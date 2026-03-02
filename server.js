@@ -332,6 +332,42 @@ function runSSH(cmd, routerConfig) {
     });
 }
 
+// Dynamic network helpers (no hardcoded wlo1/192.168.1)
+async function getPrimaryIface() {
+    try {
+        const o = await run('ip route | grep default | head -1');
+        const m = o.match(/dev\s+(\S+)/);
+        return m ? m[1] : null;
+    } catch (_) { return null; }
+}
+async function getWirelessIface() {
+    try {
+        const iw = await run('iw dev 2>/dev/null | grep Interface | awk \'{print $2}\' | head -1');
+        if (iw && iw.trim()) return iw.trim();
+        const nm = await run('nmcli -t -f DEVICE,TYPE device status 2>/dev/null | grep wifi | head -1 | cut -d: -f1');
+        return (nm && nm.trim()) ? nm.trim() : null;
+    } catch (_) { return null; }
+}
+async function getScanSubnet() {
+    try {
+        const o = await run('ip route | grep default | head -1');
+        const dev = o.match(/dev\s+(\S+)/)?.[1];
+        if (!dev) return '192.168.1.0/24';
+        const addr = await run(`ip -4 addr show dev ${dev} 2>/dev/null | grep inet`);
+        const m = addr.match(/inet\s+(\d+\.\d+\.\d+\.\d+)\/(\d+)/);
+        if (m) return m[1] + '/' + m[2];
+        const gw = o.match(/(\d+\.\d+\.\d+)\.\d+/)?.[1];
+        return gw ? gw + '.0/24' : '192.168.1.0/24';
+    } catch (_) { return '192.168.1.0/24'; }
+}
+async function getDefaultGateway() {
+    try {
+        const o = await run('ip route | grep default | head -1');
+        const m = o.match(/via\s+(\d+\.\d+\.\d+\.\d+)/);
+        return m ? m[1] : '192.168.1.1';
+    } catch (_) { return '192.168.1.1'; }
+}
+
 // Router config endpoints
 app.get('/api/router/config', (req, res) => {
     const config = getRouterConfig();
@@ -807,7 +843,8 @@ app.get('/api/devices', async (req, res) => {
         } else {
             let raw = [];
             try {
-                const o = await run('sudo nmap -sn 192.168.1.0/24 -oG - 2>/dev/null');
+                const subnet = await getScanSubnet();
+                const o = await run(`sudo nmap -sn ${subnet} -oG - 2>/dev/null`);
                 for (const l of o.split('\n')) {
                     const m = l.match(/Host:\s+(\d+\.\d+\.\d+\.\d+)\s+\(([^)]*)\)/);
                     if (m) raw.push({ ip: m[1], hostname: m[2] || 'Unknown', mac: '', status: 'Up' });
@@ -855,8 +892,9 @@ app.post('/api/devices/scan', requireAuth, (_, res) => { dCacheT = 0; res.json({
 // WiFi
 app.get('/api/wifi', async (req, res) => {
     try {
+        const wiface = await getWirelessIface();
         const [iw, nm] = await Promise.all([
-            run('iwconfig wlo1 2>/dev/null||iwconfig wlan0 2>/dev/null||echo ""'),
+            run(wiface ? `iwconfig ${wiface} 2>/dev/null||echo ""` : 'echo ""'),
             run('nmcli -t -f SSID,SIGNAL,SECURITY,FREQ,CHAN device wifi list 2>/dev/null||echo ""')
         ]);
         const connected = { 
@@ -886,8 +924,12 @@ app.post('/api/wifi/connect', requireAuth, async (req, res) => {
 });
 
 app.post('/api/wifi/disconnect', requireAuth, async (_, res) => { 
-    try { await run('nmcli device disconnect wlo1 2>&1'); res.json({ success: true }); } 
-    catch (e) { res.json({ success: false, error: e.message }) } 
+    try {
+        const wiface = await getWirelessIface();
+        if (!wiface) return res.json({ success: false, error: 'No wireless interface' });
+        await run(`nmcli device disconnect ${wiface} 2>&1`);
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
 // DNS/DHCP
@@ -906,7 +948,8 @@ app.get('/api/dns', async (_, res) => {
 
 app.get('/api/dhcp', async (_, res) => { 
     try { 
-        const o = await run('nmcli device show wlo1 2>/dev/null|grep -E "IP4\\.(ADDRESS|GATEWAY|DNS|DOMAIN)"|head -10||echo ""'); 
+        const iface = await getPrimaryIface();
+        const o = await run(iface ? `nmcli device show ${iface} 2>/dev/null|grep -E "IP4\\.(ADDRESS|GATEWAY|DNS|DOMAIN)"|head -10||echo ""` : 'echo ""');
         res.json({ info: o }); 
     } catch (e) { res.status(500).json({ error: e.message }) } 
 });
@@ -944,15 +987,22 @@ app.get('/api/connections', async (_, res) => {
     } catch (e) { res.status(500).json({ error: e.message }) } 
 });
 
-// Firewall (local)
+// Firewall (local) — iptables or UFW fallback
 app.get('/api/firewall', async (_, res) => { 
     try { 
-        const o = await run('sudo iptables -L INPUT -n --line-numbers 2>/dev/null||echo ""'); 
+        let o = await run('sudo iptables -L INPUT -n --line-numbers 2>/dev/null||echo ""'); 
         const r = []; 
         for (const l of o.split('\n').slice(2)) { 
             const p = l.trim().split(/\s+/); 
             if (p.length >= 5) r.push({ num: p[0], target: p[1], protocol: p[2], source: p[4], destination: p[5] || '*', extra: p.slice(6).join(' ') }); 
         } 
+        if (r.length === 0) {
+            const ufw = await run('sudo ufw status numbered 2>/dev/null||echo ""');
+            for (const l of ufw.split('\n')) {
+                const m = l.match(/^\[\s*(\d+)\]\s+(\S+)\s+(\S+)\s+(.*)/);
+                if (m) r.push({ num: m[1], target: m[2], protocol: m[3], source: m[4] || '*', destination: '*', extra: '' });
+            }
+        }
         res.json(r); 
     } catch (e) { res.status(500).json({ error: e.message }) } 
 });
@@ -1078,6 +1128,13 @@ app.get('/api/router/dashboard', async (_, res) => {
             const p = l.trim().split(/\s+/);
             if (p.length >= 5) fw.push({ num: p[0], target: p[1], protocol: p[2], source: p[4], destination: p[5] || '*' });
         }
+        if (fw.length === 0) {
+            const ufw = await run('sudo ufw status numbered 2>/dev/null||echo ""');
+            for (const l of ufw.split('\n')) {
+                const m = l.match(/^\[\s*(\d+)\]\s+(\S+)\s+(\S+)\s+(.*)/);
+                if (m) fw.push({ num: m[1], target: m[2], protocol: m[3], source: m[4] || '*', destination: '*' });
+            }
+        }
         const dns = (dnsRaw || '').trim().split('\n').filter(Boolean);
         const arp = (arpRaw || '').split('\n').filter(Boolean).map(l => {
             const p = l.split(/\s+/);
@@ -1087,7 +1144,6 @@ app.get('/api/router/dashboard', async (_, res) => {
         res.json({ ports, connections: conns, portForward: pf, firewall: fw, gateway, dns, arp });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
 
 // Bandwidth
 app.get('/api/bandwidth', (_, res) => { 
@@ -1398,10 +1454,11 @@ app.post('/api/speedtest', async (_, res) => {
 // Latency
 app.get('/api/latency', async (_, res) => { 
     try { 
+        const gw = await getDefaultGateway();
         const targets = [
             { name: 'Google DNS', host: '8.8.8.8' }, 
             { name: 'Cloudflare', host: '1.1.1.1' }, 
-            { name: 'Router', host: '192.168.1.1' }, 
+            { name: 'Router', host: gw }, 
             { name: 'Google', host: 'google.com' }, 
             { name: 'Minecraft Auth', host: 'sessionserver.mojang.com' }
         ]; 
@@ -2158,7 +2215,7 @@ app.get('/api/diagnostic', async (req, res) => {
     const tests = [
         { name: 'overview', fn: () => run('echo ok') },
         { name: 'devices', fn: () => run('ip neighbor show 2>/dev/null || arp -a') },
-        { name: 'wifi', fn: () => run('iwconfig wlo1 2>/dev/null || echo "no wifi"') },
+        { name: 'wifi', fn: async () => { const w = await getWirelessIface(); return run(w ? `iwconfig ${w} 2>/dev/null` : 'echo "no wifi"'); } },
         { name: 'ports', fn: () => run('ss -tlnp 2>/dev/null | head -5') },
         { name: 'firewall', fn: () => run('sudo iptables -L INPUT -n --line-numbers 2>&1 | head -3') },
         { name: 'nmap', fn: () => run('which nmap') },
