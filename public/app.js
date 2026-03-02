@@ -184,7 +184,14 @@ async function logoutAll() {
 
 // Initialize app - called after successful login
 function initApp() { 
-    loadDash(); 
+    // Start with Network and Operations groups open by default
+    ['network', 'ops'].forEach(g => {
+        const el = document.querySelector('.nav-group[data-group="' + g + '"]');
+        if (el) el.classList.add('open');
+    });
+    // Route to page from hash, or default to dashboard
+    const hash = window.location.hash.replace('#/', '') || 'dashboard';
+    go(hash);
 }
 
 // Allow Enter key to login
@@ -211,15 +218,102 @@ function esc(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp
 function escAttr(s) { if (s == null) return ''; return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") }
 
 
-// Navigation
-function go(id) {
+// ═══════════ HASH ROUTER ═══════════
+const PAGE_NAMES = {
+    dashboard: 'Home', network: 'Wi-Fi', devices: 'Connected Devices',
+    portforward: 'Port Forwarding', firewall: 'Firewall', ai: 'AI Assistant',
+    tools: 'Tools', monitoring: 'Monitoring', services: 'Services',
+    system: 'System Info', logs: 'Logs', terminal: 'Terminal',
+    files: 'Files', packages: 'Packages', hacking: 'Hacking',
+    diagnostic: 'Diagnostic', intel: 'Intelligence'
+};
+const PAGE_LOADERS = {
+    ai: () => loadAi(), hacking: () => loadHacking(), intel: () => loadIntel(),
+    diagnostic: () => loadDiagnostic(), dashboard: () => loadDash(),
+    network: () => loadNet(), devices: () => loadDevicesPage(),
+    portforward: () => loadPortForward(), firewall: () => loadFW(),
+    monitoring: () => loadMon(), tools: () => loadTools(),
+    packages: () => loadPkgs(), services: () => loadSvc(),
+    terminal: () => initTerm(), files: () => loadFiles('/home/jack'),
+    system: () => loadSys(), logs: () => loadLogs()
+};
+
+const PAGE_GROUPS = {
+    network: 'network', devices: 'network', portforward: 'network', firewall: 'network',
+    hacking: 'ops', intel: 'ops', terminal: 'ops',
+    monitoring: 'system', services: 'system', system: 'system', logs: 'system', diagnostic: 'system',
+    ai: 'tools', tools: 'tools', files: 'tools', packages: 'tools'
+};
+
+let currentPage = null;
+
+function go(id, pushState = true) {
+    if (!id) id = 'dashboard';
+    const page = document.getElementById('pg-' + id);
+    if (!page) { console.warn('Page not found:', id); return; }
+
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById('pg-' + id)?.classList.add('active');
-    document.querySelector('[data-page="' + id + '"]')?.classList.add('active');
-    const L = { ai: loadAi, hacking: loadHacking, intel: loadIntel, diagnostic: loadDiagnostic, dashboard: loadDash, network: loadNet, devices: loadDevicesPage, portforward: loadPortForward, firewall: loadFW, monitoring: loadMon, tools: loadTools, packages: loadPkgs, services: loadSvc, terminal: initTerm, files: () => loadFiles('/home/jack'), system: loadSys, logs: loadLogs };
-    if (L[id]) L[id]()
+
+    page.classList.add('active');
+    const navLink = document.querySelector('.nav-item[data-page="' + id + '"]');
+    if (navLink) navLink.classList.add('active');
+
+    // Open the parent nav group
+    const groupName = PAGE_GROUPS[id];
+    if (groupName) {
+        const group = document.querySelector('.nav-group[data-group="' + groupName + '"]');
+        if (group && !group.classList.contains('open')) group.classList.add('open');
+    }
+
+    // Update breadcrumb
+    const bcCurrent = document.getElementById('bc-current');
+    if (bcCurrent) bcCurrent.textContent = PAGE_NAMES[id] || id;
+
+    // Update URL hash
+    if (pushState) {
+        const newHash = '#/' + id;
+        if (window.location.hash !== newHash) window.location.hash = newHash;
+    }
+
+    // Load page data
+    if (PAGE_LOADERS[id]) PAGE_LOADERS[id]();
+    currentPage = id;
 }
+
+// Nav group collapse/expand
+function toggleNavGroup(name) {
+    const group = document.querySelector('.nav-group[data-group="' + name + '"]');
+    if (group) group.classList.toggle('open');
+}
+
+// Hash change handler (back/forward buttons)
+function handleHashChange() {
+    const hash = window.location.hash.replace('#/', '') || 'dashboard';
+    if (hash !== currentPage) go(hash, false);
+}
+window.addEventListener('hashchange', handleHashChange);
+
+// Intercept nav link clicks to prevent default
+document.addEventListener('click', function(e) {
+    const link = e.target.closest('a.nav-item[href^="#/"]');
+    if (link) {
+        e.preventDefault();
+        const page = link.getAttribute('href').replace('#/', '');
+        go(page);
+    }
+});
+
+// Clock in topbar
+function updateTopbarClock() {
+    const el = document.getElementById('topbar-clock');
+    if (el) {
+        const d = new Date();
+        el.textContent = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    }
+}
+setInterval(updateTopbarClock, 1000);
+updateTopbarClock();
 
 // Dashboard
 function setDashLoading(loading) {
@@ -405,7 +499,21 @@ async function sysPower(a) { if (!confirm(a.toUpperCase() + ' the system?')) ret
 
 function fbUp() { const parts = currentDir.split('/'); if (parts.length > 1) { parts.pop(); loadFiles(parts.join('/') || '/'); } }
 
-function toggleVoiceInput() { toast('Voice input not yet available', 'info'); }
+function toggleVoiceInput() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { toast('Speech recognition not supported in this browser', 'error'); return; }
+    const btn = document.getElementById('ai-mic-btn');
+    if (btn.classList.contains('listening')) { btn._recognizer?.stop(); return; }
+    const recog = new SpeechRecognition();
+    recog.lang = 'en-US'; recog.interimResults = false; recog.maxAlternatives = 1;
+    btn._recognizer = recog;
+    btn.classList.add('listening');
+    recog.onresult = (e) => { const text = e.results[0][0].transcript; aiSend(text); };
+    recog.onerror = (e) => { toast('Voice error: ' + e.error, 'error'); };
+    recog.onend = () => { btn.classList.remove('listening'); };
+    recog.start();
+    toast('Listening...', 'info');
+}
 
 function openIntelConfig() { document.getElementById('intel-config-modal').style.display = 'flex'; }
 
@@ -550,7 +658,21 @@ async function aiSend(voiceText) {
 }
 
 // Hacking
-function loadHacking() { }
+async function loadHacking() {
+    loadGhostStatus();
+    const r = await api('/hacking/shadow-mode');
+    const sw = document.getElementById('shadow-toggle');
+    const stat = document.getElementById('shadow-status');
+    const infoEl = document.getElementById('shadow-info');
+    const idBtn = document.getElementById('new-identity-btn');
+    if (sw) sw.checked = !!r?.shadowMode;
+    if (stat) { stat.textContent = r?.shadowMode ? 'SHADOW: ON' : 'SHADOW: OFF'; stat.style.color = r?.shadowMode ? 'var(--red)' : 'var(--t3)'; }
+    if (infoEl) infoEl.style.display = r?.shadowMode ? 'block' : 'none';
+    if (idBtn) idBtn.style.display = r?.shadowMode ? 'inline-block' : 'none';
+    if (r?.torIp) { const te = document.getElementById('shadow-tor-ip'); if (te) te.textContent = r.torIp; }
+    if (r?.realIp) { const re = document.getElementById('shadow-real-ip'); if (re) re.textContent = r.realIp; }
+    loadHackingTools();
+}
 async function loadIntel() {
     loadIdsAlerts();
     loadThreatIntel();
@@ -569,7 +691,7 @@ async function loadFail2ban() {
         jails.forEach(j => {
             const banned = j.banned || 0;
             const color = banned > 0 ? 'var(--red)' : 'var(--green)';
-            html += '<tr><td>' + esc(j.name) + '</td><td style="color:' + color + ';font-weight:600">' + banned + '</td><td>' + (j.total || 0) + '</td></tr>';
+            html += '<tr><td>' + esc(j.name) + '</td><td style="color:' + color + ';font-weight:600">' + banned + '</td><td>' + (j.totalBanned ?? j.total ?? 0) + '</td></tr>';
         });
         html += '</table>';
         el.innerHTML = html;
@@ -638,17 +760,173 @@ async function loadAppLogs() {
 async function runPT(tool) {
     const t = document.getElementById('pt-target').value.trim(); if (!t) return toast('Target required', 'error');
     const out = document.getElementById('pt-out'), stat = document.getElementById('pt-status');
-    out.textContent = '[+] Running ' + tool + ' on ' + t + '...';
-    stat.textContent = 'Running...'; stat.className = 'badge br';
-    const r = await api('/pentest', { method: 'POST', body: { tool, target: t } });
-    out.textContent = r?.output || 'No output';
+    const toolLabel = document.getElementById('pt-tool-name');
+    const username = document.getElementById('pt-username')?.value?.trim() || 'admin';
+    const port = document.getElementById('pt-port')?.value?.trim() || '80';
+    const hashfile = document.getElementById('pt-hashfile')?.value?.trim() || '';
+    if (toolLabel) toolLabel.textContent = tool;
+    out.textContent = '[+] ' + tool + ' -> ' + t + '\n[*] Running...\n';
+    stat.textContent = 'ATTACKING'; stat.className = 'badge br';
+    const r = await api('/pentest', { method: 'POST', body: { tool, target: t, params: { username, port: parseInt(port, 10), hashfile } } });
+    out.textContent = '[+] ' + tool + ' -> ' + t + '\n' + (r?.output || 'No output');
     stat.textContent = 'Ready'; stat.className = 'badge bo';
 }
 
 async function toggleShadowMode() {
     const sw = document.getElementById('shadow-toggle'), stat = document.getElementById('shadow-status');
+    const infoEl = document.getElementById('shadow-info');
+    const idBtn = document.getElementById('new-identity-btn');
+    stat.textContent = 'Connecting...'; stat.style.color = 'var(--amber)';
     const r = await api('/hacking/shadow-mode', { method: 'POST', body: { enabled: sw.checked } });
-    if (r?.success) { stat.textContent = sw.checked ? 'SHADOW: ON' : 'SHADOW: OFF'; stat.style.color = sw.checked ? 'var(--red)' : 'var(--t3)'; }
+    if (r?.success) {
+        stat.textContent = sw.checked ? 'SHADOW: ON' : 'SHADOW: OFF';
+        stat.style.color = sw.checked ? 'var(--red)' : 'var(--t3)';
+        if (infoEl) infoEl.style.display = sw.checked ? 'block' : 'none';
+        if (idBtn) idBtn.style.display = sw.checked ? 'inline-block' : 'none';
+        if (r.torIp) { const te = document.getElementById('shadow-tor-ip'); if (te) te.textContent = r.torIp; }
+    } else {
+        sw.checked = false;
+        stat.textContent = 'SHADOW: OFF'; stat.style.color = 'var(--t3)';
+        if (infoEl) infoEl.style.display = 'none';
+        toast(r?.error || 'Failed to enable Tor routing', 'error');
+    }
+}
+
+async function newTorIdentity() {
+    toast('Getting new identity...', 'info');
+    const r = await api('/hacking/new-identity', { method: 'POST' });
+    if (r?.success) { toast('New exit: ' + r.newIp, 'success'); const te = document.getElementById('shadow-tor-ip'); if (te) te.textContent = r.newIp; }
+    else toast(r?.error || 'Failed', 'error');
+}
+
+async function loadHackingTools() {
+    const body = document.getElementById('hack-tools-body');
+    if (!body) return;
+    body.innerHTML = '<span style="color:var(--t3)">Checking...</span>';
+    const r = await api('/hacking/tools');
+    if (!r) { body.innerHTML = '<span style="color:var(--red)">Failed</span>'; return; }
+    let html = '';
+    for (const [name, installed] of Object.entries(r)) {
+        if (name === 'wordlist' || name === 'wordlistPath') continue;
+        const cls = installed ? 'tool-badge installed' : 'tool-badge missing';
+        const label = installed ? name + ' ✓' : name + ' ✗';
+        html += '<span class="' + cls + '">' + label + '</span>';
+    }
+    if (r.wordlist) html += '<span class="tool-badge installed">rockyou.txt ✓</span>';
+    else html += '<span class="tool-badge missing">rockyou.txt ✗</span>';
+    body.innerHTML = html;
+}
+
+// ═══════════ GHOST MODE ═══════════
+
+async function loadGhostStatus() {
+    const r = await api('/ghost/status');
+    if (!r) return;
+
+    function setCheck(id, ok, val) {
+        const el = document.getElementById(id);
+        const valEl = document.getElementById(id + '-val');
+        if (!el) return;
+        el.className = 'ghost-check ' + (ok ? 'safe' : 'danger');
+        el.querySelector('.gc-icon').textContent = ok ? '✅' : '❌';
+        if (valEl) valEl.textContent = val || '';
+    }
+
+    setCheck('gc-mac', r.macRandomized || r.macSpoofed, r.macSpoofed ? 'Spoofed: ' + (r.currentMac || '').substring(0,8) + '...' : r.macRandomized ? 'NM random' : 'Real MAC exposed');
+    setCheck('gc-ipv6', r.ipv6Disabled, r.ipv6Disabled ? 'Blocked' : 'LEAKING');
+    setCheck('gc-dns', r.dnsEncrypted, r.dnsEncrypted ? (r.dnscryptActive ? 'dnscrypt-proxy' : 'Local resolver') : 'Unencrypted: ' + (r.dnsServers || []).join(','));
+    setCheck('gc-tor', r.torActive && r.torVerified, r.torVerified ? 'Exit: ' + (r.torIp || '').substring(0,15) : r.torActive ? 'Running but unverified' : 'Not running');
+    setCheck('gc-kill', r.killSwitchActive, r.killSwitchActive ? 'Active - no leaks' : 'OFF - traffic exposed');
+    setCheck('gc-host', r.hostnameGeneric, r.hostname || 'unknown');
+    setCheck('gc-hist', !r.bashHistoryExists, r.bashHistoryExists ? 'Contains data' : 'Clean');
+    setCheck('gc-swap', r.swapEncrypted || !r.swapActive, !r.swapActive ? 'No swap' : r.swapEncrypted ? 'Encrypted' : 'UNENCRYPTED');
+
+    const scoreEl = document.getElementById('ghost-score');
+    if (scoreEl) {
+        const pct = Math.round((r.score / r.maxScore) * 100);
+        const color = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)';
+        scoreEl.innerHTML = 'Score: <span style="color:' + color + ';font-weight:700">' + r.score + '/' + r.maxScore + '</span>';
+    }
+
+    const actBtn = document.getElementById('ghost-activate-btn');
+    const deactBtn = document.getElementById('ghost-deactivate-btn');
+    if (r.ghostActive) {
+        if (actBtn) actBtn.style.display = 'none';
+        if (deactBtn) deactBtn.style.display = 'inline-block';
+    } else {
+        if (actBtn) actBtn.style.display = 'inline-block';
+        if (deactBtn) deactBtn.style.display = 'none';
+    }
+}
+
+async function activateGhostMode() {
+    const btn = document.getElementById('ghost-activate-btn');
+    if (btn) { btn.textContent = 'ACTIVATING...'; btn.disabled = true; }
+    toast('Engaging Ghost Mode...', 'info');
+    const r = await api('/ghost/activate', { method: 'POST' });
+    if (btn) { btn.textContent = 'ACTIVATE'; btn.disabled = false; }
+    if (r?.success) {
+        toast('Ghost Mode ACTIVE — ' + r.results.length + ' protections engaged', 'success');
+        if (r.errors?.length) {
+            r.errors.forEach(e => toast(e, 'warning'));
+        }
+        loadGhostStatus();
+    } else {
+        toast(r?.error || 'Activation failed', 'error');
+    }
+}
+
+async function deactivateGhostMode() {
+    const btn = document.getElementById('ghost-deactivate-btn');
+    if (btn) { btn.textContent = 'DEACTIVATING...'; btn.disabled = true; }
+    const r = await api('/ghost/deactivate', { method: 'POST' });
+    if (btn) { btn.textContent = 'DEACTIVATE'; btn.disabled = false; }
+    if (r?.success) {
+        toast('Ghost Mode deactivated', 'info');
+        loadGhostStatus();
+    } else {
+        toast(r?.error || 'Deactivation failed', 'error');
+    }
+}
+
+async function ghostLeakTest() {
+    const el = document.getElementById('ghost-leak-results');
+    el.style.display = 'block';
+    el.innerHTML = '<span style="color:var(--cyan)">Running leak tests...</span>';
+    const r = await api('/ghost/leak-test');
+    if (!r) { el.innerHTML = '<span style="color:var(--red)">Leak test failed</span>'; return; }
+
+    let html = '<div style="margin-bottom:10px;font-weight:700;color:' + (r.criticalLeaks > 0 ? 'var(--red)' : r.totalLeaks > 0 ? 'var(--amber)' : 'var(--green)') + '">';
+    html += r.criticalLeaks > 0 ? 'CRITICAL LEAKS DETECTED' : r.totalLeaks > 0 ? 'SOME EXPOSURE FOUND' : 'NO LEAKS DETECTED';
+    html += ' (' + r.totalLeaks + ' issues)</div>';
+
+    if (r.leaks && r.leaks.length) {
+        r.leaks.forEach(l => {
+            html += '<div style="padding:4px 0;border-bottom:1px solid #222"><span class="ghost-leak-' + l.severity + '">■ ' + l.type + ' [' + l.severity.toUpperCase() + ']</span> — ' + esc(l.detail) + '</div>';
+        });
+    }
+    if (r.safe && r.safe.length) {
+        html += '<div style="margin-top:8px;color:var(--green);font-weight:600">PASSING:</div>';
+        r.safe.forEach(s => {
+            html += '<div style="padding:2px 0;color:var(--green)">✓ ' + esc(s.type) + ' — ' + esc(s.detail) + '</div>';
+        });
+    }
+    el.innerHTML = html;
+}
+
+async function ghostWipeTraces() {
+    if (!confirm('This will wipe bash history, recent files, caches, login records, auth logs, and more. Continue?')) return;
+    const el = document.getElementById('ghost-wipe-results');
+    el.style.display = 'block';
+    el.innerHTML = '<span style="color:var(--cyan)">Wiping traces...</span>';
+    const r = await api('/ghost/wipe-traces', { method: 'POST' });
+    if (!r) { el.innerHTML = '<span style="color:var(--red)">Wipe failed</span>'; return; }
+    if (r.success) {
+        let html = '<div style="color:var(--green);font-weight:700;margin-bottom:6px">TRACES WIPED</div>';
+        r.results.forEach(w => { html += '<div style="padding:2px 0;color:var(--green)">✓ ' + esc(w) + '</div>'; });
+        el.innerHTML = html;
+        toast('Forensic traces wiped: ' + r.results.length + ' items', 'success');
+    }
 }
 
 async function loadThreatIntel() {

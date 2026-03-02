@@ -120,25 +120,81 @@ body::after {
 
 .sidebar-nav {
   flex: 1;
-  padding: 10px 7px;
+  padding: 8px 7px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  overflow-y: auto
+  gap: 2px;
+  overflow-y: auto;
+  scrollbar-width: thin
+}
+
+/* Nav groups */
+.nav-group { margin-bottom: 2px }
+.nav-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-top: 4px;
+  color: var(--t2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: var(--tr);
+  user-select: none;
+  border-left: 2px solid transparent
+}
+.nav-group-header:hover { color: var(--t1); background: rgba(255,255,255,.03) }
+.nav-group.open > .nav-group-header { color: var(--cyan); border-left-color: var(--cyan) }
+.nav-group-icon {
+  font-size: 0;
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--t3);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform .25s ease, border-color .25s ease;
+  display: inline-block;
+  flex-shrink: 0
+}
+.nav-group.open > .nav-group-header .nav-group-icon {
+  transform: rotate(90deg);
+  border-left-color: var(--cyan)
+}
+.nav-group-count {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--t3);
+  opacity: .6
+}
+.nav-group-items {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .3s cubic-bezier(.4,0,.2,1), opacity .2s ease;
+  opacity: 0;
+  padding-left: 6px
+}
+.nav-group.open .nav-group-items {
+  max-height: 500px;
+  opacity: 1
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 9px 12px;
-  border-radius: 9px;
+  padding: 8px 12px;
+  border-radius: 8px;
   color: var(--t2);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: var(--tr);
-  text-decoration: none
+  text-decoration: none;
+  position: relative
 }
 
 .nav-item:hover {
@@ -151,19 +207,31 @@ body::after {
   color: var(--cyan);
   font-weight: 600
 }
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  background: var(--cyan);
+  border-radius: 0 3px 3px 0
+}
 
 .ni {
-  font-size: 15px;
-  width: 22px;
-  text-align: center
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0
 }
 
 .sidebar-footer {
-  padding: 14px;
+  padding: 12px;
   border-top: 1px solid var(--brd);
   display: flex;
   flex-direction: column;
-  gap: 10px
+  gap: 8px
 }
 
 /* Boot sequence overlay */
@@ -309,6 +377,57 @@ body::after {
   }
 }
 
+/* Topbar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--brd)
+}
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--t3)
+}
+.bc-home {
+  color: var(--t3);
+  text-decoration: none;
+  transition: color .2s
+}
+.bc-home:hover { color: var(--cyan) }
+.bc-sep { color: var(--t3); opacity: .4 }
+.bc-current { color: var(--t1); font-weight: 600 }
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px
+}
+.topbar-clock {
+  font-size: 11px;
+  color: var(--t3);
+  font-variant-numeric: tabular-nums;
+  padding-right: 8px;
+  border-right: 1px solid var(--brd)
+}
+.topbar-btn {
+  background: none;
+  border: 1px solid var(--brd);
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: var(--tr);
+  color: var(--t2)
+}
+.topbar-btn:hover {
+  background: rgba(255,255,255,.04);
+  border-color: var(--bh)
+}
+
 .main {
   margin-left: var(--sw);
   flex: 1;
@@ -322,13 +441,13 @@ body::after {
 
 .page.active {
   display: block;
-  animation: fadeIn .25s ease
+  animation: pageIn .3s cubic-bezier(.4,0,.2,1)
 }
 
-@keyframes fadeIn {
+@keyframes pageIn {
   from {
     opacity: 0;
-    transform: translateY(4px)
+    transform: translateY(8px)
   }
 
   to {
@@ -419,7 +538,7 @@ body::after {
   gap: 10px;
 }
 
-.nav-section-label {
+.nav-section-label-old {
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
@@ -429,7 +548,7 @@ body::after {
   margin-top: 8px;
 }
 
-.nav-section-label:first-child {
+.nav-section-label-old:first-child {
   margin-top: 0;
   padding-top: 4px;
 }
@@ -1332,13 +1451,20 @@ pre.to {
 
   .brand-text,
   .nav-item span:last-child,
-  .status-pill span:last-child {
+  .status-pill span:last-child,
+  .nav-group-header span:not(.nav-group-icon),
+  .nav-group-count {
     display: none
   }
+
+  .nav-group-items { padding-left: 0 }
+  .nav-group.open .nav-group-items { max-height: 500px; opacity: 1 }
 
   .main {
     margin-left: 56px
   }
+
+  .topbar { display: none }
 
   .g2 {
     grid-template-columns: 1fr
@@ -1604,6 +1730,23 @@ pre.to {
     border-radius: 6px; padding: 10px 15px; margin: 10px 0;
     font-size: 11px; color: var(--red);
 }
+
+/* Ghost Mode */
+.ghost-check { display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06); border-radius:6px; transition:all .3s }
+.ghost-check .gc-icon { font-size:14px; width:20px; text-align:center }
+.ghost-check .gc-label { font-size:11px; font-weight:600; color:var(--t2); flex:1 }
+.ghost-check .gc-val { font-size:10px; color:var(--t3); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.ghost-check.safe { border-color:rgba(0,255,100,.25); background:rgba(0,255,100,.04) }
+.ghost-check.safe .gc-icon { color:var(--green) }
+.ghost-check.warn { border-color:rgba(255,180,0,.25); background:rgba(255,180,0,.04) }
+.ghost-check.warn .gc-icon { color:var(--amber) }
+.ghost-check.danger { border-color:rgba(255,50,50,.25); background:rgba(255,50,50,.04) }
+.ghost-check.danger .gc-icon { color:var(--red) }
+.ghost-leak-critical { color:var(--red); font-weight:700 }
+.ghost-leak-high { color:#ff6b35; font-weight:600 }
+.ghost-leak-medium { color:var(--amber) }
+.ghost-leak-low { color:var(--t3) }
+.ghost-leak-safe { color:var(--green) }
 .tool-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; margin: 3px; }
 .tool-badge.installed { background: rgba(0,255,100,0.1); color: var(--green); border: 1px solid var(--green); }
 .tool-badge.missing { background: rgba(255,50,50,0.1); color: var(--red); border: 1px solid var(--red); }

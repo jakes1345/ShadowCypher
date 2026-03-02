@@ -844,10 +844,15 @@ app.get('/api/devices', async (req, res) => {
             let raw = [];
             try {
                 const subnet = await getScanSubnet();
-                const o = await run(`sudo nmap -sn ${subnet} -oG - 2>/dev/null`);
-                for (const l of o.split('\n')) {
-                    const m = l.match(/Host:\s+(\d+\.\d+\.\d+\.\d+)\s+\(([^)]*)\)/);
-                    if (m) raw.push({ ip: m[1], hostname: m[2] || 'Unknown', mac: '', status: 'Up' });
+                const o = await run(`sudo nmap -sn -PR --send-eth ${subnet} -oX - 2>/dev/null`);
+                const hostBlocks = o.split('<host ').slice(1);
+                for (const blk of hostBlocks) {
+                    const ip = (blk.match(/addr="(\d+\.\d+\.\d+\.\d+)"/) || [])[1];
+                    if (!ip) continue;
+                    const mac = (blk.match(/addrtype="mac" addr="([^"]+)"/) || [])[1] || '';
+                    const vendor = (blk.match(/vendor="([^"]+)"/) || [])[1] || '';
+                    const hn = (blk.match(/hostname="([^"]+)"/) || [])[1] || '';
+                    raw.push({ ip, hostname: hn || vendor || 'Unknown', mac: mac.toLowerCase(), status: 'Up', vendor: vendor });
                 }
             } catch (e) {
                 const o = await run('ip neighbor show 2>/dev/null||arp -a');
@@ -956,16 +961,36 @@ app.get('/api/dhcp', async (_, res) => {
 
 // Ports
 const KP = { 22: 'SSH', 25: 'SMTP', 53: 'DNS', 80: 'HTTP', 443: 'HTTPS', 139: 'NetBIOS', 445: 'SMB', 631: 'CUPS', 3000: 'Net Admin', 5432: 'PostgreSQL', 8080: 'HTTP-Alt', 25565: 'Minecraft', 24454: 'VoiceChat' };
+let _svcMapCache = null, _svcMapT = 0;
+async function getPortServiceMap() {
+    if (_svcMapCache && Date.now() - _svcMapT < 60000) return _svcMapCache;
+    try {
+        const o = await run('getent services 2>/dev/null || grep -v "^#" /etc/services 2>/dev/null | head -2000');
+        const m = {};
+        for (const l of (o || '').split('\n')) {
+            const parts = l.trim().split(/\s+/);
+            if (parts.length >= 2) {
+                const last = parts[parts.length - 1];
+                const match = last.match(/^(\d+)\/(tcp|udp)/);
+                if (match) m[match[1] + '/' + match[2]] = parts[0];
+            }
+        }
+        _svcMapCache = m; _svcMapT = Date.now(); return m;
+    } catch (_) { return {}; }
+}
+function portService(port, proto, svcMap) {
+    return KP[port] || (svcMap && (svcMap[port + '/tcp'] || svcMap[port + '/udp'])) || '';
+}
 app.get('/api/ports', async (_, res) => { 
     try { 
-        const o = await run('sudo ss -tlnp 2>/dev/null||ss -tlnp'); 
+        const [o, svcMap] = await Promise.all([run('sudo ss -tlnp 2>/dev/null||ss -tlnp'), getPortServiceMap()]);
         const ports = []; 
         for (const l of o.split('\n').slice(1)) { 
             const p = l.trim().split(/\s+/); 
             if (p.length < 5) continue; 
             const lo = p[3], lc = lo.lastIndexOf(':'), port = parseInt(lo.substring(lc + 1)); 
             const pm = l.match(/users:\(\("([^"]+)",pid=(\d+)/); 
-            ports.push({ address: lo.substring(0, lc), port, process: pm?.[1] || 'system', pid: pm?.[2] || '', service: KP[port] || '' }); 
+            ports.push({ address: lo.substring(0, lc), port, process: pm?.[1] || 'system', pid: pm?.[2] || '', service: portService(port, 'tcp', svcMap) });
         } 
         ports.sort((a, b) => a.port - b.port); 
         res.json(ports); 
@@ -1085,7 +1110,7 @@ app.delete('/api/portforward/:num', requireAuth, async (req, res) => {
 // Router dashboard — ports, connections, portforward, firewall, gateway, dns, arp
 app.get('/api/router/dashboard', async (_, res) => {
     try {
-        const [tcpP, udpP, tcpC, udpC, pfRaw, fwRaw, gw, dnsRaw, arpRaw] = await Promise.all([
+        const [tcpP, udpP, tcpC, udpC, pfRaw, fwRaw, gw, dnsRaw, arpRaw, svcMap] = await Promise.all([
             run('sudo ss -tlnp 2>/dev/null||ss -tlnp'),
             run('sudo ss -ulnp 2>/dev/null||ss -ulnp'),
             run('sudo ss -tnp 2>/dev/null||ss -tnp'),
@@ -1094,7 +1119,8 @@ app.get('/api/router/dashboard', async (_, res) => {
             run('sudo iptables -L INPUT -n --line-numbers 2>/dev/null||echo ""'),
             run('ip route | grep default | head -1'),
             run('cat /etc/resolv.conf 2>/dev/null | grep nameserver | awk \'{print $2}\' | head -4'),
-            run('ip neigh show 2>/dev/null | grep -v FAILED')
+            run('ip neigh show 2>/dev/null | grep -v FAILED'),
+            getPortServiceMap()
         ]);
         const ports = [], conns = [];
         const parsePorts = (o, proto) => {
@@ -1104,7 +1130,7 @@ app.get('/api/router/dashboard', async (_, res) => {
                 const lo = p[3], lc = lo.lastIndexOf(':'), port = parseInt(lo.substring(lc + 1));
                 if (isNaN(port) || port < 1) continue;
                 const pm = l.match(/users:\(\("([^"]+)",pid=(\d+)/);
-                ports.push({ address: lo.substring(0, lc), port, proto, process: pm?.[1] || 'system', service: KP[port] || '' });
+            ports.push({ address: lo.substring(0, lc), port, process: pm?.[1] || 'system', pid: pm?.[2] || '', service: portService(port, proto, svcMap) });
             }
         };
         const parseConns = (o, proto) => {
@@ -1724,12 +1750,13 @@ app.delete('/api/notes/:id', (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }) } 
 });
 
-// Password generator
+// Password generator (cryptographically secure)
 app.get('/api/password', (req, res) => { 
-    const len = parseInt(req.query.length) || 16; 
+    const len = Math.min(128, Math.max(4, parseInt(req.query.length) || 16)); 
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?'; 
+    const bytes = crypto.randomBytes(len);
     let pw = ''; 
-    for (let i = 0; i < len; i++) pw += chars[Math.floor(Math.random() * chars.length)]; 
+    for (let i = 0; i < len; i++) pw += chars[bytes[i] % chars.length]; 
     res.json({ password: pw, length: len }); 
 });
 
@@ -1759,81 +1786,504 @@ app.post('/api/ai/config', (req, res) => {
 });
 
 
-// AI Chat endpoint
+// AI Chat endpoint - supports Groq and Google Gemini
 app.post('/api/ai/chat', requireAuth, async (req, res) => {
     const { messages } = req.body;
     const c = getAiConfig();
-    
-    if (!c.apiKey) {
-        return res.json({ error: 'No API key configured. Go to AI settings to add your Groq API key.' });
-    }
-    
+    if (!c.apiKey) return res.json({ error: 'No API key configured. Go to AI Config to add your API key.' });
     try {
-        const systemMsg = { role: 'system', content: `You are ${c.assistantName || 'ShadowCypher'}, an elite AI assistant for a router admin panel.` };
-        const allMessages = [systemMsg, ...(messages || [])];
-        
+        const persona = c.assistantName === 'jarvis' ? 'JARVIS, a calm British AI butler. Address the user as Sir. Sophisticated and precise.'
+            : c.assistantName === 'friday' ? 'FRIDAY, an efficient and confident AI assistant. Direct and capable.'
+            : 'ShadowCypher, an elite AI assistant.';
+        const systemContent = "You are " + persona + " You serve as the AI for a router admin panel called ShadowCypher. Help with network diagnostics, security, system monitoring. Keep responses concise and technical.";
+        if (c.provider === 'google') {
+            const contents = [];
+            for (const m of (messages || [])) {
+                contents.push({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] });
+            }
+            if (contents.length === 0 || contents[0].role !== 'user') contents.unshift({ role: 'user', parts: [{ text: 'Hello' }] });
+            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + c.apiKey, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ systemInstruction: { parts: [{ text: systemContent }] }, contents, generationConfig: { temperature: 0.7, maxOutputTokens: 2048 } })
+            });
+            const data = await response.json();
+            if (data.error) return res.json({ error: data.error.message || data.error.status });
+            return res.json({ reply: data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini' });
+        }
+        const allMessages = [{ role: 'system', content: systemContent }, ...(messages || [])];
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + c.apiKey,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: 'llama-3.1-70b-versatile',
-                messages: allMessages,
-                temperature: 0.7
-            })
+            headers: { 'Authorization': 'Bearer ' + c.apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: allMessages, temperature: 0.7 })
         });
-        
         const data = await response.json();
-        
-        if (data.error) {
-            return res.json({ error: data.error.message });
+        if (data.error) return res.json({ error: data.error.message });
+        res.json({ reply: data.choices?.[0]?.message?.content || 'No response' });
+    } catch (e) { res.json({ error: 'AI error: ' + e.message }); }
+});
+
+
+
+// Shadow Mode - real Tor routing + identity verification
+app.get('/api/hacking/shadow-mode', async (_, res) => {
+    let torIp = null, realIp = null;
+    if (shadowMode) {
+        try {
+            const torCheck = await run('curl -s --connect-timeout 5 --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip 2>/dev/null');
+            const j = JSON.parse(torCheck);
+            if (j.IsTor) torIp = j.IP;
+        } catch (_) {}
+    }
+    try { realIp = await run('curl -4 -s --max-time 3 ifconfig.me 2>/dev/null'); } catch (_) {}
+    res.json({ shadowMode, torIp, realIp, proxychains: shadowMode });
+});
+app.post('/api/hacking/shadow-mode', async (req, res) => {
+    const enable = !!req.body.enabled;
+    if (enable && !shadowMode) {
+        try {
+            const torRunning = await run('systemctl is-active tor 2>/dev/null || pgrep tor');
+            if (!torRunning.includes('active') && !torRunning.trim()) {
+                await run('sudo systemctl start tor 2>/dev/null || tor &');
+                await new Promise(r => setTimeout(r, 2000));
+            }
+            const check = await run('curl -s --connect-timeout 5 --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip 2>/dev/null');
+            const j = JSON.parse(check);
+            if (!j.IsTor) return res.json({ success: false, error: 'Tor is not routing traffic. Check tor service.' });
+            shadowMode = true;
+            log('SHADOW MODE ON - Tor exit: ' + j.IP, 'SECURITY');
+            res.json({ success: true, shadowMode: true, torIp: j.IP });
+        } catch (e) {
+            res.json({ success: false, error: 'Failed to verify Tor: ' + e.message });
         }
-        
-        const reply = data.choices?.[0]?.message?.content || 'No response';
-        res.json({ reply: reply });
-    } catch (e) {
-        res.json({ error: 'AI error: ' + e.message });
+    } else if (!enable && shadowMode) {
+        shadowMode = false;
+        log('SHADOW MODE OFF', 'SECURITY');
+        res.json({ success: true, shadowMode: false });
+    } else {
+        res.json({ success: true, shadowMode });
     }
 });
 
-
-
-// Shadow Mode
-app.post('/api/hacking/shadow-mode', (req, res) => {
-    shadowMode = !!req.body.enabled;
-    res.json({ success: true, shadowMode });
+// New identity through Tor (get a new exit node)
+app.post('/api/hacking/new-identity', async (req, res) => {
+    try {
+        await run('sudo killall -HUP tor 2>/dev/null || (echo "AUTHENTICATE \"\"\nSIGNAL NEWNYM\nQUIT" | nc 127.0.0.1 9051 2>/dev/null)');
+        await new Promise(r => setTimeout(r, 3000));
+        const check = await run('curl -s --connect-timeout 5 --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip 2>/dev/null');
+        const j = JSON.parse(check);
+        res.json({ success: true, newIp: j.IP });
+    } catch (e) { res.json({ error: e.message }); }
 });
 
-// Pentest tools
+// ═══════════ GHOST MODE - Real Operational Security ═══════════
+
+let ghostModeActive = false;
+let ghostState = { mac: false, dns: false, ipv6: false, hostname: false, logs: false, tor: false, killswitch: false };
+
+// Get current ghost status
+app.get('/api/ghost/status', async (_, res) => {
+    const checks = {};
+    try {
+        // MAC randomization check
+        const macConf = await run('cat /etc/NetworkManager/conf.d/99-random-mac.conf 2>/dev/null || echo "NOT SET"');
+        checks.macRandomized = macConf.includes('random');
+
+        // Check current MAC vs permanent
+        const wiface = await getWirelessIface() || await getPrimaryIface();
+        if (wiface) {
+            try {
+                const permMac = await run(`cat /sys/class/net/${wiface}/address 2>/dev/null`);
+                const ethtoolPerm = await run(`ethtool -P ${wiface} 2>/dev/null | awk '{print $3}'`);
+                checks.currentMac = permMac.trim();
+                checks.permanentMac = ethtoolPerm.trim();
+                checks.macSpoofed = checks.currentMac !== checks.permanentMac && checks.permanentMac.length > 5;
+            } catch (_) {}
+        }
+
+        // IPv6 status
+        const ipv6 = await run('cat /proc/sys/net/ipv6/conf/all/disable_ipv6 2>/dev/null');
+        checks.ipv6Disabled = ipv6.trim() === '1';
+
+        // DNS encryption
+        const resolv = await run('cat /etc/resolv.conf 2>/dev/null');
+        checks.dnsServers = resolv.match(/nameserver\s+([\d.]+)/g)?.map(s => s.split(/\s+/)[1]) || [];
+        const dnscrypt = await run('systemctl is-active dnscrypt-proxy 2>/dev/null || echo inactive');
+        checks.dnscryptActive = dnscrypt.trim() === 'active';
+        checks.dnsEncrypted = checks.dnscryptActive || checks.dnsServers.includes('127.0.0.1');
+
+        // Tor status
+        const tor = await run('systemctl is-active tor 2>/dev/null || echo inactive');
+        checks.torActive = tor.trim() === 'active';
+        if (checks.torActive) {
+            try {
+                const torCheck = await run('curl -s --connect-timeout 5 --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip 2>/dev/null');
+                const j = JSON.parse(torCheck);
+                checks.torIp = j.IP;
+                checks.torVerified = j.IsTor === true;
+            } catch (_) { checks.torVerified = false; }
+        }
+
+        // Kill switch (no leaks outside Tor)
+        const iptOut = await run('sudo iptables -L OUTPUT -n 2>/dev/null | grep SHADOW_KILL || echo ""');
+        checks.killSwitchActive = iptOut.includes('SHADOW_KILL');
+
+        // Hostname
+        checks.hostname = (await run('hostname')).trim();
+        checks.hostnameGeneric = ['localhost', 'pc', 'desktop'].some(h => checks.hostname.toLowerCase().includes(h));
+
+        // Swap encryption
+        const swapInfo = await run('swapon --show 2>/dev/null || echo ""');
+        const cryptSwap = await run('cat /etc/crypttab 2>/dev/null | grep swap || echo ""');
+        checks.swapActive = swapInfo.trim().length > 10;
+        checks.swapEncrypted = cryptSwap.trim().length > 0;
+
+        // Logs that could identify
+        checks.syslogSize = 0;
+        try { const sz = await run('du -sb /var/log/syslog 2>/dev/null | awk \'{print $1}\''); checks.syslogSize = parseInt(sz) || 0; } catch (_) {}
+        checks.bashHistoryExists = false;
+        try { await run('test -s ~/.bash_history && echo yes'); checks.bashHistoryExists = true; } catch (_) {}
+        checks.wtmpSize = 0;
+        try { const sz = await run('du -sb /var/log/wtmp 2>/dev/null | awk \'{print $1}\''); checks.wtmpSize = parseInt(sz) || 0; } catch (_) {}
+
+        // Real IP for comparison
+        try { checks.realIp = await run('curl -4 -s --max-time 3 ifconfig.me 2>/dev/null'); } catch (_) {}
+
+        // WebRTC leak risk
+        checks.webrtcNote = 'Disable media.peerconnection.enabled in Firefox about:config';
+
+        // Score
+        let score = 0, max = 10;
+        if (checks.macRandomized || checks.macSpoofed) score++;
+        if (checks.ipv6Disabled) score++;
+        if (checks.dnsEncrypted) score++;
+        if (checks.torActive && checks.torVerified) score += 2;
+        if (checks.killSwitchActive) score++;
+        if (!checks.bashHistoryExists) score++;
+        if (checks.hostnameGeneric) score++;
+        if (checks.swapEncrypted || !checks.swapActive) score++;
+        if (shadowMode) score++;
+        checks.score = score;
+        checks.maxScore = max;
+        checks.ghostActive = ghostModeActive;
+
+    } catch (e) { return res.status(500).json({ error: e.message }); }
+    res.json(checks);
+});
+
+// Activate Ghost Mode - apply all protections at once
+app.post('/api/ghost/activate', requireAuth, async (req, res) => {
+    const results = [];
+    const errors = [];
+    
+    try {
+        // 1. MAC Address Randomization
+        try {
+            const wiface = await getWirelessIface() || await getPrimaryIface();
+            if (wiface) {
+                await run('sudo ip link set ' + wiface + ' down 2>/dev/null');
+                await run('sudo macchanger -r ' + wiface + ' 2>/dev/null || sudo ip link set ' + wiface + ' address $(openssl rand -hex 6 | sed \'s/\\(..\\)/\\1:/g;s/:$//;s/^./0/\')');
+                await run('sudo ip link set ' + wiface + ' up 2>/dev/null');
+                results.push('MAC address randomized on ' + wiface);
+            }
+        } catch (e) { errors.push('MAC spoof: ' + e.message); }
+
+        // 2. Enable persistent MAC randomization via NetworkManager
+        try {
+            await run('sudo mkdir -p /etc/NetworkManager/conf.d');
+            await run(`sudo bash -c 'cat > /etc/NetworkManager/conf.d/99-random-mac.conf << EOF
+[device]
+wifi.scan-rand-mac-address=yes
+
+[connection]
+wifi.cloned-mac-address=random
+ethernet.cloned-mac-address=random
+connection.stable-id=\${CONNECTION}/\${BOOT}
+EOF'`);
+            await run('sudo nmcli general reload conf 2>/dev/null');
+            results.push('Persistent MAC randomization enabled');
+        } catch (e) { errors.push('NM MAC config: ' + e.message); }
+
+        // 3. Disable IPv6 (prevents leaks)
+        try {
+            await run('sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 2>/dev/null');
+            await run('sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1 2>/dev/null');
+            results.push('IPv6 disabled');
+        } catch (e) { errors.push('IPv6: ' + e.message); }
+
+        // 4. Randomize hostname
+        try {
+            const randHost = 'desktop-' + require('crypto').randomBytes(4).toString('hex');
+            await run('sudo hostnamectl set-hostname ' + randHost + ' 2>/dev/null');
+            results.push('Hostname randomized to ' + randHost);
+        } catch (e) { errors.push('Hostname: ' + e.message); }
+
+        // 5. Start Tor
+        try {
+            await run('sudo systemctl start tor 2>/dev/null || tor &');
+            await new Promise(r => setTimeout(r, 3000));
+            shadowMode = true;
+            results.push('Tor started');
+        } catch (e) { errors.push('Tor: ' + e.message); }
+
+        // 6. Network kill switch - block all non-Tor traffic
+        try {
+            await run('sudo iptables -N GHOST_KILL 2>/dev/null || sudo iptables -F GHOST_KILL');
+            await run('sudo iptables -A GHOST_KILL -o lo -j RETURN');
+            await run('sudo iptables -A GHOST_KILL -m owner --uid-owner debian-tor -j RETURN 2>/dev/null || sudo iptables -A GHOST_KILL -d 127.0.0.1 -j RETURN');
+            await run('sudo iptables -A GHOST_KILL -p tcp --dport 9050 -j RETURN');
+            await run('sudo iptables -A GHOST_KILL -p tcp --dport 9051 -j RETURN');
+            await run('sudo iptables -A GHOST_KILL -p tcp --dport 3000 -j RETURN');
+            await run('sudo iptables -A GHOST_KILL -j DROP');
+            const check = await run('sudo iptables -C OUTPUT -j GHOST_KILL 2>/dev/null || echo "not found"');
+            if (check === 'not found') await run('sudo iptables -I OUTPUT 1 -j GHOST_KILL');
+            results.push('Kill switch active - non-Tor traffic blocked');
+        } catch (e) { errors.push('Kill switch: ' + e.message); }
+
+        // 7. Flush DNS cache
+        try {
+            await run('sudo systemd-resolve --flush-caches 2>/dev/null || sudo resolvectl flush-caches 2>/dev/null');
+            results.push('DNS cache flushed');
+        } catch (e) {}
+
+        // 8. Clear bash history
+        try {
+            await run('cat /dev/null > ~/.bash_history 2>/dev/null');
+            await run('history -c 2>/dev/null');
+            results.push('Bash history cleared');
+        } catch (e) {}
+
+        // 9. Block WebRTC STUN ports at firewall level
+        try {
+            await run('sudo iptables -t raw -A PREROUTING -p udp -m multiport --dports 3478,19302 -j DROP 2>/dev/null');
+            await run('sudo iptables -t raw -A OUTPUT -p udp -m multiport --dports 3478,19302 -j DROP 2>/dev/null');
+            results.push('WebRTC STUN ports blocked');
+        } catch (e) {}
+
+        // 10. Disable ICMP (prevents ping tracking)
+        try {
+            await run('sudo sysctl -w net.ipv4.icmp_echo_ignore_all=1 2>/dev/null');
+            results.push('ICMP echo disabled (invisible to ping)');
+        } catch (e) {}
+
+        ghostModeActive = true;
+        ghostState = { mac: true, dns: true, ipv6: true, hostname: true, logs: true, tor: true, killswitch: true };
+        log('GHOST MODE ACTIVATED', 'GHOST');
+        res.json({ success: true, results, errors, ghostActive: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Deactivate Ghost Mode
+app.post('/api/ghost/deactivate', requireAuth, async (req, res) => {
+    const results = [];
+    try {
+        // Remove kill switch
+        await run('sudo iptables -D OUTPUT -j GHOST_KILL 2>/dev/null || true');
+        await run('sudo iptables -F GHOST_KILL 2>/dev/null || true');
+        await run('sudo iptables -X GHOST_KILL 2>/dev/null || true');
+        results.push('Kill switch removed');
+
+        // Re-enable IPv6
+        await run('sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0 2>/dev/null');
+        results.push('IPv6 re-enabled');
+
+        // Re-enable ICMP
+        await run('sudo sysctl -w net.ipv4.icmp_echo_ignore_all=0 2>/dev/null');
+        results.push('ICMP re-enabled');
+
+        // Remove WebRTC blocks
+        await run('sudo iptables -t raw -D PREROUTING -p udp -m multiport --dports 3478,19302 -j DROP 2>/dev/null');
+        await run('sudo iptables -t raw -D OUTPUT -p udp -m multiport --dports 3478,19302 -j DROP 2>/dev/null');
+        results.push('WebRTC blocks removed');
+
+        shadowMode = false;
+        ghostModeActive = false;
+        ghostState = { mac: false, dns: false, ipv6: false, hostname: false, logs: false, tor: false, killswitch: false };
+        log('GHOST MODE DEACTIVATED', 'GHOST');
+        res.json({ success: true, results, ghostActive: false });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Wipe forensic traces
+app.post('/api/ghost/wipe-traces', requireAuth, async (req, res) => {
+    const results = [];
+    try {
+        // Bash history
+        try { await run('cat /dev/null > ~/.bash_history && history -c 2>/dev/null'); results.push('Bash history wiped'); } catch (_) {}
+        // Zsh history
+        try { await run('cat /dev/null > ~/.zsh_history 2>/dev/null'); results.push('Zsh history wiped'); } catch (_) {}
+        // Recent files
+        try { await run('rm -rf ~/.local/share/recently-used.xbel 2>/dev/null'); results.push('Recent files cleared'); } catch (_) {}
+        // Thumbnail cache
+        try { await run('rm -rf ~/.cache/thumbnails/* 2>/dev/null'); results.push('Thumbnail cache cleared'); } catch (_) {}
+        // Trash
+        try { await run('rm -rf ~/.local/share/Trash/* 2>/dev/null'); results.push('Trash emptied'); } catch (_) {}
+        // DNS cache
+        try { await run('sudo systemd-resolve --flush-caches 2>/dev/null || sudo resolvectl flush-caches 2>/dev/null'); results.push('DNS cache flushed'); } catch (_) {}
+        // ARP cache
+        try { await run('sudo ip neigh flush all 2>/dev/null'); results.push('ARP cache flushed'); } catch (_) {}
+        // Systemd journal (current boot only)
+        try { await run('sudo journalctl --vacuum-time=1s 2>/dev/null'); results.push('Journal vacuumed'); } catch (_) {}
+        // Login records
+        try { await run('sudo truncate -s 0 /var/log/wtmp /var/log/btmp /var/log/lastlog 2>/dev/null'); results.push('Login records wiped'); } catch (_) {}
+        // Auth log
+        try { await run('sudo truncate -s 0 /var/log/auth.log 2>/dev/null'); results.push('Auth log wiped'); } catch (_) {}
+        // RAM artifact wipe (tmpfs)
+        try { await run('sync && sudo sysctl -w vm.drop_caches=3 2>/dev/null'); results.push('Page cache dropped'); } catch (_) {}
+        // App activity log
+        try { await run('cat /dev/null > ' + LOG_FILE + ' 2>/dev/null'); results.push('App activity log wiped'); } catch (_) {}
+
+        log('TRACES WIPED', 'GHOST');
+        res.json({ success: true, results });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Leak test - check what's exposed
+app.get('/api/ghost/leak-test', async (_, res) => {
+    const leaks = [];
+    const safe = [];
+    try {
+        // Real IP leak
+        try {
+            const realIp = await run('curl -4 -s --max-time 5 ifconfig.me 2>/dev/null');
+            if (realIp && shadowMode) {
+                try {
+                    const torIp = await run('curl -s --connect-timeout 5 --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip 2>/dev/null');
+                    const j = JSON.parse(torIp);
+                    if (j.IP === realIp) leaks.push({ type: 'IP', severity: 'critical', detail: 'Tor exit IP matches real IP - Tor may not be working' });
+                    else safe.push({ type: 'IP', detail: 'Tor IP (' + j.IP + ') differs from real IP' });
+                } catch (_) { leaks.push({ type: 'IP', severity: 'critical', detail: 'Cannot verify Tor routing' }); }
+            } else if (!shadowMode) {
+                leaks.push({ type: 'IP', severity: 'warning', detail: 'Direct connection - real IP ' + realIp + ' exposed' });
+            }
+        } catch (_) {}
+
+        // IPv6 leak
+        try {
+            const v6 = await run('curl -6 -s --max-time 3 ifconfig.me 2>/dev/null');
+            if (v6 && v6.includes(':')) leaks.push({ type: 'IPv6', severity: 'critical', detail: 'IPv6 address exposed: ' + v6 });
+            else safe.push({ type: 'IPv6', detail: 'No IPv6 leak detected' });
+        } catch (_) { safe.push({ type: 'IPv6', detail: 'IPv6 appears blocked' }); }
+
+        // DNS leak
+        try {
+            const dns = await run('cat /etc/resolv.conf | grep nameserver | awk \'{print $2}\' | head -3');
+            const servers = dns.trim().split('\n');
+            const publicDns = servers.filter(s => !s.startsWith('127.') && s !== '::1');
+            if (publicDns.length > 0 && shadowMode) {
+                leaks.push({ type: 'DNS', severity: 'high', detail: 'DNS queries go to ' + publicDns.join(', ') + ' - not through Tor' });
+            } else {
+                safe.push({ type: 'DNS', detail: 'DNS: ' + servers.join(', ') });
+            }
+        } catch (_) {}
+
+        // MAC address
+        try {
+            const iface = await getWirelessIface() || await getPrimaryIface();
+            if (iface) {
+                const current = await run('cat /sys/class/net/' + iface + '/address');
+                const perm = await run('ethtool -P ' + iface + ' 2>/dev/null | awk \'{print $3}\'');
+                if (perm && current.trim() === perm.trim()) {
+                    leaks.push({ type: 'MAC', severity: 'medium', detail: 'Using permanent MAC: ' + current.trim() });
+                } else if (perm) {
+                    safe.push({ type: 'MAC', detail: 'MAC spoofed: ' + current.trim() + ' (real: ' + perm.trim() + ')' });
+                }
+            }
+        } catch (_) {}
+
+        // Hostname
+        try {
+            const hn = await run('hostname');
+            if (hn.includes('jack') || hn.includes('mint') || hn.includes('shadow')) {
+                leaks.push({ type: 'Hostname', severity: 'medium', detail: 'Hostname contains identifying info: ' + hn.trim() });
+            } else {
+                safe.push({ type: 'Hostname', detail: 'Hostname: ' + hn.trim() });
+            }
+        } catch (_) {}
+
+        // Bash history exists
+        try {
+            await run('test -s ~/.bash_history');
+            leaks.push({ type: 'History', severity: 'low', detail: 'Bash history file contains data' });
+        } catch (_) { safe.push({ type: 'History', detail: 'Bash history empty/missing' }); }
+
+        res.json({ leaks, safe, totalLeaks: leaks.length, criticalLeaks: leaks.filter(l => l.severity === 'critical').length });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Pentest / Hacking tools - real implementations
+const WORDLIST = path.join(__dirname, 'wordlists', 'rockyou.txt');
+const NMAP_SCRIPTS = '/usr/share/nmap/scripts';
+
 app.post('/api/pentest', async (req, res) => {
     const { tool, target, params } = req.body;
     if (!tool || !target) return res.status(400).json({ error: 'Tool and target required' });
     const safeTarget = sanitizeTarget(target);
-    if (!safeTarget) return res.status(400).json({ error: 'Invalid target (no shell metacharacters)' });
+    if (!safeTarget) return res.status(400).json({ error: 'Invalid target' });
     const proxy = shadowMode ? 'proxychains4 ' : '';
     const port = Math.min(65535, Math.max(1, parseInt(params?.port, 10) || 80));
     const n = Math.min(10000, Math.max(10, parseInt(params?.n, 10) || 100));
-    const c = Math.min(100, Math.max(1, parseInt(params?.c, 10) || 10));
-    let cmd = '';
+    const cc = Math.min(100, Math.max(1, parseInt(params?.c, 10) || 10));
+    const username = params?.username || 'admin';
+    const service = params?.service || 'ssh';
+    const hashfile = params?.hashfile || '';
     const urlTarget = safeTarget.startsWith('http') ? safeTarget : 'http://' + safeTarget.replace(/^\/+/, '');
+    let cmd = '';
     switch (tool) {
-        case 'ab': cmd = `${proxy}ab -n ${n} -c ${c} ${shellQuote(urlTarget)}`; break;
-        case 'nikto': cmd = `${proxy}nikto -h ${shellQuote(safeTarget)} -Tuning 123b 2>/dev/null`; break;
-        case 'nmap-vuln': cmd = `${proxy}nmap --script vuln ${shellQuote(safeTarget)} 2>/dev/null`; break;
-        case 'slowhttptest': cmd = `${proxy}slowhttptest -c 1000 -H -g -o /tmp/slow -i 10 -r 200 -t GET -u ${shellQuote(urlTarget)} -x 24 -p 3 2>/dev/null`; break;
-        case 'gobuster': cmd = `${proxy}gobuster dir -u ${shellQuote(urlTarget)} -w /usr/share/wordlists/dirb/common.txt --quiet 2>/dev/null`; break;
-        case 'sqlmap': cmd = `${proxy}sqlmap -u ${shellQuote(urlTarget)} --batch --banner 2>/dev/null`; break;
-        case 'hping3': cmd = `${proxy}sudo hping3 -S --flood -V -p ${port} ${shellQuote(safeTarget)} 2>/dev/null`; break;
-        case 'wifite': cmd = `sudo wifite --kill --all-ips --dict /usr/share/wordlists/rockyou.txt 2>/dev/null`; break;
-        case 'searchsploit': cmd = `searchsploit ${shellQuote(safeTarget)} 2>/dev/null`; break;
-        default: return res.status(400).json({ error: 'Unknown tool' });
+        // === RECON ===
+        case 'nmap-full': cmd = `${proxy}sudo nmap -sS -sV -O -A --top-ports 1000 ${shellQuote(safeTarget)} 2>&1`; break;
+        case 'nmap-vuln': cmd = `${proxy}sudo nmap -sV --script=vuln,exploit,auth ${shellQuote(safeTarget)} 2>&1`; break;
+        case 'nmap-stealth': cmd = `${proxy}sudo nmap -sS -T2 -f -D RND:5 --data-length 24 ${shellQuote(safeTarget)} 2>&1`; break;
+        case 'nmap-scripts': cmd = `${proxy}sudo nmap -sV --script=default,safe,banner,http-headers,http-title,ssl-cert,ssh-hostkey ${shellQuote(safeTarget)} 2>&1`; break;
+        case 'nmap-firewall': cmd = `${proxy}sudo nmap -sA -T4 ${shellQuote(safeTarget)} 2>&1`; break;
+        // === WEB ===
+        case 'nikto': cmd = `${proxy}nikto -h ${shellQuote(safeTarget)} -Tuning 123bde -C all 2>&1`; break;
+        case 'gobuster': cmd = `${proxy}gobuster dir -u ${shellQuote(urlTarget)} -w ${WORDLIST.replace('rockyou.txt', '../nmap/nselib/data/http-default-accounts.txt')} -t 20 --quiet 2>/dev/null || ${proxy}gobuster dir -u ${shellQuote(urlTarget)} -w /usr/share/gobuster/wordlists/common.txt --quiet 2>&1`; break;
+        case 'sqlmap': cmd = `${proxy}sqlmap -u ${shellQuote(urlTarget)} --batch --level=3 --risk=2 --banner --dbs --threads=4 2>&1`; break;
+        case 'sqlmap-forms': cmd = `${proxy}sqlmap -u ${shellQuote(urlTarget)} --batch --forms --crawl=2 --level=3 --risk=2 2>&1`; break;
+        // === BRUTE FORCE ===
+        case 'hydra-ssh': cmd = `${proxy}hydra -l ${shellQuote(username)} -P ${shellQuote(WORDLIST)} ${shellQuote(safeTarget)} ssh -t 4 -f -V 2>&1 | tail -60`; break;
+        case 'hydra-ftp': cmd = `${proxy}hydra -l ${shellQuote(username)} -P ${shellQuote(WORDLIST)} ${shellQuote(safeTarget)} ftp -t 4 -f -V 2>&1 | tail -60`; break;
+        case 'hydra-http': cmd = `${proxy}hydra -l ${shellQuote(username)} -P ${shellQuote(WORDLIST)} ${shellQuote(safeTarget)} http-post-form "/login:username=^USER^&password=^PASS^:F=incorrect" -t 4 -f -V 2>&1 | tail -60`; break;
+        case 'hydra-rdp': cmd = `${proxy}hydra -l ${shellQuote(username)} -P ${shellQuote(WORDLIST)} ${shellQuote(safeTarget)} rdp -t 4 -f -V 2>&1 | tail -60`; break;
+        case 'hydra-smb': cmd = `${proxy}hydra -l ${shellQuote(username)} -P ${shellQuote(WORDLIST)} ${shellQuote(safeTarget)} smb -t 4 -f -V 2>&1 | tail -60`; break;
+        case 'hydra-custom': cmd = `${proxy}hydra -l ${shellQuote(username)} -P ${shellQuote(WORDLIST)} ${shellQuote(safeTarget)} ${shellQuote(service)} -t 4 -f -V 2>&1 | tail -60`; break;
+        // === PASSWORD CRACKING ===
+        case 'john': cmd = hashfile ? `john --wordlist=${shellQuote(WORDLIST)} ${shellQuote(hashfile)} 2>&1` : `echo "Provide a hash file path in params.hashfile"`; break;
+        case 'john-show': cmd = hashfile ? `john --show ${shellQuote(hashfile)} 2>&1` : `echo "Provide a hash file path"`; break;
+        // === WIRELESS ===
+        case 'aircrack-scan': cmd = `sudo airmon-ng 2>&1 && echo "---" && sudo iwlist scan 2>&1 | head -100`; break;
+        case 'aircrack-deauth': cmd = `sudo aireplay-ng --deauth 10 -a ${shellQuote(safeTarget)} wlo1 2>&1`; break;
+        case 'aircrack-crack': cmd = hashfile ? `aircrack-ng -w ${shellQuote(WORDLIST)} ${shellQuote(hashfile)} 2>&1` : `echo "Capture a handshake first (.cap file in params.hashfile)"`; break;
+        // === NETWORK ATTACKS ===
+        case 'arp-scan': cmd = `sudo arp-scan -l 2>/dev/null || sudo nmap -sn -PR $(ip route | grep default | awk '{print $3}' | sed 's/\.[0-9]*$/.0\/24/') -oG - 2>&1`; break;
+        case 'smb-enum': cmd = `${proxy}smbclient -L ${shellQuote(safeTarget)} -N 2>&1 && echo "\n=== NMAP SMB ===" && sudo nmap --script smb-enum-shares,smb-enum-users,smb-os-discovery -p 445 ${shellQuote(safeTarget)} 2>&1`; break;
+        case 'snmp-enum': cmd = `${proxy}sudo nmap -sU -p 161 --script=snmp-info,snmp-brute ${shellQuote(safeTarget)} 2>&1`; break;
+        // === STRESS ===
+        case 'ab': cmd = `${proxy}ab -n ${n} -c ${cc} ${shellQuote(urlTarget)} 2>&1`; break;
+        case 'slowhttptest': cmd = `${proxy}slowhttptest -c 500 -H -g -o /tmp/slow_${Date.now()} -i 10 -r 200 -t GET -u ${shellQuote(urlTarget)} -x 24 -p 3 2>&1`; break;
+        case 'hping3': cmd = `sudo hping3 -S --flood -V -p ${port} -c 1000 ${shellQuote(safeTarget)} 2>&1`; break;
+        // === EXPLOIT ===
+        case 'searchsploit': cmd = `searchsploit ${shellQuote(safeTarget)} 2>&1`; break;
+        default: return res.status(400).json({ error: 'Unknown tool: ' + tool });
     }
+    log('PENTEST: ' + tool + ' -> ' + safeTarget, 'HACK');
     try {
-        const o = await run(`${cmd} 2>&1 | tail -n 80`);
+        const o = await run(cmd + ' | tail -n 120');
         res.json({ success: true, tool, output: o });
-    } catch (e) { res.json({ success: false, output: e.message }); }
+    } catch (e) { res.json({ success: false, tool, output: e.message }); }
+});
+
+// Installed tools check
+app.get('/api/hacking/tools', async (_, res) => {
+    const tools = ['nmap','nikto','sqlmap','hydra','john','aircrack-ng','gobuster','tshark','tcpdump','hping3','proxychains4','smbclient','searchsploit','slowhttptest','masscan','wireshark','hashcat','wifite','bettercap','responder','enum4linux'];
+    const results = {};
+    for (const t of tools) {
+        try { await run('which ' + t); results[t] = true; } catch (_) { results[t] = false; }
+    }
+    results.wordlist = fs.existsSync(WORDLIST);
+    results.wordlistPath = WORDLIST;
+    res.json(results);
 });
 
 // DNS Benchmark
@@ -1982,14 +2432,30 @@ app.get('/api/intel/ids-alerts', async (_, res) => {
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
-// WiFi Recon
+// WiFi Recon - comprehensive wireless scanning
 app.get('/api/intel/wifi-recon', async (_, res) => {
     try {
-        const ifaces = await run("iw dev | grep Interface | awk '{print $2}' || echo ''");
-        const wiface = ifaces.split('\n')[0].trim();
+        const wiface = await getWirelessIface();
         if (!wiface) return res.json({ success: false, output: "No wireless interface found." });
-        const o = await run(`sudo iwlist ${wiface} scan 2>/dev/null | grep -E "ESSID|Address|Signal|Quality|Channel" | head -n 80`);
-        res.json({ success: true, interface: wiface, output: o || 'No scan results.' });
+        let output = '';
+        try {
+            const nmcli = await run('nmcli -f BSSID,SSID,MODE,CHAN,FREQ,RATE,SIGNAL,BARS,SECURITY device wifi list 2>/dev/null');
+            if (nmcli && nmcli.trim().length > 20) output = nmcli;
+        } catch (_) {}
+        if (!output) {
+            try {
+                const iwlist = await run(`sudo iwlist ${wiface} scan 2>/dev/null`);
+                output = iwlist || '';
+            } catch (_) {}
+        }
+        if (!output) {
+            try {
+                output = await run(`sudo iw dev ${wiface} scan 2>/dev/null | grep -E "BSS |SSID|signal|freq|capability" | head -100`);
+            } catch (_) {}
+        }
+        let iface_info = '';
+        try { iface_info = await run(`iw dev ${wiface} info 2>/dev/null`); } catch (_) {}
+        res.json({ success: true, interface: wiface, info: iface_info, output: output || 'No networks found. Try: sudo iw dev ' + wiface + ' scan' });
     } catch (e) { res.json({ success: false, output: e.message }); }
 });
 

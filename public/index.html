@@ -23,32 +23,69 @@
     </div>
   </div>
 
-  <nav class="sidebar">
+  <nav class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <div class="brand-icon">📶</div>
-      <div class="brand-text"><span class="brand-name">Router</span><span class="brand-sub" id="sb-host">Admin</span>
-      </div>
+      <div class="brand-text"><span class="brand-name">ShadowCypher</span><span class="brand-sub" id="sb-host">Admin</span></div>
     </div>
-    <div class="sidebar-nav">
-      <div class="nav-section-label">Network</div>
-      <div class="nav-item active" data-page="dashboard" onclick="go('dashboard')"><span class="ni">🏠</span><span>Home</span></div>
-      <a class="nav-item" data-page="network" onclick="go('network')"><span class="ni">📶</span><span>Wi‑Fi</span></a>
-      <a class="nav-item" data-page="devices" onclick="go('devices')"><span class="ni">📱</span><span>Connected Devices</span></a>
-      <a class="nav-item" data-page="portforward" onclick="go('portforward')"><span class="ni">🔀</span><span>Port Forwarding</span></a>
-      <a class="nav-item" data-page="firewall" onclick="go('firewall')"><span class="ni">🛡️</span><span>Firewall</span></a>
-      <div class="nav-section-label">Advanced</div>
-      <div class="nav-item" data-page="ai" onclick="go('ai')"><span class="ni">🤖</span> AI Assistant</div>
-      <a class="nav-item" data-page="tools" onclick="go('tools')"><span class="ni">🔧</span><span>Tools</span></a>
-      <a class="nav-item" data-page="monitoring" onclick="go('monitoring')"><span class="ni">📊</span><span>Monitoring</span></a>
-      <a class="nav-item" data-page="services" onclick="go('services')"><span class="ni">⚙️</span><span>Services</span></a>
-      <a class="nav-item" data-page="system" onclick="go('system')"><span class="ni">🖥️</span><span>System</span></a>
-      <a class="nav-item" data-page="logs" onclick="go('logs')"><span class="ni">📋</span><span>Logs</span></a>
-      <a class="nav-item" data-page="terminal" onclick="go('terminal')"><span class="ni">💻</span><span>Terminal</span></a>
-      <a class="nav-item" data-page="files" onclick="go('files')"><span class="ni">📁</span><span>Files</span></a>
-      <a class="nav-item" data-page="packages" onclick="go('packages')"><span class="ni">📦</span><span>Packages</span></a>
-      <a class="nav-item" data-page="hacking" onclick="go('hacking')"><span class="ni">💀</span><span>Hacking</span></a>
-      <a class="nav-item" data-page="diagnostic" onclick="go('diagnostic')"><span class="ni">🔍</span><span>Diagnostic</span></a>
-      <a class="nav-item" data-page="intel" onclick="go('intel')"><span class="ni">🕶️</span><span>Intelligence</span></a>
+    <div class="sidebar-nav" id="sidebar-nav">
+      <a class="nav-item active" href="#/dashboard" data-page="dashboard"><span class="ni">🏠</span><span>Home</span></a>
+
+      <div class="nav-group" data-group="network">
+        <div class="nav-group-header" onclick="toggleNavGroup('network')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')toggleNavGroup('network')">
+          <span class="nav-group-icon"></span>
+          <span>Network</span>
+          <span class="nav-group-count" id="ng-network-count"></span>
+        </div>
+        <div class="nav-group-items">
+          <a class="nav-item" href="#/network" data-page="network"><span class="ni">📶</span><span>Wi-Fi</span></a>
+          <a class="nav-item" href="#/devices" data-page="devices"><span class="ni">📱</span><span>Devices</span></a>
+          <a class="nav-item" href="#/portforward" data-page="portforward"><span class="ni">🔀</span><span>Port Forwarding</span></a>
+          <a class="nav-item" href="#/firewall" data-page="firewall"><span class="ni">🛡️</span><span>Firewall</span></a>
+        </div>
+      </div>
+
+      <div class="nav-group" data-group="ops">
+        <div class="nav-group-header" onclick="toggleNavGroup('ops')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')toggleNavGroup('ops')">
+          <span class="nav-group-icon"></span>
+          <span>Operations</span>
+          <span class="nav-group-count" id="ng-ops-count"></span>
+        </div>
+        <div class="nav-group-items">
+          <a class="nav-item" href="#/hacking" data-page="hacking"><span class="ni">💀</span><span>Hacking</span></a>
+          <a class="nav-item" href="#/intel" data-page="intel"><span class="ni">🕶️</span><span>Intelligence</span></a>
+          <a class="nav-item" href="#/terminal" data-page="terminal"><span class="ni">💻</span><span>Terminal</span></a>
+        </div>
+      </div>
+
+      <div class="nav-group" data-group="system">
+        <div class="nav-group-header" onclick="toggleNavGroup('system')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')toggleNavGroup('system')">
+          <span class="nav-group-icon"></span>
+          <span>System</span>
+          <span class="nav-group-count" id="ng-system-count"></span>
+        </div>
+        <div class="nav-group-items">
+          <a class="nav-item" href="#/monitoring" data-page="monitoring"><span class="ni">📊</span><span>Monitoring</span></a>
+          <a class="nav-item" href="#/services" data-page="services"><span class="ni">⚙️</span><span>Services</span></a>
+          <a class="nav-item" href="#/system" data-page="system"><span class="ni">🖥️</span><span>System Info</span></a>
+          <a class="nav-item" href="#/logs" data-page="logs"><span class="ni">📋</span><span>Logs</span></a>
+          <a class="nav-item" href="#/diagnostic" data-page="diagnostic"><span class="ni">🔍</span><span>Diagnostic</span></a>
+        </div>
+      </div>
+
+      <div class="nav-group" data-group="tools">
+        <div class="nav-group-header" onclick="toggleNavGroup('tools')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')toggleNavGroup('tools')">
+          <span class="nav-group-icon"></span>
+          <span>Utilities</span>
+          <span class="nav-group-count" id="ng-tools-count"></span>
+        </div>
+        <div class="nav-group-items">
+          <a class="nav-item" href="#/ai" data-page="ai"><span class="ni">🤖</span><span>AI Assistant</span></a>
+          <a class="nav-item" href="#/tools" data-page="tools"><span class="ni">🔧</span><span>Tools</span></a>
+          <a class="nav-item" href="#/files" data-page="files"><span class="ni">📁</span><span>Files</span></a>
+          <a class="nav-item" href="#/packages" data-page="packages"><span class="ni">📦</span><span>Packages</span></a>
+        </div>
+      </div>
     </div>
     <div class="sidebar-footer">
       <div class="status-pill"><span class="sd" id="sb-status-dot"></span><span id="sb-status-text">Online</span></div>
@@ -59,7 +96,19 @@
     </div>
   </nav>
 
-  <main class="main">
+  <main class="main" id="main-content">
+    <header class="topbar" id="topbar">
+      <div class="breadcrumb" id="breadcrumb">
+        <a href="#/dashboard" class="bc-home">ShadowCypher</a>
+        <span class="bc-sep">/</span>
+        <span class="bc-current" id="bc-current">Home</span>
+      </div>
+      <div class="topbar-actions">
+        <span class="topbar-clock" id="topbar-clock"></span>
+        <button class="topbar-btn" onclick="go('ai')" title="AI Assistant">🤖</button>
+        <button class="topbar-btn" onclick="go('terminal')" title="Terminal">💻</button>
+      </div>
+    </header>
     <!-- ═══ AI ASSISTANT (Jarvis / Friday style) ═══ -->
     <section class="page" id="pg-ai">
       <div class="ph">
@@ -961,58 +1010,151 @@
     <!-- ═══ HACKING ═══ -->
     <section class="page" id="pg-hacking">
       <div class="ph">
-        <h2>Hacking / Pentesting Suite</h2>
+        <h2>Offensive Security Suite</h2>
         <div style="display:flex;gap:15px;align-items:center">
-          <label class="sw" title="Anonymous routing via Tor (Shadow Mode)">
+          <label class="sw" title="Route all attacks through Tor">
             <input type="checkbox" id="shadow-toggle" onchange="toggleShadowMode()">
             <span class="sw-slider"></span>
           </label>
           <span id="shadow-status" style="font-size:10px;color:var(--t3)">SHADOW: OFF</span>
+          <button class="abtn" id="new-identity-btn" onclick="newTorIdentity()" style="display:none">New Identity</button>
           <span class="badge bo" id="pt-status">Ready</span>
         </div>
       </div>
-      <div class="pnl">
-        <div class="pnh">
-          <div class="pnt"><span class="icon">💥</span> Offensive Tools</div>
-        </div>
-        <div class="ti" style="padding:15px;display:flex;flex-wrap:wrap;gap:10px;border-bottom:none">
-          <input class="inf" id="pt-target" style="flex:1;min-width:200px"
-            placeholder="Target (e.g. 192.168.1.1 or example.com)">
-          <div class="ig" style="flex-wrap:wrap">
-            <button class="abtn danger" onclick="runPT('ab')" title="Apache Benchmark - Layer 7 Stress">Web
-              Stress</button>
-            <button class="abtn danger" onclick="runPT('slowhttptest')" title="Slowloris DoS Test">Slowloris</button>
-            <button class="abtn warning" onclick="runPT('nikto')" title="Web Vulnerability Scan">Nikto</button>
-            <button class="abtn warning" onclick="runPT('nmap-vuln')" title="Nmap Vulnerability Script">Nmap
-              Vuln</button>
-            <button class="abtn info" onclick="runPT('gobuster')" title="Directory Brute Force">Gobuster</button>
-            <button class="abtn info" onclick="runPT('sqlmap')" title="SQL Injection Test">SQLMap</button>
-            <button class="abtn danger" onclick="runPT('hping3')" title="TCP/UDP Syn Flood">Flood</button>
+
+      <div id="shadow-info" style="display:none;padding:10px 18px;margin-bottom:14px;background:rgba(255,68,102,.05);border:1px solid rgba(255,68,102,.2);border-radius:var(--r);font-size:11px">
+        <span style="color:var(--red);font-weight:700">SHADOW MODE</span> — Traffic routed via Tor.
+        Exit: <span id="shadow-tor-ip" style="color:var(--cyan)">...</span> |
+        Real: <span id="shadow-real-ip" style="color:var(--t3)">...</span>
+      </div>
+
+      <!-- ═══ GHOST MODE ═══ -->
+      <div class="pnl" style="margin-bottom:14px;border:1px solid rgba(255,68,102,.15)">
+        <div class="pnh" style="background:linear-gradient(135deg,rgba(255,0,60,.08),rgba(139,0,255,.08))">
+          <div class="pnt"><span class="icon">👻</span> Ghost Mode — Real OPSEC</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="ghost-score" style="font-size:11px;color:var(--t3)">Score: --/10</span>
+            <button class="abtn danger" id="ghost-activate-btn" onclick="activateGhostMode()">ACTIVATE</button>
+            <button class="abtn" id="ghost-deactivate-btn" onclick="deactivateGhostMode()" style="display:none">DEACTIVATE</button>
           </div>
-          <div style="border-top:1px solid var(--brd);padding-top:12px;margin-top:5px">
-            <div
-              style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:8px;font-weight:700">
-              Level 2: Elite Hacking & Stealth Operations</div>
-            <div class="ig">
-              <button class="abtn bo" onclick="runPT('wifite')" title="Automated Wi-Fi Cracking (Level 2)">🪄
-                Wifite</button>
-              <button class="abtn bo" onclick="runPT('searchsploit')" title="Exploit Database Search (Level 2)">🔍
-                Searchsploit</button>
-            </div>
+        </div>
+        <div class="pnb" style="padding:14px 18px">
+          <div id="ghost-status-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px">
+            <div class="ghost-check" id="gc-mac"><span class="gc-icon">⏳</span><span class="gc-label">MAC Spoofing</span><span class="gc-val" id="gc-mac-val">checking...</span></div>
+            <div class="ghost-check" id="gc-ipv6"><span class="gc-icon">⏳</span><span class="gc-label">IPv6 Disabled</span><span class="gc-val" id="gc-ipv6-val">checking...</span></div>
+            <div class="ghost-check" id="gc-dns"><span class="gc-icon">⏳</span><span class="gc-label">DNS Encrypted</span><span class="gc-val" id="gc-dns-val">checking...</span></div>
+            <div class="ghost-check" id="gc-tor"><span class="gc-icon">⏳</span><span class="gc-label">Tor Routing</span><span class="gc-val" id="gc-tor-val">checking...</span></div>
+            <div class="ghost-check" id="gc-kill"><span class="gc-icon">⏳</span><span class="gc-label">Kill Switch</span><span class="gc-val" id="gc-kill-val">checking...</span></div>
+            <div class="ghost-check" id="gc-host"><span class="gc-icon">⏳</span><span class="gc-label">Hostname</span><span class="gc-val" id="gc-host-val">checking...</span></div>
+            <div class="ghost-check" id="gc-hist"><span class="gc-icon">⏳</span><span class="gc-label">Bash History</span><span class="gc-val" id="gc-hist-val">checking...</span></div>
+            <div class="ghost-check" id="gc-swap"><span class="gc-icon">⏳</span><span class="gc-label">Swap Security</span><span class="gc-val" id="gc-swap-val">checking...</span></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="abtn info" onclick="ghostLeakTest()">Run Leak Test</button>
+            <button class="abtn warning" onclick="ghostWipeTraces()">Wipe All Traces</button>
+            <button class="abtn" onclick="loadGhostStatus()">Refresh Status</button>
+          </div>
+          <div id="ghost-leak-results" style="display:none;margin-top:14px;padding:12px;background:#050505;border-radius:var(--r);font-size:11px;max-height:300px;overflow-y:auto"></div>
+          <div id="ghost-wipe-results" style="display:none;margin-top:10px;padding:10px;background:rgba(0,255,0,.03);border:1px solid rgba(0,255,0,.15);border-radius:var(--r);font-size:11px"></div>
+        </div>
+      </div>
+
+      <div style="padding:0 0 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+        <div class="ws" style="flex:1;min-width:200px"><span class="wsl">Target</span><input class="inf w" id="pt-target" placeholder="IP, hostname, or URL"></div>
+        <div class="ws" style="width:120px"><span class="wsl">Username</span><input class="inf w" id="pt-username" placeholder="admin" value="admin"></div>
+        <div class="ws" style="width:120px"><span class="wsl">Port</span><input class="inf w" id="pt-port" placeholder="80" value="80"></div>
+        <div class="ws" style="width:200px"><span class="wsl">Hash/Cap file</span><input class="inf w" id="pt-hashfile" placeholder="/path/to/hashes.txt"></div>
+      </div>
+
+      <div class="pnl">
+        <div class="pnh"><div class="pnt"><span class="icon">🔍</span> Reconnaissance</div></div>
+        <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+          <button class="abtn info" onclick="runPT('nmap-full')">Full Port Scan + OS</button>
+          <button class="abtn info" onclick="runPT('nmap-stealth')">Stealth Scan (IDS Evasion)</button>
+          <button class="abtn info" onclick="runPT('nmap-scripts')">NSE Script Scan</button>
+          <button class="abtn info" onclick="runPT('nmap-firewall')">Firewall Detection</button>
+          <button class="abtn info" onclick="runPT('arp-scan')">ARP Network Sweep</button>
+          <button class="abtn info" onclick="runPT('smb-enum')">SMB Enumeration</button>
+          <button class="abtn info" onclick="runPT('snmp-enum')">SNMP Enumeration</button>
+          <button class="abtn" onclick="runPT('searchsploit')">Exploit DB Search</button>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🌐</span> Web Application Attacks</div></div>
+          <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+            <button class="abtn warning" onclick="runPT('nikto')">Nikto Vuln Scan</button>
+            <button class="abtn warning" onclick="runPT('nmap-vuln')">Nmap Vuln Scripts</button>
+            <button class="abtn warning" onclick="runPT('gobuster')">Directory Bruteforce</button>
+            <button class="abtn danger" onclick="runPT('sqlmap')">SQLMap (Auto)</button>
+            <button class="abtn danger" onclick="runPT('sqlmap-forms')">SQLMap (Forms+Crawl)</button>
+          </div>
+        </div>
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🔑</span> Brute Force (Hydra)</div></div>
+          <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+            <button class="abtn danger" onclick="runPT('hydra-ssh')">SSH</button>
+            <button class="abtn danger" onclick="runPT('hydra-ftp')">FTP</button>
+            <button class="abtn danger" onclick="runPT('hydra-http')">HTTP Login</button>
+            <button class="abtn danger" onclick="runPT('hydra-rdp')">RDP</button>
+            <button class="abtn danger" onclick="runPT('hydra-smb')">SMB</button>
+            <button class="abtn danger" onclick="runPT('hydra-custom')">Custom Service</button>
           </div>
         </div>
       </div>
+
+      <div class="g2">
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🔓</span> Password Cracking</div></div>
+          <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+            <button class="abtn warning" onclick="runPT('john')">John the Ripper</button>
+            <button class="abtn" onclick="runPT('john-show')">Show Cracked</button>
+            <p style="font-size:9px;color:var(--t3);width:100%;margin-top:4px">Set hash file path above. Supports shadow, passwd, zip, rar, pdf, office, ssh keys, WPA handshakes</p>
+          </div>
+        </div>
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">📶</span> Wireless Attacks</div></div>
+          <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+            <button class="abtn warning" onclick="runPT('aircrack-scan')">Scan Interfaces</button>
+            <button class="abtn danger" onclick="runPT('aircrack-deauth')">Deauth (Target=BSSID)</button>
+            <button class="abtn danger" onclick="runPT('aircrack-crack')">Crack Handshake (.cap)</button>
+            <p style="font-size:9px;color:var(--t3);width:100%;margin-top:4px">For deauth: set Target to BSSID. For cracking: set hash file to .cap file path</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="pnl">
+        <div class="pnh"><div class="pnt"><span class="icon">💥</span> Stress Testing</div></div>
+        <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+          <button class="abtn danger" onclick="runPT('ab')">HTTP Flood (ab)</button>
+          <button class="abtn danger" onclick="runPT('slowhttptest')">Slowloris</button>
+          <button class="abtn danger" onclick="runPT('hping3')">SYN Flood (hping3)</button>
+          <p style="font-size:9px;color:var(--red);width:100%;margin-top:4px">AUTHORIZED TESTING ONLY. These tools generate real attack traffic.</p>
+        </div>
+      </div>
+
       <div class="pnl" style="flex:1;display:flex;flex-direction:column">
         <div class="pnh">
-          <div class="pnt"><span class="icon">💻</span> Output Console</div><button class="abtn"
-            onclick="document.getElementById('pt-out').textContent=''">Clear</button>
+          <div class="pnt"><span class="icon">💻</span> Output</div>
+          <div class="ig">
+            <span id="pt-tool-name" style="font-size:10px;color:var(--cyan)"></span>
+            <button class="abtn" onclick="document.getElementById('pt-out').textContent=''">Clear</button>
+          </div>
         </div>
-        <div class="pnb" style="padding:0;flex:1;display:flex">
-          <pre class="to" id="pt-out"
-            style="flex:1;margin:10px;border-radius:4px;font-size:11px;background:#050505;color:#0f0;overflow-y:auto;max-height:calc(100vh - 400px)">Waiting for command...
-WARNING: USE FOR AUTHORIZED TESTING ONLY.
-Results are truncated to last 50 lines.</pre>
+        <div class="pnb" style="padding:0;flex:1;display:flex;max-height:none">
+          <pre class="to" id="pt-out" style="flex:1;margin:10px;border-radius:4px;font-size:11px;background:#050505;color:#0f0;overflow-y:auto;max-height:calc(100vh - 300px);min-height:300px">Ready. Select a target and tool above.
+
+Installed tools will run real attacks against the target.
+Wordlist: rockyou.txt (14M passwords)
+
+AUTHORIZED PENETRATION TESTING ONLY.</pre>
         </div>
+      </div>
+
+      <div class="pnl" style="margin-top:14px">
+        <div class="pnh"><div class="pnt"><span class="icon">🔧</span> Installed Tools</div><button class="abtn" onclick="loadHackingTools()">Check</button></div>
+        <div class="pnb" id="hack-tools-body" style="padding:15px;display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
     </section>
 
