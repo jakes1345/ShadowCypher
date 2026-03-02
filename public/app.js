@@ -551,7 +551,30 @@ async function aiSend(voiceText) {
 
 // Hacking
 function loadHacking() { }
-function loadIntel() { }
+async function loadIntel() {
+    loadIdsAlerts();
+    loadThreatIntel();
+    loadFail2ban();
+}
+async function loadFail2ban() {
+    const el = document.getElementById('intel-f2b-body');
+    if (!el) return;
+    el.textContent = 'Loading…';
+    try {
+        const r = await api('/fail2ban');
+        if (!r || r.error) { el.innerHTML = '<span style="color:var(--t3)">' + (r?.error || 'Not available') + '</span>'; return; }
+        const jails = r.jails || [];
+        if (jails.length === 0) { el.innerHTML = '<span style="color:var(--t3)">No jails or fail2ban not running</span>'; return; }
+        let html = '<table style="width:100%;font-size:12px"><tr><th style="color:var(--cyan)">Jail</th><th>Banned</th><th>Total</th></tr>';
+        jails.forEach(j => {
+            const banned = j.banned || 0;
+            const color = banned > 0 ? 'var(--red)' : 'var(--green)';
+            html += '<tr><td>' + esc(j.name) + '</td><td style="color:' + color + ';font-weight:600">' + banned + '</td><td>' + (j.total || 0) + '</td></tr>';
+        });
+        html += '</table>';
+        el.innerHTML = html;
+    } catch (e) { el.innerHTML = '<span style="color:var(--red)">' + esc(e.message) + '</span>'; }
+}
 
 // Diagnostic
 async function loadDiagnostic() {
@@ -628,7 +651,22 @@ async function toggleShadowMode() {
     if (r?.success) { stat.textContent = sw.checked ? 'SHADOW: ON' : 'SHADOW: OFF'; stat.style.color = sw.checked ? 'var(--red)' : 'var(--t3)'; }
 }
 
-async function loadThreatIntel() { const b = document.getElementById('intel-threat-body'); b.textContent = 'Fetching...'; const r = await api('/intel/threat-feed'); b.innerHTML = r?.source + ' - ' + (r?.count || 0) + ' IPs<br>' + (r?.samples || []).slice(0, 10).join('<br>') || 'No data'; }
+async function loadThreatIntel() {
+    const b = document.getElementById('intel-threat-body');
+    b.textContent = 'Fetching...';
+    try {
+        const r = await api('/intel/threat-feed');
+        if (!r) { b.innerHTML = '<span style="color:var(--t3)">No data</span>'; return; }
+        const samples = r.samples || [];
+        let html = '<div style="color:var(--cyan);font-weight:600;margin-bottom:8px">' + esc(r.source || 'Threat feed') + ' — ' + (r.count || 0) + ' IPs</div>';
+        if (samples.length) {
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:4px;font-size:10px;color:var(--red)">';
+            samples.slice(0, 25).forEach(ip => { html += '<span>' + esc(ip) + '</span>'; });
+            html += '</div>';
+        } else html += '<span style="color:var(--t3)">No samples</span>';
+        b.innerHTML = html;
+    } catch (e) { b.innerHTML = '<span style="color:var(--red)">' + esc(e.message) + '</span>'; }
+}
 async function checkLeak() { const email = document.getElementById('leak-email').value.trim(); if (!email) return toast('Email required', 'error'); const b = document.getElementById('intel-leak-body'); b.textContent = 'Checking...'; const r = await api('/intel/check-leak', { method: 'POST', body: { email } }); b.innerHTML = r?.breached ? '<b style="color:var(--red)">Breaches found!</b>' : '<b style="color:var(--green)">No breaches found</b>'; }
 
 async function fetchOtxPulses() {
