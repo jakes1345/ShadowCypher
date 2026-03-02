@@ -1,0 +1,33 @@
+{
+  "name": "shadow-cypher",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "npx shortest",
+    "test:auth": "npx shortest tests/auth.test.ts",
+    "test:dashboard": "npx shortest tests/dashboard.test.ts",
+    "test:network": "npx shortest tests/network.test.ts",
+    "test:tools": "npx shortest tests/tools.test.ts",
+    "test:hacking": "npx shortest tests/hacking.test.ts",
+    "test:intel": "npx shortest tests/intelligence.test.ts",
+    "test:ai": "npx shortest tests/ai-assistant.test.ts",
+    "test:diagnostic": "npx shortest tests/diagnostic.test.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Network admin dashboard with Mr. Robot aesthetic",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.0",
+    "express-rate-limit": "^8.2.1",
+    "express-session": "^1.18.0",
+    "otplib": "^13.3.0",
+    "qrcode": "^1.5.4",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@antiwork/shortest": "^0.4.9"
+  }
+}
