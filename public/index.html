@@ -1248,6 +1248,141 @@ AUTHORIZED PENETRATION TESTING ONLY.</pre>
         </div>
       </div>
 
+      <!-- ═══ FILE CRACKING & FORENSICS ═══ -->
+      <div class="pnl" style="margin-top:14px;border:1px solid rgba(168,85,247,.15)">
+        <div class="pnh" style="background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(0,212,255,.05))">
+          <div class="pnt"><span class="icon">🔐</span> File Cracking & Forensics</div>
+          <button class="abtn info" onclick="crackInstallTools()">Install Crack Tools</button>
+        </div>
+        <div class="pnb" style="padding:14px 18px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px">
+            <div class="ws" style="flex:1;min-width:250px"><span class="wsl">File Path</span><input class="inf w" id="crack-file" placeholder="/path/to/encrypted.zip"></div>
+            <div class="ws" style="width:140px">
+              <span class="wsl">File Type</span>
+              <select class="inf w" id="crack-type">
+                <option value="">Auto-detect</option>
+                <option value="zip">ZIP</option>
+                <option value="rar">RAR</option>
+                <option value="pdf">PDF</option>
+                <option value="7z">7-Zip</option>
+                <option value="office">Office (docx/xlsx)</option>
+                <option value="ssh-key">SSH Key</option>
+                <option value="keepass">KeePass DB</option>
+                <option value="gpg">GPG File</option>
+                <option value="luks">LUKS Volume</option>
+              </select>
+            </div>
+            <div class="ws" style="width:140px">
+              <span class="wsl">Method</span>
+              <select class="inf w" id="crack-method">
+                <option value="dictionary">Dictionary</option>
+                <option value="bruteforce">Brute Force</option>
+                <option value="mask">Mask Attack</option>
+              </select>
+            </div>
+            <div class="ws" style="width:200px"><span class="wsl">Custom Wordlist (optional)</span><input class="inf w" id="crack-wordlist" placeholder="Default: rockyou.txt"></div>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+            <button class="abtn danger" onclick="crackFile()">Crack File</button>
+            <button class="abtn warning" onclick="crackExtractHash()">Extract Hash</button>
+            <button class="abtn info" onclick="crackAnalyze()">Analyze File</button>
+          </div>
+
+          <div class="g2" style="margin-bottom:14px">
+            <div>
+              <div style="font-size:10px;color:var(--cyan);font-weight:700;margin-bottom:6px">STEGANOGRAPHY</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <button class="abtn" onclick="crackSteg('steghide-info')">Steghide Info</button>
+                <button class="abtn warning" onclick="crackSteg('steghide-extract')">Steghide Extract</button>
+                <button class="abtn warning" onclick="crackSteg('stegseek')">Stegseek Crack</button>
+                <button class="abtn" onclick="crackSteg('binwalk')">Binwalk Scan</button>
+                <button class="abtn" onclick="crackSteg('binwalk-extract')">Binwalk Extract</button>
+                <button class="abtn" onclick="crackSteg('foremost')">Foremost Recover</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--cyan);font-weight:700;margin-bottom:6px">METADATA & FORENSICS</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <button class="abtn" onclick="crackSteg('exiftool')">ExifTool</button>
+                <button class="abtn" onclick="crackSteg('strings')">Strings</button>
+                <button class="abtn" onclick="crackSteg('hexdump')">Hex Dump</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="g2" style="margin-bottom:14px">
+            <div>
+              <div style="font-size:10px;color:var(--cyan);font-weight:700;margin-bottom:6px">HASHCAT GPU CRACKER</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+                <div class="ws" style="width:200px"><span class="wsl">Hash File</span><input class="inf w" id="hc-hashfile" placeholder="/path/to/hashes.txt"></div>
+                <div class="ws" style="width:130px">
+                  <span class="wsl">Hash Mode</span>
+                  <select class="inf w" id="hc-mode">
+                    <option value="0">0 - MD5</option>
+                    <option value="100">100 - SHA1</option>
+                    <option value="1000">1000 - NTLM</option>
+                    <option value="1400">1400 - SHA-256</option>
+                    <option value="1700">1700 - SHA-512</option>
+                    <option value="1800">1800 - sha512crypt</option>
+                    <option value="3200">3200 - bcrypt</option>
+                    <option value="5600">5600 - NetNTLMv2</option>
+                    <option value="22000">22000 - WPA2 PMKID</option>
+                    <option value="17200">17200 - PKZIP</option>
+                    <option value="13600">13600 - WinZip</option>
+                    <option value="13000">13000 - RAR5</option>
+                    <option value="10500">10500 - PDF 1.4-1.6</option>
+                    <option value="9600">9600 - Office 2013</option>
+                    <option value="13400">13400 - KeePass</option>
+                    <option value="11300">11300 - Bitcoin wallet</option>
+                    <option value="15700">15700 - Ethereum PBKDF2</option>
+                  </select>
+                </div>
+                <div class="ws" style="width:100px">
+                  <span class="wsl">Attack</span>
+                  <select class="inf w" id="hc-attack">
+                    <option value="dictionary">Dictionary</option>
+                    <option value="bruteforce">Brute Force</option>
+                    <option value="rule">Rules</option>
+                    <option value="combinator">Combinator</option>
+                  </select>
+                </div>
+                <button class="abtn danger" onclick="crackHashcat()">Launch Hashcat</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--cyan);font-weight:700;margin-bottom:6px">WORDLIST GENERATOR</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+                <div class="ws" style="width:130px">
+                  <span class="wsl">Method</span>
+                  <select class="inf w" id="wl-method">
+                    <option value="cewl">CeWL (spider site)</option>
+                    <option value="crunch">Crunch (generate)</option>
+                    <option value="combinator">Combinator</option>
+                  </select>
+                </div>
+                <div class="ws" style="width:200px"><span class="wsl">Target/Chars</span><input class="inf w" id="wl-target" placeholder="https://target.com or charset"></div>
+                <button class="abtn info" onclick="crackGenWordlist()">Generate</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pnl" style="flex:1;display:flex;flex-direction:column">
+            <div class="pnh">
+              <div class="pnt"><span class="icon">💻</span> Crack Output</div>
+              <button class="abtn" onclick="document.getElementById('crack-out').textContent=''">Clear</button>
+            </div>
+            <div class="pnb" style="padding:0;flex:1;display:flex">
+              <pre class="to" id="crack-out" style="flex:1;margin:10px;border-radius:4px;font-size:11px;background:#050505;color:#0f0;overflow-y:auto;max-height:300px;min-height:150px">Ready for file cracking operations.
+
+Supported: ZIP, RAR, PDF, 7z, Office, SSH keys, KeePass, GPG, LUKS
+GPU: NVIDIA RTX 2060 SUPER (hashcat)
+Wordlist: rockyou.txt (14M passwords)</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="pnl" style="margin-top:14px">
         <div class="pnh"><div class="pnt"><span class="icon">🔧</span> Installed Tools</div><button class="abtn" onclick="loadHackingTools()">Check</button></div>
         <div class="pnb" id="hack-tools-body" style="padding:15px;display:flex;flex-wrap:wrap;gap:6px"></div>

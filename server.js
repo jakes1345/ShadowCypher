@@ -3005,6 +3005,240 @@ app.get('/api/hub/autostart', async (_, res) => {
     } catch (e) { res.json({ error: e.message }); }
 });
 
+// ═══════════ FILE CRACKING & FORENSICS ═══════════
+
+// Hash extraction from files (converts files to crackable hashes)
+app.post('/api/crack/extract-hash', requireAuth, async (req, res) => {
+    const { filePath, fileType } = req.body;
+    if (!filePath) return res.json({ error: 'File path required' });
+    const fp = filePath.replace(/[;&|`$]/g, '');
+    const extractors = {
+        'zip': `zip2john "${fp}" 2>/dev/null || python3 -c "
+import zipfile,hashlib,sys
+try:
+    z=zipfile.ZipFile('${fp}')
+    for i in z.infolist():
+        if i.flag_bits & 0x1:
+            print(f'[ENCRYPTED] {i.filename} (size:{i.file_size} compress:{i.compress_size})')
+    print('Use: fcrackzip -D -p wordlist.txt -u ${fp}')
+except Exception as e: print(str(e))
+"`,
+        'rar': `rar2john "${fp}" 2>/dev/null || unrar t -p- "${fp}" 2>&1 | head -10`,
+        'pdf': `pdf2john "${fp}" 2>/dev/null || pdfcrack --info "${fp}" 2>/dev/null || python3 -c "
+import subprocess
+r=subprocess.run(['qpdf','--check','${fp}'],capture_output=True,text=True)
+print(r.stdout or r.stderr or 'Could not analyze PDF')
+" 2>/dev/null`,
+        'office': `office2john "${fp}" 2>/dev/null`,
+        'ssh-key': `ssh2john "${fp}" 2>/dev/null || python3 /usr/share/john/ssh2john.py "${fp}" 2>/dev/null`,
+        'keepass': `keepass2john "${fp}" 2>/dev/null`,
+        'gpg': `gpg2john "${fp}" 2>/dev/null`,
+        '7z': `7z2john "${fp}" 2>/dev/null || 7z l -slt "${fp}" 2>/dev/null | head -30`,
+        'luks': `cryptsetup luksDump "${fp}" 2>/dev/null | head -20`,
+        'auto': `file "${fp}" 2>/dev/null && echo "---" && strings "${fp}" 2>/dev/null | head -20`
+    };
+    const extractor = extractors[fileType] || extractors['auto'];
+    try {
+        const out = await run(extractor);
+        res.json({ hash: out.trim(), fileType, filePath: fp });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Crack files directly
+app.post('/api/crack/file', requireAuth, async (req, res) => {
+    const { filePath, method, fileType, customWordlist, mask } = req.body;
+    if (!filePath) return res.json({ error: 'File path required' });
+    const fp = filePath.replace(/[;&|`$]/g, '');
+    const wl = (customWordlist || WORDLIST).replace(/[;&|`$]/g, '');
+    let cmd = '';
+
+    if (fileType === 'zip' || (!fileType && fp.match(/\.zip$/i))) {
+        if (method === 'bruteforce') {
+            cmd = `fcrackzip -b -c aA1! -l 1-8 -u "${fp}" 2>&1`;
+        } else if (method === 'mask' && mask) {
+            cmd = `fcrackzip -b -c ${mask} -l 1-8 -u "${fp}" 2>&1`;
+        } else {
+            cmd = `fcrackzip -D -p "${wl}" -u "${fp}" 2>&1`;
+        }
+    } else if (fileType === 'pdf' || (!fileType && fp.match(/\.pdf$/i))) {
+        if (method === 'bruteforce') {
+            cmd = `pdfcrack -f "${fp}" --minpw=1 --maxpw=6 2>&1 | tail -20`;
+        } else {
+            cmd = `pdfcrack -f "${fp}" -w "${wl}" 2>&1 | tail -20`;
+        }
+    } else if (fileType === 'rar' || (!fileType && fp.match(/\.rar$/i))) {
+        if (method === 'bruteforce') {
+            cmd = `rarcrack "${fp}" --type rar --threads 4 2>&1 | tail -20`;
+        } else {
+            cmd = `unrar e -p- "${fp}" 2>&1 | head -5; echo "Use hashcat with rar2john hash for dictionary attack"`;
+        }
+    } else {
+        // Generic - use john the ripper
+        const hashFile = '/tmp/sc_crack_' + Date.now() + '.hash';
+        const type2john = {
+            'ssh-key': 'ssh2john', 'keepass': 'keepass2john', 'gpg': 'gpg2john',
+            'office': 'office2john', '7z': '7z2john'
+        };
+        const converter = type2john[fileType] || 'file';
+        if (converter !== 'file') {
+            cmd = `${converter} "${fp}" > ${hashFile} 2>/dev/null && john "${hashFile}" --wordlist="${wl}" 2>&1 | tail -20 && john "${hashFile}" --show 2>/dev/null; rm -f ${hashFile}`;
+        } else {
+            cmd = `file "${fp}" 2>/dev/null; echo "---"; echo "Auto-detect: trying common crackers..."; fcrackzip -D -p "${wl}" -u "${fp}" 2>/dev/null || pdfcrack -f "${fp}" -w "${wl}" 2>/dev/null | tail -10 || echo "Could not auto-detect file type. Specify fileType."`;
+        }
+    }
+
+    try {
+        const out = await run('timeout 120 bash -c \'' + cmd.replace(/'/g, "'\''") + '\' 2>&1');
+        res.json({ output: out.trim(), method: method || 'dictionary', filePath: fp });
+    } catch (e) { res.json({ output: e.message }); }
+});
+
+// Hashcat GPU cracking with all modes
+app.post('/api/crack/hashcat', requireAuth, async (req, res) => {
+    const { hashFile, hashMode, attack, mask, rules, customWordlist } = req.body;
+    if (!hashFile || !hashMode) return res.json({ error: 'hashFile and hashMode required' });
+    const hf = hashFile.replace(/[;&|`$]/g, '');
+    const wl = (customWordlist || WORDLIST).replace(/[;&|`$]/g, '');
+    let cmd = 'hashcat';
+    cmd += ' -m ' + parseInt(hashMode);
+    cmd += ' --force --status --status-timer=5';
+
+    if (attack === 'bruteforce') {
+        cmd += ' -a 3 "' + hf + '"';
+        if (mask) cmd += ' "' + mask.replace(/[;&|`$]/g, '') + '"';
+        else cmd += ' ?a?a?a?a?a?a?a?a';
+    } else if (attack === 'combinator') {
+        cmd += ' -a 1 "' + hf + '" "' + wl + '" "' + wl + '"';
+    } else if (attack === 'rule') {
+        const ruleFile = rules || '/usr/share/hashcat/rules/best64.rule';
+        cmd += ' -a 0 "' + hf + '" "' + wl + '" -r "' + ruleFile.replace(/[;&|`$]/g, '') + '"';
+    } else {
+        cmd += ' -a 0 "' + hf + '" "' + wl + '"';
+    }
+    cmd += ' 2>&1 | tail -40';
+
+    try {
+        const out = await run('timeout 300 ' + cmd);
+        res.json({ output: out.trim() });
+    } catch (e) { res.json({ output: e.message }); }
+});
+
+// Wordlist generator
+app.post('/api/crack/generate-wordlist', requireAuth, async (req, res) => {
+    const { method, target, minLen, maxLen, pattern } = req.body;
+    const outFile = path.join(__dirname, 'wordlists', 'custom_' + Date.now() + '.txt');
+    let cmd = '';
+    if (method === 'cewl' && target) {
+        const t = target.replace(/[;&|`$]/g, '');
+        cmd = `cewl -d 2 -m ${minLen || 4} -w "${outFile}" "${t}" 2>&1 && wc -l "${outFile}"`;
+    } else if (method === 'crunch') {
+        const mn = parseInt(minLen) || 4;
+        const mx = parseInt(maxLen) || 8;
+        const chars = pattern || 'abcdefghijklmnopqrstuvwxyz0123456789';
+        cmd = `crunch ${mn} ${mx} ${chars.replace(/[;&|`$]/g, '')} -o "${outFile}" 2>&1 | tail -5 && wc -l "${outFile}"`;
+    } else if (method === 'combinator') {
+        cmd = `cat "${WORDLIST}" | head -10000 | while read w; do echo "$w"; echo "$w"123; echo "$w"1; echo "$w"!; echo "$w"2024; echo "$w"2025; done > "${outFile}" && wc -l "${outFile}"`;
+    } else {
+        return res.json({ error: 'Method required: cewl, crunch, or combinator' });
+    }
+    try {
+        const out = await run('timeout 60 bash -c \'' + cmd.replace(/'/g, "'\''") + '\' 2>&1');
+        res.json({ output: out.trim(), wordlist: outFile });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Steganography - extract hidden data
+app.post('/api/crack/steg', requireAuth, async (req, res) => {
+    const { filePath, password, method } = req.body;
+    if (!filePath) return res.json({ error: 'File path required' });
+    const fp = filePath.replace(/[;&|`$]/g, '');
+    let cmd = '';
+    if (method === 'steghide-extract') {
+        cmd = password ? `steghide extract -sf "${fp}" -p "${password.replace(/"/g, '')}" -f 2>&1` : `steghide extract -sf "${fp}" -p "" -f 2>&1`;
+    } else if (method === 'steghide-info') {
+        cmd = `steghide info "${fp}" -p "" 2>&1 || steghide info "${fp}" 2>&1`;
+    } else if (method === 'stegseek') {
+        cmd = `stegseek "${fp}" "${WORDLIST}" 2>&1`;
+    } else if (method === 'binwalk') {
+        cmd = `binwalk "${fp}" 2>&1`;
+    } else if (method === 'binwalk-extract') {
+        cmd = `binwalk -e "${fp}" 2>&1 && ls -la _${path.basename(fp)}.extracted/ 2>/dev/null`;
+    } else if (method === 'exiftool') {
+        cmd = `exiftool "${fp}" 2>/dev/null`;
+    } else if (method === 'strings') {
+        cmd = `strings "${fp}" 2>/dev/null | head -100`;
+    } else if (method === 'hexdump') {
+        cmd = `hexdump -C "${fp}" 2>/dev/null | head -50`;
+    } else if (method === 'foremost') {
+        cmd = `foremost -i "${fp}" -o /tmp/foremost_out_$$ 2>&1 && ls -la /tmp/foremost_out_$$/ 2>/dev/null`;
+    } else {
+        cmd = `file "${fp}" && echo "---EXIF---" && exiftool "${fp}" 2>/dev/null | head -30 && echo "---STRINGS---" && strings "${fp}" 2>/dev/null | head -30 && echo "---BINWALK---" && binwalk "${fp}" 2>/dev/null`;
+    }
+    try {
+        const out = await run(cmd);
+        res.json({ output: out.trim() });
+    } catch (e) { res.json({ output: e.message }); }
+});
+
+// Batch install cracking tools
+app.post('/api/crack/install-tools', requireAuth, async (req, res) => {
+    try {
+        const cmd = 'sudo apt-get install -y fcrackzip pdfcrack hashcat steghide binwalk foremost libimage-exiftool-perl cewl crunch rarcrack 2>&1 | tail -15';
+        const out = await run(cmd);
+        res.json({ output: out.trim(), success: true });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// List hashcat modes reference
+app.get('/api/crack/hashcat-modes', (_, res) => {
+    res.json({
+        common: [
+            { mode: 0, name: 'MD5', speed: 'fast' },
+            { mode: 100, name: 'SHA1', speed: 'fast' },
+            { mode: 1000, name: 'NTLM', speed: 'fast' },
+            { mode: 1400, name: 'SHA-256', speed: 'medium' },
+            { mode: 1700, name: 'SHA-512', speed: 'medium' },
+            { mode: 1800, name: 'sha512crypt (Linux /etc/shadow)', speed: 'slow' },
+            { mode: 3200, name: 'bcrypt', speed: 'very slow' },
+            { mode: 500, name: 'md5crypt (Linux /etc/shadow)', speed: 'slow' },
+            { mode: 5600, name: 'NetNTLMv2', speed: 'medium' },
+            { mode: 13100, name: 'Kerberos TGS-REP', speed: 'slow' },
+        ],
+        files: [
+            { mode: 17200, name: 'PKZIP (compressed)', speed: 'medium' },
+            { mode: 17210, name: 'PKZIP (uncompressed)', speed: 'fast' },
+            { mode: 17220, name: 'PKZIP (compressed multi)', speed: 'medium' },
+            { mode: 17225, name: 'PKZIP (mixed)', speed: 'medium' },
+            { mode: 17230, name: 'PKZIP (compressed multi2)', speed: 'medium' },
+            { mode: 13600, name: 'WinZip', speed: 'slow' },
+            { mode: 23700, name: 'RAR3-hp', speed: 'very slow' },
+            { mode: 23800, name: 'RAR3-p (uncompressed)', speed: 'slow' },
+            { mode: 13000, name: 'RAR5', speed: 'very slow' },
+            { mode: 10400, name: 'PDF 1.1-1.3', speed: 'fast' },
+            { mode: 10500, name: 'PDF 1.4-1.6', speed: 'slow' },
+            { mode: 10600, name: 'PDF 1.7 Level 3', speed: 'fast' },
+            { mode: 10700, name: 'PDF 1.7 Level 8', speed: 'very slow' },
+            { mode: 9400, name: 'Office 2007', speed: 'slow' },
+            { mode: 9500, name: 'Office 2010', speed: 'slow' },
+            { mode: 9600, name: 'Office 2013', speed: 'very slow' },
+            { mode: 25300, name: 'Office 2016', speed: 'very slow' },
+        ],
+        wifi: [
+            { mode: 22000, name: 'WPA-PMKID-PBKDF2', speed: 'slow' },
+            { mode: 22001, name: 'WPA-PMK-PMKID+EAPOL', speed: 'slow' },
+        ],
+        crypto: [
+            { mode: 11300, name: 'Bitcoin/Litecoin wallet.dat', speed: 'very slow' },
+            { mode: 16600, name: 'Electrum Wallet', speed: 'slow' },
+            { mode: 13400, name: 'KeePass 1/2', speed: 'very slow' },
+            { mode: 23500, name: 'AxCrypt 2', speed: 'slow' },
+            { mode: 15700, name: 'Ethereum Wallet PBKDF2', speed: 'very slow' },
+            { mode: 15600, name: 'Ethereum Wallet scrypt', speed: 'very slow' },
+            { mode: 22500, name: 'MultiBit Classic .key', speed: 'slow' },
+        ]
+    });
+});
+
 // Start server
 server.listen(PORT, () => {
     console.log(`\nShadowCypher running on http://localhost:${PORT}`);

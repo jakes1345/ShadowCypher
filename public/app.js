@@ -1006,6 +1006,83 @@ async function installHackTool() {
     }
 }
 
+// ═══════════ FILE CRACKING & FORENSICS ═══════════
+
+function getCrackFile() { return document.getElementById('crack-file')?.value?.trim() || ''; }
+function getCrackOut() { return document.getElementById('crack-out'); }
+
+async function crackFile() {
+    const fp = getCrackFile();
+    if (!fp) return toast('Enter a file path', 'error');
+    const out = getCrackOut();
+    const fileType = document.getElementById('crack-type').value;
+    const method = document.getElementById('crack-method').value;
+    const customWordlist = document.getElementById('crack-wordlist').value.trim();
+    out.textContent = '[+] Cracking: ' + fp + '\n[*] Method: ' + method + '\n[*] Running...\n';
+    const r = await api('/crack/file', { method: 'POST', body: { filePath: fp, fileType, method, customWordlist } });
+    out.textContent = '[+] Cracking: ' + fp + '\n[*] Method: ' + (r?.method || method) + '\n\n' + (r?.output || r?.error || 'No output');
+}
+
+async function crackExtractHash() {
+    const fp = getCrackFile();
+    if (!fp) return toast('Enter a file path', 'error');
+    const out = getCrackOut();
+    const fileType = document.getElementById('crack-type').value || 'auto';
+    out.textContent = '[+] Extracting hash from: ' + fp + '\n[*] Type: ' + fileType + '\n';
+    const r = await api('/crack/extract-hash', { method: 'POST', body: { filePath: fp, fileType } });
+    out.textContent = '[+] Hash extraction: ' + fp + '\n[*] Type: ' + fileType + '\n\n' + (r?.hash || r?.error || 'No hash extracted');
+}
+
+async function crackAnalyze() {
+    const fp = getCrackFile();
+    if (!fp) return toast('Enter a file path', 'error');
+    const out = getCrackOut();
+    out.textContent = '[+] Analyzing: ' + fp + '\n';
+    const r = await api('/crack/steg', { method: 'POST', body: { filePath: fp } });
+    out.textContent = '[+] Analysis: ' + fp + '\n\n' + (r?.output || r?.error || 'No output');
+}
+
+async function crackSteg(method) {
+    const fp = getCrackFile();
+    if (!fp) return toast('Enter a file path', 'error');
+    const out = getCrackOut();
+    out.textContent = '[+] ' + method + ': ' + fp + '\n[*] Running...\n';
+    const password = method === 'steghide-extract' ? prompt('Password (blank for none):') : '';
+    const r = await api('/crack/steg', { method: 'POST', body: { filePath: fp, method, password: password || '' } });
+    out.textContent = '[+] ' + method + ': ' + fp + '\n\n' + (r?.output || r?.error || 'No output');
+}
+
+async function crackHashcat() {
+    const hashFile = document.getElementById('hc-hashfile')?.value?.trim();
+    if (!hashFile) return toast('Enter hash file path', 'error');
+    const out = getCrackOut();
+    const hashMode = document.getElementById('hc-mode').value;
+    const attack = document.getElementById('hc-attack').value;
+    out.textContent = '[+] Hashcat GPU Cracking\n[*] Mode: ' + hashMode + ' | Attack: ' + attack + '\n[*] Running on RTX 2060 SUPER...\n';
+    const r = await api('/crack/hashcat', { method: 'POST', body: { hashFile, hashMode: parseInt(hashMode), attack } });
+    out.textContent = '[+] Hashcat Result\n[*] Mode: ' + hashMode + ' | Attack: ' + attack + '\n\n' + (r?.output || r?.error || 'No output');
+}
+
+async function crackGenWordlist() {
+    const method = document.getElementById('wl-method').value;
+    const target = document.getElementById('wl-target')?.value?.trim();
+    if (!target) return toast('Enter target URL or charset', 'error');
+    const out = getCrackOut();
+    out.textContent = '[+] Generating wordlist via ' + method + '...\n';
+    const r = await api('/crack/generate-wordlist', { method: 'POST', body: { method, target, minLen: 4, maxLen: 8 } });
+    out.textContent = '[+] Wordlist generated\n\n' + (r?.output || r?.error || 'No output');
+    if (r?.wordlist) out.textContent += '\n\nSaved to: ' + r.wordlist;
+}
+
+async function crackInstallTools() {
+    if (!confirm('Install file cracking tools? (fcrackzip, pdfcrack, hashcat, steghide, binwalk, foremost, exiftool, cewl, crunch, rarcrack)')) return;
+    const out = getCrackOut();
+    out.textContent = '[*] Installing cracking tools...\n';
+    const r = await api('/crack/install-tools', { method: 'POST' });
+    out.textContent = '[*] Install result:\n\n' + (r?.output || r?.error || 'No output');
+    if (r?.success) { toast('Tools installed', 'success'); loadHackingTools(); }
+}
+
 // ═══════════ GHOST MODE ═══════════
 
 async function loadGhostStatus() {
