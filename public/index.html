@@ -73,6 +73,17 @@
         </div>
       </div>
 
+      <div class="nav-group" data-group="hub">
+        <div class="nav-group-header" onclick="toggleNavGroup('hub')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')toggleNavGroup('hub')">
+          <span class="nav-group-icon"></span>
+          <span>Control Hub</span>
+          <span class="nav-group-count" id="ng-hub-count"></span>
+        </div>
+        <div class="nav-group-items">
+          <a class="nav-item" href="#/hub" data-page="hub"><span class="ni">🎛️</span><span>PC Hub</span></a>
+        </div>
+      </div>
+
       <div class="nav-group" data-group="tools">
         <div class="nav-group-header" onclick="toggleNavGroup('tools')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')toggleNavGroup('tools')">
           <span class="nav-group-icon"></span>
@@ -1134,6 +1145,91 @@
         </div>
       </div>
 
+      <div class="g2">
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🌍</span> Advanced Recon</div></div>
+          <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+            <button class="abtn info" onclick="runPT('masscan')">Masscan Full Port</button>
+            <button class="abtn info" onclick="runPT('masscan-top')">Masscan Top Ports</button>
+            <button class="abtn info" onclick="runPT('subfinder')">Subdomain Finder</button>
+            <button class="abtn info" onclick="runPT('nuclei')">Nuclei Vuln Scan</button>
+            <button class="abtn info" onclick="runPT('httpx-probe')">HTTP Probe</button>
+            <button class="abtn info" onclick="runPT('nmap-os-detect')">OS Detection</button>
+            <button class="abtn" onclick="runPT('reverse-dns')">Reverse DNS Sweep</button>
+            <button class="abtn" onclick="runPT('whois-deep')">WHOIS Lookup</button>
+            <button class="abtn" onclick="runPT('ssl-scan')">SSL/TLS Scan</button>
+            <button class="abtn" onclick="runPT('http-headers')">HTTP Headers</button>
+            <button class="abtn" onclick="runPT('dns-zone')">DNS Zone Transfer</button>
+          </div>
+        </div>
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🔓</span> Hash Cracking (Hashcat)</div></div>
+          <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+            <button class="abtn danger" onclick="runPT('hashcat-ntlm')">NTLM (NTLMv2)</button>
+            <button class="abtn danger" onclick="runPT('hashcat-md5')">MD5</button>
+            <button class="abtn danger" onclick="runPT('hashcat-sha256')">SHA-256</button>
+            <button class="abtn danger" onclick="runPT('hashcat-bcrypt')">bcrypt</button>
+            <p style="font-size:9px;color:var(--t3);width:100%;margin-top:4px">GPU-accelerated (RTX 2060S). Set hash file path above.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🕸️</span> Web Fuzzing</div></div>
+          <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+            <button class="abtn warning" onclick="runPT('ffuf')">FFUF Directory Fuzz</button>
+            <button class="abtn warning" onclick="runPT('wfuzz')">WFuzz</button>
+            <button class="abtn" onclick="runPT('dirb')">Dirb</button>
+          </div>
+        </div>
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">💉</span> SQLi Advanced</div></div>
+          <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+            <button class="abtn danger" onclick="runPT('sqlmap-waf')">WAF Bypass (Tamper)</button>
+            <button class="abtn danger" onclick="runPT('sqlmap-dump')">Dump Database</button>
+            <button class="abtn danger" onclick="runPT('sqlmap-os')">OS Shell</button>
+            <p style="font-size:9px;color:var(--red);width:100%;margin-top:4px">Advanced SQLi: WAF bypass uses space2comment, randomcase, between, charencode tamper scripts</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🕵️</span> Network MITM</div></div>
+          <div class="pnb" style="padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px">
+            <button class="abtn danger" onclick="runPT('responder-analyze')">Responder Hashes</button>
+            <button class="abtn warning" onclick="runPT('enum4linux-full')">Enum4Linux Full</button>
+            <button class="abtn" onclick="runPT('netcat-banner')">Banner Grab</button>
+            <p style="font-size:9px;color:var(--t3);width:100%;margin-top:4px">Start Responder in terminal: sudo responder -I wlo1 -rdwv</p>
+          </div>
+        </div>
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">📦</span> Tool Installer</div></div>
+          <div class="pnb" style="padding:12px 18px">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="install-tool-select" class="inf" style="width:180px;padding:6px 10px">
+                <option value="">Select tool...</option>
+                <option value="masscan">masscan</option>
+                <option value="hashcat">hashcat</option>
+                <option value="responder">responder</option>
+                <option value="bettercap">bettercap</option>
+                <option value="enum4linux">enum4linux</option>
+                <option value="dirb">dirb</option>
+                <option value="wfuzz">wfuzz</option>
+                <option value="socat">socat</option>
+                <option value="subfinder">subfinder</option>
+                <option value="nuclei">nuclei</option>
+                <option value="ffuf">ffuf</option>
+                <option value="feroxbuster">feroxbuster</option>
+              </select>
+              <button class="abtn info" onclick="installHackTool()">Install</button>
+              <span id="install-status" style="font-size:10px;color:var(--t3)"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="pnl" style="flex:1;display:flex;flex-direction:column">
         <div class="pnh">
           <div class="pnt"><span class="icon">💻</span> Output</div>
@@ -1309,6 +1405,93 @@ AUTHORIZED PENETRATION TESTING ONLY.</pre>
       <div class="pnl" style="margin-top:20px">
         <div class="pnh"><div class="pnt">Activity Logs</div><button class="abtn" onclick="loadAppLogs()">Refresh</button></div>
         <div class="pnb" id="diag-logs" style="padding:15px;font-size:11px;max-height:300px;overflow-y:auto;font-family:monospace"></div>
+      </div>
+    </section>
+
+
+    <!-- ═══ PC HUB ═══ -->
+    <section class="page" id="pg-hub">
+      <div class="ph">
+        <h2>Control Hub</h2>
+        <div class="ig">
+          <button class="abtn" onclick="loadHub()">Refresh</button>
+          <button class="abtn danger" onclick="hubPower('suspend')">Sleep</button>
+          <button class="abtn danger" onclick="hubPower('reboot')">Reboot</button>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🎮</span> GPU — RTX 2060 SUPER</div></div>
+          <div class="pnb" id="hub-gpu" style="padding:15px;font-size:12px">Loading...</div>
+        </div>
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🧠</span> CPU — Ryzen 5 3600</div></div>
+          <div class="pnb" id="hub-cpu" style="padding:15px;font-size:12px">Loading...</div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🌡️</span> Sensors</div></div>
+          <div class="pnb" id="hub-sensors" style="padding:15px;font-size:12px">Loading...</div>
+        </div>
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">📡</span> Network Bandwidth</div></div>
+          <div class="pnb" id="hub-bandwidth" style="padding:15px;font-size:12px">Loading...</div>
+        </div>
+      </div>
+
+      <div class="pnl">
+        <div class="pnh">
+          <div class="pnt"><span class="icon">🐳</span> Docker Containers</div>
+          <button class="abtn" onclick="loadHubDocker()">Refresh</button>
+        </div>
+        <div class="pnb" id="hub-docker" style="padding:15px;font-size:12px">Loading...</div>
+      </div>
+
+      <div class="g2">
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🔗</span> Tailscale</div></div>
+          <div class="pnb" id="hub-tailscale" style="padding:15px;font-size:12px">Loading...</div>
+        </div>
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🤖</span> Ollama</div></div>
+          <div class="pnb" id="hub-ollama" style="padding:15px;font-size:12px">Loading...</div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">🔌</span> USB Devices</div></div>
+          <div class="pnb" id="hub-usb" style="padding:15px;font-size:12px">Loading...</div>
+        </div>
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">📺</span> Displays</div></div>
+          <div class="pnb" id="hub-display" style="padding:15px;font-size:12px">Loading...</div>
+        </div>
+      </div>
+
+      <div class="pnl">
+        <div class="pnh">
+          <div class="pnt"><span class="icon">⚡</span> Top Processes</div>
+          <div class="ig">
+            <input class="inf" id="hub-kill-pid" placeholder="PID" style="width:80px">
+            <button class="abtn danger" onclick="hubKillProcess()">Kill</button>
+          </div>
+        </div>
+        <div class="pnb" id="hub-processes" style="padding:0;max-height:350px;overflow-y:auto;font-size:11px"></div>
+      </div>
+
+      <div class="g2">
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">📻</span> Bluetooth</div></div>
+          <div class="pnb" id="hub-bluetooth" style="padding:15px;font-size:12px">Loading...</div>
+        </div>
+        <div class="pnl">
+          <div class="pnh"><div class="pnt"><span class="icon">📅</span> Cron Jobs</div></div>
+          <div class="pnb" id="hub-crontab" style="padding:15px;font-size:11px;max-height:200px;overflow-y:auto">Loading...</div>
+        </div>
       </div>
     </section>
 

@@ -2215,6 +2215,34 @@ app.get('/api/ghost/leak-test', async (_, res) => {
 const WORDLIST = path.join(__dirname, 'wordlists', 'rockyou.txt');
 const NMAP_SCRIPTS = '/usr/share/nmap/scripts';
 
+// Tool installer - install missing tools
+app.post('/api/hacking/install-tool', requireAuth, async (req, res) => {
+    const { tool } = req.body;
+    const installMap = {
+        'masscan': 'sudo apt-get install -y masscan',
+        'hashcat': 'sudo apt-get install -y hashcat',
+        'responder': 'sudo apt-get install -y responder',
+        'bettercap': 'sudo apt-get install -y bettercap',
+        'ettercap': 'sudo apt-get install -y ettercap-text-only',
+        'enum4linux': 'sudo apt-get install -y enum4linux',
+        'dirb': 'sudo apt-get install -y dirb',
+        'wfuzz': 'sudo apt-get install -y wfuzz',
+        'socat': 'sudo apt-get install -y socat',
+        'wireshark': 'sudo apt-get install -y wireshark-common tshark',
+        'subfinder': 'go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest 2>&1 || sudo apt-get install -y subfinder',
+        'nuclei': 'go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest',
+        'httpx': 'go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest',
+        'ffuf': 'go install -v github.com/ffuf/ffuf/v2@latest || sudo apt-get install -y ffuf',
+        'feroxbuster': 'sudo apt-get install -y feroxbuster',
+    };
+    if (!tool || !installMap[tool]) return res.json({ error: 'Unknown tool: ' + tool });
+    try {
+        const out = await run(installMap[tool]);
+        const check = await run('which ' + tool + ' 2>/dev/null');
+        res.json({ success: !!check.trim(), output: out, installed: !!check.trim() });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
 app.post('/api/pentest', async (req, res) => {
     const { tool, target, params } = req.body;
     if (!tool || !target) return res.status(400).json({ error: 'Tool and target required' });
@@ -2265,6 +2293,37 @@ app.post('/api/pentest', async (req, res) => {
         case 'hping3': cmd = `sudo hping3 -S --flood -V -p ${port} -c 1000 ${shellQuote(safeTarget)} 2>&1`; break;
         // === EXPLOIT ===
         case 'searchsploit': cmd = `searchsploit ${shellQuote(safeTarget)} 2>&1`; break;
+        // === MASS SCANNING ===
+        case 'masscan': cmd = `sudo masscan ${safeTarget} -p1-65535 --rate=1000 --open -oL - 2>/dev/null | head -200`; break;
+        case 'masscan-top': cmd = `sudo masscan ${safeTarget} -p80,443,8080,8443,21,22,23,25,53,110,143,993,995,3306,3389,5432,5900,6379,27017 --rate=500 --open -oL - 2>/dev/null`; break;
+        // === SUBDOMAIN & DISCOVERY ===
+        case 'subfinder': cmd = `subfinder -d ${safeTarget} -silent 2>/dev/null | head -100`; break;
+        case 'nuclei': cmd = `echo "${safeTarget}" | nuclei -silent -severity critical,high,medium 2>/dev/null | head -100`; break;
+        case 'httpx-probe': cmd = `echo "${safeTarget}" | httpx -silent -status-code -title -tech-detect -follow-redirects 2>/dev/null`; break;
+        // === FUZZING ===
+        case 'ffuf': cmd = `ffuf -u http://${safeTarget}/FUZZ -w /usr/share/wordlists/dirb/common.txt -mc 200,301,302,403 -t 20 -timeout 5 2>/dev/null | head -100`; break;
+        case 'wfuzz': cmd = `wfuzz -c -z file,/usr/share/wordlists/dirb/common.txt --hc 404 http://${safeTarget}/FUZZ 2>/dev/null | head -80`; break;
+        // === ENUMERATION ===
+        case 'enum4linux-full': cmd = `enum4linux -a ${safeTarget} 2>/dev/null | head -200`; break;
+        case 'responder-analyze': cmd = `ls -la /usr/share/responder/logs/ 2>/dev/null && cat /usr/share/responder/logs/*NTLM* 2>/dev/null | tail -50 || echo "No captured hashes. Run: sudo responder -I $(ip route | grep default | awk '{print $5}') -rdwv"`; break;
+        // === HASHCAT MODES ===
+        case 'hashcat-ntlm': cmd = `hashcat -m 5600 ${params?.hashfile || '/tmp/hashes.txt'} ${WORDLIST} --force --status 2>/dev/null | tail -30`; break;
+        case 'hashcat-md5': cmd = `hashcat -m 0 ${params?.hashfile || '/tmp/hashes.txt'} ${WORDLIST} --force --status 2>/dev/null | tail -30`; break;
+        case 'hashcat-sha256': cmd = `hashcat -m 1400 ${params?.hashfile || '/tmp/hashes.txt'} ${WORDLIST} --force --status 2>/dev/null | tail -30`; break;
+        case 'hashcat-bcrypt': cmd = `hashcat -m 3200 ${params?.hashfile || '/tmp/hashes.txt'} ${WORDLIST} --force --status 2>/dev/null | tail -20`; break;
+        // === ADVANCED SQL INJECTION ===
+        case 'sqlmap-waf': cmd = `sqlmap -u "${safeTarget}" --batch --level=5 --risk=3 --tamper=space2comment,randomcase,between,charencode --random-agent --timeout=10 2>/dev/null | tail -60`; break;
+        case 'sqlmap-dump': cmd = `sqlmap -u "${safeTarget}" --batch --dump --threads=4 --timeout=10 2>/dev/null | tail -80`; break;
+        case 'sqlmap-os': cmd = `sqlmap -u "${safeTarget}" --batch --os-shell --timeout=10 2>/dev/null | tail -40`; break;
+        // === NETWORK UTILITIES ===
+        case 'netcat-banner': cmd = `echo "" | nc -w 3 -v ${safeTarget} ${params?.port || 80} 2>&1 | head -20`; break;
+        case 'netcat-listen': cmd = `echo "Listener would start on port ${params?.port || 4444}. Command: nc -lvnp ${params?.port || 4444}"`; break;
+        case 'dns-zone': cmd = `dig axfr @${safeTarget} $(dig +short SOA ${safeTarget} | awk '{print $1}') 2>/dev/null || dig any ${safeTarget} +noall +answer`; break;
+        case 'whois-deep': cmd = `whois ${safeTarget} 2>/dev/null`; break;
+        case 'ssl-scan': cmd = `timeout 15 nmap --script ssl-enum-ciphers,ssl-cert,ssl-known-key -p 443 ${safeTarget} 2>/dev/null || echo "Install nmap ssl scripts"`; break;
+        case 'http-headers': cmd = `curl -sI -L --max-time 10 "${safeTarget}" 2>/dev/null`; break;
+        case 'reverse-dns': cmd = `for i in $(seq 1 254); do host 192.168.1.$i 2>/dev/null | grep "name pointer" & done; wait`; break;
+        case 'nmap-os-detect': cmd = `sudo nmap -O -sV --version-intensity 5 ${safeTarget} 2>/dev/null | head -60`; break;
         default: return res.status(400).json({ error: 'Unknown tool: ' + tool });
     }
     log('PENTEST: ' + tool + ' -> ' + safeTarget, 'HACK');
@@ -2276,7 +2335,7 @@ app.post('/api/pentest', async (req, res) => {
 
 // Installed tools check
 app.get('/api/hacking/tools', async (_, res) => {
-    const tools = ['nmap','nikto','sqlmap','hydra','john','aircrack-ng','gobuster','tshark','tcpdump','hping3','proxychains4','smbclient','searchsploit','slowhttptest','masscan','wireshark','hashcat','wifite','bettercap','responder','enum4linux'];
+    const tools = ['nmap','nikto','sqlmap','hydra','john','aircrack-ng','gobuster','tshark','tcpdump','hping3','proxychains4','smbclient','searchsploit','slowhttptest','masscan','wireshark','hashcat','wifite','bettercap','responder','enum4linux','subfinder','nuclei','httpx','ffuf','feroxbuster','wfuzz','dirb','socat','netcat','ettercap'];
     const results = {};
     for (const t of tools) {
         try { await run('which ' + t); results[t] = true; } catch (_) { results[t] = false; }
@@ -2757,6 +2816,194 @@ const AI_FUNCTIONS = [
     { name: 'check_data_leak', description: 'Monitor for data breaches or leaked credentials', parameters: { email: 'string' } },
     { name: 'fetch_onion_intel', description: 'Safely acquire intelligence from .onion services in the darknet', parameters: { url: 'string' } }
 ];
+
+// ═══════════ PC HUB - System Control Center ═══════════
+
+// GPU info and control
+app.get('/api/hub/gpu', async (_, res) => {
+    try {
+        const info = await run('nvidia-smi --query-gpu=name,driver_version,temperature.gpu,utilization.gpu,utilization.memory,memory.used,memory.total,power.draw,power.limit,fan.speed,clocks.gr,clocks.mem --format=csv,noheader,nounits 2>/dev/null');
+        const procs = await run('nvidia-smi --query-compute-apps=pid,name,used_memory --format=csv,noheader,nounits 2>/dev/null');
+        if (!info.trim()) return res.json({ error: 'nvidia-smi not available' });
+        const p = info.trim().split(', ');
+        res.json({
+            name: p[0], driver: p[1], tempC: +p[2], gpuUtil: +p[3], memUtil: +p[4],
+            memUsedMB: +p[5], memTotalMB: +p[6], powerW: +p[7], powerLimitW: +p[8],
+            fanPct: +p[9], clockMHz: +p[10], memClockMHz: +p[11],
+            processes: procs.trim().split('\n').filter(l => l.trim()).map(l => {
+                const c = l.split(', '); return { pid: c[0], name: c[1], memMB: c[2] };
+            })
+        });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// CPU detailed info
+app.get('/api/hub/cpu', async (_, res) => {
+    try {
+        const freq = await run("cat /proc/cpuinfo | grep 'cpu MHz' | head -1 | awk '{print $4}'");
+        const temps = await run("sensors 2>/dev/null | grep -E 'Tctl|Tccd|Core' | head -4");
+        const loadavg = await run("cat /proc/loadavg");
+        const uptime = await run("uptime -p");
+        const top5 = await run("ps aux --sort=-%cpu | head -6 | tail -5");
+        const perCore = await run("mpstat -P ALL 1 1 2>/dev/null | tail -13 || cat /proc/stat | head -13");
+        res.json({
+            freqMHz: parseFloat(freq) || 0,
+            temps: temps.trim().split('\n').map(l => l.trim()).filter(Boolean),
+            loadAvg: loadavg.trim(),
+            uptime: uptime.trim(),
+            topProcesses: top5.trim().split('\n').map(l => {
+                const p = l.trim().split(/\s+/); return { user: p[0], pid: p[1], cpu: p[2], mem: p[3], cmd: p.slice(10).join(' ') };
+            }),
+            perCore: perCore.trim()
+        });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Process manager
+app.get('/api/hub/processes', async (_, res) => {
+    try {
+        const out = await run("ps aux --sort=-%mem | head -31");
+        const lines = out.trim().split('\n');
+        const procs = lines.slice(1).map(l => {
+            const p = l.trim().split(/\s+/);
+            return { user: p[0], pid: +p[1], cpu: +p[2], mem: +p[3], vsz: +p[4], rss: +p[5], stat: p[7], cmd: p.slice(10).join(' ') };
+        });
+        res.json(procs);
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+app.post('/api/hub/kill-process', requireAuth, async (req, res) => {
+    const { pid, signal } = req.body;
+    if (!pid) return res.json({ error: 'PID required' });
+    const sig = signal || 'TERM';
+    try {
+        await run('kill -' + sig + ' ' + parseInt(pid));
+        res.json({ success: true, message: 'Signal ' + sig + ' sent to PID ' + pid });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Docker management
+app.get('/api/hub/docker', async (_, res) => {
+    try {
+        const containers = await run('docker ps -a --format "{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}|{{.Size}}" 2>/dev/null');
+        const images = await run('docker images --format "{{.Repository}}:{{.Tag}}|{{.Size}}|{{.ID}}" 2>/dev/null');
+        res.json({
+            containers: containers.trim().split('\n').filter(Boolean).map(l => {
+                const p = l.split('|'); return { id: p[0], name: p[1], image: p[2], status: p[3], ports: p[4], size: p[5] };
+            }),
+            images: images.trim().split('\n').filter(Boolean).map(l => {
+                const p = l.split('|'); return { name: p[0], size: p[1], id: p[2] };
+            })
+        });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+app.post('/api/hub/docker/action', requireAuth, async (req, res) => {
+    const { container, action } = req.body;
+    if (!container || !['start', 'stop', 'restart', 'pause', 'unpause', 'rm'].includes(action)) return res.json({ error: 'Invalid' });
+    try {
+        const out = await run('docker ' + action + ' ' + container + ' 2>&1');
+        res.json({ success: true, output: out.trim() });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Sensors
+app.get('/api/hub/sensors', async (_, res) => {
+    try {
+        const out = await run('sensors -j 2>/dev/null || sensors 2>/dev/null');
+        try { res.json(JSON.parse(out)); } catch (_) { res.json({ raw: out }); }
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Network bandwidth monitor
+app.get('/api/hub/bandwidth', async (_, res) => {
+    try {
+        const rx1 = await run("cat /sys/class/net/wlo1/statistics/rx_bytes 2>/dev/null || echo 0");
+        const tx1 = await run("cat /sys/class/net/wlo1/statistics/tx_bytes 2>/dev/null || echo 0");
+        await new Promise(r => setTimeout(r, 1000));
+        const rx2 = await run("cat /sys/class/net/wlo1/statistics/rx_bytes 2>/dev/null || echo 0");
+        const tx2 = await run("cat /sys/class/net/wlo1/statistics/tx_bytes 2>/dev/null || echo 0");
+        res.json({
+            rxBytesPerSec: parseInt(rx2) - parseInt(rx1),
+            txBytesPerSec: parseInt(tx2) - parseInt(tx1),
+            rxTotalBytes: parseInt(rx2),
+            txTotalBytes: parseInt(tx2)
+        });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// USB devices
+app.get('/api/hub/usb', async (_, res) => {
+    try {
+        const out = await run('lsusb 2>/dev/null');
+        const devices = out.trim().split('\n').map(l => {
+            const m = l.match(/Bus (\d+) Device (\d+): ID (\S+) (.+)/);
+            return m ? { bus: m[1], device: m[2], id: m[3], name: m[4] } : null;
+        }).filter(Boolean);
+        res.json(devices);
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Tailscale status
+app.get('/api/hub/tailscale', async (_, res) => {
+    try {
+        const status = await run('tailscale status --json 2>/dev/null');
+        res.json(JSON.parse(status));
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Ollama models
+app.get('/api/hub/ollama', async (_, res) => {
+    try {
+        const out = await run('ollama list 2>/dev/null');
+        const running = await run('ollama ps 2>/dev/null');
+        res.json({ models: out.trim(), running: running.trim() });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Power management
+app.post('/api/hub/power', requireAuth, async (req, res) => {
+    const { action } = req.body;
+    if (action === 'suspend') { await run('systemctl suspend'); res.json({ success: true }); }
+    else if (action === 'reboot') { await run('sudo reboot'); res.json({ success: true }); }
+    else if (action === 'shutdown') { await run('sudo shutdown now'); res.json({ success: true }); }
+    else res.json({ error: 'Unknown action' });
+});
+
+// Bluetooth
+app.get('/api/hub/bluetooth', async (_, res) => {
+    try {
+        const devices = await run('bluetoothctl devices 2>/dev/null');
+        const info = await run('bluetoothctl show 2>/dev/null');
+        res.json({ devices: devices.trim(), info: info.trim() });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Display / Screen info
+app.get('/api/hub/display', async (_, res) => {
+    try {
+        const xrandr = await run('xrandr --current 2>/dev/null | head -20');
+        res.json({ displays: xrandr.trim() });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Crontab
+app.get('/api/hub/crontab', async (_, res) => {
+    try {
+        const user = await run('crontab -l 2>/dev/null || echo "no crontab"');
+        const system = await run('cat /etc/crontab 2>/dev/null');
+        res.json({ user: user.trim(), system: system.trim() });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Startup apps
+app.get('/api/hub/autostart', async (_, res) => {
+    try {
+        const apps = await run('ls -la ~/.config/autostart/ 2>/dev/null');
+        const systemd = await run('systemctl list-unit-files --type=service --state=enabled --no-pager 2>/dev/null | head -30');
+        res.json({ autostart: apps.trim(), enabledServices: systemd.trim() });
+    } catch (e) { res.json({ error: e.message }); }
+});
 
 // Start server
 server.listen(PORT, () => {

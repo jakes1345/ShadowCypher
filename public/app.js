@@ -185,7 +185,7 @@ async function logoutAll() {
 // Initialize app - called after successful login
 function initApp() { 
     // Start with Network and Operations groups open by default
-    ['network', 'ops'].forEach(g => {
+    ['network', 'ops', 'hub'].forEach(g => {
         const el = document.querySelector('.nav-group[data-group="' + g + '"]');
         if (el) el.classList.add('open');
     });
@@ -225,7 +225,8 @@ const PAGE_NAMES = {
     tools: 'Tools', monitoring: 'Monitoring', services: 'Services',
     system: 'System Info', logs: 'Logs', terminal: 'Terminal',
     files: 'Files', packages: 'Packages', hacking: 'Hacking',
-    diagnostic: 'Diagnostic', intel: 'Intelligence'
+    diagnostic: 'Diagnostic', intel: 'Intelligence',
+    hub: 'Control Hub'
 };
 const PAGE_LOADERS = {
     ai: () => loadAi(), hacking: () => loadHacking(), intel: () => loadIntel(),
@@ -235,14 +236,16 @@ const PAGE_LOADERS = {
     monitoring: () => loadMon(), tools: () => loadTools(),
     packages: () => loadPkgs(), services: () => loadSvc(),
     terminal: () => initTerm(), files: () => loadFiles('/home/jack'),
-    system: () => loadSys(), logs: () => loadLogs()
+    system: () => loadSys(), logs: () => loadLogs(),
+    hub: () => loadHub()
 };
 
 const PAGE_GROUPS = {
     network: 'network', devices: 'network', portforward: 'network', firewall: 'network',
     hacking: 'ops', intel: 'ops', terminal: 'ops',
     monitoring: 'system', services: 'system', system: 'system', logs: 'system', diagnostic: 'system',
-    ai: 'tools', tools: 'tools', files: 'tools', packages: 'tools'
+    ai: 'tools', tools: 'tools', files: 'tools', packages: 'tools',
+    hub: 'hub'
 };
 
 let currentPage = null;
@@ -303,6 +306,172 @@ document.addEventListener('click', function(e) {
         go(page);
     }
 });
+
+// ═══════════ PC HUB ═══════════
+
+async function loadHub() {
+    const [gpu, cpu, sensors, docker, bw, usb, ts, ollama, procs, bt, display, cron] = await Promise.all([
+        api('/hub/gpu'), api('/hub/cpu'), api('/hub/sensors'), api('/hub/docker'),
+        api('/hub/bandwidth'), api('/hub/usb'), api('/hub/tailscale'), api('/hub/ollama'),
+        api('/hub/processes'), api('/hub/bluetooth'), api('/hub/display'), api('/hub/crontab')
+    ]);
+
+    // GPU
+    const gpuEl = document.getElementById('hub-gpu');
+    if (gpu && !gpu.error) {
+        const bar = (v, max, c) => '<div style="background:rgba(255,255,255,.05);border-radius:3px;height:6px;margin-top:3px"><div style="width:' + Math.min(100, (v/max)*100) + '%;height:100%;background:' + c + ';border-radius:3px"></div></div>';
+        gpuEl.innerHTML = '<div style="color:var(--cyan);font-weight:700;margin-bottom:8px">' + esc(gpu.name) + ' <span style="color:var(--t3);font-weight:400">(' + gpu.driver + ')</span></div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+            '<div>Temp: <b style="color:' + (gpu.tempC > 80 ? 'var(--red)' : gpu.tempC > 60 ? 'var(--amber)' : 'var(--green)') + '">' + gpu.tempC + '°C</b>' + bar(gpu.tempC, 100, gpu.tempC > 80 ? 'var(--red)' : 'var(--green)') + '</div>' +
+            '<div>GPU: <b>' + gpu.gpuUtil + '%</b>' + bar(gpu.gpuUtil, 100, 'var(--cyan)') + '</div>' +
+            '<div>VRAM: <b>' + gpu.memUsedMB + '/' + gpu.memTotalMB + ' MB</b>' + bar(gpu.memUsedMB, gpu.memTotalMB, 'var(--purple)') + '</div>' +
+            '<div>Power: <b>' + gpu.powerW + '/' + gpu.powerLimitW + ' W</b>' + bar(gpu.powerW, gpu.powerLimitW, 'var(--amber)') + '</div>' +
+            '<div>Fan: <b>' + gpu.fanPct + '%</b></div><div>Clock: <b>' + gpu.clockMHz + ' MHz</b></div></div>';
+        if (gpu.processes?.length) {
+            gpuEl.innerHTML += '<div style="margin-top:8px;font-size:10px;color:var(--t3)">GPU Processes: ' + gpu.processes.map(p => esc(p.name) + ' (' + p.memMB + 'MB)').join(', ') + '</div>';
+        }
+    } else gpuEl.innerHTML = '<span style="color:var(--t3)">' + (gpu?.error || 'No GPU data') + '</span>';
+
+    // CPU
+    const cpuEl = document.getElementById('hub-cpu');
+    if (cpu) {
+        cpuEl.innerHTML = '<div style="color:var(--cyan);font-weight:700;margin-bottom:8px">AMD Ryzen 5 3600 <span style="color:var(--t3);font-weight:400">' + cpu.freqMHz.toFixed(0) + ' MHz</span></div>' +
+            '<div>' + esc(cpu.uptime) + '</div>' +
+            '<div style="margin-top:4px">Load: <b>' + esc(cpu.loadAvg) + '</b></div>' +
+            '<div style="margin-top:6px;color:var(--t3)">' + cpu.temps.map(t => esc(t)).join(' | ') + '</div>';
+        if (cpu.topProcesses?.length) {
+            cpuEl.innerHTML += '<div style="margin-top:8px;font-size:10px"><table style="width:100%"><tr style="color:var(--cyan)"><th>PID</th><th>CPU%</th><th>MEM%</th><th>CMD</th></tr>' +
+                cpu.topProcesses.map(p => '<tr><td>' + esc(p.pid) + '</td><td>' + esc(p.cpu) + '</td><td>' + esc(p.mem) + '</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.cmd) + '</td></tr>').join('') + '</table></div>';
+        }
+    }
+
+    // Sensors
+    const sensEl = document.getElementById('hub-sensors');
+    if (sensors && !sensors.error) {
+        if (sensors.raw) { sensEl.innerHTML = '<pre style="font-size:10px;white-space:pre-wrap">' + esc(sensors.raw) + '</pre>'; }
+        else {
+            let html = '';
+            for (const [chip, data] of Object.entries(sensors)) {
+                html += '<div style="color:var(--cyan);font-weight:600;margin-bottom:4px">' + esc(chip) + '</div>';
+                if (typeof data === 'object' && data.Adapter) html += '<div style="color:var(--t3);font-size:10px;margin-bottom:4px">' + esc(data.Adapter) + '</div>';
+                for (const [key, val] of Object.entries(data)) {
+                    if (key === 'Adapter') continue;
+                    if (typeof val === 'object') {
+                        for (const [k2, v2] of Object.entries(val)) {
+                            if (k2.includes('input')) html += '<div>' + esc(key) + ': <b>' + v2 + '</b></div>';
+                        }
+                    }
+                }
+            }
+            sensEl.innerHTML = html || '<span style="color:var(--t3)">No sensor data</span>';
+        }
+    } else sensEl.innerHTML = '<span style="color:var(--t3)">No sensors</span>';
+
+    // Bandwidth
+    const bwEl = document.getElementById('hub-bandwidth');
+    if (bw && !bw.error) {
+        const fmtB = (b) => b > 1048576 ? (b/1048576).toFixed(1) + ' MB/s' : b > 1024 ? (b/1024).toFixed(1) + ' KB/s' : b + ' B/s';
+        const fmtT = (b) => b > 1073741824 ? (b/1073741824).toFixed(2) + ' GB' : (b/1048576).toFixed(1) + ' MB';
+        bwEl.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+            '<div><span style="color:var(--green)">▼ Download</span><div style="font-size:18px;font-weight:700">' + fmtB(bw.rxBytesPerSec) + '</div><div style="font-size:10px;color:var(--t3)">Total: ' + fmtT(bw.rxTotalBytes) + '</div></div>' +
+            '<div><span style="color:var(--red)">▲ Upload</span><div style="font-size:18px;font-weight:700">' + fmtB(bw.txBytesPerSec) + '</div><div style="font-size:10px;color:var(--t3)">Total: ' + fmtT(bw.txTotalBytes) + '</div></div></div>';
+    }
+
+    // Docker
+    loadHubDocker(docker);
+
+    // Tailscale
+    const tsEl = document.getElementById('hub-tailscale');
+    if (ts && ts.Self) {
+        const self = ts.Self;
+        tsEl.innerHTML = '<div style="color:var(--cyan);font-weight:700">' + esc(self.HostName) + '</div>' +
+            '<div>IP: <b>' + (self.TailscaleIPs?.[0] || 'N/A') + '</b></div>' +
+            '<div style="font-size:10px;color:var(--t3)">OS: ' + esc(self.OS) + ' | Online: ' + (self.Online ? '✓' : '✗') + '</div>';
+        if (ts.Peer) {
+            const peers = Object.values(ts.Peer).slice(0, 8);
+            tsEl.innerHTML += '<div style="margin-top:6px;font-size:10px">' + peers.map(p => '<div style="padding:2px 0">' + esc(p.HostName) + ' <span style="color:' + (p.Online ? 'var(--green)' : 'var(--t3)') + '">' + (p.Online ? '●' : '○') + '</span> ' + (p.TailscaleIPs?.[0] || '') + '</div>').join('') + '</div>';
+        }
+    } else tsEl.innerHTML = '<span style="color:var(--t3)">Not connected</span>';
+
+    // Ollama
+    const olEl = document.getElementById('hub-ollama');
+    if (ollama && !ollama.error) {
+        olEl.innerHTML = '<pre style="font-size:10px;white-space:pre-wrap">' + esc(ollama.models) + '</pre>';
+        if (ollama.running) olEl.innerHTML += '<div style="margin-top:6px;color:var(--green);font-weight:600">Running:</div><pre style="font-size:10px">' + esc(ollama.running) + '</pre>';
+    } else olEl.innerHTML = '<span style="color:var(--t3)">Ollama not available</span>';
+
+    // USB
+    const usbEl = document.getElementById('hub-usb');
+    if (Array.isArray(usb) && usb.length) {
+        usbEl.innerHTML = usb.map(d => '<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)"><span style="color:var(--cyan)">' + esc(d.id) + '</span> ' + esc(d.name) + '</div>').join('');
+    } else usbEl.innerHTML = '<span style="color:var(--t3)">No USB devices</span>';
+
+    // Display
+    const dispEl = document.getElementById('hub-display');
+    if (display?.displays) dispEl.innerHTML = '<pre style="font-size:10px;white-space:pre-wrap">' + esc(display.displays) + '</pre>';
+
+    // Processes
+    const procEl = document.getElementById('hub-processes');
+    if (Array.isArray(procs) && procs.length) {
+        procEl.innerHTML = '<table style="width:100%;font-size:10px"><tr style="position:sticky;top:0;background:var(--bg-1);color:var(--cyan)"><th style="padding:6px">PID</th><th>User</th><th>CPU%</th><th>MEM%</th><th>RSS</th><th>CMD</th></tr>' +
+            procs.map(p => '<tr style="border-bottom:1px solid rgba(255,255,255,.03)"><td style="padding:4px 6px">' + p.pid + '</td><td>' + esc(p.user) + '</td><td>' + p.cpu + '</td><td>' + p.mem + '</td><td>' + (p.rss/1024).toFixed(0) + 'M</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.cmd) + '</td></tr>').join('') + '</table>';
+    }
+
+    // Bluetooth
+    const btEl = document.getElementById('hub-bluetooth');
+    if (bt && !bt.error) {
+        btEl.innerHTML = '<pre style="font-size:10px;white-space:pre-wrap">' + esc(bt.devices || 'No devices') + '</pre>';
+    } else btEl.innerHTML = '<span style="color:var(--t3)">Bluetooth unavailable</span>';
+
+    // Crontab
+    const cronEl = document.getElementById('hub-crontab');
+    if (cron) {
+        cronEl.innerHTML = '<pre style="font-size:10px;white-space:pre-wrap">' + esc(cron.user) + '</pre>';
+    }
+}
+
+function loadHubDocker(data) {
+    const el = document.getElementById('hub-docker');
+    const render = (d) => {
+        if (!d?.containers?.length) { el.innerHTML = '<span style="color:var(--t3)">No containers</span>'; return; }
+        el.innerHTML = '<table style="width:100%;font-size:11px"><tr style="color:var(--cyan)"><th>Name</th><th>Image</th><th>Status</th><th>Actions</th></tr>' +
+            d.containers.map(function(ct) {
+                var running = ct.status.toLowerCase().includes('up');
+                var actBtn = running ? 'stop' : 'start';
+                var actLabel = running ? 'Stop' : 'Start';
+                var stColor = running ? 'var(--green)' : 'var(--red)';
+                return '<tr style="border-bottom:1px solid rgba(255,255,255,.03)">' +
+                    '<td style="padding:6px;font-weight:600">' + esc(ct.name) + '</td>' +
+                    '<td style="font-size:10px">' + esc(ct.image) + '</td>' +
+                    '<td style="color:' + stColor + '">' + esc(ct.status) + '</td>' +
+                    '<td><button class="abtn" style="padding:2px 6px;font-size:9px" onclick="hubDockerAction(&quot;' + escAttr(ct.name) + '&quot;,&quot;' + actBtn + '&quot;)">' + actLabel + '</button> ' +
+                    '<button class="abtn" style="padding:2px 6px;font-size:9px" onclick="hubDockerAction(&quot;' + escAttr(ct.name) + '&quot;,&quot;restart&quot;)">Restart</button></td></tr>';
+            }).join('') + '</table>';
+    };
+    if (data) render(data);
+    else api('/hub/docker').then(render);
+}
+
+async function hubDockerAction(name, action) {
+    toast(action + 'ing ' + name + '...', 'info');
+    const r = await api('/hub/docker/action', { method: 'POST', body: { container: name, action } });
+    if (r?.success) { toast(name + ' ' + action + 'ed', 'success'); loadHubDocker(); }
+    else toast(r?.error || 'Failed', 'error');
+}
+
+async function hubKillProcess() {
+    const pid = document.getElementById('hub-kill-pid').value.trim();
+    if (!pid) return toast('Enter a PID', 'error');
+    if (!confirm('Kill process ' + pid + '?')) return;
+    const r = await api('/hub/kill-process', { method: 'POST', body: { pid: parseInt(pid), signal: 'TERM' } });
+    if (r?.success) { toast(r.message, 'success'); loadHub(); }
+    else toast(r?.error || 'Failed', 'error');
+}
+
+async function hubPower(action) {
+    if (!confirm('Are you sure you want to ' + action + '?')) return;
+    await api('/hub/power', { method: 'POST', body: { action } });
+}
 
 // Clock in topbar
 function updateTopbarClock() {
@@ -815,6 +984,26 @@ async function loadHackingTools() {
     if (r.wordlist) html += '<span class="tool-badge installed">rockyou.txt ✓</span>';
     else html += '<span class="tool-badge missing">rockyou.txt ✗</span>';
     body.innerHTML = html;
+}
+
+async function installHackTool() {
+    const sel = document.getElementById('install-tool-select');
+    const status = document.getElementById('install-status');
+    const tool = sel.value;
+    if (!tool) return toast('Select a tool first', 'error');
+    status.textContent = 'Installing ' + tool + '...';
+    status.style.color = 'var(--cyan)';
+    const r = await api('/hacking/install-tool', { method: 'POST', body: { tool } });
+    if (r?.installed) {
+        status.textContent = tool + ' installed!';
+        status.style.color = 'var(--green)';
+        toast(tool + ' installed successfully', 'success');
+        loadHackingTools();
+    } else {
+        status.textContent = 'Failed: ' + (r?.error || 'unknown');
+        status.style.color = 'var(--red)';
+        toast('Install failed: ' + (r?.error || 'unknown'), 'error');
+    }
 }
 
 // ═══════════ GHOST MODE ═══════════
