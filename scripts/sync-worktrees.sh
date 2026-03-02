@@ -45,3 +45,11 @@ git reset --hard master 2>/dev/null && echo "OK (forced)" || echo "FAILED"
 done
 
 echo "Done."
+
+# === USAGE ===
+# ./scripts/sync-worktrees.sh           # Merge master into each worktree
+# ./scripts/sync-worktrees.sh --commit # Commit main changes first, then sync
+# ./scripts/sync-worktrees.sh --force  # Force reset each worktree to master (discards local changes)
+#
+# Post-commit hook: After every commit in main, worktrees auto-merge master.
+# To keep worktrees updated: commit in main, or run this script.
