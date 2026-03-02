@@ -222,8 +222,16 @@ function go(id) {
 }
 
 // Dashboard
+function setDashLoading(loading) {
+    if (!loading) return;
+    ['dash-ports-t','dash-conns-t','dash-pf-t','dash-fw-t','dash-arp-t'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.innerHTML = '<tr><td colspan="4" style="color:var(--t3)">Loading…</td></tr>';
+    });
+}
 async function loadDash() {
+    setDashLoading(true);
     const [ov, lat, disk, conns, wifi, devs, vpn, tor, dash] = await Promise.all([api('/overview'), api('/latency'), api('/disk'), api('/connections'), api('/wifi'), api('/devices'), api('/security/vpn-status'), api('/security/tor-status'), api('/router/dashboard')]);
+    setDashLoading(false);
     if (ov) {
         document.getElementById('sb-host').textContent = ov.hostname;
         const sbText = document.getElementById('sb-status-text');
@@ -265,7 +273,13 @@ async function loadDash() {
             badgeEl.textContent = active ? active + ' active' : '—';
         }
     }
-    if (dash && !dash.error) {
+    if (dash?.error) {
+        ['dash-ports-t','dash-conns-t','dash-pf-t','dash-fw-t','dash-arp-t'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.innerHTML = '<tr><td colspan="4" style="color:var(--t3)">—</td></tr>';
+        });
+        const gwdns = document.getElementById('dash-gw-dns');
+        if (gwdns) gwdns.innerHTML = '<div class="lat-row" style="color:var(--t3)">Router data unavailable</div>';
+    } else if (dash && !dash.error) {
         const pc = document.getElementById('dash-ports-c'), pt = document.getElementById('dash-ports-t');
         const cc = document.getElementById('dash-conns-c'), ct = document.getElementById('dash-conns-t');
         const pfc = document.getElementById('dash-pf-c'), pft = document.getElementById('dash-pf-t');
