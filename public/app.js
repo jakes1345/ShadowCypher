@@ -202,16 +202,25 @@ document.addEventListener('keypress', function(e) {
 });
 
 
-async function api(p, o = {}) { 
-    try { 
-        const r = await fetch('/api' + p, { ...o, headers: { ...(o.headers || {}), 'Content-Type': 'application/json' }, body: o.body ? JSON.stringify(o.body) : undefined });
+async function api(p, o = {}) {
+    try {
+        const opts = { ...o };
+        if (!opts.headers) opts.headers = {};
+        if (opts.body && typeof opts.body === 'object') {
+            opts.body = JSON.stringify(opts.body);
+            opts.headers['Content-Type'] = 'application/json';
+        } else if (opts.body && typeof opts.body === 'string') {
+            if (!opts.headers['Content-Type']) opts.headers['Content-Type'] = 'application/json';
+        }
+        const r = await fetch('/api' + p, opts);
         if (r.status === 401) {
             isAuthenticated = false;
-            document.getElementById('login-modal').style.display = 'flex';
+            const lm = document.getElementById('login-modal');
+            if (lm) lm.style.display = 'flex';
             return null;
         }
-        return await r.json(); 
-    } catch (e) { console.error(p, e); return null } 
+        return await r.json();
+    } catch (e) { console.error('API ' + p, e); return null; }
 }
 function toast(m, t = 'info') { const c = document.getElementById('tc'), e = document.createElement('div'); e.className = 'toast ' + t; e.textContent = m; c.appendChild(e); setTimeout(() => e.remove(), 3000) }
 function esc(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;') }
@@ -226,7 +235,9 @@ const PAGE_NAMES = {
     system: 'System Info', logs: 'Logs', terminal: 'Terminal',
     files: 'Files', packages: 'Packages', hacking: 'Hacking',
     diagnostic: 'Diagnostic', intel: 'Intelligence',
-    hub: 'Control Hub'
+    hub: 'Control Hub',
+    'infra-intel': 'Infra Intel', siem: 'SIEM', forensics: 'Forensics',
+    darkweb: 'Dark Web', geoint: 'GeoINT', comint: 'COMINT'
 };
 const PAGE_LOADERS = {
     ai: () => loadAi(), hacking: () => loadHacking(), intel: () => loadIntel(),
@@ -237,11 +248,18 @@ const PAGE_LOADERS = {
     packages: () => loadPkgs(), services: () => loadSvc(),
     terminal: () => initTerm(), files: () => loadFiles('/home/jack'),
     system: () => loadSys(), logs: () => loadLogs(),
-    hub: () => loadHub()
+    hub: () => loadHub(),
+    'infra-intel': () => loadInfraIntel(),
+    'siem': () => loadSIEM(),
+    'forensics': () => {},
+    'darkweb': () => {},
+    'geoint': () => {},
+    'comint': () => {}
 };
 
 const PAGE_GROUPS = {
     network: 'network', devices: 'network', portforward: 'network', firewall: 'network',
+    'infra-intel': 'ops', siem: 'ops', forensics: 'ops', darkweb: 'ops', geoint: 'ops', comint: 'ops',
     hacking: 'ops', intel: 'ops', terminal: 'ops',
     monitoring: 'system', services: 'system', system: 'system', logs: 'system', diagnostic: 'system',
     ai: 'tools', tools: 'tools', files: 'tools', packages: 'tools',
@@ -330,14 +348,19 @@ async function loadHub() {
         if (gpu.processes?.length) {
             gpuEl.innerHTML += '<div style="margin-top:8px;font-size:10px;color:var(--t3)">GPU Processes: ' + gpu.processes.map(p => esc(p.name) + ' (' + p.memMB + 'MB)').join(', ') + '</div>';
         }
+        var gpuNameEl = document.getElementById('hub-gpu-name');
+        if (gpuNameEl) gpuNameEl.textContent = gpu.name || 'GPU';
     } else gpuEl.innerHTML = '<span style="color:var(--t3)">' + (gpu?.error || 'No GPU data') + '</span>';
 
     // CPU
     const cpuEl = document.getElementById('hub-cpu');
     if (cpu) {
-        cpuEl.innerHTML = '<div style="color:var(--cyan);font-weight:700;margin-bottom:8px">AMD Ryzen 5 3600 <span style="color:var(--t3);font-weight:400">' + cpu.freqMHz.toFixed(0) + ' MHz</span></div>' +
+        cpuEl.innerHTML = '<div style="color:var(--cyan);font-weight:700;margin-bottom:8px">' + esc(cpu.model || 'CPU') + ' <span style="color:var(--t3);font-weight:400">' + cpu.freqMHz.toFixed(0) + ' MHz</span></div>' +
             '<div>' + esc(cpu.uptime) + '</div>' +
-            '<div style="margin-top:4px">Load: <b>' + esc(cpu.loadAvg) + '</b></div>' +
+            '<div style="margin-top:4px">Load: <b>' + esc(cpu.loadAvg) + '</b></div>';
+        var cpuNameEl = document.getElementById('hub-cpu-name');
+        if (cpuNameEl) cpuNameEl.textContent = cpu.model || 'CPU';
+        cpuEl.innerHTML += '' +
             '<div style="margin-top:6px;color:var(--t3)">' + cpu.temps.map(t => esc(t)).join(' | ') + '</div>';
         if (cpu.topProcesses?.length) {
             cpuEl.innerHTML += '<div style="margin-top:8px;font-size:10px"><table style="width:100%"><tr style="color:var(--cyan)"><th>PID</th><th>CPU%</th><th>MEM%</th><th>CMD</th></tr>' +
@@ -602,7 +625,7 @@ async function drawMem() {
 async function loadNet() {
     const [wifi, devs, dns, ifs, routes, arp] = await Promise.all([api('/wifi'), api('/devices'), api('/dns'), api('/interfaces'), api('/routes'), api('/arp')]);
     if (wifi?.connected) { const c = wifi.connected; document.getElementById('wifi-info').innerHTML = '<div class="wifi-info"><div class="ws"><span class="wsl">SSID</span><span class="wsv">' + c.ssid + '</span></div><div class="ws"><span class="wsl">Frequency</span><span class="wsv">' + c.frequency + '</span></div></div>' }
-    if (wifi?.nearby) { document.getElementById('wn-c').textContent = wifi.nearby.length; document.getElementById('wn-t').innerHTML = wifi.nearby.map(n => '<tr><td style="color:var(--cyan)">' + (esc(n.ssid) || 'Hidden') + '</td><td>' + esc(n.signal) + '</td><td>' + esc(n.security) + '</td><td>' + esc(n.channel) + '</td><td><button class="abtn success" onclick="wifiConnect(\'' + escAttr(n.ssid) + '\')">Connect</button></td></tr>').join('') }
+    if (wifi?.nearby) { document.getElementById('wn-c').textContent = wifi.nearby.length; document.getElementById('wn-t').innerHTML = wifi.nearby.map(n => '<tr><td style="color:var(--cyan)">' + (esc(n.ssid) || 'Hidden') + '</td><td>' + esc(n.signal) + '</td><td>' + esc(n.security) + '</td><td style="font-size:10px;color:var(--t3)">' + esc(n.freq || '') + '</td><td>' + esc(n.channel) + '</td><td><button class="abtn success" onclick="wifiConnect(\'' + escAttr(n.ssid) + '\')">Connect</button></td></tr>').join('') }
     if (devs) { const dc = document.getElementById('dv-c'); const dt = document.getElementById('dv-t'); if (dc) dc.textContent = devs.length; if (dt) dt.innerHTML = devs.map(d => '<tr><td style="color:var(--cyan)">' + esc(d.ip) + '</td><td>' + (d.mac || 'N/A') + '</td><td>' + esc(d.hostname) + '</td><td style="color:var(--green)">' + esc(d.status) + '</td></tr>').join('') }
     if (ifs) document.getElementById('if-t').innerHTML = ifs.map(i => '<tr><td style="color:var(--cyan)">' + i.name + '</td><td style="color:' + (i.state === 'UP' ? 'var(--green)' : 'var(--red)') + '"><b>' + i.state + '</b></td><td>' + i.addresses + '</td></tr>').join('');
     if (routes) document.getElementById('rt-body').innerHTML = '<pre class="to" style="margin:0 14px 14px">' + routes.routes.join('\n') + '</pre>';
@@ -652,7 +675,7 @@ async function deletePortForward(num) { const r = await api('/portforward/' + nu
 async function loadFW() {
     const [fw, ports, conns] = await Promise.all([api('/firewall'), api('/ports'), api('/connections')]);
     if (Array.isArray(fw)) { document.getElementById('fw-c').textContent = fw.length; document.getElementById('fw-t').innerHTML = fw.length ? fw.map(r => { const tc = r.target === 'DROP' ? 'var(--red)' : r.target === 'ACCEPT' ? 'var(--green)' : 'var(--t2)'; return '<tr><td>' + r.num + '</td><td style="color:' + tc + ';font-weight:700">' + esc(r.target) + '</td><td>' + esc(r.protocol) + '</td><td style="color:var(--cyan)">' + esc(r.source) + '</td><td>' + esc(r.destination) + '</td><td><button class="abtn danger" onclick="fwDel(' + r.num + ')">X</button></td></tr>' }).join('') : '<tr><td colspan="6" style="color:var(--t3);padding:14px 18px">No rules</td></tr>' }
-    if (Array.isArray(ports)) { document.getElementById('pt-c').textContent = ports.length; document.getElementById('pt-t').innerHTML = ports.map(p => '<tr><td style="color:var(--purple);font-weight:600">' + p.port + '</td><td style="color:var(--green)">' + esc(p.service) + '</td><td>' + esc(p.address) + '</td><td>' + esc(p.process) + '</td></tr>').join('') }
+    if (Array.isArray(ports)) { document.getElementById('pt-c').textContent = ports.length; document.getElementById('pt-t').innerHTML = ports.map(p => '<tr><td style="color:var(--purple);font-weight:600">' + p.port + '</td><td style="color:var(--green)">' + esc(p.service) + '</td><td>' + esc(p.address) + '</td><td>' + esc(p.process) + '</td><td style="color:var(--t3)">' + esc(p.pid || '') + '</td></tr>').join('') }
     if (Array.isArray(conns)) { document.getElementById('cn-c').textContent = conns.length; document.getElementById('cn-t').innerHTML = conns.slice(0, 60).map(c => '<tr><td style="color:' + (c.state === 'ESTAB' ? 'var(--green)' : 'var(--t3)') + ';font-weight:600">' + esc(c.state) + '</td><td>' + esc(c.local) + '</td><td>' + esc(c.remote) + '</td><td>' + esc(c.process) + '</td></tr>').join('') }
 }
 
@@ -729,6 +752,10 @@ async function tool(t) {
     let body = {};
     if (t === 'ping') body = { host: document.getElementById('t-ping').value };
     else if (t === 'dns') body = { host: document.getElementById('t-dns').value };
+    else if (t === 'traceroute') body = { host: document.getElementById('t-trace').value };
+    else if (t === 'whois') body = { host: document.getElementById('t-whois').value };
+    else if (t === 'nmap') body = { host: document.getElementById('t-nmap').value };
+    else if (t === 'wol') body = { mac: document.getElementById('t-wol').value };
     else if (t === 'portcheck') body = { host: document.getElementById('t-pc-h').value, port: document.getElementById('t-pc-p').value };
     else if (t === 'iplookup') body = { ip: document.getElementById('t-iplookup').value };
     else if (t === 'curl') body = { url: document.getElementById('t-curl').value };
@@ -741,13 +768,25 @@ async function speedTest() { const el = document.getElementById('o-speed'); el.t
 async function loadSvc() {
     const [mc, dk, ts, svcs] = await Promise.all([api('/minecraft'), api('/docker'), api('/tailscale'), api('/services')]);
     if (mc) { const b = document.getElementById('mc-b'); b.className = 'badge ' + (mc.running ? 'bg' : 'br'); b.textContent = mc.running ? 'ONLINE' : 'OFFLINE'; let h = '<div class="mc-info"><h3 style="color:' + (mc.running ? 'var(--green)' : 'var(--red)') + '">' + (mc.running ? 'Server Running' : 'Offline') + '</h3><p>Port ' + mc.port + '</p></div>'; if (mc.players.length) h += mc.players.map(p => '<span class="mc-p"><span class="sd"></span>' + p + '</span>').join(''); document.getElementById('mc-body').innerHTML = h }
-    if (dk?.containers) { document.getElementById('dk-c').textContent = dk.containers.length; document.getElementById('dk-t').innerHTML = dk.containers.length ? dk.containers.map(c => '<tr><td style="color:var(--cyan)">' + esc(c.name) + '</td><td style="font-size:10px">' + esc(c.image) + '</td><td style="color:' + (c.status.includes('Up') ? 'var(--green)' : 'var(--red)') + '">' + esc(c.status) + '</td><td><button class="abtn success" onclick="dkAct(\'' + escAttr(c.name) + '\',\'start\')">></button> <button class="abtn danger" onclick="dkAct(\'' + escAttr(c.name) + '\',\'stop\')">[]</button></td></tr>').join('') : '<tr><td colspan="4" style="color:var(--t3);padding:14px 18px">No containers</td></tr>' }
-    if (ts?.peers) document.getElementById('ts-t').innerHTML = ts.peers.length ? ts.peers.map(p => '<tr><td style="color:var(--cyan)">' + esc(p.ip) + '</td><td>' + esc(p.hostname) + '</td><td style="color:var(--green)">' + esc(p.status) + '</td></tr>').join('') : '<tr><td colspan="3" style="color:var(--t3);padding:14px 18px">No peers</td></tr>';
-    if (Array.isArray(svcs)) document.getElementById('svc-t').innerHTML = svcs.map(s => '<tr><td style="color:var(--cyan);font-size:10px">' + esc(s.name) + '</td><td style="color:' + (s.active === 'active' ? 'var(--green)' : s.active === 'failed' ? 'var(--red)' : 'var(--t3)') + '">' + esc(s.active) + '</td></tr>').join('');
+    if (dk?.containers) { document.getElementById('dk-c').textContent = dk.containers.length; document.getElementById('dk-t').innerHTML = dk.containers.length ? dk.containers.map(c => '<tr><td style="color:var(--cyan)">' + esc(c.name) + '</td><td style="font-size:10px">' + esc(c.image) + '</td><td style="color:' + (c.status.includes('Up') ? 'var(--green)' : 'var(--red)') + '">' + esc(c.status) + '</td><td style="font-size:9px;color:var(--t3)">' + esc(c.ports || '') + '</td><td><button class="abtn success" onclick="dkAct(\'' + escAttr(c.name) + '\',\'start\')">▶</button> <button class="abtn danger" onclick="dkAct(\'' + escAttr(c.name) + '\',\'stop\')">■</button> <button class="abtn warning" onclick="dkAct(\'' + escAttr(c.name) + '\',\'restart\')">↻</button></td></tr>').join('') : '<tr><td colspan="4" style="color:var(--t3);padding:14px 18px">No containers</td></tr>' }
+    if (ts?.peers) document.getElementById('ts-t').innerHTML = ts.peers.length ? ts.peers.map(p => '<tr><td style="color:var(--cyan)">' + esc(p.ip) + '</td><td>' + esc(p.hostname) + '</td><td style="font-size:10px;color:var(--t3)">' + esc(p.os || '') + '</td><td style="color:var(--green)">' + esc(p.status) + '</td></tr>').join('') : '<tr><td colspan="3" style="color:var(--t3);padding:14px 18px">No peers</td></tr>';
+    if (Array.isArray(svcs)) document.getElementById('svc-t').innerHTML = svcs.map(s => {
+        var ac = s.active === 'active' ? 'var(--green)' : s.active === 'failed' ? 'var(--red)' : 'var(--t3)';
+        var n = s.name.replace('.service','');
+        return '<tr><td style="color:var(--cyan);font-size:10px">' + esc(n) + '</td><td>' + esc(s.load || '') + '</td><td style="color:' + ac + ';font-weight:600">' + esc(s.active) + '</td><td>' + esc(s.sub || '') + '</td><td style="font-size:10px;color:var(--t3)">' + esc(s.description || '') + '</td><td style="white-space:nowrap"><button class="abtn success" style="padding:1px 5px;font-size:9px" onclick="svcAction(\'' + escAttr(s.name) + '\',\'restart\')">↻</button> <button class="abtn ' + (s.active==='active'?'danger':'success') + '" style="padding:1px 5px;font-size:9px" onclick="svcAction(\'' + escAttr(s.name) + '\',\'' + (s.active==='active'?'stop':'start') + '\')">' + (s.active==='active'?'■':'▶') + '</button></td></tr>';
+    }).join('');
 }
 
 async function dkAct(n, a) { const r = await api('/docker/action', { method: 'POST', body: { name: n, action: a } }); toast(r?.success ? a + ' ' + n : 'Failed', r?.success ? 'success' : 'error'); loadSvc() }
 
+
+async function svcAction(name, action) {
+    if (!confirm(action.toUpperCase() + ' ' + name + '?')) return;
+    toast(action + ' ' + name + '...', 'info');
+    const r = await api('/services/action', { method: 'POST', body: { name, action } });
+    toast(r?.success ? name + ' ' + action + 'ed' : (r?.output || 'Failed'), r?.success ? 'success' : 'error');
+    loadSvc();
+}
 // Terminal
 let termWs = null, termInited = false;
 function initTerm() {
@@ -761,24 +800,59 @@ function termSend() { const inp = document.getElementById('term-input'); const c
 
 // Files
 let currentDir = '/home/jack';
+
+async function loadSys() {
+    const [sys, users, startup, secStatus] = await Promise.all([
+        api('/system'), api('/users'), api('/startup'), api('/auth/status')
+    ]);
+    if (sys) {
+        document.getElementById('sys-host').textContent = sys.hostinfo || '';
+        document.getElementById('sys-gpu').textContent = sys.gpu || '';
+        document.getElementById('sys-pci').textContent = sys.pci || '';
+        document.getElementById('sys-cron').textContent = sys.cron || '';
+        document.getElementById('sys-mod').textContent = sys.modules || '';
+    }
+    if (users?.users) {
+        document.getElementById('usr-t').innerHTML = users.users.map(u =>
+            '<tr><td style="color:var(--cyan)">' + esc(u.name) + '</td><td>' + esc(u.uid) +
+            '</td><td style="font-size:10px;color:var(--t3)">' + esc(u.home) +
+            '</td><td style="font-size:10px">' + esc(u.shell) + '</td></tr>'
+        ).join('');
+        if (users.logged) {
+            var le = document.getElementById('sys-logged');
+            if (le) le.textContent = users.logged || 'No active sessions';
+        }
+    }
+    if (Array.isArray(startup)) {
+        document.getElementById('start-t').innerHTML = startup.map(s =>
+            '<tr><td style="color:var(--cyan);font-size:10px">' + esc(s.name) +
+            '</td><td style="color:var(--green)">' + esc(s.state) + '</td></tr>'
+        ).join('');
+    }
+    var has2FA = secStatus?.has2FA || false;
+    var sb = document.getElementById('2fa-status');
+    if (sb) { sb.textContent = has2FA ? '2FA: On' : '2FA: Off'; sb.classList.toggle('enabled', has2FA); sb.classList.toggle('bg', has2FA); sb.classList.toggle('bo', !has2FA); }
+}
+
+async function viewFile(filePath) {
+    const pnl = document.getElementById('fb-preview-pnl');
+    const nameEl = document.getElementById('fb-file-name');
+    const contentEl = document.getElementById('fb-content');
+    if (pnl) pnl.style.display = 'block';
+    if (nameEl) nameEl.textContent = filePath;
+    if (contentEl) contentEl.textContent = 'Loading...';
+    const r = await api('/files/read?path=' + encodeURIComponent(filePath));
+    if (contentEl) contentEl.textContent = r?.content || r?.error || 'Could not read file';
+}
+
 async function loadFiles(dir) {
     currentDir = dir; document.getElementById('fb-path').textContent = dir;
     const r = await api('/files?path=' + encodeURIComponent(dir)); if (!r) return;
     document.getElementById('fb-t').innerHTML = r.files.map(f => {
-        const pathEsc = escAttr(dir + '/' + f.name), nameEsc = esc(f.name);
-        if (f.isDir) return '<tr><td><span style="cursor:pointer;color:var(--cyan)" onclick="loadFiles(\'' + pathEsc + '\')">D ' + nameEsc + '</span></td><td>-</td><td>' + esc(f.modified) + '</td><td>' + esc(f.permissions) + '</td></tr>';
-        return '<tr><td>F ' + nameEsc + '</td><td>' + esc(f.size) + '</td><td>' + esc(f.modified) + '</td><td>' + esc(f.permissions) + '</td></tr>'
-    }).join('')
-}
-
-// System
-async function loadSys() {
-    const [sys, users, startup] = await Promise.all([api('/system'), api('/users'), api('/startup')]);
-    if (sys) { document.getElementById('sys-host').textContent = sys.hostinfo; document.getElementById('sys-gpu').textContent = sys.gpu; document.getElementById('sys-pci').textContent = sys.pci; document.getElementById('sys-cron').textContent = sys.cron; document.getElementById('sys-mod').textContent = sys.modules }
-    if (users) document.getElementById('usr-t').innerHTML = users.users.map(u => '<tr><td style="color:var(--cyan)">' + u.name + '</td><td>' + u.uid + '</td><td>' + u.home + '</td><td>' + u.shell + '</td></tr>').join('');
-    if (startup) document.getElementById('start-t').innerHTML = startup.map(s => '<tr><td style="color:var(--cyan);font-size:10px">' + s.name + '</td><td style="color:var(--green)">' + s.state + '</td></tr>').join('');
-    const sb = document.getElementById('2fa-status');
-    if (sb) { sb.textContent = has2FA ? '2FA: On' : '2FA: Off'; sb.classList.toggle('enabled', has2FA); sb.classList.toggle('bg', has2FA); sb.classList.toggle('bo', !has2FA); }
+        var icon = f.isDir ? '📁' : '📄';
+        var nameHtml = f.isDir ? '<a href="#" onclick="loadFiles(\'' + escAttr(f.path) + '\');return false" style="color:var(--cyan)">' + icon + ' ' + esc(f.name) + '</a>' : '<a href="#" onclick="viewFile(\'' + escAttr(f.path) + '\');return false" style="color:var(--t1)">' + icon + ' ' + esc(f.name) + '</a>';
+        return '<tr><td>' + nameHtml + '</td><td style="color:var(--t3)">' + esc(f.size) + '</td><td style="color:var(--t3);font-size:10px">' + esc(f.modified) + '</td><td style="font-family:monospace;font-size:10px;color:var(--t3)">' + esc(f.permissions) + '</td><td style="font-size:9px">' + (f.isDir ? '' : '<button class="abtn" style="padding:1px 5px;font-size:9px" onclick="viewFile(\'' + escAttr(f.path) + '\')">View</button>') + '</td></tr>';
+    }).join('');
 }
 
 // Logs
@@ -822,13 +896,23 @@ async function aiSend(voiceText) {
     const am = document.createElement('div'); am.className = 'msg ai'; am.textContent = 'One moment...'; chat.appendChild(am);
     chat.scrollTop = chat.scrollHeight;
     const r = await api('/ai/chat', { method: 'POST', body: { messages: [{ role: 'user', content: q }] } });
-    if (r?.reply) { am.textContent = r.reply; } else { am.textContent = 'Error. Check API key.'; }
+    if (r?.reply) {
+        am.textContent = r.reply;
+        var ttsCheck = document.getElementById('ai-speak-replies');
+        if (ttsCheck && ttsCheck.checked && window.speechSynthesis) {
+            var utter = new SpeechSynthesisUtterance(r.reply);
+            utter.rate = 1.1;
+            utter.pitch = 0.9;
+            window.speechSynthesis.speak(utter);
+        }
+    } else { am.textContent = 'Error. Check API key.'; }
     chat.scrollTop = chat.scrollHeight;
 }
 
 // Hacking
 async function loadHacking() {
     loadGhostStatus();
+    loadSpoofStatus();
     const r = await api('/hacking/shadow-mode');
     const sw = document.getElementById('shadow-toggle');
     const stat = document.getElementById('shadow-status');
@@ -1269,8 +1353,580 @@ checkAuth();
 setInterval(updateSecurityIndicator, 30000);
 setTimeout(updateSecurityIndicator, 3500);
 
+// ═══════════ SPOOFING SUITE ═══════════
+
+async function loadSpoofStatus() {
+    const r = await api('/spoof/status');
+    if (!r) return;
+    const macEl = document.getElementById('spoof-mac-stat');
+    const arpEl = document.getElementById('spoof-arp-stat');
+    const dnsEl = document.getElementById('spoof-dns-stat');
+    const fwdEl = document.getElementById('spoof-fwd-stat');
+    if (macEl) {
+        macEl.textContent = r.mac?.spoofed ? 'SPOOFED' : 'Real';
+        macEl.style.color = r.mac?.spoofed ? 'var(--green)' : 'var(--t3)';
+    }
+    if (arpEl) {
+        arpEl.textContent = r.arp?.active ? 'ACTIVE' : 'Off';
+        arpEl.style.color = r.arp?.active ? 'var(--red)' : 'var(--t3)';
+    }
+    if (dnsEl) {
+        dnsEl.textContent = r.dns?.active ? 'ACTIVE' : 'Off';
+        dnsEl.style.color = r.dns?.active ? 'var(--red)' : 'var(--t3)';
+    }
+    if (fwdEl) {
+        fwdEl.textContent = r.ipForward ? 'ON' : 'Off';
+        fwdEl.style.color = r.ipForward ? 'var(--amber)' : 'var(--t3)';
+    }
+    // Update MAC info
+    const macInfo = document.getElementById('mac-current-info');
+    if (macInfo && r.mac) {
+        macInfo.innerHTML = 'Current: <b style="color:var(--cyan)">' + esc(r.mac.current || '?') + '</b> | Permanent: <b>' + esc(r.mac.permanent || '?') + '</b> | ' + esc(r.mac.iface || '?');
+    }
+}
+
+async function spoofMac(method) {
+    const out = document.getElementById('spoof-out');
+    const iface = document.getElementById('mac-iface').value;
+    const customMac = document.getElementById('mac-custom').value;
+    out.textContent = 'Spoofing MAC on ' + iface + ' (' + method + ')...';
+    out.style.color = '#ff0';
+    try {
+        const r = await api('/spoof/mac', { method: 'POST', body: { iface, method, customMac } });
+        if (r?.success) {
+            out.textContent = r.results.join('\n') + '\n\nNew MAC: ' + (r.newMac || '?');
+            out.style.color = '#0f8';
+            toast('MAC spoofed to ' + (r.newMac || '?'), 'success');
+        } else {
+            out.textContent = r?.error || 'Failed';
+            out.style.color = '#f44';
+        }
+        loadSpoofStatus();
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
+async function startArpSpoof() {
+    const out = document.getElementById('spoof-out');
+    const targetIp = document.getElementById('arp-target').value;
+    const gatewayIp = document.getElementById('arp-gateway').value;
+    const iface = document.getElementById('arp-iface').value;
+    if (!targetIp || !gatewayIp) { toast('Target and Gateway IPs required', 'error'); return; }
+    out.textContent = 'Starting ARP MITM: ' + targetIp + ' <-> ' + gatewayIp + '...';
+    out.style.color = '#ff0';
+    try {
+        const r = await api('/spoof/arp/start', { method: 'POST', body: { targetIp, gatewayIp, iface } });
+        if (r?.success) {
+            out.textContent = r.message + '\nPID: ' + r.pid + '\n' + (r.output || '');
+            out.style.color = '#f44';
+            toast('ARP MITM active - intercepting traffic', 'warning');
+        } else {
+            out.textContent = r?.error || 'Failed';
+            out.style.color = '#f44';
+        }
+        loadSpoofStatus();
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
+async function stopArpSpoof() {
+    const out = document.getElementById('spoof-out');
+    out.textContent = 'Stopping ARP spoofing...';
+    try {
+        const r = await api('/spoof/arp/stop', { method: 'POST' });
+        out.textContent = r?.message || 'Stopped';
+        out.style.color = '#0f8';
+        toast('ARP spoofing stopped', 'info');
+        loadSpoofStatus();
+    } catch (e) { out.textContent = 'Error: ' + e.message; }
+}
+
+async function startDnsSpoof() {
+    const out = document.getElementById('spoof-out');
+    const domain = document.getElementById('dns-domain').value;
+    const spoofIp = document.getElementById('dns-spoofip').value;
+    if (!domain || !spoofIp) { toast('Domain and redirect IP required', 'error'); return; }
+    out.textContent = 'Poisoning DNS: ' + domain + ' -> ' + spoofIp + '...';
+    out.style.color = '#ff0';
+    try {
+        const r = await api('/spoof/dns/start', { method: 'POST', body: { targetDomain: domain, spoofIp } });
+        if (r?.success) {
+            out.textContent = r.results.join('\n');
+            out.style.color = '#0af';
+            toast('DNS spoofed: ' + domain + ' -> ' + spoofIp, 'warning');
+        } else {
+            out.textContent = r?.error || 'Failed';
+            out.style.color = '#f44';
+        }
+        loadSpoofStatus();
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
+async function stopDnsSpoof() {
+    const out = document.getElementById('spoof-out');
+    out.textContent = 'Stopping DNS spoof...';
+    try {
+        const r = await api('/spoof/dns/stop', { method: 'POST' });
+        out.textContent = r?.message || 'Stopped';
+        out.style.color = '#0f8';
+        toast('DNS spoofing stopped', 'info');
+        loadSpoofStatus();
+    } catch (e) { out.textContent = 'Error: ' + e.message; }
+}
+
+async function ipSpoof(method) {
+    const out = document.getElementById('spoof-out');
+    const targetIp = document.getElementById('ips-target').value;
+    const spoofIp = document.getElementById('ips-source').value;
+    const port = document.getElementById('ips-port').value;
+    const count = document.getElementById('ips-count').value;
+    if (!targetIp || !spoofIp) { toast('Target and fake source IP required', 'error'); return; }
+    out.textContent = 'Sending ' + count + ' spoofed ' + method.toUpperCase() + ' packets: ' + spoofIp + ' -> ' + targetIp + ':' + port + '...';
+    out.style.color = '#ff0';
+    try {
+        const r = await api('/spoof/ip', { method: 'POST', body: { targetIp, spoofIp, port, method, count } });
+        out.textContent = r?.output || r?.error || 'No output';
+        out.style.color = r?.success ? '#f80' : '#f44';
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
+async function spoofEmail() {
+    const out = document.getElementById('spoof-out');
+    const fromEmail = document.getElementById('email-from').value;
+    const fromName = document.getElementById('email-fromname').value;
+    const toEmail = document.getElementById('email-to').value;
+    const subject = document.getElementById('email-subject').value;
+    const body = document.getElementById('email-body').value;
+    const smtpServer = document.getElementById('email-smtp').value;
+    if (!fromEmail || !toEmail || !subject) { toast('From, To, and Subject required', 'error'); return; }
+    out.textContent = 'Sending spoofed email: ' + fromEmail + ' -> ' + toEmail + '...';
+    out.style.color = '#ff0';
+    try {
+        const r = await api('/spoof/email', { method: 'POST', body: { fromEmail, fromName, toEmail, subject, body: body, smtpServer } });
+        out.textContent = r?.output || r?.error || 'No response';
+        out.style.color = r?.success ? '#a855f7' : '#f44';
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
+// ═══════════ DATABASE HACKING & INJECTION ═══════════
+
+async function runSQLi(action) {
+    const out = document.getElementById('sqli-out');
+    out.textContent = 'Running SQLi ' + action + '...';
+    out.style.color = '#ff0';
+    const body = {
+        target: document.getElementById('sqli-target').value,
+        action: action,
+        dbms: document.getElementById('sqli-dbms').value,
+        db: document.getElementById('sqli-db').value,
+        table: document.getElementById('sqli-table').value,
+        column: document.getElementById('sqli-col').value,
+        tamper: document.getElementById('sqli-tamper').value,
+        technique: document.getElementById('sqli-tech').value,
+        cookie: document.getElementById('sqli-cookie').value
+    };
+    try {
+        const r = await api('/hack/sqli', { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
+        out.textContent = r.output || r.error || 'No output';
+        out.style.color = r.error ? '#f44' : '#0f0';
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
+async function runNoSQLi(method) {
+    const out = document.getElementById('sqli-out');
+    out.textContent = 'Running NoSQL ' + method + '...';
+    out.style.color = '#ff0';
+    try {
+        const r = await api('/hack/nosqli', { method: 'POST', body: JSON.stringify({ target: document.getElementById('nosqli-target').value, method: method }), headers: { 'Content-Type': 'application/json' } });
+        out.textContent = r.output || r.error || 'No output';
+        out.style.color = r.error ? '#f44' : '#0f0';
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
+async function runXSS(method) {
+    const out = document.getElementById('sqli-out');
+    out.textContent = 'Running XSS scan (' + method + ')...';
+    out.style.color = '#ff0';
+    try {
+        const r = await api('/hack/xss', { method: 'POST', body: JSON.stringify({ target: document.getElementById('xss-target').value, method: method }), headers: { 'Content-Type': 'application/json' } });
+        out.textContent = r.output || r.error || 'No output';
+        out.style.color = r.error ? '#f44' : '#0f0';
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
+// ═══════════ DDoS / STRESS TESTING ═══════════
+
+async function runDDoS(method) {
+    const out = document.getElementById('ddos-out');
+    out.textContent = 'Launching ' + method + '... (may take ' + document.getElementById('ddos-dur').value + 's)';
+    out.style.color = '#ff0';
+    const body = {
+        target: document.getElementById('ddos-target').value,
+        method: method,
+        port: document.getElementById('ddos-port').value,
+        duration: document.getElementById('ddos-dur').value,
+        threads: document.getElementById('ddos-threads').value
+    };
+    try {
+        const r = await api('/hack/ddos', { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
+        out.textContent = r.output || r.error || 'No output';
+        out.style.color = r.error ? '#f44' : '#f80';
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
+// ═══════════ OSINT / DOXING ═══════════
+
+async function runOSINT(method) {
+    const out = document.getElementById('osint-out');
+    out.textContent = 'Running OSINT ' + method + '... (this may take a while)';
+    out.style.color = '#ff0';
+    try {
+        const r = await api('/hack/osint', { method: 'POST', body: JSON.stringify({ target: document.getElementById('osint-target').value, method: method }), headers: { 'Content-Type': 'application/json' } });
+        out.textContent = r.output || r.error || 'No output';
+        out.style.color = r.error ? '#f44' : '#0ff';
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
+async function installOSINT(tool) {
+    const out = document.getElementById('osint-out');
+    out.textContent = 'Installing ' + tool + '...';
+    out.style.color = '#ff0';
+    try {
+        const r = await api('/hack/install-osint', { method: 'POST', body: JSON.stringify({ tool: tool }), headers: { 'Content-Type': 'application/json' } });
+        out.textContent = r.output || r.error || 'Install complete';
+        out.style.color = r.success ? '#0f0' : '#f44';
+    } catch (e) { out.textContent = 'Error: ' + e.message; out.style.color = '#f44'; }
+}
+
 // Auto-refresh
 setInterval(async () => {
     const a = document.querySelector('.nav-item.active')?.dataset.page || 'dashboard';
     if (a === 'dashboard') { drawCpu(); drawMem(); const o = await api('/overview'); if (o) { document.getElementById('s-cpu').textContent = o.cpuUsage + '%'; document.getElementById('cpu-bar').style.width = o.cpuUsage + '%'; document.getElementById('s-mem').textContent = o.usedMemPercent + '%'; document.getElementById('mem-bar').style.width = o.usedMemPercent + '%' } }
 }, 5000);
+
+
+// ═══════════════════════════════════════════════════════════
+// INFRASTRUCTURE INTELLIGENCE
+// ═══════════════════════════════════════════════════════════
+
+async function loadInfraIntel() {
+    const keys = await api('/intel-keys');
+    if (keys && !keys.error) {
+        for (const [k, v] of Object.entries(keys)) {
+            const el = document.getElementById('key-' + k.replace(/_/g, '-'));
+            if (el) el.placeholder = v || k;
+        }
+    }
+}
+
+async function saveIntelKeys() {
+    const keys = {};
+    const fields = { shodan: 'key-shodan', virustotal: 'key-virustotal', censys_id: 'key-censys-id', censys_secret: 'key-censys-secret', securitytrails: 'key-securitytrails', etherscan: 'key-etherscan' };
+    for (const [k, id] of Object.entries(fields)) {
+        const v = document.getElementById(id).value.trim();
+        if (v) keys[k] = v;
+    }
+    const r = await api('/intel-keys', { method: 'POST', body: keys });
+    toast(r?.success ? 'API keys saved' : 'Failed', r?.success ? 'success' : 'error');
+}
+
+async function infraShodan(mode) {
+    const out = document.getElementById('infra-shodan-out');
+    out.textContent = 'Querying Shodan...';
+    let r;
+    if (mode === 'myip') r = await api('/infra/shodan/myip');
+    else if (mode === 'search') r = await api('/infra/shodan/search', { method: 'POST', body: { query: document.getElementById('infra-shodan-ip').value } });
+    else r = await api('/infra/shodan/host', { method: 'POST', body: { ip: document.getElementById('infra-shodan-ip').value } });
+    out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function infraVT() {
+    const out = document.getElementById('infra-vt-out');
+    out.textContent = 'Scanning with VirusTotal...';
+    const r = await api('/infra/virustotal/scan', { method: 'POST', body: { target: document.getElementById('infra-vt-target').value, type: document.getElementById('infra-vt-type').value } });
+    if (r?.data?.attributes?.last_analysis_stats) {
+        const s = r.data.attributes.last_analysis_stats;
+        out.textContent = 'Malicious: ' + (s.malicious||0) + '\nSuspicious: ' + (s.suspicious||0) + '\nHarmless: ' + (s.harmless||0) + '\nUndetected: ' + (s.undetected||0) + '\n\n' + JSON.stringify(r.data.attributes, null, 2).substring(0, 2000);
+    } else out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function infraCRT() {
+    const out = document.getElementById('infra-crt-out');
+    out.textContent = 'Searching certificates...';
+    const r = await api('/infra/crtsh', { method: 'POST', body: { domain: document.getElementById('infra-crt-domain').value } });
+    if (r?.certificates) out.textContent = r.count + ' certificates found\n\n' + r.certificates.slice(0, 20).map(c => c.common_name + ' | ' + c.issuer_name + ' | ' + c.not_after).join('\n');
+    else out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function infraBGP() {
+    const out = document.getElementById('infra-bgp-out');
+    out.textContent = 'Looking up BGP/ASN...';
+    const r = await api('/infra/bgp', { method: 'POST', body: { ip: document.getElementById('infra-bgp-ip').value } });
+    if (r?.asn?.data) {
+        const d = r.asn.data;
+        out.textContent = 'ASN Data:\n' + JSON.stringify(d, null, 2).substring(0, 1500);
+    } else out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function infraDMARC() {
+    const out = document.getElementById('infra-dmarc-out');
+    out.textContent = 'Checking email security...';
+    const r = await api('/infra/dmarc', { method: 'POST', body: { domain: document.getElementById('infra-dmarc-domain').value } });
+    if (r?.domain) out.textContent = 'Domain: ' + r.domain + '\n\nSPF: ' + r.spf + '\n\nDMARC: ' + r.dmarc + '\n\nDKIM: ' + r.dkim + '\n\nMX: ' + r.mx;
+    else out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function infraSSL() {
+    const out = document.getElementById('infra-ssl-out');
+    out.textContent = 'Auditing SSL/TLS...';
+    const r = await api('/infra/ssl', { method: 'POST', body: { host: document.getElementById('infra-ssl-host').value } });
+    if (r?.certificate) {
+        let txt = '=== CERTIFICATE ===\n' + r.certificate + '\n\n=== SECURITY HEADERS ===\n';
+        for (const [h, v] of Object.entries(r.securityHeaders || {})) txt += (v === 'MISSING' ? '[FAIL] ' : '[PASS] ') + h + ': ' + v + '\n';
+        out.textContent = txt;
+    } else out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function infraTech() {
+    const out = document.getElementById('infra-tech-out');
+    out.textContent = 'Detecting technology stack...';
+    const r = await api('/infra/tech-detect', { method: 'POST', body: { url: document.getElementById('infra-tech-url').value } });
+    if (r?.technologies) out.textContent = r.technologies.length + ' technologies detected:\n\n' + r.technologies.map(t => '  [+] ' + t).join('\n');
+    else out.textContent = JSON.stringify(r, null, 2);
+}
+
+// ═══════════════════════════════════════════════════════════
+// SIEM
+// ═══════════════════════════════════════════════════════════
+
+async function loadSIEM() {
+    const [stats, alerts] = await Promise.all([api('/siem/stats'), api('/siem/alerts')]);
+    if (stats) {
+        document.getElementById('siem-total').textContent = stats.total || 0;
+        document.getElementById('siem-crit').textContent = stats.bySeverity?.critical || 0;
+        document.getElementById('siem-high').textContent = stats.bySeverity?.high || 0;
+        document.getElementById('siem-med').textContent = stats.bySeverity?.medium || 0;
+        document.getElementById('siem-low').textContent = stats.bySeverity?.low || 0;
+    }
+    if (Array.isArray(alerts) && alerts.length) {
+        document.getElementById('siem-feed').innerHTML = alerts.map(a => {
+            const colors = { critical: '#ff4444', high: '#ff8800', medium: '#ffcc00', low: '#4488ff', info: '#888' };
+            return '<div style="padding:6px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center"><span style="font-size:9px;color:var(--t3)">' + new Date(a.timestamp).toLocaleTimeString() + '</span><span style="background:' + (colors[a.severity] || '#888') + ';color:#000;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold">' + a.severity.toUpperCase() + '</span><span style="color:var(--cyan);font-size:10px">[' + a.source + ']</span><span style="font-size:11px;color:var(--t1)">' + esc(a.message) + '</span></div>';
+        }).join('');
+    }
+}
+
+async function siemStart() { const r = await api('/siem/start-monitor', { method: 'POST' }); toast(r?.status === 'started' ? 'SIEM monitoring started' : r?.status || 'Failed', 'success'); loadSIEM(); }
+async function siemStop() { const r = await api('/siem/stop-monitor', { method: 'POST' }); toast('SIEM monitoring stopped', 'info'); loadSIEM(); }
+async function siemCorrelate() {
+    toast('Correlating threat feeds against active connections...', 'info');
+    const r = await api('/siem/threat-correlate', { method: 'POST' });
+    if (r?.matches?.length) toast('CRITICAL: ' + r.matches.length + ' connections match threat IPs!', 'error');
+    else toast('Clean: 0/' + (r?.activeConnections || 0) + ' connections match ' + (r?.threatFeedSize || 0) + ' threat IPs', 'success');
+    loadSIEM();
+}
+
+// ═══════════════════════════════════════════════════════════
+// FORENSICS
+// ═══════════════════════════════════════════════════════════
+
+async function runCyberChef() {
+    const input = document.getElementById('cc-input').value;
+    const ops = Array.from(document.querySelectorAll('.cc-op:checked')).map(el => ({ type: el.value }));
+    if (!input || !ops.length) return toast('Need input and at least one operation', 'error');
+    document.getElementById('cc-output').textContent = 'Processing...';
+    const r = await api('/forensics/cyberchef', { method: 'POST', body: { input, operations: ops } });
+    document.getElementById('cc-output').textContent = r?.result || r?.error || 'No result';
+}
+
+async function malScan() {
+    const out = document.getElementById('mal-out');
+    out.textContent = 'Deep scanning file...';
+    const r = await api('/forensics/malware-scan', { method: 'POST', body: { filePath: document.getElementById('mal-path').value } });
+    if (r?.fileInfo) {
+        let txt = '=== FILE INFO ===\n' + r.fileInfo + '\n\n=== HASHES ===\n' + r.hashes + '\n\n=== ELF ===\n' + r.elfInfo;
+        if (r.suspiciousStrings?.length) txt += '\n\n=== SUSPICIOUS STRINGS ===\n' + r.suspiciousStrings.join('\n');
+        if (r.virustotal?.data) txt += '\n\n=== VIRUSTOTAL ===\n' + JSON.stringify(r.virustotal.data.attributes?.last_analysis_stats, null, 2);
+        if (r.clamav) txt += '\n\n=== CLAMAV ===\n' + r.clamav;
+        out.textContent = txt;
+    } else out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function browserForensics() {
+    document.getElementById('browser-out').textContent = 'Extracting browser data...';
+    const r = await api('/forensics/browser', { method: 'POST' });
+    let txt = '=== CHROME ===\n' + (r?.chrome?.join('\n') || 'N/A') + '\n\n=== FIREFOX ===\n' + (r?.firefox?.join('\n') || 'N/A');
+    document.getElementById('browser-out').textContent = txt;
+}
+
+async function forensicTimeline() {
+    document.getElementById('timeline-out').textContent = 'Generating timeline...';
+    const r = await api('/forensics/timeline', { method: 'POST', body: { targetDir: document.getElementById('timeline-dir').value, hours: parseInt(document.getElementById('timeline-hours').value) || 24 } });
+    if (r?.modified) {
+        let txt = '=== MODIFIED FILES (' + r.modified.length + ') ===\n' + r.modified.join('\n') + '\n\n=== ACCESSED (' + r.accessed.length + ') ===\n' + r.accessed.join('\n') + '\n\n=== LOGIN HISTORY ===\n' + r.logins.join('\n');
+        document.getElementById('timeline-out').textContent = txt;
+    } else document.getElementById('timeline-out').textContent = JSON.stringify(r, null, 2);
+}
+
+async function securityAudit() {
+    document.getElementById('sec-out').textContent = 'Running comprehensive security audit...';
+    document.getElementById('sec-score').textContent = '';
+    const r = await api('/forensics/security-audit');
+    if (r?.score !== undefined) {
+        const color = r.score >= 80 ? 'var(--green)' : r.score >= 50 ? '#ffcc00' : '#ff4444';
+        document.getElementById('sec-score').innerHTML = '<span style="color:' + color + '">' + r.score + '/100</span>';
+        let txt = '=== FINDINGS ===\n';
+        for (const f of r.findings || []) txt += '[' + f.severity.toUpperCase() + '] ' + f.finding + '\n';
+        txt += '\n=== SUID BINARIES (' + (r.suid?.length || 0) + ') ===\n' + (r.suid?.join('\n') || 'None');
+        txt += '\n\n=== OPEN PORTS ===\n' + (r.openPorts?.join('\n') || 'None');
+        txt += '\n\n=== SSH CONFIG ===\n' + (r.sshConfig || 'N/A');
+        txt += '\n\n=== FIREWALL ===\n' + (r.firewall || 'N/A');
+        txt += '\n\nFailed SSH logins (24h): ' + (r.failedLogins || 0);
+        document.getElementById('sec-out').textContent = txt;
+    } else document.getElementById('sec-out').textContent = JSON.stringify(r, null, 2);
+}
+
+async function yaraScan() {
+    document.getElementById('yara-out').textContent = 'Running YARA scan...';
+    const r = await api('/forensics/yara', { method: 'POST', body: { rule: document.getElementById('yara-rule').value, targetPath: document.getElementById('yara-path').value } });
+    document.getElementById('yara-out').textContent = r?.output || r?.error || 'No results';
+}
+
+// ═══════════════════════════════════════════════════════════
+// DARK WEB
+// ═══════════════════════════════════════════════════════════
+
+async function darkwebSearch() {
+    document.getElementById('dw-results').innerHTML = '<div style="color:var(--t3)">Searching dark web via Ahmia...</div>';
+    const r = await api('/darkweb/search', { method: 'POST', body: { query: document.getElementById('dw-query').value } });
+    if (r?.results?.length) document.getElementById('dw-results').innerHTML = r.results.map(u => '<div style="padding:4px;border-bottom:1px solid var(--border)"><a href="' + esc(u.replace(/href="/g, '').replace(/"/g, '')) + '" target="_blank" style="color:var(--cyan);font-size:11px;word-break:break-all">' + esc(u) + '</a></div>').join('');
+    else document.getElementById('dw-results').innerHTML = '<div style="color:var(--t3)">No .onion results found</div>';
+}
+
+async function onionScan() {
+    document.getElementById('dw-onion-out').textContent = 'Probing onion service (requires Tor)...';
+    const r = await api('/darkweb/onionscan', { method: 'POST', body: { url: document.getElementById('dw-onion').value } });
+    if (r) document.getElementById('dw-onion-out').textContent = 'Title: ' + (r.title || '?') + '\nReachable: ' + (r.reachable ? 'YES' : 'NO') + '\n\n=== HEADERS ===\n' + (r.headers || '') + '\n\n=== PREVIEW ===\n' + (r.bodyPreview || '');
+}
+
+async function cryptoTrace() {
+    document.getElementById('dw-crypto-out').textContent = 'Tracing wallet...';
+    const r = await api('/darkweb/crypto-trace', { method: 'POST', body: { address: document.getElementById('dw-wallet').value, coin: document.getElementById('dw-coin').value } });
+    document.getElementById('dw-crypto-out').textContent = JSON.stringify(r, null, 2).substring(0, 3000);
+}
+
+async function pasteSearch() {
+    document.getElementById('dw-paste-out').textContent = 'Searching paste sites...';
+    const r = await api('/darkweb/paste-search', { method: 'POST', body: { query: document.getElementById('dw-paste').value } });
+    document.getElementById('dw-paste-out').textContent = JSON.stringify(r, null, 2).substring(0, 3000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// GEOINT
+// ═══════════════════════════════════════════════════════════
+
+async function geoMultiIP() {
+    const ips = document.getElementById('geo-ips').value.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!ips.length) return toast('Enter at least one IP', 'error');
+    document.getElementById('geo-ip-out').innerHTML = '<div style="color:var(--t3)">Locating ' + ips.length + ' IPs...</div>';
+    const r = await api('/geoint/ip-multi', { method: 'POST', body: { ips } });
+    if (Array.isArray(r)) {
+        document.getElementById('geo-ip-out').innerHTML = '<table style="width:100%;font-size:10px"><tr style="color:var(--cyan)"><th>IP</th><th>Country</th><th>City</th><th>ISP</th><th>Lat</th><th>Lon</th></tr>' + r.map(d => '<tr><td style="color:var(--green)">' + esc(d.ip) + '</td><td>' + esc(d.country||'') + '</td><td>' + esc(d.city||'') + '</td><td style="color:var(--t3)">' + esc(d.isp||'') + '</td><td>' + (d.lat||'') + '</td><td>' + (d.lon||'') + '</td></tr>').join('') + '</table>';
+    }
+}
+
+async function geoTraceroute() {
+    document.getElementById('geo-trace-out').innerHTML = '<div style="color:var(--t3)">Tracing route with geolocation (may take 30s)...</div>';
+    const r = await api('/geoint/traceroute-geo', { method: 'POST', body: { host: document.getElementById('geo-trace-host').value } });
+    if (r?.hops) {
+        document.getElementById('geo-trace-out').innerHTML = '<table style="width:100%;font-size:10px"><tr style="color:var(--cyan)"><th>Hop</th><th>IP</th><th>RTT</th><th>Country</th><th>City</th><th>ISP</th></tr>' + r.hops.map(h => '<tr><td>' + h.hop + '</td><td style="color:var(--green)">' + esc(h.ip) + '</td><td>' + (h.rtt||'?') + 'ms</td><td>' + esc(h.country||h.private?'[Private]':'') + '</td><td>' + esc(h.city||'') + '</td><td style="color:var(--t3)">' + esc(h.isp||'') + '</td></tr>').join('') + '</table>';
+    }
+}
+
+async function adsbTracker() {
+    document.getElementById('geo-adsb-out').innerHTML = '<div style="color:var(--t3)">Fetching live ADS-B data...</div>';
+    const r = await api('/geoint/adsb');
+    if (r?.aircraft?.length) {
+        document.getElementById('geo-adsb-out').innerHTML = '<div style="margin-bottom:6px;color:var(--green)">' + r.count + ' aircraft tracked</div><table style="width:100%;font-size:10px"><tr style="color:var(--cyan)"><th>Callsign</th><th>Country</th><th>Alt (m)</th><th>Speed (m/s)</th><th>Heading</th><th>Lat</th><th>Lon</th></tr>' + r.aircraft.filter(a=>a.callsign).map(a => '<tr><td style="color:var(--green);font-weight:bold">' + esc(a.callsign) + '</td><td>' + esc(a.country||'') + '</td><td>' + (a.altitude||'GND') + '</td><td>' + (a.velocity||'?') + '</td><td>' + (a.heading||'?') + '</td><td>' + (a.lat||'') + '</td><td>' + (a.lon||'') + '</td></tr>').join('') + '</table>';
+    } else document.getElementById('geo-adsb-out').innerHTML = '<div style="color:var(--t3)">No aircraft data (API may be rate-limited)</div>';
+}
+
+async function wifiGeo() {
+    document.getElementById('geo-wifi-out').textContent = 'Looking up BSSID location...';
+    const r = await api('/geoint/wifi-locate', { method: 'POST', body: { bssid: document.getElementById('geo-bssid').value } });
+    document.getElementById('geo-wifi-out').textContent = JSON.stringify(r, null, 2);
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMINT
+// ═══════════════════════════════════════════════════════════
+
+async function analyzeEmailHeaders() {
+    document.getElementById('email-analysis').innerHTML = '<div style="color:var(--t3)">Analyzing email headers...</div>';
+    const r = await api('/comint/email-headers', { method: 'POST', body: { headers: document.getElementById('email-headers').value } });
+    if (r?.from) {
+        let html = '<div style="display:grid;grid-template-columns:120px 1fr;gap:4px;font-size:11px">';
+        html += '<div style="color:var(--cyan)">From:</div><div>' + esc(r.from) + '</div>';
+        html += '<div style="color:var(--cyan)">To:</div><div>' + esc(r.to) + '</div>';
+        html += '<div style="color:var(--cyan)">Subject:</div><div style="font-weight:bold">' + esc(r.subject) + '</div>';
+        html += '<div style="color:var(--cyan)">Date:</div><div>' + esc(r.date) + '</div>';
+        html += '<div style="color:var(--cyan)">X-Mailer:</div><div>' + esc(r.xMailer || 'N/A') + '</div>';
+        html += '<div style="color:var(--cyan)">Hops:</div><div>' + r.hopsCount + '</div>';
+        const spfColor = r.spf === 'pass' ? 'var(--green)' : '#ff4444';
+        const dkimColor = r.dkim === 'pass' ? 'var(--green)' : '#ff4444';
+        const dmarcColor = r.dmarc === 'pass' ? 'var(--green)' : '#ff4444';
+        html += '<div style="color:var(--cyan)">SPF:</div><div style="color:' + spfColor + '">' + (r.spf || 'N/A') + '</div>';
+        html += '<div style="color:var(--cyan)">DKIM:</div><div style="color:' + dkimColor + '">' + (r.dkim || 'N/A') + '</div>';
+        html += '<div style="color:var(--cyan)">DMARC:</div><div style="color:' + dmarcColor + '">' + (r.dmarc || 'N/A') + '</div>';
+        html += '</div>';
+        if (r.ips?.length) {
+            html += '<div style="margin-top:12px"><div style="color:var(--cyan);font-size:11px;margin-bottom:4px">Extracted Public IPs:</div>';
+            for (const ip of r.ips) html += '<span style="background:var(--bg);padding:2px 6px;margin:2px;border-radius:3px;font-size:10px;color:var(--green)">' + esc(ip) + '</span>';
+            html += '</div>';
+        }
+        if (r.enrichedIps?.length) {
+            html += '<div style="margin-top:8px"><table style="width:100%;font-size:10px"><tr style="color:var(--cyan)"><th>IP</th><th>Country</th><th>City</th><th>ISP</th><th>Org</th></tr>';
+            for (const e of r.enrichedIps) html += '<tr><td style="color:var(--green)">' + esc(e.ip) + '</td><td>' + esc(e.country||'') + '</td><td>' + esc(e.city||'') + '</td><td>' + esc(e.isp||'') + '</td><td style="color:var(--t3)">' + esc(e.org||'') + '</td></tr>';
+            html += '</table></div>';
+        }
+        document.getElementById('email-analysis').innerHTML = html;
+    } else document.getElementById('email-analysis').innerHTML = '<pre>' + JSON.stringify(r, null, 2) + '</pre>';
+}
+
+async function pgpLookup() {
+    document.getElementById('pgp-out').textContent = 'Searching keyservers...';
+    const r = await api('/comint/pgp-lookup', { method: 'POST', body: { email: document.getElementById('pgp-email').value } });
+    if (r) document.getElementById('pgp-out').textContent = 'MIT Keyserver: ' + (r.mit || '?') + '\nUbuntu Keyserver: ' + (r.ubuntu || '?');
+}
+
+async function extractMetadata() {
+    document.getElementById('meta-out').textContent = 'Extracting metadata...';
+    const r = await api('/comint/metadata', { method: 'POST', body: { filePath: document.getElementById('meta-file').value } });
+    if (r?.exif) document.getElementById('meta-out').textContent = '=== FILE TYPE ===\n' + r.fileType + '\n\n=== HASHES ===\n' + r.hashes + '\n\n=== EXIF ===\n' + r.exif;
+    else document.getElementById('meta-out').textContent = JSON.stringify(r, null, 2);
+}
+
+// SIEM WebSocket handler for real-time alerts
+if (typeof originalWsOnMessage === 'undefined') {
+    var originalWsOnMessage = null;
+    var siemWsSetup = false;
+}
+function setupSiemWs() {
+    if (siemWsSetup || !window.ws) return;
+    siemWsSetup = true;
+    const orig = window.ws.onmessage;
+    window.ws.onmessage = function(e) {
+        if (orig) orig.call(this, e);
+        try {
+            const d = JSON.parse(e.data);
+            if (d.type === 'siem-alert') {
+                const feed = document.getElementById('siem-feed');
+                if (feed) {
+                    const colors = { critical: '#ff4444', high: '#ff8800', medium: '#ffcc00', low: '#4488ff', info: '#888' };
+                    const a = d.alert;
+                    const html = '<div style="padding:6px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center"><span style="font-size:9px;color:var(--t3)">' + new Date(a.timestamp).toLocaleTimeString() + '</span><span style="background:' + (colors[a.severity]||'#888') + ';color:#000;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold">' + a.severity.toUpperCase() + '</span><span style="color:var(--cyan);font-size:10px">[' + a.source + ']</span><span style="font-size:11px;color:var(--t1)">' + a.message + '</span></div>';
+                    feed.insertAdjacentHTML('afterbegin', html);
+                }
+            }
+        } catch(e) {}
+    };
+}
+setTimeout(setupSiemWs, 3000);

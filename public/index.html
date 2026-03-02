@@ -54,6 +54,12 @@
         <div class="nav-group-items">
           <a class="nav-item" href="#/hacking" data-page="hacking"><span class="ni">💀</span><span>Hacking</span></a>
           <a class="nav-item" href="#/intel" data-page="intel"><span class="ni">🕶️</span><span>Intelligence</span></a>
+                    <a class="nav-item" href="#/infra-intel" data-page="infra-intel"><span class="ni">🏗️</span><span>Infra Intel</span></a>
+          <a class="nav-item" href="#/siem" data-page="siem"><span class="ni">🚨</span><span>SIEM</span></a>
+          <a class="nav-item" href="#/forensics" data-page="forensics"><span class="ni">🔬</span><span>Forensics</span></a>
+          <a class="nav-item" href="#/darkweb" data-page="darkweb"><span class="ni">🌑</span><span>Dark Web</span></a>
+          <a class="nav-item" href="#/geoint" data-page="geoint"><span class="ni">🌍</span><span>GeoINT</span></a>
+          <a class="nav-item" href="#/comint" data-page="comint"><span class="ni">📡</span><span>COMINT</span></a>
           <a class="nav-item" href="#/terminal" data-page="terminal"><span class="ni">💻</span><span>Terminal</span></a>
         </div>
       </div>
@@ -1169,7 +1175,7 @@
             <button class="abtn danger" onclick="runPT('hashcat-md5')">MD5</button>
             <button class="abtn danger" onclick="runPT('hashcat-sha256')">SHA-256</button>
             <button class="abtn danger" onclick="runPT('hashcat-bcrypt')">bcrypt</button>
-            <p style="font-size:9px;color:var(--t3);width:100%;margin-top:4px">GPU-accelerated (RTX 2060S). Set hash file path above.</p>
+            <p style="font-size:9px;color:var(--t3);width:100%;margin-top:4px">GPU-accelerated. Set hash file path above.</p>
           </div>
         </div>
       </div>
@@ -1376,10 +1382,369 @@ AUTHORIZED PENETRATION TESTING ONLY.</pre>
               <pre class="to" id="crack-out" style="flex:1;margin:10px;border-radius:4px;font-size:11px;background:#050505;color:#0f0;overflow-y:auto;max-height:300px;min-height:150px">Ready for file cracking operations.
 
 Supported: ZIP, RAR, PDF, 7z, Office, SSH keys, KeePass, GPG, LUKS
-GPU: NVIDIA RTX 2060 SUPER (hashcat)
+GPU: detected via hashcat
 Wordlist: rockyou.txt (14M passwords)</pre>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ═══ SPOOFING SUITE ═══ -->
+      <div class="pnl" style="margin-top:14px;border:1px solid rgba(0,255,136,.18)">
+        <div class="pnh" style="background:linear-gradient(135deg,rgba(0,255,136,.08),rgba(0,200,255,.05))">
+          <div class="pnt"><span class="icon">🎭</span> Spoofing Suite</div>
+          <button class="abtn info" onclick="loadSpoofStatus()">Refresh Status</button>
+        </div>
+        <div class="pnb" style="padding:14px 18px">
+
+          <!-- Spoof Status Bar -->
+          <div id="spoof-status-bar" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:10px;background:rgba(0,0,0,.3);border-radius:6px;font-size:11px">
+            <span>MAC: <b id="spoof-mac-stat" style="color:var(--t3)">---</b></span>
+            <span>ARP MITM: <b id="spoof-arp-stat" style="color:var(--t3)">---</b></span>
+            <span>DNS Spoof: <b id="spoof-dns-stat" style="color:var(--t3)">---</b></span>
+            <span>IP Forward: <b id="spoof-fwd-stat" style="color:var(--t3)">---</b></span>
+          </div>
+
+          <!-- MAC Spoofing -->
+          <div class="pnl" style="margin-bottom:12px">
+            <div class="pnh" style="background:rgba(0,255,136,.05)"><div class="pnt"><span class="icon">🔀</span> MAC Address Spoofing</div></div>
+            <div class="pnb" style="padding:12px">
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+                <div style="flex:1;min-width:160px">
+                  <label style="font-size:10px;color:var(--t3)">Interface</label>
+                  <select class="in" id="mac-iface" style="width:100%"></select>
+                </div>
+                <div style="flex:1;min-width:160px">
+                  <label style="font-size:10px;color:var(--t3)">Custom MAC (optional)</label>
+                  <input class="in" id="mac-custom" placeholder="AA:BB:CC:DD:EE:FF" style="width:100%">
+                </div>
+              </div>
+              <div id="mac-current-info" style="font-size:10px;color:var(--t3);margin-bottom:10px"></div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap">
+                <button class="abtn" style="background:#00aa55" onclick="spoofMac('random')">Random MAC</button>
+                <button class="abtn info" onclick="spoofMac('same-vendor')">Same Vendor</button>
+                <button class="abtn info" onclick="spoofMac('any-vendor')">Any Vendor</button>
+                <button class="abtn warning" onclick="spoofMac('specific')">Set Custom MAC</button>
+                <button class="abtn danger" onclick="spoofMac('burned-in')">Restore Original</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ARP Spoofing / MITM -->
+          <div class="pnl" style="margin-bottom:12px">
+            <div class="pnh" style="background:rgba(255,0,100,.05)"><div class="pnt"><span class="icon">🕸️</span> ARP Spoofing (Man-in-the-Middle)</div></div>
+            <div class="pnb" style="padding:12px">
+              <div style="font-size:10px;color:var(--t3);margin-bottom:8px">
+                Intercept traffic between a target device and the gateway. All their traffic flows through you.
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+                <div style="flex:1;min-width:160px">
+                  <label style="font-size:10px;color:var(--t3)">Target IP (victim)</label>
+                  <input class="in" id="arp-target" placeholder="192.168.1.154" style="width:100%">
+                </div>
+                <div style="flex:1;min-width:160px">
+                  <label style="font-size:10px;color:var(--t3)">Gateway IP</label>
+                  <input class="in" id="arp-gateway" placeholder="192.168.1.1" style="width:100%">
+                </div>
+                <div style="min-width:130px">
+                  <label style="font-size:10px;color:var(--t3)">Interface</label>
+                  <select class="in" id="arp-iface" style="width:100%"></select>
+                </div>
+              </div>
+              <div style="display:flex;gap:5px">
+                <button class="abtn danger" onclick="startArpSpoof()">Start MITM</button>
+                <button class="abtn" style="background:#555" onclick="stopArpSpoof()">Stop MITM</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- DNS Spoofing -->
+          <div class="pnl" style="margin-bottom:12px">
+            <div class="pnh" style="background:rgba(0,100,255,.05)"><div class="pnt"><span class="icon">🌐</span> DNS Spoofing</div></div>
+            <div class="pnb" style="padding:12px">
+              <div style="font-size:10px;color:var(--t3);margin-bottom:8px">
+                Redirect a domain to your IP. Victim visits "bank.com" and lands on your server.
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+                <div style="flex:1;min-width:180px">
+                  <label style="font-size:10px;color:var(--t3)">Target Domain</label>
+                  <input class="in" id="dns-domain" placeholder="example.com" style="width:100%">
+                </div>
+                <div style="flex:1;min-width:140px">
+                  <label style="font-size:10px;color:var(--t3)">Redirect to IP</label>
+                  <input class="in" id="dns-spoofip" placeholder="192.168.1.152" style="width:100%">
+                </div>
+              </div>
+              <div style="display:flex;gap:5px">
+                <button class="abtn danger" onclick="startDnsSpoof()">Poison DNS</button>
+                <button class="abtn" style="background:#555" onclick="stopDnsSpoof()">Stop DNS Spoof</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+            <!-- IP Spoofing -->
+            <div class="pnl" style="flex:1;min-width:260px">
+              <div class="pnh" style="background:rgba(255,100,0,.05)"><div class="pnt"><span class="icon">📡</span> IP Spoofing</div></div>
+              <div class="pnb" style="padding:12px">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+                  <div style="flex:1;min-width:130px">
+                    <label style="font-size:10px;color:var(--t3)">Target IP</label>
+                    <input class="in" id="ips-target" placeholder="10.0.0.1" style="width:100%">
+                  </div>
+                  <div style="flex:1;min-width:130px">
+                    <label style="font-size:10px;color:var(--t3)">Fake Source IP</label>
+                    <input class="in" id="ips-source" placeholder="8.8.8.8" style="width:100%">
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:8px">
+                  <div style="flex:1"><label style="font-size:10px;color:var(--t3)">Port</label><input class="in" id="ips-port" type="number" value="80" style="width:100%"></div>
+                  <div style="flex:1"><label style="font-size:10px;color:var(--t3)">Count</label><input class="in" id="ips-count" type="number" value="10" max="100" style="width:100%"></div>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                  <button class="abtn danger" onclick="ipSpoof('syn')">SYN Spoof</button>
+                  <button class="abtn warning" onclick="ipSpoof('udp')">UDP Spoof</button>
+                  <button class="abtn info" onclick="ipSpoof('icmp')">ICMP Spoof</button>
+                  <button class="abtn" style="background:#800" onclick="ipSpoof('land')">LAND Attack</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Email Spoofing -->
+            <div class="pnl" style="flex:1;min-width:260px">
+              <div class="pnh" style="background:rgba(168,85,247,.05)"><div class="pnt"><span class="icon">📧</span> Email Spoofing</div></div>
+              <div class="pnb" style="padding:12px">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+                  <div style="flex:1;min-width:130px"><label style="font-size:10px;color:var(--t3)">From Email</label><input class="in" id="email-from" placeholder="ceo@company.com" style="width:100%"></div>
+                  <div style="flex:1;min-width:130px"><label style="font-size:10px;color:var(--t3)">From Name</label><input class="in" id="email-fromname" placeholder="John CEO" style="width:100%"></div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+                  <div style="flex:1;min-width:130px"><label style="font-size:10px;color:var(--t3)">To Email</label><input class="in" id="email-to" placeholder="target@email.com" style="width:100%"></div>
+                  <div style="flex:1;min-width:130px"><label style="font-size:10px;color:var(--t3)">SMTP Server</label><input class="in" id="email-smtp" placeholder="localhost" value="localhost" style="width:100%"></div>
+                </div>
+                <div style="margin-bottom:6px"><label style="font-size:10px;color:var(--t3)">Subject</label><input class="in" id="email-subject" placeholder="Urgent: Wire Transfer Required" style="width:100%"></div>
+                <div style="margin-bottom:8px"><label style="font-size:10px;color:var(--t3)">Body</label><textarea class="in" id="email-body" rows="2" style="width:100%;resize:vertical" placeholder="Please review the attached invoice..."></textarea></div>
+                <button class="abtn" style="background:#7c3aed" onclick="spoofEmail()">Send Spoofed Email</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Spoof Output -->
+          <pre class="to" id="spoof-out" style="font-size:11px;background:#050505;color:#0f8;max-height:300px;min-height:100px;overflow-y:auto;padding:10px;border-radius:4px">Spoofing suite ready.
+MAC Spoof: Change your hardware address to become invisible
+ARP MITM: Intercept all traffic between two devices on your network
+DNS Spoof: Redirect domains to your IP for phishing/credential capture
+IP Spoof: Send packets with forged source addresses
+Email Spoof: Send emails appearing to come from any address</pre>
+        </div>
+      </div>
+
+      <!-- ═══ DATABASE HACKING & INJECTION ═══ -->
+      <div class="pnl" style="margin-top:14px;border:1px solid rgba(255,0,60,.15)">
+        <div class="pnh" style="background:linear-gradient(135deg,rgba(255,0,60,.1),rgba(255,100,0,.05))">
+          <div class="pnt"><span class="icon">🗄️</span> Database Hacking & Injection</div>
+        </div>
+        <div class="pnb" style="padding:14px 18px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+            <div style="flex:1;min-width:220px">
+              <label style="font-size:10px;color:var(--t3)">Target URL (with param)</label>
+              <input class="in" id="sqli-target" placeholder="http://target.com/page?id=1" style="width:100%">
+            </div>
+            <div style="min-width:140px">
+              <label style="font-size:10px;color:var(--t3)">DBMS Type</label>
+              <select class="in" id="sqli-dbms" style="width:100%">
+                <option value="">Auto-Detect</option>
+                <option value="MySQL">MySQL</option>
+                <option value="PostgreSQL">PostgreSQL</option>
+                <option value="MSSQL">MSSQL</option>
+                <option value="Oracle">Oracle</option>
+                <option value="SQLite">SQLite</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+            <div style="flex:1;min-width:160px">
+              <label style="font-size:10px;color:var(--t3)">Database Name</label>
+              <input class="in" id="sqli-db" placeholder="target_db" style="width:100%">
+            </div>
+            <div style="flex:1;min-width:160px">
+              <label style="font-size:10px;color:var(--t3)">Table</label>
+              <input class="in" id="sqli-table" placeholder="users" style="width:100%">
+            </div>
+            <div style="flex:1;min-width:120px">
+              <label style="font-size:10px;color:var(--t3)">Column</label>
+              <input class="in" id="sqli-col" placeholder="password" style="width:100%">
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+            <div style="flex:1;min-width:150px">
+              <label style="font-size:10px;color:var(--t3)">WAF Tamper</label>
+              <select class="in" id="sqli-tamper" style="width:100%">
+                <option value="">None</option>
+                <option value="space2comment">space2comment</option>
+                <option value="randomcase">randomcase</option>
+                <option value="between">between</option>
+                <option value="charencode">charencode</option>
+                <option value="space2comment,randomcase,between">Multi-bypass combo</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:120px">
+              <label style="font-size:10px;color:var(--t3)">Technique</label>
+              <select class="in" id="sqli-tech" style="width:100%">
+                <option value="">All</option>
+                <option value="BEUST">All 5 (BEUST)</option>
+                <option value="BEU">Boolean+Error+Union</option>
+                <option value="T">Time-based only</option>
+                <option value="S">Stacked only</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:150px">
+              <label style="font-size:10px;color:var(--t3)">Cookie</label>
+              <input class="in" id="sqli-cookie" placeholder="PHPSESSID=abc123" style="width:100%">
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+            <button class="abtn danger" onclick="runSQLi('detect')">Detect SQLi</button>
+            <button class="abtn danger" onclick="runSQLi('detect-aggressive')">Aggressive Detect</button>
+            <button class="abtn warning" onclick="runSQLi('dbs')">List Databases</button>
+            <button class="abtn warning" onclick="runSQLi('tables')">List Tables</button>
+            <button class="abtn warning" onclick="runSQLi('columns')">List Columns</button>
+            <button class="abtn" style="background:#d00" onclick="runSQLi('dump')">Dump Data</button>
+            <button class="abtn" style="background:#d00" onclick="runSQLi('dump-all')">Dump ALL</button>
+            <button class="abtn info" onclick="runSQLi('passwords')">Crack Passwords</button>
+            <button class="abtn info" onclick="runSQLi('current-user')">Current User/DB</button>
+            <button class="abtn" style="background:#800" onclick="runSQLi('os-shell')">OS Shell</button>
+            <button class="abtn" style="background:#800" onclick="runSQLi('file-read')">Read Server File</button>
+            <button class="abtn warning" onclick="runSQLi('waf-bypass')">WAF Bypass</button>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+            <div class="pnl" style="flex:1;min-width:200px">
+              <div class="pnh"><div class="pnt"><span class="icon">🍃</span> NoSQL Injection</div></div>
+              <div class="pnb" style="padding:10px">
+                <input class="in" id="nosqli-target" placeholder="http://target.com/api/login" style="width:100%;margin-bottom:8px">
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                  <button class="abtn danger" onclick="runNoSQLi('auth-bypass')">Auth Bypass</button>
+                  <button class="abtn warning" onclick="runNoSQLi('extract')">Extract Data</button>
+                  <button class="abtn info" onclick="runNoSQLi('enum-length')">Enum Length</button>
+                  <button class="abtn" onclick="runNoSQLi('nosqlmap')">NoSQLMap</button>
+                </div>
+              </div>
+            </div>
+            <div class="pnl" style="flex:1;min-width:200px">
+              <div class="pnh"><div class="pnt"><span class="icon">💉</span> XSS Scanner</div></div>
+              <div class="pnb" style="padding:10px">
+                <input class="in" id="xss-target" placeholder="http://target.com/search?q=test" style="width:100%;margin-bottom:8px">
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                  <button class="abtn danger" onclick="runXSS('dalfox')">DalFox Scan</button>
+                  <button class="abtn warning" onclick="runXSS('dalfox-pipe')">DalFox Pipe</button>
+                  <button class="abtn info" onclick="runXSS('manual')">Manual Test</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <pre class="to" id="sqli-out" style="font-size:11px;background:#050505;color:#0f0;max-height:300px;min-height:100px;overflow-y:auto;margin-top:8px;padding:10px;border-radius:4px">Database injection tools ready.</pre>
+        </div>
+      </div>
+
+      <!-- ═══ DDoS / STRESS TESTING ═══ -->
+      <div class="pnl" style="margin-top:14px;border:1px solid rgba(255,50,0,.15)">
+        <div class="pnh" style="background:linear-gradient(135deg,rgba(255,50,0,.1),rgba(255,0,0,.05))">
+          <div class="pnt"><span class="icon">💥</span> DDoS / Network Stress Testing</div>
+        </div>
+        <div class="pnb" style="padding:14px 18px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+            <div style="flex:2;min-width:200px">
+              <label style="font-size:10px;color:var(--t3)">Target IP / Host</label>
+              <input class="in" id="ddos-target" placeholder="192.168.1.1" style="width:100%">
+            </div>
+            <div style="flex:1;min-width:80px">
+              <label style="font-size:10px;color:var(--t3)">Port</label>
+              <input class="in" id="ddos-port" type="number" value="80" style="width:100%">
+            </div>
+            <div style="flex:1;min-width:80px">
+              <label style="font-size:10px;color:var(--t3)">Duration (s)</label>
+              <input class="in" id="ddos-dur" type="number" value="10" max="60" style="width:100%">
+            </div>
+            <div style="flex:1;min-width:80px">
+              <label style="font-size:10px;color:var(--t3)">Threads</label>
+              <input class="in" id="ddos-threads" type="number" value="100" max="500" style="width:100%">
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+            <button class="abtn danger" onclick="runDDoS('syn-flood')">SYN Flood</button>
+            <button class="abtn danger" onclick="runDDoS('udp-flood')">UDP Flood</button>
+            <button class="abtn danger" onclick="runDDoS('icmp-flood')">ICMP Flood</button>
+            <button class="abtn warning" onclick="runDDoS('http-flood')">HTTP Flood</button>
+            <button class="abtn warning" onclick="runDDoS('slowloris')">Slowloris</button>
+            <button class="abtn warning" onclick="runDDoS('slow-post')">Slow POST</button>
+            <button class="abtn warning" onclick="runDDoS('slow-read')">Slow Read</button>
+            <button class="abtn info" onclick="runDDoS('goldeneye')">GoldenEye</button>
+            <button class="abtn" style="background:#600" onclick="runDDoS('xmas-flood')">XMAS Flood</button>
+            <button class="abtn" style="background:#600" onclick="runDDoS('land-attack')">LAND Attack</button>
+          </div>
+          <div style="font-size:9px;color:var(--t3);margin-bottom:8px">
+            <b>Layer 3/4:</b> SYN/UDP/ICMP/XMAS (hping3, needs sudo) &nbsp;|&nbsp;
+            <b>Layer 7:</b> HTTP Flood (ab), Slowloris/SlowPOST/SlowRead (slowhttptest), GoldenEye
+          </div>
+          <pre class="to" id="ddos-out" style="font-size:11px;background:#050505;color:#f80;max-height:250px;min-height:80px;overflow-y:auto;padding:10px;border-radius:4px">Stress testing tools ready. Max duration: 60s safety limit.</pre>
+        </div>
+      </div>
+
+      <!-- ═══ OSINT / DOXING ═══ -->
+      <div class="pnl" style="margin-top:14px;border:1px solid rgba(0,200,255,.15)">
+        <div class="pnh" style="background:linear-gradient(135deg,rgba(0,200,255,.1),rgba(0,100,255,.05))">
+          <div class="pnt"><span class="icon">🔍</span> OSINT / Doxing Intelligence</div>
+          <button class="abtn info" onclick="installOSINT('all-osint')">Install All OSINT</button>
+        </div>
+        <div class="pnb" style="padding:14px 18px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+            <div style="flex:2;min-width:250px">
+              <label style="font-size:10px;color:var(--t3)">Target (username / email / domain / phone / IP)</label>
+              <input class="in" id="osint-target" placeholder="username or email@domain.com or domain.com or +1234567890" style="width:100%">
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div style="font-size:10px;color:var(--cyan);margin-bottom:6px;font-weight:600">Username Hunting</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
+              <button class="abtn" style="background:#1a73e8" onclick="runOSINT('sherlock')">Sherlock (400+ sites)</button>
+              <button class="abtn" style="background:#7c3aed" onclick="runOSINT('maigret')">Maigret (3000+ sites)</button>
+              <button class="abtn info" onclick="runOSINT('social-media')">Social Media Check</button>
+            </div>
+            <div style="font-size:10px;color:var(--cyan);margin-bottom:6px;font-weight:600">Email OSINT</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
+              <button class="abtn warning" onclick="runOSINT('holehe')">Holehe (accounts)</button>
+              <button class="abtn danger" onclick="runOSINT('email-breach')">Breach Check</button>
+            </div>
+            <div style="font-size:10px;color:var(--cyan);margin-bottom:6px;font-weight:600">Domain / IP Recon</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
+              <button class="abtn" onclick="runOSINT('theharvester')">theHarvester</button>
+              <button class="abtn info" onclick="runOSINT('whois')">WHOIS</button>
+              <button class="abtn info" onclick="runOSINT('dns-all')">DNS All Records</button>
+              <button class="abtn warning" onclick="runOSINT('subdomain')">Subdomains</button>
+              <button class="abtn" onclick="runOSINT('ip-lookup')">IP Geolocation</button>
+              <button class="abtn warning" onclick="runOSINT('google-dork')">Google Dorks</button>
+            </div>
+            <div style="font-size:10px;color:var(--cyan);margin-bottom:6px;font-weight:600">Phone OSINT</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
+              <button class="abtn" style="background:#16a34a" onclick="runOSINT('phoneinfoga')">PhoneInfoga</button>
+            </div>
+            <div style="font-size:10px;color:var(--cyan);margin-bottom:6px;font-weight:600">Install Individual Tools</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">
+              <button class="abtn" style="padding:2px 8px;font-size:9px" onclick="installOSINT('sherlock')">+sherlock</button>
+              <button class="abtn" style="padding:2px 8px;font-size:9px" onclick="installOSINT('maigret')">+maigret</button>
+              <button class="abtn" style="padding:2px 8px;font-size:9px" onclick="installOSINT('holehe')">+holehe</button>
+              <button class="abtn" style="padding:2px 8px;font-size:9px" onclick="installOSINT('theharvester')">+theharvester</button>
+              <button class="abtn" style="padding:2px 8px;font-size:9px" onclick="installOSINT('phoneinfoga')">+phoneinfoga</button>
+              <button class="abtn" style="padding:2px 8px;font-size:9px" onclick="installOSINT('dalfox')">+dalfox</button>
+            </div>
+          </div>
+          <pre class="to" id="osint-out" style="font-size:11px;background:#050505;color:#0ff;max-height:350px;min-height:120px;overflow-y:auto;padding:10px;border-radius:4px">OSINT reconnaissance tools ready.
+Sherlock: Username search across 400+ social networks
+Maigret: Deep username search across 3000+ sites with profile parsing
+Holehe: Email-to-account mapping
+theHarvester: Domain email/subdomain/IP harvesting
+PhoneInfoga: Phone number carrier/location/social lookup
+Google Dorks: Advanced search queries for hidden data</pre>
         </div>
       </div>
 
@@ -1557,11 +1922,11 @@ Wordlist: rockyou.txt (14M passwords)</pre>
 
       <div class="g2">
         <div class="pnl">
-          <div class="pnh"><div class="pnt"><span class="icon">🎮</span> GPU — RTX 2060 SUPER</div></div>
+          <div class="pnh"><div class="pnt"><span class="icon">🎮</span> GPU — <span id="hub-gpu-name">detecting...</span></div></div>
           <div class="pnb" id="hub-gpu" style="padding:15px;font-size:12px">Loading...</div>
         </div>
         <div class="pnl">
-          <div class="pnh"><div class="pnt"><span class="icon">🧠</span> CPU — Ryzen 5 3600</div></div>
+          <div class="pnh"><div class="pnt"><span class="icon">🧠</span> CPU — <span id="hub-cpu-name">detecting...</span></div></div>
           <div class="pnb" id="hub-cpu" style="padding:15px;font-size:12px">Loading...</div>
         </div>
       </div>
@@ -1627,6 +1992,192 @@ Wordlist: rockyou.txt (14M passwords)</pre>
           <div class="pnh"><div class="pnt"><span class="icon">📅</span> Cron Jobs</div></div>
           <div class="pnb" id="hub-crontab" style="padding:15px;font-size:11px;max-height:200px;overflow-y:auto">Loading...</div>
         </div>
+      </div>
+    </section>
+
+
+    <!-- ═══════════════════ INFRASTRUCTURE INTELLIGENCE ═══════════════════ -->
+    <section class="page" id="pg-infra-intel">
+      <div class="page-header"><div class="page-title">Infrastructure Intelligence</div></div>
+      <div class="pgrid" style="grid-template-columns:1fr 1fr">
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🔑</span> API Keys</div></div><div class="pnb" style="padding:12px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <input id="key-shodan" placeholder="Shodan API Key" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
+            <input id="key-virustotal" placeholder="VirusTotal API Key" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
+            <input id="key-censys-id" placeholder="Censys ID" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
+            <input id="key-censys-secret" placeholder="Censys Secret" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
+            <input id="key-securitytrails" placeholder="SecurityTrails Key" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
+            <input id="key-etherscan" placeholder="Etherscan Key" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
+          </div>
+          <button class="abtn success" style="margin-top:8px;width:100%" onclick="saveIntelKeys()">Save API Keys</button>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🔍</span> Shodan</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-shodan-ip" placeholder="IP Address" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="infraShodan('host')">Host</button><button class="abtn" onclick="infraShodan('search')">Search</button><button class="abtn" onclick="infraShodan('myip')">My IP</button></div>
+          <pre id="infra-shodan-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🛡️</span> VirusTotal</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-vt-target" placeholder="IP / Domain / Hash" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><select id="infra-vt-type" class="abtn" style="background:var(--bg);color:var(--t1)"><option value="ip">IP</option><option value="domain">Domain</option><option value="hash">Hash</option></select><button class="abtn" onclick="infraVT()">Scan</button></div>
+          <pre id="infra-vt-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">📜</span> Cert Transparency</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-crt-domain" placeholder="Domain" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="infraCRT()">Search Certs</button></div>
+          <pre id="infra-crt-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🌐</span> BGP / ASN Lookup</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-bgp-ip" placeholder="IP Address" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="infraBGP()">Lookup</button></div>
+          <pre id="infra-bgp-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">📧</span> DMARC / SPF / DKIM</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-dmarc-domain" placeholder="Domain" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="infraDMARC()">Check</button></div>
+          <pre id="infra-dmarc-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🔒</span> SSL / Security Headers</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-ssl-host" placeholder="Hostname" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="infraSSL()">Audit</button></div>
+          <pre id="infra-ssl-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🔧</span> Tech Stack Detection</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-tech-url" placeholder="https://example.com" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="infraTech()">Detect</button></div>
+          <pre id="infra-tech-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ SIEM ═══════════════════ -->
+    <section class="page" id="pg-siem">
+      <div class="page-header"><div class="page-title">SIEM - Security Information & Event Management</div></div>
+      <div class="pgrid" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr;margin-bottom:12px">
+        <div class="pnl" style="text-align:center;padding:12px"><div style="font-size:24px;font-weight:bold;color:var(--t1)" id="siem-total">0</div><div style="font-size:10px;color:var(--t3)">Total Alerts</div></div>
+        <div class="pnl" style="text-align:center;padding:12px"><div style="font-size:24px;font-weight:bold;color:#ff4444" id="siem-crit">0</div><div style="font-size:10px;color:var(--t3)">Critical</div></div>
+        <div class="pnl" style="text-align:center;padding:12px"><div style="font-size:24px;font-weight:bold;color:#ff8800" id="siem-high">0</div><div style="font-size:10px;color:var(--t3)">High</div></div>
+        <div class="pnl" style="text-align:center;padding:12px"><div style="font-size:24px;font-weight:bold;color:#ffcc00" id="siem-med">0</div><div style="font-size:10px;color:var(--t3)">Medium</div></div>
+        <div class="pnl" style="text-align:center;padding:12px"><div style="font-size:24px;font-weight:bold;color:#4488ff" id="siem-low">0</div><div style="font-size:10px;color:var(--t3)">Low</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="abtn success" onclick="siemStart()">Start SIEM Monitor</button>
+        <button class="abtn danger" onclick="siemStop()">Stop Monitor</button>
+        <button class="abtn" onclick="siemCorrelate()">Threat Feed Correlate</button>
+        <button class="abtn" onclick="loadSIEM()">Refresh</button>
+      </div>
+      <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🚨</span> Live Alert Feed</div></div>
+        <div class="pnb" id="siem-feed" style="max-height:500px;overflow-y:auto;padding:8px;font-size:11px">No alerts yet. Start the SIEM monitor.</div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ FORENSICS ═══════════════════ -->
+    <section class="page" id="pg-forensics">
+      <div class="page-header"><div class="page-title">Forensics & Malware Analysis</div></div>
+      <div class="pgrid" style="grid-template-columns:1fr 1fr">
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🧪</span> CyberChef</div></div><div class="pnb" style="padding:12px">
+          <textarea id="cc-input" rows="3" placeholder="Input data..." style="width:100%;background:var(--bg);color:var(--t1);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:monospace;font-size:11px;resize:vertical"></textarea>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0">
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="base64-encode"> B64 Enc</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="base64-decode"> B64 Dec</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="hex-encode"> Hex Enc</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="hex-decode"> Hex Dec</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="url-encode"> URL Enc</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="url-decode"> URL Dec</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="rot13"> ROT13</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="md5"> MD5</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="sha256"> SHA256</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="reverse"> Reverse</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="binary"> Binary</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="entropy"> Entropy</label>
+            <label style="font-size:10px;color:var(--t2)"><input type="checkbox" class="cc-op" value="jwt-decode"> JWT</label>
+          </div>
+          <button class="abtn" onclick="runCyberChef()">Process</button>
+          <pre id="cc-output" style="margin-top:8px;max-height:200px;overflow:auto;font-size:10px;color:var(--green)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🦠</span> Malware Scanner</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="mal-path" placeholder="/path/to/file" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn danger" onclick="malScan()">Deep Scan</button></div>
+          <pre id="mal-out" style="max-height:300px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🌐</span> Browser Forensics</div></div><div class="pnb" style="padding:12px">
+          <button class="abtn" onclick="browserForensics()">Extract Browser History</button>
+          <pre id="browser-out" style="margin-top:8px;max-height:300px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🕐</span> Forensic Timeline</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="timeline-dir" placeholder="/home" value="/home" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><input id="timeline-hours" placeholder="24" value="24" type="number" class="abtn" style="width:60px;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="forensicTimeline()">Generate</button></div>
+          <pre id="timeline-out" style="max-height:300px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🔒</span> Security Audit</div></div><div class="pnb" style="padding:12px">
+          <button class="abtn danger" onclick="securityAudit()">Run Full Security Audit</button>
+          <div id="sec-score" style="margin:8px 0;font-size:28px;font-weight:bold;text-align:center;color:var(--green)"></div>
+          <pre id="sec-out" style="max-height:300px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">📏</span> YARA Scanner</div></div><div class="pnb" style="padding:12px">
+          <textarea id="yara-rule" rows="5" placeholder="rule example { strings: $a = &quot;malware&quot; condition: $a }" style="width:100%;background:var(--bg);color:var(--t1);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:monospace;font-size:11px"></textarea>
+          <div style="display:flex;gap:6px;margin-top:8px"><input id="yara-path" placeholder="/path/to/scan" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="yaraScan()">Scan</button></div>
+          <pre id="yara-out" style="margin-top:8px;max-height:200px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ DARK WEB ═══════════════════ -->
+    <section class="page" id="pg-darkweb">
+      <div class="page-header"><div class="page-title">Dark Web Intelligence</div></div>
+      <div class="pgrid" style="grid-template-columns:1fr 1fr">
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🌑</span> Dark Web Search (Ahmia)</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="dw-query" placeholder="Search query..." class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="darkwebSearch()">Search</button></div>
+          <div id="dw-results" style="max-height:300px;overflow:auto;font-size:11px;color:var(--t2)">Ready</div>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🧅</span> Onion Scanner</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="dw-onion" placeholder="http://xxxxx.onion" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="onionScan()">Probe</button></div>
+          <pre id="dw-onion-out" style="max-height:300px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">💰</span> Crypto Wallet Tracer</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="dw-wallet" placeholder="Wallet address" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><select id="dw-coin" class="abtn" style="background:var(--bg);color:var(--t1)"><option value="btc">Bitcoin</option><option value="eth">Ethereum</option></select><button class="abtn" onclick="cryptoTrace()">Trace</button></div>
+          <pre id="dw-crypto-out" style="max-height:300px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">📋</span> Paste Site Search</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="dw-paste" placeholder="Search pastes..." class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="pasteSearch()">Search</button></div>
+          <pre id="dw-paste-out" style="max-height:300px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ GEOINT ═══════════════════ -->
+    <section class="page" id="pg-geoint">
+      <div class="page-header"><div class="page-title">Geolocation Intelligence</div></div>
+      <div class="pgrid" style="grid-template-columns:1fr 1fr">
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">📍</span> Multi-IP Geolocation</div></div><div class="pnb" style="padding:12px">
+          <textarea id="geo-ips" rows="4" placeholder="One IP per line..." style="width:100%;background:var(--bg);color:var(--t1);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:monospace;font-size:11px"></textarea>
+          <button class="abtn" style="margin-top:8px" onclick="geoMultiIP()">Locate All</button>
+          <div id="geo-ip-out" style="margin-top:8px;max-height:300px;overflow:auto;font-size:11px">Ready</div>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🗺️</span> Geo Traceroute</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="geo-trace-host" placeholder="Host / IP" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="geoTraceroute()">Trace</button></div>
+          <div id="geo-trace-out" style="max-height:300px;overflow:auto;font-size:11px">Ready</div>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">✈️</span> ADS-B Flight Tracker</div></div><div class="pnb" style="padding:12px">
+          <button class="abtn" onclick="adsbTracker()">Fetch Live Aircraft</button>
+          <div id="geo-adsb-out" style="margin-top:8px;max-height:350px;overflow:auto;font-size:10px">Ready</div>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">📶</span> WiFi Geolocation</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="geo-bssid" placeholder="BSSID (AA:BB:CC:DD:EE:FF)" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="wifiGeo()">Locate</button></div>
+          <pre id="geo-wifi-out" style="max-height:200px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════ COMINT ═══════════════════ -->
+    <section class="page" id="pg-comint">
+      <div class="page-header"><div class="page-title">Communication Intelligence</div></div>
+      <div class="pgrid" style="grid-template-columns:1fr">
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">📧</span> Email Header Analyzer</div></div><div class="pnb" style="padding:12px">
+          <textarea id="email-headers" rows="8" placeholder="Paste full email headers here..." style="width:100%;background:var(--bg);color:var(--t1);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:monospace;font-size:11px;resize:vertical"></textarea>
+          <button class="abtn" style="margin-top:8px" onclick="analyzeEmailHeaders()">Analyze Headers</button>
+          <div id="email-analysis" style="margin-top:12px;font-size:11px">Ready</div>
+        </div></div>
+      </div>
+      <div class="pgrid" style="grid-template-columns:1fr 1fr;margin-top:12px">
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🔐</span> PGP Keyserver Lookup</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="pgp-email" placeholder="email@example.com" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="pgpLookup()">Search</button></div>
+          <pre id="pgp-out" style="max-height:200px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">📄</span> File Metadata Extractor</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="meta-file" placeholder="/path/to/file" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="extractMetadata()">Extract</button></div>
+          <pre id="meta-out" style="max-height:300px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
       </div>
     </section>
 
