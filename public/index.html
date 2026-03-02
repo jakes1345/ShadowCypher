@@ -2008,6 +2008,8 @@ Google Dorks: Advanced search queries for hidden data</pre>
             <input id="key-censys-secret" placeholder="Censys Secret" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
             <input id="key-securitytrails" placeholder="SecurityTrails Key" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
             <input id="key-etherscan" placeholder="Etherscan Key" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
+            <input id="key-abuse-ch" placeholder="abuse.ch (MalwareBazaar/URLhaus)" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
+            <input id="key-leakix" placeholder="LeakIX API Key" class="abtn" style="background:var(--bg);color:var(--t1);border:1px solid var(--border)">
           </div>
           <button class="abtn success" style="margin-top:8px;width:100%" onclick="saveIntelKeys()">Save API Keys</button>
         </div></div>
@@ -2038,6 +2040,26 @@ Google Dorks: Advanced search queries for hidden data</pre>
         <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🔧</span> Tech Stack Detection</div></div><div class="pnb" style="padding:12px">
           <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-tech-url" placeholder="https://example.com" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="infraTech()">Detect</button></div>
           <pre id="infra-tech-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🌐</span> InternetDB (Free)</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-internetdb-ip" placeholder="IP Address" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="infraInternetDB()">Lookup</button></div>
+          <pre id="infra-internetdb-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready (no key)</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🔓</span> LeakIX</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-leakix-q" placeholder="Query (ip, email, etc)" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><select id="infra-leakix-scope" class="abtn" style="background:var(--bg);color:var(--t1)"><option value="service">Service</option><option value="leak">Leak</option></select><button class="abtn" onclick="infraLeakIX()">Search</button></div>
+          <pre id="infra-leakix-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🦠</span> MalwareBazaar</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-mb-hash" placeholder="SHA256 hash" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="infraMalwareBazaar()">Lookup</button></div>
+          <pre id="infra-mb-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready (abuse.ch key)</pre>
+        </div></div>
+        <div class="pnl"><div class="pnh"><div class="pnt"><span class="icon">🔗</span> URLhaus</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-urlhaus-url" placeholder="URL to check" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="infraURLhaus()">Check</button></div>
+          <pre id="infra-urlhaus-out" style="max-height:250px;overflow:auto;font-size:10px;color:var(--t2)">Ready (abuse.ch key)</pre>
+        </div></div>
+        <div class="pnl" style="grid-column:1/-1"><div class="pnh"><div class="pnt"><span class="icon">🖼️</span> URL Preview (iframe)</div></div><div class="pnb" style="padding:12px">
+          <div style="display:flex;gap:6px;margin-bottom:8px"><input id="infra-preview-url" placeholder="https://example.com" class="abtn" style="flex:1;background:var(--bg);color:var(--t1);border:1px solid var(--border)"><button class="abtn" onclick="loadUrlPreview()">Load Preview</button><button class="abtn" onclick="document.getElementById('infra-preview-frame').src='about:blank'">Clear</button></div>
+          <iframe id="infra-preview-frame" class="embed-frame" sandbox="allow-scripts allow-same-origin" title="URL Preview"></iframe>
         </div></div>
       </div>
     </section>
@@ -2222,6 +2244,8 @@ Google Dorks: Advanced search queries for hidden data</pre>
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="animations.js"></script>
   <script src="app.js"></script>
 </body>
 

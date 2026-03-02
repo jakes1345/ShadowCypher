@@ -7,12 +7,65 @@ app.get('/api/intel-keys', requireAuth, (_, res) => { const k = getKeys(), m = {
 app.post('/api/intel-keys', requireAuth, (req, res) => { setKeys(req.body); res.json({ success: true }); });
 
 // SHODAN
-app.post('/api/infra/shodan/host', requireAuth, async (req, res) => { const key = getKeys().shodan; if (!key) return res.json({ error: 'No Shodan API key' }); try { res.json(JSON.parse(await run('curl -s "https://api.shodan.io/shodan/host/'+req.body.ip+'?key='+key+'"', 15000))); } catch(e) { res.json({ error: e.message }); } });
+app.post('/api/infra/shodan/host', requireAuth, async (req, res) => {
+    const key = getKeys().shodan;
+    const ip = req.body.ip;
+    if (key) {
+        try { return res.json(JSON.parse(await run('curl -s "https://api.shodan.io/shodan/host/'+ip+'?key='+key+'"', 15000))); } catch(e) { return res.json({ error: e.message }); }
+    }
+    try { res.json(JSON.parse(await run('curl -s "https://internetdb.shodan.io/'+ip+'"', 15000))); } catch(e) { res.json({ error: e.message }); }
+});
 app.post('/api/infra/shodan/search', requireAuth, async (req, res) => { const key = getKeys().shodan; if (!key) return res.json({ error: 'No Shodan API key' }); try { res.json(JSON.parse(await run('curl -s "https://api.shodan.io/shodan/host/search?key='+key+'&query='+encodeURIComponent(req.body.query)+'"', 30000))); } catch(e) { res.json({ error: e.message }); } });
-app.get('/api/infra/shodan/myip', requireAuth, async (_, res) => { const key = getKeys().shodan; if (!key) return res.json({ error: 'No Shodan API key' }); try { const ip = (await run('curl -s "https://api.shodan.io/tools/myip?key='+key+'"')).replace(/"/g,''); res.json({ ip }); } catch(e) { res.json({ error: e.message }); } });
+app.get('/api/infra/shodan/myip', requireAuth, async (_, res) => {
+    const key = getKeys().shodan;
+    if (key) { try { const ip = (await run('curl -s "https://api.shodan.io/tools/myip?key='+key+'"')).replace(/"/g,''); return res.json({ ip }); } catch(e) { return res.json({ error: e.message }); } }
+    try { const ip = (await run('curl -s "https://icanhazip.com"')).trim(); res.json({ ip, source: 'free' }); } catch(e) { res.json({ error: e.message }); }
+});
 
 // VIRUSTOTAL
-app.post('/api/infra/virustotal/scan', requireAuth, async (req, res) => { const key = getKeys().virustotal; if (!key) return res.json({ error: 'No VirusTotal API key' }); const { target, type } = req.body; let url; if (type==='ip') url='https://www.virustotal.com/api/v3/ip_addresses/'+target; else if (type==='domain') url='https://www.virustotal.com/api/v3/domains/'+target; else if (type==='hash') url='https://www.virustotal.com/api/v3/files/'+target; else return res.json({ error: 'Type: ip/domain/hash' }); try { res.json(JSON.parse(await run('curl -s "'+url+'" -H "x-apikey: '+key+'"', 15000))); } catch(e) { res.json({ error: e.message }); } });
+
+// SHODAN INTERNETDB (FREE - NO KEY)
+app.post('/api/infra/internetdb', requireAuth, async (req, res) => { try { res.json(JSON.parse(await run('curl -s "https://internetdb.shodan.io/'+req.body.ip+'"', 15000))); } catch(e) { res.json({ error: e.message }); } });
+
+// LEAKIX (FREE KEY - breach + service search)
+app.post('/api/infra/leakix', requireAuth, async (req, res) => {
+    const key = getKeys().leakix;
+    const { q, scope, page } = req.body;
+    const scopeVal = scope || 'service';
+    const pageVal = page || 0;
+    const url = 'https://leakix.net/search?scope='+scopeVal+'&page='+pageVal+'&q='+encodeURIComponent(q||'');
+    const headers = key ? ' -H "api-key: '+key+'"' : '';
+    try { res.json(JSON.parse(await run('curl -s -H "accept: application/json"'+headers+' "'+url+'"', 20000))); } catch(e) { res.json({ error: e.message }); }
+});
+
+// MALWAREEBAZAAR (FREE KEY - abuse.ch)
+app.post('/api/infra/malwarebazaar', requireAuth, async (req, res) => {
+    const key = getKeys().abuse_ch;
+    if (!key) return res.json({ error: 'No abuse.ch key - get free at auth.abuse.ch' });
+    const { hash } = req.body;
+    try { res.json(JSON.parse(await run('curl -s -X POST "https://mb-api.abuse.ch/api/v1/" -d "query=get_info" -d "hash='+hash+'" -H "Auth-Key: '+key+'"', 15000))); } catch(e) { res.json({ error: e.message }); }
+});
+
+// URLHAUS (FREE KEY - same abuse.ch)
+app.post('/api/infra/urlhaus', requireAuth, async (req, res) => {
+    const key = getKeys().abuse_ch;
+    if (!key) return res.json({ error: 'No abuse.ch key - get free at auth.abuse.ch' });
+    const { url } = req.body;
+    try { res.json(JSON.parse(await run('curl -s -X POST "https://urlhaus-api.abuse.ch/v1/url/" -d "url='+encodeURIComponent(url)+'" -H "Auth-Key: '+key+'"', 15000))); } catch(e) { res.json({ error: e.message }); }
+});
+app.post('/api/infra/virustotal/scan', requireAuth, async (req, res) => {
+    const vtKey = getKeys().virustotal;
+    const abuseKey = getKeys().abuse_ch;
+    const { target, type } = req.body;
+    if (vtKey) {
+        let url; if (type==='ip') url='https://www.virustotal.com/api/v3/ip_addresses/'+target; else if (type==='domain') url='https://www.virustotal.com/api/v3/domains/'+target; else if (type==='hash') url='https://www.virustotal.com/api/v3/files/'+target; else return res.json({ error: 'Type: ip/domain/hash' });
+        try { return res.json(JSON.parse(await run('curl -s "'+url+'" -H "x-apikey: '+vtKey+'"', 15000))); } catch(e) { return res.json({ error: e.message }); }
+    }
+    if (type==='hash' && abuseKey) {
+        try { return res.json({ source: 'MalwareBazaar', ...JSON.parse(await run('curl -s -X POST "https://mb-api.abuse.ch/api/v1/" -d "query=get_info" -d "hash='+target+'" -H "Auth-Key: '+abuseKey+'"', 15000))}); } catch(e) { return res.json({ error: e.message }); }
+    }
+    return res.json({ error: 'No VirusTotal key. For hash lookup, add abuse.ch key (auth.abuse.ch)' });
+});
 
 // CERT TRANSPARENCY
 app.post('/api/infra/crtsh', async (req, res) => { try { const d = await run('curl -s "https://crt.sh/?q=%25.'+req.body.domain+'&output=json" | head -c 100000', 30000); const c = JSON.parse(d||'[]'); res.json({ count: c.length, certificates: c.slice(0,100) }); } catch(e) { res.json({ error: e.message }); } });
@@ -51,10 +104,20 @@ app.post('/api/comint/email-headers', async (req, res) => {
     p.hopsCount = p.received.length;
     res.json(p);
 });
-app.post('/api/geoint/ip-multi', async (req, res) => { if(!Array.isArray(req.body.ips)) return res.json({error:'Need array'}); try { const r=await Promise.allSettled(req.body.ips.slice(0,50).map(async ip=>({ip,...JSON.parse(await run('curl -s "http://ip-api.com/json/'+ip+'?fields=status,country,countryCode,city,lat,lon,timezone,isp,org,as"', 5000))}))); res.json(r.filter(x=>x.status==='fulfilled').map(x=>x.value)); } catch(e) { res.json({error:e.message}); } });
+async function geoLookup(ip) {
+    try {
+        const j = JSON.parse(await run('curl -s "http://ip-api.com/json/'+ip+'?fields=status,country,countryCode,city,lat,lon,timezone,isp,org,as"', 5000));
+        if (j.status === 'success') return { ip, ...j };
+        throw new Error('ip-api failed');
+    } catch (e) {
+        const j = JSON.parse(await run('curl -s "https://reallyfreegeoip.org/json/'+ip+'"', 5000));
+        return { ip, status: 'success', country: j.country_name, countryCode: j.country_code, city: j.city||'', lat: j.latitude, lon: j.longitude, timezone: j.time_zone||'', isp: '', org: '', as: '' };
+    }
+}
+app.post('/api/geoint/ip-multi', async (req, res) => { if(!Array.isArray(req.body.ips)) return res.json({error:'Need array'}); try { const r=await Promise.allSettled(req.body.ips.slice(0,50).map(ip=>geoLookup(ip))); res.json(r.filter(x=>x.status==='fulfilled').map(x=>x.value)); } catch(e) { res.json({error:e.message}); } });
 
 // GEOINT: TRACEROUTE WITH GEO
-app.post('/api/geoint/traceroute-geo', async (req, res) => { try { const trace=await run('traceroute -n -m 20 '+req.body.host+' 2>/dev/null', 30000); const hops=[]; for(const l of trace.split('\n')){const m=l.match(/^s*(d+)s+(d+.d+.d+.d+)s+(S+)s+ms/);if(m)hops.push({hop:+m[1],ip:m[2],rtt:+m[3]});} const geo=await Promise.allSettled(hops.map(async h=>{if(/^(10.|192.168.|172.)/.test(h.ip))return{...h,private:true};try{return{...h,...JSON.parse(await run('curl -s "http://ip-api.com/json/'+h.ip+'?fields=country,city,lat,lon,isp"',5000))};}catch(e){return h;}})); res.json({raw:trace,hops:geo.filter(r=>r.status==='fulfilled').map(r=>r.value)}); } catch(e) { res.json({error:e.message}); } });
+app.post('/api/geoint/traceroute-geo', async (req, res) => { try { const trace=await run('traceroute -n -m 20 '+req.body.host+' 2>/dev/null', 30000); const hops=[]; for(const l of trace.split('\n')){const m=l.match(/^\s*(\d+)\s+(\d+\.\d+\.\d+\.\d+)\s+(\S+)\s+ms/);if(m)hops.push({hop:+m[1],ip:m[2],rtt:+m[3]});} const geo=await Promise.allSettled(hops.map(async h=>{if(/^(10\.|192\.168\.|172\.)/.test(h.ip))return{...h,private:true};try{const g=await geoLookup(h.ip);return{...h,country:g.country,city:g.city,lat:g.lat,lon:g.lon,isp:g.isp};}catch(e){return h;}})); res.json({raw:trace,hops:geo.filter(r=>r.status==='fulfilled').map(r=>r.value)}); } catch(e) { res.json({error:e.message}); } });
 
 // GEOINT: ADS-B
 app.get('/api/geoint/adsb', async (_, res) => { try { const d=JSON.parse(await run('curl -s "https://opensky-network.org/api/states/all?lamin=25&lomin=-130&lamax=50&lomax=-60" | head -c 100000', 20000)||'{}'); const ac=(d.states||[]).slice(0,200).map(s=>({icao24:s[0],callsign:(s[1]||'').trim(),country:s[2],lat:s[6],lon:s[5],altitude:s[7],velocity:s[9],heading:s[10],onGround:s[8]})); res.json({aircraft:ac,time:d.time,count:ac.length}); } catch(e) { res.json({error:e.message}); } });
@@ -75,7 +138,7 @@ app.post('/api/darkweb/crypto-trace', async (req, res) => { const {address,coin}
 app.post('/api/forensics/cyberchef', requireAuth, async (req, res) => { let result=req.body.input; try { for(const op of req.body.operations){ switch(op.type){ case 'base64-encode':result=Buffer.from(result).toString('base64');break; case 'base64-decode':result=Buffer.from(result,'base64').toString('utf8');break; case 'hex-encode':result=Buffer.from(result).toString('hex');break; case 'hex-decode':result=Buffer.from(result,'hex').toString('utf8');break; case 'url-encode':result=encodeURIComponent(result);break; case 'url-decode':result=decodeURIComponent(result);break; case 'rot13':result=result.replace(/[a-zA-Z]/g,c=>String.fromCharCode((c<='Z'?90:122)>=(c=c.charCodeAt(0)+13)?c:c-26));break; case 'reverse':result=result.split('').reverse().join('');break; case 'md5':result=require('crypto').createHash('md5').update(result).digest('hex');break; case 'sha256':result=require('crypto').createHash('sha256').update(result).digest('hex');break; case 'binary':result=result.split('').map(c=>c.charCodeAt(0).toString(2).padStart(8,'0')).join(' ');break; case 'xor':{const k=op.key||'A';result=result.split('').map((c,i)=>String.fromCharCode(c.charCodeAt(0)^k.charCodeAt(i%k.length))).join('');break;} case 'jwt-decode':{result=result.split('.').map((p,i)=>{try{return i<2?JSON.stringify(JSON.parse(Buffer.from(p,'base64url').toString()),null,2):p}catch(e){return p}}).join('\n---\n');break;} }} res.json({result}); } catch(e) { res.json({error:e.message}); } });
 
 // FORENSICS: MALWARE SCAN
-app.post('/api/forensics/malware-scan', requireAuth, async (req, res) => { const f=req.body.filePath; try { const [fi,hashes,str,elf]=await Promise.all([run('file "'+f+'"'),run('sha256sum "'+f+'" && md5sum "'+f+'" 2>/dev/null'),run('strings -n 6 "'+f+'" | head -50'),run('readelf -h "'+f+'" 2>/dev/null | head -20 || echo "Not ELF"')]); let vt=null; const sha256=(hashes.match(/^(\w{64})/m)||[])[1]; const vtKey=getKeys().virustotal; if(vtKey&&sha256) try{vt=JSON.parse(await run('curl -s "https://www.virustotal.com/api/v3/files/'+sha256+'" -H "x-apikey: '+vtKey+'"', 15000));}catch(e){} res.json({fileInfo:fi,hashes,elfInfo:elf,virustotal:vt,suspiciousStrings:str.split('\n').filter(s=>/http|exec|eval|shell|password|token|secret/i.test(s)),allStrings:str.split('\n')}); } catch(e) { res.json({error:e.message}); } });
+app.post('/api/forensics/malware-scan', requireAuth, async (req, res) => { const f=req.body.filePath; try { const [fi,hashes,str,elf]=await Promise.all([run('file "'+f+'"'),run('sha256sum "'+f+'" && md5sum "'+f+'" 2>/dev/null'),run('strings -n 6 "'+f+'" | head -50'),run('readelf -h "'+f+'" 2>/dev/null | head -20 || echo "Not ELF"')]); let vt=null; const sha256=(hashes.match(/^(\w{64})/m)||[])[1]; const vtKey=getKeys().virustotal; const abuseKey=getKeys().abuse_ch; if(vtKey&&sha256) try{vt=JSON.parse(await run('curl -s "https://www.virustotal.com/api/v3/files/'+sha256+'" -H "x-apikey: '+vtKey+'"', 15000));}catch(e){} else if(sha256&&abuseKey) try{vt={source:'MalwareBazaar',...JSON.parse(await run('curl -s -X POST "https://mb-api.abuse.ch/api/v1/" -d "query=get_info" -d "hash='+sha256+'" -H "Auth-Key: '+abuseKey+'"', 15000))};}catch(e){} res.json({fileInfo:fi,hashes,elfInfo:elf,virustotal:vt,suspiciousStrings:str.split('\n').filter(s=>/http|exec|eval|shell|password|token|secret/i.test(s)),allStrings:str.split('\n')}); } catch(e) { res.json({error:e.message}); } });
 
 // FORENSICS: BROWSER HISTORY
 app.post('/api/forensics/browser', requireAuth, async (req, res) => {
@@ -86,15 +149,6 @@ app.post('/api/forensics/browser', requireAuth, async (req, res) => {
         const ffCmd = 'find "' + home + '/.mozilla/firefox" -name "places.sqlite" 2>/dev/null | head -1 | xargs -I{} sqlite3 {} "SELECT url,title FROM moz_places ORDER BY last_visit_date DESC LIMIT 50" 2>/dev/null || echo "Firefox not found"';
         const [ch, ff] = await Promise.all([run(chromeCmd, 10000), run(ffCmd, 10000)]);
         res.json({ chrome: ch.split('\n'), firefox: ff.split('\n') });
-    } catch(e) { res.json({ error: e.message }); }
-});
-
-app.post('/api/forensics/browser', requireAuth, async (req, res) => {
-    const home = process.env.HOME;
-    try {
-        const ch = await run('sqlite3 ' + home + '/.config/google-chrome/Default/History ' + '"SELECT url,title FROM urls ORDER BY last_visit_time DESC LIMIT 50" 2>/dev/null || echo Chrome_NA', 10000);
-        const ff = await run('ls ' + home + '/.mozilla/firefox/*/places.sqlite 2>/dev/null | head -1 | xargs sqlite3 "SELECT url,title FROM moz_places ORDER BY last_visit_date DESC LIMIT 50" 2>/dev/null || echo Firefox_NA', 10000);
-        res.json({ chrome: ch.split(String.fromCharCode(10)), firefox: ff.split(String.fromCharCode(10)) });
     } catch(e) { res.json({ error: e.message }); }
 });
 

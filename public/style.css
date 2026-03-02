@@ -441,7 +441,8 @@ body::after {
 
 .page.active {
   display: block;
-  animation: pageIn .3s cubic-bezier(.4,0,.2,1)
+  animation: pageIn .3s cubic-bezier(.4,0,.2,1);
+  view-transition-name: page-content
 }
 
 @keyframes pageIn {
@@ -1755,3 +1756,136 @@ pre.to {
 .security-score .score-num { font-size: 14px; color: var(--t3); margin-top: 5px; }
 .security-finding { padding: 8px 12px; border-left: 3px solid var(--orange); margin: 5px 0; font-size: 11px; background: rgba(255,165,0,0.05); }
 .security-finding.good { border-left-color: var(--green); background: rgba(0,255,100,0.05); }
+/* ═══════════════════════════════════════════════════════════
+   PREMIUM ANIMATIONS - View Transitions, Skeleton, Ripple
+   ═══════════════════════════════════════════════════════════ */
+
+/* View Transitions API - smooth page crossfade */
+::view-transition-old(root) {
+  animation: vt-fade-out 0.25s ease-out forwards;
+}
+::view-transition-new(root) {
+  animation: vt-fade-in 0.35s ease-out forwards;
+}
+@keyframes vt-fade-out {
+  to { opacity: 0; }
+}
+@keyframes vt-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Page content - for View Transitions name matching */
+
+
+/* Stagger fallback (when no GSAP) */
+@keyframes staggerIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton loading - shimmer effect */
+.skeleton-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+.skeleton-line {
+  height: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+  border-radius: 4px;
+  width: var(--w, 80%);
+}
+pre.skeleton-active {
+  min-height: 120px;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Button ripple effect */
+.abtn {
+  position: relative;
+  overflow: hidden;
+}
+.btn-ripple {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 212, 255, 0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple-expand 0.6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes ripple-expand {
+  to {
+    transform: translate(-50%, -50%) scale(15);
+    opacity: 0;
+  }
+}
+
+/* Glassmorphism accent for panels */
+.pnl {
+  background: var(--bg-c);
+  position: relative;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.pnl::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 40%, transparent 60%, rgba(0,212,255,0.05));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Depth shadows for cards */
+.sc {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+.sc:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,212,255,0.1);
+}
+
+/* Nav item active indicator - subtle glow */
+.nav-item.active {
+  box-shadow: inset 0 0 20px rgba(0,212,255,0.06);
+}
+
+/* iframe embed - for preview/sandbox panels */
+.embed-frame {
+  width: 100%;
+  min-height: 400px;
+  border: 1px solid var(--brd);
+  border-radius: var(--r);
+  background: var(--bg-0);
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  .skeleton-line { animation: none !important; }
+  .btn-ripple { display: none !important; }
+}

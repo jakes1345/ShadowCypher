@@ -184,14 +184,15 @@ async function logoutAll() {
 
 // Initialize app - called after successful login
 function initApp() { 
-    // Start with Network and Operations groups open by default
-    ['network', 'ops', 'hub'].forEach(g => {
-        const el = document.querySelector('.nav-group[data-group="' + g + '"]');
+    ['network', 'ops', 'hub'].forEach(function(g) {
+        var el = document.querySelector('.nav-group[data-group="' + g + '"]');
         if (el) el.classList.add('open');
     });
-    // Route to page from hash, or default to dashboard
-    const hash = window.location.hash.replace('#/', '') || 'dashboard';
+    var hash = window.location.hash.replace('#/', '') || 'dashboard';
     go(hash);
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.initButtonRipples) {
+        window.ShadowCypherAnim.initButtonRipples();
+    }
 }
 
 // Allow Enter key to login
@@ -268,38 +269,49 @@ const PAGE_GROUPS = {
 
 let currentPage = null;
 
-function go(id, pushState = true) {
+function go(id, pushState) {
+    pushState = pushState !== false;
     if (!id) id = 'dashboard';
     const page = document.getElementById('pg-' + id);
     if (!page) { console.warn('Page not found:', id); return; }
 
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    var doUpdate = function() {
+        document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+        document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
 
-    page.classList.add('active');
-    const navLink = document.querySelector('.nav-item[data-page="' + id + '"]');
-    if (navLink) navLink.classList.add('active');
+        page.classList.add('active');
+        var navLink = document.querySelector('.nav-item[data-page="' + id + '"]');
+        if (navLink) navLink.classList.add('active');
 
-    // Open the parent nav group
-    const groupName = PAGE_GROUPS[id];
-    if (groupName) {
-        const group = document.querySelector('.nav-group[data-group="' + groupName + '"]');
-        if (group && !group.classList.contains('open')) group.classList.add('open');
+        var groupName = PAGE_GROUPS[id];
+        if (groupName) {
+            var group = document.querySelector('.nav-group[data-group="' + groupName + '"]');
+            if (group && !group.classList.contains('open')) group.classList.add('open');
+        }
+
+        var bcCurrent = document.getElementById('bc-current');
+        if (bcCurrent) bcCurrent.textContent = PAGE_NAMES[id] || id;
+
+        if (pushState) {
+            var newHash = '#/' + id;
+            if (window.location.hash !== newHash) window.location.hash = newHash;
+        }
+
+        if (PAGE_LOADERS[id]) PAGE_LOADERS[id]();
+        currentPage = id;
+
+        if (window.ShadowCypherAnim && window.ShadowCypherAnim.staggerPageIn) {
+            requestAnimationFrame(function() {
+                window.ShadowCypherAnim.staggerPageIn(page, { delay: 0.02, duration: 0.3 });
+            });
+        }
+    };
+
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.withViewTransition) {
+        window.ShadowCypherAnim.withViewTransition(doUpdate);
+    } else {
+        doUpdate();
     }
-
-    // Update breadcrumb
-    const bcCurrent = document.getElementById('bc-current');
-    if (bcCurrent) bcCurrent.textContent = PAGE_NAMES[id] || id;
-
-    // Update URL hash
-    if (pushState) {
-        const newHash = '#/' + id;
-        if (window.location.hash !== newHash) window.location.hash = newHash;
-    }
-
-    // Load page data
-    if (PAGE_LOADERS[id]) PAGE_LOADERS[id]();
-    currentPage = id;
 }
 
 // Nav group collapse/expand
@@ -1619,7 +1631,7 @@ async function loadInfraIntel() {
 
 async function saveIntelKeys() {
     const keys = {};
-    const fields = { shodan: 'key-shodan', virustotal: 'key-virustotal', censys_id: 'key-censys-id', censys_secret: 'key-censys-secret', securitytrails: 'key-securitytrails', etherscan: 'key-etherscan' };
+    const fields = { shodan: 'key-shodan', virustotal: 'key-virustotal', censys_id: 'key-censys-id', censys_secret: 'key-censys-secret', securitytrails: 'key-securitytrails', etherscan: 'key-etherscan', abuse_ch: 'key-abuse-ch', leakix: 'key-leakix' };
     for (const [k, id] of Object.entries(fields)) {
         const v = document.getElementById(id).value.trim();
         if (v) keys[k] = v;
@@ -1629,23 +1641,46 @@ async function saveIntelKeys() {
 }
 
 async function infraShodan(mode) {
-    const out = document.getElementById('infra-shodan-out');
-    out.textContent = 'Querying Shodan...';
-    let r;
+    var out = document.getElementById('infra-shodan-out');
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.showSkeleton) {
+        window.ShadowCypherAnim.showSkeleton(out, 'json');
+    } else {
+        out.textContent = 'Querying...';
+    }
+    var r;
     if (mode === 'myip') r = await api('/infra/shodan/myip');
     else if (mode === 'search') r = await api('/infra/shodan/search', { method: 'POST', body: { query: document.getElementById('infra-shodan-ip').value } });
     else r = await api('/infra/shodan/host', { method: 'POST', body: { ip: document.getElementById('infra-shodan-ip').value } });
-    out.textContent = JSON.stringify(r, null, 2);
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.hideSkeleton) {
+        window.ShadowCypherAnim.hideSkeleton(out, r);
+    } else {
+        out.textContent = JSON.stringify(r, null, 2);
+    }
 }
 
 async function infraVT() {
-    const out = document.getElementById('infra-vt-out');
-    out.textContent = 'Scanning with VirusTotal...';
-    const r = await api('/infra/virustotal/scan', { method: 'POST', body: { target: document.getElementById('infra-vt-target').value, type: document.getElementById('infra-vt-type').value } });
-    if (r?.data?.attributes?.last_analysis_stats) {
-        const s = r.data.attributes.last_analysis_stats;
-        out.textContent = 'Malicious: ' + (s.malicious||0) + '\nSuspicious: ' + (s.suspicious||0) + '\nHarmless: ' + (s.harmless||0) + '\nUndetected: ' + (s.undetected||0) + '\n\n' + JSON.stringify(r.data.attributes, null, 2).substring(0, 2000);
-    } else out.textContent = JSON.stringify(r, null, 2);
+    var out = document.getElementById('infra-vt-out');
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.showSkeleton) {
+        window.ShadowCypherAnim.showSkeleton(out, 'json');
+    } else {
+        out.textContent = 'Scanning...';
+    }
+    var r = await api('/infra/virustotal/scan', { method: 'POST', body: { target: document.getElementById('infra-vt-target').value, type: document.getElementById('infra-vt-type').value } });
+    var txt;
+    if (r && r.data && r.data.attributes && r.data.attributes.last_analysis_stats) {
+        var s = r.data.attributes.last_analysis_stats;
+        txt = 'Malicious: ' + (s.malicious||0) + '\nSuspicious: ' + (s.suspicious||0) + '\nHarmless: ' + (s.harmless||0) + '\nUndetected: ' + (s.undetected||0) + '\n\n' + JSON.stringify(r.data.attributes, null, 2).substring(0, 2000);
+    } else if (r && r.source === 'MalwareBazaar' && r.data && r.data.length) {
+        var d = r.data[0];
+        txt = 'Source: MalwareBazaar\n\nFile: ' + (d.file_name||'N/A') + '\nSHA256: ' + (d.sha256_hash||'') + '\nMalware: ' + (d.tags ? d.tags.join(', ') : 'N/A') + '\n\n' + JSON.stringify(r, null, 2).substring(0, 2000);
+    } else {
+        txt = JSON.stringify(r, null, 2);
+    }
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.hideSkeleton) {
+        window.ShadowCypherAnim.hideSkeleton(out, txt);
+    } else {
+        out.textContent = txt;
+    }
 }
 
 async function infraCRT() {
@@ -1691,6 +1726,56 @@ async function infraTech() {
     const r = await api('/infra/tech-detect', { method: 'POST', body: { url: document.getElementById('infra-tech-url').value } });
     if (r?.technologies) out.textContent = r.technologies.length + ' technologies detected:\n\n' + r.technologies.map(t => '  [+] ' + t).join('\n');
     else out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function infraInternetDB() {
+    var out = document.getElementById('infra-internetdb-out');
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.showSkeleton) window.ShadowCypherAnim.showSkeleton(out, 'json');
+    else out.textContent = 'Querying...';
+    var r = await api('/infra/internetdb', { method: 'POST', body: { ip: document.getElementById('infra-internetdb-ip').value } });
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.hideSkeleton) window.ShadowCypherAnim.hideSkeleton(out, r);
+    else out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function infraLeakIX() {
+    var out = document.getElementById('infra-leakix-out');
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.showSkeleton) window.ShadowCypherAnim.showSkeleton(out, 'json');
+    else out.textContent = 'Searching...';
+    var r = await api('/infra/leakix', { method: 'POST', body: { q: document.getElementById('infra-leakix-q').value, scope: document.getElementById('infra-leakix-scope').value } });
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.hideSkeleton) window.ShadowCypherAnim.hideSkeleton(out, r);
+    else out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function infraMalwareBazaar() {
+    var out = document.getElementById('infra-mb-out');
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.showSkeleton) window.ShadowCypherAnim.showSkeleton(out, 'json');
+    else out.textContent = 'Looking up...';
+    var r = await api('/infra/malwarebazaar', { method: 'POST', body: { hash: document.getElementById('infra-mb-hash').value } });
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.hideSkeleton) window.ShadowCypherAnim.hideSkeleton(out, r);
+    else out.textContent = JSON.stringify(r, null, 2);
+}
+
+async function infraURLhaus() {
+    var out = document.getElementById('infra-urlhaus-out');
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.showSkeleton) window.ShadowCypherAnim.showSkeleton(out, 'json');
+    else out.textContent = 'Checking...';
+    var r = await api('/infra/urlhaus', { method: 'POST', body: { url: document.getElementById('infra-urlhaus-url').value } });
+    if (window.ShadowCypherAnim && window.ShadowCypherAnim.hideSkeleton) window.ShadowCypherAnim.hideSkeleton(out, r);
+    else out.textContent = JSON.stringify(r, null, 2);
+}
+
+function loadUrlPreview() {
+    var url = document.getElementById('infra-preview-url').value.trim();
+    var frame = document.getElementById('infra-preview-frame');
+    if (!frame) return;
+    if (!url) { toast('Enter a URL', 'error'); return; }
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    try {
+        frame.src = url;
+        toast('Loading preview...', 'info');
+    } catch (e) {
+        toast('Invalid URL', 'error');
+    }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1744,7 +1829,7 @@ async function malScan() {
     if (r?.fileInfo) {
         let txt = '=== FILE INFO ===\n' + r.fileInfo + '\n\n=== HASHES ===\n' + r.hashes + '\n\n=== ELF ===\n' + r.elfInfo;
         if (r.suspiciousStrings?.length) txt += '\n\n=== SUSPICIOUS STRINGS ===\n' + r.suspiciousStrings.join('\n');
-        if (r.virustotal?.data) txt += '\n\n=== VIRUSTOTAL ===\n' + JSON.stringify(r.virustotal.data.attributes?.last_analysis_stats, null, 2);
+        if (r.virustotal?.data?.attributes?.last_analysis_stats) txt += '\n\n=== VIRUSTOTAL ===\n' + JSON.stringify(r.virustotal.data.attributes.last_analysis_stats, null, 2); else if (r.virustotal?.source === 'MalwareBazaar' && r.virustotal?.data?.length) { const mb = r.virustotal.data[0]; txt += '\n\n=== MALWAREBAZAAR ===\nFile: ' + (mb.file_name||'N/A') + '\nTags: ' + (mb.tags?.join(', ')||'N/A'); }
         if (r.clamav) txt += '\n\n=== CLAMAV ===\n' + r.clamav;
         out.textContent = txt;
     } else out.textContent = JSON.stringify(r, null, 2);
