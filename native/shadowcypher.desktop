@@ -1,7 +1,8 @@
+#!/usr/bin/env xdg-open
 [Desktop Entry]
 Name=ShadowCypher
 Comment=Network Admin Panel
-Exec=/home/jack/ShadowCypher/native/shadowcypher
+Exec=bash -c "cd /home/jack/ShadowCypher && python3 desktop/main.py"
 Path=/home/jack/ShadowCypher
 Icon=network-workgroup
 Terminal=false

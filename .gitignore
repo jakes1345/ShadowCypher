@@ -4,6 +4,8 @@ server_output.txt
 ai_config.json
 intel_config.json
 router_config.json
+upnp_mappings.json
+minecraft_config.json
 notes.json
 users.json
 activity.log
@@ -18,3 +20,26 @@ server.js.broken
 .session-secret
 devices.json
 !.env.local
+
+# API key stores
+intel-keys.json
+
+# IDE/tool directories
+.claude/
+.cursor/hooks/
+.cursor/worktrees.json
+.sisyphus/
+.crush/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.eggs/
+*.egg-info/
+shadowcypher.egg-info/
+
+# Desktop app data
+desktop/backend/__pycache__/
+desktop/pages/__pycache__/
+desktop/widgets/__pycache__/
