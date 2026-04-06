@@ -37,16 +37,39 @@ class CryptoManager:
                 self.is_unlocked = False
 
     def unlock_system(self, user_key):
-        """Validates a key provided by the user in the UI."""
+        """Validates a key provided by the user with Anti-Bruteforce Tarpits."""
+        import time
+        
+        # Check if they are permanently locked out
+        if os.path.exists(os.path.join(config.project_root, '.drm-lockout')):
+            logger.error("crypto", "SYSTEM PERMANENTLY LOCKED DUE TO INTRUSION ATTEMPT.")
+            return False
+
         try:
             self.fernet = Fernet(user_key.encode())
             # Write it so they don't have to enter it every time
             with open(self.key_file, 'wb') as f:
                 f.write(user_key.encode())
             self.is_unlocked = True
+            
+            # Reset intrusion attempts
+            self._failed_attempts = 0
             logger.info("crypto", "SYSTEM DECRYPTED. Arsenal online.")
             return True
+            
         except ValueError:
+            self._failed_attempts = getattr(self, '_failed_attempts', 0) + 1
+            logger.error("crypto", f"INVALID KEY COMBINATION. Warning {self._failed_attempts}/5.")
+            
+            # Tarpit Delay: Mathematically slows down automated hash-cracking 
+            time.sleep(3.0 * self._failed_attempts)
+            
+            if self._failed_attempts >= 5:
+                # Self-Destruct Protocol
+                with open(os.path.join(config.project_root, '.drm-lockout'), 'w') as f:
+                    f.write("BURNED")
+                logger.error("crypto", "MAXIMUM ATTEMPTS REACHED. LOCKOUT PROTOCOL ENGAGED.")
+                
             return False
 
     def require_unlock(self, func):
