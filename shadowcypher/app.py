@@ -30,6 +30,9 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.show_all()
 
     def _build_sidebar(self):
+        import platform
+        current_os = platform.system()
+        
         sidebar = Gtk.ListBox()
         sidebar.get_style_context().add_class("sidebar")
         pages = [
@@ -39,9 +42,19 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             "\U0001f6e1 Firewall Defense", "\U0001f4f6 Wireless Signals", "\U0001f4bb System Control",
             "\U0001f4e7 Network Support & Ticketing"
         ]
+        
+        linux_only_modules = ["Firewall Defense", "Wireless Signals"]
+        
         for name in pages:
             row = Gtk.ListBoxRow()
             lbl = Gtk.Label(label=name, xalign=0)
+            
+            clean_name = name.split(" ", 1)[1]
+            if current_os != "Linux" and clean_name in linux_only_modules:
+                lbl.set_label(f"[{current_os} UNSUPPORTED]\n{name}")
+                lbl.set_sensitive(False)
+                row.set_sensitive(False)
+                
             row.add(lbl)
             sidebar.add(row)
         sidebar.connect("row-activated", self._on_sidebar_selected)
