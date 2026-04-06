@@ -4,14 +4,14 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 from shadowcypher.ui.base_page import BasePage
-from shadowcypher.modules.recon import RouterInspector
+from shadowcypher.modules.recon import Recon
 from shadowcypher.core.logger import logger
 
 class ReconPage(BasePage):
     """Elite Reconnaissance Hub. Gateway discovery and OS fingerprinting."""
     def __init__(self):
         super().__init__("\U0001f4e1 SIGNAL RECONNAISSANCE")
-        self.inspector = RouterInspector()
+        self.inspector = Recon()
         self._build_ui()
 
     def _build_ui(self):

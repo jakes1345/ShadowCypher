@@ -47,3 +47,44 @@ class VulnScanner:
         with open(report_path, "w") as f:
             f.write(text)
         return report_path
+        
+    # UI Backwards Compatibility Hooks
+    @staticmethod
+    def nikto_scan(target, port=80, ssl=False, on_output=None, on_complete=None):
+        cmd = f"nikto -h {target} -p {port}" + (" -ssl" if ssl else "")
+        runner.execute_task(f"NIKTO_{target}", cmd, callback=on_output)
+        
+    @staticmethod
+    def sqlmap_scan(target, on_output=None, on_complete=None):
+        cmd = f"sqlmap -u {target} --batch"
+        runner.execute_task(f"SQLMAP_{target}", cmd, callback=on_output)
+        
+    @staticmethod
+    def sqlmap_enumerate(target, on_output=None, on_complete=None):
+        cmd = f"sqlmap -u {target} --batch --dbs"
+        runner.execute_task(f"SQLMAP_ENUM_{target}", cmd, callback=on_output)
+        
+    @staticmethod
+    def nmap_vuln_scan(target, ports="1-1024", on_output=None, on_complete=None):
+        cmd = f"nmap -p {ports} --script vuln {target}"
+        runner.execute_task(f"NMAP_VULN_{target}", cmd, callback=on_output)
+        
+    @staticmethod
+    def nmap_smb_vuln(target, on_output=None, on_complete=None):
+        cmd = f"nmap -p 139,445 --script smb-vuln* {target}"
+        runner.execute_task(f"NMAP_SMB_{target}", cmd, callback=on_output)
+        
+    @staticmethod
+    def nmap_ssl_scan(target, on_output=None, on_complete=None):
+        cmd = f"nmap -p 443 --script ssl-enum-ciphers {target}"
+        runner.execute_task(f"NMAP_SSL_{target}", cmd, callback=on_output)
+        
+    @staticmethod
+    def searchsploit(query, on_output=None, on_complete=None):
+        cmd = f"searchsploit {query}"
+        runner.execute_task(f"SEARCHSPLOIT_{query}", cmd, callback=on_output)
+        
+    @staticmethod
+    def full_assessment(target, on_output=None, on_complete=None):
+        cmd = f"nmap -A -p- -T4 {target}"
+        runner.execute_task(f"FULL_ASSESSMENT_{target}", cmd, callback=on_output)
