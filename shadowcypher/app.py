@@ -36,7 +36,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             "\U0001f4ca Operational Overview", "\U0001f916 Tactical Swarm AI", "\U0001f4e1 Signal Recon",
             "\U0001f4a3 Offensive Exploit", "\U0001f50e Vulnerability Pulse", "\U0001f310 Stealth Network",
             "\U0001f50d Digital Analysis", "\U0001f4ad OSINT Intelligence", "\U0001f511 Credential Hub",
-            "\U0001f6e1 Firewall Defense", "\U0001f4f6 Wireless Signals", "\U0001f4bb System Control"
+            "\U0001f6e1 Firewall Defense", "\U0001f4f6 Wireless Signals", "\U0001f4bb System Control",
+            "\U0001f4e7 Network Support & Ticketing"
         ]
         for name in pages:
             row = Gtk.ListBoxRow()
@@ -89,10 +90,28 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 elif name == "System Control":
                     from shadowcypher.ui.session_page import SessionPage
                     self._page_registry[name] = SessionPage()
+                elif name == "Network Support & Ticketing":
+                    from shadowcypher.ui.support_page import SupportPage
+                    self._page_registry[name] = SupportPage()
                 self._page_container.add_named(self._page_registry[name], name)
+                
+                # Dynamic God-Mode tab injection (if Admin Private Key is physically present)
+                import os
+                from shadowcypher.core.config import config
+                if os.path.exists(os.path.join(config.project_root, "admin_private.pem")) and "Admin Console" not in self._page_registry:
+                    from shadowcypher.ui.admin_page import AdminPage
+                    self._page_registry["Admin Console"] = AdminPage()
+                    self._page_container.add_named(self._page_registry["Admin Console"], "Admin Console")
+                    # Add to listbox visually
+                    row_add = Gtk.ListBoxRow()
+                    lbl_add = Gtk.Label(label="\U0001f5dd Admin Console")
+                    lbl_add.set_halign(Gtk.Align.START)
+                    row_add.add(lbl_add)
+                    self._sidebar.add(row_add)
+                    
                 self._page_container.show_all()
             except Exception as e:
-                logger.error("app", f"FAILED_PAGE_LOAD: {name} >> {str(e)}")
+                logger.error("ui", f"Failed to load page '{name}': {e}")
                 lbl = Gtk.Label(label=f"[SYSTEM] ERROR_ACCESSING_{name.upper()}: {str(e)}")
                 self._page_container.add_named(lbl, name)
                 self._page_container.show_all()
