@@ -57,3 +57,7 @@ package-lock.json
 Thumbs.db
 admin_private.pem
 admin_tools/
+projects/
+payloads/
+wordlists/
+.drm-lockout
