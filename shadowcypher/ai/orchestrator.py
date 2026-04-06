@@ -18,22 +18,30 @@ class AIOrchestrator:
         self.payload_dir = "payloads"
         os.makedirs(self.payload_dir, exist_ok=True)
 
-    def execute_query(self, query, callback=None):
-        """Execute a query using an autonomous ReAct loop."""
-        logger.info("ai", f"DeepHat Query: {query}")
+    def execute_query(self, query, callback=None, agent_role="commander"):
+        """Execute a query using an autonomous ReAct loop with Subagent support."""
+        logger.info("ai", f"DeepHat Query [{agent_role}]: {query}")
         
-        system_prompt = """ACT AS SHADOWCYPHER DEEPHAT OFFENSIVE AI.
-You are fully autonomous. You have the ability to run tools on the host system to gather intel, write files, search github, and execute bash.
+        roles = {
+            "commander": "You are the COMMANDER AI. You oversee the mission. You can use tools and DELEGATE complex tasks to subagents ('recon' or 'coder').",
+            "recon": "You are the RECON SUBAGENT. You focus solely on intelligence gathering, finding open ports, and searching github.",
+            "coder": "You are the CODER SUBAGENT. You focus entirely on writing tight, flawless exploit scripts and reading local files."
+        }
+        
+        system_prompt = f"""ACT AS SHADOWCYPHER DEEPHAT {agent_role.upper()} AI.
+{roles.get(agent_role, roles['commander'])}
+You are fully autonomous. You have the ability to run tools.
 To use a tool, you must reply with EXACTLY this JSON wrapper format and nothing else:
 <TOOL_CALL>
-{"tool": "command", "args": {"cmd": "ls -la"}}
+{{"tool": "command", "args": {{"cmd": "ls -la"}}}}
 </TOOL_CALL>
 
 Available tools:
-1. command: args: {"cmd": "shell command"} -> Executes a bash command on the host. Great for nmap, curl, etc.
-2. write_file: args: {"path": "file_path", "content": "file_content"} -> Writes customized exploit content to a file.
-3. read_file: args: {"path": "file_path"} -> Reads a local file.
-4. github_search: args: {"query": "repo or topic"} -> Searches github repos natively.
+1. command: args: {{"cmd": "shell command"}} -> Executes a bash command.
+2. write_file: args: {{"path": "file_path", "content": "file_content"}} -> Writes a file.
+3. read_file: args: {{"path": "file_path"}} -> Reads a local file.
+4. github_search: args: {{"query": "repo or topic"}} -> Searches github repos.
+5. delegate: args: {{"subagent": "recon|coder", "instructions": "what to do"}} -> Spawns a dedicated subagent to solve a specific sub-problem.
 
 If you use a tool, wait for the TOOL_RESULT. Do not hallucinate the result.
 When you have the final answer, answer the user normally without <TOOL_CALL>.
@@ -121,6 +129,12 @@ When you have the final answer, answer the user normally without <TOOL_CALL>.
             except:
                 return "GITHUB_SEARCH_FAILED"
                 
+        elif name == "delegate":
+            subagent = args.get("subagent", "recon")
+            instructions = args.get("instructions", "")
+            # Recursive call: The commander pauses and spawns a new orchestrator context
+            return self.execute_query(instructions, callback=None, agent_role=subagent)
+            
         return "UNKNOWN_TOOL"
 
     def _extract_and_write_script(self, text):
