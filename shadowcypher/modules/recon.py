@@ -1,65 +1,35 @@
-"""ShadowCypher Network Recon — Auto-Inspect Router Module."""
+"""ShadowCypher Signal Recon Engine — High-Fidelity Sync (V23.2)."""
 
+import os
 import subprocess
-import shutil
-import re
 from shadowcypher.core.logger import logger
+from shadowcypher.core.runner import runner
 
-class RouterInspector:
-    """Pro-grade network inspector for gateway discovery and OS fingerprinting."""
-    def __init__(self):
-        self.gateway = self._find_gateway()
+class Recon:
+    """The 'Radar' of the suite. Handles signal analysis, spectrum scans, and Nmap pulses."""
+    
+    @staticmethod
+    def get_scan_types():
+        return ["Signal Pulse", "TCP Discovery", "UDP Stealth", "OS Introspection", "CVE Pulse"]
 
-    def _find_gateway(self):
-        """Discover the default gateway [Router IP]."""
-        try:
-            # High-fidelity discovery via ip route
-            result = subprocess.check_output(["ip", "route", "show", "default"]).decode()
-            match = re.search(r"default via (\d+\.\d+\.\d+\.\d+)", result)
-            if match:
-                gw = match.group(1)
-                logger.info("recon", f"Gateway discovered: {gw}")
-                return gw
-        except Exception:
-            logger.error("recon", "Failed to discover default gateway.")
-        return None
-
-    def auto_inspect(self):
-        """Perform a deep-pulse scan of the router for OS and specs."""
-        if not self.gateway:
-            return "ERROR: GATEWAY_NOT_FOUND"
-
-        if not shutil.which("nmap"):
-            return "ERROR: NMAP_NOT_INSTALLED"
-
-        # TACTICAL: Service Fingerprinting [Fast pass]
-        logger.info("recon", f"Auto-inspecting Gateway: {self.gateway}")
-        try:
-            # -sV: version, -T4: fast, --top-ports 20
-            cmd = ["nmap", "-sV", "-T4", "--top-ports", "20", self.gateway]
-            output = subprocess.check_output(cmd).decode()
-            
-            # Extract vital components
-            summary = self._parse_nmap(output)
-            return summary
-        except Exception as e:
-            return f"ERROR: SCAN_FAILURE [{str(e)}]"
-
-    def _parse_nmap(self, output):
-        """Extract OS and hardware signatures from nmap output."""
-        # Simple extraction for now - could be a more complex parser
-        lines = output.split('\n')
-        services = []
-        os_guess = "Linux/Embedded"
+    @staticmethod
+    def pulse_target(target, stype="Signal Pulse", on_output=None, on_complete=None):
+        logger.info("recon", f"INITIATING_PULSE: {target} [TYPE={stype}]")
         
-        for line in lines:
-            if "/tcp" in line and "open" in line:
-                services.append(line.strip())
-            if "Service Info: OS:" in line:
-                match = re.search(r"OS: ([^;]+)", line)
-                if match: os_guess = match.group(1)
+        cmds = {
+            "Signal Pulse": f"nmap -sn {target}",
+            "TCP Discovery": f"nmap -sV -T4 {target}",
+            "UDP Stealth": f"nmap -sU {target}",
+            "OS Introspection": f"nmap -O {target}",
+            "CVE Pulse": f"nmap -sV --script=vulners {target}"
+        }
+        
+        cmd = cmds.get(stype, f"nmap -sn {target}")
+        runner.execute_task(f"RECON_{target}", cmd, callback=on_output)
 
-        summary = f"TARGET: {self.gateway}\n"
-        summary += f"ESTIMATED OS: {os_guess}\n"
-        summary += f"VITAL_SERVICES:\n" + "\n".join(services) if services else "No open common ports."
-        return summary
+    @staticmethod
+    def parse_sighting(line):
+        """Monitor logs for suspicious signal sightings."""
+        if "up" in line.lower() and "Host" in line:
+            return f"ACTVE_HOST_SIGHTED: {line.split(' ')[1]}"
+        return None

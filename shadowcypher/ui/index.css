@@ -1,112 +1,115 @@
-/* Professional ShadowCypher Design System — Glassmorphic Dark Mode */
+/* Absolute Obsidian-Stealth Design System — High-Fidelity Build (V24) */
 
 :root {
-    --bg-dark: #0a0c10;
-    --bg-panel: rgba(20, 25, 32, 0.7);
-    --border-glass: rgba(255, 255, 255, 0.08);
-    --accent: #00f2ff; /* Stealth Neon Cyan */
-    --accent-glow: rgba(0, 242, 255, 0.3);
-    --text-main: #e2e8f0;
+    --bg-obsidian: #010204;  /* Deep matte black */
+    --bg-glass: rgba(10, 15, 20, 0.98); /* High-alpha glass */
+    --border-cyan: rgba(0, 242, 255, 0.4);
+    --border-dim: rgba(255, 255, 255, 0.05);
+    --accent-cyan: #00f2ff;
+    --accent-glow: rgba(0, 242, 255, 0.25);
+    
+    --text-white: #ffffff;
     --text-dim: #94a3b8;
-    --error: #ff4b5c;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --font-main: 'Inter', 'Segoe UI', system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --terminal-green: #00ff41;
 }
 
-/* Global resets for GTK integration (simulated via CSS classes) */
-.main-window {
-    background-color: var(--bg-dark);
-    font-family: var(--font-main);
-    color: var(--text-main);
+/* Global Reset (Obsidian Overwrite) */
+window, 
+.main-window,
+stack,
+notebook,
+grid,
+box {
+    background-color: var(--bg-obsidian);
+    color: var(--text-white);
 }
 
-/* Glassmorphic Panel Style */
-.glass-panel {
-    background: var(--bg-panel);
-    border: 1px solid var(--border-glass);
+/* Elite Glass-Pod Style (Matching Dashboard V21) */
+.card, .glass-panel {
+    background: var(--bg-glass);
+    border: 1.5px solid var(--border-cyan);
+    border-radius: 20px; /* High-fidelity rounded corners */
+    padding: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 242, 255, 0.05);
+}
+
+/* High-Contrast Interactive Elements */
+entry {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-dim);
     border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    padding: 12px;
+    color: var(--text-white);
 }
 
-/* Sidebar Navigation (Sleek) */
-.sidebar {
-    background: rgba(10, 12, 16, 0.95);
-    border-right: 1px solid var(--border-glass);
+entry:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 15px var(--accent-glow);
 }
 
-.nav-item {
-    padding: 12px 20px;
-    color: var(--text-dim);
-    transition: all 0.2s ease-in-out;
-    border-radius: 8px;
-    margin: 4px 10px;
+button {
+    background: #05070a;
+    border: 1px solid var(--border-cyan);
+    border-radius: 10px;
+    padding: 12px 24px;
+    color: var(--accent-cyan);
+    font-weight: bold;
+    text-shadow: 0 0 5px var(--accent-glow);
 }
 
-.nav-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-main);
-}
-
-.nav-item.active {
-    background: var(--accent-glow);
-    color: var(--accent);
-    border: 1px solid rgba(0, 242, 255, 0.2);
-}
-
-/* Inputs & Buttons (Premium) */
-.input-main {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--border-glass);
-    border-radius: 8px;
-    padding: 10px 15px;
-    color: var(--text-main);
-    transition: border 0.3s ease;
-}
-
-.input-main:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 10px var(--accent-glow);
-}
-
-.btn-primary {
-    background: var(--accent);
+button:hover {
+    background: var(--accent-cyan);
     color: #000;
-    font-weight: 700;
-    border-radius: 8px;
-    padding: 10px 20px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transition: all 0.2s ease;
+    box-shadow: 0 0 25px var(--accent-glow);
 }
 
-.btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 20px var(--accent-glow);
+/* Sidebar & Navigation (Glossy Stealth) */
+list {
+    background: var(--bg-obsidian);
 }
 
-/* Terminal & Console (Subtle pulses, no jitter) */
-.terminal-view {
+row {
+    padding: 16px 24px;
+    margin: 6px 14px;
+    border-radius: 14px;
+    color: var(--text-dim);
+    transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+row:hover {
+    background: rgba(0, 242, 255, 0.03);
+    color: var(--text-white);
+}
+
+row:selected, .nav-active {
+    background: var(--accent-glow);
+    color: var(--accent-cyan);
+    border: 1px solid var(--border-cyan);
+}
+
+/* Notebook Header Purge (The "Tab Blackout") */
+notebook header {
+    background: var(--bg-obsidian);
+    border-bottom: 2px solid var(--border-cyan);
+}
+
+notebook tab {
+    padding: 12px 24px;
+    color: var(--text-dim);
+}
+
+notebook tab:checked {
+    background: var(--bg-glass);
+    color: var(--accent-cyan);
+    border-bottom: 2px solid var(--accent-cyan);
+}
+
+/* High-Fidelity Terminal (Deep-Well) */
+textview, .terminal-view {
     background: #000;
-    border: 1px solid var(--border-glass);
-    border-radius: 12px;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--accent);
-    padding: 15px;
-}
-
-/* Micro-animations */
-@keyframes subtle-glow {
-    0% { box-shadow: 0 0 5px var(--accent-glow); }
-    50% { box-shadow: 0 0 15px var(--accent-glow); }
-    100% { box-shadow: 0 0 5px var(--accent-glow); }
-}
-
-.pulse {
-    animation: subtle-glow 4s infinite ease-in-out;
+    border-radius: 18px;
+    border: 1px solid var(--border-dim);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: var(--terminal-green);
+    padding: 20px;
 }
