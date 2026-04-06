@@ -72,6 +72,34 @@ class SessionPage(BasePage):
         new_box.pack_start(create_btn, False, False, 0)
         vbox.pack_start(new_box, False, False, 0)
 
+        # ── STATUS / SUMMARY ──
+        self.status_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        self.status_lbl = Gtk.Label(label="No project currently active.")
+        self.status_lbl.set_halign(Gtk.Align.START)
+        self.status_box.pack_start(self.status_lbl, False, False, 0)
+        vbox.pack_start(self.status_box, False, False, 0)
+        
+        # --- DRM LICENSE CONTROL ---
+        frm_drm = Gtk.Frame(label="System License & DRM Unlock")
+        drm_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        drm_box.set_margin_top(10); drm_box.set_margin_bottom(10); drm_box.set_margin_start(10); drm_box.set_margin_end(10)
+        
+        lbl_drm = Gtk.Label(label="AES-256 Key:")
+        self.key_entry = Gtk.Entry()
+        self.key_entry.set_placeholder_text("Enter License Key to decrpyt Arsenal...")
+        self.key_entry.set_hexpand(True)
+        self.key_entry.set_visibility(False) # Hide password
+        
+        btn_unlock = Gtk.Button(label="Unlock Subsystems")
+        btn_unlock.get_style_context().add_class("suggested-action")
+        btn_unlock.connect("clicked", self._on_unlock_system)
+        
+        drm_box.pack_start(lbl_drm, False, False, 0)
+        drm_box.pack_start(self.key_entry, True, True, 0)
+        drm_box.pack_start(btn_unlock, False, False, 0)
+        frm_drm.add(drm_box)
+        vbox.pack_start(frm_drm, False, False, 10)
+
         # ── EXPORT REPORTS ──
         rep_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         lbl = Gtk.Label(label="Export Engagement Reports")
@@ -104,16 +132,21 @@ class SessionPage(BasePage):
             self.proj_combo.set_active(0)
 
     def _update_status(self):
+        from shadowcypher.core.crypto import crypt_mgr
+        lock_status = "<span foreground='#00ff41'><b>[UNLOCKED] Arsenal Online</b></span>" if crypt_mgr.is_unlocked else "<span foreground='#ff0000'><b>[LOCKED] System Encrypted</b></span>"
+        
         if session.current_project:
             p = session.current_project
             status = f"""<b>ACTIVE PROJECT: {p.name}</b>
 <b>Created:</b> {p.created}
 <b>Targets:</b> {", ".join(p.targets)}
 <b>Scope:</b> {", ".join(p.scope) if p.scope else "Unlimited"}
+
+<b>DRM Status:</b> {lock_status}
 """
             self.status_lbl.set_markup(status)
         else:
-            self.status_lbl.set_markup("<i>No professional engagement currently active. Create one above to begin.</i>")
+            self.status_lbl.set_markup(f"<i>No professional engagement currently active. Create one above to begin.</i>\n\n<b>DRM Status:</b> {lock_status}")
 
     def _on_create_project(self, btn):
         name = self.new_name.get_text().strip()
@@ -128,6 +161,13 @@ class SessionPage(BasePage):
         self._refresh_projects()
         self._update_status()
         self.new_name.set_text(""); self.new_targets.set_text(""); self.new_scope.set_text("")
+        
+    def _on_unlock_system(self, btn):
+        from shadowcypher.core.crypto import crypt_mgr
+        key = self.key_entry.get_text().strip()
+        if crypt_mgr.unlock_system(key):
+            self.key_entry.set_text("")
+            self._update_status()
 
     def _on_load_project(self, btn):
         name = self.proj_combo.get_active_text()
