@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=2.0
+Name=ShadowCypher
+GenericName=Security Operations Platform
+Comment=Offensive security toolkit with 7 immersive themes and local AI assistant
+Exec=bash -c "cd /home/jack/ShadowCypher && python3 -m shadowcypher.app"
+Path=/home/jack/ShadowCypher
+Icon=/home/jack/ShadowCypher/native/icons/shadowcypher-256.png
+Terminal=false
+Type=Application
+Categories=System;Security;Network;
+Keywords=hacking;security;pentest;nmap;hydra;hashcat;matrix;forensics;
+StartupNotify=true
+StartupWMClass=ShadowCypher

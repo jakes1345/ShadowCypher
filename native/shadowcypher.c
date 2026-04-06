@@ -277,6 +277,7 @@ static gpointer thread_run_user_cmd(gpointer data)
         dup2(pipefd[1], STDOUT_FILENO);
         dup2(pipefd[1], STDERR_FILENO);
         close(pipefd[1]);
+        close(STDIN_FILENO);
         signal(SIGPIPE, SIG_DFL);
         execvp(job->argv[0], job->argv);
         _exit(127);
@@ -353,8 +354,6 @@ static gboolean overview_tick(gpointer data)
         fclose(f);
     }
 
-    read_cpu_times(&g_prev_idle, &g_prev_total);
-    g_usleep(150000);
     double cpu = cpu_percent_sample();
     snprintf(b, sizeof b, "%.1f%%", cpu);
     gtk_label_set_text(GTK_LABEL(o->l_cpu), b);
@@ -448,8 +447,8 @@ static GtkWidget *build_overview_page(OverviewCtx *ctx)
     gtk_box_pack_start(GTK_BOX(box), make_label_row("Disk /", &ctx->l_disk), FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(box), make_label_row("Public IP", &ctx->l_ip), FALSE, FALSE, 0);
 
+    /* Prime the CPU sample: first read sets baseline, second computes delta. */
     read_cpu_times(&g_prev_idle, &g_prev_total);
-    g_usleep(100000);
     overview_tick(ctx);
 
     ctx->tick = g_timeout_add(2000, overview_tick, ctx);
@@ -574,6 +573,12 @@ static void tools_win_destroy(GtkWidget *w, gpointer data)
     g_free(data);
 }
 
+static void bufs_destroy_free(GtkWidget *w, gpointer data)
+{
+    (void)w;
+    g_free(data);
+}
+
 static void apply_css(GtkWidget *w)
 {
     GtkCssProvider *css = gtk_css_provider_new();
@@ -646,7 +651,11 @@ static void on_activate(GtkApplication *app, gpointer user_data)
     ToolsCtx *tools = g_new0(ToolsCtx, 1);
     gtk_stack_add_named(GTK_STACK(stack), build_tools_page(tools), PAGE_IDS[PAGE_TOOLS]);
 
-    GtkTextBuffer *bufs[4] = { b_net, b_sys, b_fw, b_log };
+    GtkTextBuffer **bufs = g_new0(GtkTextBuffer *, 4);
+    bufs[0] = b_net;
+    bufs[1] = b_sys;
+    bufs[2] = b_fw;
+    bufs[3] = b_log;
     g_signal_connect(stack, "notify::visible-child", G_CALLBACK(on_stack_visible_child), bufs);
 
     gtk_paned_pack1(GTK_PANED(paned), list, FALSE, FALSE);
@@ -659,6 +668,7 @@ static void on_activate(GtkApplication *app, gpointer user_data)
 
     g_signal_connect(win, "destroy", G_CALLBACK(overview_win_destroy), ov);
     g_signal_connect(win, "destroy", G_CALLBACK(tools_win_destroy), tools);
+    g_signal_connect(win, "destroy", G_CALLBACK(bufs_destroy_free), bufs);
 
     gtk_widget_show_all(win);
 }
