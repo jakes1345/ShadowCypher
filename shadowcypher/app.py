@@ -56,12 +56,15 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 row.set_sensitive(False)
                 
             row.add(lbl)
+            row.set_name(clean_name)
             sidebar.add(row)
         sidebar.connect("row-activated", self._on_sidebar_selected)
         return sidebar
 
     def _on_sidebar_selected(self, listbox, row):
-        name = row.get_child().get_text().split(" ", 1)[1]
+        name = row.get_name()
+        if not name:
+            name = row.get_child().get_text().split(" ", 1)[1]
         self._switch_to_page(name)
 
     def _switch_to_page(self, name):
@@ -120,6 +123,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                     lbl_add = Gtk.Label(label="\U0001f5dd Admin Console")
                     lbl_add.set_halign(Gtk.Align.START)
                     row_add.add(lbl_add)
+                    row_add.set_name("Admin Console")
                     self._sidebar.add(row_add)
                     
                 self._page_container.show_all()
