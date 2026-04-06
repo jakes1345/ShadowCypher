@@ -18,11 +18,15 @@ class Runner:
 
     def _run_process(self, name, command, callback):
         try:
+            # Privilege Escalation Interceptor
+            if command.strip().startswith("sudo "):
+                logger.info("runner", "Intercepted sudo command, elevating via pkexec for GUI auth.")
+                command = "pkexec " + command.strip()[5:]
+
             process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             self.active_processes[name] = process
             for line in process.stdout:
                 if callback: callback(line)
-                # KAIROS: Monitor stdout for vulnerability flashes
                 kairos.analyze(line)
             process.wait()
             if callback: callback(f"\n[COMPLETED: {process.returncode}]")

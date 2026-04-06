@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  shadowcypher-ui:
+    build: .
+    container_name: shadowcypher_mac_engine
+    network_mode: host
+    privileged: true
+    environment:
+      - DISPLAY=host.docker.internal:0
+      - XAUTHORITY=/.Xauthority
+    volumes:
+      # Inject Mac X11 socket for XQuartz UI Projection
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ~/.Xauthority:/.Xauthority
+      # Persistent project storage
+      - ./projects:/opt/ShadowCypher/projects
+      - ./payloads:/opt/ShadowCypher/payloads
+    command: python3 -m shadowcypher.app
