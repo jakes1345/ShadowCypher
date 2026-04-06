@@ -101,14 +101,21 @@ class SupportPage(BasePage):
         from cryptography.hazmat.primitives import hashes
         import base64
         
-        # Simulate loading the Developer's Master Public Key
-        GLib.idle_add(self._append_sys_msg, "Generating ephemeral RSA tunnel...")
+        import os
+        from cryptography.hazmat.primitives import serialization
+        from shadowcypher.core.config import config
+        
+        pub_key_path = os.path.join(config.project_root, 'shadowcypher', 'core', 'admin_public.pem')
+        
+        if not os.path.exists(pub_key_path):
+            GLib.idle_add(self._append_sys_msg, "CRITICAL ERROR: Admin Public Key not found. Communications severed.")
+            return
+
+        GLib.idle_add(self._append_sys_msg, "Loading Admin Public Key for RSA Tunneling...")
         time.sleep(0.5)
         
-        # Generate an ephemeral RSA key just to demonstrate the crypto on the client side
-        # In reality, this would use a hardcoded public key for 'Jack'
-        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        public_key = private_key.public_key()
+        with open(pub_key_path, "rb") as f:
+            public_key = serialization.load_pem_public_key(f.read())
         
         GLib.idle_add(self._append_sys_msg, "Securing payload via RSA-OAEP (SHA-256) encryption block...")
         ciphertext = public_key.encrypt(
