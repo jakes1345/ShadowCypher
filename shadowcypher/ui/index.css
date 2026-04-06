@@ -1,0 +1,112 @@
+/* Professional ShadowCypher Design System — Glassmorphic Dark Mode */
+
+:root {
+    --bg-dark: #0a0c10;
+    --bg-panel: rgba(20, 25, 32, 0.7);
+    --border-glass: rgba(255, 255, 255, 0.08);
+    --accent: #00f2ff; /* Stealth Neon Cyan */
+    --accent-glow: rgba(0, 242, 255, 0.3);
+    --text-main: #e2e8f0;
+    --text-dim: #94a3b8;
+    --error: #ff4b5c;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --font-main: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Global resets for GTK integration (simulated via CSS classes) */
+.main-window {
+    background-color: var(--bg-dark);
+    font-family: var(--font-main);
+    color: var(--text-main);
+}
+
+/* Glassmorphic Panel Style */
+.glass-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* Sidebar Navigation (Sleek) */
+.sidebar {
+    background: rgba(10, 12, 16, 0.95);
+    border-right: 1px solid var(--border-glass);
+}
+
+.nav-item {
+    padding: 12px 20px;
+    color: var(--text-dim);
+    transition: all 0.2s ease-in-out;
+    border-radius: 8px;
+    margin: 4px 10px;
+}
+
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+}
+
+.nav-item.active {
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid rgba(0, 242, 255, 0.2);
+}
+
+/* Inputs & Buttons (Premium) */
+.input-main {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-glass);
+    border-radius: 8px;
+    padding: 10px 15px;
+    color: var(--text-main);
+    transition: border 0.3s ease;
+}
+
+.input-main:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 10px 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+/* Terminal & Console (Subtle pulses, no jitter) */
+.terminal-view {
+    background: #000;
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+    padding: 15px;
+}
+
+/* Micro-animations */
+@keyframes subtle-glow {
+    0% { box-shadow: 0 0 5px var(--accent-glow); }
+    50% { box-shadow: 0 0 15px var(--accent-glow); }
+    100% { box-shadow: 0 0 5px var(--accent-glow); }
+}
+
+.pulse {
+    animation: subtle-glow 4s infinite ease-in-out;
+}

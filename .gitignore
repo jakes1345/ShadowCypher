@@ -1,45 +1,57 @@
-node_modules/
-*.log
-server_output.txt
-ai_config.json
-intel_config.json
-router_config.json
-upnp_mappings.json
-minecraft_config.json
-notes.json
-users.json
-activity.log
-.env
-.env.*
-!.env.example
-.aider*
-server.js.bak
-server.js.new
-server.js.broken
-.shortest/
-.session-secret
-devices.json
-!.env.local
-
-# API key stores
-intel-keys.json
-
-# IDE/tool directories
-.claude/
-.cursor/hooks/
-.cursor/worktrees.json
-.sisyphus/
-.crush/
-
-# Python cache
+# ── Python ──
 __pycache__/
 *.pyc
 *.pyo
-.eggs/
 *.egg-info/
-shadowcypher.egg-info/
+*.eggs/
+dist/
+build/
+.eggs/
 
-# Desktop app data
-desktop/backend/__pycache__/
-desktop/pages/__pycache__/
-desktop/widgets/__pycache__/
+# ── Runtime data ──
+logs/
+sessions/
+models/
+*.log
+
+# ── Configuration (may contain secrets) ──
+config.json
+users.json
+.session-secret
+
+# ── AI Models (large binaries) ──
+models/
+*.gguf
+
+# ── Environment ──
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+
+# ── Build artifacts ──
+native/shadowcypher
+*.o
+
+# ── IDE / Tool directories ──
+.claude/
+.cursor/
+.sisyphus/
+.crush/
+.shortest/
+.aider*
+.vscode/
+.idea/
+
+# ── Node (not used, cleanup from old tooling) ──
+node_modules/
+package-lock.json
+
+# ── OS ──
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db

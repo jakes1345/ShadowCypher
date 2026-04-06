@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShadowCypher Command Center</title>
+    <style>
+        :root {
+            --obsidian: #05070a;
+            --glass: rgba(13, 17, 23, 0.7);
+            --cyan: #00f2ff;
+            --glow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+        body {
+            background: var(--obsidian);
+            color: #d0d5d9;
+            font-family: 'Inter', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        /* GLASS SUBSYSTEM */
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+        }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .hud-grid { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; flex-grow: 1; }
+        .radar-box { position: relative; display: flex; justify-content: center; align-items: center; }
+        
+        /* TACTICAL RADAR */
+        #radar { width: 400px; height: 400px; border-radius: 50%; border: 2px solid var(--cyan); box-shadow: var(--glow); position: relative; overflow: hidden; }
+        .sweep { position: absolute; top: 50%; left: 50%; width: 50%; height: 2px; background: linear-gradient(to right, rgba(0, 242, 255, 0.8), transparent); transform-origin: left; animation: sweep 3s linear infinite; }
+        @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        .stat-card { margin-bottom: 15px; }
+        .stat-card h3 { color: var(--cyan); font-size: 10px; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-card p { font-size: 24px; font-weight: 800; margin: 5px 0 0 0; }
+        
+        .roadmap-list { margin: 0; padding: 0; list-style: none; }
+        .roadmap-step { display: flex; align-items: center; margin-bottom: 12px; font-size: 13px; opacity: 0.6; }
+        /* OPTICAL SUBSYSTEM */
+        .crt-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.5) 100%),
+                        repeating-linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+                        repeating-linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 100%, 100% 3px, 3px 100%;
+            pointer-events: none; z-index: 1000; mix-blend-mode: overlay;
+        }
+    </style>
+</head>
+<body>
+    <div class="crt-overlay"></div>
+    <div class="header glass-panel">
+        <div style="font-weight: 800; letter-spacing: 2px; color: var(--cyan);">SHADOWCYPHER OBSIDIAN STEALTH</div>
+        <div style="font-size: 12px; opacity: 0.6;">DREAM CORE: ACTIVE | SWARM LOAD: 14%</div>
+    </div>
+    
+    <div class="hud-grid">
+        <div class="glass-panel">
+            <div class="stat-card"><h3>COMPUTE LOAD</h3><p id="cpu-stat">0.0%</p></div>
+            <div class="stat-card"><h3>VRAM ALLOCATION</h3><p id="vram-stat">78%</p></div>
+            <div class="stat-card"><h3>ACTIVE INTAKE</h3><p>0.0.0.0:*</p></div>
+        </div>
+        
+        <div class="glass-panel radar-box">
+            <div id="radar"><div class="sweep"></div></div>
+            <div style="position: absolute; bottom: 20px; font-size: 10px; color: var(--cyan); letter-spacing: 2px;">TACTICAL HUD ONLINE</div>
+        </div>
+        
+        <div class="glass-panel">
+            <h3>🗺️ MISSION ROADMAP</h3>
+            <ul class="roadmap-list">
+                <li class="roadmap-step">01. RECON & SCANNING</li>
+                <li class="roadmap-step active">02. VULNERABILITY ANALYSIS</li>
+                <li class="roadmap-step">03. EXPLOIT GENERATION</li>
+                <li class="roadmap-step">04. PERSISTENCE MAPPING</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Real-time stat simulation (Python bridge will update later)
+        setInterval(() => {
+            document.getElementById('cpu-stat').innerText = (Math.random() * 5 + 3).toFixed(1) + '%';
+        }, 1000);
+    </script>
+</body>
+</html>
