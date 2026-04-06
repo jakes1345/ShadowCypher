@@ -1,35 +1,41 @@
-"""ShadowCypher Signal Recon Engine — High-Fidelity Sync (V23.2)."""
+"""ShadowCypher Recon (Signal) Engine — Absolute Sync (Build V29.1)."""
 
 import os
-import subprocess
-from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
+from shadowcypher.core.logger import logger
 
 class Recon:
-    """The 'Radar' of the suite. Handles signal analysis, spectrum scans, and Nmap pulses."""
+    """The 'Signal' engine. Handles port scanning, discovery, and path tracing."""
     
-    @staticmethod
-    def get_scan_types():
-        return ["Signal Pulse", "TCP Discovery", "UDP Stealth", "OS Introspection", "CVE Pulse"]
+    def __init__(self):
+        self.gateway = "192.168.1.1" # Dynamic detection hook
+        self.scans = []
 
     @staticmethod
-    def pulse_target(target, stype="Signal Pulse", on_output=None, on_complete=None):
-        logger.info("recon", f"INITIATING_PULSE: {target} [TYPE={stype}]")
+    def get_scan_types():
+        return ["Quick Port Scan", "Full Port Scan", "UDP Scan", "OS Detection", "Service Fingerprint"]
+
+    @staticmethod
+    def pulse_target(target, stype="Quick Port Scan", on_output=None, on_complete=None):
+        logger.info("recon", f"PULSING_TARGET: {target} [TYPE={stype}]")
         
         cmds = {
-            "Signal Pulse": f"nmap -sn {target}",
-            "TCP Discovery": f"nmap -sV -T4 {target}",
-            "UDP Stealth": f"nmap -sU {target}",
-            "OS Introspection": f"nmap -O {target}",
-            "CVE Pulse": f"nmap -sV --script=vulners {target}"
+            "Quick Port Scan": f"nmap -F {target}",
+            "Full Port Scan": f"nmap -p- {target}",
+            "UDP Scan": f"nmap -sU {target}",
+            "OS Detection": f"nmap -O {target}",
+            "Service Fingerprint": f"nmap -sV {target}"
         }
         
-        cmd = cmds.get(stype, f"nmap -sn {target}")
+        cmd = cmds.get(stype, f"nmap {target}")
         runner.execute_task(f"RECON_{target}", cmd, callback=on_output)
 
     @staticmethod
-    def parse_sighting(line):
-        """Monitor logs for suspicious signal sightings."""
-        if "up" in line.lower() and "Host" in line:
-            return f"ACTVE_HOST_SIGHTED: {line.split(' ')[1]}"
-        return None
+    def traceroute(target, on_output=None, on_complete=None):
+        cmd = f"traceroute {target}"
+        runner.execute_task(f"TRACE_{target}", cmd, callback=on_output)
+
+    # UI Backend Hooks
+    def discover_hosts(self, on_output=None, on_complete=None):
+        cmd = "nmap -sn 192.168.1.0/24"
+        runner.execute_task("HOST_DISCOVERY", cmd, callback=on_output)

@@ -75,12 +75,12 @@ THEMES = {
             }
 
             /* Absolute Deep-Well Terminal */
-            textview, .terminal-view {
-                background: #000;
-                border: 1px solid rgba(255, 255, 255, 0.05);
+            textview, .terminal-view, textview text {
+                background-color: #010204;
+                border: 1px solid rgba(0, 242, 255, 0.2);
                 border-radius: 18px;
                 color: #00ff41;
-                font-family: 'JetBrains Mono', monospace;
+                font-family: 'JetBrains Mono', 'CaskaydiaCove NF', 'Monospace', monospace;
                 padding: 20px;
             }
         """

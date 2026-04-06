@@ -35,9 +35,14 @@ class Wireless:
         runner.execute_task("無線_SCAN", cmd, callback=on_output)
 
     @staticmethod
-    def capture_handshake(interface, bssid, channel, on_output=None, on_complete=None):
-        """Capture WPA handshake."""
-        cmd = f"airodump-ng -c {channel} --bssid {bssid} -w /tmp/handshake {interface}"
+    def list_interfaces(on_output=None, on_complete=None):
+        cmd = "iwconfig 2>/dev/null"
+        runner.execute_task("LIST_IFACES", cmd, callback=on_output)
+
+    @staticmethod
+    def capture_handshake(interface, bssid, channel, timeout=120, on_output=None, on_complete=None):
+        """Capture WPA handshake with optional timeout."""
+        cmd = f"timeout {timeout} airodump-ng -c {channel} --bssid {bssid} -w /tmp/handshake {interface}"
         runner.execute_task("HANDSHAKE_CAPTURE", cmd, callback=on_output)
 
     @staticmethod
