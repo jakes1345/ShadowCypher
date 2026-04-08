@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="https://via.placeholder.com/150/010204/00ffff?text=ShadowCypher" alt="ShadowCypher Core">
+  <img src="https://via.placeholder.com/150/010204/00ffff?text=ShadowCypher+OMNI-HEAL" alt="ShadowCypher Core">
   <h1>S H A D O W C Y P H E R</h1>
-  <p><b>Elite Penetration Testing & AI Orchestration Platform [Build V32 OMNI]</b></p>
+  <p><b>Elite Penetration Testing & AI Orchestration Platform [Build V33 OMNI-HEAL]</b></p>
 </div>
 
 ---
@@ -64,6 +64,9 @@ Your real-time mission telemetry. Features a spinning radar pulse tracking your 
 ### 🤖 Tactical Swarm AI (Tengu Core)
 The autonomous brain of ShadowCypher. Designed to integrate directly with local LLMs (via Ollama or custom model hubs). Put the AI into "Active Pulse" to dynamically analyze Nmap outputs, reverse engineer binaries, or generate custom exploitation vectors—fully air-gapped and secure.
 
+### 🛡️ Autonomous Audit Engine (Project Overlord)
+The suite's self-healing heart. Project Overlord runs continuous background audits to ensure UI stability, resource optimization, and security integrity. If a distortion or process failure is detected, the engine autonomously restores the system state, ensuring zero-downtime operations.
+
 ### 📡 Signal Reconnaissance
 The mapping engine. Traces exact paths to the target gateway and generates comprehensive network topographies.
 - **Active Hooks:** Quick Port Scans, UDP Sweeps, OS Detection, Subnet Discovery, Traceroute.
@@ -88,6 +91,18 @@ Deep-file extraction and reverse engineering. Tear apart binaries and discover h
 Information dominance. Scrape, scrape, and scrape. Expose the public footprint of domains and organizations.
 - **Active Hooks:** Deep SSL Certificate probing, email MX/SPF validation, Subnet/ASN extraction, HTTP architecture detection, Zone Transfers.
 
+### 🎮 Gaming OSINT (The Nexus)
+Cross-platform intelligence gathering. Discover the digital fingerprints of targets across gaming ecosystems.
+- **Active Hooks:** Steam Profile Recon, Xbox Live Activity tracking, cross-platform username correlation, achievement-based behavioral profiling.
+
+### 🏰 AD Attacks (The Citadel)
+Domain dominance and enterprise-level exploitation.
+- **Active Hooks:** Kerberoasting, AS-REP Roasting, Domain Controller enumeration, LDAP reconnaissance, GPO auditing.
+
+### 🕸️ Web Attacks (The Weaver)
+High-precision web application vulnerability discovery.
+- **Active Hooks:** Automated XSS Probing, SQL Injection automation, Path Traversal discovery, HTTP Request Smuggling tests, API fuzzer integration.
+
 ### 🔑 Credential Hub (Identity Engine)
 Your password dominance module. Crack standard hashes or perform live-fire network brute forces.
 - **Active Hooks:** Hydra network brute forces (SSH, FTP, HTTP), John the Ripper hash cracking, hash identification, localized wordlist generation (CUPP).
@@ -109,6 +124,7 @@ Killswitches and deeper configuration overrides. Manages your background jobs, h
 
 **Prerequisites:** Python 3.10+, PyGObject, local system security tools (`nmap`, `wireshark`, `binwalk`, `exiftool`, `john`, `hydra`, `aircrack-ng`).
 
+### Option A: Native Linux Deployment
 ```bash
 # 1. Clone the Arsenal
 git clone https://github.com/jakes1345/ShadowCypher.git
@@ -120,6 +136,13 @@ pip install -r requirements.txt
 
 # 3. Launch OMNI-Build
 DISPLAY=:0 python3 -m shadowcypher.app
+```
+
+### Option B: Rapid Docker Deployment
+Deploy the entire suite in minutes using the pre-configured containerized environment:
+```bash
+# Launch via Docker Compose
+docker-compose up -d --build
 ```
 
 ---
