@@ -12,10 +12,45 @@ Every line of code and every visual interface has been synthesized under the **O
 
 ---
 
-## ⚡ The Architecture: OMNI-Runner Core
+## ⚠️ Legal & Ethical Disclaimer
+
+**ShadowCypher is strictly for educational purposes, authorized security auditing, and defensive research.**
+
+The creators, contributors, and maintainers of ShadowCypher assume **NO LIABILITY** for any misuse, damage, or illegal activities conducted with this software. By downloading, installing, or using ShadowCypher, you explicitly agree that:
+1. You have explicit, written authorization to scan, test, and interact with the networks and systems you target.
+2. You will not use this software for malicious, unauthorized, or illegal activities.
+3. You bear full responsibility for your actions and the consequences of utilizing offensive security tooling.
+
+---
+
+## 🎯 The Architecture: OMNI-Runner Core
 ShadowCypher does not freeze. Every offensive scan, payload generation, and packet capture is securely outsourced to the asynchronous **Shadow-Runner Architecture**.
 - **Non-Blocking IO**: Deep-threaded execution means you can run a Hydra brute-force on your Credential Hub while capturing a WPA handshake on your Wireless Tab, all while the 60FPS overlay renders system telemetry.
 - **Obsidian Terminal VOID**: Every output stream is piped instantly back into a custom GTK TextView locked into the `Obsidian Black` theme. Zero white boxes. Zero cliches. 
+
+---
+
+## 🛡️ Security Hardening & The Admin Node
+
+When dealing with offensive tools and autonomous AI, security is paramount. ShadowCypher implements multiple layers of defense-in-depth:
+
+### 1. The Trust Model: Admin Node vs. Operator Node
+ShadowCypher implements a unique cryptographic identity system to differentiate the project maintainer (Admin) from open-source users (Operators):
+- The repository ships with an `admin_public.pem`.
+- To unlock the **Admin Sector** (and the ability to decrypt secure support tickets), the machine must possess the mathematically corresponding `admin_private.pem`.
+- The system runs a live cryptographic challenge-response at startup. You cannot simply generate a random private key to bypass this; it must match the shipped public key footprint.
+- **Result:** Anyone can clone the repo and use the tool fully ("Operator" mode), but only the verified maintainer has "Admin" access.
+
+### 2. Secure Comm-Link (Ticketing)
+Operators who find bugs or need support can use the **Secure Comm-Link**.
+- **100% Offline:** The system makes zero network connections.
+- **End-to-End Encrypted:** Messages are encrypted locally using RSA-OAEP (SHA-256) against the Admin's public key.
+- **Privacy First:** It generates a `.json` file containing the Base64 ciphertext. The Operator manually sends this file to the Admin via any channel (Discord, Email, etc.). IPs are never tracked or transmitted.
+
+### 3. AI Sandboxing & Process Isolation
+- **AI Sandboxing:** The AI Orchestrator cannot run arbitrary bash commands. It uses `execvp` (bypassing the shell entirely) and validates all executions against a strict allowlist of known security tools (e.g., `nmap`, `dig`, `whois`).
+- **Input Sanitization:** All user inputs (IPs, MAC addresses, ports) passed to underlying tools are rigorously validated (`core/sanitize.py`) to prevent OS command injection.
+- **Thread Safety:** The SQLite database uses explicit threading locks, and all UI updates from background processes utilize `GLib.idle_add` to prevent GTK thread collisions.
 
 ---
 

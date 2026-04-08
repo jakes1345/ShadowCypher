@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# --- SHADOWCYPHER OVERLORD MASTER LAUNCHER ---
+# This script initializes the unified AI environment and launches the core suite.
+
+PROJECT_ROOT="/home/jack/ShadowCypher"
+VENV_PATH="$PROJECT_ROOT/ai_engine/meta-venv"
+
+echo -e "\033[92m[OVERLORD] Initializing ShadowCypher Integrated Engine...\033[0m"
+
+# 1. Sync the environment
+if [ ! -d "$VENV_PATH" ]; then
+    echo -e "\033[91m[ERROR] AI Engine Virtual Environment not found in $VENV_PATH\033[0m"
+    exit 1
+fi
+
+# 2. Export necessary variables
+export PYTHONPATH=$PYTHONPATH:$PROJECT_ROOT:$PROJECT_ROOT/ai_engine
+export COMPLETION_MODEL="DeepHat-V1-7B"
+export API_BASE_URL="http://localhost:11434/v1"
+
+# 3. SELF-HEALING & AUDIT MODE (New Feature)
+if [[ "$1" == "--audit" ]]; then
+    echo -e "\033[96m[OVERLORD] Initializing Autonomous Integrity Audit...\033[0m"
+    source $VENV_PATH/bin/activate
+    python3 $PROJECT_ROOT/shadowcypher_overlord_audit.py
+    exit 0
+fi
+
+if [[ "$1" == "--heal" ]]; then
+    echo -e "\033[96m[OVERLORD] Initializing Infinite Self-Healing Loop...\033[0m"
+    source $VENV_PATH/bin/activate
+    while true; do
+        python3 $PROJECT_ROOT/shadowcypher_overlord_audit.py
+        echo -e "\033[90m[OVERLORD] Healing cycle complete. Sleeping for 60s...\033[0m"
+        sleep 60
+    done
+    exit 0
+fi
+
+# 4. Protocol & Persistence Registry
+if [ ! -f ~/.local/share/applications/org.shadowcypher.overlord.desktop ]; then
+    echo "[OVERLORD] Registering Desktop Mime-Types..."
+    xdg-mime default org.shadowcypher.overlord.desktop x-scheme-handler/swav2 2>/dev/null
+fi
+
+# 5. Routing Logic (Old)
+if [[ "$1" == swav2://* ]]; then
+    echo -e "\033[93m[OVERLORD] Routing SWA Authentication Link: $1\033[0m"
+    source $VENV_PATH/bin/activate
+    python3 $PROJECT_ROOT/shadowcypher/core/protocol.py "$1"
+    exit 0
+fi
+
+# 6. Verify Tor Status (for Shadow_Wraith)
+TOR_STATUS=$(systemctl is-active tor 2>/dev/null || echo "inactive")
+if [ "$TOR_STATUS" != "active" ]; then
+    echo -e "\033[93m[WARN] Tor is NOT active. Attempting start via polkit...\033[0m"
+    # SECURITY: Never hardcode passwords. Use polkit/pkexec for privilege escalation.
+    pkexec systemctl start tor 2>/dev/null || \
+        sudo systemctl start tor 2>/dev/null || \
+        echo -e "\033[91m[ERROR] Could not start Tor. Run: sudo systemctl start tor\033[0m"
+fi
+
+# 7. Launch the application
+echo -e "\033[92m[OVERLORD] Launching Core Application with AI-Hacking-Bridge...\033[0m"
+source $VENV_PATH/bin/activate
+python3 $PROJECT_ROOT/shadowcypher/app.py

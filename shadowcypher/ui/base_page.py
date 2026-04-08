@@ -1,6 +1,7 @@
 """Base page — shared infrastructure for all tool pages."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 
@@ -54,7 +55,9 @@ class BasePage(Gtk.Box):
         self.stop_btn.set_sensitive(False)
         return self.stop_btn
 
-    def make_action_btn(self, label: str, handler, style: str = "action-btn") -> Gtk.Button:
+    def make_action_btn(
+        self, label: str, handler, style: str = "action-btn"
+    ) -> Gtk.Button:
         """Create a styled action button and track it for sensitivity toggling."""
         btn = Gtk.Button(label=label)
         btn.get_style_context().add_class(style)
@@ -67,6 +70,9 @@ class BasePage(Gtk.Box):
     def on_output(self, text: str):
         """Thread-safe: append text to terminal."""
         GLib.idle_add(self._append, text)
+        if "[MISSION_EXIT_CODE:" in text:
+            GLib.idle_add(self._set_running, False)
+            self._job_id = None
 
     def on_complete(self, rc: int):
         """Thread-safe: show completion and re-enable buttons."""
@@ -91,7 +97,7 @@ class BasePage(Gtk.Box):
     def _set_running(self, running: bool):
         for btn in self._action_buttons:
             btn.set_sensitive(not running)
-        if hasattr(self, 'stop_btn'):
+        if hasattr(self, "stop_btn"):
             self.stop_btn.set_sensitive(running)
 
     def _on_stop(self, btn):

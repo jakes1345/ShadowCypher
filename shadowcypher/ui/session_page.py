@@ -1,6 +1,7 @@
 """Session Management Page — manage professional engagements/projects."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 
@@ -16,8 +17,10 @@ class SessionPage(BasePage):
 
         # Main layout
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        vbox.set_margin_start(20); vbox.set_margin_end(20)
-        vbox.set_margin_top(20); vbox.set_margin_bottom(20)
+        vbox.set_margin_start(20)
+        vbox.set_margin_end(20)
+        vbox.set_margin_top(20)
+        vbox.set_margin_bottom(20)
         self.add(vbox)
 
         # ── PROJECT SELECTOR ──
@@ -32,7 +35,9 @@ class SessionPage(BasePage):
         self._refresh_projects()
         sel_row.pack_start(self.proj_combo, True, True, 0)
 
-        load_btn = self.make_action_btn("\U0001f4c2 Load Project", self._on_load_project)
+        load_btn = self.make_action_btn(
+            "\U0001f4c2 Load Project", self._on_load_project
+        )
         sel_row.pack_start(load_btn, False, False, 0)
         sel_box.pack_start(sel_row, False, False, 0)
         vbox.pack_start(sel_box, False, False, 0)
@@ -68,7 +73,9 @@ class SessionPage(BasePage):
 
         new_box.pack_start(grid, False, False, 0)
 
-        create_btn = self.make_action_btn("\u2795 Create Project", self._on_create_project, "success-btn")
+        create_btn = self.make_action_btn(
+            "\u2795 Create Project", self._on_create_project, "success-btn"
+        )
         new_box.pack_start(create_btn, False, False, 0)
         vbox.pack_start(new_box, False, False, 0)
 
@@ -78,22 +85,25 @@ class SessionPage(BasePage):
         self.status_lbl.set_halign(Gtk.Align.START)
         self.status_box.pack_start(self.status_lbl, False, False, 0)
         vbox.pack_start(self.status_box, False, False, 0)
-        
+
         # --- DRM LICENSE CONTROL ---
         frm_drm = Gtk.Frame(label="System License & DRM Unlock")
         drm_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        drm_box.set_margin_top(10); drm_box.set_margin_bottom(10); drm_box.set_margin_start(10); drm_box.set_margin_end(10)
-        
+        drm_box.set_margin_top(10)
+        drm_box.set_margin_bottom(10)
+        drm_box.set_margin_start(10)
+        drm_box.set_margin_end(10)
+
         lbl_drm = Gtk.Label(label="AES-256 Key:")
         self.key_entry = Gtk.Entry()
-        self.key_entry.set_placeholder_text("Enter License Key to decrpyt Arsenal...")
+        self.key_entry.set_placeholder_text("Enter License Key to decrypt Arsenal...")
         self.key_entry.set_hexpand(True)
-        self.key_entry.set_visibility(False) # Hide password
-        
+        self.key_entry.set_visibility(False)  # Hide password
+
         btn_unlock = Gtk.Button(label="Unlock Subsystems")
         btn_unlock.get_style_context().add_class("suggested-action")
         btn_unlock.connect("clicked", self._on_unlock_system)
-        
+
         drm_box.pack_start(lbl_drm, False, False, 0)
         drm_box.pack_start(self.key_entry, True, True, 0)
         drm_box.pack_start(btn_unlock, False, False, 0)
@@ -108,9 +118,26 @@ class SessionPage(BasePage):
         rep_box.pack_start(lbl, False, False, 0)
 
         rep_row = Gtk.Box(spacing=8)
-        rep_row.pack_start(self.make_action_btn("\U0001f310 HTML Report", self._on_export_html, "success-btn"), False, False, 0)
-        rep_row.pack_start(self.make_action_btn("\U0001f4c4 Text Report", self._on_export_text), False, False, 0)
-        rep_row.pack_start(self.make_action_btn("\U0001f4dc JSON Export", self._on_export_json), False, False, 0)
+        rep_row.pack_start(
+            self.make_action_btn(
+                "\U0001f310 HTML Report", self._on_export_html, "success-btn"
+            ),
+            False,
+            False,
+            0,
+        )
+        rep_row.pack_start(
+            self.make_action_btn("\U0001f4c4 Text Report", self._on_export_text),
+            False,
+            False,
+            0,
+        )
+        rep_row.pack_start(
+            self.make_action_btn("\U0001f4dc JSON Export", self._on_export_json),
+            False,
+            False,
+            0,
+        )
         rep_box.pack_start(rep_row, False, False, 0)
         vbox.pack_start(rep_box, False, False, 0)
 
@@ -133,8 +160,13 @@ class SessionPage(BasePage):
 
     def _update_status(self):
         from shadowcypher.core.crypto import crypt_mgr
-        lock_status = "<span foreground='#00ff41'><b>[UNLOCKED] Arsenal Online</b></span>" if crypt_mgr.is_unlocked else "<span foreground='#ff0000'><b>[LOCKED] System Encrypted</b></span>"
-        
+
+        lock_status = (
+            "<span foreground='#00ff41'><b>[UNLOCKED] Arsenal Online</b></span>"
+            if crypt_mgr.is_unlocked
+            else "<span foreground='#ff0000'><b>[LOCKED] System Encrypted</b></span>"
+        )
+
         if session.current_project:
             p = session.current_project
             status = f"""<b>ACTIVE PROJECT: {p.name}</b>
@@ -146,7 +178,9 @@ class SessionPage(BasePage):
 """
             self.status_lbl.set_markup(status)
         else:
-            self.status_lbl.set_markup(f"<i>No professional engagement currently active. Create one above to begin.</i>\n\n<b>DRM Status:</b> {lock_status}")
+            self.status_lbl.set_markup(
+                f"<i>No professional engagement currently active. Create one above to begin.</i>\n\n<b>DRM Status:</b> {lock_status}"
+            )
 
     def _on_create_project(self, btn):
         name = self.new_name.get_text().strip()
@@ -154,16 +188,21 @@ class SessionPage(BasePage):
             # Simple error dialog
             return
 
-        targets = [t.strip() for t in self.new_targets.get_text().split(",") if t.strip()]
+        targets = [
+            t.strip() for t in self.new_targets.get_text().split(",") if t.strip()
+        ]
         scope = [s.strip() for s in self.new_scope.get_text().split(",") if s.strip()]
 
         session.create_project(name, targets=targets, scope=scope)
         self._refresh_projects()
         self._update_status()
-        self.new_name.set_text(""); self.new_targets.set_text(""); self.new_scope.set_text("")
-        
+        self.new_name.set_text("")
+        self.new_targets.set_text("")
+        self.new_scope.set_text("")
+
     def _on_unlock_system(self, btn):
         from shadowcypher.core.crypto import crypt_mgr
+
         key = self.key_entry.get_text().strip()
         if crypt_mgr.unlock_system(key):
             self.key_entry.set_text("")
@@ -179,16 +218,18 @@ class SessionPage(BasePage):
         if session.current_project:
             path = session.current_project.report.generate_html()
             import webbrowser
+
             webbrowser.open(f"file://{path}")
 
     def _on_export_text(self, btn):
         if session.current_project:
             path = session.current_project.report.generate_text()
-            # Just open with default editor
-            import os
-            os.system(f"xdg-open {path} &")
+            import subprocess
+
+            subprocess.Popen(
+                ["xdg-open", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
 
     def _on_export_json(self, btn):
         if session.current_project:
             session.current_project.report.generate_json()
-
