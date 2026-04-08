@@ -1,0 +1,26 @@
+{
+  "ai": {
+    "model_repo": "TheBloke/WhiteRabbitNeo-V1.5-7B-GGUF",
+    "model_file": "whiterabbitneo-v1.5-7b.Q4_K_M.gguf",
+    "n_ctx": 4096,
+    "n_gpu_layers": 35,
+    "temperature": 0.7,
+    "max_tokens": 2048
+  },
+  "tools": {
+    "nmap_path": "/usr/bin/nmap",
+    "hydra_path": "/usr/bin/hydra",
+    "john_path": "/usr/sbin/john",
+    "hashcat_path": "/usr/bin/hashcat",
+    "aircrack_path": "/usr/bin/aircrack-ng",
+    "tcpdump_path": "/usr/bin/tcpdump"
+  },
+  "wordlists": {
+    "default": "wordlists/rockyou.txt"
+  },
+  "ui": {
+    "theme": "dark",
+    "window_width": 1400,
+    "window_height": 900
+  }
+}

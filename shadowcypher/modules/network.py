@@ -1,72 +1,152 @@
 """ShadowCypher Network Operations Engine — High-Fidelity Sync (V23.1)."""
 
 import subprocess
-import os
+import shlex
 from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
+from shadowcypher.core.sanitize import (
+    validate_target,
+    validate_ports,
+    validate_interface,
+    sanitize_bpf_filter,
+)
+
 
 class Network:
     """Universal network engine. Handles ARPs, TCP scans, and real-time captures."""
-    
+
     @staticmethod
     def get_interfaces():
         """List all network interfaces with their IPs."""
         try:
-            return subprocess.check_output("ip -br addr", shell=True, text=True)
-        except:
+            return subprocess.check_output(["ip", "-br", "addr"], text=True)
+        except Exception:
             return "Unable to retrieve interfaces."
 
     @staticmethod
     def arp_scan(interface=None, subnet=None, on_output=None, on_complete=None):
         """ARP scan a local network to discover hosts."""
         subnet = subnet or "192.168.1.0/24"
-        iface_flag = f"-e {interface}" if interface else ""
-        cmd = f"nmap -sn -PR {iface_flag} {subnet}"
-        runner.execute_task(f"ARP_SCAN_{subnet}", cmd, callback=on_output)
+        if not validate_target(subnet):
+            if on_output:
+                on_output(f"[ERROR] Invalid subnet: {subnet}")
+            return
+        args = ["nmap", "-sn", "-PR"]
+        if interface:
+            if not validate_interface(interface):
+                if on_output:
+                    on_output(f"[ERROR] Invalid interface: {interface}")
+                return
+            args += ["-e", interface]
+        args.append(subnet)
+        return runner.execute_task(f"ARP_SCAN_{subnet}", args, callback=on_output)
 
     @staticmethod
     def port_scan_tcp_connect(target, ports="1-1024", on_output=None, on_complete=None):
         """TCP connect scan (no root needed)."""
-        cmd = f"nmap -sT -p {ports} -T4 --open {target}"
-        runner.execute_task(f"TCP_SCAN_{target}", cmd, callback=on_output)
+        if not validate_target(target):
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
+            return
+        if not validate_ports(ports):
+            if on_output:
+                on_output(f"[ERROR] Invalid port spec: {ports}")
+            return
+        return runner.execute_task(
+            f"TCP_SCAN_{target}",
+            ["nmap", "-sT", "-p", ports, "-T4", "--open", target],
+            callback=on_output,
+        )
 
     @staticmethod
     def port_scan_syn(target, ports="1-65535", on_output=None, on_complete=None):
         """SYN stealth scan (requires root)."""
-        cmd = f"nmap -sS -p {ports} -T4 --open {target}"
-        # Note: This may require sudo, but the runner handles shell=True
-        runner.execute_task(f"SYN_SCAN_{target}", cmd, callback=on_output)
+        if not validate_target(target):
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
+            return
+        if not validate_ports(ports):
+            if on_output:
+                on_output(f"[ERROR] Invalid port spec: {ports}")
+            return
+        return runner.execute_task(
+            f"SYN_SCAN_{target}",
+            ["nmap", "-sS", "-p", ports, "-T4", "--open", target],
+            callback=on_output,
+        )
 
     @staticmethod
-    def packet_capture(interface=None, count=100, filter_expr="", on_output=None, on_complete=None):
+    def packet_capture(
+        interface=None, count=100, filter_expr="", on_output=None, on_complete=None
+    ):
         """Capture packets using tcpdump."""
-        iface_flag = f"-i {interface}" if interface else "-i any"
-        filter_part = f" '{filter_expr}'" if filter_expr else ""
-        cmd = f"tcpdump {iface_flag} -c {count} -nn -l {filter_part}"
-        runner.execute_task("PACKET_CAPTURE", cmd, callback=on_output)
+        args = ["tcpdump"]
+        if interface:
+            if not validate_interface(interface):
+                if on_output:
+                    on_output(f"[ERROR] Invalid interface: {interface}")
+                return
+            args += ["-i", interface]
+        else:
+            args += ["-i", "any"]
+        args += ["-c", str(int(count)), "-nn", "-l"]
+        if filter_expr:
+            safe_filter = sanitize_bpf_filter(filter_expr)
+            if not safe_filter:
+                if on_output:
+                    on_output(f"[ERROR] Invalid BPF filter expression.")
+                return
+            args.append(safe_filter)
+        return runner.execute_task("PACKET_CAPTURE", args, callback=on_output)
 
     @staticmethod
     def network_monitor(interface=None, on_output=None, on_complete=None):
         """Monitor network traffic statistics in real-time."""
         iface = interface or "eth0"
-        script = f"watch -n 1 'grep {iface} /proc/net/dev | awk \"{{print \\$1, \\$2, \\$10}}\"'"
-        runner.execute_task(f"MONITOR_{iface}", script, callback=on_output)
+        if not validate_interface(iface):
+            if on_output:
+                on_output(f"[ERROR] Invalid interface: {iface}")
+            return
+        cmd = f"watch -n 1 'grep {shlex.quote(iface)} /proc/net/dev'"
+        return runner.execute_task_shell(f"MONITOR_{iface}", cmd, callback=on_output)
 
     @staticmethod
     def dns_leak_test(on_output=None, on_complete=None):
         """Basic DNS leak test."""
-        cmd = "dig +short whoami.akamai.net @ns1-1.akamaitech.net"
-        runner.execute_task("DNS_LEAK_TEST", cmd, callback=on_output)
+        return runner.execute_task(
+            "DNS_LEAK_TEST",
+            ["dig", "+short", "whoami.akamai.net", "@ns1-1.akamaitech.net"],
+            callback=on_output,
+        )
 
     @staticmethod
     def network_os_detection(target, on_output=None, on_complete=None):
         """Aggressive OS detection scan."""
-        cmd = f"nmap -O -A -T4 {target}"
-        runner.execute_task(f"OS_DETECT_{target}", cmd, callback=on_output)
+        if not validate_target(target):
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
+            return
+        return runner.execute_task(
+            f"OS_DETECT_{target}",
+            ["nmap", "-O", "-A", "-T4", target],
+            callback=on_output,
+        )
 
     @staticmethod
     def service_fingerprint(target, ports=None, on_output=None, on_complete=None):
         """Detailed service version detection."""
-        port_arg = f"-p {ports}" if ports else ""
-        cmd = f"nmap -sV {port_arg} {target}"
-        runner.execute_task(f"SVC_FINGERPRINT_{target}", cmd, callback=on_output)
+        if not validate_target(target):
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
+            return
+        args = ["nmap", "-sV"]
+        if ports:
+            if not validate_ports(ports):
+                if on_output:
+                    on_output(f"[ERROR] Invalid port spec: {ports}")
+                return
+            args += ["-p", ports]
+        args.append(target)
+        return runner.execute_task(
+            f"SVC_FINGERPRINT_{target}", args, callback=on_output
+        )

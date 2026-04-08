@@ -1,6 +1,7 @@
 """Admin UI Extension — Embedded directly into ShadowCypher if Master Keys are present."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -22,12 +23,15 @@ class AdminPage(BasePage):
         # ── 1. Ticket Decryption Box ──
         frm_decrypt = Gtk.Frame(label="Ticket Decryption Matrix (RSA-OAEP)")
         box_dec = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box_dec.set_margin_start(10); box_dec.set_margin_end(10); box_dec.set_margin_top(10); box_dec.set_margin_bottom(10)
-        
+        box_dec.set_margin_start(10)
+        box_dec.set_margin_end(10)
+        box_dec.set_margin_top(10)
+        box_dec.set_margin_bottom(10)
+
         lbl_in = Gtk.Label(label="Paste the user's Encrypted Ticket (Base64) below:")
         lbl_in.set_halign(Gtk.Align.START)
         box_dec.pack_start(lbl_in, False, False, 0)
-        
+
         self.buf_in = Gtk.TextBuffer()
         tv_in = Gtk.TextView(buffer=self.buf_in)
         tv_in.set_wrap_mode(Gtk.WrapMode.CHAR)
@@ -36,28 +40,31 @@ class AdminPage(BasePage):
         scroll_in.set_min_content_height(120)
         scroll_in.add(tv_in)
         box_dec.pack_start(scroll_in, True, True, 0)
-        
+
         btn_dec = Gtk.Button(label="\U0001f5dd Execute Neural Decryption")
         btn_dec.get_style_context().add_class("danger-btn")
         btn_dec.connect("clicked", self._on_decrypt)
         box_dec.pack_start(btn_dec, False, False, 0)
-        
+
         frm_decrypt.add(box_dec)
         self.pack_start(frm_decrypt, True, True, 0)
-        
+
         # Output terminal for Admin tools
         self.build_terminal()
 
         # ── 2. License Generation Box ──
         frm_gen = Gtk.Frame(label="AES-256 License Generator")
         box_gen = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box_gen.set_margin_start(10); box_gen.set_margin_end(10); box_gen.set_margin_top(10); box_gen.set_margin_bottom(10)
-        
+        box_gen.set_margin_start(10)
+        box_gen.set_margin_end(10)
+        box_gen.set_margin_top(10)
+        box_gen.set_margin_bottom(10)
+
         btn_gen = Gtk.Button(label="\u2699 Forge New License Key")
         btn_gen.get_style_context().add_class("suggested-action")
         btn_gen.connect("clicked", self._on_generate)
         box_gen.pack_start(btn_gen, False, False, 0)
-        
+
         frm_gen.add(box_gen)
         self.pack_start(frm_gen, False, False, 0)
 
@@ -66,33 +73,51 @@ class AdminPage(BasePage):
         b64_ticket = self.buf_in.get_text(bounds[0], bounds[1], True).strip()
         if not b64_ticket:
             return
-            
+
         try:
             self.clear_output("Locating Offline Master Private Key...\n")
-            with open(os.path.join(config.project_root, "admin_private.pem"), "rb") as key_file:
-                private_key = serialization.load_pem_private_key(key_file.read(), password=None)
-            
-            self.on_output("Key successfully mounted into RAM. Reversing cipher block...\n\n")
-            
+            from shadowcypher.core.identity import identity
+
+            if not identity.is_admin:
+                self.on_output("[DENIED] This machine is not the admin node.\n")
+                return
+
+            with open(
+                os.path.join(config.project_root, "admin_private.pem"), "rb"
+            ) as key_file:
+                private_key = serialization.load_pem_private_key(
+                    key_file.read(), password=None
+                )
+
+            self.on_output(
+                "Key successfully mounted into RAM. Reversing cipher block...\n\n"
+            )
+
             ciphertext = base64.b64decode(b64_ticket)
             plaintext = private_key.decrypt(
                 ciphertext,
                 padding.OAEP(
                     mgf=padding.MGF1(algorithm=hashes.SHA256()),
                     algorithm=hashes.SHA256(),
-                    label=None
-                )
+                    label=None,
+                ),
             )
-            self.on_output(f"══════ DECRYPTED MESSAGE ══════\n{plaintext.decode()}\n═══════════════════════════════\n")
-            
+            self.on_output(
+                f"══════ DECRYPTED MESSAGE ══════\n{plaintext.decode()}\n═══════════════════════════════\n"
+            )
+
         except Exception as e:
-            self.on_output(f"\n[FATAL ERROR] Decryption failed: {str(e)}\nEnsure you pasted the correct Base64 string.\n")
+            self.on_output(
+                f"\n[FATAL ERROR] Decryption failed: {str(e)}\nEnsure you pasted the correct Base64 string.\n"
+            )
 
     def _on_generate(self, btn):
         key = Fernet.generate_key()
-        self.clear_output(f"====================================\n"
-                          f"   SHADOWCYPHER LICENSE GENERATOR   \n"
-                          f"====================================\n\n"
-                          f"[+] NEW LICENSE KEY FORGED:\n"
-                          f"\n{key.decode()}\n\n"
-                          f"Send this exact string to the user to unlock their arsenal.")
+        self.clear_output(
+            f"====================================\n"
+            f"   SHADOWCYPHER LICENSE GENERATOR   \n"
+            f"====================================\n\n"
+            f"[+] NEW LICENSE KEY FORGED:\n"
+            f"\n{key.decode()}\n\n"
+            f"Send this exact string to the user to unlock their arsenal."
+        )

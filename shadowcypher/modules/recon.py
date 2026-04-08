@@ -1,15 +1,38 @@
-"""ShadowCypher Recon (Signal) Engine — Absolute Sync (Build V29.1)."""
-
-import os
+import subprocess
+import re
 from shadowcypher.core.runner import runner
 from shadowcypher.core.logger import logger
+from shadowcypher.core.sanitize import validate_target
 
 class Recon:
     """The 'Signal' engine. Handles port scanning, discovery, and path tracing."""
-    
+
     def __init__(self):
-        self.gateway = "192.168.1.1" # Dynamic detection hook
+        self.gateway = self._detect_gateway()
+        self.subnet = self._detect_subnet()
         self.scans = []
+
+    def _detect_gateway(self):
+        """Dynamic Gateway Detection — Hardened Logic."""
+        try:
+            # Parse 'ip route' for default gateway
+            res = subprocess.check_output(["ip", "route", "show", "default"], text=True)
+            match = re.search(r"default via ([\d\.]+)", res)
+            if match:
+                return match.group(1)
+        except Exception: pass
+        return "127.0.0.1"
+
+    def _detect_subnet(self):
+        """Dynamic Subnet Detection for host discovery."""
+        try:
+            res = subprocess.check_output(["ip", "addr", "show"], text=True)
+            # Find the primary interface subnet
+            match = re.search(r"inet ([\d\.]+/[\d]+) brd", res)
+            if match:
+                return match.group(1)
+        except Exception: pass
+        return "192.168.1.0/24"
 
     @staticmethod
     def get_scan_types():
@@ -17,25 +40,49 @@ class Recon:
 
     @staticmethod
     def pulse_target(target, stype="Quick Port Scan", on_output=None, on_complete=None):
+        if not validate_target(target):
+            if on_output: on_output(f"[ERROR] Invalid target: {target}")
+            return
         logger.info("recon", f"PULSING_TARGET: {target} [TYPE={stype}]")
-        
-        cmds = {
-            "Quick Port Scan": f"nmap -F {target}",
-            "Full Port Scan": f"nmap -p- {target}",
-            "UDP Scan": f"nmap -sU {target}",
-            "OS Detection": f"nmap -O {target}",
-            "Service Fingerprint": f"nmap -sV {target}"
+
+        flag_map = {
+            "Quick Port Scan": ["-F"],
+            "Full Port Scan": ["-p-"],
+            "UDP Scan": ["-sU"],
+            "OS Detection": ["-O"],
+            "Service Fingerprint": ["-sV"],
         }
-        
-        cmd = cmds.get(stype, f"nmap {target}")
-        runner.execute_task(f"RECON_{target}", cmd, callback=on_output)
+        flags = flag_map.get(stype, [])
+        return runner.execute_task(f"RECON_{target}", ["nmap"] + flags + [target], callback=on_output)
 
     @staticmethod
     def traceroute(target, on_output=None, on_complete=None):
-        cmd = f"traceroute {target}"
-        runner.execute_task(f"TRACE_{target}", cmd, callback=on_output)
+        if not validate_target(target):
+            if on_output: on_output(f"[ERROR] Invalid target: {target}")
+            return
+        return runner.execute_task(f"TRACE_{target}", ["traceroute", target], callback=on_output)
 
-    # UI Backend Hooks
     def discover_hosts(self, on_output=None, on_complete=None):
-        cmd = "nmap -sn 192.168.1.0/24"
-        runner.execute_task("HOST_DISCOVERY", cmd, callback=on_output)
+        """Dynamic Subnet Host Discovery."""
+        target_subnet = self.subnet
+        if on_output: on_output(f"[RECON] INITIATING_NETWORK_SWEEP_ON: {target_subnet}")
+        return runner.execute_task("HOST_DISCOVERY", ["nmap", "-sn", target_subnet], callback=on_output)
+
+    def auto_inspect(self):
+        """Dynamic nmap service scan on the detected gateway."""
+        try:
+            return subprocess.check_output(["nmap", "-sV", self.gateway], text=True, timeout=60)
+        except Exception as e:
+            return f"Error: {e}"
+
+    @staticmethod
+    def ai_recon(target, on_output=None):
+        """Advanced AI-Augmented Reconnaissance using the Masterclass loop."""
+        from shadowcypher.ai.orchestrator import AIOrchestrator
+        logger.info("ai", f"INITIATING_AI_RECON_ON: {target}")
+        if on_output: 
+            on_output(f"[AI] INITIATING_DEEPHAT_RECON_FOR: {target}")
+            on_output("[AI] ACTIVATING_SHADOW_WRAITH_STEALTH_SHIELD...")
+        orch = AIOrchestrator()
+        query = f"Provide a complete vulnerability analysis and scan for {target}. Start with stealth check."
+        return orch.execute_query(query, callback=on_output)

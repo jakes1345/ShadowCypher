@@ -7,8 +7,7 @@ from pathlib import Path
 
 DEFAULT_CONFIG = {
     "ai": {
-        "model_repo": "TheBloke/WhiteRabbitNeo-V1.5-7B-GGUF",
-        "model_file": "whiterabbitneo-v1.5-7b.Q4_K_M.gguf",
+        "model": "DeepHat-V1-7B",
         "n_ctx": 4096,
         "n_gpu_layers": 35,
         "temperature": 0.7,
@@ -43,22 +42,28 @@ class Config:
         self.load()
 
     def load(self):
-        """Load config from disk, merging with defaults."""
         if self.config_file.exists():
             try:
                 with open(self.config_file, "r") as f:
                     saved = json.load(f)
                 self._deep_merge(self.data, saved)
-            except (json.JSONDecodeError, OSError):
-                pass
+            except json.JSONDecodeError as e:
+                import sys
+
+                print(f"[WARN] config.json is corrupt: {e}", file=sys.stderr)
+            except OSError as e:
+                import sys
+
+                print(f"[WARN] Cannot read config.json: {e}", file=sys.stderr)
 
     def save(self):
-        """Persist current config to disk."""
         try:
             with open(self.config_file, "w") as f:
                 json.dump(self.data, f, indent=2)
-        except OSError:
-            pass
+        except OSError as e:
+            import sys
+
+            print(f"[WARN] Cannot save config.json: {e}", file=sys.stderr)
 
     def get(self, *keys, default=None):
         """Get a nested config value. e.g. config.get('ai', 'model_repo')"""

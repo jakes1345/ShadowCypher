@@ -1,63 +1,49 @@
-# ── Python ──
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-*.eggs/
-dist/
-build/
-.eggs/
+# ShadowCypher Tactical Git Exclusion Engine
+# ── Mission Critical: DO NOT COMMIT SENSITIVE DATA ──
 
-# ── Runtime data ──
+# Local Tactical Data
 logs/
-sessions/
-models/
 *.log
+/tmp/shadow_*.log
+/tmp/sys_*.log
 
-# ── Configuration (may contain secrets) ──
-config.json
-users.json
-.session-secret
-
-# ── AI Models (large binaries) ──
-models/
-*.gguf
-
-# ── Environment ──
-.env
-.env.*
-!.env.example
-.venv/
+# Python Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
 venv/
+.venv/
+meta-venv/
+pip-log.txt
+pip-delete-this-directory.txt
 
-# ── Build artifacts ──
-native/shadowcypher
-*.o
-
-# ── IDE / Tool directories ──
-.claude/
-.cursor/
-.sisyphus/
-.crush/
-.shortest/
-.aider*
-.vscode/
-.idea/
-
-# ── Node (not used, cleanup from old tooling) ──
-node_modules/
-package-lock.json
-
-# ── OS ──
-*.tmp
-*.bak
-*.swp
-*~
-.DS_Store
-Thumbs.db
-admin_private.pem
-admin_tools/
-projects/
-payloads/
-wordlists/
+# Personal Encryption & Credentials
+.env
+auth.json
+*.key
+*.pem
+credentials/
+loot/
+sessions/
+tickets/
+.session-secret
 .drm-lockout
+
+# Machine Specific Fingerprints (REDACTED FOR GITHUB)
+machines.json
+config/local_config.py
+
+# System Cache & OS Metadata
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+node_modules/
+
+# ShadowCypher UI Artifacts (Local only)
+shadowcypher/ui/assets/icon.png
+shadowcypher/ui/assets/branding/

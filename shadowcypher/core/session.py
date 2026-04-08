@@ -12,8 +12,13 @@ from shadowcypher.core.reporting import Report
 class Project:
     """A professional security engagement project."""
 
-    def __init__(self, name: str, description: str = "",
-                 targets: list[str] = None, scope: list[str] = None):
+    def __init__(
+        self,
+        name: str,
+        description: str = "",
+        targets: list[str] = None,
+        scope: list[str] = None,
+    ):
         self.name = name
         self.description = description
         self.targets = targets or []
@@ -58,8 +63,13 @@ class SessionManager:
         """Get list of active project names."""
         return [p.stem for p in self.projects_dir.glob("*.json")]
 
-    def create_project(self, name: str, description: str = "",
-                       targets: list[str] = None, scope: list[str] = None) -> Project:
+    def create_project(
+        self,
+        name: str,
+        description: str = "",
+        targets: list[str] = None,
+        scope: list[str] = None,
+    ) -> Project:
         """Create and switch to a new project."""
         p = Project(name, description, targets, scope)
         self.current_project = p
@@ -97,20 +107,38 @@ class SessionManager:
             f.write(self.current_project.name)
 
     def _load_last_session(self):
-        """Auto-load least project on startup."""
+        """Auto-load last project on startup."""
         path = self.projects_dir / "last_session.txt"
         if path.exists():
             name = path.read_text().strip()
-            self.load_project(name)
+            if self.load_project(name):
+                return
+
+        # Fallback if no valid project loaded
+        if not list(self.projects_dir.glob("*.json")):
+            self.create_project(
+                "Shadow_Operation_Alpha",
+                "Default operational scope.",
+                ["127.0.0.1"],
+                [],
+            )
 
     def is_in_scope(self, target: str) -> bool:
-        """Check if a target is within the defined project scope."""
         if not self.current_project or not self.current_project.scope:
-            return True  # If no scope defined, assume anything is allowed
-        # Simple string check for now, can be expanded to IP ranges
+            return True
+        import ipaddress
+
         for s in self.current_project.scope:
-            if target in s or s in target:
+            if target == s:
                 return True
+            try:
+                net = ipaddress.ip_network(s, strict=False)
+                addr = ipaddress.ip_address(target)
+                if addr in net:
+                    return True
+            except ValueError:
+                if target.endswith("." + s) or target == s:
+                    return True
         return False
 
 

@@ -398,13 +398,17 @@ static gboolean overview_tick(gpointer data)
         pclose(f);
     }
 
-    f = popen("curl -4sS --max-time 4 https://ifconfig.me/ip 2>/dev/null || echo N/A", "r");
+    /* Public IP: read from a cached file to avoid leaking IP to external services.
+       Run 'curl -4s https://ifconfig.me/ip > /tmp/sc_pubip.txt' manually when needed. */
+    f = fopen("/tmp/sc_pubip.txt", "r");
     if (f) {
         if (fgets(b, sizeof b, f)) {
             b[strcspn(b, "\n")] = 0;
             gtk_label_set_text(GTK_LABEL(o->l_ip), b);
         }
-        pclose(f);
+        fclose(f);
+    } else {
+        gtk_label_set_text(GTK_LABEL(o->l_ip), "(run: curl -4s ifconfig.me > /tmp/sc_pubip.txt)");
     }
 
     return G_SOURCE_CONTINUE;

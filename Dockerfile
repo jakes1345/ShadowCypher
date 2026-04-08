@@ -3,7 +3,6 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV QT_X11_NO_MITSHM=1
 
-# Install all penetration testing dependencies and UI libraries
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
@@ -19,27 +18,36 @@ RUN apt-get update && apt-get install -y \
     binwalk \
     exiftool \
     git \
-    sudo \
-    policykit-1 \
+    wget \
+    unzip \
+    curl \
+    ffuf \
     pkg-config \
     libcairo2-dev \
     libgirepository1.0-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Add a non-root user for X11 UI safety
-RUN useradd -ms /bin/bash shadowuser && echo "shadowuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN git clone https://github.com/SpiderLabs/Responder.git /opt/Responder && \
+    wget -q https://github.com/projectdiscovery/nuclei/releases/download/v3.2.0/nuclei_3.2.0_linux_amd64.zip && \
+    unzip nuclei_3.2.0_linux_amd64.zip -d /usr/local/bin/ && \
+    rm nuclei_3.2.0_linux_amd64.zip && \
+    wget -q https://github.com/BishopFox/sliver/releases/download/v1.5.42/sliver-server_linux -O /usr/local/bin/sliver-server && \
+    chmod +x /usr/local/bin/sliver-server
+
+RUN useradd -ms /bin/bash shadowuser
 
 WORKDIR /opt/ShadowCypher
-COPY . .
-
+COPY .dockerignore .
+COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Create necessary directories
-RUN mkdir -p /home/shadowuser/.cache && chown -R shadowuser:shadowuser /home/shadowuser && chown -R shadowuser:shadowuser /opt/ShadowCypher
+COPY shadowcypher/ ./shadowcypher/
+COPY config.json pyproject.toml ./
+RUN mkdir -p /home/shadowuser/.cache projects payloads reports logs && \
+    chown -R shadowuser:shadowuser /home/shadowuser /opt/ShadowCypher
 
 USER shadowuser
 ENV FONTCONFIG_PATH=/etc/fonts
 ENV XDG_CACHE_HOME=/home/shadowuser/.cache
 
-# Start the HUD
 CMD ["python3", "-m", "shadowcypher.app"]

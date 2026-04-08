@@ -1,14 +1,17 @@
 """ShadowCypher Tactical AI Swarm — Global AI Resuscitation Build V13."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib, Gdk
 from shadowcypher.ai.orchestrator import AIOrchestrator
 from shadowcypher.core.logger import logger
 import threading
 
+
 class AIPage(Gtk.Box):
     """Elite Tactical AI interface. Features live terminal logs and local-AI health checks."""
+
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.orchestrator = AIOrchestrator()
@@ -32,7 +35,7 @@ class AIPage(Gtk.Box):
         self.log_view.set_editable(False)
         self.log_view.get_style_context().add_class("terminal-view")
         self.log_view.set_size_request(-1, 400)
-        
+
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroll.add(self.log_view)
@@ -44,15 +47,40 @@ class AIPage(Gtk.Box):
         self.msg_entry.set_placeholder_text("EXECUTE_AI_QUERY...")
         self.msg_entry.connect("activate", self._on_send_clicked)
         input_box.pack_start(self.msg_entry, True, True, 0)
-        
+
         btn_send = Gtk.Button(label="ENGAGE")
         btn_send.get_style_context().add_class("suggested-action")
         btn_send.connect("clicked", self._on_send_clicked)
         input_box.pack_end(btn_send, False, False, 0)
+
+        # 4. MASTERCLASS QUICK TRIGGER
+        btn_masterclass = Gtk.Button(label="LAUNCH_MASTERCLASS")
+        btn_masterclass.get_style_context().add_class("destructive-action")
+        btn_masterclass.get_style_context().add_class("pulse-animation")
+        btn_masterclass.connect("clicked", self._on_masterclass_clicked)
+        input_box.pack_end(btn_masterclass, False, False, 10)
+
         self.main_pod.pack_start(input_box, False, False, 0)
 
         self._log_terminal("[SYSTEM] TENGU_CORE_ONLINE...")
-        self._log_terminal("[SYSTEM] WAITING_FOR_LOCAL_LLM_MISSION_PARAMETERS...")
+        self._log_terminal("[SYSTEM] MASTERCLASS_LOOP_CALIBRATED...")
+
+    def _on_masterclass_clicked(self, widget):
+        msg = self.msg_entry.get_text()
+        if not msg:
+            self._log_terminal(
+                "[WARN] SPECIFY_TARGET_IP_IN_QUERY_FIELD_BEFORE_MASTERCLASS"
+            )
+            return
+        self._log_terminal(f"[CRITICAL] INITIATING_FULL_OFFENSIVE_AUDIT_ON: {msg}")
+        # Send the special tool command
+        import json
+
+        safe_target = json.dumps(msg)
+        masterclass_query = f'<TOOL_CALL>{{"tool": "run_masterclass", "args": {{"target": {safe_target}}}}}</TOOL_CALL>'
+        threading.Thread(
+            target=self._run_ai_swarm, args=(masterclass_query,), daemon=True
+        ).start()
 
     def _log_terminal(self, text):
         buf = self.log_view.get_buffer()
@@ -61,7 +89,8 @@ class AIPage(Gtk.Box):
 
     def _on_send_clicked(self, widget):
         msg = self.msg_entry.get_text()
-        if not msg: return
+        if not msg:
+            return
         self.msg_entry.set_text("")
         self.msg_entry.set_sensitive(False)
         # We need a reference to the button for lockdown
@@ -73,15 +102,18 @@ class AIPage(Gtk.Box):
     def _run_ai_swarm(self, query):
         try:
             # Atomic Callback for Progress Feed
-            def hb(txt): GLib.idle_add(self._log_terminal, txt)
-            
+            def hb(txt):
+                GLib.idle_add(self._log_terminal, txt)
+
             hb("[TENGU] INITIATING_AUTONOMOUS_ORCHESTRATION...")
             # Real call with Callback Support
             response = self.orchestrator.execute_query(query, callback=hb)
             hb(f"TENGU >> {response}")
         except Exception as e:
             GLib.idle_add(self._log_terminal, f"[ERROR] SWARM_FAILURE: {str(e)}")
-            GLib.idle_add(self._log_terminal, "[VITAL] ENSURE 'OLLAMA SERVE' IS RUNNING")
+            GLib.idle_add(
+                self._log_terminal, "[VITAL] ENSURE 'OLLAMA SERVE' IS RUNNING"
+            )
         finally:
             # Unlock Inputs
             GLib.idle_add(self.msg_entry.set_sensitive, True)
