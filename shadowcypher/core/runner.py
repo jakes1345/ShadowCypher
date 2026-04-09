@@ -1,147 +1,74 @@
+"""
+Apex Runner — High-Performance Cross-Platform Execution Engine.
+Standardizes command execution across Linux, macOS, and Windows.
+"""
+
 import subprocess
-import shlex
 import threading
-import os
 import uuid
-import time
-from shadowcypher.core.logger import logger
-
-_PROCESS_TIMEOUT = 1200  # 20 minute max per task
-
+import os
+import shlex
+from shadowcypher.core.bus import bus
+from shadowcypher.core.platform import platform_engine
 
 class Runner:
-    """Universal task runner with persistent job-tracking and cancellation."""
-
+    """The central execution artery of ShadowCypher."""
+    
     def __init__(self):
         self.active_processes = {}
+        self.platform = platform_engine
+        self._perf_env = self._init_perf_env()
+
+    def _init_perf_env(self):
+        env = os.environ.copy()
+        # APEX Optimization: only apply mold on Linux
+        if self.platform.IS_LINUX:
+            env["RUSTFLAGS"] = "-C target-cpu=native -C linker=mold"
+            env["LDFLAGS"] = "-fuse-ld=mold"
+        return env
 
     def execute_task(self, name, command, callback=None, cwd=None):
-        """
-        Execute a tactical mission task.
-        Returns a unique 'task_id' for cancellation support.
-        """
         task_id = str(uuid.uuid4())[:8]
-        full_name = f"{name}_{task_id}"
-
-        logger.info("runner", f"INITIATING_TASK: {full_name} >> {command} [CWD={cwd}]")
-        thread = threading.Thread(
-            target=self._run_process,
-            args=(task_id, full_name, command, callback, cwd),
-            daemon=True,
-        )
-        thread.start()
+        threading.Thread(target=self._run, args=(task_id, command, callback, cwd, False), daemon=True).start()
         return task_id
-
-    def cancel(self, task_id):
-        """Force-terminate an active mission task."""
-        if task_id in self.active_processes:
-            proc = self.active_processes[task_id]
-            logger.warn("runner", f"MANUAL_CANCELLATION: Terminating task_id {task_id}")
-            try:
-                proc.terminate()
-                time.sleep(0.5)
-                if proc.poll() is None:
-                    proc.kill()
-            except Exception as e:
-                logger.error("runner", f"CANCELLATION_FAILURE: {e}")
-            return True
-        return False
-
-    def _run_process(self, task_id, name, command, callback, cwd=None):
-        import platform
-
-        current_os = platform.system()
-
-        try:
-            if isinstance(command, str):
-                # Privilege Escalation Bridge
-                if command.strip().startswith("sudo "):
-                    core_cmd = command.strip()[5:]
-                    if current_os == "Linux":
-                        command = "pkexec " + core_cmd
-                    elif current_os == "Darwin":
-                        command = f"osascript -e 'do shell script \"{shlex.quote(core_cmd)}\" with administrator privileges'"
-                args = shlex.split(command)
-            else:
-                args = list(command)
-
-            process = subprocess.Popen(
-                args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,  # Line-buffered for real-time OSINT
-                universal_newlines=True,
-                cwd=cwd,
-            )
-
-            self.active_processes[task_id] = process
-
-            for line in process.stdout:
-                if callback:
-                    callback(line)
-                try:
-                    from shadowcypher.core.kairos import kairos
-
-                    kairos.analyze(line)
-                except Exception:
-                    pass
-
-            process.wait(timeout=_PROCESS_TIMEOUT)
-            if callback:
-                callback(f"\n[MISSION_EXIT_CODE: {process.returncode}]")
-
-        except subprocess.TimeoutExpired:
-            if task_id in self.active_processes:
-                self.active_processes[task_id].kill()
-            if callback:
-                callback("[ERROR] MISSION_TIMEOUT: Command exceeded safety duration.")
-        except Exception as e:
-            if callback:
-                callback(f"[ERROR] MISSION_FAILURE: {str(e)}")
-        finally:
-            self.active_processes.pop(task_id, None)
 
     def execute_task_shell(self, name, command, callback=None):
-        """Shell execution with task ID support."""
         task_id = str(uuid.uuid4())[:8]
-        thread = threading.Thread(
-            target=self._run_shell_process,
-            args=(task_id, f"{name}_{task_id}", command, callback),
-            daemon=True,
-        )
-        thread.start()
+        threading.Thread(target=self._run, args=(task_id, command, callback, None, True), daemon=True).start()
         return task_id
 
-    def _run_shell_process(self, task_id, name, command, callback):
+    def _run(self, task_id, command, callback, cwd, is_shell):
         try:
-            process = subprocess.Popen(
-                command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-                universal_newlines=True,
-            )
-            self.active_processes[task_id] = process
-            for line in process.stdout:
-                if callback:
-                    callback(line)
-                try:
-                    from shadowcypher.core.kairos import kairos
+            # 1. CROSS-PLATFORM ELEVATION
+            if not is_shell and isinstance(command, list) and command[0] == "sudo":
+                if self.platform.IS_LINUX:
+                    command = ["pkexec"] + command[1:]
+                elif self.platform.IS_WINDOWS:
+                    command = ["powershell", "Start-Process", "-Verb", "runAs"] + command[1:]
+                # macOS stays sudo for now (Gtk-based GUI sudo is complex)
 
-                    kairos.analyze(line)
-                except Exception:
-                    pass
-            process.wait(timeout=_PROCESS_TIMEOUT)
-            if callback:
-                callback(f"\n[MISSION_EXIT_CODE: {process.returncode}]")
+            # 2. BINARY SUFFIXING (Windows)
+            if self.platform.IS_WINDOWS and not is_shell and isinstance(command, list):
+                if not command[0].endswith(".exe") and not command[0].endswith(".bat"):
+                    command[0] += ".exe"
+
+            args = command if is_shell else (shlex.split(command) if isinstance(command, str) else command)
+            
+            proc = subprocess.Popen(
+                args, shell=is_shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, bufsize=1, env=self._perf_env, cwd=cwd
+            )
+            self.active_processes[task_id] = proc
+            
+            for line in proc.stdout:
+                if callback: callback(line)
+                bus.publish("mission_output", line)
+            
+            proc.wait(timeout=1200)
+            if callback: callback(f"\n[MISSION_{name[:4]}_EXIT: {proc.returncode}]")
         except Exception as e:
-            if callback:
-                callback(f"[ERROR] MISSION_FAILURE: {str(e)}")
+            if callback: callback(f"[ERROR] APEX_RUNNER_FAULT: {e}")
         finally:
             self.active_processes.pop(task_id, None)
-
 
 runner = Runner()
