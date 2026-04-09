@@ -21,14 +21,14 @@ class CredentialsPage(BasePage):
         notebook.append_page(self._build_hydra_tab(), Gtk.Label(label="Hydra Brute Force"))
         notebook.append_page(self._build_hash_tab(), Gtk.Label(label="Hash Cracking"))
         notebook.append_page(self._build_identify_tab(), Gtk.Label(label="Hash Identify"))
-        self.pack_start(notebook, False, False, 0)
+        self.workspace.pack_start(notebook, False, False, 0)
 
         self.build_terminal()
 
         # Stop button at bottom
         stop_box = Gtk.Box()
         stop_box.pack_start(self.build_stop_button(), False, False, 0)
-        self.pack_start(stop_box, False, False, 0)
+        self.workspace.pack_start(stop_box, False, False, 0)
 
     def _build_hydra_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)

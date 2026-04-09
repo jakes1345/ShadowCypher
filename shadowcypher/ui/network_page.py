@@ -33,7 +33,7 @@ class NetworkPage(BasePage):
         self.ports_entry.set_placeholder_text("1-1024")
         self.ports_entry.set_width_chars(12)
         row1.pack_start(self.ports_entry, False, False, 0)
-        self.pack_start(row1, False, False, 0)
+        self.workspace.pack_start(row1, False, False, 0)
 
         # ── Packet capture options ──
         row2 = Gtk.Box(spacing=8)
@@ -47,7 +47,7 @@ class NetworkPage(BasePage):
         self.count_spin = Gtk.SpinButton.new_with_range(10, 10000, 10)
         self.count_spin.set_value(100)
         row2.pack_start(self.count_spin, False, False, 0)
-        self.pack_start(row2, False, False, 0)
+        self.workspace.pack_start(row2, False, False, 0)
 
         # ── Buttons ──
         btn_box = Gtk.Box(spacing=8)
@@ -64,7 +64,7 @@ class NetworkPage(BasePage):
             btn_box.pack_start(self.make_action_btn(label, handler), False, False, 0)
 
         btn_box.pack_end(self.build_stop_button(), False, False, 0)
-        self.pack_start(btn_box, False, False, 0)
+        self.workspace.pack_start(btn_box, False, False, 0)
 
         self.build_terminal()
 

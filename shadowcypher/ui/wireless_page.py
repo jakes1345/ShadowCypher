@@ -25,7 +25,7 @@ class WirelessPage(BasePage):
         row1.pack_start(self.make_action_btn("Enable Monitor", self._on_enable_monitor), False, False, 0)
         row1.pack_start(self.make_action_btn("Disable Monitor", self._on_disable_monitor), False, False, 0)
         row1.pack_start(self.make_action_btn("List Interfaces", self._on_list), False, False, 0)
-        self.pack_start(row1, False, False, 0)
+        self.workspace.pack_start(row1, False, False, 0)
 
         # Target AP
         row2 = Gtk.Box(spacing=8)
@@ -45,7 +45,7 @@ class WirelessPage(BasePage):
         self.client_entry.set_placeholder_text("optional client MAC")
         self.client_entry.set_width_chars(20)
         row2.pack_start(self.client_entry, False, False, 0)
-        self.pack_start(row2, False, False, 0)
+        self.workspace.pack_start(row2, False, False, 0)
 
         # Cap file
         row3 = Gtk.Box(spacing=8)
@@ -57,7 +57,7 @@ class WirelessPage(BasePage):
         cap_btn = Gtk.Button(label="Browse")
         cap_btn.connect("clicked", lambda b: self._browse(self.cap_entry))
         row3.pack_start(cap_btn, False, False, 0)
-        self.pack_start(row3, False, False, 0)
+        self.workspace.pack_start(row3, False, False, 0)
 
         # Action buttons
         btn_box = Gtk.Box(spacing=8)
@@ -66,7 +66,7 @@ class WirelessPage(BasePage):
         btn_box.pack_start(self.make_action_btn("Deauth", self._on_deauth, "danger-btn"), False, False, 0)
         btn_box.pack_start(self.make_action_btn("Crack WPA", self._on_crack_wpa), False, False, 0)
         btn_box.pack_end(self.build_stop_button(), False, False, 0)
-        self.pack_start(btn_box, False, False, 0)
+        self.workspace.pack_start(btn_box, False, False, 0)
 
         self.build_terminal()
 

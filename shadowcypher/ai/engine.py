@@ -14,6 +14,7 @@ from typing import Optional, Callable
 
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
+from shadowcypher.ai.providers import provider_registry
 
 
 OLLAMA_BASE = "http://127.0.0.1:11434"
@@ -305,14 +306,20 @@ class AIEngine:
     def generate(self, prompt: str, system_prompt: str = "",
                  max_tokens: int = None, temperature: float = None,
                  stream: bool = False) -> str:
-        """Generate a response from the model."""
-        if not self._loaded:
-            return "[AI not loaded] Load the model first from the AI Assistant page."
-
+        """Generate a response. Routes through provider registry for cloud backends."""
         if max_tokens is None:
             max_tokens = config.get("ai", "max_tokens", default=2048)
         if temperature is None:
             temperature = config.get("ai", "temperature", default=0.7)
+
+        # Cloud provider takes priority if configured and active
+        active = provider_registry.active
+        if active and active.id != "ollama" and active.is_configured:
+            return provider_registry.generate(prompt, system_prompt, max_tokens, temperature)
+
+        # Local backend (Ollama / llama-cpp)
+        if not self._loaded:
+            return "[AI not loaded] Load a model or configure a cloud provider in AI Settings."
 
         if self._backend == "ollama":
             return self._generate_ollama(prompt, system_prompt, max_tokens, temperature)
@@ -371,15 +378,21 @@ class AIEngine:
                         max_tokens: int = None, temperature: float = None,
                         on_token: Callable[[str], None] = None) -> str:
         """Stream tokens one at a time for real-time display."""
-        if not self._loaded:
-            if on_token:
-                on_token("[AI not loaded] Load the model first.\n")
-            return ""
-
         if max_tokens is None:
             max_tokens = config.get("ai", "max_tokens", default=2048)
         if temperature is None:
             temperature = config.get("ai", "temperature", default=0.7)
+
+        # Cloud provider takes priority
+        active = provider_registry.active
+        if active and active.id != "ollama" and active.is_configured:
+            return provider_registry.generate_stream(prompt, system_prompt, max_tokens,
+                                                     temperature, on_token=on_token)
+
+        if not self._loaded:
+            if on_token:
+                on_token("[AI not loaded] Load a model or configure a cloud provider.\n")
+            return ""
 
         if self._backend == "ollama":
             return self._stream_ollama(prompt, system_prompt, max_tokens, temperature, on_token)

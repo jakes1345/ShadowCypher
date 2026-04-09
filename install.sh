@@ -1,58 +1,112 @@
 #!/bin/bash
-# 💠 SHADOWCYPHER: INDUSTRIAL INSTALLATION ENGINE (V19)
-# MISSION: RESIDENT_TASK_FORCE_DEPLOYMENT (EXTERNAL_BYPASS)
+# ShadowCypher: Installation Engine (V20)
+# Cross-platform installer for Linux (Debian/Ubuntu, Arch), macOS, and Windows/WSL
 
-echo "[SHADOW] INITIATING_TACTICAL_DEPLOYMENT_V19..."
-APP_DIR=$(pwd)
+set -e
+
+echo "[SHADOW] INITIATING_TACTICAL_DEPLOYMENT..."
+APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 ICON_PATH="$APP_DIR/assets/icon.png"
 DESKTOP_FILE="$HOME/.local/share/applications/shadowcypher.desktop"
 
-# 1. Dependency Pulse (Handling Externally Managed Environments)
-echo "[SHADOW] PULSING_INDUSTRIAL_REQUIREMENTS..."
-# We try venv first, but if system is strict, we allow --break-system-packages
-pip3 install -r requirements.txt --break-system-packages 2>/dev/null || pip3 install -r requirements.txt
-
-# 2. Advanced Security Tools Installation
-echo "[SHADOW] INSTALLING_ADVANCED_ARSENAL (Nuclei, Ffuf, Responder, Sliver)..."
-sudo apt-get install -y ffuf wget unzip curl git 2>/dev/null
-if [ ! -d "/opt/Responder" ]; then
-    sudo git clone https://github.com/SpiderLabs/Responder.git /opt/Responder
-fi
-if ! command -v nuclei &> /dev/null; then
-    wget -q https://github.com/projectdiscovery/nuclei/releases/download/v3.2.0/nuclei_3.2.0_linux_amd64.zip
-    sudo unzip nuclei_3.2.0_linux_amd64.zip -d /usr/local/bin/
-    rm nuclei_3.2.0_linux_amd64.zip
-fi
-if ! command -v sliver-server &> /dev/null; then
-    wget -q https://github.com/BishopFox/sliver/releases/download/v1.5.42/sliver-server_linux -O sliver-server
-    sudo mv sliver-server /usr/local/bin/sliver-server
-    sudo chmod +x /usr/local/bin/sliver-server
+# ── 1. Python Dependencies ──
+echo "[SHADOW] Installing Python dependencies..."
+if [ -d "$APP_DIR/venv" ]; then
+    echo "[SHADOW] Using existing virtual environment..."
+    source "$APP_DIR/venv/bin/activate"
+    pip install -r "$APP_DIR/requirements.txt" -q
+elif command -v python3 &>/dev/null; then
+    # Try venv first (recommended)
+    python3 -m venv "$APP_DIR/venv" 2>/dev/null && {
+        source "$APP_DIR/venv/bin/activate"
+        pip install -r "$APP_DIR/requirements.txt" -q
+        echo "[SHADOW] Virtual environment created at $APP_DIR/venv"
+    } || {
+        # Fallback: install globally
+        pip3 install -r "$APP_DIR/requirements.txt" --user -q 2>/dev/null || \
+        pip3 install -r "$APP_DIR/requirements.txt" -q
+    }
 fi
 
-# 3. Universal Launcher Shell
-echo "[SHADOW] ENGINEERING_LAUNCHER_SHELL..."
-cat <<EOF > "$APP_DIR/run.sh"
+# ── 2. System Dependencies (Linux only) ──
+if [ "$(uname)" = "Linux" ]; then
+    echo "[SHADOW] Installing system packages..."
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y python3-gi python3-gi-cairo gir1.2-gtk-3.0 \
+            libcairo2-dev nmap ffuf wget unzip curl git 2>/dev/null || true
+    elif command -v pacman &>/dev/null; then
+        sudo pacman -S --noconfirm python-gobject gtk3 cairo nmap 2>/dev/null || true
+    fi
+fi
+
+# ── 3. Optional Arsenal ──
+echo "[SHADOW] Checking optional security tools..."
+if [ "$(uname)" = "Linux" ]; then
+    if [ ! -d "/opt/Responder" ]; then
+        echo "[SHADOW] Installing Responder..."
+        sudo git clone https://github.com/SpiderLabs/Responder.git /opt/Responder 2>/dev/null || true
+    fi
+    if ! command -v nuclei &>/dev/null; then
+        echo "[SHADOW] Installing Nuclei..."
+        NUCLEI_VER="3.2.0"
+        wget -q "https://github.com/projectdiscovery/nuclei/releases/download/v${NUCLEI_VER}/nuclei_${NUCLEI_VER}_linux_amd64.zip" -O /tmp/nuclei.zip 2>/dev/null && {
+            sudo unzip -o /tmp/nuclei.zip -d /usr/local/bin/ nuclei
+            rm -f /tmp/nuclei.zip
+        } || echo "[SHADOW] Nuclei install skipped (download failed)"
+    fi
+fi
+
+# ── 4. Create Required Directories ──
+echo "[SHADOW] Creating project directories..."
+mkdir -p "$APP_DIR/wordlists" "$APP_DIR/findings" "$APP_DIR/reports" \
+         "$APP_DIR/tickets" "$APP_DIR/logs" "$APP_DIR/tools"
+
+# ── 5. Universal Launcher ──
+echo "[SHADOW] Creating launcher..."
+cat <<LAUNCHER > "$APP_DIR/run.sh"
 #!/bin/bash
 cd "$APP_DIR"
-DISPLAY=:0 python3 -m shadowcypher.app
-EOF
+# Auto-detect display server
+if [ -n "\$WAYLAND_DISPLAY" ]; then
+    export GDK_BACKEND=wayland
+elif [ -z "\$DISPLAY" ]; then
+    export DISPLAY=:0
+fi
+# Use venv if available
+[ -d "$APP_DIR/venv" ] && source "$APP_DIR/venv/bin/activate"
+python3 -m shadowcypher.app "\$@"
+LAUNCHER
 chmod +x "$APP_DIR/run.sh"
 
-# 3. Desktop Identity Protocol
-echo "[SHADOW] REGISTERING_DESKTOP_SIGIL..."
-cat <<EOF > "$DESKTOP_FILE"
+# ── 6. System-wide CLI command ──
+echo "[SHADOW] Installing 'shadowcypher' command..."
+sudo ln -sf "$APP_DIR/run.sh" /usr/local/bin/shadowcypher 2>/dev/null || true
+
+# ── 7. Desktop Entry (Linux only) ──
+if [ "$(uname)" = "Linux" ]; then
+    echo "[SHADOW] Registering desktop application..."
+    mkdir -p "$(dirname "$DESKTOP_FILE")"
+    cat <<DESKTOP > "$DESKTOP_FILE"
 [Desktop Entry]
 Version=1.0
 Type=Application
 Name=ShadowCypher
-Comment=Professional Obsidian Stealth Security Suite
+Comment=Autonomous Offensive Security Platform
 Exec=$APP_DIR/run.sh
-Icon=security-high
+Icon=${ICON_PATH:-security-high}
 Categories=Development;Security;System;
 Terminal=false
 StartupNotify=true
-EOF
-chmod +x "$DESKTOP_FILE"
+DESKTOP
+    chmod +x "$DESKTOP_FILE"
+    update-desktop-database "$HOME/.local/share/applications/" 2>/dev/null || true
+fi
 
-echo "[SUCCESS] MISSION_ACCOMPLISHED: SHADOWCYPHER_IS_NOW_A_REAL_NATIVE_ASSET."
-echo "[VITAL] YOU_CAN_NOW_LAUNCH_SHADOWCYPHER_FROM_YOUR_APPLICATIONS_MENU."
+echo ""
+echo "╔══════════════════════════════════════════════╗"
+echo "║  SHADOWCYPHER DEPLOYED SUCCESSFULLY          ║"
+echo "║                                              ║"
+echo "║  Launch: shadowcypher                        ║"
+echo "║  Or:     ./run.sh                            ║"
+echo "║  Or:     python3 -m shadowcypher.app         ║"
+echo "╚══════════════════════════════════════════════╝"

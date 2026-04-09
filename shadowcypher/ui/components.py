@@ -38,7 +38,7 @@ class TacticalTerminal(Gtk.Box):
 
 class DataPod(Gtk.Box):
     """A glowing data card for tactical metrics."""
-    def __init__(self, title: str, initial_value: str = "---"):
+    def __init__(self, title: str, initial_value: str = "---", accent: str = "cyan"):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         self.get_style_context().add_class("card")
         

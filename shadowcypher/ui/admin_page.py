@@ -47,7 +47,7 @@ class AdminPage(BasePage):
         box_dec.pack_start(btn_dec, False, False, 0)
 
         frm_decrypt.add(box_dec)
-        self.pack_start(frm_decrypt, True, True, 0)
+        self.workspace.pack_start(frm_decrypt, True, True, 0)
 
         # Output terminal for Admin tools
         self.build_terminal()
@@ -66,7 +66,7 @@ class AdminPage(BasePage):
         box_gen.pack_start(btn_gen, False, False, 0)
 
         frm_gen.add(box_gen)
-        self.pack_start(frm_gen, False, False, 0)
+        self.workspace.pack_start(frm_gen, False, False, 0)
 
     def _on_decrypt(self, btn):
         bounds = self.buf_in.get_bounds()

@@ -4,7 +4,7 @@ gi.require_version("Vte", "2.91")
 from gi.repository import Gtk, Vte, GLib, Gdk
 import os
 
-class TacticalTerminal(Vte.Terminal):
+class VteTerminal(Vte.Terminal):
     """
     ShadowCypher High-Fidelity Tactical Terminal.
     A real Virtual Terminal Emulator (VTE) integrated directly into the HUD.
@@ -64,7 +64,7 @@ class TerminalPage(Gtk.Box):
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.get_style_context().add_class("card")
-        self.set_margin_all(10)
+        self.set_margin_top(10); self.set_margin_bottom(10); self.set_margin_start(10); self.set_margin_end(10)
         
         # Tactical Header
         header = Gtk.Box(spacing=10)
@@ -80,7 +80,7 @@ class TerminalPage(Gtk.Box):
         self.pack_start(header, False, False, 0)
 
         # The Real CLI
-        self.terminal = TacticalTerminal()
+        self.terminal = VteTerminal()
         self.terminal.spawn_shell()
         
         scroll = Gtk.ScrolledWindow()

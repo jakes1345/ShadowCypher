@@ -1,6 +1,7 @@
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
+import os
 
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.modules.phishing import Phishing
@@ -24,11 +25,11 @@ class PhishingPage(BasePage):
         self.main_pod.pack_start(notebook, False, False, 0)
 
         self.build_terminal()
-        self.pack_start(self.build_stop_button(), False, False, 0)
+        self.workspace.pack_start(self.build_stop_button(), False, False, 0)
 
     def _build_artifacts_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        box.set_margin_all(15)
+        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
 
         # 1. PDF Artifact
         row_pdf = Gtk.Box(spacing=10)
@@ -70,14 +71,15 @@ class PhishingPage(BasePage):
 
     def _build_server_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        box.set_margin_all(15)
+        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
 
         row = Gtk.Box(spacing=10)
         row.pack_start(Gtk.Label(label="Template:"), False, False, 0)
         self.template_combo = Gtk.ComboBoxText()
         
         # PRO_DIVE: Scrape real templates from the modules directory
-        project_root = "/home/jack/ShadowCypher"
+        from shadowcypher.core.config import config
+        project_root = str(config.project_root)
         tpl_dir = os.path.join(project_root, "shadowcypher/modules/phish_data/sites")
         if os.path.exists(tpl_dir):
             templates = sorted([d for d in os.listdir(tpl_dir) if os.path.isdir(os.path.join(tpl_dir, d))])
@@ -106,7 +108,7 @@ class PhishingPage(BasePage):
 
     def _build_smuggling_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        box.set_margin_all(15)
+        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
 
         row = Gtk.Box(spacing=10)
         row.pack_start(Gtk.Label(label="Source File:"), False, False, 0)

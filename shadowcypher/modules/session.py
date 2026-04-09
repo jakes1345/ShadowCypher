@@ -39,7 +39,8 @@ class Session:
         
         # Professional Depth: Spawn a real terminal window for the interactive shell
         # We use netcat to bridge to the session port (if detected) or just a manual command.
-        cmd = f"gnome-terminal -- bash -c 'echo \"[SHADOWCYPHER] EMBEDDED_SESSION_BRIDGE: {sid}\"; ncat -v -l -p {sid}; exec bash'"
+        cmd = ["gnome-terminal", "--", "bash", "-c",
+               f'echo "[SHADOWCYPHER] EMBEDDED_SESSION_BRIDGE: {sid}"; ncat -v -l -p {sid}; exec bash']
         return runner.execute_task(f"INTERACT_{sid}", cmd, callback=on_output)
 
     @staticmethod

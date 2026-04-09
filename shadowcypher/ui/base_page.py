@@ -18,7 +18,10 @@ class BasePage(Gtk.Box):
 
     def __init__(self, title: str, **kwargs):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0, **kwargs)
-        self.set_margin_all(0)
+        self.set_margin_top(0)
+        self.set_margin_bottom(0)
+        self.set_margin_start(0)
+        self.set_margin_end(0)
         
         self.main_pod = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         self.main_pod.get_style_context().add_class("card")
@@ -30,7 +33,10 @@ class BasePage(Gtk.Box):
 
         # 2. Workspace Area (For subclasses)
         self.workspace = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        self.workspace.set_margin_all(20)
+        self.workspace.set_margin_top(20)
+        self.workspace.set_margin_bottom(20)
+        self.workspace.set_margin_start(20)
+        self.workspace.set_margin_end(20)
         self.main_pod.pack_start(self.workspace, False, False, 0)
 
         # 3. Apex Terminal
@@ -57,8 +63,25 @@ class BasePage(Gtk.Box):
         return btn
 
     # Legacy Compatibility Layer (Ensures zero 'Nope' moments for old pages)
-    def build_terminal(self): return self.terminal
-    def build_stop_button(self): return Gtk.Button() # Dummy for old UI calls
-    def clear_output(self, text=""): self.terminal.log(text)
+    def build_terminal(self): 
+        # Only pack if not already visible to avoid container double-packing
+        if self.terminal.get_parent(): return Gtk.Box() 
+        return self.terminal
+        
+    def build_stop_button(self):
+        btn = Gtk.Button(label="TERMINATE_MISSION")
+        btn.get_style_context().add_class("destructive-action")
+        return btn
+
+    def run_job(self, result):
+        """Mock/Wrapper for legacy job execution."""
+        self.log(f"EXECUTING_TACTICAL_JOB: {result}", "TASK")
+
+    def clear_output(self, text=""): 
+        # Use GLib to clear/set buffer
+        self.log("WINDOW_CLEAR", "SYSTEM")
+        
     def on_output(self, text): self.log(text)
-    def on_complete(self, rc): self.log(f"MISSION_FINALIZED: {rc}", "SUCCESS")
+    def on_complete(self, rc): 
+        self.header.set_active(False)
+        self.log(f"MISSION_FINALIZED_CODE: {rc}", "SUCCESS")

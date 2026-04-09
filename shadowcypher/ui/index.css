@@ -1,148 +1,408 @@
-:root {
-    --bg-obsidian: #010204;
-    --bg-deep: #020617;
-    --bg-glass: rgba(8, 12, 18, 0.98);
-    --border-cyan: rgba(0, 242, 255, 0.45);
-    --border-dim: rgba(255, 255, 255, 0.08);
-    --accent-cyan: #00f2ff;
-    --accent-magenta: #ff00ff;
-    --accent-violet: #8b5cf6;
-    --accent-amber: #f59e0b;
-    --accent-glow: rgba(0, 242, 255, 0.35);
-    
-    --text-white: #f8fafc;
-    --text-dim: #94a3b8;
-    --terminal-green: #00ff41;
-    --vibrant-gradient: linear-gradient(135deg, #00f2ff 0%, #8b5cf6 50%, #ff00ff 100%);
+/* 
+  ShadowCypher APEX — Obsidian Glass Theme V4.0
+  GTK3 Native CSS — Zero-compromise premium aesthetic.
+  Uses @define-color, @keyframes, transitions, shade(), alpha().
+*/
+
+/* ── COLOR SYSTEM ── */
+@define-color bg_void #060a10;
+@define-color bg_obsidian #0a0f1a;
+@define-color bg_surface #111827;
+@define-color bg_elevated #1e293b;
+@define-color bg_glass alpha(#111827, 0.85);
+
+@define-color border_glow alpha(#00d4ff, 0.35);
+@define-color border_subtle alpha(#94a3b8, 0.12);
+@define-color border_active alpha(#8b5cf6, 0.6);
+
+@define-color accent_cyan #00d4ff;
+@define-color accent_violet #8b5cf6;
+@define-color accent_rose #f43f5e;
+@define-color accent_amber #f59e0b;
+@define-color accent_green #10b981;
+
+@define-color text_primary #f1f5f9;
+@define-color text_secondary #94a3b8;
+@define-color text_muted #475569;
+@define-color terminal_green #00ff41;
+
+/* ── KEYFRAMES ── */
+@keyframes pulse-glow {
+  from { border-color: @border_glow; }
+  to   { border-color: alpha(@accent_cyan, 0.1); }
 }
 
-/* Global Nuclear Reset */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── GLOBAL RESET ── */
 * {
-    background-color: transparent;
-    color: var(--text-white);
-    outline-color: var(--accent-cyan);
+    color: @text_primary;
+    -gtk-icon-shadow: none;
+    text-shadow: none;
+    outline-color: @accent_cyan;
 }
 
 window, 
-.main-window,
-stack,
-notebook,
-grid,
-box,
-list,
-listbox,
-row,
-viewport,
-scrolledwindow {
-    background-color: var(--bg-obsidian) !important;
+.main-window {
+    background-color: @bg_void;
 }
 
+stack, notebook, grid, box, viewport, scrolledwindow, paned {
+    background-color: transparent;
+}
+
+/* ── HEADER BAR ── */
 headerbar {
-    background: #000 !important;
-    border-bottom: 2px solid transparent !important;
-    border-image: var(--vibrant-gradient) 1 !important;
+    background-color: @bg_obsidian;
+    border-bottom: 1px solid @border_glow;
+    padding: 6px 16px;
+    min-height: 42px;
 }
 
-label.app-title {
-    background: var(--vibrant-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-size: 24px;
-    font-weight: 900;
+headerbar .title {
+    color: @accent_cyan;
+    font-weight: 800;
+    letter-spacing: 2px;
+    font-size: 15px;
 }
 
-/* Elite Glass-Pod Style */
-.card, .glass-panel, .glass-pod {
-    background: var(--bg-glass) !important;
-    border: 1.5px solid var(--border-cyan) !important;
-    border-radius: 24px !important;
-    padding: 24px !important;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), inset 0 0 20px rgba(0, 242, 255, 0.08) !important;
-    transition: all 0.4s ease !important;
+headerbar .subtitle {
+    color: @text_secondary;
+    font-size: 11px;
+    letter-spacing: 1px;
 }
 
-.card:hover {
-    border-color: var(--accent-violet) !important;
-    box-shadow: 0 25px 60px rgba(139, 92, 246, 0.25), inset 0 0 30px rgba(0, 242, 255, 0.1) !important;
+/* ── SIDEBAR ── */
+.sidebar {
+    background-color: @bg_obsidian;
+    border-right: 1px solid @border_subtle;
 }
 
-/* High-Contrast Interactive Elements */
-entry {
-    background: var(--bg-deep) !important;
-    border: 1px solid var(--border-dim) !important;
-    border-radius: 14px !important;
-    padding: 12px 16px !important;
-    color: var(--text-white) !important;
-    font-family: 'Inter', sans-serif !important;
-}
-
-entry:focus {
-    border-color: var(--accent-cyan) !important;
-    box-shadow: 0 0 20px var(--accent-glow) !important;
-}
-
-combobox, comboboxtext {
-    background: var(--bg-deep) !important;
-    border: 1px solid var(--border-dim) !important;
-    border-radius: 10px !important;
-    color: var(--text-white) !important;
-}
-
-button {
-    background: linear-gradient(135deg, #0f172a 0%, #020617 100%) !important;
-    border: 1.5px solid var(--border-cyan) !important;
-    border-radius: 12px !important;
-    padding: 12px 24px !important;
-    color: var(--accent-cyan) !important;
-    font-weight: 800 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-button:hover {
-    background: var(--vibrant-gradient) !important;
-    color: #fff !important;
-    border-color: transparent !important;
-    box-shadow: 0 0 30px rgba(139, 92, 246, 0.5) !important;
-    transform: translateY(-2px) !important;
-}
-
-/* Sidebar & Navigation */
 list {
-    background: var(--bg-obsidian) !important;
+    background-color: transparent;
 }
 
 row {
-    padding: 14px 20px !important;
-    margin: 6px 12px !important;
-    border-radius: 12px !important;
-    color: var(--text-dim) !important;
-    transition: all 0.3s ease !important;
+    background-color: transparent;
+    padding: 12px 16px;
+    margin: 3px 8px;
+    border-radius: 10px;
+    color: @text_secondary;
+    transition: all 200ms ease-in-out;
 }
 
 row:hover {
-    background: rgba(139, 92, 246, 0.08) !important;
-    color: var(--text-white) !important;
+    background-color: alpha(@accent_violet, 0.08);
+    color: @text_primary;
 }
 
-row:selected, .nav-active {
-    background: linear-gradient(90deg, rgba(139, 92, 246, 0.2) 0%, rgba(0,0,0,0) 100%) !important;
-    color: var(--accent-violet) !important;
-    border-left: 4px solid var(--accent-violet) !important;
+row:selected {
+    background-color: alpha(@accent_violet, 0.15);
+    color: @accent_cyan;
+    border-left: 3px solid @accent_violet;
 }
 
-/* High-Fidelity Terminal */
-textview, .terminal-view, vte-terminal {
-    background: var(--bg-deep) !important;
-    border-radius: 20px !important;
-    border: 1px solid var(--border-dim) !important;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-    color: var(--terminal-green) !important;
-    padding: 24px !important;
-    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5) !important;
+.sidebar-header {
+    color: @text_muted;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    padding: 8px 4px 4px;
 }
 
-.pulse-animation {
-    animation: pulse-cyan 2s infinite !important;
+/* ── GLASS CARDS ── */
+.card, .glass-panel, .glass-pod {
+    background-color: @bg_glass;
+    border: 1px solid @border_subtle;
+    border-radius: 14px;
+    padding: 14px 18px;
+    transition: all 250ms ease-in-out;
+}
+
+.card:hover {
+    border-color: @border_glow;
+    background-color: alpha(@bg_elevated, 0.9);
+}
+
+/* ── DATA PODS ── */
+.metric-value {
+    font-size: 22px;
+    font-weight: 900;
+    color: @accent_cyan;
+}
+
+.dim-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: @text_muted;
+}
+
+/* ── NOTEBOOK TABS ── */
+notebook {
+    background-color: transparent;
+}
+
+notebook header {
+    background-color: @bg_obsidian;
+    border-bottom: 1px solid @border_subtle;
+}
+
+notebook header tab {
+    background-color: transparent;
+    color: @text_secondary;
+    padding: 10px 20px;
+    border-bottom: 2px solid transparent;
+    transition: all 200ms ease-in-out;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+notebook header tab:hover {
+    color: @text_primary;
+    background-color: alpha(@accent_violet, 0.05);
+}
+
+notebook header tab:checked {
+    color: @accent_cyan;
+    border-bottom-color: @accent_cyan;
+    background-color: alpha(@accent_cyan, 0.05);
+}
+
+notebook stack {
+    background-color: transparent;
+}
+
+/* ── ACTION BAR / FOOTER ── */
+actionbar {
+    background-color: @bg_obsidian;
+    border-top: 1px solid @border_subtle;
+    padding: 6px 20px;
+}
+
+/* ── ENTRIES ── */
+entry {
+    background-color: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: @text_primary;
+    caret-color: @accent_cyan;
+    transition: all 200ms ease-in-out;
+    min-height: 20px;
+}
+
+entry:focus {
+    border-color: @accent_cyan;
+    background-color: @bg_elevated;
+}
+
+entry selection {
+    background-color: alpha(@accent_cyan, 0.3);
+}
+
+/* ── BUTTONS ── */
+button {
+    background-color: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 10px;
+    padding: 8px 18px;
+    color: @text_primary;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    transition: all 200ms ease-in-out;
+    min-height: 20px;
+}
+
+button:hover {
+    background-color: @bg_elevated;
+    border-color: @border_glow;
+    color: @accent_cyan;
+}
+
+button:active {
+    background-color: alpha(@accent_cyan, 0.15);
+}
+
+button.suggested-action {
+    background-color: alpha(@accent_cyan, 0.15);
+    border-color: @accent_cyan;
+    color: @accent_cyan;
+}
+
+button.suggested-action:hover {
+    background-color: alpha(@accent_cyan, 0.25);
+}
+
+button.destructive-action, button.danger-btn {
+    background-color: alpha(@accent_rose, 0.12);
+    border-color: alpha(@accent_rose, 0.5);
+    color: @accent_rose;
+}
+
+button.destructive-action:hover, button.danger-btn:hover {
+    background-color: alpha(@accent_rose, 0.2);
+}
+
+/* ── COMBO BOX ── */
+combobox, comboboxtext {
+    background-color: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 8px;
+    color: @text_primary;
+    padding: 4px 8px;
+    min-height: 20px;
+}
+
+combobox button, comboboxtext button {
+    background-color: transparent;
+    border: none;
+    padding: 4px 8px;
+}
+
+/* ── CHECK BUTTONS ── */
+checkbutton {
+    color: @text_secondary;
+}
+
+checkbutton check {
+    background-color: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 4px;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+checkbutton check:checked {
+    background-color: @accent_cyan;
+    border-color: @accent_cyan;
+    color: @bg_void;
+}
+
+/* ── SPIN BUTTON ── */
+spinbutton {
+    background-color: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 8px;
+    color: @text_primary;
+}
+
+spinbutton button {
+    background-color: transparent;
+    border: none;
+    color: @text_secondary;
+    min-width: 24px;
+}
+
+/* ── SCROLLBAR ── */
+scrollbar {
+    background-color: transparent;
+}
+
+scrollbar slider {
+    background-color: alpha(@text_muted, 0.3);
+    border-radius: 10px;
+    min-width: 6px;
+    min-height: 6px;
+}
+
+scrollbar slider:hover {
+    background-color: alpha(@accent_cyan, 0.4);
+}
+
+/* ── SEPARATORS ── */
+separator {
+    background-color: @border_subtle;
+    min-height: 1px;
+    min-width: 1px;
+}
+
+/* ── TERMINAL ── */
+.terminal-view, textview {
+    background-color: @bg_void;
+    border: 1px solid @border_subtle;
+    border-radius: 12px;
+    color: @terminal_green;
+    padding: 16px;
+    font-family: "JetBrains Mono", "Fira Code", "Source Code Pro", monospace;
+    font-size: 12px;
+}
+
+textview text {
+    background-color: transparent;
+    color: @terminal_green;
+}
+
+/* ── SPINNER ── */
+spinner {
+    color: @accent_cyan;
+}
+
+/* ── LABELS ── */
+.app-title {
+    color: @accent_cyan;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 3px;
+}
+
+.cyan-text {
+    color: @accent_cyan;
+    font-size: 18px;
+}
+
+/* ── TOOLTIP ── */
+tooltip {
+    background-color: @bg_elevated;
+    border: 1px solid @border_glow;
+    border-radius: 8px;
+    color: @text_primary;
+    padding: 8px 12px;
+}
+
+/* ── FILE CHOOSER ── */
+filechooser {
+    background-color: @bg_obsidian;
+}
+
+/* ── PULSE ANIMATION CLASS ── */
+.pulse-active {
+    animation: pulse-glow 1.5s ease-in-out infinite alternate;
+}
+
+/* ── FLOW BOX (Arsenal Grid) ── */
+flowboxchild {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    outline: none;
+}
+
+flowboxchild:selected {
+    background-color: transparent;
+    outline: none;
+}
+
+/* ── REVEALER ── */
+revealer {
+    background-color: transparent;
+}
+
+/* ── PROGRESS BAR ── */
+progressbar trough {
+    background-color: @bg_surface;
+    border-radius: 6px;
+    min-height: 6px;
+}
+
+progressbar progress {
+    background-color: @accent_cyan;
+    border-radius: 6px;
+    min-height: 6px;
 }

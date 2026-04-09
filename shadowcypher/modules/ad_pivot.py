@@ -16,7 +16,8 @@ class ADPivot:
         """Perform Kerberoasting to extract TGS tickets for offline cracking."""
         os.makedirs("findings", exist_ok=True)
         # Deep Level: Using Impacket's GetUserSPNs locally
-        project_root = "/home/jack/ShadowCypher"
+        from shadowcypher.core.config import config
+        project_root = str(config.project_root)
         script_path = os.path.join(project_root, "tools", "Responder", "tools", "MultiRelay", "impacket-dev", "examples", "GetUserSPNs.py")
         
         if not os.path.exists(script_path):

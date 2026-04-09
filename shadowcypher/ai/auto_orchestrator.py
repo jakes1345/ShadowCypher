@@ -30,8 +30,10 @@ except ImportError as e:
 class AutoOrchestrator:
     """The High-Intensity execution engine powered by AutoAgent MetaChain."""
     
-    def __init__(self, model="gemma-4-heretic:latest"):
-        self.model = model
+    def __init__(self, model=None):
+        from shadowcypher.ai.providers import provider_registry
+        active = provider_registry.active
+        self.model = model or (active.model if active else "gemma3")
         self.log_dir = PROJECT_ROOT / "logs" / "autoagent"
         os.makedirs(self.log_dir, exist_ok=True)
 

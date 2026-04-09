@@ -7,10 +7,10 @@ from pathlib import Path
 
 DEFAULT_CONFIG = {
     "ai": {
-        "model": "gemma-4-heretic",
+        "model": "gemma3",
         "n_ctx": 4096,
         "n_gpu_layers": 35,
-        "api_base": "http://localhost:11434/api/generate"
+        "api_base": "http://localhost:11434"
     },
     "tools": {
         "nmap_path": "nmap",
@@ -23,7 +23,7 @@ DEFAULT_CONFIG = {
         "responder_path": "Responder.py"
     },
     "wordlists": {
-        "default": "wordlists/rockyou.txt",
+        "default": "wordlists/common.txt",
     },
 }
 
@@ -43,7 +43,7 @@ class Config:
                     saved = json.load(f)
                 self._deep_merge(self.data, saved)
             except Exception as e:
-                logger.error("config", f"Load fault: {e}")
+                pass  # Logger not yet available during init
 
     def save(self):
         try:
@@ -104,8 +104,6 @@ class Config:
 
 # Global singleton
 config = Config()
+
+# Import logger AFTER singleton to avoid circular import
 from shadowcypher.core.logger import logger
-
-
-# Global singleton
-config = Config()
