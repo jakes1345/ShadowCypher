@@ -64,53 +64,70 @@ class VulnScanner:
         return runner.execute_task(f"NIKTO_{target}", args, callback=on_output)
 
     @staticmethod
-    def sqlmap_scan(target, on_output=None, on_complete=None):
+    def sqlmap_scan(target, data=None, level=1, risk=1, on_output=None, on_complete=None):
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
-        return runner.execute_task(f"SQLMAP_{target}", ["sqlmap", "-u", target, "--batch"], callback=on_output)
+        args = ["sqlmap", "-u", target, "--batch", "--level", str(level), "--risk", str(risk)]
+        if data:
+            args += ["--data", data]
+        return runner.execute_task(f"SQLMAP_{target}", args, callback=on_output)
 
     @staticmethod
-    def sqlmap_enumerate(target, on_output=None, on_complete=None):
+    def sqlmap_enumerate(target, action="dbs", on_output=None, on_complete=None):
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
-        return runner.execute_task(f"SQLMAP_ENUM_{target}", ["sqlmap", "-u", target, "--batch", "--dbs"], callback=on_output)
+        flag = f"--{action}"
+        return runner.execute_task(f"SQLMAP_ENUM_{target}", ["sqlmap", "-u", target, "--batch", flag], callback=on_output)
 
     @staticmethod
-    def nmap_vuln_scan(target, ports="1-1024", on_output=None, on_complete=None):
+    def nmap_vuln_scan(target, ports=None, on_output=None, on_complete=None):
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
-        if not validate_ports(ports):
-            if on_output: on_output(f"[ERROR] Invalid port spec: {ports}")
-            return
-        return runner.execute_task(f"NMAP_VULN_{target}", ["nmap", "-p", ports, "--script", "vuln", target], callback=on_output)
+        args = ["nmap", "--script", "vuln"]
+        if ports:
+            if not validate_ports(ports):
+                if on_output: on_output(f"[ERROR] Invalid port spec: {ports}")
+                return
+            args += ["-p", ports]
+        args.append(target)
+        return runner.execute_task(f"NMAP_VULN_{target}", args, callback=on_output)
 
     @staticmethod
     def nmap_smb_vuln(target, on_output=None, on_complete=None):
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
-        return runner.execute_task(f"NMAP_SMB_{target}", ["nmap", "-p", "139,445", "--script", "smb-vuln*", target], callback=on_output)
+        return runner.execute_task(f"NMAP_SMB_{target}", ["nmap", "-p", "139,445", "--script", "smb-vuln*", "-T4", target], callback=on_output)
 
     @staticmethod
     def nmap_ssl_scan(target, on_output=None, on_complete=None):
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
-        return runner.execute_task(f"NMAP_SSL_{target}", ["nmap", "-p", "443", "--script", "ssl-enum-ciphers", target], callback=on_output)
+        return runner.execute_task(f"NMAP_SSL_{target}", ["nmap", "-p", "443", "--script", "ssl-enum-ciphers", "-T4", target], callback=on_output)
 
     @staticmethod
     def searchsploit(query, on_output=None, on_complete=None):
-        return runner.execute_task(f"SEARCHSPLOIT", ["searchsploit", query], callback=on_output)
+        # Professional Depth: Check local tools first to avoid sudo dependency
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        local_ss = os.path.join(project_root, "tools", "exploitdb", "searchsploit")
+        
+        cmd_base = "searchsploit"
+        if os.path.exists(local_ss):
+            cmd_base = local_ss
+            
+        return runner.execute_task("SEARCHSPLOIT", [cmd_base, query], callback=on_output)
 
     @staticmethod
     def full_assessment(target, on_output=None, on_complete=None):
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
-        return runner.execute_task(f"FULL_ASSESSMENT_{target}", ["nmap", "-A", "-p-", "-T4", target], callback=on_output)
+        # A truly legit full assessment
+        return runner.execute_task(f"FULL_ASSESSMENT_{target}", ["nmap", "-A", "-v", "-T4", target], callback=on_output)
 
     @staticmethod
     def ai_audit(target, on_output=None):

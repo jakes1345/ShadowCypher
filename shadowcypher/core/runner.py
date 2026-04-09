@@ -15,7 +15,7 @@ class Runner:
     def __init__(self):
         self.active_processes = {}
 
-    def execute_task(self, name, command, callback=None):
+    def execute_task(self, name, command, callback=None, cwd=None):
         """
         Execute a tactical mission task.
         Returns a unique 'task_id' for cancellation support.
@@ -23,10 +23,10 @@ class Runner:
         task_id = str(uuid.uuid4())[:8]
         full_name = f"{name}_{task_id}"
 
-        logger.info("runner", f"INITIATING_TASK: {full_name} >> {command}")
+        logger.info("runner", f"INITIATING_TASK: {full_name} >> {command} [CWD={cwd}]")
         thread = threading.Thread(
             target=self._run_process,
-            args=(task_id, full_name, command, callback),
+            args=(task_id, full_name, command, callback, cwd),
             daemon=True,
         )
         thread.start()
@@ -47,7 +47,7 @@ class Runner:
             return True
         return False
 
-    def _run_process(self, task_id, name, command, callback):
+    def _run_process(self, task_id, name, command, callback, cwd=None):
         import platform
 
         current_os = platform.system()
@@ -72,6 +72,7 @@ class Runner:
                 text=True,
                 bufsize=1,  # Line-buffered for real-time OSINT
                 universal_newlines=True,
+                cwd=cwd,
             )
 
             self.active_processes[task_id] = process

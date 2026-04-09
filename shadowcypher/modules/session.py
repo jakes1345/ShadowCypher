@@ -33,8 +33,14 @@ class Session:
 
     @staticmethod
     def interact_session(sid, on_output=None, on_complete=None):
-        """Interact with a specific session (placeholder)."""
-        if on_output: on_output("[INFO] Interactive session support requires a terminal emulator.")
+        """Interact with a specific session via GNOME Terminal bridge."""
+        if on_output: 
+            on_output(f"[SESSION] ATTEMPTING_INTERACTIVE_BRIDGE: {sid}...\n")
+        
+        # Professional Depth: Spawn a real terminal window for the interactive shell
+        # We use netcat to bridge to the session port (if detected) or just a manual command.
+        cmd = f"gnome-terminal -- bash -c 'echo \"[SHADOWCYPHER] EMBEDDED_SESSION_BRIDGE: {sid}\"; ncat -v -l -p {sid}; exec bash'"
+        return runner.execute_task(f"INTERACT_{sid}", cmd, callback=on_output)
 
     @staticmethod
     def upload_to_session(sid, local_file, remote_file, on_output=None, on_complete=None):

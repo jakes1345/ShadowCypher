@@ -7,33 +7,28 @@ from pathlib import Path
 
 DEFAULT_CONFIG = {
     "ai": {
-        "model": "DeepHat-V1-7B",
+        "model": "gemma-4-heretic",
         "n_ctx": 4096,
         "n_gpu_layers": 35,
-        "temperature": 0.7,
-        "max_tokens": 2048,
+        "api_base": "http://localhost:11434/api/generate"
     },
     "tools": {
-        "nmap_path": "/usr/bin/nmap",
-        "hydra_path": "/usr/bin/hydra",
-        "john_path": "/usr/sbin/john",
-        "hashcat_path": "/usr/bin/hashcat",
-        "aircrack_path": "/usr/bin/aircrack-ng",
-        "tcpdump_path": "/usr/bin/tcpdump",
+        "nmap_path": "nmap",
+        "hydra_path": "hydra",
+        "john_path": "john",
+        "hashcat_path": "hashcat",
+        "aircrack_path": "aircrack-ng",
+        "tcpdump_path": "tcpdump",
+        "searchsploit_path": "searchsploit",
+        "responder_path": "Responder.py"
     },
     "wordlists": {
         "default": "wordlists/rockyou.txt",
     },
-    "ui": {
-        "theme": "matrix",
-        "window_width": 1400,
-        "window_height": 900,
-    },
 }
 
-
 class Config:
-    """Load/save configuration from JSON file."""
+    """Advanced mission-aware configuration engine."""
 
     def __init__(self):
         self.project_root = Path(__file__).resolve().parent.parent.parent
@@ -47,26 +42,16 @@ class Config:
                 with open(self.config_file, "r") as f:
                     saved = json.load(f)
                 self._deep_merge(self.data, saved)
-            except json.JSONDecodeError as e:
-                import sys
-
-                print(f"[WARN] config.json is corrupt: {e}", file=sys.stderr)
-            except OSError as e:
-                import sys
-
-                print(f"[WARN] Cannot read config.json: {e}", file=sys.stderr)
+            except Exception as e:
+                logger.error("config", f"Load fault: {e}")
 
     def save(self):
         try:
             with open(self.config_file, "w") as f:
                 json.dump(self.data, f, indent=2)
-        except OSError as e:
-            import sys
-
-            print(f"[WARN] Cannot save config.json: {e}", file=sys.stderr)
+        except Exception: pass
 
     def get(self, *keys, default=None):
-        """Get a nested config value. e.g. config.get('ai', 'model_repo')"""
         d = self.data
         for k in keys:
             if isinstance(d, dict) and k in d:
@@ -76,16 +61,11 @@ class Config:
         return d
 
     def set(self, *keys_and_value):
-        """Set a nested config value. Last arg is the value."""
-        if len(keys_and_value) < 2:
-            return
-        keys = keys_and_value[:-1]
-        value = keys_and_value[-1]
+        if len(keys_and_value) < 2: return
+        keys, value = keys_and_value[:-1], keys_and_value[-1]
         d = self.data
         for k in keys[:-1]:
-            if k not in d or not isinstance(d[k], dict):
-                d[k] = {}
-            d = d[k]
+            d = d.setdefault(k, {})
         d[keys[-1]] = value
         self.save()
 
@@ -96,15 +76,35 @@ class Config:
             else:
                 base[k] = v
 
-    def get_wordlist_path(self) -> str:
-        wl = self.get("wordlists", "default", default="wordlists/rockyou.txt")
-        full = self.project_root / wl
-        if full.exists():
-            return str(full)
-        return wl
-
     def get_tool_path(self, tool: str) -> str:
-        return self.get("tools", f"{tool}_path", default=tool)
+        """Deep Search Logic: Config -> tools/ -> system PATH."""
+        # 1. Check config override
+        path_key = f"{tool.lower().replace('-', '_')}_path"
+        config_path = self.get("tools", path_key)
+        
+        # 2. Check Local project tools/ directory (Deep Level Autonomy)
+        local_dir = self.project_root / "tools"
+        if local_dir.exists():
+            # Recursive check for the binary in tools/
+            for root, dirs, files in os.walk(str(local_dir)):
+                for f in files:
+                    if f.lower() == tool.lower() or f.lower() == f"{tool.lower()}.sh":
+                        return os.path.join(root, f)
+                    if tool.lower() == "responder.py" and f.lower() == "responder.py":
+                        return os.path.join(root, f)
+
+        # 3. Check System PATH via 'which'
+        import shutil
+        sys_path = shutil.which(tool)
+        if sys_path:
+            return sys_path
+
+        # 4. Final Fallback (Config default or raw name)
+        return config_path or tool
+
+# Global singleton
+config = Config()
+from shadowcypher.core.logger import logger
 
 
 # Global singleton

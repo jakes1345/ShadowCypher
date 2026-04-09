@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(curl:*)",
+      "Bash(nmap:*)",
+      "Bash(node:*)",
+      "Bash(ls:*)",
+      "Bash(sort -u grep -oP \"app\\\\.\\(get|post|delete|put\\)\\\\\\(''/api\\\\K[^''\"\"]*\" server.js)",
+      "Read(//home/jack/ShadowCypher/**)",
+      "Read(//tmp/**)",
+      "Bash(sudo:*)",
+      "Read(//usr/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//usr/**)",
+      "Read(//home/jack/.local/share/fnm/node-versions/**)",
+      "Read(//home/jack/.fnm/**)",
+      "Bash(/usr/bin/node:*)",
+      "Bash(sudo tee:*)",
+      "Bash(systemctl:*)",
+      "Bash(grep:*)",
+      "Read(//home/jack/.local/bin/**)",
+      "Bash(wc -l /home/jack/ShadowCypher/shadowcypher/**/*.py /home/jack/ShadowCypher/shadowcypher/*.py)",
+      "Bash(xvfb-run:*)",
+      "Bash(PYTHONPATH=/home/jack/ShadowCypher xvfb-run:*)",
+      "Bash(torsocks curl:*)",
+      "Bash(sqlite3 /home/jack/ShadowCypher/projects/shadow_registry.db \".tables\")"
+    ]
+  }
+}
