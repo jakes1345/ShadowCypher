@@ -32,9 +32,13 @@ class IRCClient:
         self._on_system: Optional[Callable] = None
         self._on_connect: Optional[Callable] = None
         self._on_userlist: Optional[Callable] = None
+        self._on_whois: Optional[Callable] = None
+        self._on_private: Optional[Callable] = None
+        self._on_join: Optional[Callable] = None
+        self._on_part: Optional[Callable] = None
         self._buffer = ""
-
-    # ── Callbacks ──
+        self._whois_cache: dict = {}
+        self._whois_building: Optional[str] = None
 
     def on_message(self, cb: Callable[[str, str, str], None]):
         """Register callback: (nick, channel/target, message)"""
@@ -50,10 +54,21 @@ class IRCClient:
     def on_userlist(self, cb: Callable[[list], None]):
         self._on_userlist = cb
 
-    # ── Connection ──
+    def on_whois(self, cb: Callable[[dict], None]):
+        """Register callback: (whois_info_dict)"""
+        self._on_whois = cb
+
+    def on_private(self, cb: Callable[[str, str], None]):
+        """Register callback for private messages: (nick, message)"""
+        self._on_private = cb
+
+    def on_join(self, cb: Callable[[str], None]):
+        self._on_join = cb
+
+    def on_part(self, cb: Callable[[str], None]):
+        self._on_part = cb
 
     def connect(self):
-        """Connect to IRC server in background thread."""
         if self._running:
             return
         self._running = True
@@ -61,7 +76,6 @@ class IRCClient:
         self._thread.start()
 
     def disconnect(self, reason="Signing off"):
-        """Gracefully disconnect."""
         self._running = False
         if self._sock:
             try:
@@ -74,22 +88,29 @@ class IRCClient:
         self._emit_sys("Disconnected from IRC.")
 
     def send_message(self, msg: str, target: str = None):
-        """Send a message to the channel (or a specific target)."""
         target = target or self.channel
         self._send(f"PRIVMSG {target} :{msg}")
 
-    def send_action(self, msg: str):
-        """Send a /me action."""
-        self._send(f"PRIVMSG {self.channel} :\x01ACTION {msg}\x01")
+    def send_private(self, nick: str, msg: str):
+        self._send(f"PRIVMSG {nick} :{msg}")
+
+    def send_action(self, msg: str, target: str = None):
+        target = target or self.channel
+        self._send(f"PRIVMSG {target} :\x01ACTION {msg}\x01")
+
+    def send_whois(self, nick: str):
+        self._whois_building = nick
+        self._whois_cache[nick] = {"nick": nick}
+        self._send(f"WHOIS {nick}")
+
+    def request_names(self):
+        self._send(f"NAMES {self.channel}")
 
     @property
     def connected(self) -> bool:
         return self._connected
 
-    # ── Internal ──
-
     def _run(self):
-        """Main connection + read loop."""
         try:
             self._emit_sys(f"Connecting to {self.server}:{self.port}...")
             raw = socket.create_connection((self.server, self.port), timeout=15)
@@ -100,9 +121,8 @@ class IRCClient:
             else:
                 self._sock = raw
 
-            self._sock.settimeout(300)  # 5 min read timeout
+            self._sock.settimeout(300)
 
-            # IRC handshake
             self._send(f"NICK {self.nick}")
             self._send(f"USER {self.nick} 0 * :ShadowCypher Operator")
 
@@ -116,7 +136,6 @@ class IRCClient:
             self._running = False
 
     def _read_loop(self):
-        """Parse incoming IRC messages."""
         while self._running:
             try:
                 data = self._sock.recv(4096)
@@ -130,7 +149,6 @@ class IRCClient:
                     self._handle_line(line)
 
             except socket.timeout:
-                # Send keepalive
                 self._send(f"PING :keepalive_{int(time.time())}")
             except Exception as e:
                 if self._running:
@@ -138,20 +156,16 @@ class IRCClient:
                 break
 
     def _handle_line(self, line: str):
-        """Process a single IRC protocol line."""
-        # PING/PONG keepalive
         if line.startswith("PING"):
             self._send(line.replace("PING", "PONG", 1))
             return
 
-        # Parse IRC prefix format: :nick!user@host COMMAND params :trailing
         parts = line.split(" ", 3)
 
-        # Numeric replies
         if len(parts) >= 2:
             command = parts[1] if parts[0].startswith(":") else parts[0]
 
-            # 001 = Welcome (successfully connected)
+            # 001 = Welcome
             if command == "001":
                 self._connected = True
                 self._emit_sys(f"Connected as {self.nick}. Joining {self.channel}...")
@@ -166,9 +180,53 @@ class IRCClient:
                 if self._on_userlist:
                     self._on_userlist(names)
 
-            # 366 = End of NAMES
             elif command == "366":
                 pass
+
+            # 311 = WHOIS user info
+            elif command == "311":
+                raw = line.split(" ", 6)
+                if len(raw) >= 6 and self._whois_building:
+                    info = self._whois_cache.get(self._whois_building, {})
+                    info["user"] = raw[4]
+                    info["host"] = raw[5]
+                    if len(raw) > 6:
+                        info["realname"] = raw[6].lstrip(":")
+                    self._whois_cache[self._whois_building] = info
+
+            # 312 = WHOIS server
+            elif command == "312":
+                raw = line.split(" ", 5)
+                if len(raw) >= 5 and self._whois_building:
+                    info = self._whois_cache.get(self._whois_building, {})
+                    info["server"] = raw[4]
+                    if len(raw) > 5:
+                        info["server_info"] = raw[5].lstrip(":")
+
+            # 319 = WHOIS channels
+            elif command == "319":
+                raw = line.split(":", 2)
+                if len(raw) >= 3 and self._whois_building:
+                    info = self._whois_cache.get(self._whois_building, {})
+                    info["channels"] = raw[2].strip()
+
+            # 317 = WHOIS idle/signon
+            elif command == "317":
+                raw = line.split(" ", 6)
+                if len(raw) >= 6 and self._whois_building:
+                    info = self._whois_cache.get(self._whois_building, {})
+                    try:
+                        info["idle_seconds"] = int(raw[4])
+                        info["signon_time"] = int(raw[5])
+                    except (ValueError, IndexError):
+                        pass
+
+            # 318 = End of WHOIS
+            elif command == "318":
+                if self._whois_building and self._on_whois:
+                    info = self._whois_cache.get(self._whois_building, {})
+                    self._on_whois(info)
+                self._whois_building = None
 
             # 433 = Nick in use
             elif command == "433":
@@ -176,7 +234,6 @@ class IRCClient:
                 self._send(f"NICK {self.nick}")
                 self._emit_sys(f"Nick taken, trying: {self.nick}")
 
-            # JOIN
             elif command == "JOIN":
                 nick = self._extract_nick(parts[0])
                 if nick == self.nick:
@@ -184,44 +241,49 @@ class IRCClient:
                     self._send(f"NAMES {self.channel}")
                 else:
                     self._emit_sys(f"{nick} joined the channel")
+                    if self._on_join:
+                        self._on_join(nick)
+                    self._send(f"NAMES {self.channel}")
 
-            # PART
             elif command == "PART":
                 nick = self._extract_nick(parts[0])
                 self._emit_sys(f"{nick} left the channel")
+                if self._on_part:
+                    self._on_part(nick)
+                self._send(f"NAMES {self.channel}")
 
-            # QUIT
             elif command == "QUIT":
                 nick = self._extract_nick(parts[0])
                 self._emit_sys(f"{nick} disconnected")
+                if self._on_part:
+                    self._on_part(nick)
+                self._send(f"NAMES {self.channel}")
 
-            # PRIVMSG
             elif command == "PRIVMSG":
                 nick = self._extract_nick(parts[0])
                 target = parts[2]
                 msg = parts[3][1:] if len(parts) > 3 else ""
 
-                # Handle CTCP ACTION (/me)
                 if msg.startswith("\x01ACTION") and msg.endswith("\x01"):
                     action = msg[8:-1]
                     self._emit_sys(f"* {nick} {action}")
+                elif target == self.nick:
+                    if self._on_private:
+                        self._on_private(nick, msg)
                 elif self._on_message:
                     self._on_message(nick, target, msg)
 
-            # NOTICE
             elif command == "NOTICE":
                 msg = parts[3][1:] if len(parts) > 3 else ""
                 self._emit_sys(f"[NOTICE] {msg}")
 
     @staticmethod
     def _extract_nick(prefix: str) -> str:
-        """Extract nick from :nick!user@host"""
         if "!" in prefix:
             return prefix[1:prefix.index("!")]
         return prefix.lstrip(":")
 
     def _send(self, raw: str):
-        """Send a raw IRC command."""
         if self._sock:
             try:
                 self._sock.send(f"{raw}\r\n".encode("utf-8"))

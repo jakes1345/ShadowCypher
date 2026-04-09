@@ -25,6 +25,12 @@ DEFAULT_CONFIG = {
     "wordlists": {
         "default": "wordlists/common.txt",
     },
+    "irc": {
+        "server": "irc.libera.chat",
+        "port": 6697,
+        "channel": "#shadowcypher-support",
+        "use_ssl": True,
+    },
 }
 
 class Config:
