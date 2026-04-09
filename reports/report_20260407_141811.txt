@@ -1,0 +1,27 @@
+======================================================================
+  SHADOWCYPHER SECURITY ASSESSMENT REPORT
+  Project: TestProject
+  Target:  
+  Scope:   
+  Date:    2026-04-07 14:18:11
+======================================================================
+
+EXECUTIVE SUMMARY
+----------------------------------------
+Total findings: 1
+  Medium: 1
+
+DETAILED FINDINGS
+----------------------------------------
+
+[MEDIUM] Finding #1: Open SSH
+  Module:      
+  Target:      
+  Timestamp:   2026-04-07T14:18:11.120904
+  Description: Port 22 open with password auth
+  Evidence:
+    22/tcp open ssh
+
+======================================================================
+END OF REPORT
+======================================================================

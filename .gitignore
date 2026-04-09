@@ -37,13 +37,18 @@ machines.json
 config/local_config.py
 
 # System Cache & OS Metadata
+# 🛸 Tactical Offense Stashes (Staged Locally)
+tools/
+shadowcypher/modules/phish_data/
+
+# 🧩 Databases & Harvesters
+*.db
+*.sqlite
+targets.json
+extracted_creds.txt
+
+# 🎨 UI & Branding Fallbacks
 .DS_Store
 .idea/
 .vscode/
-*.swp
-*.swo
-node_modules/
-
-# ShadowCypher UI Artifacts (Local only)
-shadowcypher/ui/assets/icon.png
-shadowcypher/ui/assets/branding/
+/tmp/shadowcypher-*

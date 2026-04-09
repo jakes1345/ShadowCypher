@@ -1,0 +1,26 @@
+{
+  "project": "TestProject",
+  "target": "",
+  "scope": "",
+  "created": "2026-04-07T14:18:11.119936",
+  "summary": {
+    "Critical": 0,
+    "High": 0,
+    "Medium": 1,
+    "Low": 0,
+    "Info": 0
+  },
+  "total_findings": 1,
+  "findings": [
+    {
+      "title": "Open SSH",
+      "severity": "Medium",
+      "description": "Port 22 open with password auth",
+      "evidence": "22/tcp open ssh",
+      "remediation": "",
+      "module": "",
+      "target": "",
+      "timestamp": "2026-04-07T14:18:11.120904"
+    }
+  ]
+}
