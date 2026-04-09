@@ -55,17 +55,13 @@ class Kairos:
                 bus.publish("intel_found", {"type": "CVE", "value": cve_up, "ip": ips[0] if ips else "TARGET"})
                 db.log_vulnerability(ips[0] if ips else "TARGET", 0, "unknown", cve_id=cve_up, severity="CRITICAL", payload=line)
 
-        # 3. Port/Cred detection (Published via Bus)
-        for match in self._port_re.finditer(line):
-            port, proto, service = match.groups()
-            bus.publish("intel_found", {"type": "PORT", "value": f"{port}/{proto}", "ip": ips[0] if ips else "TARGET"})
-
         # 3. Detect open ports (nmap format)
         for match in self._port_re.finditer(line):
             port, proto, service = match.groups()
             self._alert("PORT", f"{port}/{proto} open ({service})")
             potential_ip = ips[0] if ips else "TARGET"
             db.log_vulnerability(potential_ip, int(port), service, severity="INFO", payload=line)
+            bus.publish("intel_found", {"type": "PORT", "value": f"{port}/{proto}", "ip": potential_ip})
 
         # 4. Detect vulnerability patterns (Trigger deep-dive if critical found)
         for pattern in self._vuln_patterns:
@@ -115,6 +111,10 @@ class Kairos:
         """Clear seen-state for a new engagement."""
         self._seen_cves.clear()
         self._seen_vulns.clear()
+
+    def _alert(self, alert_type: str, message: str):
+        """Log an intelligence alert."""
+        logger.info("kairos", f"[{alert_type}] {message}")
 
 
 kairos = Kairos()

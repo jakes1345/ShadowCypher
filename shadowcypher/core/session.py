@@ -23,6 +23,7 @@ class Project:
         self.description = description
         self.targets = targets or []
         self.scope = scope or []  # Subnets or specific IPs in-scope
+        self.roadmap = []  # Multi-phase engagement plan (populated by UltraPlan)
         self.created = datetime.now().isoformat()
         self.last_accessed = datetime.now().isoformat()
         self.report = Report(project_name=name)

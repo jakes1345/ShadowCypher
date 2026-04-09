@@ -1,6 +1,5 @@
 import sys
 import os
-import requests
 from shadowcypher.core.logger import logger
 from shadowcypher.core.config import config
 

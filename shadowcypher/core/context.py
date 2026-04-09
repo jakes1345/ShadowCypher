@@ -17,7 +17,7 @@ class ShadowContext:
         """Returns a summarized tree of the project for the AI's mental map."""
         tree = []
         for root, dirs, files in os.walk(self.root):
-            level = root.replace(self.root, '').count(os.sep)
+            level = root.replace(str(self.root), '').count(os.sep)
             if level >= depth: continue
             
             indent = ' ' * 4 * level

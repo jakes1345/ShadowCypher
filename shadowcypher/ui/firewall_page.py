@@ -19,7 +19,7 @@ class FirewallPage(BasePage):
         info = Gtk.Label(label=f"Detected backend: {backend}")
         info.get_style_context().add_class("subsection-title")
         info.set_halign(Gtk.Align.START)
-        self.pack_start(info, False, False, 0)
+        self.workspace.pack_start(info, False, False, 0)
 
         # Quick actions
         quick_box = Gtk.Box(spacing=8)
@@ -30,7 +30,7 @@ class FirewallPage(BasePage):
         flush_btn.get_style_context().add_class("danger-btn")
         flush_btn.connect("clicked", self._on_flush)
         quick_box.pack_start(flush_btn, False, False, 0)
-        self.pack_start(quick_box, False, False, 0)
+        self.workspace.pack_start(quick_box, False, False, 0)
 
         # ── Block/Allow IP ──
         ip_box = Gtk.Box(spacing=8)
@@ -40,7 +40,7 @@ class FirewallPage(BasePage):
         self.ip_entry.set_hexpand(True)
         ip_box.pack_start(self.ip_entry, True, True, 0)
         ip_box.pack_start(self.make_action_btn("Block IP", self._on_block_ip, "danger-btn"), False, False, 0)
-        self.pack_start(ip_box, False, False, 0)
+        self.workspace.pack_start(ip_box, False, False, 0)
 
         # ── Block/Allow Port ──
         port_box = Gtk.Box(spacing=8)
@@ -58,7 +58,7 @@ class FirewallPage(BasePage):
         port_box.pack_start(self.proto_combo, False, False, 0)
         port_box.pack_start(self.make_action_btn("Block Port", self._on_block_port, "danger-btn"), False, False, 0)
         port_box.pack_start(self.make_action_btn("Allow Port", self._on_allow_port, "success-btn"), False, False, 0)
-        self.pack_start(port_box, False, False, 0)
+        self.workspace.pack_start(port_box, False, False, 0)
 
         # ── Custom rule ──
         rule_box = Gtk.Box(spacing=8)
@@ -75,7 +75,7 @@ class FirewallPage(BasePage):
         self.rule_entry.set_hexpand(True)
         rule_box.pack_start(self.rule_entry, True, True, 0)
         rule_box.pack_start(self.make_action_btn("Add Rule", self._on_add_rule), False, False, 0)
-        self.pack_start(rule_box, False, False, 0)
+        self.workspace.pack_start(rule_box, False, False, 0)
 
         self.build_terminal()
 

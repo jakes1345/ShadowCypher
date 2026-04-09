@@ -81,11 +81,28 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("---", "APEX_COMMAND"),
             ("\U0001f4ca", "Operational Overview"),
             ("\U0001f916", "Tactical Swarm AI"),
-            ("---", "OFFENSIVE_ARSENAL"),
-            ("\U0001f310", "Web Assault"),
+            ("---", "RECON_&_INTEL"),
             ("\U0001f4e1", "Signal Recon"),
+            ("\U0001f575", "Deep OSINT Hub"),
+            ("\U0001f310", "Network Ops"),
+            ("\U0001f4f6", "Wireless Assault"),
+            ("---", "OFFENSIVE_STRIKE"),
+            ("\U0001f310", "Web Assault"),
             ("\u26a1", "Offensive Exploit"),
             ("\U0001f50e", "Vulnerability Pulse"),
+            ("\U0001f511", "Credential Assault"),
+            ("---", "ADVANCED_OPS"),
+            ("\U0001f3f0", "AD Infiltration"),
+            ("\U0001f4bb", "AD Attacks (Impacket)"),
+            ("\U0001f3a3", "Phishing Lab"),
+            ("\U0001f528", "Payload Forge"),
+            ("\U0001f52c", "Digital Forensics"),
+            ("---", "SYSTEM_OPS"),
+            ("\U0001f6e1\ufe0f", "Firewall Control"),
+            ("\U0001f4c1", "Session Manager"),
+            ("\U0001f3ae", "Gaming OSINT"),
+            ("\U0001f4e8", "Support & Comms"),
+            ("\U0001f512", "Admin Panel"),
         ]
 
         for icon, name in pages:
@@ -107,30 +124,73 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 row.set_name(name)
             sidebar.add(row)
 
-        sidebar.connect("row-activated", self._on_sidebar_selected)
+        sidebar.set_activate_on_single_click(True)
+        sidebar.connect("row-selected", self._on_sidebar_selected)
         scroller.add(sidebar)
         return scroller
 
     def _on_sidebar_selected(self, lb, row):
+        if row is None:
+            return
         name = row.get_name()
-        if name: self._switch_to_page(name)
+        if name and name != "GtkListBoxRow":
+            self._switch_to_page(name)
 
     def _switch_to_page(self, name):
+        import sys
+        print(f"[NAV] Switching to: {name}", file=sys.stderr, flush=True)
         if name not in self._page_registry:
             mapping = {
                 "Operational Overview": "dashboard.DashboardPage",
                 "Tactical Swarm AI": "ai_page.AIPage",
                 "Web Assault": "web_attacks_page.WebAttacksPage",
                 "Signal Recon": "recon_page.ReconPage",
+                "Network Ops": "network_page.NetworkPage",
                 "Offensive Exploit": "exploit_page.ExploitPage",
                 "Vulnerability Pulse": "vuln_page.VulnScannerPage",
+                "Deep OSINT Hub": "osint_page.OSINTPage",
+                "Wireless Assault": "wireless_page.WirelessPage",
+                "AD Infiltration": "ad_page.AdPage",
+                "AD Attacks (Impacket)": "ad_attacks_page.ADAttacksPage",
+                "Phishing Lab": "phishing_page.PhishingPage",
+                "Payload Forge": "payload_page.PayloadPage",
+                "Digital Forensics": "forensics_page.ForensicsPage",
+                "Credential Assault": "credentials_page.CredentialsPage",
+                "Firewall Control": "firewall_page.FirewallPage",
+                "Session Manager": "session_page.SessionPage",
+                "Gaming OSINT": "steam_page.SteamAuditPage",
+                "Support & Comms": "support_page.SupportPage",
+                "Admin Panel": "admin_page.AdminPage",
             }
-            if name in mapping:
-                mod_name, class_name = mapping[name].split(".")
+            if name not in mapping:
+                print(f"[NAV] Unknown page: {name}", file=sys.stderr, flush=True)
+                return
+            mod_name, class_name = mapping[name].split(".")
+            try:
                 mod = __import__(f"shadowcypher.ui.{mod_name}", fromlist=[class_name])
                 cls = getattr(mod, class_name)
-                self._page_registry[name] = cls()
-                self._page_container.add_named(self._page_registry[name], name)
+                page = cls()
+                page.show_all()
+                self._page_registry[name] = page
+                self._page_container.add_named(page, name)
+                print(f"[NAV] Loaded: {name} OK", file=sys.stderr, flush=True)
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print(f"[NAV] CRASH loading {name}: {e}", file=sys.stderr, flush=True)
+                logger.error("app", f"PAGE_LOAD_FAILED: {name} -> {e}")
+                err_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+                err_box.set_margin_top(40)
+                err_box.set_margin_start(40)
+                err_lbl = Gtk.Label()
+                err_lbl.set_markup(
+                    f"<span size='large' color='#f87171'><b>⚠ Module Load Failed</b></span>\n\n"
+                    f"<span color='#94a3b8'>{name}: {e}</span>"
+                )
+                err_box.pack_start(err_lbl, False, False, 0)
+                err_box.show_all()
+                self._page_registry[name] = err_box
+                self._page_container.add_named(err_box, name)
         self._page_container.set_visible_child_name(name)
         self._page_container.show_all()
 

@@ -29,15 +29,15 @@ class Runner:
 
     def execute_task(self, name, command, callback=None, cwd=None):
         task_id = str(uuid.uuid4())[:8]
-        threading.Thread(target=self._run, args=(task_id, command, callback, cwd, False), daemon=True).start()
+        threading.Thread(target=self._run, args=(task_id, name, command, callback, cwd, False), daemon=True).start()
         return task_id
 
     def execute_task_shell(self, name, command, callback=None):
         task_id = str(uuid.uuid4())[:8]
-        threading.Thread(target=self._run, args=(task_id, command, callback, None, True), daemon=True).start()
+        threading.Thread(target=self._run, args=(task_id, name, command, callback, None, True), daemon=True).start()
         return task_id
 
-    def _run(self, task_id, command, callback, cwd, is_shell):
+    def _run(self, task_id, name, command, callback, cwd, is_shell):
         try:
             # 1. CROSS-PLATFORM ELEVATION
             if not is_shell and isinstance(command, list) and command[0] == "sudo":

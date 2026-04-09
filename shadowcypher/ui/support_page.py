@@ -55,7 +55,7 @@ class SupportPage(BasePage):
         conn_box.pack_start(row1, False, False, 0)
 
         conn_frame.add(conn_box)
-        self.pack_start(conn_frame, False, False, 10)
+        self.workspace.pack_start(conn_frame, False, False, 10)
 
         chat_frame = Gtk.Frame(label="Secure Comm-Link")
         chat_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
@@ -105,7 +105,7 @@ class SupportPage(BasePage):
         chat_box.pack_start(btn_row, False, False, 5)
 
         chat_frame.add(chat_box)
-        self.pack_start(chat_frame, True, True, 10)
+        self.workspace.pack_start(chat_frame, True, True, 10)
 
         self._last_ticket_b64 = None
         self._loaded_ticket_b64 = None

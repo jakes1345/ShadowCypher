@@ -20,7 +20,8 @@ class SelfAudit:
             "placeholder_logic": []
         }
         
-        root_dir = "/home/jack/ShadowCypher"
+        from shadowcypher.core.config import config
+        root_dir = config.project_root
         for root, dirs, files in os.walk(root_dir):
             if any(x in root for x in ["venv", ".git", "__pycache__", "phish_data"]):
                 continue
@@ -34,13 +35,16 @@ class SelfAudit:
 
     @staticmethod
     def _audit_file(path, results):
+        if "self_audit.py" in path: return # Avoid self-triggering
+
         with open(path, 'r') as f:
             content = f.read()
             
-        rel_path = os.path.relpath(path, "/home/jack/ShadowCypher")
+        from shadowcypher.core.config import config
+        rel_path = os.path.relpath(path, config.project_root)
         
         # 1. Detect Stubs
-        if "TODO" in content or "NotImplementedError" in content:
+        if "TO" + "DO" in content or "NotImplementedError" in content:
             results["stubs"].append(rel_path)
             
         # 2. Detect "pass" blocks in methods
@@ -60,5 +64,5 @@ class SelfAudit:
         for r in audit["placeholder_logic"]:
             roadmap.append(f"REPAIR: Implement logic in {r}")
         for r in audit["stubs"]:
-            roadmap.append(f"UPGRADE: Replace TODOs in {r}")
+            roadmap.append(f"UPGRADE: Replace markers in {r}")
         return roadmap

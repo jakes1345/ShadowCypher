@@ -40,6 +40,10 @@ config/local_config.py
 # 🛸 Tactical Offense Stashes (Staged Locally)
 tools/
 shadowcypher/modules/phish_data/
+wordlists/
+findings/
+models/
+config.json
 
 # 🧩 Databases & Harvesters
 *.db

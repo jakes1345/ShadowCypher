@@ -28,7 +28,7 @@ class OSINTPage(BasePage):
         self.port_entry.set_text("443")
         self.port_entry.set_width_chars(6)
         row1.pack_start(self.port_entry, False, False, 0)
-        self.pack_start(row1, False, False, 0)
+        self.workspace.pack_start(row1, False, False, 0)
 
         # Action buttons
         btn_box = Gtk.Box(spacing=8)
@@ -43,7 +43,7 @@ class OSINTPage(BasePage):
             btn_box.pack_start(self.make_action_btn(label, handler), False, False, 0)
 
         btn_box.pack_end(self.build_stop_button(), False, False, 0)
-        self.pack_start(btn_box, False, False, 0)
+        self.workspace.pack_start(btn_box, False, False, 0)
 
         self.build_terminal()
 

@@ -14,7 +14,8 @@ class DeepOSINT:
     @staticmethod
     def social_footprint(username, on_output=None):
         """Search for social media accounts via Sherlock."""
-        project_root = "/home/jack/ShadowCypher"
+        from shadowcypher.core.config import config
+        project_root = str(config.project_root)
         sherlock_path = os.path.join(project_root, "tools", "sherlock", "sherlock")
         
         # Check if dir exists
@@ -29,7 +30,8 @@ class DeepOSINT:
     @staticmethod
     def email_audit(email, on_output=None):
         """Check if an email is registered on 100+ sites via Holehe."""
-        project_root = "/home/jack/ShadowCypher"
+        from shadowcypher.core.config import config
+        project_root = str(config.project_root)
         holehe_path = os.path.join(project_root, "tools", "holehe")
         
         if not os.path.exists(holehe_path):
@@ -48,8 +50,10 @@ class DeepOSINT:
 
     @staticmethod
     def leak_check(query, on_output=None):
-        """Check for publicly leaked credentials (Mock/Local-DB check)."""
-        # In a real scenario, this would hit an API like DeHashed or have a local 50GB DB
+        """Check for publicly leaked credentials (Local-DB check)."""
         if on_output: on_output(f"[INTEL] SEARCHING_LOCAL_LEAK_DATABASE: {query}")
         from shadowcypher.modules.credentials import Credentials
-        return Credentials.hunt_credentials(query, on_output=on_output)
+        creds = Credentials()
+        result = creds.identify_hash(query)
+        if on_output: on_output(f"[INTEL] RESULT: {result}")
+        return result
