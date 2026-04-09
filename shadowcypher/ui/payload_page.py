@@ -21,7 +21,8 @@ class PayloadPage(BasePage):
         pod.get_style_context().add_class("card")
         pod.set_margin_top(15); pod.set_margin_bottom(15); pod.set_margin_start(15); pod.set_margin_end(15)
         
-        self.target_entry = Gtk.Entry(placeholder_text="MISSION_TARGET_SPEC")
+        self.target_entry = Gtk.Entry()
+        self.target_entry.set_placeholder_text("MISSION_TARGET_SPEC")
         pod.pack_start(self.target_entry, False, False, 0)
         
         btn = self.make_action_btn("⚡ INITIATE_OPERATION", self._on_mission)

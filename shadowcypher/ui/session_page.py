@@ -15,14 +15,6 @@ class SessionPage(BasePage):
     def __init__(self):
         super().__init__("\U0001f4c2 Session & Projects")
 
-        # Main layout
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        vbox.set_margin_start(20)
-        vbox.set_margin_end(20)
-        vbox.set_margin_top(20)
-        vbox.set_margin_bottom(20)
-        self.add(vbox)
-
         # ── PROJECT SELECTOR ──
         sel_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         lbl = Gtk.Label(label="Active Engagement")
@@ -40,14 +32,16 @@ class SessionPage(BasePage):
         )
         sel_row.pack_start(load_btn, False, False, 0)
         sel_box.pack_start(sel_row, False, False, 0)
-        vbox.pack_start(sel_box, False, False, 0)
+        self.workspace.pack_start(sel_box, False, False, 0)
 
         # ── CREATE NEW PROJECT ──
         new_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         new_box.set_name("new-project-box")
         new_box.get_style_context().add_class("terminal-view")
         new_box.set_margin_top(20)
-        new_box.set_border_width(20)
+        new_box.set_margin_start(20)
+        new_box.set_margin_end(20)
+        new_box.set_margin_bottom(20)
 
         lbl = Gtk.Label(label="Create New Engagement")
         lbl.get_style_context().add_class("section-title")
@@ -77,14 +71,14 @@ class SessionPage(BasePage):
             "\u2795 Create Project", self._on_create_project, "success-btn"
         )
         new_box.pack_start(create_btn, False, False, 0)
-        vbox.pack_start(new_box, False, False, 0)
+        self.workspace.pack_start(new_box, False, False, 0)
 
         # ── STATUS / SUMMARY ──
         self.status_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.status_lbl = Gtk.Label(label="No project currently active.")
         self.status_lbl.set_halign(Gtk.Align.START)
         self.status_box.pack_start(self.status_lbl, False, False, 0)
-        vbox.pack_start(self.status_box, False, False, 0)
+        self.workspace.pack_start(self.status_box, False, False, 0)
 
         # --- DRM LICENSE CONTROL ---
         frm_drm = Gtk.Frame(label="System License & DRM Unlock")
@@ -108,7 +102,7 @@ class SessionPage(BasePage):
         drm_box.pack_start(self.key_entry, True, True, 0)
         drm_box.pack_start(btn_unlock, False, False, 0)
         frm_drm.add(drm_box)
-        vbox.pack_start(frm_drm, False, False, 10)
+        self.workspace.pack_start(frm_drm, False, False, 10)
 
         # ── EXPORT REPORTS ──
         rep_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
@@ -139,14 +133,7 @@ class SessionPage(BasePage):
             0,
         )
         rep_box.pack_start(rep_row, False, False, 0)
-        vbox.pack_start(rep_box, False, False, 0)
-
-        # ── STATUS / SUMMARY ──
-        self.status_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        self.status_lbl = Gtk.Label(label="No project currently active.")
-        self.status_lbl.set_halign(Gtk.Align.START)
-        self.status_box.pack_start(self.status_lbl, False, False, 0)
-        vbox.pack_start(self.status_box, False, False, 0)
+        self.workspace.pack_start(rep_box, False, False, 0)
 
         self._update_status()
 
