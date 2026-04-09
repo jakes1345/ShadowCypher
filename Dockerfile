@@ -1,14 +1,17 @@
+# ─────────────────────────────────────────────────────────────
+# ShadowCypher Autonomous Offensive Suite — Ultimate Build
+# ─────────────────────────────────────────────────────────────
 FROM ubuntu:22.04
 
+# Core Dependencies
 ENV DEBIAN_FRONTEND=noninteractive
-ENV QT_X11_NO_MITSHM=1
-
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-gi \
     python3-gi-cairo \
     gir1.2-gtk-3.0 \
+    gir1.2-vte-2.91 \
     nmap \
     tcpdump \
     wireshark-tshark \
@@ -21,33 +24,44 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     curl \
-    ffuf \
+    golang-go \
     pkg-config \
     libcairo2-dev \
-    libgirepository1.0-dev && \
+    libgirepository1.0-dev \
+    php-cli \
+    sqlmap \
+    nikto \
+    exploitdb && \
     rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/SpiderLabs/Responder.git /opt/Responder && \
-    wget -q https://github.com/projectdiscovery/nuclei/releases/download/v3.2.0/nuclei_3.2.0_linux_amd64.zip && \
-    unzip nuclei_3.2.0_linux_amd64.zip -d /usr/local/bin/ && \
-    rm nuclei_3.2.0_linux_amd64.zip && \
-    wget -q https://github.com/BishopFox/sliver/releases/download/v1.5.42/sliver-server_linux -O /usr/local/bin/sliver-server && \
-    chmod +x /usr/local/bin/sliver-server
+WORKDIR /app
+COPY . .
 
-RUN useradd -ms /bin/bash shadowuser
+# ─────────────────────────────────────────────────────────────
+# ShadowCypher Core Weapons Systems (Local Staging)
+# ─────────────────────────────────────────────────────────────
+RUN mkdir -p /app/tools && \
+    git clone --depth 1 https://github.com/lgandx/Responder.git /app/tools/Responder && \
+    git clone --depth 1 https://github.com/offensive-security/exploitdb.git /app/tools/exploitdb && \
+    git clone --depth 1 https://github.com/JoasASantos/ShadowPhish.git /app/shadowcypher/modules/phish_data
 
-WORKDIR /opt/ShadowCypher
-COPY .dockerignore .
-COPY requirements.txt .
+# ─────────────────────────────────────────────────────────────
+# High-Performance Go Utilities
+# ─────────────────────────────────────────────────────────────
+RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
+    go install -v github.com/ffuf/ffuf/v2@latest && \
+    go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
+    cp /root/go/bin/* /usr/local/bin/
+
+# Python Environment
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-COPY shadowcypher/ ./shadowcypher/
-COPY config.json pyproject.toml ./
-RUN mkdir -p /home/shadowuser/.cache projects payloads reports logs && \
-    chown -R shadowuser:shadowuser /home/shadowuser /opt/ShadowCypher
+# Finalize Environment
+ENV QT_X11_NO_MITSHM=1
+ENV OLLAMA_BASE="http://127.0.0.1:11434"
+ENV DISPLAY=:0
+ENV PATH="/app/tools/exploitdb:$PATH"
 
-USER shadowuser
-ENV FONTCONFIG_PATH=/etc/fonts
-ENV XDG_CACHE_HOME=/home/shadowuser/.cache
+EXPOSE 8080 55553 4444 1080
 
-CMD ["python3", "-m", "shadowcypher.app"]
+CMD ["./run.sh"]

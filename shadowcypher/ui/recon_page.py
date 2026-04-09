@@ -68,6 +68,8 @@ class ReconPage(BasePage):
         threading.Thread(target=self._run_recon_worker, daemon=True).start()
 
     def _run_recon_worker(self):
-        results = self.inspector.auto_inspect()
-        GLib.idle_add(self._log_terminal, results)
-        GLib.idle_add(self.btn_inspect.set_sensitive, True)
+        # Professional Depth Fix: Using async callbacks for live terminal feed
+        self.inspector.auto_inspect(
+            on_output=lambda line: GLib.idle_add(self._log_terminal, line.strip()),
+            on_complete=lambda: GLib.idle_add(self.btn_inspect.set_sensitive, True),
+        )

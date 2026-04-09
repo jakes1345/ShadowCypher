@@ -78,12 +78,15 @@ class ADAttacks:
     def run_responder(
         interface, analyze_only=False, wpad=True, on_output=None, on_complete=None
     ):
-        responder_path = "/opt/Responder/Responder.py"
+        # Professional Depth Fix: Detect local tools directory
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        responder_path = os.path.join(project_root, "tools", "Responder", "Responder.py")
 
         if not os.path.exists(responder_path):
             if on_output:
                 on_output(
-                    f"[ERROR] Responder not found at {responder_path}. Please check installation."
+                    f"[ERROR] MISSION_CRITICAL_FAILURE: Responder missing at {responder_path}.\n"
+                    f"[SYSTEM] AD_ATTACK_ENGINE_NOT_PRIMED."
                 )
             return
 

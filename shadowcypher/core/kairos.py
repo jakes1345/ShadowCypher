@@ -87,7 +87,8 @@ class Kairos:
         line = line.strip()
 
         # 1. Detect and register IPs
-        for ip in self._ip_re.findall(line):
+        ips = self._ip_re.findall(line)
+        for ip in ips:
             if not ip.startswith(("127.", "0.0.", "255.")):
                 db.register_target(ip)
 
@@ -97,13 +98,25 @@ class Kairos:
             if cve_upper not in self._seen_cves:
                 self._seen_cves.add(cve_upper)
                 self._alert("CVE", f"Detected: {cve_upper} — {line[:80]}")
+                # Store in DB
+                potential_ip = ips[0] if ips else "TARGET"
+                db.log_vulnerability(potential_ip, 0, "unknown", cve_id=cve_upper, severity="CRITICAL", payload=line)
+                
+                # DEEP LEVEL: Trigger Autonomous Exploitation Analysis
+                try:
+                    from shadowcypher.ai.orchestrator import AIOrchestrator
+                    orch = AIOrchestrator()
+                    orch.queue_mission(f"Analyze exploitation path for {cve_upper} on {potential_ip}")
+                except Exception: pass
 
         # 3. Detect open ports (nmap format)
         for match in self._port_re.finditer(line):
             port, proto, service = match.groups()
             self._alert("PORT", f"{port}/{proto} open ({service})")
+            potential_ip = ips[0] if ips else "TARGET"
+            db.log_vulnerability(potential_ip, int(port), service, severity="INFO", payload=line)
 
-        # 4. Detect vulnerability patterns
+        # 4. Detect vulnerability patterns (Trigger deep-dive if critical found)
         for pattern in self._vuln_patterns:
             match = pattern.search(line)
             if match:
@@ -111,13 +124,40 @@ class Kairos:
                 if key not in self._seen_vulns:
                     self._seen_vulns.add(key)
                     self._alert("VULN", line[:120])
+                    potential_ip = ips[0] if ips else "TARGET"
+                    db.log_vulnerability(potential_ip, 0, "unknown", severity="MEDIUM", payload=line)
+                    
+                    # If high-value target, escalate
+                    if "critical" in line.lower() or "rce" in line.lower():
+                        try:
+                            from shadowcypher.ai.orchestrator import AIOrchestrator
+                            orch = AIOrchestrator()
+                            orch.queue_mission(f"Critical vulnerability identified: {line[:50]}. Initiate escalation audit on {potential_ip}")
+                        except Exception: pass
                 break  # One alert per line
 
-        # 5. Detect credentials / hashes
+        # 5. Detect credentials / hashes (Automated Credential Extraction V3)
         for pattern in self._cred_patterns:
             if pattern.search(line):
-                # Don't log actual credentials, just the alert
                 self._alert("CRED", f"Potential credential detected in output")
+                potential_ip = ips[0] if ips else "TARGET"
+                try:
+                    # Multi-pattern extraction for professional results
+                    user_match = re.search(r'(?:username|user|login)\s*[:=]\s*(\S+)', line, re.IGNORECASE)
+                    pass_match = re.search(r'(?:password|passwd|pwd)\s*[:=]\s*(\S+)', line, re.IGNORECASE)
+                    hash_match = re.search(r'([a-f0-9]{32,64})', line, re.IGNORECASE)
+                    
+                    username = user_match.group(1) if user_match else "unknown"
+                    password = pass_match.group(1) if pass_match else None
+                    cred_hash = hash_match.group(1) if hash_match else None
+                    
+                    if password or cred_hash:
+                        db.cursor.execute(
+                            "INSERT INTO credentials_sink (target_ip, service, username, password, hash, cracked) VALUES (?, ?, ?, ?, ?, ?)",
+                            (potential_ip, "unknown", username, password, cred_hash, False)
+                        )
+                        db.conn.commit()
+                except Exception: pass
                 break
 
     def reset(self):

@@ -14,8 +14,9 @@ class Credentials:
         target, service, username, wordlist, port=None, on_output=None, on_complete=None
     ):
         """Perform a targeted brute force scan via Hydra."""
-        # Use standard hydra or medusa based on availability
-        args = ["hydra", "-l", username, "-P", wordlist]
+        from shadowcypher.core.config import config
+        hydra = config.get_tool_path("hydra")
+        args = [hydra, "-l", username, "-P", wordlist]
         if port and port != "auto":
             args += ["-s", str(port)]
         args += [target, service, "-t", "4", "-vV"]

@@ -19,22 +19,18 @@ class WebAttacks:
         on_complete=None,
     ):
         """Directory and file fuzzing with Ffuf."""
+        from shadowcypher.core.config import config
+        ffuf = config.get_tool_path("ffuf")
+        
         if not validate_target(url):
-            if on_output:
-                on_output(f"[ERROR] Invalid URL: {url}")
+            if on_output: on_output(f"[ERROR] Invalid URL: {url}")
             return
 
-        if not os.path.exists(wordlist):
-            if on_output:
-                on_output(f"[ERROR] Wordlist not found: {wordlist}")
-            return
-
-        # Ffuf requires FUZZ keyword
         fuzz_url = url.rstrip("/") + "/FUZZ"
         if extension:
             fuzz_url += f".{extension.strip('.')}"
 
-        args = ["ffuf", "-c", "-w", wordlist, "-u", fuzz_url, "-t", "50"]
+        args = [ffuf, "-c", "-w", wordlist, "-u", fuzz_url, "-t", "50"]
         logger.info("web", f"FFUF Directory Fuzzing: {fuzz_url}")
         return runner.execute_task(f"FFUF_DIR_{url}", args, callback=on_output)
 
@@ -47,20 +43,15 @@ class WebAttacks:
         on_complete=None,
     ):
         """Virtual Host (VHost) fuzzing with Ffuf."""
+        from shadowcypher.core.config import config
+        ffuf = config.get_tool_path("ffuf")
+        
         if not validate_target(url):
-            if on_output:
-                on_output(f"[ERROR] Invalid URL: {url}")
+            if on_output: on_output(f"[ERROR] Invalid URL: {url}")
             return
 
-        if not os.path.exists(wordlist):
-            if on_output:
-                on_output(f"[ERROR] Wordlist not found: {wordlist}")
-            return
-
-        # Replace the subdomain part with FUZZ
-        # Example: host_header = "FUZZ.target.com"
         args = [
-            "ffuf",
+            ffuf,
             "-c",
             "-w",
             wordlist,
@@ -79,12 +70,14 @@ class WebAttacks:
         target, template_tags="", severity="", on_output=None, on_complete=None
     ):
         """Nuclei template-based vulnerability scanning."""
+        from shadowcypher.core.config import config
+        nuclei = config.get_tool_path("nuclei")
+        
         if not validate_target(target):
-            if on_output:
-                on_output(f"[ERROR] Invalid target: {target}")
+            if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
 
-        args = ["nuclei", "-u", target, "-c", "50", "-no-color"]
+        args = [nuclei, "-u", target, "-c", "50", "-no-color"]
 
         if template_tags:
             args.extend(["-tags", template_tags])

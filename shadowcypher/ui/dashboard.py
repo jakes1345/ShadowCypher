@@ -241,21 +241,50 @@ class DashboardPage(Gtk.Box):
         self.show_all()
 
     def _process_mission_logs(self):
-        missions = [
-            "[OK] TENGU_CORE: Ready for autonomous dispatch.",
-            "[OK] STEAM_SHADOW: Global asset discovery calibrated.",
-            "[INFO] DEEPHAT_OFFENSIVE: Neural bridge 100% stable.",
-            "[OK] TOR_GRID: Routing intelligence through SOCKS5 link.",
-            "[OK] SHADOWCYPHER_OVERLORD: System integrity verified.",
-        ]
-        row = Gtk.ListBoxRow()
-        lbl = Gtk.Label(label=f"> {random.choice(missions)}", xalign=0)
-        lbl.set_margin_start(15)
-        lbl.set_margin_top(5)
-        lbl.set_margin_bottom(5)
-        row.add(lbl)
-        self.log_list.prepend(row)
-        if len(self.log_list.get_children()) > 10:
-            self.log_list.remove(self.log_list.get_children()[-1])
-        self.show_all()
+        """High-Fidelity Log Telemetry — Real-time tailing of mission activity."""
+        log_path = "/home/jack/ShadowCypher/logs/ai_debug.log"
+        if not os.path.exists(log_path):
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            with open(log_path, "w") as f: f.write("[SYSTEM] Operational Log Initialized.\n")
+        
+        # Track file position across calls
+        if not hasattr(self, "_log_offset"):
+            self._log_offset = os.path.getsize(log_path)
+            return True
+
+        try:
+            current_size = os.path.getsize(log_path)
+            if current_size < self._log_offset: # Log rotated
+                self._log_offset = 0
+
+            if current_size > self._log_offset:
+                with open(log_path, "r") as f:
+                    f.seek(self._log_offset)
+                    new_lines = f.readlines()
+                    self._log_offset = f.tell()
+                    
+                    for line in new_lines:
+                        clean_line = line.strip()
+                        if not clean_line or "---" in clean_line: continue
+                        
+                        row = Gtk.ListBoxRow()
+                        lbl = Gtk.Label(xalign=0)
+                        # Trim for UI stability but keep enough context
+                        display_text = clean_line[-120:] if len(clean_line) > 120 else clean_line
+                        lbl.set_markup(f"<span font_family='monospace' size='small' color='#94a3b8'>> {display_text}</span>")
+                        lbl.set_margin_start(15)
+                        lbl.set_margin_top(2)
+                        lbl.set_margin_bottom(2)
+                        row.add(lbl)
+                        self.log_list.prepend(row)
+                        
+                        # Keep maximum 25 rows
+                        children = self.log_list.get_children()
+                        if len(children) > 25:
+                            self.log_list.remove(children[-1])
+            
+            self.show_all()
+        except Exception as e:
+            logger.error("ui", f"Telemetry failure: {e}")
+
         return True

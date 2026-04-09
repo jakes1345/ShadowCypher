@@ -60,56 +60,70 @@ class StealthHoneypot:
         self._sock = None
         self._threat_log = None
 
-    def start_bait(self):
+    def start_bait(self, on_threat=None):
         import socket
-        import os
+        import threading
         from pathlib import Path
+        import datetime
+
+        if self.active:
+            return
 
         log_dir = Path(__file__).resolve().parent.parent.parent / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         self._threat_log = log_dir / "threats.log"
 
-        try:
-            self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self._sock.settimeout(2.0)
-            self._sock.bind((self.bind_addr, self.port))
-            self._sock.listen(5)
-            self.active = True
-        except Exception:
-            return
-
-        while self.active:
+        def _bait_loop():
             try:
-                conn, addr = self._sock.accept()
-                conn.settimeout(5.0)
-                self._handle_connection(conn, addr)
-            except socket.timeout:
-                continue
-            except OSError:
-                break
+                self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self._sock.settimeout(2.0)
+                self._sock.bind((self.bind_addr, self.port))
+                self._sock.listen(5)
+                self.active = True
+                logger.info("security", f"Stealth Honeypot active on {self.bind_addr}:{self.port}")
+            except Exception as e:
+                logger.error("security", f"Honeypot bind failure: {e}")
+                self.active = False
+                return
 
-    def _handle_connection(self, conn, addr):
+            while self.active:
+                try:
+                    conn, addr = self._sock.accept()
+                    conn.settimeout(5.0)
+                    threading.Thread(target=self._handle_connection, args=(conn, addr, on_threat), daemon=True).start()
+                except socket.timeout:
+                    continue
+                except OSError:
+                    break
+
+        threading.Thread(target=_bait_loop, daemon=True).start()
+
+    def _handle_connection(self, conn, addr, on_threat=None):
         import datetime
-
         try:
             conn.sendall(self._SSH_BANNER)
             data = conn.recv(256)
-            entry = f"[{datetime.datetime.now().isoformat()}] HONEYPOT connection from {addr[0]}:{addr[1]}"
+            entry = f"[{datetime.datetime.now().isoformat()}] HONEYPOT_HIT: {addr[0]}:{addr[1]}"
             if data:
                 safe_data = data[:64].decode("utf-8", errors="replace").strip()
-                entry += f" | banner: {safe_data}"
-            entry += "\n"
-
+                entry += f" | banner_probe: {safe_data}"
+            
             with open(self._threat_log, "a") as f:
-                f.write(entry)
-        except Exception:
-            pass
+                f.write(entry + "\n")
+            
+            if on_threat:
+                on_threat(entry)
+            
+            # Feed into Kairos
+            from shadowcypher.core.kairos import kairos
+            kairos.analyze(entry)
+
+        except Exception as e:
+            logger.debug("security", f"Honeypot connection dropped: {e}")
         finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
+            try: conn.close()
+            except Exception: pass
 
     def stop(self):
         self.active = False

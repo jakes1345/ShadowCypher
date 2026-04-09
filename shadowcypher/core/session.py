@@ -78,13 +78,16 @@ class SessionManager:
         return p
 
     def load_project(self, name: str) -> bool:
-        """Load an existing project by name."""
+        """Load an existing project by name with tactical locking."""
         path = self.projects_dir / f"{name}.json"
         if not path.exists():
             return False
+        
+        from shadowcypher.core.utils import file_lock
         try:
-            with open(path, "r") as f:
-                data = json.load(f)
+            with file_lock(str(path)):
+                with open(path, "r") as f:
+                    data = json.load(f)
             self.current_project = Project.from_dict(data)
             self.current_project.last_accessed = datetime.now().isoformat()
             self.save_current()
@@ -95,16 +98,24 @@ class SessionManager:
             return False
 
     def save_current(self):
-        """Save active project state."""
+        """Save active project state with atomic locking."""
         if not self.current_project:
             return
         path = self.projects_dir / f"{self.current_project.name}.json"
-        with open(path, "w") as f:
-            json.dump(self.current_project.to_dict(), f, indent=4)
+        
+        from shadowcypher.core.utils import file_lock
+        try:
+            with file_lock(str(path)):
+                with open(path, "w") as f:
+                    json.dump(self.current_project.to_dict(), f, indent=4)
 
-        # Save as last session
-        with open(self.projects_dir / "last_session.txt", "w") as f:
-            f.write(self.current_project.name)
+            # Save as last session
+            last_session_path = self.projects_dir / "last_session.txt"
+            with file_lock(str(last_session_path)):
+                with open(last_session_path, "w") as f:
+                    f.write(self.current_project.name)
+        except Exception as e:
+            logger.error("session", f"Project save failed: {e}")
 
     def _load_last_session(self):
         """Auto-load last project on startup."""

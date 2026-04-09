@@ -110,8 +110,9 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f310", "Web Assault"),
             ("\U0001f4bb", "Domain Dominance"),
             ("\U0001f4e1", "Signal Recon"),
-            ("\U0001f4a3", "Offensive Exploit"),
+            ("\u26a1", "Offensive Exploit"),
             ("\U0001f50e", "Vulnerability Pulse"),
+            ("\U0001f3a3", "Phishing Assault"),
             ("---", "INTEL_OSINT"),
             ("\U0001f50d", "Digital Analysis"),
             ("\U0001f4ad", "OSINT Intelligence"),
@@ -124,6 +125,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f6e1", "Firewall Defense"),
             ("\U0001f4f6", "Wireless Signals"),
             ("\U0001f4bb", "System Control"),
+            ("\u2328", "Terminal Command Center"),
             ("\U0001f4e7", "Support & Ticketing"),
         ]
 
@@ -170,6 +172,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                     "Signal Recon": "recon_page.ReconPage",
                     "Offensive Exploit": "exploit_page.ExploitPage",
                     "Vulnerability Pulse": "vuln_page.VulnScannerPage",
+                    "Phishing Assault": "phishing_page.PhishingPage",
                     "Stealth Network": "network_page.NetworkPage",
                     "Digital Analysis": "forensics_page.ForensicsPage",
                     "OSINT Intelligence": "osint_page.OSINTPage",
@@ -179,6 +182,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                     "Firewall Defense": "firewall_page.FirewallPage",
                     "Wireless Signals": "wireless_page.WirelessPage",
                     "System Control": "session_page.SessionPage",
+                    "Terminal Command Center": "terminal_widget.TerminalPage",
                     "Support & Ticketing": "support_page.SupportPage",
                     "Admin Master Control": "admin_page.AdminPage",
                 }
@@ -224,6 +228,17 @@ def _start_honeypot():
 
 def main():
     _start_honeypot()
+    
+    # MISSION_CRITICAL: Start Autonomous AI Sentry & Sisyphus Protocol
+    from shadowcypher.ai.orchestrator import AIOrchestrator
+    from shadowcypher.ai.sisyphus import sisyphus
+    
+    orch = AIOrchestrator()
+    orch.start_sentinel()
+    
+    # Initiate the Infinite Loop of Refinement
+    sisyphus.start()
+    
     app = ShadowCypherApp()
     app.run(sys.argv)
 

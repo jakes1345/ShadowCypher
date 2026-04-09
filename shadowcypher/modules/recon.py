@@ -53,27 +53,34 @@ class Recon:
             "Service Fingerprint": ["-sV"],
         }
         flags = flag_map.get(stype, [])
-        return runner.execute_task(f"RECON_{target}", ["nmap"] + flags + [target], callback=on_output)
+        from shadowcypher.core.config import config
+        nmap = config.get_tool_path("nmap")
+        return runner.execute_task(f"RECON_{target}", [nmap] + flags + [target], callback=on_output)
 
     @staticmethod
     def traceroute(target, on_output=None, on_complete=None):
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
-        return runner.execute_task(f"TRACE_{target}", ["traceroute", target], callback=on_output)
+        from shadowcypher.core.config import config
+        trace = config.get_tool_path("traceroute")
+        return runner.execute_task(f"TRACE_{target}", [trace, target], callback=on_output)
 
     def discover_hosts(self, on_output=None, on_complete=None):
         """Dynamic Subnet Host Discovery."""
         target_subnet = self.subnet
         if on_output: on_output(f"[RECON] INITIATING_NETWORK_SWEEP_ON: {target_subnet}")
-        return runner.execute_task("HOST_DISCOVERY", ["nmap", "-sn", target_subnet], callback=on_output)
+        from shadowcypher.core.config import config
+        nmap = config.get_tool_path("nmap")
+        return runner.execute_task("HOST_DISCOVERY", [nmap, "-sn", target_subnet], callback=on_output)
 
-    def auto_inspect(self):
-        """Dynamic nmap service scan on the detected gateway."""
-        try:
-            return subprocess.check_output(["nmap", "-sV", self.gateway], text=True, timeout=60)
-        except Exception as e:
-            return f"Error: {e}"
+    def auto_inspect(self, on_output=None, on_complete=None):
+        """Dynamic nmap service scan on the detected gateway with async streaming."""
+        if not self.gateway:
+            return "ERROR: No gateway detected."
+        
+        logger.info("recon", f"AUTO_INSPECTING_GATEWAY: {self.gateway}")
+        return runner.execute_task(f"INSPECT_{self.gateway}", ["nmap", "-sV", self.gateway], callback=on_output)
 
     @staticmethod
     def ai_recon(target, on_output=None):
@@ -86,3 +93,7 @@ class Recon:
         orch = AIOrchestrator()
         query = f"Provide a complete vulnerability analysis and scan for {target}. Start with stealth check."
         return orch.execute_query(query, callback=on_output)
+
+class RouterInspector(Recon): 
+    """Compatibility alias for legacy 'Stealth Network' components."""
+    pass
