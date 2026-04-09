@@ -43,7 +43,8 @@ class VulnScannerPage(BasePage):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
         row = Gtk.Box(spacing=10)
-        self.nikto_target = Gtk.Entry(placeholder_text="Target URL/IP")
+        self.nikto_target = Gtk.Entry()
+        self.nikto_target.set_placeholder_text("Target URL/IP")
         row.pack_start(self.nikto_target, True, True, 0)
 
         btn = Gtk.Button(label="SCAN_NIKTO")
@@ -68,7 +69,8 @@ class VulnScannerPage(BasePage):
     def _build_sqlmap_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
-        self.sqlmap_url = Gtk.Entry(placeholder_text="IP/URL for SQLi Check")
+        self.sqlmap_url = Gtk.Entry()
+        self.sqlmap_url.set_placeholder_text("IP/URL for SQLi Check")
         box.pack_start(self.sqlmap_url, False, False, 0)
 
         btn = Gtk.Button(label="INJECT_TEST")
@@ -90,7 +92,8 @@ class VulnScannerPage(BasePage):
     def _build_nse_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
-        self.nse_target = Gtk.Entry(placeholder_text="Target IP")
+        self.nse_target = Gtk.Entry()
+        self.nse_target.set_placeholder_text("Target IP")
         box.pack_start(self.nse_target, False, False, 0)
 
         btn = Gtk.Button(label="NSE_VULN_AUDIT")
