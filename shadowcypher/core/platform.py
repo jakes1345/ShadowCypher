@@ -25,6 +25,8 @@ class ShadowPlatform:
             "msf": {"Linux": "msfconsole", "Darwin": "msfconsole", "Windows": "msfconsole.bat"},
             "sudo": {"Linux": "sudo", "Darwin": "sudo", "Windows": "runas"},
             "shell": {"Linux": "/bin/bash", "Darwin": "/bin/zsh", "Windows": "powershell.exe"},
+            "ifconfig": {"Linux": "ip link", "Darwin": "ifconfig", "Windows": "ipconfig /all"},
+            "keychain": {"Darwin": "security"},
         }
         return mappings.get(key, {}).get(ShadowPlatform.SYSTEM, key)
 
@@ -32,7 +34,7 @@ class ShadowPlatform:
     def get_net_info_cmd() -> list[str]:
         """Returns the platform-specific routing/interface command."""
         if ShadowPlatform.IS_LINUX: return ["ip", "route", "show", "default"]
-        if ShadowPlatform.IS_MACOS: return ["netstat", "-rn"]
+        if ShadowPlatform.IS_MACOS: return ["networksetup", "-listallnetworkservices"] # Deeper macOS info
         if ShadowPlatform.IS_WINDOWS: return ["route", "print"]
         return []
 
