@@ -89,10 +89,10 @@ class AIOrchestrator:
         
         return "TIMEOUT: Mission reached max cycles."
 
-    def _execute_tool(self, name, args, callback=None):
+    def _execute_tool(self, name, args, callback=None, intensity=None):
         try:
             # 1. SPECIAL CASE: DELEGATION TO AUTO-ORCHESTRATOR
-            if name == "run_masterclass" or args.get("intensity") == "MAX":
+            if name == "run_masterclass" or intensity == "MAX":
                 from shadowcypher.ai.auto_orchestrator import auto_orch
                 if callback: callback("[SYSTEM] ESCALATING_TO_METACHAIN_ENGINE...")
                 auto_orch.execute_mission(
@@ -118,10 +118,8 @@ class AIOrchestrator:
             # 3. OFFENSIVE SUITE TOOLS
             elif name == "nmap_scan":
                 from shadowcypher.modules.recon import Recon
-                return Recon.pulse_target(args.get("target"), args.get("type", "Quick Port Scan"), on_output=callback)
-            elif name == "nuclei_scan":
-                from shadowcypher.modules.web_attacks import WebAttacks
-                return WebAttacks.nuclei_scan(args.get("target"), on_output=callback)
+                recon = Recon()
+                return recon.pulse_target(args.get("target"), stype=args.get("type", "Quick Port Scan"), on_output=callback)
             
             return f"ERROR: Tool '{name}' not found."
         except Exception as e:
@@ -132,4 +130,3 @@ class AIOrchestrator:
             clean = re.sub(r'^```(json)?\n?|```$', '', raw, flags=re.MULTILINE).strip()
             return json.loads(clean)
         except: return None
-"
