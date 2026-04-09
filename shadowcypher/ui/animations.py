@@ -31,6 +31,13 @@ class RadarSweep(Gtk.DrawingArea):
             GLib.source_remove(self._tick_id)
 
     def _tick(self):
+        # Apex Optimization: Adaptive Framerate
+        try:
+            load = os.getloadavg()[0]
+            if load > 5.0: # System is under heavy stress (e.g. gaming)
+                if random.random() < 0.5: return True # Skip 50% of frames
+        except (AttributeError, OSError): pass
+
         self.angle += 0.03
         if self.angle > 2 * math.pi:
             self.angle -= 2 * math.pi
@@ -385,9 +392,9 @@ class TerminalBoot(Gtk.DrawingArea):
         self.lines: list[str] = []
         self.boot_lines = [
             "BIOS POST... OK",
-            "Memory test: 47104 MB ... PASS",
-            "GPU: NVIDIA RTX 2060 SUPER [8192 MB] ... DETECTED",
-            "CPU: AMD Ryzen 5 3600 6-Core ... ONLINE",
+            f"Memory test: {psutil.virtual_memory().total // (1024*1024)} MB ... PASS",
+            f"CPU: {subprocess.check_output(['grep', '-m1', 'model name', '/proc/cpuinfo'], text=True).split(': ')[1].strip() if os.path.exists('/proc/cpuinfo') else 'GENERIC_APEX_CORE'} ... ONLINE",
+            "GPU: [AUTODETECTING_VULKAN_GPGPU] ... COMPATIBLE",
             "Loading kernel... done",
             "Mounting filesystems... done",
             "Starting network services... done",
