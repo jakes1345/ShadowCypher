@@ -21,6 +21,7 @@ class CredentialsPage(BasePage):
         notebook.append_page(self._build_hydra_tab(), Gtk.Label(label="Hydra Brute Force"))
         notebook.append_page(self._build_hash_tab(), Gtk.Label(label="Hash Cracking"))
         notebook.append_page(self._build_identify_tab(), Gtk.Label(label="Hash Identify"))
+        notebook.append_page(self._build_deep_breach_tab(), Gtk.Label(label="Deep Breach"))
         self.workspace.pack_start(notebook, False, False, 0)
 
         self.build_terminal()
@@ -209,3 +210,21 @@ class CredentialsPage(BasePage):
             return
         result = Credentials.identify_hash(hash_val)
         self.clear_output(result)
+
+    def _build_deep_breach_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12); box.set_margin_end(12); box.set_margin_top(12); box.set_margin_bottom(12)
+
+        self.breach_target = Gtk.Entry(); self.breach_target.set_placeholder_text("Target Email (e.g. ceo@target.com)")
+        box.pack_start(self.breach_target, False, False, 0)
+
+        btn = self.make_action_btn("\U0001f50e CORRELATE_BREACH_DATA", self._on_deep_breach, "danger-btn")
+        box.pack_start(btn, False, False, 0)
+        return box
+
+    def _on_deep_breach(self, btn):
+        email = self.breach_target.get_text().strip()
+        self.terminal.log(f"INITIATING_DDEEPHAT_BREACH_CORRELATION: {email}", "AI")
+        # Instantiate Credentials once or use static if available
+        c = Credentials()
+        c.deep_leak_correlation(email, on_output=self.on_output)

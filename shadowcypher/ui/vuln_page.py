@@ -25,6 +25,7 @@ class VulnScannerPage(BasePage):
         notebook.append_page(self._build_nikto_tab(), Gtk.Label(label="Nikto"))
         notebook.append_page(self._build_sqlmap_tab(), Gtk.Label(label="SQLmap"))
         notebook.append_page(self._build_nse_tab(), Gtk.Label(label="Nmap NSE"))
+        notebook.append_page(self._build_shadow_tab(), Gtk.Label(label="Shadow Audit"))
         self.workspace.pack_start(notebook, False, False, 0)
 
     def _build_nikto_tab(self):
@@ -101,3 +102,18 @@ class VulnScannerPage(BasePage):
             tags="cve,vuln",
             on_output=lambda x: GLib.idle_add(self.terminal.log, x.strip(), "NMAP"),
         )
+
+    def _build_shadow_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
+        self.shadow_target = Gtk.Entry(); self.shadow_target.set_placeholder_text("Target for Heuristic Audit")
+        box.pack_start(self.shadow_target, False, False, 0)
+
+        btn = self.make_action_btn("\U0001f441\ufe0f INITIATE_SHADOW_SCAN", self._on_shadow_audit, "danger-btn")
+        box.pack_start(btn, False, False, 0)
+        return box
+
+    def _on_shadow_audit(self, btn):
+        target = self.shadow_target.get_text().strip()
+        self.terminal.log("ENGAGING_DEEPHAT_HEURISTICS...", "AI")
+        self._scanner.shadow_zero_day_scan(target, on_output=self.on_output)
