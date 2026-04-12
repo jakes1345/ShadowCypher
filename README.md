@@ -1,75 +1,82 @@
-# ShadowCypher — DEEPHAT APEX Edition
+# ShadowCypher — Professional Offensive Security Workstation
 
-> **Version 4.5.5-DEEPHAT** | GTK3 Offensive Workstation | Python 3.12+
+> **Build 4.5.8-ULTIMA** | Enterprise-Grade Tactical HUD | Python 3.12 Compliance
 > 
-> **The Obsidian Citadel Protocol**: A high-performance, autonomous offensive platform equipped with **DeepHat Ultima** weapon synthesis and **Sovereign Hub** command hardening.
+> **ShadowCypher** is a sovereign, high-fidelity security platform engineered for autonomous mission execution, advanced signal intelligence, and multi-spectrum offensive synthesis.
 
 ---
 
-## ⚡ Quick Start
+## 🏛️ Tactical Architecture
+
+ShadowCypher utilizes the **Obsidian Citadel Protocol**, a decoupled, mission-aware architecture that ensures zero-interference operations across complex network topographies.
+
+```mermaid
+graph TD
+    A[Tactical Interface] --> B[ShadowBus Event Bridge]
+    B --> C[Sovereign Hub - Hardened Command]
+    C --> D[Autonomous Intelligence Cluster]
+    D --> E[Weapon Synthesis Engine]
+    E --> F[Artifact Deployment]
+    B --> G[Sisyphus Integrity Monitor]
+    G --> H[Post-Quantum Audit]
+```
+
+---
+
+## ⚡ Mission Initialization
+
+The platform expects a hardened Linux environment with standard GLib/GTK dependencies.
 
 ```bash
-# Clone & Launch (Bypass Environment Checks)
+# Clone the Core Repository
 git clone https://github.com/jakes1345/ShadowCypher.git
-cd ShadowCypher && pip install -r requirements.txt
+cd ShadowCypher
+
+# Environment Preparation
+pip install -r requirements.txt
+
+# Terminal Engagement
 python3 -m shadowcypher.app
 ```
 
 ---
 
-## 🏗️ Core Architecture: V4 Hardening
+## 🛡️ Sovereign Security & Hardening
 
-<details>
-<summary><b>1. Sovereign Hub (Double-Gate Security)</b></summary>
-A dual-port WebSocket server (8888/44444) with mandatory HMAC-SHA256 handshaking. No connection is accepted without the target secret signature.
-</details>
+ShadowCypher enforces strict cryptographic governance to ensure platform integrity and operator anonymity.
 
-<details>
-<summary><b>2. DeepHat Ultima (Synthesis Engine)</b></summary>
-The uncensored brain of the platform. Utilizes <b>Gemma-4-Heretic</b> for autonomous multi-file weapon forging (Exploits, C2, Doxing).
-</details>
-
-<details>
-<summary><b>3. ShadowPulse SIGINT</b></summary>
-Wavelet-based signal intelligence engine that analyzes tactical latency to evade EDR/IDS via temporal throttling.
-</details>
-
-<details>
-<summary><b>4. Sisyphus Sentinel</b></summary>
-Autonomous health governance. Performs Post-Quantum Security Audits (PQSA) to detect legacy cryptographic vulnerabilities.
-</details>
+*   **Hardened Sovereign Hub**: Dual-port command plane (8888/44444) utilizing mandatory **HMAC-SHA256** handshakes signed with a rotational mission secret.
+*   **Cryptographic Identity**: Admin rights are exclusively verified via **RSA-4096** challenge-response. Non-verified sessions operate in a restricted "Operator" mode.
+*   **ShadowPulse SIGINT**: Real-time temporal analyzer that detects EDR/IDS interference and injects micro-delays to maintain a non-stationary signal footprint.
+*   **Quantum Readiness**: The **Sisyphus Sentinel** performs periodic Post-Quantum Security Audits (PQSA), identifying and forcing upgrades on legacy cryptographic primitives.
 
 ---
 
-## 🛠️ Module Arsenal (V4 Enhanced)
+## 🔧 Offensive Arsenal (Ultima Matrix)
 
-| Category | High-Impact Tools |
-|----------|-------------------|
-| **RECON** | Signal Recon, Deep OSINT Hub, ShadowPulse Pulse |
-| **OFFENSIVE** | **DeepHat Exploit Forge**, Nuclei, Web Assault, **Hyper-Dox** |
-| **ADVANCED** | **Golden Ticket Synthesis**, Mutating Stagers, Secure HTTPS Tunnels |
-| **SYSTEM** | Firewall Control, Gaming OSINT (Steam), High-Fidelity Forensic Registry |
+The arsenal is organized into logical strike-groups, each powered by a dedicated autonomous controller.
 
----
-
-## 🤖 AI Engine Setup (Ollama-First)
-
-ShadowCypher is optimized for **unconstrained local models**.
-
-1. **Install Ollama**: `curl -fsSL https://ollama.com/install.sh | sh`
-2. **Pull Heretic**: `ollama pull gemma-4-heretic` (or gemma3 for base ops)
-3. **Toggle**: Open Tactical Swarm AI → ⚙ Settings → Select Provider.
+| Strike Group | Capabilities | Engineering Focus |
+|--------------|--------------|-------------------|
+| **Recon & Intel** | Signal Recon, Deep OSINT Hub, ShadowPulse Pulse | Sub-threshold signal detection. |
+| **Offensive Strike** | Ultima Shellcode Synthesis, Heuristic Zero-Day Audit | Unconstrained weapon forging. |
+| **Advanced Ops** | Golden Ticket Synthesis, Mutating Stagers, HTTPS Tunnels | Persistence & Evasion. |
+| **Integrity Ops** | Sisyphus Governance, Forensic Audit Logger | Operational health & traceability. |
 
 ---
 
-## 🛡️ Administrative Identity
+## 🤖 Intelligence Engine Integration
 
-Admin status is **cryptographically verified** via RSA-4096 challenge-response. Only the session holding `admin_private.pem` can generate license keys or decrypt support tickets.
+ShadowCypher supports deep integration with local and cloud-based intelligence clusters. For sovereign operations, the platform is optimized for the **Heretic Synthesis Model**.
+
+1. **Local Engine**: Optimized for **Ollama-based** inference.
+2. **Setup**: Access the **Autonomous Engine** tab → **Settings** to activate your provider.
+3. **Synthesis**: The **DeepHat Ultima** engine autonomously forges multi-file exploit chains based on heuristic audit data.
 
 ---
 
-## ⚖️ Legal & Security
+## ⚖️ Legal Disclaimer
 
-Authorized penetration testing only. See [LICENSE](LICENSE) for terms.
+ShadowCypher is a professional-grade offensive security tool intended for **authorized penetration testing and research only**. Unauthorized engagement against infrastructure not under the operator's explicit mandate is illegal and strictly prohibited.
 
-> **Status**: APEX_STABLE | Deployment Ready
+> **Status**: APEX_STABLE | Deployment Ready | Sovereign Build Verified 
