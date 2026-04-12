@@ -3,10 +3,8 @@ Sovereign Platform Engine — Cross-Platform Abstraction for ShadowCypher.
 Abstracts OS-specific commands (Windows, Linux, macOS) to ensure Apex parity.
 """
 
-import sys
-import os
-import subprocess
-import platform
+import sys, os, subprocess, platform
+from typing import Dict, List, Optional, Any
 
 class ShadowPlatform:
     """The Cross-Platform brain of ShadowCypher."""
