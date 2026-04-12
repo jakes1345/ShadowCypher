@@ -44,10 +44,10 @@ class Kairos:
         pulse.ingest("tactical_feed", float(len(line)))
         
         # Periodic Spectrum Audit (Every 50 lines)
-        if hasattr(self, '_line_count'):
-            self._line_count += 1
-        else:
-            self._line_count = 1
+        if not hasattr(self, '_line_count'):
+            self._line_count: int = 0
+            
+        self._line_count += 1
             
         if self._line_count % 50 == 0:
             analysis = pulse.analyze_spectrum("tactical_feed")

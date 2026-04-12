@@ -32,7 +32,7 @@ class IRCClient:
     def __init__(self, server: str = "irc.libera.chat", port: int = 6697,
                  channel: str = "#shadowcypher-support",
                  nick: str = "sc_operator", use_ssl: bool = True,
-                 sasl_user: str = None, sasl_pass: str = None,
+                 sasl_user: Optional[str] = None, sasl_pass: Optional[str] = None,
                  auto_reconnect: bool = True, max_reconnect_delay: int = 300):
         self.server = server
         self.port = port
