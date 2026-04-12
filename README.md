@@ -1,82 +1,87 @@
-# ShadowCypher — Professional Offensive Security Workstation
+# 🛡️ ShadowCypher: Polyglot Offensive Orchestration Plane
 
-> **Build 4.5.8-ULTIMA** | Enterprise-Grade Tactical HUD | Python 3.12 Compliance
-> 
-> **ShadowCypher** is a sovereign, high-fidelity security platform engineered for autonomous mission execution, advanced signal intelligence, and multi-spectrum offensive synthesis.
+![Project Intelligence - Apex_Stable](https://img.shields.io/badge/Intelligence-Apex_v4.5.8-blueviolet?style=for-the-badge)
+![Runtime - Multi--Interpreter_Bridge](https://img.shields.io/badge/Runtime-Polyglot_Bridge-green?style=for-the-badge)
+![Security - Post--Quantum_Ready](https://img.shields.io/badge/Security-RSA_4096_HMAC_256-black?style=for-the-badge)
+
+**ShadowCypher** is a high-fidelity offensive security workstation designed to unify modern AI-driven synthesis with a legacy-compatible tactical engine. Unlike unified-version frameworks, ShadowCypher utilizes a **Polyglot Runtime Bridge** to execute thousands of security tools across disparate environments (Python 2.7, Python 3.x, Go, C++, Rust, and Bash) within a single, hardened command plane.
 
 ---
 
-## 🏛️ Tactical Architecture
+## 🏛️ Direct-Link Architecture: The Obsidian Citadel
 
-ShadowCypher utilizes the **Obsidian Citadel Protocol**, a decoupled, mission-aware architecture that ensures zero-interference operations across complex network topographies.
+ShadowCypher circumvents standard virtual machine overhead by utilizing **Direct-Link Native Binders**. This allows the UI to communicate with offensive modules via a high-speed inter-process event bus, zero-cladding execution, and specialized linker optimizations (`mold`).
 
 ```mermaid
 graph TD
-    A[Tactical Interface] --> B[ShadowBus Event Bridge]
-    B --> C[Sovereign Hub - Hardened Command]
-    C --> D[Autonomous Intelligence Cluster]
-    D --> E[Weapon Synthesis Engine]
-    E --> F[Artifact Deployment]
-    B --> G[Sisyphus Integrity Monitor]
-    G --> H[Post-Quantum Audit]
+    UI[Tactical HUD] --> BUS[ShadowBus Event Bridge]
+    BUS --> HUB[ShadowHub Director]
+    
+    subgraph "Polyglot Runtime Bridge"
+        HUB --> R3[Python 3.12 Engine]
+        HUB --> R2[Legacy Python 2.7 Wrapper]
+        HUB --> RN[Native Binary / Go / Rust]
+    end
+    
+    R3 --> M1[AI Synthesis / DeepHat]
+    R2 --> M2[Responder / Classic Impacket]
+    RN --> M3[Nmap / Nuclei / Metasploit]
 ```
 
 ---
 
-## ⚡ Mission Initialization
+## 🚀 Key Technological Pillars
 
-The platform expects a hardened Linux environment with standard GLib/GTK dependencies.
+### 1. Polyglot Runtime Resolution
+The platform autonomously detects the mandatory environment for any given tactical script. 
+-   **Header Analysis**: Scrapes shebangs and file metadata to determine if a legacy Python 2.7 interpreter or a specific shell context is required.
+-   **Zero-Config Execution**: Automatically wraps commands like `Responder.py` with the correct prefix, regardless of the core platform's version.
 
+### 2. High-Fidelity Signal Synthesis
+Using the **DeepHat Ultima** engine, ShadowCypher doesn't just run tools—it forges them.
+-   **Heuristic Adaptation**: AI-driven analysis of scan data informs the synthesis of mutating stagers and custom EDR bypasses.
+-   **Artifact Forging**: Synchronizes with the local signal-pulse to ensure payloads are temporally aligned with target network windows.
+
+### 3. Hardened Sovereign Operations
+Security is enforced at the kernel and application layer to ensure absolute operator discretion.
+-   **MTLS Engagement**: All internal communications between the UI and sub-processes are signed via HMAC-SHA256.
+-   **RSA-4096 Identity**: Administrative elevation is locked behind asymmetric challenge-response handshakes.
+
+---
+
+## 🔧 Offensive Arsenal & Strike Groups
+
+| Strike Group | Logic Engine | Primary Focus |
+|--------------|--------------|---------------|
+| **SIGINT & Recon** | Native C / Go | Sub-threshold signal discovery and gateway fingerprinting. |
+| **Exploit Forge** | DeepHat Synthesis | Autonomous zero-day audit and shellcode mutation. |
+| **Identity Strike** | Legacy Python 2.7 | Kerberos spoofing, AD pivoting, and NTLM relaying. |
+| **Deployment** | HTTPS / Tunneling | Secure phishing lures and SSL-hardened persistence. |
+
+---
+
+## ⚡ Quick Engagement
+
+### 1. Workstation Preparation
 ```bash
-# Clone the Core Repository
+# Install the Obsidian dependency matrix
+sudo apt-get update && sudo apt-get install -y \
+    python3-gi python2 gir1.2-gtk-3.0 \
+    libcairo2-dev libgtk-3-dev xvfb
+```
+
+### 2. Command Plane Ignition
+```bash
 git clone https://github.com/jakes1345/ShadowCypher.git
 cd ShadowCypher
-
-# Environment Preparation
 pip install -r requirements.txt
-
-# Terminal Engagement
-python3 -m shadowcypher.app
+./shadowcypher_launch
 ```
 
 ---
 
-## 🛡️ Sovereign Security & Hardening
+## ⚖️ Operational Mandate
 
-ShadowCypher enforces strict cryptographic governance to ensure platform integrity and operator anonymity.
+This workstation is a specialized instrument for **authorized research and penetration testing**. Unauthorized engagement of external infrastructure is illegal. The operator holds 100% liability for missions dispatched via the Sovereign Hub.
 
-*   **Hardened Sovereign Hub**: Dual-port command plane (8888/44444) utilizing mandatory **HMAC-SHA256** handshakes signed with a rotational mission secret.
-*   **Cryptographic Identity**: Admin rights are exclusively verified via **RSA-4096** challenge-response. Non-verified sessions operate in a restricted "Operator" mode.
-*   **ShadowPulse SIGINT**: Real-time temporal analyzer that detects EDR/IDS interference and injects micro-delays to maintain a non-stationary signal footprint.
-*   **Quantum Readiness**: The **Sisyphus Sentinel** performs periodic Post-Quantum Security Audits (PQSA), identifying and forcing upgrades on legacy cryptographic primitives.
-
----
-
-## 🔧 Offensive Arsenal (Ultima Matrix)
-
-The arsenal is organized into logical strike-groups, each powered by a dedicated autonomous controller.
-
-| Strike Group | Capabilities | Engineering Focus |
-|--------------|--------------|-------------------|
-| **Recon & Intel** | Signal Recon, Deep OSINT Hub, ShadowPulse Pulse | Sub-threshold signal detection. |
-| **Offensive Strike** | Ultima Shellcode Synthesis, Heuristic Zero-Day Audit | Unconstrained weapon forging. |
-| **Advanced Ops** | Golden Ticket Synthesis, Mutating Stagers, HTTPS Tunnels | Persistence & Evasion. |
-| **Integrity Ops** | Sisyphus Governance, Forensic Audit Logger | Operational health & traceability. |
-
----
-
-## 🤖 Intelligence Engine Integration
-
-ShadowCypher supports deep integration with local and cloud-based intelligence clusters. For sovereign operations, the platform is optimized for the **Heretic Synthesis Model**.
-
-1. **Local Engine**: Optimized for **Ollama-based** inference.
-2. **Setup**: Access the **Autonomous Engine** tab → **Settings** to activate your provider.
-3. **Synthesis**: The **DeepHat Ultima** engine autonomously forges multi-file exploit chains based on heuristic audit data.
-
----
-
-## ⚖️ Legal Disclaimer
-
-ShadowCypher is a professional-grade offensive security tool intended for **authorized penetration testing and research only**. Unauthorized engagement against infrastructure not under the operator's explicit mandate is illegal and strictly prohibited.
-
-> **Status**: APEX_STABLE | Deployment Ready | Sovereign Build Verified 
+> **Status**: APEX_STABLE | Deployment Ready | Legacy Support: ACTIVE

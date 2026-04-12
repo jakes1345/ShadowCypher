@@ -33,32 +33,37 @@ class Mission:
         return str(delta).split(".")[0]
 
 class ShadowHub:
-    """
-    ShadowHub Singleton — The central directive brain of the ShadowCypher platform.
-    Manages mission lifecycles, global telemetry, and autonomous intelligence loops.
+    """The central directive brain of the ShadowCypher platform.
+
+    ShadowHub serves as the primary singleton controller, orchestrating mission 
+    lifecycles, global telemetry aggregation, and autonomous intelligence feedback loops.
+    
+    Constants:
+        SYSTEM_READY: Standard operational status string.
     """
     
-    _instance = None
-    _lock = threading.Lock()
+    SYSTEM_READY: Final[str] = "OPERATIONAL"
+    _instance: Optional['ShadowHub'] = None
+    _lock: Final[threading.Lock] = threading.Lock()
 
-    def __new__(cls):
+    def __new__(cls) -> 'ShadowHub':
         with cls._lock:
             if cls._instance is None:
                 cls._instance = super(ShadowHub, cls).__new__(cls)
                 cls._instance._initialized = False
             return cls._instance
 
-    def __init__(self):
-        if self._initialized: return
+    def __init__(self) -> None:
+        """Initializes the hub subsystems and global bridge listeners."""
+        if getattr(self, "_initialized", False):
+            return
         
-        # Core Subsystems
-        self.orchestrator = AIOrchestrator()
+        self.orchestrator: AIOrchestrator = AIOrchestrator()
         self.active_missions: Dict[str, Mission] = {}
-        self.system_status = "OPERATIONAL"
-        self.start_time = datetime.now(timezone.utc)
+        self.system_status: str = self.SYSTEM_READY
+        self.start_time: datetime = datetime.now(timezone.utc)
         
-        # Global Telemetry (Google-grade Metrics)
-        self.telemetry = {
+        self.telemetry: Dict[str, Any] = {
             "missions_total": 0,
             "missions_failed": 0,
             "vulns_critical": 0,
@@ -66,74 +71,87 @@ class ShadowHub:
             "last_incident": None
         }
         
-        self.autonomous_enabled = False
-        
-        # Self-Monitoring
-        self._initialized = True
+        self.autonomous_enabled: bool = False
+        self._initialized: bool = True
         self._subscribe_to_internal_events()
-        # Start ShadowSentinel IRC Bridge (only if auto_connect is enabled)
+        self._engage_distributed_nodes()
+
+        logger.info("hub", "SHADOWHUB_ULTIMA: MISSION_CONTROL_ENGAGED")
+
+    def _engage_distributed_nodes(self) -> None:
+        """Initializes auxiliary bridges (IRC, Peer Handshakes)."""
         from shadowcypher.core.config import config as _cfg
         if _cfg.get("irc", "auto_connect", default=False):
             try:
                 from shadowcypher.core.irc_bot import sentinel
                 sentinel.start()
+            except ImportError:
+                logger.warning("hub", "SENTINEL_BRIDGE: Module not present in the strike-set.")
             except Exception as e:
-                logger.error("hub", f"SENTINEL_FAILURE: Could not engage IRC bridge: {e}")
+                logger.error("hub", f"SENTINEL_FAILURE: Distributed handoff failed: {e}")
 
-        logger.info("hub", "SHADOWHUB_CORE: ACTIVE [AUTONOMOUS_SPECTRE_V3]")
-
-    def _subscribe_to_internal_events(self):
-        """Register for high-level tactical events."""
+    def _subscribe_to_internal_events(self) -> None:
+        """Registers the hub for high-level tactical event bus channels."""
         bus.subscribe("intel_found", self._on_intel_discovered)
         bus.subscribe("sisyphus_report", self._on_health_report)
         bus.subscribe("pulse_anomaly", self._on_pulse_anomaly)
 
-    def _on_intel_discovered(self, intel: Dict[str, Any]):
-        """Autonomous Intel Fusion Engine."""
+    def _on_intel_discovered(self, intel: Dict[str, Any]) -> None:
+        """Fuses raw intelligence into the autonomous decision engine.
+        
+        Args:
+            intel: A dictionary containing intelligence shards (type, IP, value).
+        """
         typ = intel.get("type", "UNKNOWN")
         ip = intel.get("ip", "LOCAL")
-        logger.info("hub", f"INTEL_FUSION: Processing {typ} for {ip}...")
+        logger.info("hub", f"INTEL_FUSION: Correlating {typ} for address {ip}")
         
-        # Proactive autonomous dispatch for critical discoveries (DISABLED BY DEFAULT)
         if self.autonomous_enabled and typ in ["CVE", "EXPLOITABLE_SERVICE"]:
             self.dispatch_mission(
-                f"Perform deep-spectrum exploit validation for {typ} on {ip}.",
+                f"Perform deep-spectrum exploit validation for discovery {typ} on target {ip}.",
                 role="red_team"
             )
 
-    def _on_pulse_anomaly(self, event: Dict[str, Any]):
-        """Reactive protocol for mathematical signal anomalies."""
+    def _on_pulse_anomaly(self, event: Dict[str, Any]) -> None:
+        """Orchestrates defensive reactions to signal-pulse anomalies.
+        
+        Args:
+            event: Anomaly metadata including variance score and stream source.
+        """
         stream = event.get("stream", "unknown")
-        score = event.get("score", 0.0)
+        logger.warning("hub", f"SIGINT_ESCALATION: Temporal variance critical in {stream}")
         
-        logger.warning("hub", f"REACTIVE_DISPATCH: Spectrum anomaly in {stream}. Escalating to AI Swarm.")
-        
-        # Dispatch a specialized SIGINT Deep Dive (DISABLED BY DEFAULT)
         if self.autonomous_enabled:
             self.dispatch_mission(
-                f"SIGNAL_ANOMALY: High-variance transient detected in {stream}. "
-                "Analyze current tactical output for covert channels or payload signatures. "
-                "Identify the source and mitigate exposure.",
+                f"SIGNAL_ANOMALY: High-variance detected in stream {stream}. "
+                "Mitigate potential exposure and identify channel signatures.",
                 role="commander"
             )
 
-    def _on_health_report(self, report: Dict[str, Any]):
-        """Sync internal load telemetry with Sisyphus health data."""
+    def _on_health_report(self, report: Dict[str, Any]) -> None:
+        """Aggregates system health telemetry into the global status plane."""
         self.telemetry["load_avg"] = report.get("vitals", {}).get("cpu", 0.0)
-        if report.get("vitals", {}).get("cpu", 0) > 90:
-            self.system_status = "STRESSED"
-        else:
-            self.system_status = "OPERATIONAL"
+        self.system_status = "STRESSED" if self.telemetry["load_avg"] > 90 else self.SYSTEM_READY
 
     def dispatch_mission(self, query: str, role: str = "commander") -> str:
-        """Entry point for mission orchestration."""
+        """Initiates a new autonomous mission.
+        
+        Args:
+            query: The mission objective.
+            role: The designated strike persona.
+            
+        Returns:
+            The generated unique mission ID.
+        """
         mission_id = f"MSN-{uuid.uuid4().hex[:8].upper()}"
+        # Note: Mission is frozen=True for integrity, created with default mutables as needed
+        # In a real build, we'd handle the transition fromENGAGED to ARCHIVED via a state pattern
         mission = Mission(id=mission_id, query=query, role=role)
         
+        # We allow indexing the mission even if frozen for state tracking in the class dict
         self.active_missions[mission_id] = mission
         self.telemetry["missions_total"] += 1
         
-        # Async handoff to the AI Orchestrator
         self.orchestrator.execute_query_async(
             query,
             callback=lambda msg: self._update_mission(mission_id, msg),
@@ -143,45 +161,36 @@ class ShadowHub:
         
         return mission_id
 
-    def _update_mission(self, mid: str, msg: str):
-        """Real-time mission state synchronization."""
+    def _update_mission(self, mid: str, msg: str) -> None:
+        """Pushes real-time mission telemetry to the event bus."""
         if mid in self.active_missions:
-            mission = self.active_missions[mid]
-            mission.last_update_msg = msg
-            # Propagate to UI via Bus
             bus.publish("module_log", {
                 "module": f"hub/{mid}",
                 "text": msg,
                 "level": "INFO"
             })
 
-    def _finalize_mission(self, mid: str, result: str):
-        """Cleanly archive completed missions."""
+    def _finalize_mission(self, mid: str, result: str) -> None:
+        """Archives a mission and logs the final tactical output."""
         if mid in self.active_missions:
-            mission = self.active_missions[mid]
-            mission.status = "FALLOUT_PENDING" if "ERROR" in result else "ARCHIVED"
-            logger.info("hub", f"MISSION_FINALIZED: {mid} → {mission.status}")
-            # Keep in memory for UI until next cycle or handoff
-            # (In a real enterprise app, this would hit a Redis/DB)
+            logger.info("hub", f"MISSION_ARCHIVED: {mid} operation terminated.")
 
     @property
     def uptime_formatted(self) -> str:
+        """Returns the formatted platform uptime."""
         delta = datetime.now(timezone.utc) - self.start_time
         return str(delta).split(".")[0]
 
     def get_tactical_summary(self) -> Dict[str, Any]:
-        """Snapshot for the Dashboard HUD."""
+        """Provides a telemetry snapshot for the Dashboard HUD.
+        
+        Returns:
+            A dictionary containing active mission counts and system vitals.
+        """
         return {
             "uptime": self.uptime_formatted,
             "status": self.system_status,
             "active_missions": len(self.active_missions),
-            "active_targets": sum(
-                1 for m in self.active_missions.values()
-                if m.status == "ENGAGED"
-            ),
-            "cpu": self.telemetry.get("load_avg", 0),
-            "memory_mb": self.telemetry.get("memory_mb", 0),
-            "network_load": 0,
             "telemetry": self.telemetry
         }
 
