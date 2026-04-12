@@ -70,7 +70,8 @@ class C2Manager:
             return cls._instance
 
     def __init__(self, bind_ip: str = "0.0.0.0", bind_port: int = 4444):
-        if self._initialized: return
+        if self._initialized:
+            return
         
         self.sessions: Dict[str, C2Session] = {}
         self.bind_ip = bind_ip
@@ -81,10 +82,13 @@ class C2Manager:
 
     def start_listener(self, port: Optional[int] = None, bind_ip: Optional[str] = None):
         """Invoke the background C2 listener thread with optional bind overrides."""
-        if self._active: return
+        if self._active:
+            return
         
-        if port: self.bind_port = port
-        if bind_ip: self.bind_ip = bind_ip
+        if port:
+            self.bind_port = port
+        if bind_ip:
+            self.bind_ip = bind_ip
         
         name = f"C2-HiveListener-{self.bind_port}"
         thread = threading.Thread(target=self._run_server, name=name, daemon=True)
