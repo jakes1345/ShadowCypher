@@ -8,11 +8,17 @@ import threading
 import uuid
 import os
 import shlex
+from typing import Dict, List, Optional, Any, Callable, Union, Final
 from shadowcypher.core.bus import bus
 from shadowcypher.core.platform import platform_engine
 
 class Runner:
-    """The central execution artery of ShadowCypher."""
+    """The central execution artery of the ShadowCypher platform.
+
+    The Runner class standardizes asynchronous process execution across multiple
+    operating systems, ensuring high-performance I/O and robust process lifecycle
+    management through the Obsidian Citadel event bridge.
+    """
     
     def __init__(self):
         self.active_processes = {}
@@ -40,9 +46,26 @@ class Runner:
                 except Exception as e:
                     pass
 
-    def execute_task(self, name, command, callback=None, cwd=None):
+    def execute_task(self, name: str, command: Union[str, List[str]], 
+                     callback: Optional[Callable[[str], None]] = None, 
+                     cwd: Optional[str] = None) -> str:
+        """Dispatches a tactical operation to the background.
+        
+        Args:
+            name: Human-readable task name prefix.
+            command: The command string or argument list to execute.
+            callback: Optional callable for real-time output ingestion.
+            cwd: The directory context for execution.
+            
+        Returns:
+            The generated unique task identifier string.
+        """
         task_id = f"{name[:4]}_{str(uuid.uuid4())[:4]}"
-        threading.Thread(target=self._run, args=(task_id, name, command, callback, cwd, False), daemon=True).start()
+        threading.Thread(
+            target=self._run, 
+            args=(task_id, name, command, callback, cwd, False), 
+            daemon=True
+        ).start()
         return task_id
 
     def execute_task_shell(self, name, command, callback=None):
@@ -50,23 +73,35 @@ class Runner:
         threading.Thread(target=self._run, args=(task_id, name, command, callback, None, True), daemon=True).start()
         return task_id
 
-    def _run(self, task_id, name, command, callback, cwd, is_shell):
+    def _run(self, task_id: str, name: str, command: Union[str, List[str]], 
+             callback: Optional[Callable[[str], None]], 
+             cwd: Optional[str], is_shell: bool) -> None:
+        """Internal execution loop with polyglot runtime resolution."""
         try:
-            # 1. CROSS-PLATFORM ELEVATION
-            if not is_shell and isinstance(command, list) and command[0] == "sudo":
-                if self.platform.IS_LINUX:
-                    command = ["pkexec"] + command[1:]
-                elif self.platform.IS_WINDOWS:
-                    command = ["powershell", "Start-Process", "-Verb", "runAs"] + command[1:]
-                # macOS stays sudo for now (Gtk-based GUI sudo is complex)
-
-            # 2. BINARY SUFFIXING (Windows)
-            if self.platform.IS_WINDOWS and not is_shell and isinstance(command, list):
-                if not command[0].endswith(".exe") and not command[0].endswith(".bat"):
-                    command[0] += ".exe"
-
+            # 1. Argument Normalization
             args = command if is_shell else (shlex.split(command) if isinstance(command, str) else command)
             
+            # 2. Polyglot Runtime Bridge (Python 2 vs 3 vs Native)
+            if not is_shell and isinstance(args, list) and args:
+                potential_script = args[0]
+                # Check tools/ and absolute paths
+                if not os.path.exists(potential_script):
+                    proj_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                    tool_path = os.path.join(proj_root, "tools", potential_script)
+                    if os.path.exists(tool_path):
+                        potential_script = tool_path
+                
+                prefix = self.platform.resolve_runtime(potential_script)
+                if prefix:
+                    args = prefix + args
+            
+            # 3. Platform-Aware Elevation
+            if not is_shell and isinstance(args, list) and args[0] == "sudo":
+                if self.platform.IS_LINUX:
+                    args = ["pkexec"] + args[1:]
+                elif self.platform.IS_WINDOWS:
+                    args = ["powershell", "Start-Process", "-Verb", "runAs"] + args[1:]
+
             proc = subprocess.Popen(
                 args, shell=is_shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, bufsize=1, env=self._perf_env, cwd=cwd,
@@ -76,20 +111,21 @@ class Runner:
             with self._lock:
                 self.active_processes[task_id] = proc
             
-            while True:
-                line = proc.stdout.readline()
-                if not line and proc.poll() is not None:
-                    break
-                if line:
-                    if callback: callback(line)
+            # 4. Stream Management
+            if proc.stdout:
+                for line in iter(proc.stdout.readline, ""):
+                    if callback:
+                        callback(line)
                     bus.publish("mission_output", {"task": task_id, "text": line})
             
-            proc.wait(timeout=1200)
-            if callback: callback(f"\n[MISSION_{name[:4]}_EXIT: {proc.returncode}]")
+            proc.wait(timeout=1800)
+            if callback:
+                callback(f"\n[MISSION_{name[:4]}_TERM: Return {proc.returncode}]")
         except Exception as e:
-            if callback: callback(f"[ERROR] APEX_RUNNER_FAULT: {e}")
+            if callback:
+                callback(f"[ERROR] RUNNER_CRITICAL_FAULT: {str(e)}")
         finally:
             with self._lock:
                 self.active_processes.pop(task_id, None)
 
-runner = Runner()
+runner: Final[Runner] = Runner()

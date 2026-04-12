@@ -57,4 +57,34 @@ class ShadowPlatform:
         except: return "GENERIC_APEX_PROCESSOR"
         return "UNKNOWN"
 
+    @staticmethod
+    def resolve_runtime(file_path: str) -> list[str]:
+        """Detects and returns the mandatory execution prefix for a given script.
+        
+        Analyzes shebang headers and file extensions to ensure compatibility across
+        Python 2.7, Python 3.x, and native shell environments.
+        """
+        if not os.path.exists(file_path):
+            return []
+
+        # 1. Extension Check
+        if file_path.endswith(".py"):
+            # Check shebang for python2 requirement
+            try:
+                with open(file_path, 'r', errors='ignore') as f:
+                    first_line = f.readline()
+                    if "python2" in first_line:
+                        return ["python2"]
+            except: pass
+            return ["python3"]
+        
+        if file_path.endswith(".sh"): return ["bash"]
+        if file_path.endswith(".ps1"): return ["powershell", "-File"]
+        
+        # 2. Binary / Compiled Check
+        if os.access(file_path, os.X_OK):
+            return [] # Execute directly
+            
+        return []
+
 platform_engine = ShadowPlatform()
