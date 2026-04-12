@@ -95,10 +95,9 @@ class ShadowHub:
         logger.info("hub", f"INTEL_FUSION: Correlating {typ} for address {ip}")
         
         if self.autonomous_enabled and typ in ["CVE", "EXPLOITABLE_SERVICE"]:
-            # FIXME: Make sure targeting is 100% verified before auto-pwn
             self.dispatch_mission(
                 f"Perform deep-spectrum exploit validation for discovery {typ} on target {ip}.",
-                role="red_team"
+                agent_role="red_team"
             )
 
     def _on_pulse_anomaly(self, event: Dict[str, Any]) -> None:
@@ -110,7 +109,7 @@ class ShadowHub:
             self.dispatch_mission(
                 f"SIGNAL_ANOMALY: High-variance detected in stream {stream}. "
                 "Mitigate potential exposure and identify channel signatures.",
-                role="commander"
+                agent_role="commander"
             )
 
     def _on_health_report(self, report: Dict[str, Any]) -> None:

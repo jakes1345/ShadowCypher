@@ -48,7 +48,7 @@ class BasePage(Gtk.Box):
         self.terminal = TacticalTerminal(height=340)
         self.main_pod.pack_start(self.terminal, True, True, 0)
         
-        self._action_buttons = []
+        self._action_buttons: list[Gtk.Button] = []
 
     def log(self, text, tag="INFO"):
         """Thread-safe logging."""

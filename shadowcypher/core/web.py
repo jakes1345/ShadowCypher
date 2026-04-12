@@ -104,7 +104,7 @@ class StealthFetcher:
             return False
 
     def fetch_l1(self, url: str, timeout: int = 20,
-                 impersonate: str = None, **kwargs) -> Optional[str]:
+                 impersonate: Optional[str] = None, **kwargs) -> Optional[str]:
         """L1: curl_cffi with browser TLS fingerprint impersonation.
         This mimics the exact TLS handshake (JA3/JA4) of a real browser,
         which bypasses Cloudflare's TLS fingerprint detection."""
@@ -303,9 +303,9 @@ class StealthFetcher:
     # ──────────────────────────────────────────────
 
     def fetch_l4(self, url: str, timeout: int = 30,
-                 wait_selector: str = None,
-                 screenshot: str = None,
-                 proxy: str = None) -> Optional[str]:
+                 wait_selector: Optional[str] = None,
+                 screenshot: Optional[str] = None,
+                 proxy: Optional[str] = None) -> Optional[str]:
         """L4: Full headless browser with stealth patches.
         Handles Cloudflare Turnstile, JS challenges, and behavioral analysis.
         Requires: pip install playwright && playwright install chromium"""

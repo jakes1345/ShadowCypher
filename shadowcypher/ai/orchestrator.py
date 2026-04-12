@@ -140,6 +140,11 @@ class AIOrchestrator:
         threading.Thread(target=_mission, daemon=True).start()
         return mission_id
 
+    def queue_mission(self, query: str, agent_role: str = "red_team"):
+        """Asynchronously queues a mission for the autonomous hive mind."""
+        logger.info("ai", f"MISSION_QUEUED: {query[:64]}...")
+        self.execute_query_async(query, agent_role=agent_role)
+
     def execute_sync(self, query, **kwargs):
         """Synchronous wrapper for execute_query."""
         return self.execute_query(query, **kwargs)
