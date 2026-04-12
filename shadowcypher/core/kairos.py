@@ -38,7 +38,23 @@ class Kairos:
         if not line or not line.strip(): return
         line = line.strip()
 
-        # 1. Target Discovery
+        # 1. Pulse Ingestion (Temporal Metadata)
+        # We track the 'Transient Density' of the incoming data stream
+        from shadowcypher.core.pulse import pulse
+        pulse.ingest("tactical_feed", float(len(line)))
+        
+        # Periodic Spectrum Audit (Every 50 lines)
+        if hasattr(self, '_line_count'):
+            self._line_count += 1
+        else:
+            self._line_count = 1
+            
+        if self._line_count % 50 == 0:
+            analysis = pulse.analyze_spectrum("tactical_feed")
+            if analysis.get("status") == "CAUTION":
+                logger.warning("kairos", f"PULSE_WARNING: Non-stationary transient detected in stream. Score: {analysis['anomaly_score']}")
+
+        # 2. Target Discovery
         ips = self._ip_re.findall(line)
         for ip in ips:
             if not ip.startswith(("127.", "255.")):

@@ -11,9 +11,10 @@
 @define-color bg_elevated #1e293b;
 @define-color bg_glass alpha(#111827, 0.85);
 
-@define-color border_glow alpha(#00d4ff, 0.35);
-@define-color border_subtle alpha(#94a3b8, 0.12);
-@define-color border_active alpha(#8b5cf6, 0.6);
+@define-color border_glow alpha(#00f2ff, 0.6);
+@define-color border_subtle rgba(255, 255, 255, 0.08);
+@define-color border_active #8b5cf6;
+@define-color glow_cyan rgba(0, 242, 255, 0.3);
 
 @define-color accent_cyan #00d4ff;
 @define-color accent_violet #8b5cf6;
@@ -56,10 +57,11 @@ stack, notebook, grid, box, viewport, scrolledwindow, paned {
 
 /* ── HEADER BAR ── */
 headerbar {
-    background-color: @bg_obsidian;
-    border-bottom: 1px solid @border_glow;
-    padding: 6px 16px;
-    min-height: 42px;
+    background: linear-gradient(180deg, @bg_obsidian 0%, @bg_void 100%);
+    border-bottom: 2px solid @border_glow;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    padding: 8px 16px;
+    min-height: 48px;
 }
 
 headerbar .title {
@@ -100,9 +102,10 @@ row:hover {
 }
 
 row:selected {
-    background-color: alpha(@accent_violet, 0.15);
+    background: linear-gradient(90deg, alpha(@accent_violet, 0.2) 0%, transparent 100%);
     color: @accent_cyan;
-    border-left: 3px solid @accent_violet;
+    border-left: 4px solid @accent_cyan;
+    box-shadow: inset 10px 0 20px alpha(@accent_cyan, 0.05);
 }
 
 .sidebar-header {
@@ -114,17 +117,20 @@ row:selected {
 }
 
 /* ── GLASS CARDS ── */
-.card, .glass-panel, .glass-pod {
-    background-color: @bg_glass;
+.card, .glass-panel, .glass-pod, .glass-card {
+    background: linear-gradient(135deg, alpha(@bg_surface, 0.7) 0%, alpha(@bg_void, 0.9) 100%);
     border: 1px solid @border_subtle;
-    border-radius: 14px;
-    padding: 14px 18px;
-    transition: all 250ms ease-in-out;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    -gtk-outline-radius: 18px;
 }
 
 .card:hover {
-    border-color: @border_glow;
-    background-color: alpha(@bg_elevated, 0.9);
+    border-color: @accent_cyan;
+    background-color: alpha(@bg_elevated, 0.95);
+    box-shadow: 0 0 25px @glow_cyan;
 }
 
 /* ── DATA PODS ── */
@@ -217,6 +223,40 @@ button {
     letter-spacing: 0.5px;
     transition: all 200ms ease-in-out;
     min-height: 20px;
+}
+
+/* --- CITADEL PULSE HUD --- */
+.citadel-pulse {
+    background: rgba(10, 10, 15, 0.95);
+    border-left: 1px solid rgba(0, 255, 157, 0.2);
+    padding: 20px;
+    margin-left: 5px;
+}
+
+.citadel-pulse label {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    color: #00ff9d;
+    text-shadow: 0 0 5px rgba(0, 255, 157, 0.5);
+    letter-spacing: 1px;
+}
+
+.nav-link {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 2px 8px;
+}
+
+.nav-link:hover {
+    background: rgba(0, 255, 157, 0.1);
+    box-shadow: inset 0 0 10px rgba(0, 255, 157, 0.05);
+}
+
+.nav-link.active {
+    background: rgba(0, 255, 157, 0.15);
+    border-left: 3px solid #00ff9d;
+    color: #fff;
 }
 
 button:hover {
@@ -405,4 +445,142 @@ progressbar progress {
     background-color: @accent_cyan;
     border-radius: 6px;
     min-height: 6px;
+}
+
+/* ── MENUS & CONTEXT MENUS (CRITICAL FIX) ── */
+menu, .menu, context-menu {
+    background-color: @bg_elevated;
+    border: 1px solid @border_glow;
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+
+menuitem, .menuitem {
+    background-color: transparent;
+    padding: 8px 16px;
+    border-radius: 8px;
+    color: @text_primary;
+}
+
+menuitem:hover, .menuitem:hover {
+    background-color: alpha(@accent_cyan, 0.15);
+    color: @accent_cyan;
+}
+
+menu separator {
+    background-color: @border_subtle;
+    margin: 6px 0;
+}
+
+/* ── POPOVERS ── */
+popover {
+    background-color: @bg_elevated;
+    border: 1px solid @border_glow;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+popover list {
+    background-color: transparent;
+}
+
+/* ── IRC SPECIFIC (HIGH DENSITY) ── */
+list.user-list row.irc-user-row, 
+row.irc-user-row {
+    padding: 0px 4px;
+    margin: 0;
+    border-radius: 0;
+    min-height: 18px;
+    border: none;
+}
+
+.irc-user-nick {
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.irc-sentinel-nick {
+    color: @accent_amber;
+    font-weight: 800;
+    text-shadow: 0 0 3px rgba(251, 191, 36, 0.4);
+}
+
+@keyframes typing-pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1.0; color: @accent_cyan; }
+    100% { opacity: 0.4; }
+}
+
+.typing-avatar {
+    animation: typing-pulse 1s infinite ease-in-out;
+    font-weight: 900;
+}
+
+/* ── SOVEREIGN POWERS (XAT-STYLE) ── */
+.power-gold {
+    color: #fbbf24;
+    font-weight: 900;
+}
+
+.power-hacker {
+    color: @terminal_green;
+    font-family: monospace;
+}
+
+.power-mod {
+    color: #8b5cf6;
+}
+
+.sovereign-msg {
+    border-left: 3px solid @accent_cyan;
+    padding-left: 10px;
+}
+
+.sovereign-avatar {
+    border-radius: 4px;
+    border: 1px solid @border_subtle;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+/* ── DISCORD-STYLE SIDEBAR ── */
+.channel-sidebar {
+    background: alpha(@bg_darker, 0.8);
+    border-right: 1px solid @border_subtle;
+}
+
+.channel-row {
+    padding: 6px 10px;
+    margin: 2px 5px;
+    border-radius: 4px;
+    color: @text_muted;
+}
+
+.channel-row:hover {
+    background: alpha(@accent_cyan, 0.1);
+    color: @text_primary;
+}
+
+.channel-active {
+    background: alpha(@accent_cyan, 0.2);
+    color: @accent_cyan;
+    font-weight: 800;
+}
+
+/* ── RICH EMBEDS ── */
+.sov-embed {
+    background: alpha(@bg_panel, 0.6);
+    border-left: 4px solid @accent_cyan;
+    border-radius: 4px;
+    padding: 12px;
+    margin: 8px 0;
+}
+
+.xp-badge {
+    font-size: 8px;
+    color: #94a3b8;
+    background: rgba(148, 163, 184, 0.1);
+    padding: 1px 3px;
+    border-radius: 3px;
 }

@@ -13,18 +13,25 @@ class PhishingPage(BasePage):
     def __init__(self):
         super().__init__("\U0001f3a3 PHISHING_ASSAULT (ShadowPhish Bridge)")
 
-        self.main_pod = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.main_pod.get_style_context().add_class("card")
-        self.pack_start(self.main_pod, True, True, 0)
+        from shadowcypher.ui.components import DataPod
+        
+        # Populate Metrics
+        self.pod_creds = DataPod("CAPTURED_CREDS", "0", "cyan")
+        self.pod_uptime = DataPod("SERVER_UPTIME", "IDLE", "violet")
+        self.pod_success = DataPod("SUCCESS_RATIO", "0.0%", "amber")
+        
+        self.metric_strip.pack_start(self.pod_creds, True, True, 0)
+        self.metric_strip.pack_start(self.pod_uptime, True, True, 0)
+        self.metric_strip.pack_start(self.pod_success, True, True, 0)
 
-        # ── TACTICAL NOTEBOOK ──
+        # Build Notebook
         notebook = Gtk.Notebook()
         notebook.append_page(self._build_artifacts_tab(), Gtk.Label(label="Artifacts"))
         notebook.append_page(self._build_server_tab(), Gtk.Label(label="Phish Server"))
         notebook.append_page(self._build_smuggling_tab(), Gtk.Label(label="Smuggling"))
-        self.main_pod.pack_start(notebook, False, False, 0)
-
-        self.build_terminal()
+        self.workspace.pack_start(notebook, True, True, 0)
+        
+        # Termination control
         self.workspace.pack_start(self.build_stop_button(), False, False, 0)
 
     def _build_artifacts_tab(self):

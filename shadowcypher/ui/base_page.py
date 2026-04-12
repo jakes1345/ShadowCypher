@@ -31,7 +31,12 @@ class BasePage(Gtk.Box):
         self.header = TacticalHeader(title.upper())
         self.main_pod.pack_start(self.header, False, False, 0)
 
-        # 2. Workspace Area (For subclasses)
+        # 2. Tactical Metric Strip
+        self.metric_strip = Gtk.Box(spacing=10)
+        self.metric_strip.set_margin_start(20); self.metric_strip.set_margin_end(20)
+        self.main_pod.pack_start(self.metric_strip, False, False, 0)
+
+        # 3. Workspace / Controls Area
         self.workspace = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
         self.workspace.set_margin_top(20)
         self.workspace.set_margin_bottom(20)
@@ -39,8 +44,8 @@ class BasePage(Gtk.Box):
         self.workspace.set_margin_end(20)
         self.main_pod.pack_start(self.workspace, False, False, 0)
 
-        # 3. Apex Terminal
-        self.terminal = TacticalTerminal(height=380)
+        # 4. Apex Terminal (Mission Oversight)
+        self.terminal = TacticalTerminal(height=340)
         self.main_pod.pack_start(self.terminal, True, True, 0)
         
         self._action_buttons = []
@@ -53,7 +58,7 @@ class BasePage(Gtk.Box):
         """Centralized Mission Dispatch."""
         self.header.set_active(True)
         self.log(f"INITIATING_MISSION: {query}", "APEX")
-        hub.register_mission(query, agent_role=role)
+        hub.dispatch_mission(query, agent_role=role)
 
     def make_action_btn(self, label, handler, style="suggested-action"):
         btn = Gtk.Button(label=label)

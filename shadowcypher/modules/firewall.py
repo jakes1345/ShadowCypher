@@ -144,6 +144,44 @@ class Firewall(BaseModule):
             cmd = ["echo", "Unsupported platform"]
         return runner.execute_task(f"ADD_RULE_{chain}", cmd, callback=on_output)
 
+    # ── ADVANCED DEFENSE ──
+
+    @staticmethod
+    def sovereign_lockdown(on_output=None):
+        """INIT_SOVEREIGN_LOCKDOWN: Allow only loopback and established traffic."""
+        from shadowcypher.core.runner import runner
+        if platform_engine.IS_LINUX:
+            # 1. Allow Loopback
+            # 2. Allow Established
+            # 3. Drop INPUT
+            cmd = ["sudo", "bash", "-c", "iptables -A INPUT -i lo -j ACCEPT; iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT; iptables -P INPUT DROP"]
+        else:
+            cmd = ["echo", "Lockdown not yet automated for this platform."]
+        return runner.execute_task("SOVEREIGN_LOCKDOWN", cmd, callback=on_output)
+
+    @staticmethod
+    def ghost_mode(on_output=None):
+        """GHOST_MODE: Silently drop all incoming packets."""
+        from shadowcypher.core.runner import runner
+        if platform_engine.IS_LINUX:
+            cmd = ["sudo", "iptables", "-P", "INPUT", "DROP"]
+        elif platform_engine.IS_WINDOWS:
+            cmd = ["netsh", "advfirewall", "set", "allprofiles", "firewallpolicy", "blockinbound,allowoutbound"]
+        else:
+            cmd = ["echo", "Ghost Mode enabled."]
+        return runner.execute_task("GHOST_MODE", cmd, callback=on_output)
+
+    @staticmethod
+    def get_active_connections(on_output=None):
+        """LIVE_RADAR: Fetch active TCP/UDP connections."""
+        from shadowcypher.core.runner import runner
+        if platform_engine.IS_LINUX:
+            # ss -tapn
+            cmd = ["ss", "-tapn"]
+        else:
+            cmd = ["netstat", "-an"]
+        return runner.execute_task("LIVE_RADAR", cmd, callback=on_output)
+
     # ── Instance methods (legacy compat) ──
 
     def block_ip(self, ip, on_output=None):

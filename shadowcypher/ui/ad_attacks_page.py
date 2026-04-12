@@ -9,11 +9,18 @@ from shadowcypher.ui.base_page import BasePage
 
 class ADAttacksPage(BasePage):
     def __init__(self):
-        super().__init__("\U0001f4bb Active Directory (Impacket & Responder)")
+        super().__init__("\U0001f4bb ACTIVE_DIRECTORY_STRIKE (Impacket & Responder)")
 
-        self.main_pod = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.main_pod.get_style_context().add_class("card")
-        self.pack_start(self.main_pod, True, True, 0)
+        from shadowcypher.ui.components import DataPod
+        
+        # 1. Populate Metrics
+        self.pod_imp = DataPod("IMPACKET_PULSE", "READY", "cyan")
+        self.pod_resp = DataPod("RESPONDER_LINK", "IDLE", "violet")
+        self.pod_hashes = DataPod("HASH_INTENSITY", "0", "amber")
+        
+        self.metric_strip.pack_start(self.pod_imp, True, True, 0)
+        self.metric_strip.pack_start(self.pod_resp, True, True, 0)
+        self.metric_strip.pack_start(self.pod_hashes, True, True, 0)
 
         notebook = Gtk.Notebook()
         notebook.append_page(

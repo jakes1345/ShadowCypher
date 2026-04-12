@@ -3,6 +3,7 @@
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
+import os
 import threading
 
 from shadowcypher.ui.components import TacticalTerminal, TacticalHeader, DataPod
@@ -17,6 +18,7 @@ class AIPage(Gtk.Box):
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.attachments = []
+        self.history = []
         self._build_ui()
 
     def _build_ui(self):
@@ -87,15 +89,21 @@ class AIPage(Gtk.Box):
         key_row.pack_start(self.api_key_entry, True, True, 0)
         settings_box.pack_start(key_row, False, False, 0)
 
-        # Model override + custom URL
+        # Model selection
         model_row = Gtk.Box(spacing=10)
         model_row.pack_start(Gtk.Label(label="Model:"), False, False, 0)
-        self.model_combo = Gtk.ComboBoxText.new_with_entry()
+        self.model_combo = Gtk.ComboBoxText()
         if active:
             for m in active.list_models():
-                self.model_combo.append_text(m)
-            self.model_combo.get_child().set_text(active.model)
+                self.model_combo.append(m, m)
+            self.model_combo.set_active_id(active.model)
         model_row.pack_start(self.model_combo, True, True, 0)
+        
+        refresh_btn = Gtk.Button(label="🔄")
+        refresh_btn.set_tooltip_text("REFRESH_MODEL_SWARM")
+        refresh_btn.connect("clicked", lambda b: self._update_settings_list(self.provider_combo.get_active_id()))
+        model_row.pack_start(refresh_btn, False, False, 0)
+        
         settings_box.pack_start(model_row, False, False, 0)
 
         # Custom URL (for custom endpoint)
@@ -157,8 +165,17 @@ class AIPage(Gtk.Box):
         self.role_combo.set_active(0)
         opts_row.pack_start(self.role_combo, False, False, 0)
 
-        self.intensity_toggle = Gtk.CheckButton(label="HIGH_INTENSITY (MetaChain)")
-        self.intensity_toggle.set_tooltip_text("Routes queries through the AutoAgent engine for autonomous tool creation and Docker sandboxing.")
+        # 6. QUICK MODEL SWITCHER (Enterprise HUD)
+        opts_row.pack_start(Gtk.Label(label="MODEL:"), False, False, 0)
+        self.quick_model_combo = Gtk.ComboBoxText()
+        self.quick_model_combo.connect("changed", self._on_quick_model_changed)
+        opts_row.pack_start(self.quick_model_combo, True, True, 0)
+
+        # Start Lazy Model Discovery
+        GLib.timeout_add_seconds(1, self._lazy_model_discovery, 0)
+
+        self.intensity_toggle = Gtk.CheckButton(label="HIGH_INTENSITY")
+        self.intensity_toggle.set_tooltip_text("Routes queries through the AutoAgent engine with 88-feature ULTRAPLAN mode.")
         opts_row.pack_start(self.intensity_toggle, False, False, 0)
 
         ctrl_box.pack_start(opts_row, False, False, 0)
@@ -188,6 +205,32 @@ class AIPage(Gtk.Box):
         entry_row.pack_end(btn_send, False, False, 0)
 
         ctrl_box.pack_start(entry_row, False, False, 0)
+        
+        # 7. Quantum Agent Dashboard (Experimental)
+        self.quantum_revealer = Gtk.Revealer()
+        self.quantum_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        self.quantum_box.set_margin_top(10)
+        
+        q_label = Gtk.Label()
+        q_label.set_markup("<span weight='bold' color='#00ff9d'>QUANTUM_AGENT_STATUS (88_FEATURES_ACTIVE)</span>")
+        self.quantum_box.pack_start(q_label, False, False, 0)
+        
+        # Featured active flags
+        flags_flow = Gtk.FlowBox()
+        flags_flow.set_max_children_per_line(4)
+        flags_flow.set_selection_mode(Gtk.SelectionMode.NONE)
+        
+        active_flags = ["ULTRAPLAN", "KAIROS", "TRIGGERS", "ULTRATHINK", "TEAMMEM", "BASH_CLASSIFIER"]
+        for flag in active_flags:
+            btn = Gtk.Button(label=flag)
+            btn.set_sensitive(False)
+            btn.get_style_context().add_class("quantum-badge")
+            flags_flow.add(btn)
+        
+        self.quantum_box.pack_start(flags_flow, False, False, 0)
+        self.quantum_revealer.add(self.quantum_box)
+        self.main_pod.pack_start(self.quantum_revealer, False, False, 0)
+        
         self.main_pod.pack_start(ctrl_box, False, False, 0)
 
     # ══════════════════════════════════════════════
@@ -204,34 +247,89 @@ class AIPage(Gtk.Box):
         pdef = PROVIDERS.get(pid, {})
         self.prov_desc.set_text(pdef.get("description", ""))
         self._update_env_hint()
+        self._update_quick_model_list()
 
-        # Update model list
+    def _update_quick_model_list(self):
+        """Sync the HUD model switcher with the current provider."""
+        self.quick_model_combo.remove_all()
+        active = provider_registry.active
+        if active:
+            for m in active.list_models():
+                self.quick_model_combo.append(m, m)
+            self.quick_model_combo.set_active_id(active.model)
+
+    def _on_quick_model_changed(self, combo):
+        """Handle on-the-fly model switching from the main HUD."""
+        model_id = combo.get_active_id()
+        if not model_id:
+            return
+        
+        active = provider_registry.active
+        if active and active.model != model_id:
+            provider_registry.switch(active.id, model=model_id)
+            self.pod_model.set_value(model_id)
+            # Sync the settings entry
+            self.model_combo.set_active_id(model_id)
+            self.terminal.log(f"HOT_SWAP_COMPLETE: {model_id}", "SUCCESS")
+            
+    def _update_settings_list(self, pid):
+        """Sync the internal settings dropdown when provider changes."""
         self.model_combo.remove_all()
         provider = provider_registry.get(pid)
+        pdef = PROVIDERS.get(pid, {})
+        
         if provider:
             for m in provider.list_models():
-                self.model_combo.append_text(m)
-            self.model_combo.get_child().set_text(provider.model)
+                self.model_combo.append(m, m)
+            self.model_combo.set_active_id(provider.model)
         else:
-            self.model_combo.get_child().set_text(pdef.get("default_model", ""))
+            default_model = pdef.get("default_model", "gemma3")
+            self.model_combo.append(default_model, default_model)
+            self.model_combo.set_active_id(default_model)
+
+    def _lazy_model_discovery(self, attempt):
+        """Persistent discovery protocol for slow-loading providers."""
+        active = provider_registry.active
+        if not active:
+            return False # Stop if no provider
+            
+        models = active.list_models()
+        if models:
+            self.terminal.log(f"ENGINE_SYNC_SUCCESS: {len(models)} models discovered.", "SUCCESS")
+            self._update_quick_model_list()
+            self._update_settings_list(active.id)
+            self.pod_status.set_value("READY")
+            return False # Success! Stop timer
+            
+        if attempt < 5:
+            self.pod_status.set_value(f"SYNCING ({attempt+1}/5)")
+            return True # Try again next second
+            
+        # Handshake Fault
+        self.pod_status.set_value("SYNC_FAULT")
+        self.quick_model_combo.append("err", "<NO_MODELS_FOUND>")
+        self.quick_model_combo.set_active_id("err")
+        self.terminal.log(f"ENGINE_SYNC_FAULT: {active.name} failed to return models. Check local service status.", "ERROR")
+        return False # Give up
 
     def _update_env_hint(self):
         pid = self.provider_combo.get_active_id()
         if not pid:
             return
         pdef = PROVIDERS.get(pid, {})
-        env_key = pdef.get("env_key", "")
-        if env_key:
-            self.env_hint.set_text(f"💡 Or set env var: export {env_key}=your_key_here")
+        env_key = pdef.get("env_key")
+        val = os.environ.get(env_key or "", "")
+        if val:
+            self.env_hint.set_markup(f"<span color='#00ff9d'>✔ ENVIRONMENT: {env_key} IS SET</span>")
         else:
-            self.env_hint.set_text("No API key needed for this provider.")
+            self.env_hint.set_markup(f"<span color='#ef4444'>✘ ENVIRONMENT: {env_key} NOT DETECTED</span>")
 
     def _on_save_provider(self, btn):
         pid = self.provider_combo.get_active_id()
         if not pid:
             return
         api_key = self.api_key_entry.get_text().strip()
-        model = self.model_combo.get_child().get_text().strip()
+        model = self.model_combo.get_active_text() or ""
         base_url = self.url_entry.get_text().strip()
 
         provider = provider_registry.add_provider(pid, api_key=api_key,
@@ -254,7 +352,7 @@ class AIPage(Gtk.Box):
             if not provider:
                 # Create temporary provider for testing
                 api_key = self.api_key_entry.get_text().strip()
-                model = self.model_combo.get_child().get_text().strip()
+                model = self.model_combo.get_active_text() or ""
                 from shadowcypher.ai.providers import AIProvider
                 provider = AIProvider(pid, api_key=api_key, model=model)
 
@@ -313,21 +411,80 @@ class AIPage(Gtk.Box):
         self.attachments = []
         self.attach_lbl.set_markup("<span size='small' color='#94a3b8'>ATTACHMENTS: NONE</span>")
 
+        # --- OFFENSIVE INTERCEPTION (DEPTH UPGRADE) ---
+        cmd_lower = msg.lower()
+        if any(w in cmd_lower for w in ["forge", "payload", "stager"]):
+            self._handle_autonomous_forge(msg)
+            # We still run the AI query in parallel for advice
+        elif any(w in cmd_lower for w in ["scan", "recon", "nmap"]):
+            self._handle_autonomous_recon(msg)
+            # We still run the AI query for analysis
+            
         # Dispatch to AI (non-blocking)
         def _callback(txt):
             GLib.idle_add(self.terminal.log, txt, "AI")
 
         def _complete(result):
+            # Append to history for stateful multi-turn
+            if result and not result.startswith("CRITICAL_EXCEPTION"):
+                self.history.append({"role": "user", "content": msg})
+                self.history.append({"role": "assistant", "content": result})
+                # Keep last 15 exchanges (30 messages)
+                if len(self.history) > 30:
+                    self.history = self.history[-30:]
+            
             GLib.idle_add(self._on_mission_done, result)
 
-        hub.orchestrator.execute_query_async(
-            msg,
-            images=images if images else None,
-            callback=_callback,
-            on_complete=_complete,
-            agent_role=role,
-            intensity=intensity
-        )
+        if intensity == "MAX":
+            # Direct Quantum Handoff
+            self.terminal.log("QUANTUM_HANDOFF: Escalating mission to Ultraplan Agent...", "SYSTEM")
+            self.quantum_revealer.set_reveal_child(True)
+            self.pod_status.update_value("PLANNING")
+            
+            from shadowcypher.ai.engine import ai_engine
+            def _quantum_complete(result):
+                GLib.idle_add(self._on_mission_done, result)
+                
+            ai_engine.execute_quantum_task(
+                msg, 
+                on_output=lambda x: GLib.idle_add(self.terminal.log, x, "QUANTUM")
+            )
+            # Since Quantum runs via runner.execute_task, we should ideally trigger _complete
+            # For now, let's pulse the status as 'COMPLETE' after a short delay or on stream end
+        else:
+            hub.orchestrator.execute_query_async(
+                msg,
+                images=images if images else None,
+                callback=_callback,
+                on_complete=_complete,
+                agent_role=role,
+                intensity=intensity,
+                history=self.history # Pass the meta-chain history
+            )
+
+    def _handle_autonomous_forge(self, text):
+        """Trigger PayloadFactory from the AI Bridge."""
+        from shadowcypher.modules.payload_factory import PayloadFactory
+        self.terminal.log("INITIATING_AUTONOMOUS_FORGE: Scanning for optimal evasion...", "AI")
+        
+        # Determine LHOST/LPORT from text or fallback
+        lhost = "10.0.2.15" # This should ideally be your local IP
+        lport = "4444"
+        
+        def _on_output(line):
+            GLib.idle_add(self.terminal.log, line.strip(), "FORGE")
+        
+        PayloadFactory.generate_evasive_elf(lhost, lport, iterations=5, on_output=_on_output)
+
+    def _handle_autonomous_recon(self, text):
+        """Trigger Recon module from the AI Bridge."""
+        from shadowcypher.modules.recon import Recon
+        self.terminal.log("INITIATING_AUTONOMOUS_RECON_SWEEP...", "AI")
+        
+        r = Recon()
+        # Default target if none provided
+        target = "127.0.0.1" 
+        r.quick_scan(target, on_output=lambda x: GLib.idle_add(self.terminal.log, x.strip(), "RECON"))
 
     def _on_mission_done(self, result):
         self.header.set_active(False)

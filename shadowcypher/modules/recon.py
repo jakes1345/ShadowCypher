@@ -44,10 +44,19 @@ class Recon(BaseModule):
             "Full Port Scan": ["-p-"],
             "OS Detection": ["-O"],
             "Service Fingerprint": ["-sV"],
+            "Deep Recon": ["-Pn", "-sV", "-sC", "-O"]
         }
         flags = flag_map.get(stype, [])
         return self.execute(f"PULSE_{target}", [nmap] + flags + [target], callback=on_output)
 
+    def quick_scan(self, target, on_output=None):
+        """Standard AI-driven quick scan."""
+        return self.pulse_target(target, "Quick Port Scan", on_output=on_output)
+
+    def deep_recon(self, target, on_output=None):
+        """High-intensity service and script enumeration."""
+        return self.pulse_target(target, "Deep Recon", on_output=on_output)
+
     def ai_recon(self, target, on_output=None):
         from shadowcypher.core.hub import hub
-        return hub.register_mission(f"Map the network surface of {target}. Use OS-specific reconnaissance tools for {platform_engine.SYSTEM}.")
+        return hub.dispatch_mission(f"Map the network surface of {target}. Use OS-specific reconnaissance tools for {platform_engine.SYSTEM}.")

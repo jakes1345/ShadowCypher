@@ -79,12 +79,16 @@ def validate_ports(ports: str) -> bool:
 
 
 def validate_filepath(path: str) -> bool:
-    """Validate a file path doesn't contain shell metacharacters."""
+    """Validate a file path doesn't contain shell metacharacters or traversal."""
     # Block obvious injection attempts
     dangerous = ['$(', '`', '|', ';', '&&', '||', '>', '<', '\n', '\r']
     for d in dangerous:
         if d in path:
             return False
+    # Block path traversal
+    import os
+    if '..' in path.split(os.sep):
+        return False
     return bool(path.strip())
 
 

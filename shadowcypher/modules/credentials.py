@@ -37,15 +37,27 @@ class Credentials(BaseModule):
     @staticmethod
     def hydra_attack(target, service, username="admin", passlist=None,
                      extra_args="", on_output=None, on_complete=None):
-        """Launch a Hydra brute-force attack against a target service."""
+        """Launch a Hydra brute-force attack with timing-based Pulse ingestion."""
         from shadowcypher.core.runner import runner
+        from shadowcypher.core.pulse import pulse
+        import time
+
         wordlist = passlist or "/usr/share/wordlists/rockyou.txt"
         args = ["hydra", "-l", username, "-P", wordlist, "-t", "4"]
         if extra_args:
             import shlex
             args += shlex.split(extra_args)
         args += [target, service]
-        return runner.execute_task(f"HYDRA_{target}", args, callback=on_output)
+
+        last_t = time.time()
+        def timing_wrapper(line):
+            nonlocal last_t
+            now = time.time()
+            pulse.ingest("auth_latency", now - last_t)
+            last_t = now
+            if on_output: on_output(line)
+
+        return runner.execute_task(f"HYDRA_{target}", args, callback=timing_wrapper)
 
     def brute_force(self, target, service, user, wordlist, on_output=None):
         """Instance-method wrapper for hydra_attack."""
@@ -133,7 +145,7 @@ class Credentials(BaseModule):
         """Escalate hash cracking to the Swarm for pattern-based attacks."""
         from shadowcypher.core.hub import hub
         self.log("AI_HASH_RECOVERY_ENGAGED", "AI")
-        return hub.register_mission(
+        return hub.dispatch_mission(
             f"Recover the plaintext for the following hash: {hash_str}. "
             "Identify the format and perform semantic wordlist mutation."
         )

@@ -2,79 +2,90 @@
 
 import json
 import threading
+import logging
+from logging.handlers import RotatingFileHandler
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 
 class Logger:
-    """Thread-safe activity logger with persistent file handles."""
+    """Enterprise-grade thread-safe logger with rotation and structured JSON output."""
 
     def __init__(self, log_dir: str = None):
         if log_dir is None:
             log_dir = str(Path(__file__).resolve().parent.parent.parent / "logs")
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
+        
         self.log_file = self.log_dir / "activity.log"
         self.ops_log = self.log_dir / "operations.jsonl"
-        self._memory: list[dict] = []
+        
         self._lock = threading.Lock()
-        self._activity_fh = None
-        self._ops_fh = None
+        self._current_mission_id: Optional[str] = None
+        
+        # 1. Apex Standard Logger (Human Readable)
+        self._std_logger = logging.getLogger("ShadowCypher")
+        self._std_logger.setLevel(logging.INFO)
+        # Use RotatingFileHandler (Max 10MB per file, 5 backups)
+        handler = RotatingFileHandler(self.log_file, maxBytes=10*1024*1024, backupCount=5)
+        formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s')
+        handler.setFormatter(formatter)
+        self._std_logger.addHandler(handler)
+        
+        # 2. Add Stdout for Container/Cloud logging
+        console = logging.StreamHandler()
+        console.setFormatter(formatter)
+        self._std_logger.addHandler(console)
 
-    def _ensure_handles(self):
-        """Lazily open file handles (once, not every write)."""
-        if self._activity_fh is None:
-            try:
-                self._activity_fh = open(self.log_file, "a", buffering=1)
-            except OSError:
-                pass
-        if self._ops_fh is None:
-            try:
-                self._ops_fh = open(self.ops_log, "a", buffering=1)
-            except OSError:
-                pass
+        # 3. Operations JSON Storage (Raw records)
+        self._memory: list[dict] = []
+
+    def set_mission_context(self, mission_id: Optional[str]):
+        """Bind a mission ID to the current thread's logging context."""
+        with self._lock:
+            self._current_mission_id = mission_id
 
     @staticmethod
     def _timestamp() -> str:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        return datetime.now(timezone.utc).isoformat()
 
     def log(self, level: str, module: str, message: str, **extra):
-        """Write a log entry."""
+        """Write a structured log entry."""
         entry = {
             "timestamp": self._timestamp(),
             "level": level.upper(),
             "module": module,
+            "mission_id": self._current_mission_id,
             "message": message,
             **extra,
         }
 
         with self._lock:
-            self._memory.append(entry)
-            if len(self._memory) > 10000:
-                self._memory = self._memory[-5000:]
+            # Persistent JSONL write
+            try:
+                with open(self.ops_log, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(entry) + "\n")
+            except Exception:
+                pass # Fail silently on I/O issues in critical offensive paths
 
-            self._ensure_handles()
-
-            line = f"[{entry['timestamp']}] [{level.upper()}] [{module}] {message}"
+            # Human-readable stream log
+            log_msg = f"[{module}] {message}"
             if extra:
-                line += f" | {json.dumps(extra)}"
-
-            if self._activity_fh:
-                try:
-                    self._activity_fh.write(line + "\n")
-                except OSError:
-                    pass
-            if self._ops_fh:
-                try:
-                    self._ops_fh.write(json.dumps(entry) + "\n")
-                except OSError:
-                    pass
+                log_msg += f" | {json.dumps(extra)}"
+            
+            lvl_num = getattr(logging, level.upper(), logging.INFO)
+            self._std_logger.log(lvl_num, log_msg)
 
     def info(self, module: str, message: str, **extra):
         self.log("INFO", module, message, **extra)
 
     def warn(self, module: str, message: str, **extra):
-        self.log("WARN", module, message, **extra)
+        self.log("WARNING", module, message, **extra)
+
+    def warning(self, module: str, message: str, **extra):
+        """Standard alias for warn()."""
+        self.warn(module, message, **extra)
 
     def error(self, module: str, message: str, **extra):
         self.log("ERROR", module, message, **extra)
@@ -82,33 +93,21 @@ class Logger:
     def critical(self, module: str, message: str, **extra):
         self.log("CRITICAL", module, message, **extra)
 
-    def get_recent(self, count: int = 100, module: str = None) -> list[dict]:
-        """Get recent log entries, optionally filtered by module."""
-        with self._lock:
-            entries = self._memory
-            if module:
-                entries = [e for e in entries if e["module"] == module]
-            return entries[-count:]
-
-    def get_log_text(self, count: int = 200) -> str:
-        """Get raw log text for display."""
+    def get_recent_json(self, count: int = 100) -> list[dict]:
+        """Read recent entries from the JSONL log file."""
+        if not self.ops_log.exists():
+            return []
         try:
-            with open(self.log_file, "r") as f:
+            with open(self.ops_log, "r") as f:
                 lines = f.readlines()
-            return "".join(lines[-count:])
-        except FileNotFoundError:
-            return "No log file found."
+                return [json.loads(l) for l in lines[-count:]]
+        except Exception:
+            return []
 
     def close(self):
-        """Close file handles."""
-        with self._lock:
-            if self._activity_fh:
-                self._activity_fh.close()
-                self._activity_fh = None
-            if self._ops_fh:
-                self._ops_fh.close()
-                self._ops_fh = None
+        """Cleanup logic."""
+        pass
 
 
-# Global singleton
+# Global singleton instance
 logger = Logger()

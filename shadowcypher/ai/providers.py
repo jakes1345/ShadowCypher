@@ -364,18 +364,33 @@ class AIProvider:
     def list_models(self) -> list:
         """List available models (Ollama only for now)."""
         if self.api_format == "ollama":
+            url = f"{self.base_url}/api/tags"
             try:
-                req = urllib.request.Request(f"{self.base_url}/api/tags")
+                req = urllib.request.Request(url)
                 with urllib.request.urlopen(req, timeout=5) as resp:
                     data = json.loads(resp.read())
-                return [m["name"] for m in data.get("models", [])]
-            except Exception:
+                models = [m["name"] for m in data.get("models", [])]
+                if not models:
+                    logger.warn("ai", f"[Ollama] No models found at {url}")
+                return models
+            except urllib.error.URLError as e:
+                logger.error("ai", f"[Ollama] Connection failed at {url}: {e.reason}")
+                return []
+            except Exception as e:
+                logger.error("ai", f"[Ollama] Unexpected failure: {e}")
                 return []
         # For cloud providers, return known model list
         known = {
-            "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1", "o1-mini"],
-            "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
-            "google": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"],
+            "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1", "o1-mini", "o3-mini"],
+            "anthropic": [
+                "claude-3-5-sonnet-latest", 
+                "claude-3-5-haiku-latest", 
+                "claude-3-opus-latest",
+                "claude-3-5-sonnet-20241022",
+                "claude-sonnet-4-20250514-ULTRATHINK", # Experimental Flag Simulation
+                "claude-sonnet-4-20250514-ULTRAPLAN"
+            ],
+            "google": ["gemini-2.0-pro-exp", "gemini-2.5-pro", "gemini-2.0-flash-exp", "gemini-1.5-pro"],
             "groq": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
             "mistral": ["mistral-large-latest", "mistral-medium-latest", "codestral-latest"],
             "deepseek": ["deepseek-chat", "deepseek-coder", "deepseek-reasoner"],
@@ -491,30 +506,44 @@ class ProviderRegistry:
             logger.info("ai", f"Switched to: {provider.name} / {provider.model}")
             return True
 
+    def _get_identity_context(self) -> str:
+        """Build identity-aware context for the system prompt."""
+        ident = config.identity
+        if not ident.handle:
+            return ""
+        return f" [OPERATOR_ID: {ident.handle} | ROLE: {ident.role.upper()}]"
+
     def generate(self, prompt: str, system_prompt: str = "",
                  max_tokens: int = 2048, temperature: float = 0.7) -> str:
-        """Generate using the active provider."""
+        """Generate using the active provider with identity context."""
         provider = self.active
         if not provider:
             return "[Error] No AI provider configured."
         if not provider.is_configured:
-            return f"[Error] {provider.name} needs an API key. Set {PROVIDERS[provider.id].get('env_key', 'the key')} or configure in Settings."
+            return f"[Error] {provider.name} needs an API key."
+
+        # Inject Apex Identity
+        ctx = self._get_identity_context()
+        if ctx:
+            system_prompt = f"{system_prompt}\n\nADMIN_IDENTITY_CONTEXT: {ctx}"
+            
         return provider.generate(prompt, system_prompt, max_tokens, temperature)
 
     def generate_stream(self, prompt: str, system_prompt: str = "",
                         max_tokens: int = 2048, temperature: float = 0.7,
                         on_token: Callable[[str], None] = None) -> str:
-        """Stream using the active provider."""
+        """Stream using the active provider with identity context."""
         provider = self.active
         if not provider:
-            if on_token:
-                on_token("[Error] No AI provider configured.")
             return ""
         if not provider.is_configured:
-            msg = f"[Error] {provider.name} needs an API key."
-            if on_token:
-                on_token(msg)
-            return msg
+            return ""
+
+        # Inject Apex Identity
+        ctx = self._get_identity_context()
+        if ctx:
+            system_prompt = f"{system_prompt}\n\nADMIN_IDENTITY_CONTEXT: {ctx}"
+
         return provider.generate_stream(prompt, system_prompt, max_tokens, temperature,
                                         on_token=on_token)
 

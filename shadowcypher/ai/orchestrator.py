@@ -93,6 +93,14 @@ GAMING OSINT:
 - steam_deals: {} — Get current Steam featured deals
 - steam_search: {"query": "game name"} — Search Steam store
 
+CONFORMANCE & AUDIT:
+- system_audit: {} — Request a full health and vitals report from Sisyphus
+- terminate_task: {"task_id": "EXPL_1234"} — Force-kill a runaway or high-risk task
+
+OFFENSIVE SYNTHESIS (DEEPHAT APEX):
+- forge_weapon: {"category": "exploit", "target_desc": "Windows 11 x64"} — Synthesize a custom offensive tool
+- execute_weapon: {"filename": "payloads/deephat_xyz.py"} — Execute a previously synthesized weapon
+
 REPORTING:
 - add_finding: {"title": "SQLi in login", "severity": "Critical", "description": "...", "evidence": "...", "target": "10.0.0.1"} — Add a finding to the report
 - generate_report: {"project": "Client Pentest", "target": "10.0.0.0/24"} — Generate HTML report
@@ -120,97 +128,131 @@ class AIOrchestrator:
             return None
 
     def execute_query_async(self, query, images=None, callback=None,
-                            on_complete=None, agent_role="commander", intensity=None):
+                            on_complete=None, agent_role="commander", intensity=None, history=None):
         mission_id = f"MSN_{int(time.time())}"
 
         def _mission():
             result = self.execute_query(query, images=images, callback=callback,
-                                        agent_role=agent_role, intensity=intensity)
+                                        agent_role=agent_role, intensity=intensity, history=history)
             if on_complete:
                 on_complete(result)
 
         threading.Thread(target=_mission, daemon=True).start()
         return mission_id
 
+    def execute_sync(self, query, **kwargs):
+        """Synchronous wrapper for execute_query."""
+        return self.execute_query(query, **kwargs)
+
     def execute_query(self, query, images=None, callback=None,
-                      agent_role="commander", intensity=None):
+                      agent_role="commander", intensity=None, history=None, model=None):
         """Main autonomous loop — routes through provider system."""
         from shadowcypher.ai.providers import provider_registry
         from shadowcypher.ai.prompts import get_team_prompt
+        try:
+            from shadowcypher.ai.memory import shadow_memory
+        except ImportError:
+            shadow_memory = None
 
         provider = provider_registry.active
         if not provider or not provider.is_configured:
-            return "ERROR: No AI provider configured. Go to Tactical Swarm AI → ⚙ Settings."
+            return "ERROR: No AI provider configured. Go to Tactical Swarm AI → \u2699 Settings."
 
-        # Build system prompt with tool definitions and project context
-        project_tree = context.list_project_tree(depth=2)
-        system_prompt = get_team_prompt(agent_role)
-        system_prompt += f"\n\n{TOOL_DEFINITIONS}\n\n[WORKSPACE]\n{project_tree}\n"
-        system_prompt += "\nWhen you need to use a tool, wrap it in <TOOL_CALL>{...}</TOOL_CALL> tags."
-        system_prompt += "\nWhen you have the final answer, respond normally without tool calls."
+        # Support per-request model override (e.g. for ShadowSentinel bot)
+        original_model = provider.model
+        if model:
+            provider.model = model
 
-        messages = [{"role": "system", "content": system_prompt}]
+        try:
+            # 1. PEAK INTEL RECALL (mem0 Integration)
+            relevant_memories = shadow_memory.recall(query) if shadow_memory else []
+            mem_str = "\n".join([f"- {m['text']}" for m in relevant_memories]) if relevant_memories else "None"
 
-        # Handle images (base64 in first user message for vision models)
-        user_content = query
-        if images:
-            encoded = [self._encode_image(img) for img in images if img]
-            if encoded and any(encoded):
-                user_content += f"\n[ATTACHED_IMAGES: {len([e for e in encoded if e])} file(s)]"
-        messages.append({"role": "user", "content": user_content})
+            # 2. Build system prompt with tool definitions and project context
+            project_tree = context.list_project_tree(depth=2)
+            system_prompt = get_team_prompt(agent_role)
+            system_prompt += f"\n\n{TOOL_DEFINITIONS}\n\n[WORKSPACE]\n{project_tree}\n"
+            system_prompt += f"\n[TACTICAL_MEMORY]\n{mem_str}\n"
+            system_prompt += "\nWhen you need to use a tool, wrap it in <TOOL_CALL>{...}</TOOL_CALL> tags."
+            system_prompt += "\nWhen you have the final answer, respond normally without tool calls."
 
-        for cycle in range(_MAX_CYCLES):
-            try:
-                ai_raw = provider.generate(
-                    prompt=messages[-1]["content"] if len(messages) == 2 else "",
-                    system_prompt=system_prompt if len(messages) == 2 else "",
-                    max_tokens=4096,
-                    temperature=0.05,
-                )
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            # Inject history if provided
+            if history:
+                for msg in history:
+                    messages.append(msg)
 
-                # For multi-turn, use messages format if provider supports it
-                if len(messages) > 2:
-                    # Build full conversation as prompt
-                    conv_text = "\n".join(
-                        f"{m['role'].upper()}: {m['content']}" for m in messages
-                    )
-                    ai_raw = provider.generate(
-                        prompt=conv_text,
-                        system_prompt="",
-                        max_tokens=4096,
-                        temperature=0.05,
-                    )
+            # 3. QUANTUM ESCALATION (Claude-Code dev-full handoff)
+            if intensity == "MAX":
+                if callback: callback("QUANTUM_ESCALATION: Strategy handed to 88-feature core...")
+                from shadowcypher.ai.engine import ai_engine
+                return ai_engine.execute_quantum_task(query, on_output=callback)
 
-                # Check for tool calls
-                tool_match = re.search(r"<TOOL_CALL>(.*?)</TOOL_CALL>", ai_raw, re.DOTALL)
-                if tool_match:
-                    js = self._fuzzy_json_repair(tool_match.group(1))
-                    if js:
-                        t_name = js.get("tool", "")
-                        t_args = js.get("args", {})
-                        if callback:
-                            callback(f"[TOOL] Executing: {t_name}")
-                        output = self._execute_tool(t_name, t_args, callback)
-                        if len(output) > _MAX_OUTPUT_CHARS:
-                            output = output[:_MAX_OUTPUT_CHARS] + "\n[TRUNCATED]"
-                        messages.append({"role": "assistant", "content": ai_raw})
-                        messages.append({"role": "user", "content": f"[TOOL_RESULT]\n{output}"})
-                        if callback:
-                            callback(f"[TOOL] {t_name} complete ({len(output)} chars)")
-                        continue
+            # Handle images (base64 in first user message for vision models)
+            user_content = query
+            if images:
+                encoded = [self._encode_image(img) for img in images if img]
+                if encoded and any(encoded):
+                    user_content += f"\n[ATTACHED_IMAGES: {len([e for e in encoded if e])} file(s)]"
+            
+            messages.append({"role": "user", "content": user_content})
 
-                # No tool call = final answer
-                if callback:
-                    callback(ai_raw)
-                return ai_raw
+            for cycle in range(_MAX_CYCLES):
+                try:
+                    # For multi-turn, use messages format if provider supports it
+                    if len(messages) > 2:
+                        # Build full conversation as prompt for models that don't support message lists natively
+                        conv_text = "\n".join(
+                            f"{m['role'].upper()}: {m['content']}" for m in messages
+                        )
+                        ai_raw = provider.generate(
+                            prompt=conv_text,
+                            system_prompt=system_prompt, # Keep system prompt in the call
+                            max_tokens=4096,
+                            temperature=0.1,
+                        )
+                    else:
+                        ai_raw = provider.generate(
+                            prompt=messages[-1]["content"],
+                            system_prompt=system_prompt,
+                            max_tokens=4096,
+                            temperature=0.1,
+                        )
 
-            except Exception as e:
-                err = f"CRITICAL_EXCEPTION: {e}"
-                if callback:
-                    callback(err)
-                return err
+                    # Check for tool calls
+                    tool_match = re.search(r"<TOOL_CALL>(.*?)</TOOL_CALL>", ai_raw, re.DOTALL)
+                    if tool_match:
+                        js = self._fuzzy_json_repair(tool_match.group(1))
+                        if js:
+                            t_name = js.get("tool", "")
+                            t_args = js.get("args", {})
+                            if callback:
+                                callback(f"[TOOL] Executing: {t_name}")
+                            output = self._execute_tool(t_name, t_args, callback)
+                            if len(output) > _MAX_OUTPUT_CHARS:
+                                output = output[:_MAX_OUTPUT_CHARS] + "\n[TRUNCATED]"
+                            messages.append({"role": "assistant", "content": ai_raw})
+                            messages.append({"role": "user", "content": f"[TOOL_RESULT]\n{output}"})
+                            if callback:
+                                callback(f"[TOOL] {t_name} complete ({len(output)} chars)")
+                            continue
 
-        return "TIMEOUT: Mission reached max cycles."
+                    # No tool call = final answer
+                    if callback:
+                        callback(ai_raw)
+                    return ai_raw
+
+                except Exception as e:
+                    err = f"CRITICAL_EXCEPTION: {e}"
+                    if callback:
+                        callback(err)
+                    return err
+
+            return "TIMEOUT: Mission reached max cycles."
+        finally:
+            provider.model = original_model
+
 
     def _execute_tool(self, name, args, callback=None):
         """Execute a tool by name. Returns string output."""
@@ -288,7 +330,7 @@ class AIOrchestrator:
                 return Wireless.deauth(
                     args.get("interface", "wlan0mon"),
                     args.get("bssid", ""),
-                    args.get("channel", ""),
+                    client_mac=args.get("client_mac"),
                     on_output=callback,
                 )
             elif name == "wifi_capture":
@@ -314,8 +356,8 @@ class AIOrchestrator:
                 return c.hydra_attack(
                     target=args.get("target", ""),
                     service=args.get("service", "ssh"),
-                    user_list=args.get("user_list", ""),
-                    pass_list=args.get("pass_list", ""),
+                    username=args.get("user_list", "admin"),
+                    passlist=args.get("pass_list"),
                     on_output=callback,
                 )
             elif name == "hashcat_crack":
@@ -332,7 +374,7 @@ class AIOrchestrator:
                 c = Credentials()
                 return c.john_crack(
                     hash_file=args.get("hash_file", ""),
-                    format_type=args.get("format", ""),
+                    wordlist=args.get("wordlist"),
                     on_output=callback,
                 )
             elif name == "identify_hash":
@@ -368,12 +410,12 @@ class AIOrchestrator:
             elif name == "firewall_block_port":
                 from shadowcypher.modules.firewall import Firewall
                 return Firewall.ipt_block_port(
-                    args.get("port", ""), args.get("chain", "INPUT"), on_output=callback
+                    args.get("port", ""), protocol=args.get("protocol", "tcp"), on_output=callback
                 )
             elif name == "firewall_allow_port":
                 from shadowcypher.modules.firewall import Firewall
                 return Firewall.ipt_allow_port(
-                    args.get("port", ""), args.get("chain", "INPUT"), on_output=callback
+                    args.get("port", ""), protocol=args.get("protocol", "tcp"), on_output=callback
                 )
             elif name == "firewall_flush":
                 from shadowcypher.modules.firewall import Firewall
@@ -413,9 +455,28 @@ class AIOrchestrator:
             elif name == "generate_payload_pdf":
                 from shadowcypher.modules.phishing import Phishing
                 p = Phishing()
-                return p.generate_pdf(
-                    args.get("url", ""), on_output=callback
+                return p.generate_pdf(args.get("url", ""))
+
+            # ── DEEPHAT APEX ──
+            elif name == "forge_weapon":
+                from shadowcypher.modules.deephat import deephat
+                return deephat.forge_weapon(
+                    args.get("target_desc", ""),
+                    category=args.get("category", "exploit"),
+                    language=args.get("language", "python")
                 )
+            elif name == "execute_weapon":
+                from shadowcypher.modules.deephat import deephat
+                return deephat.execute_payload(args.get("filename", ""))
+
+            # ── SYSTEM CONTROL ──
+            elif name == "system_audit":
+                from shadowcypher.ai.sisyphus import sisyphus
+                return sisyphus.audit_report()
+            elif name == "terminate_task":
+                from shadowcypher.core.runner import runner
+                runner.stop_task(args.get("task_id", ""))
+                return "TERMINATION_SIGNAL_SENT"
 
             # ── FORENSICS ──
             elif name == "file_metadata":
@@ -436,12 +497,12 @@ class AIOrchestrator:
                 from shadowcypher.modules.gaming_osint import GamingAssetScraper
                 g = GamingAssetScraper()
                 results = g.fetch_global_assets()
-                return json.dumps(results[:20], indent=2)
+                return json.dumps(results, indent=2)
             elif name == "steam_deals":
                 from shadowcypher.modules.gaming_osint import GamingAssetScraper
                 g = GamingAssetScraper()
                 results = g.get_featured_deals()
-                return json.dumps(results[:15], indent=2)
+                return json.dumps(results, indent=2)
             elif name == "steam_search":
                 from shadowcypher.modules.gaming_osint import GamingAssetScraper
                 g = GamingAssetScraper()

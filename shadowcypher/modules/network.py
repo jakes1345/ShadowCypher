@@ -91,21 +91,42 @@ class Network(BaseModule):
 
     @staticmethod
     def packet_capture(interface=None, count=100, bpf_filter=None, on_output=None, on_complete=None):
-        """Live packet capture via tcpdump."""
+        """Live packet capture via tcpdump with Pulse spectrum injection."""
         from shadowcypher.core.runner import runner
+        from shadowcypher.core.pulse import pulse
+        
         iface = interface or "any"
         args = ["tcpdump", "-i", iface, "-c", str(count), "-nn", "-l"]
         if bpf_filter:
             args.append(bpf_filter)
-        return runner.execute_task("SNIFFER", args, callback=on_output)
+            
+        def pulse_wrapper(line):
+            # Extract length if present: "... length 102"
+            import re
+            match = re.search(r'length (\d+)', line)
+            if match:
+                pulse.ingest("network_spectrum", float(match.group(1)))
+            if on_output: on_output(line)
+
+        return runner.execute_task("SNIFFER", args, callback=pulse_wrapper)
 
     @staticmethod
     def network_monitor(interface=None, on_output=None, on_complete=None):
-        """Live traffic monitoring (long-running)."""
+        """Live traffic monitoring (long-running) with real-time Pulse auditing."""
         from shadowcypher.core.runner import runner
+        from shadowcypher.core.pulse import pulse
+        
         iface = interface or "any"
         args = ["tcpdump", "-i", iface, "-nn", "-l", "-c", "500"]
-        return runner.execute_task("NET_MONITOR", args, callback=on_output)
+        
+        def pulse_wrapper(line):
+            import re
+            match = re.search(r'length (\d+)', line)
+            if match:
+                pulse.ingest("network_spectrum", float(match.group(1)))
+            if on_output: on_output(line)
+
+        return runner.execute_task("NET_MONITOR", args, callback=pulse_wrapper)
 
     # ── DNS & Other ──
 
@@ -129,7 +150,7 @@ class Network(BaseModule):
         """Escalate to the Swarm for deep-packet network analysis."""
         from shadowcypher.core.hub import hub
         self.log(f"AI_NETWORK_AUDIT_ENGAGED: {target}", "AI")
-        return hub.register_mission(
+        return hub.dispatch_mission(
             f"Perform a complete network-layer audit of {target}. "
             "Identify hidden services and potential lateral movement paths."
         )

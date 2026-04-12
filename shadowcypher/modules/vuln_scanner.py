@@ -44,4 +44,4 @@ class VulnScanner(BaseModule):
         """Perform a complete autonomous audit of a target."""
         from shadowcypher.core.hub import hub
         self.log(f"AUDIT_REQUESTED: {target}", "SYSTEM")
-        return hub.register_mission(f"Execute a high-intensity vulnerability audit and exploit verification on {target}")
+        return hub.dispatch_mission(f"Execute a high-intensity vulnerability audit and exploit verification on {target}")

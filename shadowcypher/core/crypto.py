@@ -23,6 +23,7 @@ class CryptoManager:
         key = Fernet.generate_key()
         with open(self.key_file, "wb") as f:
             f.write(key)
+        os.chmod(self.key_file, 0o600)
         return key.decode()
 
     def _load_key(self):

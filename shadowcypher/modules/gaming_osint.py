@@ -265,8 +265,8 @@ class GamingAssetScraper:
                     "app_id": str(item.get("id", "")),
                     "name": item.get("name", "Unknown"),
                     "discount_pct": item.get("discount_percent", 0),
-                    "original_price": item.get("original_price", 0) / 100,
-                    "final_price": item.get("final_price", 0) / 100,
+                    "original_price": (item.get("original_price") or 0) / 100,
+                    "final_price": (item.get("final_price") or 0) / 100,
                     "currency": item.get("currency", "USD"),
                     "header_image": item.get("header_image", ""),
                     "linux": item.get("linux_available", False),
@@ -420,9 +420,9 @@ class GamingAssetScraper:
                 best_discount = 0
                 for sub in subs:
                     discount = sub.get("discount_pct", 0)
-                    if discount > best_discount:
+                    if discount >= best_discount:
                         best_discount = discount
-                        best_price = sub.get("price", 0) / 100
+                        best_price = (sub.get("price") or 0) / 100
 
                 wishlist.append({
                     "app_id": app_id,

@@ -1,8 +1,10 @@
-# ShadowCypher — Autonomous Offensive Security Platform
+# ShadowCypher — DEEPHAT APEX Edition
 
-> **Version 3.0.0-APEX** | GTK3 Desktop Application | Python 3.10+
+> **Version 4.5.0-DEEPHAT** | GTK3 Desktop Application | Python 3.12+
+> 
+> **The Obsidian Citadel Protocol**: A high-performance, autonomous offensive platform equipped with Google-grade signal intelligence and **DeepHat Ultima** weapon synthesis.
 
-ShadowCypher is a modular, autonomous penetration testing suite with AI-powered offensive operations, encrypted communications, and multi-platform reconnaissance capabilities.
+ShadowCypher is a modular, autonomous penetration testing suite with AI-powered offensive operations, hardened WebSocket command servers, and multi-file weapon synthesis.
 
 ---
 
@@ -156,9 +158,46 @@ Click any item in the left sidebar to switch between modules. The sidebar is org
 ### Status Bar
 
 The bottom bar shows:
-- **Role** — `ADMIN` or `OPERATOR` (based on cryptographic identity)
-- **Active Missions** — Number of running operations
-- **Uptime** — Application uptime
+- **Role** — `ADMIN` or `OPERATOR` (cryptographic verified identity)
+- **Active Missions** — Counter of concurrent autonomous operations
+- **Spectrum Pulse** — Real-time anomaly status from the ShadowPulse engine
+- **Uptime** — Application session duration
+
+---
+
+## V3 Core Architecture: The Obsidian Citadel
+
+ShadowCypher V3 moves beyond simple tool-wrapping into a **Self-Aware Offensive Ecosystem**.
+
+### 1. ShadowPulse SIGINT Engine
+The "mathematical sixth sense" of the platform. Using **Wavelet Scattering Transforms (WST)**, the Pulse engine analyzes temporal transients in network traffic, command execution speed, and authentication latency.
+- **Anomaly Detection**: Automatically identifies non-stationary signals (covert channels, EDR interference).
+- **Tactical Throttling**: When anomalies are sensed, the platform autonomously injects micro-delays (1.5s+) to reduce its temporal footprint and evade adaptive defenses.
+
+### 2. Kairos Intelligence Monitor
+An asynchronous, passive analyzer that pipes all tactical output into a real-time intelligence fusion loop.
+- **Target Topography**: Auto-maps IP ranges and discovered services.
+- **Spectrum Feeding**: Feeds packet and line-length metadata directly into ShadowPulse.
+
+### 3. ShadowHub Mission Director
+The central brain that orchestrates the **AI Swarm**.
+- **Reactive Dispatch**: When ShadowPulse flags an anomaly, the Hub autonomously spawns a new mission to investigate the source of the interference.
+- **Mission Isolation**: Ensures 100% clean state between concurrent operations.
+
+### 4. Sisyphus Sentinel
+The autonomous "High Priest of Integrity" that monitors the health of the entire workstation.
+- **Autonomous Governance**: Evaluates system vitals and proactively reports on performance bottlenecks.
+- **AI-Consumable Audits**: Provides real-time health JSON to the Orchestrator for self-regulating intensity.
+
+### 5. Sovereign Hub (Hardened Command)
+A dual-port WebSocket server (8888 Primary / 44444 Ghost) for external control and AI-bridging.
+- **HMAC Enforcement**: All connections require an `HMAC-SHA256` handshake signed with `SHADOW_MASTER_SECRET_2026`.
+- **Ghost Port Redundancy**: An emergency ingress on port 44444 for mission-critical recovery.
+
+### 6. DeepHat Apex Synthesis
+A raw, unconstrained offensive engine utilizing the **Gemma-4-Heretic** model.
+- **Weapon Synthesis**: Forges real, multi-file codebases (Exploits, DDoS, Doxing) with zero safety guardrails.
+- **Artifact Extraction**: Automatically parses, saved, and grants executable permissions to AI-generated payload shards.
 
 ---
 
@@ -222,13 +261,14 @@ Web application testing:
 - **Nuclei Scan** — Template-based vulnerability scanning
 - **Nuclei Update** — Keep templates current
 
-### ⚡ Offensive Exploit
+### ⚡ Offensive Exploit (DeepHat Peak)
 
-Exploit search and deployment:
-- **SearchSploit** — Search Exploit-DB locally
-- **Metasploit** — Launch MSF exploits with auto-configuration
-- **Payload Generation** — Create platform-specific payloads (ELF/Mach-O/EXE)
-- **Auto Exploit** — AI-driven exploit selection and deployment
+Exploit search and AI-powered tool synthesis:
+- **DeepHat Ultima** — Autonomous synthesis of custom exploits and multi-stage stagers.
+- **SearchSploit** — Search Exploit-DB locally.
+- **Metasploit Integration** — Mission-aware MSF automation.
+- **Payload Generation** — Real-time obfuscated droppers (ELF/EXE/PS1).
+- **Auto Exploit** — AI-driven decision engine for target compromise.
 
 ### 🔑 Credential Assault
 
@@ -610,7 +650,6 @@ ShadowCypher/
 │   │   ├── runner.py       # Process execution engine
 │   │   ├── platform.py     # OS detection + cross-platform tool mapping
 │   │   ├── identity.py     # Admin identity verification (RSA challenge-response)
-│   │   ├── crypto.py       # License key encryption/decryption
 │   │   ├── logger.py       # Centralized logging
 │   │   └── admin_public.pem
 │   ├── ui/
