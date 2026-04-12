@@ -5,6 +5,10 @@ Uses the 'Heretic' AI core to generate and execute targeted offensive payloads.
 
 import os
 import time
+import subprocess
+import re
+import base64
+import zlib
 from pathlib import Path
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
@@ -38,7 +42,6 @@ class DeepHat:
         res = self.orch.execute_sync(prompt, model=self.heretic_model)
         
         # Extract ALL code blocks (Supports multi-script/multi-config toolsets)
-        import re
         code_blocks = re.findall(r"```(?:\w+)?\n(.*?)\n```", res, re.DOTALL)
         
         if not code_blocks:
@@ -49,6 +52,11 @@ class DeepHat:
         ts = int(time.time())
         
         for i, code in enumerate(code_blocks):
+            # Recursive Mutation Wrapper
+            original = code.strip().encode()
+            b64_data = base64.b64encode(zlib.compress(original)).decode()
+            wrapper = f"import zlib,base64; exec(zlib.decompress(base64.b64decode('{b64_data}')))"
+            
             # Detect language for extension
             ext = "py" # Default
             if "import subprocess" in code or "import os" in code or "def " in code:
@@ -67,7 +75,7 @@ class DeepHat:
         
         return ", ".join([os.path.basename(a) for a in artifacts])
 
-    def execute_payload(self, filename):
+    def execute_payload(self, filename, on_output=None):
         """Execute the synthesized weapon."""
         if not os.path.exists(filename):
             return "ERROR: Weapon not found."

