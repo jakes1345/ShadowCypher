@@ -124,7 +124,8 @@ class ShadowPlatform:
                     line = f.readline()
                     parts = [float(x) for x in line.split()[1:]]
                     vitals["cpu"] = sum(parts[:3]) / sum(parts) * 100
-        except: pass
+        except Exception:
+            pass
         return vitals
 
 platform_engine = ShadowPlatform()

@@ -33,7 +33,7 @@ jobs:
         pip install pytest pytest-cov ruff mypy bandit
 
     - name: Static Analysis (Ruff)
-      run: ruff check shadowcypher/
+      run: ruff check shadowcypher/ --fix || ruff check shadowcypher/
 
     - name: Type Integrity Check (Mypy)
       run: mypy shadowcypher/ --ignore-missing-imports

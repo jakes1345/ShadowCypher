@@ -6,6 +6,7 @@ Inspired by rmmh/skybot: Multithreaded, Hook-based, and Self-Healing.
 import threading
 import time
 import re
+import random
 import traceback
 from typing import Optional, Callable, Dict, List
 from shadowcypher.core.irc import IRCClient
