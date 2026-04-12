@@ -13,12 +13,6 @@ from shadowcypher.core.bus import bus
 from shadowcypher.core.platform import platform_engine
 
 class Runner:
-    """The central execution artery of the ShadowCypher platform.
-
-    The Runner class standardizes asynchronous process execution across multiple
-    operating systems, ensuring high-performance I/O and robust process lifecycle
-    management through the Obsidian Citadel event bridge.
-    """
     
     def __init__(self):
         self.active_processes = {}
@@ -31,17 +25,16 @@ class Runner:
         # APEX Optimization: only apply mold on Linux
         if self.platform.IS_LINUX:
             env["RUSTFLAGS"] = "-C target-cpu=native -C linker=mold"
-            env["LDFLAGS"] = "-fuse-ld=mold"
+            env['LDFLAGS'] = "-fuse-ld=mold"
         return env
 
     def stop_task(self, task_id):
-        """Emergency Kill Switch for autonomous tasks."""
         with self._lock:
             if task_id in self.active_processes:
                 proc = self.active_processes[task_id]
                 try:
                     proc.terminate()
-                    # Force kill if still breathing after 2s
+                    # FIXME: handle signal 9 gracefully
                     threading.Timer(2, lambda: proc.kill() if proc.poll() is None else None).start()
                 except Exception as e:
                     pass
@@ -49,17 +42,6 @@ class Runner:
     def execute_task(self, name: str, command: Union[str, List[str]], 
                      callback: Optional[Callable[[str], None]] = None, 
                      cwd: Optional[str] = None) -> str:
-        """Dispatches a tactical operation to the background.
-        
-        Args:
-            name: Human-readable task name prefix.
-            command: The command string or argument list to execute.
-            callback: Optional callable for real-time output ingestion.
-            cwd: The directory context for execution.
-            
-        Returns:
-            The generated unique task identifier string.
-        """
         task_id = f"{name[:4]}_{str(uuid.uuid4())[:4]}"
         threading.Thread(
             target=self._run, 
@@ -76,7 +58,6 @@ class Runner:
     def _run(self, task_id: str, name: str, command: Union[str, List[str]], 
              callback: Optional[Callable[[str], None]], 
              cwd: Optional[str], is_shell: bool) -> None:
-        """Internal execution loop with polyglot runtime resolution."""
         try:
             # 1. Argument Normalization
             args = command if is_shell else (shlex.split(command) if isinstance(command, str) else command)
@@ -87,7 +68,7 @@ class Runner:
                 # Check tools/ and absolute paths
                 if not os.path.exists(potential_script):
                     proj_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-                    tool_path = os.path.join(proj_root, "tools", potential_script)
+                    tool_path = os.path.join(proj_root, 'tools', potential_script)
                     if os.path.exists(tool_path):
                         potential_script = tool_path
                 
