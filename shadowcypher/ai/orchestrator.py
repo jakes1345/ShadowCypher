@@ -523,7 +523,7 @@ class AIOrchestrator:
                         target=args.get("target", ""),
                         project_name=args.get("project", "ShadowCypher Assessment"),
                     )
-                finding = Finding(
+                self._current_report.add_finding(
                     title=args.get("title", "Untitled"),
                     severity=args.get("severity", "Info"),
                     description=args.get("description", ""),
@@ -532,8 +532,7 @@ class AIOrchestrator:
                     module=args.get("module", "orchestrator"),
                     target=args.get("target", ""),
                 )
-                self._current_report.add_finding(finding)
-                return f"Finding added: [{finding.severity}] {finding.title}"
+                return f"Finding added: [{args.get('severity', 'Info')}] {args.get('title', 'Untitled')}"
             elif name == "generate_report":
                 from shadowcypher.core.reporting import Report
                 if not hasattr(self, "_current_report"):

@@ -80,6 +80,10 @@ class Logger:
     def info(self, module: str, message: str, **extra):
         self.log("INFO", module, message, **extra)
 
+    def debug(self, module: str, message: str, **extra):
+        """Standard debug-level logging."""
+        self.log("DEBUG", module, message, **extra)
+
     def warn(self, module: str, message: str, **extra):
         self.log("WARNING", module, message, **extra)
 
