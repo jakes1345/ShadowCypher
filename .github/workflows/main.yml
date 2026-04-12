@@ -24,7 +24,7 @@ jobs:
     - name: Install System Dependencies (GTK3 Armory)
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev gir1.2-gtk-3.0 python3-gi python3-gi-cairo libcairo2-dev pkg-config xvfb libgirepository1.0-dev build-essential gobject-introspection
+        sudo apt-get install -y libgtk-3-dev gir1.2-gtk-3.0 python3-gi python3-gi-cairo libcairo2-dev pkg-config xvfb libgirepository1.0-dev build-essential gobject-introspection python3-gi python3-cairo
 
     - name: Install Python Dependencies
       run: |
