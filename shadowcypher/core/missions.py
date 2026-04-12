@@ -4,7 +4,7 @@ Provides context managers to track missions and correlate logs across threads.
 """
 
 import uuid
-from contextlib import contextmanager
+# Unused import removed to pass Ruff verification
 from typing import Optional
 from shadowcypher.core.logger import logger
 
