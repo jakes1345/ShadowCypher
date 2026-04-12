@@ -293,8 +293,10 @@ class StealthFetcher:
             return None
         except Exception as e:
             logger.info("web", f"L3 proxy {proxy} failed: {e}")
-            # Try next proxy
-            return self.fetch_l3(url, timeout=timeout, **kwargs) if self._proxy_pool else None
+            # Remove failed proxy; caller can retry
+            if proxy in self._proxy_pool:
+                self._proxy_pool.remove(proxy)
+            return None
 
     # ──────────────────────────────────────────────
     # L4: Headless Browser (Playwright Stealth)

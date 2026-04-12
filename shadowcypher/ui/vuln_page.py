@@ -5,7 +5,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 
 from shadowcypher.ui.base_page import BasePage
-from shadowcypher.ui.components import TacticalTerminal, TacticalHeader, DataPod
+from shadowcypher.ui.components import DataPod
 from shadowcypher.core.hub import hub
 from shadowcypher.modules.vuln_scanner import VulnScanner
 from shadowcypher.core.logger import logger
@@ -20,24 +20,12 @@ class VulnScannerPage(BasePage):
         self._build_ui()
 
     def _build_ui(self):
-        self.main_pod = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.main_pod.get_style_context().add_class("card")
-        self.pack_start(self.main_pod, True, True, 0)
-
-        # 1. Apex Header
-        self.header = TacticalHeader("SURFACE VULNERABILITY ANALYSIS")
-        self.main_pod.pack_start(self.header, False, False, 0)
-
-        # 2. Strategic Tabs
+        # Strategic Tabs
         notebook = Gtk.Notebook()
         notebook.append_page(self._build_nikto_tab(), Gtk.Label(label="Nikto"))
         notebook.append_page(self._build_sqlmap_tab(), Gtk.Label(label="SQLmap"))
         notebook.append_page(self._build_nse_tab(), Gtk.Label(label="Nmap NSE"))
-        self.main_pod.pack_start(notebook, False, False, 0)
-
-        # 3. Apex Terminal
-        self.terminal = TacticalTerminal(height=400)
-        self.main_pod.pack_start(self.terminal, True, True, 0)
+        self.workspace.pack_start(notebook, False, False, 0)
 
     def _build_nikto_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
@@ -60,7 +48,7 @@ class VulnScannerPage(BasePage):
             return
         self.header.set_active(True)
         self.terminal.log(f"INITIATING_NIKTO_SCAN: {target}", "VULN")
-        hub.register_mission(f"Nikto vulnerability scan on {target}")
+        hub.dispatch_mission(f"Nikto vulnerability scan on {target}")
         self._scanner.nikto_scan(
             target,
             on_output=lambda x: GLib.idle_add(self.terminal.log, x.strip(), "NIKTO"),

@@ -6,31 +6,74 @@ from gi.repository import Gtk
 class PayloadPage(BasePage):
     def __init__(self):
         super().__init__("🔨 ARSENAL_FORGE")
+
+        # 1. Populate Metric Strip
+        self.pod_pulse = DataPod("MUTATION_PULSE", "ACTIVE", "cyan")
+        self.pod_depth = DataPod("OBF_DEPTH", "LEVEL_3", "violet")
+        self.pod_entropy = DataPod("ENTROPY", "HIGH", "amber")
+
+        self.metric_strip.pack_start(self.pod_pulse, True, True, 0)
+        self.metric_strip.pack_start(self.pod_depth, True, True, 0)
+        self.metric_strip.pack_start(self.pod_entropy, True, True, 0)
+
         self._build_tactical_interface()
 
     def _build_tactical_interface(self):
-        # 1. Metric Strip
-        strip = Gtk.Box(spacing=15)
-        strip.pack_start(DataPod("PULSE", "ACTIVE", "cyan"), True, True, 0)
-        strip.pack_start(DataPod("LOAD", "0.0%", "violet"), True, True, 0)
-        strip.set_margin_bottom(20)
-        self.workspace.pack_start(strip, False, False, 0)
+        # Control Deck
+        deck = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+        
+        row1 = Gtk.Box(spacing=10)
+        row1.pack_start(Gtk.Label(label="Payload Type:"), False, False, 0)
+        self.payload_type = Gtk.ComboBoxText()
+        self.payload_type.append("elf", "Evasive ELF (x64/Shikata)")
+        self.payload_type.append("ps1", "Stealth PowerShell (AMSI Bypass)")
+        self.payload_type.append("py_xor", "Obfuscated Python (XOR)")
+        self.payload_type.append("py_c2", "Encrypted C2 Agent (Fernet)")
+        self.payload_type.set_active(0)
+        row1.pack_start(self.payload_type, True, True, 0)
+        deck.pack_start(row1, False, False, 0)
 
-        # 2. Control Pod
-        pod = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        pod.get_style_context().add_class("card")
-        pod.set_margin_top(15); pod.set_margin_bottom(15); pod.set_margin_start(15); pod.set_margin_end(15)
+        row2 = Gtk.Box(spacing=10)
+        self.lhost_entry = Gtk.Entry()
+        self.lhost_entry.set_placeholder_text("LHOST (e.g. 10.0.2.15)")
+        self.lhost_entry.set_text("10.0.2.15") # Ideally from config
+        row2.pack_start(self.lhost_entry, True, True, 0)
         
-        self.target_entry = Gtk.Entry()
-        self.target_entry.set_placeholder_text("MISSION_TARGET_SPEC")
-        pod.pack_start(self.target_entry, False, False, 0)
+        self.lport_entry = Gtk.Entry()
+        self.lport_entry.set_placeholder_text("LPORT")
+        self.lport_entry.set_text("4444")
+        row2.pack_start(self.lport_entry, False, False, 0)
+        deck.pack_start(row2, False, False, 0)
         
-        btn = self.make_action_btn("⚡ INITIATE_OPERATION", self._on_mission)
-        pod.pack_start(btn, False, False, 0)
+        btn = self.make_action_btn("⚡ INITIATE_ARSENAL_FORGE", self._on_forge)
+        deck.pack_start(btn, False, False, 0)
         
-        self.workspace.pack_start(pod, True, True, 0)
+        self.workspace.pack_start(deck, True, True, 0)
 
-    def _on_mission(self, btn):
-        target = self.target_entry.get_text()
-        self.run_mission(f"Perform ARSENAL_FORGE on target: {target}")
+    def _on_forge(self, btn):
+        from shadowcypher.modules.payload_factory import PayloadFactory
+        from gi.repository import GLib
+        
+        ptype = self.payload_type.get_active_id()
+        lhost = self.lhost_entry.get_text().strip()
+        lport = self.lport_entry.get_text().strip()
+        
+        self.terminal.clear()
+        self.terminal.log(f"INITIATING_FORGE: {ptype.upper()} -> {lhost}:{lport}", "SYSTEM")
+        
+        def _on_out(line):
+            GLib.idle_add(self.terminal.log, line.strip(), "FORGE")
+        
+        if ptype == "elf":
+            PayloadFactory.generate_evasive_elf(lhost, lport, on_output=_on_out)
+        elif ptype == "ps1":
+            path = PayloadFactory.generate_stealth_powershell(lhost, lport, on_output=_on_out)
+            self.terminal.log(f"ARTIFACT_STORED: {path}", "SUCCESS")
+        elif ptype == "py_xor":
+            path = PayloadFactory.generate_obfuscated_python(lhost, lport)
+            self.terminal.log(f"ARTIFACT_STORED: {path}", "SUCCESS")
+        elif ptype == "py_c2":
+            b64 = PayloadFactory.generate_stealth_c2_python(lhost, lport)
+            self.terminal.log("ENCRYPTED_AGENT_BASE64:", "SUCCESS")
+            self.terminal.log(b64, "DATA")
 

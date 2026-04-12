@@ -11,20 +11,22 @@ class WebAttacksPage(BasePage):
     def __init__(self):
         super().__init__("\U0001f310 Web Assault (Ffuf & Nuclei)")
 
-        self.main_pod = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.main_pod.get_style_context().add_class("card")
-        self.pack_start(self.main_pod, True, True, 0)
+        from shadowcypher.ui.components import DataPod
 
+        # Metric Strip
+        self.pod_vulns = DataPod("VULNS_FOUND", "0", "cyan")
+        self.pod_speed = DataPod("SCAN_SPEED", "NORMAL", "violet")
+        self.pod_status = DataPod("ENGINE_STATUS", "IDLE", "amber")
+
+        self.metric_strip.pack_start(self.pod_vulns, True, True, 0)
+        self.metric_strip.pack_start(self.pod_speed, True, True, 0)
+        self.metric_strip.pack_start(self.pod_status, True, True, 0)
+
+        # Operations Notebook
         notebook = Gtk.Notebook()
         notebook.append_page(self._build_nuclei_tab(), Gtk.Label(label="Nuclei"))
         notebook.append_page(self._build_ffuf_tab(), Gtk.Label(label="Ffuf Fuzzing"))
-        self.main_pod.pack_start(notebook, False, False, 0)
-
-        self.build_terminal()
-
-        stop_box = Gtk.Box()
-        stop_box.pack_start(self.build_stop_button(), False, False, 0)
-        self.main_pod.pack_start(stop_box, False, False, 0)
+        self.workspace.pack_start(notebook, False, False, 0)
 
     def _build_nuclei_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)

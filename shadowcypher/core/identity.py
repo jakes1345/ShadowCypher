@@ -51,10 +51,40 @@ def get_pubkey_fingerprint() -> str:
     return hashlib.sha256(pub_bytes).hexdigest()
 
 
-def verify_admin() -> bool:
-    """Cryptographic admin verification.
-    The private key must exist AND its derived public key must match the shipped public key.
-    Simply creating a random private key will fail this check."""
+def verify_admin(irc_nick: str = None) -> bool:
+    """Enterprise Identity Verification.
+    
+    Two modes:
+    - Local (irc_nick=None): Checks machine handle + crypto key proof.
+      Used by the UI to gate admin features.
+    - IRC (irc_nick provided): Checks the IRC nick against the admin_list.
+      Only authorized nicks (e.g. 'jack', 'ShadowSentinel') get admin.
+    """
+    from shadowcypher.core.config import config
+    
+    admin_list = config.get("identity", "admin_list", default=[])
+    
+    # ── IRC Authorization Mode ──
+    if irc_nick is not None:
+        if irc_nick in admin_list:
+            return True
+        # Also grant admin if IRC nick matches the machine handle
+        current_handle = config.get("identity", "handle", default="")
+        if current_handle and irc_nick == current_handle:
+            return True
+        return False
+    
+    # ── Local Machine Authorization Mode ──
+    # 1. Primary: Admin List Delegation
+    try:
+        current_handle = config.get("identity", "handle", default="")
+        if current_handle and current_handle in admin_list:
+            logger.info("identity", f"Escalating privileges for authorized ADMIN: {current_handle}")
+            return True
+    except Exception:
+        pass
+
+    # 2. Secondary: Cryptographic Key Proofs
     pub = _load_public_key()
     priv = _load_private_key()
     if not pub or not priv:
@@ -71,35 +101,26 @@ def verify_admin() -> bool:
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
         if shipped_fp != derived_fp:
-            logger.warn(
-                "identity",
-                "TAMPER DETECTED: private key does not match shipped public key",
-            )
+            logger.warn("identity", "TAMPER DETECTED: key mismatch")
             return False
 
         challenge = os.urandom(32)
         signature = priv.sign(
             challenge,
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH,
-            ),
+            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
             hashes.SHA256(),
         )
         pub.verify(
             signature,
             challenge,
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH,
-            ),
+            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
             hashes.SHA256(),
         )
-        logger.info("identity", "Admin identity VERIFIED via challenge-response")
+        logger.info("identity", "Admin identity VERIFIED via crypto-key")
         return True
 
     except Exception as e:
-        logger.warn("identity", f"Admin verification failed: {e}")
+        logger.warn("identity", f"Crypto-verification failed: {e}")
         return False
 
 
@@ -125,9 +146,19 @@ class Identity:
 
     @property
     def handle(self) -> str:
+        # Load custom handle from config (overrides for both admin and op)
+        custom = config.get("identity", "handle", default="")
+        if custom:
+            return custom
+        
         if self._is_admin:
             return _ADMIN_HANDLE
-        return ""
+        return "SC_OPERATOR"
+
+    def set_handle(self, new_handle: str):
+        """Set and persist a custom handle (Admin or Operator)."""
+        config.set("identity", "handle", new_handle)
+        logger.info("identity", f"Handle updated: {new_handle}")
 
     @property
     def pubkey_fingerprint(self) -> str:

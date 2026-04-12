@@ -113,7 +113,7 @@ class Wireless(BaseModule):
     def ai_jammer(bssid, on_output=None):
         """Escalate to Swarm for complex signal-jamming strategies."""
         from shadowcypher.core.hub import hub
-        return hub.register_mission(
+        return hub.dispatch_mission(
             f"Devise and execute a smart deauth/jamming strategy for AP {bssid} "
             "to force clients to our honeypot."
         )

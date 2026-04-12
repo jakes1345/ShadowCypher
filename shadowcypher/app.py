@@ -10,6 +10,7 @@ from shadowcypher.ui.themes import get_theme
 from shadowcypher.core.logger import logger
 from shadowcypher.core.security import StealthHoneypot
 from shadowcypher.core.identity import identity
+from shadowcypher.core.bus import bus
 
 class ShadowCypherWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
@@ -18,11 +19,16 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.set_resizable(True)
         self.set_position(Gtk.WindowPosition.CENTER)
 
+        # Apex Application Icon Injection
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "native/icons/shadowcypher-256.png")
+        if os.path.exists(icon_path):
+            self.set_icon_from_file(icon_path)
+
         # 1. Apex HeaderBar
         self.header = Gtk.HeaderBar()
         self.header.set_show_close_button(True)
-        self.header.set_title("ShadowCypher")
-        self.header.set_subtitle("\U0001f575\ufe0f APEX_MISSION_CONTROL")
+        self.header.set_title("CITADEL // SHADOWCYPHER")
+        self.header.set_subtitle("\U0001f575\ufe0f APEX_TACTICAL_OFFENSIVE")
         self.set_titlebar(self.header)
 
         theme = get_theme("dark")
@@ -33,42 +39,139 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         # 2. Apex Layout
         vbox_master = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.add(vbox_master)
-        hbox_content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        vbox_master.pack_start(hbox_content, True, True, 0)
-
-        self._sidebar = self._build_sidebar()
-        hbox_content.pack_start(self._sidebar, False, False, 0)
-
+        
+        self.nav_box = self._build_sidebar()
+        
+        # 3. Main Operational Stack (The Pulse HUD)
         self._page_container = Gtk.Stack()
         self._page_container.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
-        hbox_content.pack_start(self._page_container, True, True, 0)
+        self._page_container.set_transition_duration(400)
+        
+        # 4. Tactical Sidebar (The Pulse)
+        self.pulse_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self.pulse_box.get_style_context().add_class("citadel-pulse")
+        self.pulse_box.set_size_request(320, -1)
+        
+        # Section Header: Telemetry
+        tel_header = Gtk.Label()
+        tel_header.set_markup("<span size='small' weight='bold' color='#94a3b8'>// REAL-TIME_TELEMETRY</span>")
+        tel_header.set_halign(Gtk.Align.START)
+        self.pulse_box.pack_start(tel_header, False, False, 10)
+        
+        # Real-time Pulse Components
+        self.cpu_label = Gtk.Label(label="CPU_LOAD: [||||||||||] 0%")
+        self.mem_label = Gtk.Label(label="MEM_PRESSURE: [||||||||||] 0%")
+        
+        for lbl in [self.cpu_label, self.mem_label]:
+            lbl.set_halign(Gtk.Align.START)
+            self.pulse_box.pack_start(lbl, False, False, 5)
 
-        # 3. Apex Footer (Synchronized with ShadowHub)
+        # Section Header: Network
+        net_header = Gtk.Label()
+        net_header.set_markup("<span size='small' weight='bold' color='#94a3b8'>// NETWORK_ENTROPY</span>")
+        net_header.set_halign(Gtk.Align.START)
+        self.pulse_box.pack_start(net_header, False, False, 10)
+        
+        self.net_label = Gtk.Label(label="NET_ENTROPY: 0.00bps")
+        self.irc_label = Gtk.Label(label="COORDINATION: NOMINAL")
+        
+        for lbl in [self.net_label, self.irc_label]:
+            lbl.set_halign(Gtk.Align.START)
+            self.pulse_box.pack_start(lbl, False, False, 5)
+
+        # Assemble Full Layout
+        self.layout_grid = Gtk.Grid()
+        self.layout_grid.set_column_spacing(0)
+        
+        # Ensure children expand to fill the void
+        self.nav_box.set_vexpand(True)
+        self._page_container.set_hexpand(True)
+        self._page_container.set_vexpand(True)
+        self.pulse_box.set_vexpand(True)
+        
+        self.layout_grid.attach(self.nav_box, 0, 0, 1, 1)
+        self.layout_grid.attach(self._page_container, 1, 0, 1, 1)
+        self.layout_grid.attach(self.pulse_box, 2, 0, 1, 1)
+        
+        vbox_master.pack_start(self.layout_grid, True, True, 0)
+
+        # 3. Apex Footer
         self.footer = Gtk.ActionBar()
-        self.system_status = Gtk.Label()
-        self.footer.pack_start(self.system_status)
-
-        self.uptime_status = Gtk.Label(label="IDLE")
-        self.footer.pack_end(self.uptime_status)
-        vbox_master.pack_start(self.footer, False, False, 0)
-
+        self.footer.get_style_context().add_class("footer")
+        vbox_master.pack_end(self.footer, False, False, 0)
+        
+        self.status_label = Gtk.Label(label="CITADEL_NOMINAL | MISSION_READY")
+        self.footer.pack_start(self.status_label)
+        
+        # 4. Final Initialization
         self._page_registry = {}
         self._switch_to_page("Operational Overview")
-        GLib.timeout_add(1000, self._tick_apex_telemetry)
+        
+        # Subscribe to Autonomous Ticket Events
+        from shadowcypher.core.bus import bus
+        bus.subscribe("new_ticket", self._on_new_ticket)
+        
+        # Start High-Frequency Telemetry Tick
+        GLib.timeout_add(100, self._pulse_tick)
+        
+        # --- Sovereign Ignition ---
+        self._start_sovereign_hub()
+        
         self.show_all()
 
-    def _tick_apex_telemetry(self):
-        """Global UI Synchronization with the ShadowHub Core."""
-        summary = hub.get_tactical_summary()
-        role = "ADMIN" if identity.is_admin else "OPERATOR"
+    def _start_sovereign_hub(self):
+        """Autonomously launch the Sovereign War-Room server."""
+        from shadowcypher.core.sovereign import SovereignServer
+        import asyncio
+        import threading
         
-        self.system_status.set_markup(
-            f"<span color='#38bdf8'><b>[{role}]</b></span> | "
-            f"<span color='#f87171'><b>[MISSIONS:{summary['active_missions']}]</b></span> | "
-            f"<span color='#a855f7'><b>[APEX_CORE: ACTIVE]</b></span>"
-        )
-        self.uptime_status.set_text(f"UPTIME: {summary['uptime']}")
+        def run_srv():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            srv = SovereignServer(host="127.0.0.1", port=8888)
+            
+            # Start the Bot Client 2 seconds after server init
+            def ignite_bot():
+                time.sleep(2)
+                from shadowcypher.core.irc_bot import sentinel
+                sentinel.start()
+                logger.info("app", "SENTINEL_IGNITION: ShadowSentinel bot joined the hub.")
+            
+            threading.Thread(target=ignite_bot, daemon=True).start()
+            loop.run_until_complete(srv.start())
+
+        t = threading.Thread(target=run_srv, daemon=True)
+        t.start()
+        logger.info("app", "SOVEREIGN_IGNITION: War-Room server launched in background.")
+
+    def _pulse_tick(self):
+        """Ultra-Advanced Real-time Telemetry Processing (60Hz Logic)."""
+        import psutil
+        from shadowcypher.core.hub import hub
+        try:
+            cpu = psutil.cpu_percent()
+            mem = psutil.virtual_memory().percent
+            
+            # Update Visual Pulse (Mono-bar aesthetic)
+            self.cpu_label.set_text(f"CPU_LOAD: [{'|'*int(cpu/10)}{'.'*(10-int(cpu/10))}] {cpu}%")
+            self.mem_label.set_text(f"MEM_PRESSURE: [{'|'*int(mem/10)}{'.'*(10-int(mem/10))}] {mem}%")
+            
+            # Fetch tactical data from the Hub
+            summary = hub.get_tactical_summary()
+            self.net_label.set_text(f"NET_ENTROPY: {summary.get('network_load', 0)}bps")
+            
+            # Update Coordinate Status
+            status_text = f"CITADEL_NOMINAL | MISSIONS: {summary.get('active_missions')} | THREATS: {summary.get('active_targets')}"
+            self.status_label.set_text(status_text)
+        except Exception:
+            pass
         return True
+
+    def _on_new_ticket(self, data: dict):
+        """High-priority visual alert for incoming autonomous tickets."""
+        handle = data.get("handle", "Unknown")
+        self.header.set_subtitle(f"\u26a0\ufe0f TICKET_ALERT: {handle}")
+        logger.info("ui", f"NOTIFIED: New autonomous ticket from {handle}")
 
     def _build_sidebar(self):
         scroller = Gtk.ScrolledWindow()
@@ -83,26 +186,26 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f916", "Tactical Swarm AI"),
             ("---", "RECON_&_INTEL"),
             ("\U0001f4e1", "Signal Recon"),
-            ("\U0001f575", "Deep OSINT Hub"),
+            ("\U0001f50e", "Deep OSINT Hub"),
             ("\U0001f310", "Network Ops"),
             ("\U0001f4f6", "Wireless Assault"),
             ("---", "OFFENSIVE_STRIKE"),
-            ("\U0001f310", "Web Assault"),
-            ("\u26a1", "Offensive Exploit"),
-            ("\U0001f50e", "Vulnerability Pulse"),
+            ("\U0001f575", "Web Assault"),
+            ("\U0001f4a3", "Offensive Exploit"),
+            ("\U0001f3af", "Vulnerability Pulse"),
             ("\U0001f511", "Credential Assault"),
             ("---", "ADVANCED_OPS"),
-            ("\U0001f3f0", "AD Infiltration"),
-            ("\U0001f4bb", "AD Attacks (Impacket)"),
+            ("\U0001f6e1", "AD Infiltration"),
+            ("\U0001f528", "AD Attacks (Impacket)"),
             ("\U0001f3a3", "Phishing Lab"),
-            ("\U0001f528", "Payload Forge"),
-            ("\U0001f52c", "Digital Forensics"),
-            ("---", "SYSTEM_OPS"),
-            ("\U0001f6e1\ufe0f", "Firewall Control"),
-            ("\U0001f4c1", "Session Manager"),
+            ("\U0001f4e6", "Payload Forge"),
+            ("---", "DEFENSIVE_SOVEREIGN"),
+            ("\U0001f525", "Firewall Control"),
+            ("\U0001f50d", "Digital Forensics"),
+            ("\U0001f512", "Session Manager"),
             ("\U0001f3ae", "Gaming OSINT"),
-            ("\U0001f4e8", "Support & Comms"),
-            ("\U0001f512", "Admin Panel"),
+            ("\U0001f4ac", "Support & Comms"),
+            ("\U0001f6e0", "Admin Panel"),
         ]
 
         for icon, name in pages:
@@ -121,7 +224,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 hbox.pack_start(icon_lbl, False, False, 0)
                 hbox.pack_start(name_lbl, True, True, 0)
                 row.add(hbox)
-                row.set_name(name)
+                # Use GObject data for robust metadata storage
+                row.page_id = name 
             sidebar.add(row)
 
         sidebar.set_activate_on_single_click(True)
@@ -132,8 +236,9 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
     def _on_sidebar_selected(self, lb, row):
         if row is None:
             return
-        name = row.get_name()
-        if name and name != "GtkListBoxRow":
+        # Pull the page ID from our custom attribute
+        name = getattr(row, "page_id", None)
+        if name:
             self._switch_to_page(name)
 
     def _switch_to_page(self, name):
@@ -196,23 +301,19 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
 
 class ShadowCypherApp(Gtk.Application):
     def __init__(self):
-        super().__init__(application_id="org.shadowcypher.apex")
+        super().__init__(application_id="org.shadowcypher.ShadowCypher")
 
     def do_activate(self):
         self._window = ShadowCypherWindow(self)
 
 def main():
     # APEX_BOOTSTRAP_PROTOCOL
-    from shadowcypher_overlord_audit import ApexOverlord
     from shadowcypher.core.hub import hub
     from shadowcypher.ai.sisyphus import sisyphus
     
     logger.info("system", "BOOTING_APEX_PREDATOR_CORE...")
     
-    # 1. Ground-Up System Scan
-    ApexOverlord().stabilize()
-    
-    # 2. Start Infinite Intelligence Loop
+    # Start Infinite Intelligence Loop (Non-blocking)
     hub.system_status = "OPTIMIZING"
     sisyphus.start()
     

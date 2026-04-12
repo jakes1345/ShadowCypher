@@ -172,37 +172,36 @@ class DashboardPage(Gtk.Box):
         content.pack_start(header, False, False, 0)
 
         # ── Gauge Row ──
-        gauge_row = Gtk.Box(spacing=16, homogeneous=False)
+        gauge_row = Gtk.Box(spacing=20, homogeneous=False)
 
         # Gauges panel (left)
-        gauges_box = Gtk.Box(spacing=8, homogeneous=True)
-        gauges_box.get_style_context().add_class("card")
+        gauges_box = Gtk.Box(spacing=15, homogeneous=True)
+        gauges_box.get_style_context().add_class("citadel-pulse") # Use pulse styling for consistency
 
-        self.gauge_cpu = ArcGauge("CPU LOAD", "%", (0, 0.83, 1.0), 130)
-        self.gauge_ram = ArcGauge("MEMORY", "%", (0.55, 0.36, 0.96), 130)
-        self.gauge_disk = ArcGauge("DISK", "%", (0.96, 0.62, 0.04), 130)
+        self.gauge_cpu = ArcGauge("CPU LOAD", "%", (0, 1.0, 0.61), 180)
+        self.gauge_ram = ArcGauge("MEMORY", "%", (0.6, 0.4, 1.0), 180)
+        self.gauge_disk = ArcGauge("DISK", "%", (1.0, 0.6, 0.1), 180)
 
-        gauges_box.pack_start(self.gauge_cpu, True, True, 4)
-        gauges_box.pack_start(self.gauge_ram, True, True, 4)
-        gauges_box.pack_start(self.gauge_disk, True, True, 4)
+        gauges_box.pack_start(self.gauge_cpu, True, True, 10)
+        gauges_box.pack_start(self.gauge_ram, True, True, 10)
+        gauges_box.pack_start(self.gauge_disk, True, True, 10)
         gauge_row.pack_start(gauges_box, True, True, 0)
 
         # Stats panel (right)
-        stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        stats_box.set_size_request(240, -1)
 
-        self.stat_ai = MiniStat("AI Provider", "Checking...", "#8b5cf6")
-        self.stat_missions = MiniStat("Active Missions", "0", "#f43f5e")
-        self.stat_uptime = MiniStat("Session Uptime", "0:00:00", "#00d4ff")
-        self.stat_net = MiniStat("Network Out", "0 B/s", "#10b981")
-        self.stat_stealth = MiniStat("Stealth Levels", "...", "#f59e0b")
+        self.stat_ai = MiniStat("AI_CORE", "NOMINAL", "#8b5cf6")
+        self.stat_missions = MiniStat("ACTIVE_MISSIONS", "0", "#f43f5e")
+        self.stat_pulse = MiniStat("SPECTRAL_PULSE", "NOMINAL", "#00ff9d")
+        self.stat_uptime = MiniStat("MISSION_UPTIME", "0:00:00", "#38bdf8")
+        self.stat_net = MiniStat("NET_IO_PRESSURE", "0 B/s", "#64748b")
+        self.stat_stealth = MiniStat("STEALTH_SIGNATURE", "4/5 ACTIVE", "#fbbf24")
 
-        stats_box.pack_start(self.stat_ai, False, False, 0)
-        stats_box.pack_start(self.stat_missions, False, False, 0)
-        stats_box.pack_start(self.stat_uptime, False, False, 0)
-        stats_box.pack_start(self.stat_net, False, False, 0)
-        stats_box.pack_start(self.stat_stealth, False, False, 0)
+        for stat in [self.stat_ai, self.stat_missions, self.stat_pulse, self.stat_uptime, self.stat_net, self.stat_stealth]:
+            stats_box.pack_start(stat, False, False, 0)
+        
         gauge_row.pack_start(stats_box, False, False, 0)
-
         content.pack_start(gauge_row, False, False, 0)
 
         # ── Arsenal Grid ──
@@ -343,6 +342,12 @@ class DashboardPage(Gtk.Box):
             s = hub.get_tactical_summary()
             self.stat_missions.set_value(str(s["active_missions"]))
             self.stat_uptime.set_value(s["uptime"])
+
+            # Pulse
+            from shadowcypher.core.pulse import pulse
+            score = pulse.last_anomaly_score
+            pulse_lbl = "NOMINAL" if score < 2.5 else f"ANOMALY ({score:.1f})"
+            self.stat_pulse.set_value(pulse_lbl)
 
         except Exception:
             pass

@@ -514,6 +514,35 @@ class AIEngine:
             on_progress(f"Failed to load {model_name}\n")
         return False
 
+    def execute_quantum_task(self, prompt: str, on_output: Callable[[str], None] = None):
+        """Execute a high-stakes task using the Quantum Agent (Claude-Code dev-full)."""
+        # PRIMARY: The recently built dev-full binary
+        binary_path = "/home/jack/dev-full-claude/cli-dev"
+        
+        if not os.path.exists(binary_path):
+            # SECONDARY: Check for global symlink
+            binary_path = os.path.expanduser("~/.local/bin/cli-dev")
+            
+        if not os.path.exists(binary_path):
+            if on_output:
+                on_output("[ERROR] QUANTUM_BINARY_NOT_FOUND: Ensure 'dev-full' build is complete in /home/jack/dev-full-claude/\n")
+            return
+
+        from shadowcypher.core.runner import runner
+        logger.info("ai", f"QUANTUM_GATE_OPEN: Dispatching mission to {binary_path}")
+        
+        # Run Claude-Code in non-interactive mode with full project context
+        cmd = [binary_path, "--non-interactive", prompt]
+        env = os.environ.copy()
+        env["CLAUDE_CODE_EXPERIMENTAL"] = "1" # Force experimental feature flags
+        
+        return runner.execute_task(
+            "QUANTUM_EXEC", 
+            cmd, 
+            callback=on_output,
+            cwd="/home/jack/ShadowCypher"
+        )
+
     def unload(self):
         """Unload model from memory."""
         with self._lock:

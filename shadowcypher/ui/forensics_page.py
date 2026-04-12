@@ -12,7 +12,19 @@ class ForensicsPage(BasePage):
     """Digital forensics UI."""
 
     def __init__(self):
-        super().__init__("\U0001f52c Digital Forensics")
+        super().__init__("\U0001f52c DIGITAL_FORENSICS_VAULT")
+
+        from shadowcypher.ui.components import DataPod
+        
+        # 1. Populate Metrics
+        self.pod_evidence = DataPod("EVIDENCE_LOCKED", "READY", "cyan")
+        self.pod_integrity = DataPod("HOST_INTEGRITY", "VERIFIED", "violet")
+        self.pod_audit = DataPod("AUDIT_PULSE", "NOMINAL", "amber")
+        
+        self.metric_strip.pack_start(self.pod_evidence, True, True, 0)
+        self.metric_strip.pack_start(self.pod_integrity, True, True, 0)
+        self.metric_strip.pack_start(self.pod_audit, True, True, 0)
+
         self._engine = Forensics()
         self._build_controls()
 

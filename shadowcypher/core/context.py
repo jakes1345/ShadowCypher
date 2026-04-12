@@ -30,7 +30,9 @@ class ShadowContext:
 
     def read_file_content(self, relative_path: str) -> str:
         """Reads a specific file for the AI to analyze."""
-        abs_path = os.path.join(self.root, relative_path)
+        abs_path = os.path.realpath(os.path.join(self.root, relative_path))
+        if not abs_path.startswith(os.path.realpath(self.root)):
+            return "ERROR: Access denied — path traversal blocked."
         if not os.path.exists(abs_path):
             return f"ERROR: File {relative_path} not found."
         

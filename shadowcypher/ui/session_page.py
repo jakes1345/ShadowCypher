@@ -13,7 +13,18 @@ class SessionPage(BasePage):
     """Session and Project management UI."""
 
     def __init__(self):
-        super().__init__("\U0001f4c2 Session & Projects")
+        super().__init__("\U0001f4c2 SESSION_&_ENGAGEMENTS")
+
+        from shadowcypher.ui.components import DataPod
+        
+        # 1. Populate Metrics
+        self.pod_eng = DataPod("ACTIVE_ENGAGEMENT", "IDLE", "cyan")
+        self.pod_drm = DataPod("SYSTEM_DRM", "LOCKED", "violet")
+        self.pod_persistence = DataPod("PERSISTENCE", "STABLE", "amber")
+        
+        self.metric_strip.pack_start(self.pod_eng, True, True, 0)
+        self.metric_strip.pack_start(self.pod_drm, True, True, 0)
+        self.metric_strip.pack_start(self.pod_persistence, True, True, 0)
 
         # ── PROJECT SELECTOR ──
         sel_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)

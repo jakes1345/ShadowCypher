@@ -2,7 +2,7 @@
 
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 
 from shadowcypher.modules.firewall import Firewall
 from shadowcypher.ui.base_page import BasePage
@@ -14,23 +14,48 @@ class FirewallPage(BasePage):
     def __init__(self):
         super().__init__("\U0001f6e1\ufe0f Firewall Management")
 
-        # Backend detection
+        from shadowcypher.ui.components import DataPod
+        
+        # 1. Populate Metrics
         backend = Firewall.detect_backend()
-        info = Gtk.Label(label=f"Detected backend: {backend}")
-        info.get_style_context().add_class("subsection-title")
-        info.set_halign(Gtk.Align.START)
-        self.workspace.pack_start(info, False, False, 0)
+        self.pod_backend = DataPod("BACKEND", backend.upper(), "cyan")
+        self.pod_status = DataPod("STATUS", "PROTECTED", "violet")
+        self.pod_uptime = DataPod("FILTER_UPTIME", "0:00:00", "amber")
+        
+        self.metric_strip.pack_start(self.pod_backend, True, True, 0)
+        self.metric_strip.pack_start(self.pod_status, True, True, 0)
+        self.metric_strip.pack_start(self.pod_uptime, True, True, 0)
 
-        # Quick actions
-        quick_box = Gtk.Box(spacing=8)
-        quick_box.pack_start(self.make_action_btn("View Rules", self._on_view_rules), False, False, 0)
-        quick_box.pack_start(self.make_action_btn("Save Rules", self._on_save, "success-btn"), False, False, 0)
+        # ── DEFENSIVE OPERATIONS ──
+        ops_box = Gtk.Box(spacing=15)
+        
+        lockdown_btn = self.make_action_btn("⚡ INITIATE_SOVEREIGN_LOCKDOWN", self._on_lockdown, "danger-btn")
+        ops_box.pack_start(lockdown_btn, True, True, 0)
+        
+        ghost_btn = self.make_action_btn("👻 GHOST_MODE (DROP ALL)", self._on_ghost, "suggested-action")
+        ops_box.pack_start(ghost_btn, True, True, 0)
+        
+        self.workspace.pack_start(ops_box, False, False, 0)
 
-        flush_btn = Gtk.Button(label="\u26a0 Flush All")
-        flush_btn.get_style_context().add_class("danger-btn")
-        flush_btn.connect("clicked", self._on_flush)
-        quick_box.pack_start(flush_btn, False, False, 0)
-        self.workspace.pack_start(quick_box, False, False, 0)
+        # ── CONNECTION RADAR ──
+        radar_lbl = Gtk.Label()
+        radar_lbl.set_markup("<span size='large' weight='bold' foreground='#00ff9d'>[LIVE_CONNECTION_RADAR]</span>")
+        radar_lbl.set_halign(Gtk.Align.START)
+        self.workspace.pack_start(radar_lbl, False, False, 0)
+
+        self.con_store = Gtk.ListStore(str, str, str, str) # Local, Remote, State, Process
+        self.con_tree = Gtk.TreeView(model=self.con_store)
+        self.con_tree.get_style_context().add_class("terminal-view")
+        
+        for i, title in enumerate(["LOCAL_ADDR", "REMOTE_ADDR", "STATE", "PROCESS"]):
+            renderer = Gtk.CellRendererText()
+            column = Gtk.TreeViewColumn(title, renderer, text=i)
+            self.con_tree.append_column(column)
+            
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_min_content_height(150)
+        scroll.add(self.con_tree)
+        self.workspace.pack_start(scroll, True, True, 0)
 
         # ── Block/Allow IP ──
         ip_box = Gtk.Box(spacing=8)
@@ -82,9 +107,35 @@ class FirewallPage(BasePage):
         # Load initial rules
         self._on_view_rules(None)
 
+    def _on_lockdown(self, btn):
+        self.clear_output("INITIATING_SOVEREIGN_LOCKDOWN: Shielding mission core...\n")
+        Firewall.sovereign_lockdown(self.on_output)
+
+    def _on_ghost(self, btn):
+        self.clear_output("ACTIVATING_GHOST_MODE: Silencing inbound signal...\n")
+        Firewall.ghost_mode(self.on_output)
+
+    def _refresh_radar(self):
+        """Heartbeat: Update the Live Connection Radar."""
+        def _on_radar_out(line):
+            # Parse 'ss -tapn' or 'netstat' output and add to store
+            if "LISTEN" in line or "ESTAB" in line:
+                parts = line.split()
+                if len(parts) >= 4:
+                    GLib.idle_add(self.con_store.append, [parts[3], parts[4], parts[1], parts[-1]])
+        
+        self.con_store.clear()
+        Firewall.get_active_connections(_on_radar_out)
+        return True # Continue timer
+
     def _on_view_rules(self, btn):
         self.clear_output("Loading firewall rules...\n\n")
         Firewall.get_rules(self.on_output, self.on_complete)
+        self._refresh_radar()
+        # Start the 5s heartbeat (only once)
+        if not getattr(self, '_radar_timer_active', False):
+            self._radar_timer_active = True
+            GLib.timeout_add_seconds(5, self._refresh_radar)
 
     def _on_save(self, btn):
         self.clear_output("Saving firewall rules...\n")

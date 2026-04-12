@@ -15,26 +15,32 @@ class SteamAuditPage(BasePage):
 
     def __init__(self):
         super().__init__("GAMING SHADOW-OPS")
+        
+        from shadowcypher.ui.components import DataPod
+        
+        # 1. Populate Metric Strip (Unified with Citadel)
+        self.pod_library = DataPod("LOCAL_LIB", "—", "cyan")
+        self.pod_usage = DataPod("DISK_USAGE", "—", "violet")
+        self.pod_deals = DataPod("ACTIVE_DEALS", "—", "amber")
+        
+        self.metric_strip.pack_start(self.pod_library, True, True, 0)
+        self.metric_strip.pack_start(self.pod_usage, True, True, 0)
+        self.metric_strip.pack_start(self.pod_deals, True, True, 0)
+
         self._build_ui()
 
     def _build_ui(self):
+        # Stats are now in metric_strip, so we don't need stats_row here
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.workspace.pack_start(vbox, True, True, 0)
-
-        # ═══ 1. STATS ROW ═══
-        stats_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        self.stat_labels = {}
-        for key, title, val, sub in [
-            ("LIBRARY", "LOCAL LIBRARY", "—", "Installed Games"),
-            ("STORAGE", "DISK USAGE", "—", "Total Size"),
-            ("FREE", "FREE GAMES", "—", "Claimable Now"),
-            ("DEALS", "ACTIVE DEALS", "—", "On Sale"),
-            ("WISHLIST", "WISHLIST DEALS", "—", "Sale Items"),
-        ]:
-            card = self._stat_card(title, val, sub)
-            self.stat_labels[key] = card["value"]
-            stats_row.pack_start(card["box"], True, True, 0)
-        vbox.pack_start(stats_row, False, False, 0)
+        
+        self.stat_labels = {
+            "LIBRARY": self.pod_library.lbl_value,
+            "STORAGE": self.pod_usage.lbl_value,
+            "DEALS": self.pod_deals.lbl_value,
+            "FREE": Gtk.Label(), # Legacy compatibility
+            "WISHLIST": Gtk.Label() # Legacy compatibility
+        }
 
         # ═══ 2. CONFIG ROW ═══
         config_row = Gtk.Box(spacing=8)
@@ -338,9 +344,11 @@ class SteamAuditPage(BasePage):
             for item in results:
                 price = item.get("price", {})
                 if isinstance(price, dict):
-                    price_str = price.get("final", "Free")
-                    if isinstance(price_str, int):
-                        price_str = f"${price_str / 100:.2f}"
+                    raw_price = price.get("final")
+                    if isinstance(raw_price, int):
+                        price_str = f"${raw_price / 100:.2f}"
+                    else:
+                        price_str = str(raw_price) if raw_price is not None else "Free"
                 else:
                     price_str = "Free"
                 linux = " 🐧" if item.get("linux") else ""

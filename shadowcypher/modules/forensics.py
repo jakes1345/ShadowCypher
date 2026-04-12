@@ -56,4 +56,4 @@ class Forensics(BaseModule):
         from shadowcypher.core.hub import hub
         self.log(f"AI_INVESTIGATION_INITIATED: {target}", "AI")
         # We might pass the strings output to the AI here
-        return hub.register_mission(f"Investigate the file {target}. Perform static analysis and explain its function/possible malicious attributes.")
+        return hub.dispatch_mission(f"Investigate the file {target}. Perform static analysis and explain its function/possible malicious attributes.")

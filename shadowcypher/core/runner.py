@@ -16,6 +16,7 @@ class Runner:
     
     def __init__(self):
         self.active_processes = {}
+        self._lock = threading.Lock()
         self.platform = platform_engine
         self._perf_env = self._init_perf_env()
 
@@ -27,13 +28,25 @@ class Runner:
             env["LDFLAGS"] = "-fuse-ld=mold"
         return env
 
+    def stop_task(self, task_id):
+        """Emergency Kill Switch for autonomous tasks."""
+        with self._lock:
+            if task_id in self.active_processes:
+                proc = self.active_processes[task_id]
+                try:
+                    proc.terminate()
+                    # Force kill if still breathing after 2s
+                    threading.Timer(2, lambda: proc.kill() if proc.poll() is None else None).start()
+                except Exception as e:
+                    pass
+
     def execute_task(self, name, command, callback=None, cwd=None):
-        task_id = str(uuid.uuid4())[:8]
+        task_id = f"{name[:4]}_{str(uuid.uuid4())[:4]}"
         threading.Thread(target=self._run, args=(task_id, name, command, callback, cwd, False), daemon=True).start()
         return task_id
 
     def execute_task_shell(self, name, command, callback=None):
-        task_id = str(uuid.uuid4())[:8]
+        task_id = f"{name[:4]}_{str(uuid.uuid4())[:4]}"
         threading.Thread(target=self._run, args=(task_id, name, command, callback, None, True), daemon=True).start()
         return task_id
 
@@ -56,19 +69,27 @@ class Runner:
             
             proc = subprocess.Popen(
                 args, shell=is_shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, bufsize=1, env=self._perf_env, cwd=cwd
+                text=True, bufsize=1, env=self._perf_env, cwd=cwd,
+                start_new_session=True
             )
-            self.active_processes[task_id] = proc
             
-            for line in proc.stdout:
-                if callback: callback(line)
-                bus.publish("mission_output", line)
+            with self._lock:
+                self.active_processes[task_id] = proc
+            
+            while True:
+                line = proc.stdout.readline()
+                if not line and proc.poll() is not None:
+                    break
+                if line:
+                    if callback: callback(line)
+                    bus.publish("mission_output", {"task": task_id, "text": line})
             
             proc.wait(timeout=1200)
             if callback: callback(f"\n[MISSION_{name[:4]}_EXIT: {proc.returncode}]")
         except Exception as e:
             if callback: callback(f"[ERROR] APEX_RUNNER_FAULT: {e}")
         finally:
-            self.active_processes.pop(task_id, None)
+            with self._lock:
+                self.active_processes.pop(task_id, None)
 
 runner = Runner()
