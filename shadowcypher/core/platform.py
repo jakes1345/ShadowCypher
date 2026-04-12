@@ -31,16 +31,22 @@ class ShadowPlatform:
     @staticmethod
     def get_net_info_cmd() -> list[str]:
         """Returns the platform-specific routing/interface command."""
-        if ShadowPlatform.IS_LINUX: return ["ip", "route", "show", "default"]
-        if ShadowPlatform.IS_MACOS: return ["networksetup", "-listallnetworkservices"] # Deeper macOS info
-        if ShadowPlatform.IS_WINDOWS: return ["route", "print"]
+        if ShadowPlatform.IS_LINUX:
+            return ["ip", "route", "show", "default"]
+        if ShadowPlatform.IS_MACOS:
+            return ["networksetup", "-listallnetworkservices"]
+        if ShadowPlatform.IS_WINDOWS:
+            return ["route", "print"]
         return []
 
     @staticmethod
     def get_firewall_backend() -> str:
-        if ShadowPlatform.IS_LINUX: return "iptables"
-        if ShadowPlatform.IS_MACOS: return "pfctl"
-        if ShadowPlatform.IS_WINDOWS: return "netsh"
+        if ShadowPlatform.IS_LINUX:
+            return "iptables"
+        if ShadowPlatform.IS_MACOS:
+            return "pfctl"
+        if ShadowPlatform.IS_WINDOWS:
+            return "netsh"
         return "GENERIC"
 
     @staticmethod
@@ -52,7 +58,8 @@ class ShadowPlatform:
                 return subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True).strip()
             if ShadowPlatform.IS_WINDOWS:
                 return subprocess.check_output(['wmic', 'cpu', 'get', 'name'], text=True).split('\n')[1].strip()
-        except: return "GENERIC_APEX_PROCESSOR"
+        except:
+            return "GENERIC_APEX_PROCESSOR"
         return "UNKNOWN"
 
     @staticmethod
