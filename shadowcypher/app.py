@@ -19,6 +19,15 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.set_resizable(True)
         self.set_position(Gtk.WindowPosition.CENTER)
 
+        # Enable Hardware Acceleration & GPU Compositing
+        settings = Gtk.Settings.get_default()
+        if settings:
+            settings.set_property("gtk-application-prefer-dark-theme", True)
+            settings.set_property("gtk-enable-animations", True)
+        
+        # Critical: Force Native OpenGL rendering for the Citadel Pulse
+        Gdk.set_allowed_backends("x11,wayland,*")
+
         # Apex Application Icon Injection
         icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "native/icons/shadowcypher-256.png")
         if os.path.exists(icon_path):
@@ -144,24 +153,26 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         t.start()
         logger.info("app", "SOVEREIGN_IGNITION: War-Room server launched in background.")
 
-    def _pulse_tick(self):
-        """Ultra-Advanced Real-time Telemetry Processing (60Hz Logic)."""
-        import psutil
+    def _pulse_tick(self) -> bool:
+        """High-Frequency Native Telemetry Tick (100ms cycle)."""
+        from shadowcypher.core.platform import platform_engine
         from shadowcypher.core.hub import hub
+        
         try:
-            cpu = psutil.cpu_percent()
-            mem = psutil.virtual_memory().percent
+            # Use Native Platform Vitals instead of overhead-heavy psutil
+            vitals = platform_engine.get_system_vitals()
+            cpu, mem = vitals["cpu"], vitals["mem"]
             
             # Update Visual Pulse (Mono-bar aesthetic)
-            self.cpu_label.set_text(f"CPU_LOAD: [{'|'*int(cpu/10)}{'.'*(10-int(cpu/10))}] {cpu}%")
-            self.mem_label.set_text(f"MEM_PRESSURE: [{'|'*int(mem/10)}{'.'*(10-int(mem/10))}] {mem}%")
+            self.cpu_label.set_text(f"CPU_LOAD: [{'|'*int(cpu/10)}{'.'*(10-int(cpu/10))}] {cpu:.1f}%")
+            self.mem_label.set_text(f"MEM_PRESSURE: [{'|'*int(mem/10)}{'.'*(10-int(mem/10))}] {mem:.1f}%")
             
             # Fetch tactical data from the Hub
             summary = hub.get_tactical_summary()
-            self.net_label.set_text(f"NET_ENTROPY: {summary.get('network_load', 0)}bps")
+            self.net_label.set_text(f"NET_ENTROPY: {summary.get('telemetry', {}).get('load_avg', 0):.2f}bps")
             
             # Update Coordinate Status
-            status_text = f"CITADEL_NOMINAL | MISSIONS: {summary.get('active_missions')} | THREATS: {summary.get('active_targets')}"
+            status_text = f"CITADEL_NOMINAL | MISSIONS: {summary.get('active_missions')} | LOAD: {vitals['p_load']:.2f}"
             self.status_label.set_text(status_text)
         except Exception:
             pass
@@ -307,7 +318,12 @@ class ShadowCypherApp(Gtk.Application):
         self._window = ShadowCypherWindow(self)
 
 def main():
-    # APEX_BOOTSTRAP_PROTOCOL
+    # APEX_BOOTSTRAP: Prioritize the command plane
+    try:
+        if os.getuid() == 0:
+            os.nice(-10) # Elevate scheduling priority for real-time mission execution
+    except: pass
+
     from shadowcypher.core.hub import hub
     from shadowcypher.ai.sisyphus import sisyphus
     

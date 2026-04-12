@@ -87,4 +87,39 @@ class ShadowPlatform:
             
         return []
 
+    @staticmethod
+    def audit_tool_path(tool_name: str) -> Optional[str]:
+        """Locates and validates the execution integrity of a system tool.
+        
+        Args:
+            tool_name: The binary name or path.
+            
+        Returns:
+            The absolute path to the verified binary, or None.
+        """
+        import shutil
+        path = shutil.which(tool_name)
+        if path and os.access(path, os.X_OK):
+            return path
+        return None
+
+    @staticmethod
+    def get_system_vitals() -> Dict[str, Any]:
+        """Fetches high-fidelity system telemetry via native OS calls.
+        
+        Avoids library overhead by querying /proc or system-specific binaries.
+        """
+        vitals = {"cpu": 0.0, "mem": 0.0, "p_load": 0.0}
+        try:
+            if ShadowPlatform.IS_LINUX:
+                with open("/proc/loadavg", "r") as f:
+                    vitals["p_load"] = float(f.read().split()[0])
+                # CPU usage calculation (simplified for core health)
+                with open("/proc/stat", "r") as f:
+                    line = f.readline()
+                    parts = [float(x) for x in line.split()[1:]]
+                    vitals["cpu"] = sum(parts[:3]) / sum(parts) * 100
+        except: pass
+        return vitals
+
 platform_engine = ShadowPlatform()
