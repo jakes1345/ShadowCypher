@@ -8,41 +8,34 @@ import threading
 import uuid
 import sys
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any, Callable, Final
 from dataclasses import dataclass, field
 
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
 from shadowcypher.ai.orchestrator import AIOrchestrator
 
-@dataclass
+@dataclass(frozen=True)
 class Mission:
-    """Enterprise-grade mission state tracker."""
+    # Core state for tactical engagement
     id: str
     query: str
     role: str
-    status: str = "ENGAGED"
+    status: str = 'ENGAGED'
     progress: int = 0
     start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_update_msg: str = ""
-    findings: List[Dict] = field(default_factory=list)
+    findings: List[Dict[str, Any]] = field(default_factory=list)
     
     @property
     def duration(self) -> str:
+        # TODO: This formatting is a bit brittle, fix it for long running missions
         delta = datetime.now(timezone.utc) - self.start_time
         return str(delta).split(".")[0]
 
 class ShadowHub:
-    """The central directive brain of the ShadowCypher platform.
-
-    ShadowHub serves as the primary singleton controller, orchestrating mission 
-    lifecycles, global telemetry aggregation, and autonomous intelligence feedback loops.
-    
-    Constants:
-        SYSTEM_READY: Standard operational status string.
-    """
-    
-    SYSTEM_READY: Final[str] = "OPERATIONAL"
+    # Directs the Citadel core and autonomous loops.
+    SYSTEM_READY: Final[str] = 'OPERATIONAL'
     _instance: Optional['ShadowHub'] = None
     _lock: Final[threading.Lock] = threading.Lock()
 
@@ -54,7 +47,6 @@ class ShadowHub:
             return cls._instance
 
     def __init__(self) -> None:
-        """Initializes the hub subsystems and global bridge listeners."""
         if getattr(self, "_initialized", False):
             return
         
@@ -73,8 +65,8 @@ class ShadowHub:
         
         self.autonomous_enabled: bool = False
         self._initialized: bool = True
-        self._subscribe_to_internal_events()
-        self._engage_distributed_nodes()
+        self._wire_bus()
+        self._engage_distributed_nodes() # sentinel/irc bridge
 
         logger.info("hub", "SHADOWHUB_ULTIMA: MISSION_CONTROL_ENGAGED")
 
@@ -90,34 +82,27 @@ class ShadowHub:
             except Exception as e:
                 logger.error("hub", f"SENTINEL_FAILURE: Distributed handoff failed: {e}")
 
-    def _subscribe_to_internal_events(self) -> None:
-        """Registers the hub for high-level tactical event bus channels."""
+    def _wire_bus(self) -> None:
+        # Connect to tactical event channels
         bus.subscribe("intel_found", self._on_intel_discovered)
         bus.subscribe("sisyphus_report", self._on_health_report)
         bus.subscribe("pulse_anomaly", self._on_pulse_anomaly)
 
     def _on_intel_discovered(self, intel: Dict[str, Any]) -> None:
-        """Fuses raw intelligence into the autonomous decision engine.
-        
-        Args:
-            intel: A dictionary containing intelligence shards (type, IP, value).
-        """
+        # Fuses raw intel into the decision engine
         typ = intel.get("type", "UNKNOWN")
         ip = intel.get("ip", "LOCAL")
         logger.info("hub", f"INTEL_FUSION: Correlating {typ} for address {ip}")
         
         if self.autonomous_enabled and typ in ["CVE", "EXPLOITABLE_SERVICE"]:
+            # FIXME: Make sure targeting is 100% verified before auto-pwn
             self.dispatch_mission(
                 f"Perform deep-spectrum exploit validation for discovery {typ} on target {ip}.",
                 role="red_team"
             )
 
     def _on_pulse_anomaly(self, event: Dict[str, Any]) -> None:
-        """Orchestrates defensive reactions to signal-pulse anomalies.
-        
-        Args:
-            event: Anomaly metadata including variance score and stream source.
-        """
+        # Handles defensive reactions to spectrum pulse jitter
         stream = event.get("stream", "unknown")
         logger.warning("hub", f"SIGINT_ESCALATION: Temporal variance critical in {stream}")
         

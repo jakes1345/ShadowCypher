@@ -19,16 +19,16 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.set_resizable(True)
         self.set_position(Gtk.WindowPosition.CENTER)
 
-        # Enable Hardware Acceleration & GPU Compositing
+        # DEBUG: Toggle GPU acceleration based on driver support
         settings = Gtk.Settings.get_default()
         if settings:
             settings.set_property("gtk-application-prefer-dark-theme", True)
             settings.set_property("gtk-enable-animations", True)
         
-        # Critical: Force Native OpenGL rendering for the Citadel Pulse
+        # FIXME: Native OpenGL backend is flaky on some X11 drivers
         Gdk.set_allowed_backends("x11,wayland,*")
 
-        # Apex Application Icon Injection
+        # Load branding assets
         icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "native/icons/shadowcypher-256.png")
         if os.path.exists(icon_path):
             self.set_icon_from_file(icon_path)
@@ -129,7 +129,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.show_all()
 
     def _start_sovereign_hub(self):
-        """Autonomously launch the Sovereign War-Room server."""
+        # FIXME: cleanup this mess
         from shadowcypher.core.sovereign import SovereignServer
         import asyncio
         import threading
@@ -144,17 +144,16 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 time.sleep(2)
                 from shadowcypher.core.irc_bot import sentinel
                 sentinel.start()
-                logger.info("app", "SENTINEL_IGNITION: ShadowSentinel bot joined the hub.")
+                logger.info("hub", "SENTINEL_IGNITION: ShadowSentinel bot joined the hub.")
             
             threading.Thread(target=ignite_bot, daemon=True).start()
             loop.run_until_complete(srv.start())
 
         t = threading.Thread(target=run_srv, daemon=True)
         t.start()
-        logger.info("app", "SOVEREIGN_IGNITION: War-Room server launched in background.")
+        logger.info("hub", "SOVEREIGN_IGNITION: War-Room server launched in background.")
 
     def _pulse_tick(self) -> bool:
-        """High-Frequency Native Telemetry Tick (100ms cycle)."""
         from shadowcypher.core.platform import platform_engine
         from shadowcypher.core.hub import hub
         
@@ -179,7 +178,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         return True
 
     def _on_new_ticket(self, data: dict):
-        """High-priority visual alert for incoming autonomous tickets."""
         handle = data.get("handle", "Unknown")
         self.header.set_subtitle(f"\u26a0\ufe0f TICKET_ALERT: {handle}")
         logger.info("ui", f"NOTIFIED: New autonomous ticket from {handle}")
@@ -237,7 +235,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 hbox.pack_start(icon_lbl, False, False, 0)
                 hbox.pack_start(name_lbl, True, True, 0)
                 row.add(hbox)
-                # Use GObject data for robust metadata storage
                 row.page_id = name 
             sidebar.add(row)
 
@@ -249,7 +246,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
     def _on_sidebar_selected(self, lb, row):
         if row is None:
             return
-        # Pull the page ID from our custom attribute
         name = getattr(row, "page_id", None)
         if name:
             self._switch_to_page(name)
@@ -298,7 +294,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 import traceback
                 traceback.print_exc()
                 print(f"[NAV] CRASH loading {name}: {e}", file=sys.stderr, flush=True)
-                logger.error("app", f"PAGE_LOAD_FAILED: {name} -> {e}")
+                logger.error("hub", f"PAGE_LOAD_FAILED: {name} -> {e}")
                 err_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
                 err_box.set_margin_top(40)
                 err_box.set_margin_start(40)
@@ -322,18 +318,16 @@ class ShadowCypherApp(Gtk.Application):
         self._window = ShadowCypherWindow(self)
 
 def main():
-    # APEX_BOOTSTRAP: Prioritize the command plane
     try:
         if os.getuid() == 0:
-            os.nice(-10) # Elevate scheduling priority for real-time mission execution
+            os.nice(-10) 
     except: pass
 
     from shadowcypher.core.hub import hub
     from shadowcypher.ai.sisyphus import sisyphus
     
-    logger.info("system", "BOOTING_APEX_PREDATOR_CORE...")
+    logger.info("hub", "BOOTING_APEX_PREDATOR_CORE...")
     
-    # Start Infinite Intelligence Loop (Non-blocking)
     hub.system_status = "OPTIMIZING"
     sisyphus.start()
     
