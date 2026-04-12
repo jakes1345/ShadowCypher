@@ -64,7 +64,14 @@ extracted_creds.txt
 payloads/
 reports/
 projects/
-research/
+scratch/
 shadowcypher/tests/
 *.pyc
 __pycache__/
+*.bak
+*.old
+*.202*
+temp/
+out/
+dist/
+build/

@@ -126,7 +126,7 @@ class Sisyphus:
         return {"cpu": cpu, "ram": ram, "disk": disk}
 
     def _check_integrity(self) -> List[str]:
-        """Verify core framework files against the security baseline."""
+        """Verify core framework files and scan for Quantum-Safe compliance."""
         violations = []
         for rel_path, expected_hash in self._integrity_map.items():
             abs_path = os.path.join(str(self.project_root), rel_path)
@@ -137,7 +137,26 @@ class Sisyphus:
             current_hash = self._get_file_hash(abs_path)
             if current_hash != expected_hash:
                 violations.append(f"MODIFIED: {rel_path}")
+        
+        # Year 2026: Quantum-Safe Compliance Scan
+        violations.extend(self._check_quantum_readiness())
         return violations
+
+    def _check_quantum_readiness(self) -> List[str]:
+        """Scan for legacy cryptographic primitives vulnerable to Shor's algorithm."""
+        vulns = []
+        # Check if we are still using weak RSA or SHA1 in core modules
+        core_dir = os.path.join(str(self.project_root), "shadowcypher", "core")
+        for root, _, files in os.walk(core_dir):
+            for f in files:
+                if f.endswith(".py"):
+                    with open(os.path.join(root, f), "r") as fh:
+                        content = fh.read()
+                        if "RSA.generate(1024)" in content:
+                            vulns.append(f"QUANTUM_RISK: Weak RSA (1024) in {f}")
+                        if "hashlib.sha1" in content:
+                            vulns.append(f"LEGACY_HASH: SHA1 detected in {f}")
+        return vulns
 
     def _check_framework_health(self) -> Dict[str, List[str]]:
         """Deep syntax and structural validation of the codebase."""

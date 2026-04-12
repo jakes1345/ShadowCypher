@@ -27,6 +27,7 @@ class ADAttacksPage(BasePage):
             self._build_impacket_tab(), Gtk.Label(label="Impacket Tools")
         )
         notebook.append_page(self._build_responder_tab(), Gtk.Label(label="Responder"))
+        notebook.append_page(self._build_ai_forge_tab(), Gtk.Label(label="AI Forge"))
         self.main_pod.pack_start(notebook, False, False, 0)
 
         self.build_terminal()
@@ -178,3 +179,23 @@ class ADAttacksPage(BasePage):
                 on_complete=self.on_complete,
             )
         )
+
+    def _build_ai_forge_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12); box.set_margin_end(12); box.set_margin_top(12); box.set_margin_bottom(12)
+
+        self.sid_entry = Gtk.Entry(); self.sid_entry.set_placeholder_text("DOMAIN_SID (S-1-5-21-...)")
+        box.pack_start(self.sid_entry, False, False, 0)
+        
+        self.krbtgt_entry = Gtk.Entry(); self.krbtgt_entry.set_placeholder_text("KRBTGT_HASH (NTLM)")
+        box.pack_start(self.krbtgt_entry, False, False, 0)
+
+        btn = self.make_action_btn("\U0001f3ab FORGE_GOLDEN_TICKET", self._on_golden_ticket, "danger-btn")
+        box.pack_start(btn, False, False, 0)
+        return box
+
+    def _on_golden_ticket(self, btn):
+        sid = self.sid_entry.get_text().strip()
+        hash_val = self.krbtgt_entry.get_text().strip()
+        self.terminal.log("INITIATING_DEEPHAT_KERBEROS_FORGE...", "AI")
+        ADAttacks.golden_ticket_forge(sid, hash_val, "Administrator", on_output=self.on_output)

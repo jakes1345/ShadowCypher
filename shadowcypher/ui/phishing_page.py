@@ -106,10 +106,16 @@ class PhishingPage(BasePage):
         self.phish_port = Gtk.SpinButton.new_with_range(80, 65535, 1)
         self.phish_port.set_value(8080)
         row2.pack_start(self.phish_port, False, False, 0)
+        
+        self.chk_tunnel = Gtk.CheckButton(label="SECURE_TUNNEL (HTTPS)")
+        row2.pack_start(self.chk_tunnel, False, False, 10)
         box.pack_start(row2, False, False, 0)
 
         btn = self.make_action_btn("\U0001f310 Launch Phishing Server", self._on_start_server, "danger-btn")
         box.pack_start(btn, False, False, 0)
+
+        btn_ai = self.make_action_btn("\U0001f9e0 Synthesize AI-Lure", self._on_ai_lure)
+        box.pack_start(btn_ai, False, False, 0)
 
         return box
 
@@ -160,8 +166,15 @@ class PhishingPage(BasePage):
     def _on_start_server(self, btn):
         tmpl = self.template_combo.get_active_text()
         port = int(self.phish_port.get_value())
-        self.clear_output(f"Launching {tmpl} phishing site on port {port}...\n")
-        self.run_job(Phishing.start_phishing_server(tmpl, port, self.on_output))
+        use_tunnel = self.chk_tunnel.get_active()
+        self.clear_output(f"Launching {tmpl} phishing site on port {port} (Bridge: {'HTTPS_TUNNEL' if use_tunnel else 'LOCAL'})...\n")
+        Phishing.start_phishing_server(tmpl, port, self.on_output, use_tunnel=use_tunnel)
+
+    def _on_ai_lure(self, btn):
+        tmpl = self.template_combo.get_active_text()
+        self.terminal.log(f"INITIATING_DEEPHAT_SYNTHESIS: Forging {tmpl} persuasion lure...", "AI")
+        res = Phishing.generate_professional_bait(tmpl, "http://localhost:8080")
+        self.terminal.log(res, "SUCCESS")
 
     def _on_smuggling(self, btn):
         path = self.smuggle_file.get_text().strip()

