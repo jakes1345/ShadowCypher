@@ -149,8 +149,8 @@ class AIEngine:
     # Loading
     # ──────────────────────────────────────────────────────────────────
 
-    def load(self, on_progress: Callable[[str], None] = None,
-             model_override: str = None) -> bool:
+    def load(self, on_progress: Optional[Callable[[str], None]] = None,
+             model_override: Optional[str] = None) -> bool:
         """Load the AI model. Tries Ollama first, then llama-cpp-python."""
         with self._lock:
             if self._loaded:
@@ -514,7 +514,7 @@ class AIEngine:
             on_progress(f"Failed to load {model_name}\n")
         return False
 
-    def execute_quantum_task(self, prompt: str, on_output: Callable[[str], None] = None):
+    def execute_quantum_task(self, prompt: str, on_output: Optional[Callable[[str], None]] = None):
         """Execute a high-stakes task using the Quantum Agent (Claude-Code dev-full)."""
         # PRIMARY: The recently built dev-full binary
         binary_path = "/home/jack/dev-full-claude/cli-dev"

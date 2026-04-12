@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 class Logger:
     """Enterprise-grade thread-safe logger with rotation and structured JSON output."""
 
-    def __init__(self, log_dir: str = None):
+    def __init__(self, log_dir: Optional[str] = None):
         if log_dir is None:
             log_dir = str(Path(__file__).resolve().parent.parent.parent / "logs")
         self.log_dir = Path(log_dir)

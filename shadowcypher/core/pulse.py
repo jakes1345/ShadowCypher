@@ -106,7 +106,7 @@ class ShadowPulse:
             "priority": "HIGH" if score > 5.0 else "MEDIUM"
         })
 
-    def reset(self, stream_id: str = None):
+    def reset(self, stream_id: Optional[str] = None):
         """Flush the spectrum buffers."""
         with self._lock:
             if stream_id:
