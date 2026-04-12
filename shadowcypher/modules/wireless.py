@@ -117,3 +117,12 @@ class Wireless(BaseModule):
             f"Devise and execute a smart deauth/jamming strategy for AP {bssid} "
             "to force clients to our honeypot."
         )
+
+    def deauth_swarm(self, bssid_list, on_output=None):
+        """2026 Signal Suppression: AI-driven coordinated jamming across multiple targets."""
+        from shadowcypher.modules.deephat import deephat
+        if on_output: on_output(f"[SIGNAL] INITIATING_SWARM_JAMMING: {len(bssid_list)} targets...\n")
+        
+        desc = f"Generate a coordinated deauth/jamming payload for the following BSSIDs: {', '.join(bssid_list)}. Use opportunistic signal-overlapping for max efficiency."
+        filename = deephat.forge_weapon(desc, category="jamming")
+        return deephat.execute_payload(filename, on_output=on_output)
