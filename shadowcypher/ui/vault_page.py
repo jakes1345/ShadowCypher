@@ -28,6 +28,7 @@ class ShadowVaultPage(BasePage):
         for i, column_title in enumerate(["Filename", "Type", "Timestamp"]):
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn(column_title, renderer, text=i)
+            column.set_expand(True)
             self.tree.append_column(column)
 
         scroller = Gtk.ScrolledWindow()

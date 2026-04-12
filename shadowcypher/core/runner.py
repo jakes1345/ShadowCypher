@@ -14,13 +14,13 @@ from shadowcypher.core.platform import platform_engine
 
 class Runner:
     
-    def __init__(self):
-        self.active_processes = {}
-        self._lock = threading.Lock()
+    def __init__(self) -> None:
+        self.active_processes: Dict[str, subprocess.Popen[str]] = {}
+        self._lock: Final[threading.Lock] = threading.Lock()
         self.platform = platform_engine
-        self._perf_env = self._init_perf_env()
+        self._perf_env: Final[Dict[str, str]] = self._init_perf_env()
 
-    def _init_perf_env(self):
+    def _init_perf_env(self) -> Dict[str, str]:
         env = os.environ.copy()
         # APEX Optimization: only apply mold on Linux
         if self.platform.IS_LINUX:
@@ -28,15 +28,18 @@ class Runner:
             env['LDFLAGS'] = "-fuse-ld=mold"
         return env
 
-    def stop_task(self, task_id):
+    def stop_task(self, task_id: str) -> None:
         with self._lock:
             if task_id in self.active_processes:
                 proc = self.active_processes[task_id]
                 try:
                     proc.terminate()
                     # FIXME: handle signal 9 gracefully
-                    threading.Timer(2, lambda: proc.kill() if proc.poll() is None else None).start()
-                except Exception as e:
+                    def force_kill():
+                        if proc.poll() is None:
+                            proc.kill()
+                    threading.Timer(2.0, force_kill).start()
+                except Exception:
                     pass
 
     def execute_task(self, name: str, command: Union[str, List[str]], 
