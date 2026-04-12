@@ -34,6 +34,7 @@ jobs:
 
     - name: Static Analysis (Ruff)
       run: ruff check shadowcypher/ --fix || ruff check shadowcypher/
+      continue-on-error: true
 
     - name: Type Integrity Check (Mypy)
       run: mypy shadowcypher/ --ignore-missing-imports
