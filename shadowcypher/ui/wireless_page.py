@@ -64,6 +64,7 @@ class WirelessPage(BasePage):
         btn_box.pack_start(self.make_action_btn("Scan Networks", self._on_scan), False, False, 0)
         btn_box.pack_start(self.make_action_btn("Capture Handshake", self._on_capture), False, False, 0)
         btn_box.pack_start(self.make_action_btn("Deauth", self._on_deauth, "danger-btn"), False, False, 0)
+        btn_box.pack_start(self.make_action_btn("\U0001f300 Swarm Jammer", self._on_swarm_jam, "danger-btn"), False, False, 0)
         btn_box.pack_start(self.make_action_btn("Crack WPA", self._on_crack_wpa), False, False, 0)
         btn_box.pack_end(self.build_stop_button(), False, False, 0)
         self.workspace.pack_start(btn_box, False, False, 0)
@@ -126,3 +127,12 @@ class WirelessPage(BasePage):
             return
         self.clear_output(f"Cracking WPA: {cap}...\n\n")
         self.run_job(Wireless.crack_wpa(cap, on_output=self.on_output, on_complete=self.on_complete))
+
+    def _on_swarm_jam(self, btn):
+        bssid = self.bssid_entry.get_text().strip()
+        if not bssid:
+            self.clear_output("Enter at least one target BSSID for the swarm.")
+            return
+        self.terminal.log(f"INITIATING_DDEEPHAT_SIGNAL_SUPPRESSION: {bssid}", "AI")
+        w = Wireless()
+        w.deauth_swarm([bssid], on_output=self.on_output)

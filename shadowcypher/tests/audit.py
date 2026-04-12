@@ -27,7 +27,7 @@ modules = {
     'Recon': Recon,
 }
 
-# ── Required Methods (synced to actual implementations) ──
+# ── Required Methods (synced to 4.5.8 ULTIMA implementations) ──
 
 required_methods = {
     'Exploit': [
@@ -41,6 +41,7 @@ required_methods = {
         'sqlmap_scan',
         'nikto_scan',
         'audit_target',
+        'shadow_zero_day_scan', # NEW
     ],
     'Network': [
         'get_interfaces',
@@ -52,7 +53,7 @@ required_methods = {
         'service_scan',
         'network_os_detection',
         'packet_capture',
-        'network_monitor',
+        'traffic_monitor',
         'dns_leak_test',
         'ai_network_audit',
     ],
@@ -70,7 +71,6 @@ required_methods = {
         'brute_force',
         'hydra_attack',
         'identify_hash',
-        'crack_hash',
         'hashcat_crack',
         'hashcat_crack_string',
         'hashcat_benchmark',
@@ -78,6 +78,7 @@ required_methods = {
         'john_crack_string',
         'audit_macos_keychain',
         'ai_crack',
+        'deep_leak_correlation', # NEW
     ],
     'Forensics': [
         'analyze_file',
@@ -96,8 +97,8 @@ required_methods = {
         'capture_handshake',
         'deauth',
         'deauth_target',
-        'crack_wpa',
         'ai_jammer',
+        'deauth_swarm', # NEW
     ],
     'Firewall': [
         'detect_backend',
@@ -122,6 +123,8 @@ required_methods = {
 total_missing = 0
 total_methods = 0
 
+print(f"[SYSTEM] BEGINNING_PLATFORM_INTEGRITY_AUDIT_v4.5.8...")
+
 for mod_name, methods in required_methods.items():
     mod_cls = modules.get(mod_name)
     missing = []
@@ -132,29 +135,23 @@ for mod_name, methods in required_methods.items():
             total_missing += 1
 
     if missing:
-        print(f"[MISSING] {mod_name}: {', '.join(missing)}")
+        print(f"  [MISSING] {mod_name:15}: {', '.join(missing)}")
     else:
-        print(f"[OK] {mod_name}: All {len(methods)} methods verified.")
-
-print(f"\n{'='*50}")
-print(f"Total methods checked: {total_methods}")
-print(f"Missing: {total_missing}")
-print(f"Status: {'PASS' if total_missing == 0 else 'FAIL'}")
+        print(f"  [OK]      {mod_name:15}: All {len(methods)} methods verified.")
 
 # ── Extended Modules Check (non-__init__ modules) ──
 
-print(f"\n{'='*50}")
-print("Extended Module Health:")
+print(f"\nExtended Module Verification:")
 
 extended = {
     'ADAttacks': ('shadowcypher.modules.ad_attacks', 'ADAttacks',
-                  ['impacket_psexec', 'impacket_secretsdump', 'run_responder']),
+                  ['impacket_psexec', 'impacket_secretsdump', 'run_responder', 'golden_ticket_forge']), # NEW
     'ADPivot': ('shadowcypher.modules.ad_pivot', 'ADPivot',
                 ['kerberoast', 'smb_relay_start', 'setup_pivot_tunnel', 'crackmapexec_scan']),
     'Phishing': ('shadowcypher.modules.phishing', 'Phishing',
                  ['generate_pdf', 'generate_obfuscated_ps1', 'start_phishing_server',
                   'generate_fake_recaptcha', 'generate_html_smuggling', 'start_zphisher',
-                  'generate_professional_bait']),
+                  'generate_professional_bait', 'start_secure_tunnel']), # NEW
     'PayloadFactory': ('shadowcypher.modules.payload_factory', 'PayloadFactory',
                        ['generate_evasive_elf', 'generate_stealth_powershell',
                         'generate_stealth_c2_python', 'generate_obfuscated_python']),
@@ -174,8 +171,19 @@ for label, (mod_path, cls_name, methods) in extended.items():
         cls = getattr(mod, cls_name)
         missing = [m for m in methods if not hasattr(cls, m)]
         if missing:
-            print(f"  [MISSING] {label}: {', '.join(missing)}")
+            print(f"  [MISSING] {label:15}: {', '.join(missing)}")
+            total_missing += len(missing)
         else:
-            print(f"  [OK] {label}: All {len(methods)} methods verified.")
+            print(f"  [OK]      {label:15}: All {len(methods)} methods verified.")
     except ImportError as e:
-        print(f"  [IMPORT_ERROR] {label}: {e}")
+        print(f"  [ERROR]   {label:15}: {e}")
+        total_missing += 1
+
+print(f"\n{'='*60}")
+print(f"Total Integrity Checks: {total_methods + len(extended)}")
+print(f"Total Failures:         {total_missing}")
+print(f"Status:                 {'PASS' if total_missing == 0 else 'FAIL'}")
+print(f"{'='*60}")
+
+if total_missing > 0:
+    sys.exit(1)

@@ -65,7 +65,8 @@ payloads/
 reports/
 projects/
 scratch/
-shadowcypher/tests/
+shadowcypher/ai/memory/
+shadowcypher/core/memory/
 *.pyc
 __pycache__/
 *.bak
