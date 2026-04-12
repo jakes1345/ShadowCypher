@@ -51,7 +51,7 @@ def get_pubkey_fingerprint() -> str:
     return hashlib.sha256(pub_bytes).hexdigest()
 
 
-def verify_admin(irc_nick: str = None) -> bool:
+def verify_admin(irc_nick: Optional[str] = None) -> bool:
     """Enterprise Identity Verification.
     
     Two modes:

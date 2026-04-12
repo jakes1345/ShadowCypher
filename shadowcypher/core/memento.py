@@ -33,7 +33,7 @@ class MementoEngine:
                 return f.read()
         return ""
 
-    def refine_skill(self, name: str, feedback: str, code_patch: str = None):
+    def refine_skill(self, name: str, feedback: str, code_patch: Optional[str] = None):
         """
         The 'Reflect/Write' phase.
         Updates the skill artifact based on mission telemetry.
