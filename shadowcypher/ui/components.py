@@ -50,19 +50,31 @@ class TacticalTerminal(Gtk.Box):
         """Thread-safe logging with stylistic tags."""
         def _insert():
             buf = self.text_view.get_buffer()
+            tag_table = buf.get_tag_table()
             ts = GLib.DateTime.new_now_local().format("%H:%M:%S")
             it = buf.get_end_iter()
+            
+            # Defensive check for timestamp tag
+            if not tag_table.lookup("timestamp"):
+                buf.create_tag("timestamp", foreground="#64748b")
+
             buf.insert_with_tags_by_name(it, f"[{ts}] ", "timestamp")
             
             it = buf.get_end_iter()
-            color_tag = tag.lower() if tag.lower() in ["system", "quantum", "error", "success", "ai"] else "timestamp"
+            color_tag = tag.lower()
+            # Register specific status tags if missing
+            if not tag_table.lookup(color_tag):
+                colors = {"error": "#f87171", "success": "#34d399", "quantum": "#00ff9d", "ai": "#a78bfa"}
+                fg = colors.get(color_tag, "#00d4ff")
+                buf.create_tag(color_tag, foreground=fg, weight=700)
+                
             buf.insert_with_tags_by_name(it, f"[{tag.upper()}] ", color_tag)
             
             it = buf.get_end_iter()
             buf.insert(it, f"{text}\n")
             
             adj = self.scroll.get_vadjustment()
-            adj.set_value(adj.get_upper() - adj.get_page_size())
+            GLib.idle_add(lambda: adj.set_value(adj.get_upper() - adj.get_page_size()))
         GLib.idle_add(_insert)
 
 class DataPod(Gtk.Box):

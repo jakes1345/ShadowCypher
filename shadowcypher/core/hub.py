@@ -118,22 +118,19 @@ class ShadowHub:
         self.telemetry["load_avg"] = report.get("vitals", {}).get("cpu", 0.0)
         self.system_status = "STRESSED" if self.telemetry["load_avg"] > 90 else self.SYSTEM_READY
 
-    def dispatch_mission(self, query: str, role: str = "commander") -> str:
+    def dispatch_mission(self, query: str, agent_role: str = "commander") -> str:
         """Initiates a new autonomous mission.
         
         Args:
             query: The mission objective.
-            role: The designated strike persona.
+            agent_role: The designated strike persona.
             
         Returns:
             The generated unique mission ID.
         """
         mission_id = f"MSN-{uuid.uuid4().hex[:8].upper()}"
-        # Note: Mission is frozen=True for integrity, created with default mutables as needed
-        # In a real build, we'd handle the transition fromENGAGED to ARCHIVED via a state pattern
-        mission = Mission(id=mission_id, query=query, role=role)
+        mission = Mission(id=mission_id, query=query, role=agent_role)
         
-        # We allow indexing the mission even if frozen for state tracking in the class dict
         self.active_missions[mission_id] = mission
         self.telemetry["missions_total"] += 1
         
@@ -141,7 +138,7 @@ class ShadowHub:
             query,
             callback=lambda msg: self._update_mission(mission_id, msg),
             on_complete=lambda res: self._finalize_mission(mission_id, res),
-            agent_role=role
+            agent_role=agent_role
         )
         
         return mission_id
