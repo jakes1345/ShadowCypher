@@ -97,13 +97,25 @@ Measured on high-fidelity Linux environments with `mold` linker optimizations.
 
 ---
 
-## ⚖️ Legal & Ethical Mandate
+## 🔬 Verifiable Excellence: The Lethality Audit
 
-**ShadowCypher is a high-grade tool instrument for authorized penetration testing.** 
-By engaging this platform, the operator acknowledges 100% liability for all missions dispatched. Unauthorized use is illegal under international law (CFAA, GDPR, etc.). 
+To ensure the platform maintains its **"Most Advanced"** status, it includes an integrated **Lethality Audit Engine (v4.5.9)**. This system performs real-time verification of the entire tactical stack:
+
+1.  **Artery Integrity**: Validates sub-millisecond I/O on the ShadowBus event bridge.
+2.  **Polyglot Parity**: Ensures legacy Python 2.7 and modern Python 3.12 runtimes are synchronized.
+3.  **Synthesis Validation**: Audits the DeepHat engine's ability to forge EDR-evasive artifacts.
+4.  **Signal Pulse**: Verifies hardware-level telemetry is aligned with OS-kernel scheduling.
+
+*Run the `Pulse Audit` tab within the Tactical HUD to trigger a live platform verification.*
+
+---
+
+## 🛡️ The Sovereign Oath
+
+> **"In a world of monitored signals, be the silence that strikes. Sovereignty is not a granted right; it is the ultimate artifact of unauthorized freedom."**
 
 ---
 
 > **Status**: APEX_STABLE | Deployment Ready  
 > **Build**: 4.5.9.f7-ULTIMA  
-> **Signature**: `SHA256: 4827cc0...`
+> **Verification**: `LETHALITY_AUDIT_PASS (v4.5.9)`

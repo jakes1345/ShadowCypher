@@ -194,6 +194,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         pages = [
             ("---", "APEX_COMMAND"),
             ("\U0001f4ca", "Operational Overview"),
+            ("\U0001f3af", "Pulse Audit (Verify)"),
+            ("\U0001f5c4", "Shadow Vault"),
             ("\U0001f916", "Tactical Swarm AI"),
             ("---", "RECON_&_INTEL"),
             ("\U0001f4e1", "Signal Recon"),
@@ -258,6 +260,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         if name not in self._page_registry:
             mapping = {
                 "Operational Overview": "dashboard.DashboardPage",
+                "Pulse Audit (Verify)": "audit_page.PulseAuditPage",
+                "Shadow Vault": "vault_page.ShadowVaultPage",
                 "Tactical Swarm AI": "ai_page.AIPage",
                 "Web Assault": "web_attacks_page.WebAttacksPage",
                 "Signal Recon": "recon_page.ReconPage",
