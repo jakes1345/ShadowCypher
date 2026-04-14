@@ -79,9 +79,9 @@ First launch opens a welcome dialog — pick a handle, the rest is configured au
 
 ## // THE_OATH
 
-> **"The machine that asks permission from the cloud is not yours. The one that answers only to the key in your pocket — that one is."**
+> **"if it phones home it isnt yours. if you cant pull the plug and have it still work its not yours either. build the thing. own the keys. trust nobody including me."**
 >
-> — *ShadowCypher Manifesto // Sector 7*
+> — anon, somewhere
 
 ---
 
