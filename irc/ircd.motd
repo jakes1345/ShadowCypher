@@ -1,0 +1,47 @@
+$c15,1
+$c15,1  $c9,1 ███████╗██╗  ██╗ █████╗ ██████╗  ██████╗ ██╗    ██╗
+$c15,1  $c9,1 ██╔════╝██║  ██║██╔══██╗██╔══██╗██╔═══██╗██║    ██║
+$c15,1  $c9,1 ███████╗███████║███████║██║  ██║██║   ██║██║ █╗ ██║
+$c15,1  $c9,1 ╚════██║██╔══██║██╔══██║██║  ██║██║   ██║██║███╗██║
+$c15,1  $c9,1 ███████║██║  ██║██║  ██║██████╔╝╚██████╔╝╚███╔███╔╝
+$c15,1  $c9,1 ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝  ╚═════╝  ╚══╝╚══╝
+$c15,1
+$c15,1  $c14,1    ██████╗██╗   ██╗██████╗ ██╗  ██╗███████╗██████╗
+$c15,1  $c14,1   ██╔════╝╚██╗ ██╔╝██╔══██╗██║  ██║██╔════╝██╔══██╗
+$c15,1  $c14,1   ██║      ╚████╔╝ ██████╔╝███████║█████╗  ██████╔╝
+$c15,1  $c14,1   ██║       ╚██╔╝  ██╔═══╝ ██╔══██║██╔══╝  ██╔══██╗
+$c15,1  $c14,1   ╚██████╗   ██║   ██║     ██║  ██║███████╗██║  ██║
+$c15,1  $c14,1    ╚═════╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+$c15,1
+$c15,1  $c11═══════════════════════════════════════════════════════════$c1
+$c15,1
+$c15,1  $c9  SOVEREIGN NETWORK$c15 — Private Encrypted Communications
+$c15,1
+$c15,1  $c14  Server:$c15  sovereign.shadowcypher.net
+$c15,1  $c14  Engine:$c15  Ergo v2.14.0 (ShadowCypher Edition)
+$c15,1  $c14  TLS:$c15     Required on port 6697
+$c15,1  $c14  WebSocket:$c15 Port 8097 (plain) / 8098 (TLS)
+$c15,1
+$c15,1  $c11═══════════════════════════════════════════════════════════$c1
+$c15,1
+$c15,1  $c9  RULES$c15
+$c15,1  $c14  1.$c15 This is a private network. Authorized users only.
+$c15,1  $c14  2.$c15 All traffic is encrypted. DMs are end-to-end.
+$c15,1  $c14  3.$c15 No logging of private messages. Ever.
+$c15,1  $c14  4.$c15 Register your nick: /msg NickServ REGISTER <pass> <email>
+$c15,1  $c14  5.$c15 ShadowSentinel AI bot responds to !commands and mentions.
+$c15,1
+$c15,1  $c11═══════════════════════════════════════════════════════════$c1
+$c15,1
+$c15,1  $c9  CHANNELS$c15
+$c15,1  $c14  #general$c15    — Main coordination hub
+$c15,1  $c14  #intel$c15      — Intelligence gathering & OSINT
+$c15,1  $c14  #missions$c15   — Active operation coordination
+$c15,1  $c14  #chaos$c15      — Chaos Engine & stress testing
+$c15,1  $c14  #dev$c15        — Development & code review
+$c15,1  $c14  #security$c15   — Vulnerability research & exploits
+$c15,1
+$c15,1  $c11═══════════════════════════════════════════════════════════$c1
+$c15,1
+$c15,1  $c7  "The shadows are where we operate. The cipher is how we speak."
+$c15,1

@@ -4,7 +4,12 @@ target-specific intelligence across all ShadowCypher components.
 """
 
 import os
-from mem0 import Memory
+
+try:
+    from mem0 import Memory
+except ImportError:
+    Memory = None
+
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 
@@ -27,6 +32,11 @@ class ShadowMemory:
             "history_db_path": os.path.join(self.db_path, "history.db")
         }
         
+        if Memory is None:
+            logger.warning("ai", "MEM_OFFLINE: mem0 not installed — tactical memory disabled. Install with: pip install mem0ai")
+            self.memory = None
+            return
+
         try:
             self.memory = Memory.from_config(self.config)
             logger.info("ai", "SHADOW_MEMORY_ENGAGED: Tactical recall active.")

@@ -20,13 +20,16 @@ except ImportError:
     SettingsConfigDict = dict
 
 class AISettings(BaseSettings):
-    model: str = "gemma3"
+    model: str = "shadowcypher-ai"
     api_base: str = "http://localhost:11434"
     active_provider: str = "ollama"
     temperature: float = 0.3
     max_tokens: int = 4096
     n_ctx: int = 4096
     n_gpu_layers: int = 35
+    providers: Dict[str, Any] = {}
+    model_file: str = "shadowcypher-ai-q4km.gguf"
+    model_repo: str = "jakes1345/shadowcypher-ai"
 
 class ToolPaths(BaseSettings):
     nmap: str = "nmap"
@@ -49,15 +52,21 @@ class ToolPaths(BaseSettings):
     curl: str = "curl"
 
 class IRCSettings(BaseSettings):
-    server: str = "127.0.0.1"
-    port: int = 8888
+    server: str = "irc.libera.chat"
+    port: int = 6697
     channel: str = "#shadowcypher"
-    use_ssl: bool = False
-    auto_connect: bool = True
-    sasl_user: str = "ShadowSentinel"
+    use_ssl: bool = True
+    auto_connect: bool = False
+    sasl_user: str = ""
     sasl_pass: str = ""
-    hub_secret: str = "SHADOW_MASTER_SECRET_2026"
+    hub_secret: str = ""
     hub_ghost_port: int = 44444
+    bot_nick: str = "ShadowSentinel"
+    bot_species: str = "apex_predator"
+    stealth_mode: bool = False
+    sovereign_enabled: bool = False
+    sovereign_server: str = "127.0.0.1"
+    sovereign_port: int = 6667
 
 class IdentitySettings(BaseSettings):
     handle: str = ""
@@ -133,17 +142,38 @@ class Config(BaseSettings):
         except Exception:
             return default
 
+    def save_to_json(self, path: Optional[Path] = None) -> None:
+        """Persist current config to disk."""
+        path = path or (self.project_root / "config.json")
+        data: Dict[str, Any] = {}
+        for key in ["app_name", "version"]:
+            data[key] = getattr(self, key)
+        for section_name in ["ai", "tools", "irc", "identity"]:
+            section = getattr(self, section_name)
+            data[section_name] = section.model_dump() if hasattr(section, "model_dump") else dict(section)
+        try:
+            with open(path, "w") as f:
+                json.dump(data, f, indent=2, default=str)
+        except Exception as e:
+            # Import here to avoid circular at module load
+            try:
+                from shadowcypher.core.logger import logger
+                logger.error("config", f"Failed to save config: {e}")
+            except Exception:
+                pass
+
     def set(self, *args: Any):
         """
         Enterprise-grade nested configuration updates.
         Usage: config.set("ai", "active_provider", "anthropic")
+        Auto-persists to disk after each change.
         """
         if len(args) < 2:
             return
-        
+
         keys = args[:-1]
         value = args[-1]
-        
+
         current = self
         for key in keys[:-1]:
             if hasattr(current, key):
@@ -151,13 +181,15 @@ class Config(BaseSettings):
             elif isinstance(current, dict):
                 current = current.setdefault(key, {})
             else:
-                return # Should not happen in strict Pydantic mode
-        
+                return
+
         last_key = keys[-1]
         if hasattr(current, last_key):
             setattr(current, last_key, value)
         elif isinstance(current, dict):
             current[last_key] = value
+
+        self.save_to_json()
 
     def get_tool_path(self, tool_name: str) -> str:
         """
@@ -192,6 +224,11 @@ class Config(BaseSettings):
 
 # Global singleton
 config = Config()
+try:
+    from shadowcypher.core.onboarding import ensure_user_config
+    ensure_user_config(config.project_root)
+except Exception:
+    pass
 config.load_from_json(config.project_root / "config.json")
 
 # Import logger AFTER singleton for enterprise bootstrap

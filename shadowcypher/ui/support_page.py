@@ -8,11 +8,12 @@ import threading
 import os
 import json
 import time
-import base64
+import subprocess
 import hashlib
 from datetime import datetime
 from pathlib import Path
 from shadowcypher.core.logger import logger
+from shadowcypher.core.irc import IRCClient
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import TacticalTerminal, DataPod, TacticalHeader
 from shadowcypher.core.config import config
@@ -50,108 +51,260 @@ class SupportPage(Gtk.Box):
         self._typing_timers = {} # nick -> GLib source id
         self._last_typing_sent = 0
         
-        # Sovereign Internal State
+        # Sovereign Internal State (Ergo IRC via IRCClient)
+        self._sov_irc: IRCClient | None = None
         self._sov_connected = False
-        self._sov_users = []
+        self._sov_users = []          # list of nicks in current channel
+        self._sov_nick = "Operator"
+        self._sov_channel = "#general"
+        self._sov_active_pm = None     # nick if viewing a PM, None if channel
 
         self.notebook = Gtk.Notebook()
         self.notebook.set_tab_pos(Gtk.PositionType.TOP)
         self.pack_start(self.notebook, True, True, 0)
 
-        # 1. IRC PROTOCOL TAB
-        irc_box = self._build_irc_tab()
-        self.notebook.append_page(irc_box, Gtk.Label(label="\U0001f310 IRC_PROTOCOL"))
-
-        # 2. SOVEREIGN WAR-ROOM TAB (Xat-style Custom Hub)
+        # 1. SOVEREIGN WAR-ROOM (Main IRC Hub)
         sov_box = self._build_sovereign_tab()
         self.notebook.append_page(sov_box, Gtk.Label(label="\U0001f6e1 SOVEREIGN_HUB"))
 
         self.notebook.append_page(self._build_ticket_tab(), Gtk.Label(label="\U0001f512 Encrypted Tickets"))
         self.notebook.append_page(self._build_forensic_tab(), Gtk.Label(label="\U0001f6e1 Forensic Registry"))
 
-        # 3. Sovereign Integration Hub
-        bus.subscribe("sovereign_in", self._handle_sov_packet)
+        # 3. Sovereign Integration — start server + auto-connect
+        self._start_sovereign_server()
+        # Auto-connect after a short delay (let server boot)
+        GLib.timeout_add(1500, self._sov_auto_connect)
 
     def _build_sovereign_tab(self):
-        """Discord-style High-Engagement Coordination Hub."""
+        """Full IRC-style Sovereign Hub with real WebSocket connection."""
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        
+
         # 1. Channel Sidebar
         sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         sidebar.get_style_context().add_class("channel-sidebar")
         sidebar.set_size_request(160, -1)
-        
+
         sidebar_lbl = Gtk.Label()
-        sidebar_lbl.set_markup("<span weight='bold' size='small' color='#64748b'>OPERATIONAL_CHANNELS</span>")
+        sidebar_lbl.set_markup("<span weight='bold' size='small' color='#64748b'>CHANNELS</span>")
         sidebar_lbl.set_margin_top(15)
         sidebar.pack_start(sidebar_lbl, False, False, 10)
-        
+
         self.sov_channels_list = Gtk.ListBox()
         self.sov_channels_list.get_style_context().add_class("user-list")
         self.sov_channels_list.connect("row-activated", self._on_chan_switch)
-        
-        for c in ["#general", "#intel", "#missions", "#chaos"]:
-            row = Gtk.ListBoxRow()
-            row.set_name(c)
-            row.get_style_context().add_class("channel-row")
-            lbl = Gtk.Label(label=c, xalign=0)
-            row.add(lbl)
-            self.sov_channels_list.add(row)
-        
+
+        for c in ["#general", "#intel", "#missions", "#chaos", "#dev"]:
+            self._add_sidebar_row(c, is_channel=True)
+
         sidebar.pack_start(self.sov_channels_list, True, True, 0)
+
+        # PM section label
+        pm_lbl = Gtk.Label()
+        pm_lbl.set_markup("<span weight='bold' size='small' color='#64748b'>PRIVATE</span>")
+        pm_lbl.set_margin_top(10)
+        sidebar.pack_start(pm_lbl, False, False, 0)
+
+        self.sov_pm_list = Gtk.ListBox()
+        self.sov_pm_list.get_style_context().add_class("user-list")
+        self.sov_pm_list.connect("row-activated", self._on_pm_tab_switch)
+        sidebar.pack_start(self.sov_pm_list, False, False, 0)
+
+        # Connect / Disconnect buttons
+        conn_row = Gtk.Box(spacing=4)
+        conn_row.set_margin_start(4)
+        conn_row.set_margin_end(4)
+        conn_row.set_margin_bottom(4)
+        self.sov_connect_btn = Gtk.Button(label="Connect")
+        self.sov_connect_btn.get_style_context().add_class("suggested-action")
+        self.sov_connect_btn.connect("clicked", lambda b: self._sov_connect())
+        conn_row.pack_start(self.sov_connect_btn, True, True, 0)
+        self.sov_disconnect_btn = Gtk.Button(label="DC")
+        self.sov_disconnect_btn.get_style_context().add_class("destructive-action")
+        self.sov_disconnect_btn.connect("clicked", lambda b: self._sov_disconnect())
+        conn_row.pack_start(self.sov_disconnect_btn, False, False, 0)
+        sidebar.pack_end(conn_row, False, False, 0)
+
         hbox.pack_start(sidebar, False, False, 0)
 
-        # 2. Main Center (Chat)
-        main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        main_vbox.set_margin_start(15)
-        main_vbox.set_margin_end(15)
-        main_vbox.set_margin_top(15)
-        
+        # 2. Main Chat Area
+        main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        main_vbox.set_margin_start(10)
+        main_vbox.set_margin_end(10)
+        main_vbox.set_margin_top(10)
+
         header = Gtk.Box(spacing=10)
         self.sov_channel_lbl = Gtk.Label()
         self.sov_channel_lbl.set_markup("<span size='large' weight='800' color='#00d4ff'>#general</span>")
         header.pack_start(self.sov_channel_lbl, False, False, 0)
-        
-        self.sov_status = Gtk.Label(label="HUB_ENCRYPTED")
+
+        self.sov_topic_lbl = Gtk.Label()
+        self.sov_topic_lbl.set_markup("<span color='#64748b' size='small'>Welcome to ShadowCypher Sovereign</span>")
+        self.sov_topic_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+        header.pack_start(self.sov_topic_lbl, True, True, 8)
+
+        self.sov_status = Gtk.Label(label="DISCONNECTED")
         self.sov_status.get_style_context().add_class("text-muted")
         header.pack_end(self.sov_status, False, False, 0)
         main_vbox.pack_start(header, False, False, 0)
 
-        self.sov_terminal = TacticalTerminal(height=500)
-        main_vbox.pack_start(self.sov_terminal, True, True, 0)
+        # Chat display
+        self.sov_chat_buf = Gtk.TextBuffer()
+        tag_table = self.sov_chat_buf.get_tag_table()
+        self.sov_chat_buf.create_tag("system", foreground="#64748b", style=Pango.Style.ITALIC)
+        self.sov_chat_buf.create_tag("error", foreground="#f87171", weight=Pango.Weight.BOLD)
+        self.sov_chat_buf.create_tag("action", foreground="#a78bfa", style=Pango.Style.ITALIC)
+        self.sov_chat_buf.create_tag("timestamp", foreground="#475569")
+        self.sov_chat_buf.create_tag("self_nick", foreground="#38bdf8", weight=Pango.Weight.BOLD)
+        self.sov_chat_buf.create_tag("motd", foreground="#22d3ee")
+        for color in NICK_COLORS:
+            safe_name = f"nick_{color.replace('#', '')}"
+            if not tag_table.lookup(safe_name):
+                self.sov_chat_buf.create_tag(safe_name, foreground=color, weight=Pango.Weight.BOLD)
+
+        self.sov_chat_view = Gtk.TextView(buffer=self.sov_chat_buf)
+        self.sov_chat_view.set_editable(False)
+        self.sov_chat_view.set_cursor_visible(False)
+        self.sov_chat_view.set_monospace(True)
+        self.sov_chat_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.sov_chat_view.get_style_context().add_class("terminal-view")
+
+        self.sov_chat_scroll = Gtk.ScrolledWindow()
+        self.sov_chat_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        self.sov_chat_scroll.set_min_content_height(400)
+        self.sov_chat_scroll.add(self.sov_chat_view)
+
+        # Paned: channel chat on left, PM panel slides in on right (xat-style)
+        self.sov_chat_paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        self.sov_chat_paned.pack1(self.sov_chat_scroll, resize=True, shrink=False)
+
+        # PM panel (hidden by default, slides in with blue glow)
+        self.sov_pm_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        self.sov_pm_panel.set_no_show_all(True)
+
+        # PM header with nick + close button
+        pm_header = Gtk.Box(spacing=6)
+        pm_header.set_margin_start(8)
+        pm_header.set_margin_end(8)
+        pm_header.set_margin_top(6)
+        self.sov_pm_header_lbl = Gtk.Label()
+        self.sov_pm_header_lbl.set_markup("<span color='#60a5fa' weight='bold'>\u2709 Private Chat</span>")
+        pm_header.pack_start(self.sov_pm_header_lbl, True, True, 0)
+        pm_close = Gtk.Button(label="\u2716")
+        pm_close.set_relief(Gtk.ReliefStyle.NONE)
+        pm_close.connect("clicked", lambda w: self._close_active_pm())
+        pm_header.pack_end(pm_close, False, False, 0)
+        self.sov_pm_panel.pack_start(pm_header, False, False, 0)
+
+        # PM chat view
+        self.sov_pm_buf = Gtk.TextBuffer()
+        self.sov_pm_buf.create_tag("system", foreground="#64748b", style=Pango.Style.ITALIC)
+        self.sov_pm_buf.create_tag("timestamp", foreground="#475569")
+        self.sov_pm_buf.create_tag("self_nick", foreground="#38bdf8", weight=Pango.Weight.BOLD)
+        for color in NICK_COLORS:
+            safe = f"nick_{color.replace('#', '')}"
+            tag_table = self.sov_pm_buf.get_tag_table()
+            if not tag_table.lookup(safe):
+                self.sov_pm_buf.create_tag(safe, foreground=color, weight=Pango.Weight.BOLD)
+
+        self.sov_pm_view = Gtk.TextView(buffer=self.sov_pm_buf)
+        self.sov_pm_view.set_editable(False)
+        self.sov_pm_view.set_cursor_visible(False)
+        self.sov_pm_view.set_monospace(True)
+        self.sov_pm_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.sov_pm_view.get_style_context().add_class("terminal-view")
+
+        pm_scroll = Gtk.ScrolledWindow()
+        pm_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        pm_scroll.add(self.sov_pm_view)
+        self.sov_pm_scroll = pm_scroll
+        self.sov_pm_panel.pack_start(pm_scroll, True, True, 0)
+
+        # PM input
+        pm_input_box = Gtk.Box(spacing=4)
+        pm_input_box.set_margin_start(4)
+        pm_input_box.set_margin_end(4)
+        pm_input_box.set_margin_bottom(4)
+        self.sov_pm_entry = Gtk.Entry()
+        self.sov_pm_entry.set_placeholder_text("Private message...")
+        self.sov_pm_entry.connect("activate", self._on_sov_pm_send)
+        pm_input_box.pack_start(self.sov_pm_entry, True, True, 0)
+        pm_send = Gtk.Button(label="Send")
+        pm_send.get_style_context().add_class("suggested-action")
+        pm_send.connect("clicked", self._on_sov_pm_send)
+        pm_input_box.pack_start(pm_send, False, False, 0)
+        self.sov_pm_panel.pack_start(pm_input_box, False, False, 0)
+
+        self.sov_chat_paned.pack2(self.sov_pm_panel, resize=True, shrink=True)
+        main_vbox.pack_start(self.sov_chat_paned, True, True, 0)
+
+        # Apply blue glow CSS to PM panel
+        css = Gtk.CssProvider()
+        css.load_from_data(b"""
+            .pm-glow {
+                border-left: 2px solid #3b82f6;
+                box-shadow: -4px 0 15px rgba(59, 130, 246, 0.3);
+                background: rgba(30, 58, 138, 0.08);
+                padding: 4px;
+            }
+            .pm-unread {
+                background: rgba(59, 130, 246, 0.15);
+                border-left: 3px solid #60a5fa;
+            }
+            .pm-unread label {
+                color: #60a5fa;
+                font-weight: bold;
+            }
+        """)
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+        self.sov_pm_panel.get_style_context().add_class("pm-glow")
 
         # Input
-        sov_entry_box = Gtk.Box(spacing=10)
+        sov_entry_box = Gtk.Box(spacing=8)
+        self.sov_nick_lbl = Gtk.Label()
+        self.sov_nick_lbl.set_markup("<span color='#38bdf8' weight='bold'>Operator</span>")
+        sov_entry_box.pack_start(self.sov_nick_lbl, False, False, 4)
+
         self.sov_entry = Gtk.Entry()
-        self.sov_entry.set_placeholder_text("Broadcast to Sovereign Hub...")
+        self.sov_entry.set_placeholder_text("Type message or /command...")
         self.sov_entry.connect("activate", self._on_sov_send)
-        sov_entry_box.pack_start(self.sov_entry, True, True, 10)
-        
-        main_vbox.pack_start(sov_entry_box, False, False, 10)
+        self.sov_entry.set_sensitive(False)
+        sov_entry_box.pack_start(self.sov_entry, True, True, 0)
+
+        sov_send_btn = Gtk.Button(label="Send")
+        sov_send_btn.get_style_context().add_class("suggested-action")
+        sov_send_btn.connect("clicked", self._on_sov_send)
+        sov_entry_box.pack_start(sov_send_btn, False, False, 0)
+
+        main_vbox.pack_start(sov_entry_box, False, False, 8)
+
+        # PM buffers (nick -> TextBuffer) — swap into main chat view
+        self._sov_pm_tabs = {}  # nick -> {buf}
+        self._sov_channel_buf = self.sov_chat_buf  # save reference to channel buffer
+
         hbox.pack_start(main_vbox, True, True, 0)
 
-        # 3. User List (Dominion)
+        # 3. User List
         user_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        user_vbox.set_size_request(200, -1)
+        user_vbox.set_size_request(180, -1)
         user_vbox.get_style_context().add_class("card")
-        
+
         user_lbl = Gtk.Label()
-        user_lbl.set_markup("<span weight='bold' size='small' color='#64748b'>DOMINIONS</span>")
+        user_lbl.set_markup("<span weight='bold' size='small' color='#64748b'>ONLINE</span>")
         user_vbox.pack_start(user_lbl, False, False, 5)
-        
+
+        self.sov_user_count = Gtk.Label(label="0 users")
+        self.sov_user_count.get_style_context().add_class("text-muted")
+        user_vbox.pack_start(self.sov_user_count, False, False, 0)
+
         self.sov_user_list = Gtk.ListBox()
+        self.sov_user_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.sov_user_list.connect("button-press-event", self._on_sov_user_click)
         user_scroll = Gtk.ScrolledWindow()
+        user_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         user_scroll.add(self.sov_user_list)
         user_vbox.pack_start(user_scroll, True, True, 0)
-
-        # Power Persistence (X-style)
-        pwr_row = Gtk.Box(homogeneous=True, spacing=2)
-        for pwr, cls in [("GOLD", "power-gold"), ("HACKER", "power-hacker"), ("MOD", "power-mod")]:
-            btn = Gtk.Button(label=pwr)
-            btn.get_style_context().add_class(cls)
-            btn.connect("clicked", lambda b, p=pwr: self._on_sov_set_power(p))
-            pwr_row.pack_start(btn, True, True, 0)
-        user_vbox.pack_end(pwr_row, False, False, 5)
 
         hbox.pack_start(user_vbox, False, False, 0)
         return hbox
@@ -622,102 +775,732 @@ class SupportPage(Gtk.Box):
                 self._irc.send_typing(self._irc.channel, "active")
                 self._last_typing_sent = now
 
+    # ═══════════════════════════════════════════════
+    # SOVEREIGN HUB — WebSocket Client & Handlers
+    # ═══════════════════════════════════════════════
+
+    def _start_sovereign_server(self):
+        """Start the Ergo IRC server via sovereign.sh if not already running."""
+        irc_dir = Path(config.project_root) / "irc"
+        pidfile = irc_dir / "ergo.pid"
+        ergo_bin = irc_dir / "ergo"
+
+        if not ergo_bin.exists():
+            logger.warning("sovereign", "Ergo binary not found at %s", ergo_bin)
+            return
+
+        # Check if already running
+        if pidfile.exists():
+            try:
+                pid = int(pidfile.read_text().strip())
+                os.kill(pid, 0)  # signal 0 = check if alive
+                logger.info("sovereign", f"Ergo already running (PID {pid})")
+                return
+            except (OSError, ValueError):
+                pass  # stale pid, start fresh
+
+        script = irc_dir / "sovereign.sh"
+        if script.exists():
+            def _launch():
+                try:
+                    subprocess.run(
+                        ["bash", str(script), "start"],
+                        cwd=str(irc_dir), timeout=15,
+                        capture_output=True, text=True,
+                    )
+                except Exception as e:
+                    logger.error("sovereign", f"Failed to start Ergo: {e}")
+
+            threading.Thread(target=_launch, daemon=True).start()
+            logger.info("sovereign", "Launching Ergo IRC server...")
+
+    def _sov_auto_connect(self):
+        """Auto-connect to Ergo IRC after server has had time to start."""
+        if not self._sov_connected:
+            self._sov_connect()
+        return False  # Don't repeat
+
+    def _sov_connect(self):
+        """Connect to the Ergo IRC server via IRCClient."""
+        if self._sov_connected or self._sov_irc:
+            return
+
+        from shadowcypher.core.identity import identity
+        import re as _re
+        raw_handle = identity.handle or "Operator"
+        # Sanitize for IRC: strip non-alphanumeric, no spaces, max 32 chars
+        clean = _re.sub(r'[^A-Za-z0-9_\-\[\]\\`^{}]', '', raw_handle)
+        self._sov_nick = clean[:32] if clean else "Operator"
+
+        self._sov_irc = IRCClient(
+            server="127.0.0.1",
+            port=6667,
+            channel=self._sov_channel,
+            nick=self._sov_nick,
+            use_ssl=False,
+            auto_reconnect=True,
+            max_reconnect_delay=60,
+        )
+
+        # Wire up all callbacks (they fire from the IRC thread, so use GLib.idle_add)
+        self._sov_irc.on_message(lambda nick, chan, msg, src:
+            GLib.idle_add(self._sov_on_irc_message, nick, chan, msg))
+        self._sov_irc.on_system(lambda msg:
+            GLib.idle_add(self._sov_sys, msg))
+        self._sov_irc.on_connect(lambda:
+            GLib.idle_add(self._sov_on_connect))
+        self._sov_irc.on_userlist(lambda names:
+            GLib.idle_add(self._sov_on_irc_userlist, names))
+        self._sov_irc.on_whois(lambda info:
+            GLib.idle_add(self._sov_on_irc_whois, info))
+        self._sov_irc.on_private(lambda nick, msg, src:
+            GLib.idle_add(self._sov_on_irc_private, nick, msg))
+        self._sov_irc.on_join(lambda nick:
+            GLib.idle_add(self._sov_on_irc_join, nick))
+        self._sov_irc.on_part(lambda nick:
+            GLib.idle_add(self._sov_on_irc_part, nick))
+        self._sov_irc.on_topic(lambda topic, setter:
+            GLib.idle_add(self._sov_on_irc_topic, topic, setter))
+        self._sov_irc.on_nick_change(lambda old, new:
+            GLib.idle_add(self._sov_on_irc_nick_change, old, new))
+        self._sov_irc.on_kick(lambda kicker, kicked, reason:
+            GLib.idle_add(self._sov_on_irc_kick, kicker, kicked, reason))
+        self._sov_irc.on_disconnect(lambda:
+            GLib.idle_add(self._sov_on_disconnect))
+
+        self._sov_irc.connect()
+
+    def _sov_disconnect(self):
+        """Disconnect from Ergo IRC server."""
+        if self._sov_irc:
+            self._sov_irc.disconnect("Signing off")
+            self._sov_irc = None
+        self._sov_on_disconnect()
+
+    def _sov_on_connect(self):
+        """Called on GTK thread when IRC connection established."""
+        self._sov_connected = True
+        if self._sov_irc:
+            self._sov_nick = self._sov_irc.nick
+        self.sov_status.set_text("CONNECTED")
+        self.sov_status.get_style_context().remove_class("text-muted")
+        self.sov_entry.set_sensitive(True)
+        self.sov_nick_lbl.set_markup(
+            f"<span color='#38bdf8' weight='bold'>{GLib.markup_escape_text(self._sov_nick)}</span>"
+        )
+        self._sov_sys(f"Connected to Sovereign as {self._sov_nick}")
+
+    def _sov_on_disconnect(self):
+        """Called on GTK thread when disconnected."""
+        self._sov_connected = False
+        self.sov_status.set_text("DISCONNECTED")
+        self.sov_status.get_style_context().add_class("text-muted")
+        self.sov_entry.set_sensitive(False)
+
+    # ── Sovereign IRC Callbacks (fired from IRCClient thread → GTK via GLib.idle_add) ──
+
+    def _sov_on_irc_message(self, nick, channel, msg):
+        """Channel message from Ergo."""
+        buf = self.sov_chat_buf
+        end = buf.get_end_iter()
+        ts = time.strftime("%H:%M:%S")
+        buf.insert_with_tags_by_name(end, f"[{ts}] ", "timestamp")
+
+        end = buf.get_end_iter()
+        prefix = self._sov_irc.get_user_prefix(nick) if self._sov_irc else ""
+        is_self = (nick == self._sov_nick)
+        if is_self:
+            buf.insert_with_tags_by_name(end, f"{prefix}{nick}", "self_nick")
+        else:
+            color = _nick_color(nick)
+            tag = f"nick_{color.replace('#', '')}"
+            buf.insert_with_tags_by_name(end, f"{prefix}{nick}", tag)
+
+        end = buf.get_end_iter()
+        buf.insert(end, f": {msg}\n")
+        self._sov_autoscroll()
+
+    def _sov_on_irc_private(self, nick, msg):
+        """Private message from Ergo — open PM panel and display."""
+        was_active = (self._sov_active_pm == nick)
+        self._open_sov_pm(nick)
+        self._sov_pm_append(nick, msg, target_nick=nick)
+        if not was_active:
+            # Add unread glow to sidebar row
+            for row in self.sov_pm_list.get_children():
+                if row.get_name() == nick:
+                    row.get_style_context().add_class("pm-unread")
+                    break
+            self._sov_sys(f"\u2709 PM from {nick}")
+
+    def _sov_on_irc_userlist(self, names):
+        """NAMES reply — update the user sidebar."""
+        self._sov_users = names
+        self._update_sov_userlist()
+
+    def _sov_on_irc_whois(self, info):
+        """WHOIS result from Ergo."""
+        nick = info.get("nick", "?")
+        lines = [f"\u2550\u2550 WHOIS: {nick} \u2550\u2550"]
+        if info.get("user"):
+            lines.append(f"  User: {info['user']}@{info.get('host', '?')}")
+        if info.get("realname"):
+            lines.append(f"  Real name: {info['realname']}")
+        if info.get("channels"):
+            lines.append(f"  Channels: {info['channels']}")
+        if info.get("server"):
+            lines.append(f"  Server: {info['server']} ({info.get('server_info', '')})")
+        if info.get("idle_seconds") is not None:
+            lines.append(f"  Idle: {info['idle_seconds']}s")
+        lines.append("\u2550" * 40)
+        for line in lines:
+            self._sov_sys(line)
+
+    def _sov_on_irc_join(self, nick):
+        """Someone joined the channel."""
+        pass  # on_system already prints it; userlist refresh is triggered by IRCClient
+
+    def _sov_on_irc_part(self, nick):
+        """Someone left the channel."""
+        pass  # on_system handles it
+
+    def _sov_on_irc_topic(self, topic, setter):
+        """Topic changed."""
+        escaped = GLib.markup_escape_text(topic) if topic else "No topic set"
+        self.sov_topic_lbl.set_markup(f"<span color='#94a3b8' size='small'>{escaped}</span>")
+
+    def _sov_on_irc_nick_change(self, old_nick, new_nick):
+        """Someone changed nick."""
+        if old_nick == self._sov_nick:
+            self._sov_nick = new_nick
+            self.sov_nick_lbl.set_markup(
+                f"<span color='#38bdf8' weight='bold'>{GLib.markup_escape_text(new_nick)}</span>"
+            )
+
+    def _sov_on_irc_kick(self, kicker, kicked, reason):
+        """Someone was kicked."""
+        pass  # on_system handles display; IRCClient auto-rejoins if we were kicked
+
+    # ── Sovereign Chat Output Helpers ───────────────────────────
+
+    def _sov_sys(self, msg):
+        """System message in Sovereign chat."""
+        buf = self.sov_chat_buf
+        end = buf.get_end_iter()
+        ts = time.strftime("%H:%M:%S")
+        buf.insert_with_tags_by_name(end, f"[{ts}] ", "timestamp")
+        end = buf.get_end_iter()
+        buf.insert_with_tags_by_name(end, f"\u2699 {msg}\n", "system")
+        self._sov_autoscroll()
+
+    def _sov_error(self, msg):
+        """Error message in Sovereign chat."""
+        buf = self.sov_chat_buf
+        end = buf.get_end_iter()
+        ts = time.strftime("%H:%M:%S")
+        buf.insert_with_tags_by_name(end, f"[{ts}] ", "timestamp")
+        end = buf.get_end_iter()
+        buf.insert_with_tags_by_name(end, f"\u2716 {msg}\n", "error")
+        self._sov_autoscroll()
+
+    def _sov_motd(self, line):
+        """MOTD line in Sovereign chat."""
+        buf = self.sov_chat_buf
+        end = buf.get_end_iter()
+        buf.insert_with_tags_by_name(end, f"{line}\n", "motd")
+        self._sov_autoscroll()
+
+    def _sov_action(self, nick, text):
+        """Action (/me) in Sovereign chat."""
+        buf = self.sov_chat_buf
+        end = buf.get_end_iter()
+        ts = time.strftime("%H:%M:%S")
+        buf.insert_with_tags_by_name(end, f"[{ts}] ", "timestamp")
+        end = buf.get_end_iter()
+        buf.insert_with_tags_by_name(end, f"* {nick} {text}\n", "action")
+        self._sov_autoscroll()
+
+    def _sov_autoscroll(self):
+        adj = self.sov_chat_scroll.get_vadjustment()
+        adj.set_value(adj.get_upper() - adj.get_page_size())
+
+    # ── Sovereign Input & Command Parser ────────────────────────
+
+    # ── Right-Click Context Menu & PM System ──────────────────────
+
+    def _add_sidebar_row(self, name, is_channel=True):
+        """Add a channel or PM row to the sidebar."""
+        row = Gtk.ListBoxRow()
+        row.set_name(name)
+        row.get_style_context().add_class("channel-row")
+        lbl = Gtk.Label(xalign=0)
+        lbl.set_margin_start(8)
+        if is_channel:
+            lbl.set_text(name)
+        else:
+            color = _nick_color(name)
+            lbl.set_markup(f"<span color='{color}'>\u2709 {GLib.markup_escape_text(name)}</span>")
+        row.add(lbl)
+        if is_channel:
+            self.sov_channels_list.add(row)
+        else:
+            self.sov_pm_list.add(row)
+        return row
+
+    def _sov_current_target(self):
+        """Return current target — channel name or PM nick."""
+        return getattr(self, '_sov_active_pm', None) or self._sov_channel
+
+    def _on_pm_tab_switch(self, listbox, row):
+        """Click a PM nick in sidebar — open/focus the PM panel."""
+        nick = row.get_name()
+        self._open_sov_pm(nick)
+
+    def _on_sov_user_click(self, widget, event):
+        """Handle clicks on user list — right-click for context menu, double-click for PM."""
+        if event.button == 3:  # Right click
+            row = self.sov_user_list.get_row_at_y(int(event.y))
+            if not row:
+                return False
+            nick = row.get_name()
+            if not nick or nick == self._sov_nick:
+                return False
+            self._show_sov_user_menu(nick, event)
+            return True
+        elif event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:  # Double click
+            row = self.sov_user_list.get_row_at_y(int(event.y))
+            if row:
+                nick = row.get_name()
+                if nick and nick != self._sov_nick:
+                    self._open_sov_pm(nick)
+            return True
+        return False
+
+    def _show_sov_user_menu(self, nick, event):
+        """Right-click context menu for a user."""
+        menu = Gtk.Menu()
+
+        # Private Message
+        item_pm = Gtk.MenuItem(label=f"Private Message {nick}")
+        item_pm.connect("activate", lambda w: self._open_sov_pm(nick))
+        menu.append(item_pm)
+
+        # Whois
+        item_whois = Gtk.MenuItem(label=f"Whois {nick}")
+        item_whois.connect("activate", lambda w: self._sov_irc.send_whois(nick) if self._sov_irc else None)
+        menu.append(item_whois)
+
+        menu.append(Gtk.SeparatorMenuItem())
+
+        # Mention in chat
+        item_mention = Gtk.MenuItem(label=f"Mention @{nick}")
+        item_mention.connect("activate", lambda w: self._sov_insert_text(f"{nick}: "))
+        menu.append(item_mention)
+
+        # Slap (fun)
+        item_slap = Gtk.MenuItem(label=f"Slap {nick}")
+        item_slap.connect("activate", lambda w: self._sov_do_action(f"slaps {nick} around a bit with a large trout"))
+        menu.append(item_slap)
+
+        menu.append(Gtk.SeparatorMenuItem())
+
+        # Op/Voice/Kick (admin actions)
+        item_op = Gtk.MenuItem(label=f"Give Op (+o)")
+        item_op.connect("activate", lambda w: self._sov_irc.set_mode("+o", nick) if self._sov_irc else None)
+        menu.append(item_op)
+
+        item_voice = Gtk.MenuItem(label=f"Give Voice (+v)")
+        item_voice.connect("activate", lambda w: self._sov_irc.set_mode("+v", nick) if self._sov_irc else None)
+        menu.append(item_voice)
+
+        item_kick = Gtk.MenuItem(label=f"Kick {nick}")
+        item_kick.connect("activate", lambda w: self._sov_kick_prompt(nick))
+        menu.append(item_kick)
+
+        item_ban = Gtk.MenuItem(label=f"Ban {nick}")
+        item_ban.connect("activate", lambda w: self._sov_irc.set_mode(f"+b {nick}!*@*") if self._sov_irc else None)
+        menu.append(item_ban)
+
+        menu.show_all()
+        menu.popup_at_pointer(event)
+
+    def _sov_insert_text(self, text):
+        """Insert text into the chat entry."""
+        self.sov_entry.set_text(text)
+        self.sov_entry.set_position(-1)
+        self.sov_entry.grab_focus()
+
+    def _sov_do_action(self, text):
+        """Send a /me action."""
+        if self._sov_irc and self._sov_connected:
+            self._sov_irc.send_action(text)
+            self._sov_action(self._sov_nick, text)
+
+    def _sov_kick_prompt(self, nick):
+        """Kick with optional reason dialog."""
+        dialog = Gtk.MessageDialog(
+            transient_for=self.get_toplevel(),
+            flags=0,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.OK_CANCEL,
+            text=f"Kick {nick}?",
+        )
+        dialog.format_secondary_text("Enter reason (optional):")
+        entry = Gtk.Entry()
+        entry.set_text("Removed")
+        dialog.get_content_area().pack_end(entry, False, False, 0)
+        dialog.show_all()
+        resp = dialog.run()
+        reason = entry.get_text() or "Removed"
+        dialog.destroy()
+        if resp == Gtk.ResponseType.OK and self._sov_irc:
+            self._sov_irc.kick_user(nick, reason)
+
+    def _open_sov_pm(self, nick):
+        """Open PM panel next to main chat (xat-style slide-in)."""
+        if nick not in self._sov_pm_tabs:
+            self._sov_pm_tabs[nick] = True
+            self._add_sidebar_row(nick, is_channel=False)
+            self.sov_pm_list.show_all()
+
+        self._sov_active_pm = nick
+        for row in self.sov_pm_list.get_children():
+            if row.get_name() == nick:
+                row.get_style_context().remove_class("pm-unread")
+                break
+        self.sov_pm_header_lbl.set_markup(
+            f"<span color='#60a5fa' weight='bold'>\u2709 {GLib.markup_escape_text(nick)}</span>"
+        )
+
+        # Per-nick persistent buffers — no more history wipe on switch
+        if not hasattr(self, '_sov_pm_nick_bufs'):
+            self._sov_pm_nick_bufs = {}
+        if nick not in self._sov_pm_nick_bufs:
+            buf = Gtk.TextBuffer()
+            # Clone tags from master buffer
+            for tag_name, fg, weight in [
+                ("system", "#64748b", None),
+                ("timestamp", "#475569", None),
+                ("self_nick", "#38bdf8", Pango.Weight.BOLD),
+            ]:
+                props = {"foreground": fg}
+                if weight: props["weight"] = weight
+                if tag_name == "system": props["style"] = Pango.Style.ITALIC
+                buf.create_tag(tag_name, **props)
+            for safe, color in [(f"nick_{c.replace('#','')}", c) for c in
+                                ["#f87171","#fb923c","#fbbf24","#a3e635",
+                                 "#4ade80","#34d399","#22d3ee","#60a5fa",
+                                 "#818cf8","#a78bfa","#c084fc","#e879f9",
+                                 "#f472b6","#fb7185"]]:
+                buf.create_tag(safe, foreground=color, weight=Pango.Weight.BOLD)
+            end = buf.get_end_iter()
+            buf.insert_with_tags_by_name(end, f"Private chat with {nick}\n", "system")
+            self._sov_pm_nick_bufs[nick] = buf
+
+        # Swap buffer into the view — preserves history per nick
+        self.sov_pm_view.set_buffer(self._sov_pm_nick_bufs[nick])
+
+        self.sov_pm_panel.show_all()
+        self.sov_pm_entry.grab_focus()
+
+        # Set paned position to give PM ~40% of space
+        GLib.idle_add(lambda: self.sov_chat_paned.set_position(
+            int(self.sov_chat_paned.get_allocated_width() * 0.6)
+        ))
+
+    def _close_active_pm(self):
+        """Close the PM panel (slide it away)."""
+        self.sov_pm_panel.hide()
+        self._sov_active_pm = None
+
+    def _on_sov_pm_send(self, widget):
+        """Send from the PM input box."""
+        msg = self.sov_pm_entry.get_text().strip()
+        if not msg or not self._sov_irc or not self._sov_active_pm:
+            return
+        self.sov_pm_entry.set_text("")
+        nick = self._sov_active_pm
+        self._sov_irc.send_private(nick, msg)
+        self._sov_pm_append(self._sov_nick, msg)
+
+    def _sov_pm_append(self, sender, msg, target_nick=None):
+        """Append a message to the PM panel for `target_nick` (defaults to active)."""
+        target_nick = target_nick or self._sov_active_pm
+        if not target_nick:
+            return
+        bufs = getattr(self, '_sov_pm_nick_bufs', {})
+        buf = bufs.get(target_nick, self.sov_pm_buf)
+        end = buf.get_end_iter()
+        ts = time.strftime("%H:%M:%S")
+        buf.insert_with_tags_by_name(end, f"[{ts}] ", "timestamp")
+        end = buf.get_end_iter()
+        if sender == self._sov_nick:
+            buf.insert_with_tags_by_name(end, sender, "self_nick")
+        else:
+            color = _nick_color(sender)
+            tag = f"nick_{color.replace('#', '')}"
+            buf.insert_with_tags_by_name(end, sender, tag)
+        end = buf.get_end_iter()
+        buf.insert(end, f": {msg}\n")
+        # Auto-scroll PM
+        adj = self.sov_pm_scroll.get_vadjustment()
+        adj.set_value(adj.get_upper() - adj.get_page_size())
+
+    def _close_sov_pm(self, nick):
+        """Remove a PM from sidebar."""
+        if nick in self._sov_pm_tabs:
+            for row in self.sov_pm_list.get_children():
+                if row.get_name() == nick:
+                    self.sov_pm_list.remove(row)
+                    break
+            del self._sov_pm_tabs[nick]
+        if self._sov_active_pm == nick:
+            self._close_active_pm()
+
+    def _on_sov_send(self, widget):
+        """Handle user input — route to channel or PM depending on active view."""
+        msg = self.sov_entry.get_text().strip()
+        if not msg:
+            return
+        self.sov_entry.set_text("")
+
+        if not self._sov_irc or not self._sov_connected:
+            self._sov_sys("Not connected to Sovereign")
+            return
+
+        if msg.startswith("/"):
+            self._sov_parse_command(msg)
+        elif self._sov_active_pm:
+            # Main entry also works for PM if panel is open
+            nick = self._sov_active_pm
+            self._sov_irc.send_private(nick, msg)
+            self._sov_pm_append(self._sov_nick, msg)
+        else:
+            # Channel message
+            self._sov_irc.send_message(msg)
+            self._sov_on_irc_message(self._sov_nick, self._sov_channel, msg)
+
+    def _sov_parse_command(self, msg):
+        """Parse IRC-style commands and dispatch via IRCClient."""
+        irc = self._sov_irc
+        if not irc:
+            return
+
+        parts = msg.split(None, 1)
+        cmd = parts[0].lower()
+        args = parts[1] if len(parts) > 1 else ""
+
+        if cmd == "/nick":
+            if args:
+                irc.change_nick(args.strip())
+            else:
+                self._sov_sys(f"Current nick: {self._sov_nick}")
+
+        elif cmd == "/topic":
+            if args:
+                irc.set_topic(args)
+            else:
+                topic = irc.channel_topic or "No topic set"
+                self._sov_sys(f"Topic: {topic}")
+
+        elif cmd == "/join":
+            chan = args.strip()
+            if chan:
+                if not chan.startswith("#"):
+                    chan = f"#{chan}"
+                # Part current channel, join new one
+                irc._send_raw(f"PART {self._sov_channel} :Switching channels")
+                self._sov_channel = chan
+                irc.channel = chan
+                irc._send_raw(f"JOIN {chan}")
+                self.sov_channel_lbl.set_markup(
+                    f"<span size='large' weight='800' color='#00d4ff'>{GLib.markup_escape_text(chan)}</span>"
+                )
+
+        elif cmd == "/part":
+            reason = args or "Leaving"
+            irc._send_raw(f"PART {self._sov_channel} :{reason}")
+
+        elif cmd in ("/msg", "/dm", "/pm", "/query"):
+            dm_parts = args.split(None, 1)
+            if len(dm_parts) >= 1 and dm_parts[0]:
+                target = dm_parts[0]
+                dm_msg = dm_parts[1] if len(dm_parts) == 2 else ""
+                self._open_sov_pm(target)
+                if dm_msg:
+                    irc.send_private(target, dm_msg)
+                    self._sov_pm_append(self._sov_nick, dm_msg, target_nick=target)
+            else:
+                self._sov_sys("Usage: /msg <nick> [message]")
+
+        elif cmd == "/me":
+            if args:
+                irc.send_action(args)
+                self._sov_action(self._sov_nick, args)
+
+        elif cmd == "/whois":
+            target = args.strip() or self._sov_nick
+            irc.send_whois(target)
+
+        elif cmd == "/list":
+            irc._send_raw("LIST")
+
+        elif cmd == "/names":
+            irc.request_names()
+
+        elif cmd == "/mode":
+            mode_parts = args.split(None, 1)
+            if mode_parts:
+                target = mode_parts[1] if len(mode_parts) > 1 else None
+                irc.set_mode(mode_parts[0], target=target)
+            else:
+                irc._send_raw(f"MODE {self._sov_channel}")
+
+        elif cmd == "/kick":
+            kick_parts = args.split(None, 1)
+            if kick_parts:
+                reason = kick_parts[1] if len(kick_parts) > 1 else "Removed"
+                irc.kick_user(kick_parts[0], reason)
+            else:
+                self._sov_sys("Usage: /kick <nick> [reason]")
+
+        elif cmd == "/ban":
+            if args:
+                target = args.split()[0]
+                irc.set_mode(f"+b {target}!*@*")
+            else:
+                self._sov_sys("Usage: /ban <nick>")
+
+        elif cmd == "/invite":
+            if args:
+                irc._send_raw(f"INVITE {args.strip()} {self._sov_channel}")
+            else:
+                self._sov_sys("Usage: /invite <nick>")
+
+        elif cmd == "/away":
+            if args:
+                irc._send_raw(f"AWAY :{args}")
+            else:
+                irc._send_raw("AWAY")
+
+        elif cmd == "/register":
+            if args:
+                irc._send_raw(f"PRIVMSG NickServ :REGISTER {args}")
+                self._sov_sys("Registration request sent to NickServ")
+            else:
+                self._sov_sys("Usage: /register <password> <email>")
+
+        elif cmd == "/identify":
+            if args:
+                irc._send_raw(f"PRIVMSG NickServ :IDENTIFY {args}")
+            else:
+                self._sov_sys("Usage: /identify <password>")
+
+        elif cmd == "/oper":
+            if args:
+                oper_parts = args.split(None, 1)
+                if len(oper_parts) >= 2:
+                    irc._send_raw(f"OPER {oper_parts[0]} {oper_parts[1]}")
+                else:
+                    self._sov_sys("Usage: /oper <name> <password>")
+            else:
+                self._sov_sys("Usage: /oper <name> <password>")
+
+        elif cmd == "/raw":
+            if args:
+                irc._send_raw(args)
+                self._sov_sys(f">> {args}")
+            else:
+                self._sov_sys("Usage: /raw <IRC command>")
+
+        elif cmd == "/help":
+            help_lines = [
+                "Sovereign IRC Commands:",
+                "  /nick <name>           — Change your nick",
+                "  /topic [text]          — View or set channel topic",
+                "  /join <#channel>       — Join a channel",
+                "  /part [reason]         — Leave current channel",
+                "  /msg <nick> <text>     — Send private message",
+                "  /me <action>           — Action (/me does something)",
+                "  /whois [nick]          — User info lookup",
+                "  /list                  — List all channels",
+                "  /names                 — List users in channel",
+                "  /mode <flags> [target] — Set channel/user modes",
+                "  /kick <nick> [reason]  — Kick user from channel",
+                "  /ban <nick>            — Ban user from channel",
+                "  /invite <nick>         — Invite user to channel",
+                "  /away [message]        — Set/clear away status",
+                "  /register <pass> <email> — Register nick (NickServ)",
+                "  /identify <password>   — Identify to NickServ",
+                "  /oper <name> <pass>    — Authenticate as IRC operator",
+                "  /raw <command>         — Send raw IRC command",
+            ]
+            for line in help_lines:
+                self._sov_sys(line)
+        else:
+            self._sov_sys(f"Unknown command: {cmd}. Type /help for commands.")
+
     def _on_chan_switch(self, listbox, row):
+        """Switch channels via IRC JOIN/PART."""
         chan = row.get_name()
-        # Update UI state
-        self.sov_channel_lbl.set_markup(f"<span size='large' weight='800' color='#00d4ff'>{chan}</span>")
+        # Deselect PM sidebar
+        self.sov_pm_list.unselect_all()
+
+        self.sov_channel_lbl.set_markup(
+            f"<span size='large' weight='800' color='#00d4ff'>{GLib.markup_escape_text(chan)}</span>"
+        )
         for r in listbox.get_children():
             r.get_style_context().remove_class("channel-active")
         row.get_style_context().add_class("channel-active")
-        
-        # Notify server
-        self._sov_broadcast({"type": "switch_channel", "channel": chan})
-        self._chat_sys(self.sov_terminal.text_view.get_buffer(), f"CHANNEL_SHIFT: Switched to {chan}")
 
-    def _on_sov_send(self, widget):
-        msg = self.sov_entry.get_text().strip()
-        if not msg: return
-        self._sov_broadcast({"type": "chat", "text": msg})
-        self.sov_entry.set_text("")
-        
-    def _on_sov_set_power(self, power):
-        self._sov_broadcast({"type": "set_metadata", "field": "power", "value": power.lower()})
-        self._chat_sys(self.sov_terminal.text_view.get_buffer(), f"POWER_UPDATE: Attempting shift to {power}")
-
-    def _sov_broadcast(self, packet):
-        """Internal dispatch to the Sovereign Hub."""
-        # For this implementation, we bridge to the SovereignServer via the Bus
-        # but also simulate the network response for immediate feedback.
-        from shadowcypher.core.bus import bus
-        packet["nick"] = self._irc.nick if self._irc else "Operator"
-        bus.publish("sovereign_out", packet)
-        
-    def _handle_sov_packet(self, packet):
-        """Process incoming Sovereign data (Xat-style)."""
-        GLib.idle_add(self._process_sov_ui, packet)
-
-    def _process_sov_ui(self, packet):
-        ptype = packet.get("type")
-        nick = packet.get("nick", "Unknown")
-        buf = self.sov_terminal.text_view.get_buffer()
-        
-        if ptype == "chat":
-            power = packet.get("power", "default")
-            power_cls = f"power-{power}"
-            text = packet.get("text", "")
-            
-            end = buf.get_end_iter()
-            ts = time.strftime("%H:%M:%S")
-            buf.insert_with_tags_by_name(end, f"[{ts}] ", "timestamp")
-            
-            # Nick with Power styling
-            end = buf.get_end_iter()
-            nick_tag = f"nick_{_nick_color(nick).replace('#', '')}"
-            buf.insert_with_tags_by_name(end, f"{nick}", nick_tag)
-            
-            if power != "default":
-                end = buf.get_end_iter()
-                buf.insert_with_tags_by_name(end, f" [{power.upper()}]", power_cls)
-            
-            end = buf.get_end_iter()
-            buf.insert(end, f": {text}\n")
-            
-        elif ptype == "user_sync":
-            self._sov_users = packet.get("users", [])
-            self._update_sov_userlist()
+        if self._sov_irc and self._sov_connected and chan != self._sov_channel:
+            self._sov_irc._send_raw(f"PART {self._sov_channel} :Switching")
+            self._sov_channel = chan
+            self._sov_irc.channel = chan
+            self._sov_irc._send_raw(f"JOIN {chan}")
 
     def _update_sov_userlist(self):
+        """Refresh the user list from IRCClient NAMES data."""
         for child in self.sov_user_list.get_children():
             self.sov_user_list.remove(child)
-            
-        for u in self._sov_users:
+
+        user_modes = self._sov_irc._user_modes if self._sov_irc else {}
+
+        for nick in self._sov_users:
             row = Gtk.ListBoxRow()
+            row.set_name(nick)
             row.get_style_context().add_class("irc-user-row")
-            hbox = Gtk.Box(spacing=8)
-            hbox.set_margin_start(5)
-            
-            # Xat-style Avatar or Power Dot
+            hbox = Gtk.Box(spacing=6)
+            hbox.set_margin_start(4)
+            hbox.set_margin_end(4)
+
+            prefix = user_modes.get(nick, "")
+
+            # Status dot color based on mode prefix
             dot = Gtk.Label()
-            color = "#00ff9d" # default sovereign green
-            if u["power"] == "gold": color = "#fbbf24"
-            elif u["power"] == "mod": color = "#8b5cf6"
-            
-            dot.set_markup(f"<span color='{color}' font_desc='10'>\u2b24</span>")
+            if "@" in prefix or "~" in prefix or "&" in prefix:
+                color = "#fbbf24"   # op/owner/admin = gold
+            elif "+" in prefix or "%" in prefix:
+                color = "#22d3ee"   # voice/halfop = cyan
+            else:
+                color = "#00ff9d"   # normal = green
+            dot.set_markup(f"<span color='{color}'>\u2b24</span>")
             hbox.pack_start(dot, False, False, 0)
-            
-            lbl = Gtk.Label(label=u["nick"], xalign=0)
-            lbl.get_style_context().add_class(f"power-{u['power']}")
+
+            # Nick with prefix
+            nick_color = _nick_color(nick)
+            lbl = Gtk.Label(xalign=0)
+            lbl.set_markup(
+                f"<span color='{nick_color}'>{GLib.markup_escape_text(prefix + nick)}</span>"
+            )
+            lbl.set_ellipsize(Pango.EllipsizeMode.END)
             hbox.pack_start(lbl, True, True, 0)
 
-            # Level Badge
-            lvl = u.get("level", 1)
-            badge = Gtk.Label()
-            badge.set_markup(f"<span class='xp-badge'>Lvl {lvl}</span>")
-            hbox.pack_end(badge, False, False, 5)
-            
             row.add(hbox)
             self.sov_user_list.add(row)
+
         self.sov_user_list.show_all()
+        self.sov_user_count.set_text(f"{len(self._sov_users)} users")
 
     def _on_user_double_click(self, listbox, row):
         nick = row.get_name()

@@ -36,7 +36,7 @@ class FirewallBridge:
             # subprocess.run(cmd.split(), check=True)
             
             self.active_bans.add(hostmask)
-            logger.success("network", f"QUARANTINE_ACTIVE: {target} is now blocked at the network plane.")
+            logger.info("network", f"QUARANTINE_ACTIVE: {target} is now blocked at the network plane.")
         except Exception as e:
             logger.error("network", f"LOCKDOWN_FAILED: {e}")
 

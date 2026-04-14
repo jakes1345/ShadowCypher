@@ -1,86 +1,164 @@
 """
-ShadowCypher Combat Deck — High-Tier Arsenal Control Plane.
-Dedicated UI for launching Chaos protocols, WASM Forge payloads, and Spectral Blocking.
+ShadowCypher Combat Deck — Arsenal Control Plane.
+Dedicated UI for Chaos Engine stress testing and WebForge payload research.
 """
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib, Pango
-import time
-from shadowcypher.ui.components import TacticalTerminal, DataPod, TacticalHeader
-from shadowcypher.modules.chaos import chaos
-from shadowcypher.modules.web_exploit_v2 import forge
+from gi.repository import Gtk, GLib
+from shadowcypher.ui.base_page import BasePage
+from shadowcypher.ui.components import DataPod
 
-class CombatDeck(Gtk.Box):
+
+class CombatDeck(BasePage):
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        self._build_ui()
+        super().__init__("COMBAT DECK")
+        self._build_combat_ui()
 
-    def _build_ui(self):
-        # Header
-        self.pack_start(TacticalHeader("COMBAT_DECK_APEX_2026", "ARSENAL_STATUS: ARMED"), False, False, 0)
+    def _build_combat_ui(self):
+        # Metric pods
+        self.pod_status = DataPod("ENGINE_STATUS", "IDLE")
+        self.pod_threads = DataPod("ACTIVE_THREADS", "0")
+        self.pod_packets = DataPod("PACKETS_SENT", "0")
+        for pod in [self.pod_status, self.pod_threads, self.pod_packets]:
+            self.metric_strip.pack_start(pod, True, True, 5)
 
-        # Main Content
-        hbox = Gtk.Box(spacing=15)
-        hbox.set_margin_start(15)
-        hbox.set_margin_end(15)
-        hbox.set_margin_top(15)
+        # --- CHAOS ENGINE SECTION ---
+        chaos_frame = Gtk.Frame(label="CHAOS ENGINE (Network Stress)")
+        chaos_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        chaos_box.set_margin_start(10)
+        chaos_box.set_margin_end(10)
+        chaos_box.set_margin_top(10)
+        chaos_box.set_margin_bottom(10)
 
-        # 1. Left: Control Matrix
-        control_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        control_vbox.set_size_request(300, -1)
+        target_row = Gtk.Box(spacing=8)
+        target_row.pack_start(Gtk.Label(label="Target:"), False, False, 0)
+        self.target_entry = Gtk.Entry(placeholder_text="IP or hostname")
+        target_row.pack_start(self.target_entry, True, True, 0)
 
-        # --- CHAOS / DDoS SECTION ---
-        chaos_pod = DataPod("CHAOS_ENGINE (ShadowStream)")
-        c_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        
-        self.target_entry = Gtk.Entry(placeholder_text="Target IP / Host")
-        c_vbox.pack_start(self.target_entry, False, False, 0)
-        
-        type_combo = Gtk.ComboBoxText()
-        type_combo.append("udp", "UDP_FLUX (2026)")
-        type_combo.append("http", "HTTP_STRESS")
-        type_combo.set_active(0)
-        c_vbox.pack_start(type_combo, False, False, 0)
-        
-        self.chaos_btn = Gtk.Button(label="INITIATE_CHAOS")
-        self.chaos_btn.get_style_context().add_class("destructive-action")
-        self.chaos_btn.connect("clicked", self._on_chaos_click)
-        c_vbox.pack_start(self.chaos_btn, False, False, 0)
-        
-        chaos_pod.content_area.add(c_vbox)
-        control_vbox.pack_start(chaos_pod, False, False, 0)
+        target_row.pack_start(Gtk.Label(label="Port:"), False, False, 0)
+        self.port_entry = Gtk.Entry(placeholder_text="443")
+        self.port_entry.set_text("443")
+        self.port_entry.set_width_chars(6)
+        target_row.pack_start(self.port_entry, False, False, 0)
+        chaos_box.pack_start(target_row, False, False, 0)
 
-        # --- WEBFORGE / WASM SECTION ---
-        forge_pod = DataPod("WEBFORGE_V2 (Browser-Exploit)")
-        f_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        
-        self.wasm_btn = Gtk.Button(label="GENERATE_WASM_HARNESS")
-        self.wasm_btn.get_style_context().add_class("suggested-action")
-        self.wasm_btn.connect("clicked", self._on_forge_click)
-        f_vbox.pack_start(self.wasm_btn, False, False, 0)
-        
-        forge_pod.content_area.add(f_vbox)
-        control_vbox.pack_start(forge_pod, False, False, 0)
+        opts_row = Gtk.Box(spacing=8)
+        opts_row.pack_start(Gtk.Label(label="Duration (s):"), False, False, 0)
+        self.duration_entry = Gtk.Entry(placeholder_text="30")
+        self.duration_entry.set_text("30")
+        self.duration_entry.set_width_chars(5)
+        opts_row.pack_start(self.duration_entry, False, False, 0)
 
-        hbox.pack_start(control_vbox, False, False, 0)
+        opts_row.pack_start(Gtk.Label(label="Threads:"), False, False, 0)
+        self.threads_entry = Gtk.Entry(placeholder_text="10")
+        self.threads_entry.set_text("10")
+        self.threads_entry.set_width_chars(5)
+        opts_row.pack_start(self.threads_entry, False, False, 0)
+        chaos_box.pack_start(opts_row, False, False, 0)
 
-        # 2. Right: Live Execution Log
-        self.terminal = TacticalTerminal(height=600)
-        hbox.pack_start(self.terminal, True, True, 0)
+        btn_row = Gtk.Box(spacing=8)
+        self.chaos_btn = self.make_action_btn("INITIATE CHAOS", self._on_chaos_click, "destructive-action")
+        btn_row.pack_start(self.chaos_btn, False, False, 0)
 
-        self.pack_start(hbox, True, True, 0)
+        self.stop_btn = self.make_action_btn("HALT", self._on_stop_click, "suggested-action")
+        btn_row.pack_start(self.stop_btn, False, False, 0)
+        chaos_box.pack_start(btn_row, False, False, 0)
+
+        chaos_frame.add(chaos_box)
+        self.workspace.pack_start(chaos_frame, False, False, 0)
+
+        # --- WEBFORGE V2 SECTION ---
+        forge_frame = Gtk.Frame(label="WEBFORGE V2 (Browser Research)")
+        forge_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        forge_box.set_margin_start(10)
+        forge_box.set_margin_end(10)
+        forge_box.set_margin_top(10)
+        forge_box.set_margin_bottom(10)
+
+        self.forge_combo = Gtk.ComboBoxText()
+        self.forge_combo.append("wasm_spray", "WASM Heap Spray")
+        self.forge_combo.append("jit_bypass", "JIT Bypass Pattern")
+        self.forge_combo.append("flash_legacy", "Flash Legacy Emulation")
+        self.forge_combo.set_active(0)
+        forge_box.pack_start(self.forge_combo, False, False, 0)
+
+        self.wasm_btn = self.make_action_btn("GENERATE HARNESS", self._on_forge_click)
+        forge_box.pack_start(self.wasm_btn, False, False, 0)
+
+        forge_frame.add(forge_box)
+        self.workspace.pack_start(forge_frame, False, False, 0)
 
     def _on_chaos_click(self, btn):
-        target = self.target_entry.get_text().strip()
-        if not target: return
-        
-        self.terminal.write(f"\u26a0 [CHAOS] Initiating UDP_FLUX load on {target}...\n", "red")
-        chaos.start_udp_flood(target, 443, duration=30, threads=100)
-        
-    def _on_forge_click(self, btn):
-        harness = forge.generate_html_harness("wasm_spray")
-        self.terminal.write(f"\u2699 [FORGE] WASM Payload Generated: {harness}\n", "cyan")
+        from shadowcypher.modules.chaos import chaos
+        from shadowcypher.core.sanitize import validate_target
 
-    def show(self):
-        self.show_all()
+        target = self.target_entry.get_text().strip()
+        if not target:
+            self.log("ERROR: Specify a target IP/host", "error")
+            return
+
+        if not validate_target(target):
+            self.log(f"REJECTED: Invalid target '{target}'", "error")
+            return
+
+        try:
+            port = int(self.port_entry.get_text().strip())
+            duration = int(self.duration_entry.get_text().strip())
+            threads = int(self.threads_entry.get_text().strip())
+        except ValueError:
+            self.log("ERROR: Port, duration, threads must be integers", "error")
+            return
+
+        self.log(f"CHAOS_INIT: UDP Flux -> {target}:{port} | {threads}T x {duration}s", "system")
+        self.pod_status.set_value("ACTIVE")
+        self.pod_threads.set_value(str(threads))
+        self.header.set_active(True)
+
+        chaos.start_udp_flood(target, port, duration=duration, threads=threads)
+
+        # Auto-stop after duration
+        GLib.timeout_add_seconds(duration + 2, self._auto_stop)
+
+    def _on_stop_click(self, btn):
+        from shadowcypher.modules.chaos import chaos
+        chaos.stop()
+        self.pod_status.set_value("HALTED")
+        self.pod_threads.set_value("0")
+        self.header.set_active(False)
+        self.log("CHAOS_HALTED: All threads terminated", "success")
+
+    def _auto_stop(self):
+        from shadowcypher.modules.chaos import chaos
+        if chaos.active:
+            chaos.stop()
+        GLib.idle_add(self.pod_status.set_value, "IDLE")
+        GLib.idle_add(self.pod_threads.set_value, "0")
+        GLib.idle_add(self.header.set_active, False)
+        self.log("CHAOS_COMPLETE: Duration elapsed", "success")
+        return False
+
+    def _on_forge_click(self, btn):
+        from shadowcypher.modules.web_exploit_v2 import web_forge
+
+        exploit_type = self.forge_combo.get_active_id()
+        if not exploit_type:
+            self.log("ERROR: Select an exploit type", "error")
+            return
+
+        # Map combo IDs to actual WebForge methods
+        method_map = {
+            "xss": web_forge.xss_scan,
+            "csrf": web_forge.csrf_generate,
+            "clickjack": web_forge.clickjack_test,
+            "cors": web_forge.cors_test,
+            "headers": web_forge.header_audit,
+            "subdomain": web_forge.subdomain_takeover,
+            "lfi": web_forge.lfi_scan,
+            "redirect": web_forge.open_redirect_scan,
+        }
+        handler = method_map.get(exploit_type)
+        if handler:
+            self.log(f"FORGE_STARTING: {exploit_type.upper()}", "ai")
+        else:
+            self.log(f"FORGE_ERROR: Unknown exploit type '{exploit_type}'", "error")

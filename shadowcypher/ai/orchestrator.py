@@ -118,6 +118,7 @@ class AIOrchestrator:
         self.project_root = str(config.project_root)
         self.conversation_history = []
         self._lock = threading.Lock()
+        self._use_agent_routing = True  # Enable Claude Code-style agent fleet
 
     def _encode_image(self, image_path):
         try:
@@ -151,13 +152,34 @@ class AIOrchestrator:
 
     def execute_query(self, query, images=None, callback=None,
                       agent_role="commander", intensity=None, history=None, model=None):
-        """Main autonomous loop — routes through provider system."""
+        """Main autonomous loop — routes through provider system or agent fleet."""
         from shadowcypher.ai.providers import provider_registry
         from shadowcypher.ai.prompts import get_team_prompt
         try:
             from shadowcypher.ai.memory import shadow_memory
         except ImportError:
             shadow_memory = None
+
+        # Agent Fleet routing — if enabled and conditions are right, route through
+        # the specialist agent fleet (Claude Code-style delegation)
+        if (self._use_agent_routing and not images and not history
+                and intensity != "MAX" and not model):
+            try:
+                from shadowcypher.ai.agents import agent_router
+                role_map = {
+                    "red_team": "security",
+                    "blue_team": "analyst",
+                    "devops": "coder",
+                    "sisyphus": "coder",
+                }
+                force = role_map.get(agent_role)
+                return agent_router.dispatch(
+                    query, callback=callback,
+                    force_agent=force,
+                    use_ai_routing=(force is None),
+                )
+            except Exception as e:
+                logger.error("orchestrator", f"Agent fleet fallback: {e}")
 
         provider = provider_registry.active
         if not provider or not provider.is_configured:

@@ -33,7 +33,7 @@ class AutoOrchestrator:
     def __init__(self, model=None):
         from shadowcypher.ai.providers import provider_registry
         active = provider_registry.active
-        self.model = model or (active.model if active else "gemma3")
+        self.model = model or (active.model if active else "gemma4")
         self.log_dir = PROJECT_ROOT / "logs" / "autoagent"
         os.makedirs(self.log_dir, exist_ok=True)
 

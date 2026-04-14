@@ -283,7 +283,7 @@ class AIPage(Gtk.Box):
                 self.model_combo.append(m, m)
             self.model_combo.set_active_id(provider.model)
         else:
-            default_model = pdef.get("default_model", "gemma3")
+            default_model = pdef.get("default_model", "gemma4")
             self.model_combo.append(default_model, default_model)
             self.model_combo.set_active_id(default_model)
 

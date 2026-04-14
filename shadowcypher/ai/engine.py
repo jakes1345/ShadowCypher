@@ -125,12 +125,16 @@ class AIEngine:
 
         # Preference order for security/coding tasks
         preferences = [
+            "shadowcypher-ai",   # Our fine-tuned Dolphin3 8B (primary)
+            "gemma-4-heretic",   # ShadowCypher uncensored custom
+            "gemma4",            # Google Gemma 4
+            "qwen3",             # Qwen 3 reasoning
+            "qwen2.5-coder",    # Qwen coder
+            "hermes",            # Hermes 3
             "whiterabbitneo",
             "dolphin",
             "mistral",
             "llama3",
-            "llama2",
-            "codellama",
             "deepseek-coder",
             "qwen",
             "gemma",
