@@ -217,6 +217,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f3ae", "Gaming OSINT"),
             ("\U0001f4ac", "Support & Comms"),
             ("\U0001f6e0", "Admin Panel"),
+            ("\U0001f5e1", "Combat Deck"),
         ]
 
         for icon, name in pages:
@@ -277,6 +278,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Gaming OSINT": "steam_page.SteamAuditPage",
                 "Support & Comms": "support_page.SupportPage",
                 "Admin Panel": "admin_page.AdminPage",
+                "Combat Deck": "combat_page.CombatDeck",
             }
             if name not in mapping:
                 print(f"[NAV] Unknown page: {name}", file=sys.stderr, flush=True)
@@ -315,6 +317,9 @@ class ShadowCypherApp(Gtk.Application):
         super().__init__(application_id="org.shadowcypher.ShadowCypher")
 
     def do_activate(self):
+        from shadowcypher.ui.welcome_dialog import needs_onboarding, show_welcome
+        if needs_onboarding():
+            show_welcome(parent=None)
         self._window = ShadowCypherWindow(self)
 
 def main():

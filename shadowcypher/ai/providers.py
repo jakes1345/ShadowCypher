@@ -28,7 +28,7 @@ PROVIDERS = {
         "base_url": "http://127.0.0.1:11434",
         "api_format": "ollama",
         "env_key": None,
-        "default_model": "gemma3",
+        "default_model": "gemma4",
         "free": True,
         "description": "Local GPU inference via Ollama. No API key needed.",
     },

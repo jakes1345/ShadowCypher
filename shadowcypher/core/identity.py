@@ -3,6 +3,7 @@
 import os
 import hashlib
 from pathlib import Path
+from typing import Optional
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes

@@ -15,7 +15,7 @@ from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
 from shadowcypher.ai.orchestrator import AIOrchestrator
 
-@dataclass(frozen=True)
+@dataclass
 class Mission:
     # Core state for tactical engagement
     id: str
@@ -154,7 +154,12 @@ class ShadowHub:
     def _finalize_mission(self, mid: str, result: str) -> None:
         """Archives a mission and logs the final tactical output."""
         if mid in self.active_missions:
+            mission = self.active_missions[mid]
+            mission.status = 'COMPLETE'
+            mission.progress = 100
+            mission.last_update_msg = result
             logger.info("hub", f"MISSION_ARCHIVED: {mid} operation terminated.")
+            del self.active_missions[mid]
 
     @property
     def uptime_formatted(self) -> str:

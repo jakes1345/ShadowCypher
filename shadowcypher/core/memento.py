@@ -5,6 +5,7 @@ Implements the 'Read-Execute-Reflect' cycle for autonomous tool refinement.
 
 import os
 from pathlib import Path
+from typing import Optional
 from shadowcypher.core.logger import logger
 
 class MementoEngine:

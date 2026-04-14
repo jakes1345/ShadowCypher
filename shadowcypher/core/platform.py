@@ -124,6 +124,16 @@ class ShadowPlatform:
                     line = f.readline()
                     parts = [float(x) for x in line.split()[1:]]
                     vitals["cpu"] = sum(parts[:3]) / sum(parts) * 100
+                # Memory usage from /proc/meminfo
+                with open("/proc/meminfo", "r") as f:
+                    meminfo = {}
+                    for line in f:
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            meminfo[parts[0].rstrip(":")] = int(parts[1])
+                    total = meminfo.get("MemTotal", 1)
+                    available = meminfo.get("MemAvailable", total)
+                    vitals["mem"] = (1 - available / total) * 100
         except Exception:
             pass
         return vitals
