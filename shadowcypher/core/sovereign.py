@@ -5,6 +5,7 @@ E2E encrypted DMs that are NEVER logged or stored.
 """
 
 import asyncio
+import os
 import json
 import time
 import uuid
@@ -14,12 +15,11 @@ import base64
 import platform
 import subprocess
 import socket
-import uuid
-import time
 from typing import Dict, Set, Any, Optional, List, Callable
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
+from shadowcypher.core.platform import platform_engine
 
 import websockets
 
@@ -915,6 +915,13 @@ class SovereignServer:
         if not stored:
             await self._send_to(nick, {"type": "error", "text": f"Nick '{nick}' is not registered"})
             return
+        
+        pw_hash = hashlib.sha256(password.encode()).hexdigest()
+        if hmac.compare_digest(pw_hash, stored):
+            self._identified.add(nick)
+            await self._send_to(nick, {"type": "sys", "text": "You are now identified."})
+        else:
+            await self._send_to(nick, {"type": "error", "text": "Wrong password."})
 
     # ── God-Mode: /unmask ────────────────────────────────────────
 
@@ -939,14 +946,6 @@ class SovereignServer:
                 "nodes": self._unmasked_cache
             })
 
-    # ── Internal Helpers ─────────────────────────────────────────
-
-        pw_hash = hashlib.sha256(password.encode()).hexdigest()
-        if hmac.compare_digest(pw_hash, stored):
-            self._identified.add(nick)
-            await self._send_to(nick, {"type": "sys", "text": "You are now identified."})
-        else:
-            await self._send_to(nick, {"type": "error", "text": "Wrong password."})
 
     # ── Create channel ───────────────────────────────────────────
 
