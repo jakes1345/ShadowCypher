@@ -60,6 +60,24 @@ class ForensicRegistry:
     def is_quarantined(self, hostmask: str) -> bool:
         return hostmask in self._registry
 
+    def register_mission(self, mission_id: str, query: str, results: str, metadata: dict):
+        """Archives a mission result into the permanent forensic registry."""
+        archive_file = os.path.join(self._forensic_dir, f"mission_{mission_id}.json")
+        entry = {
+            "mission_id": mission_id,
+            "query": query,
+            "results": results,
+            "timestamp": time.time(),
+            "metadata": metadata
+        }
+        try:
+            with open(archive_file, "w") as f:
+                json.dump(entry, f, indent=4)
+            logger.info("forensics", f"MISSION_ARCHIVED: {mission_id} saved to registry.")
+            bus.publish("mission_archived", entry)
+        except Exception as e:
+            logger.error("forensics", f"MISSION_ARCHIVE_FAILED: {e}")
+
     def _calculate_risk(self, metadata: dict) -> str:
         # Complex heuristic calculation for mission risk
         score = 0

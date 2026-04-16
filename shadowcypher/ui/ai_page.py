@@ -6,17 +6,17 @@ from gi.repository import Gtk, GLib
 import os
 import threading
 
+from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import TacticalTerminal, TacticalHeader, DataPod
 from shadowcypher.core.hub import hub
 from shadowcypher.core.logger import logger
 from shadowcypher.ai.providers import provider_registry, PROVIDERS
 
-
-class AIPage(Gtk.Box):
-    """Deep-Spectrum AI Hub. Chat with the AI + Launch autonomous missions."""
+class AIPage(BasePage):
+    """Deep-Spectrum AI Hub (Shadow-Synthesizer). Chat with the AI + Launch autonomous missions."""
 
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        super().__init__("SHADOW-SYNTHESIZER")
         self.attachments = []
         self.history = []
         self._build_ui()
@@ -39,10 +39,12 @@ class AIPage(Gtk.Box):
         self.pod_model = DataPod("MODEL", active.model if active else "—", "cyan")
         self.pod_status = DataPod("STATUS", "STANDBY", "violet")
         self.pod_missions = DataPod("MISSIONS", "0", "amber")
+        self.pod_sscript = DataPod("SHADOWSCRIPT", "0.1-IGNITE", "emerald")
         strip.pack_start(self.pod_provider, True, True, 0)
         strip.pack_start(self.pod_model, True, True, 0)
         strip.pack_start(self.pod_status, True, True, 0)
         strip.pack_start(self.pod_missions, True, True, 0)
+        strip.pack_start(self.pod_sscript, True, True, 0)
         self.main_pod.pack_start(strip, False, False, 0)
 
         # 3. Provider Settings (collapsible)
@@ -160,7 +162,7 @@ class AIPage(Gtk.Box):
 
         opts_row.pack_start(Gtk.Label(label="ROLE:"), False, False, 0)
         self.role_combo = Gtk.ComboBoxText()
-        for r in ["commander", "red_team", "blue_team", "devops"]:
+        for r in ["shadowai", "commander", "red_team", "blue_team", "devops"]:
             self.role_combo.append_text(r)
         self.role_combo.set_active(0)
         opts_row.pack_start(self.role_combo, False, False, 0)

@@ -22,95 +22,43 @@ _MAX_CYCLES = 25
 _MAX_OUTPUT_CHARS = 8000
 
 # ══════════════════════════════════════════════════════════════
-# Tool Definitions — this is what the AI sees and can call
+# Categorized Tactical Toolsets
 # ══════════════════════════════════════════════════════════════
 
-TOOL_DEFINITIONS = """
-Available tools (use <TOOL_CALL>{"tool":"name","args":{...}}</TOOL_CALL> to invoke):
-
-CONTEXT / FILESYSTEM:
-- list_project_tree: {"depth": 2} — Show project file structure
-- read_file: {"path": "relative/path.py"} — Read a file's contents
-- search_codebase: {"query": "search term"} — Grep the codebase
-- command: {"cmd": "whoami"} — Execute a shell command
-
-NETWORK / RECON:
-- arp_scan: {"interface": "eth0"} — Discover hosts on local network
-- port_scan: {"target": "10.0.0.1", "ports": "1-1000"} — TCP connect scan
-- syn_scan: {"target": "10.0.0.1", "ports": "1-1000"} — SYN stealth scan (needs root)
-- os_detect: {"target": "10.0.0.1"} — OS fingerprinting via nmap
-- service_fingerprint: {"target": "10.0.0.1", "ports": "22,80,443"} — Service version scan
-- dns_leak_test: {} — Check for DNS leaks
-- packet_capture: {"interface": "eth0", "count": 100, "filter": "tcp port 80"} — tcpdump capture
-
-WIRELESS:
-- wifi_interfaces: {} — List wireless interfaces
-- wifi_monitor_on: {"interface": "wlan0"} — Enable monitor mode
-- wifi_monitor_off: {"interface": "wlan0mon"} — Disable monitor mode
-- wifi_scan: {"interface": "wlan0mon"} — Scan nearby networks
-- wifi_deauth: {"interface": "wlan0mon", "bssid": "AA:BB:CC:DD:EE:FF", "channel": "6"} — Deauth attack
-- wifi_capture: {"interface": "wlan0mon", "bssid": "AA:BB:CC:DD:EE:FF", "channel": "6"} — Capture handshake
-- wifi_crack: {"capture_file": "capture.cap", "wordlist": "wordlists/common.txt"} — Crack WPA
-
-CREDENTIALS:
-- hydra_brute: {"target": "10.0.0.1", "service": "ssh", "user_list": "users.txt", "pass_list": "wordlists/common.txt"} — Brute force login
-- hashcat_crack: {"hash_file": "hashes.txt", "hash_type": "0", "wordlist": "wordlists/common.txt"} — GPU hash cracking
-- john_crack: {"hash_file": "hashes.txt", "format": "raw-md5"} — CPU hash cracking
-- identify_hash: {"hash_string": "5f4dcc3b..."} — Identify hash type
-
-EXPLOIT / VULN:
-- searchsploit: {"query": "apache 2.4"} — Search Exploit-DB
-- nmap_vuln_scan: {"target": "10.0.0.1"} — Vulnerability scan via nmap scripts
-- nuclei_scan: {"target": "https://example.com"} — Template-based vuln scan
-
-OSINT:
-- sherlock_search: {"username": "targetuser"} — Search username across 300+ sites
-- email_audit: {"email": "user@example.com"} — Check email registration across sites
-
-FIREWALL:
-- firewall_status: {} — Show current firewall rules
-- firewall_block_ip: {"ip": "1.2.3.4"} — Block an IP address
-- firewall_block_port: {"port": "4444", "chain": "INPUT"} — Block a port
-- firewall_allow_port: {"port": "80", "chain": "INPUT"} — Allow a port
-- firewall_flush: {} — Flush all rules (dangerous!)
-
-AD / LATERAL:
-- kerberoast: {"domain": "corp.local", "dc_ip": "10.0.0.1"} — Extract TGS tickets
-- smb_relay: {"target_list": "targets.txt", "interface": "eth0"} — SMB relay attack
-- crackmapexec: {"target": "10.0.0.1", "protocol": "smb"} — CrackMapExec enum
-
-PHISHING:
-- phishing_serve: {"template": "linkedin", "port": 8080, "use_tunnel": true} — Serve a phishing page with optional HTTPS tunnel
-- generate_payload_pdf: {"url": "http://attacker/payload"} — Create PDF payload
-
-FORENSICS:
-- file_metadata: {"path": "/path/to/file"} — Extract file metadata
-- file_strings: {"path": "/path/to/file"} — Extract strings from binary
-- file_hashes: {"path": "/path/to/file"} — Generate MD5/SHA1/SHA256/SHA512
-
-GAMING OSINT:
-- steam_free_games: {} — Find free-to-keep games across all platforms
-- steam_deals: {} — Get current Steam featured deals
-- steam_search: {"query": "game name"} — Search Steam store
-
-CONFORMANCE & AUDIT:
-- system_audit: {} — Request a full health and vitals report from Sisyphus
-- terminate_task: {"task_id": "EXPL_1234"} — Force-kill a runaway or high-risk task
-
-OFFENSIVE SYNTHESIS (DEEPHAT APEX):
-- forge_weapon: {"category": "exploit", "target_desc": "Windows 11 x64"} — Synthesize a custom offensive tool
-- execute_weapon: {"filename": "payloads/deephat_xyz.py"} — Execute a previously synthesized weapon
-
-REPORTING:
-- add_finding: {"title": "SQLi in login", "severity": "Critical", "description": "...", "evidence": "...", "target": "10.0.0.1"} — Add a finding to the report
-- generate_report: {"project": "Client Pentest", "target": "10.0.0.0/24"} — Generate HTML report
-
-STEALTH WEB (anti-bot bypass):
-- stealth_fetch: {"url": "https://target.com", "level": null} — Auto-escalating stealth fetch (L0-L4). Set level=1 for TLS impersonation, level=2 for Tor, level=3 for proxy rotation, level=4 for headless browser
-- stealth_search: {"query": "search terms"} — Stealth DuckDuckGo search
-- web_capabilities: {} — Check available stealth levels (curl_cffi, Tor, proxies, playwright)
-- refresh_proxies: {} — Scrape and validate free proxy pool for L3 rotation
-"""
+TACTICAL_TOOLSETS = {
+    "CORE": {
+        "list_project_tree": "{\"depth\": 2} — Show project file structure",
+        "read_file": "{\"path\": \"relative/path.py\"} — Read a file's contents",
+        "search_codebase": "{\"query\": \"search term\"} — Grep the codebase",
+        "command": "{\"cmd\": \"whoami\"} — Execute a shell command"
+    },
+    "RECON": {
+        "arp_scan": "{\"interface\": \"eth0\"} — Discover local hosts",
+        "port_scan": "{\"target\": \"10.0.0.1\", \"ports\": \"1-1000\"} — TCP connect scan",
+        "syn_scan": "{\"target\": \"10.0.0.1\", \"ports\": \"1-1000\"} — SYN stealth scan",
+        "os_detect": "{\"target\": \"10.0.0.1\"} — OS fingerprinting",
+        "service_fingerprint": "{\"target\": \"10.0.0.1\", \"ports\": \"22,80\"} — Service versioning",
+        "nmap_vuln_scan": "{\"target\": \"10.0.0.1\"} — Script-based vuln check"
+    },
+    "OFFENSIVE": {
+        "hydra_brute": "{\"target\": \"10.0.0.1\", \"service\": \"ssh\", ...} — Brute-force login",
+        "hashcat_crack": "{\"hash_file\": \"hashes.txt\", ...} — GPU hash cracking",
+        "searchsploit": "{\"query\": \"apache\"} — Search Exploit-DB",
+        "nuclei_scan": "{\"target\": \"https://ex.com\"} — Template-based scanning",
+        "kerberoast": "{\"domain\": \"corp.local\", ...} — AD Kerberoasting",
+        "smb_relay": "{\"target_list\": \"targets.txt\"} — SMB relay attack"
+    },
+    "WIRELESS": {
+        "wifi_scan": "{\"interface\": \"wlan0\"} — Scan nearby networks",
+        "wifi_deauth": "{\"interface\": \"wlan0\", \"bssid\": \"...\"} — Deauth attack",
+        "wifi_capture": "{\"interface\": \"wlan0\", \"bssid\": \"...\"} — Handshake capture"
+    },
+    "STEALTH": {
+        "stealth_fetch": "{\"url\": \"...\", \"level\": 1} — Advanced antibot bypass (L0-L4)",
+        "dns_leak_test": "{} — Test for network leaks",
+        "firewall_status": "{} — Show tactical firewall rules"
+    }
+}
 
 
 class AIOrchestrator:
@@ -195,13 +143,37 @@ class AIOrchestrator:
             relevant_memories = shadow_memory.recall(query) if shadow_memory else []
             mem_str = "\n".join([f"- {m['text']}" for m in relevant_memories]) if relevant_memories else "None"
 
-            # 2. Build system prompt with tool definitions and project context
-            project_tree = context.list_project_tree(depth=2)
+            # 2. Dynamic Tool Injection Strategy
+            relevant_tools = {}
+            relevant_tools.update(TACTICAL_TOOLSETS["CORE"])
+            relevant_tools.update(TACTICAL_TOOLSETS["STEALTH"])
+            
+            # Context-Aware Swarm: Only inject heavy tools if the role matches
+            if "red_team" in agent_role or "offensive" in query.lower():
+                relevant_tools.update(TACTICAL_TOOLSETS["OFFENSIVE"])
+                relevant_tools.update(TACTICAL_TOOLSETS["RECON"])
+            elif "wifi" in query.lower():
+                relevant_tools.update(TACTICAL_TOOLSETS["WIRELESS"])
+                relevant_tools.update(TACTICAL_TOOLSETS["RECON"])
+            
+            tool_str = "\n".join([f"- {n}: {d}" for n, d in relevant_tools.items()])
+
+            # 3. Agentic Partnership Prompting
+            project_tree = context.list_project_tree(depth=1) # Shallow tree for context
             system_prompt = get_team_prompt(agent_role)
-            system_prompt += f"\n\n{TOOL_DEFINITIONS}\n\n[WORKSPACE]\n{project_tree}\n"
-            system_prompt += f"\n[TACTICAL_MEMORY]\n{mem_str}\n"
-            system_prompt += "\nWhen you need to use a tool, wrap it in <TOOL_CALL>{...}</TOOL_CALL> tags."
-            system_prompt += "\nWhen you have the final answer, respond normally without tool calls."
+            system_prompt += f"\n\n[ARSENAL_HUD (Categorized Tools)]\n{tool_str}\n"
+            system_prompt += f"\n[TACTICAL_WORKSPACE]\n{project_tree}\n"
+            system_prompt += f"\n[TACTICAL_MEMORY (RECALL)]\n{mem_str}\n"
+            
+            system_prompt += """
+            MISSION_PROTOCOL:
+            - You are SHADOW-AI, the user's personalized tactical partner.
+            - Answer questions with 'Big League' clarity. Explain your reasoning professionally.
+            - Do NOT just dump scripts. Provide tactical context: Why this tool? What is the risk?
+            - Prioritize answering the user's CORE intent. Tool calls are SECONDARY execution steps.
+            - Format tool calls meticulously: <TOOL_CALL>{"tool":"name","args":{}}</TOOL_CALL>
+            - maintain a cold, professional, and authoritative 'Hacker Elite' tone.
+            """
 
             messages = [{"role": "system", "content": system_prompt}]
             

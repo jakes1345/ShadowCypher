@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
 from shadowcypher.ai.orchestrator import AIOrchestrator
+from shadowcypher.core.nexus import nexus
 
 @dataclass
 class Mission:
@@ -29,9 +30,13 @@ class Mission:
     
     @property
     def duration(self) -> str:
-        # TODO: This formatting is a bit brittle, fix it for long running missions
+        """Calculates mission duration with high-fidelity formatting."""
         delta = datetime.now(timezone.utc) - self.start_time
-        return str(delta).split(".")[0]
+        hours, remainder = divmod(int(delta.total_seconds()), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        if hours > 0:
+            return f"{hours}h {minutes}m {seconds}s"
+        return f"{minutes}m {seconds}s"
 
 class ShadowHub:
     # Directs the Citadel core and autonomous loops.
@@ -69,6 +74,20 @@ class ShadowHub:
         self._engage_distributed_nodes() # sentinel/irc bridge
 
         logger.info("hub", "SHADOWHUB_ULTIMA: MISSION_CONTROL_ENGAGED")
+        self._start_nexus_relay()
+
+    def _start_nexus_relay(self) -> None:
+        """Launches the Nexus Relay protocol bridge in the background."""
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(nexus.start())
+            else:
+                # If we are starting fresh and no loop is running (rare in this framework)
+                threading.Thread(target=lambda: asyncio.run(nexus.start()), daemon=True).start()
+        except Exception as e:
+            logger.error("hub", f"NEXUS_INIT_FAILURE: Handshake relay failed: {e}")
 
     def _engage_distributed_nodes(self) -> None:
         """Initializes auxiliary bridges (IRC, Peer Handshakes)."""
@@ -158,6 +177,15 @@ class ShadowHub:
             mission.status = 'COMPLETE'
             mission.progress = 100
             mission.last_update_msg = result
+            
+            # Persist to Forensics Registry
+            from shadowcypher.core.forensics import registry
+            registry.register_mission(mid, mission.query, result, {
+                "role": mission.role,
+                "duration": mission.duration,
+                "findings_count": len(mission.findings)
+            })
+
             logger.info("hub", f"MISSION_ARCHIVED: {mid} operation terminated.")
             del self.active_missions[mid]
 

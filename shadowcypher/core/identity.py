@@ -133,8 +133,25 @@ class Identity:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._is_admin = verify_admin()
-            cls._instance._role = _ADMIN_ROLE if cls._instance._is_admin else _USER_ROLE
+            
+            # 1. Automatic Recognition: Check Master Hardware Fingerprint
+            from shadowcypher.core.security import hardener
+            master_fp = config.get("identity", "master_fp", default="")
+            current_fp = hardener.get_hardware_footprint()
+            
+            if not master_fp:
+                # First run initialization: Lock to THIS machine
+                config.set("identity", "master_fp", current_fp)
+                master_fp = current_fp
+                logger.info("identity", "SOVEREIGN_INITIALIZATION: Machine bound as MASTER_NODE")
+
+            is_admin = (current_fp == master_fp) or verify_admin()
+            
+            cls._instance._is_admin = is_admin
+            cls._instance._role = _ADMIN_ROLE if is_admin else _USER_ROLE
+            
+            if is_admin:
+                logger.info("identity", "IDENTITY_VERIFIED: MASTER_ACCESS_GRANTED")
         return cls._instance
 
     @property
@@ -147,6 +164,14 @@ class Identity:
 
     @property
     def handle(self) -> str:
+        # Load custom handle from config (overrides for both admin and op)
+        custom = config.get("identity", "handle", default="")
+        if custom:
+            return custom
+        
+        if self._is_admin:
+            return _ADMIN_HANDLE
+        return "SC_OPERATOR"
         # Load custom handle from config (overrides for both admin and op)
         custom = config.get("identity", "handle", default="")
         if custom:

