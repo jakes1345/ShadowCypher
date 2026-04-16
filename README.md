@@ -46,4 +46,4 @@ ShadowCypher is a professional-grade, autonomous security framework built for fu
     ```
 
 ---
-*Developed for the Shadows. Sovereign in the Light.*
+*In the silent crossfire of the global cyber-war—where the titans of code define the conflict and no perimeter is absolute—ShadowCypher is the definitive response. High-performance, sovereign, and absolute. The architecture of the new frontier.*
