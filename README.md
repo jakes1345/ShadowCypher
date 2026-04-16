@@ -1,89 +1,49 @@
-# SHADOWCYPHER // BUILD_4.6.2
-### [ SOVEREIGN_CONTROL_PLANE // OFFLINE_OFFENSIVE_ORCHESTRATION ]
+# SHADOWCYPHER: THE SOVEREIGN TACTICAL SUITE
 
-![Build Status](https://img.shields.io/badge/CI-GREEN-success?style=for-the-badge&logo=github)
-![Version](https://img.shields.io/badge/VERSION-4.6.2-blueviolet?style=for-the-badge)
-![Engine](https://img.shields.io/badge/AI-CLASSIC_BRAIN_OFFLINE-red?style=for-the-badge)
-![License](https://img.shields.io/badge/LICENSE-MIT-blue?style=for-the-badge)
+> "Encryption is the primary vector of freedom. In the decentralized silence, our signal remains unbroken." 
+> — **Apex Commander**
 
----
+ShadowCypher is a professional-grade, autonomous security framework built for full-spectrum offensive operations, high-fidelity reconnaissance, and sovereign communication. Designed for elite practitioners who demand native performance and total privacy.
 
-## // THE_SOVEREIGN_ASSERTION
+## ⚡ CORE TACTICAL DIVISIONS
 
-In an era of hardware-level telemetry and cloud-bound LLMs, **ShadowCypher** is the assertion of absolute digital sovereignty. No API keys. No outbound inference. No third-party prompt logs. Just a hardened GTK workstation, an offline conversational engine, and a bot that answers only to the people who actually own the keys.
+### 🧠 NEXUS-COMMAND
+*   **Shadow-Synthesizer**: Your personalized, high-fidelity AI partner. Powered by local DeepSeek R1 and Gemma 2 models optimized for the RTX 2060 SUPER.
+*   **Spectre War-Map**: Real-time global topology visualization. Identify, de-cloak, and unmask target nodes across the decentralized network.
+*   **ShadowScript (v0.1-IGNITE)**: The unified tactical mission language. Orchestrate complex breaches with natural-hacking directives.
 
-ShadowCypher fuses a **Heterogeneous Polyglot Bridge (HPB)** for legacy + modern tooling with a **Classic Brain** conversational engine — ELIZA-style reflection, keyword intents, and a self-training Markov chain. Runs on a laptop in airplane mode. Gets smarter the more you talk to it.
+### 🕵️ COVERT-INTEL
+*   **Signal Analysis**: Deep-spectrum frequency and protocol audit.
+*   **Infrastructure Recon**: Full-stack discovery and automated fingerprinting.
+*   **Sovereign Directory**: The Nexus-Relay global decentralized node registry.
 
----
+### ⚔️ OFFENSIVE-LAB
+*   **DeepHat Apex**: Autonomous offensive script synthesis using the unconstrained 'Heretic' AI core.
+*   **Ghost Factory**: Multi-target payload generation and mutation tracking.
+*   **Phishing Synthesis**: High-fidelity social engineering forge with automated tunnel exposure.
 
-## // UNDER_THE_HOOD
+### 🛡️ SOVEREIGN-OPS
+*   **Citadel Core**: E2EE chat infrastructure based on the Sovereign-Go 1.24.1 relay.
+*   **Wraith Protocol**: Emergency system lockdown and ephemeral data shredding.
+*   **Ghost-Hose**: High-entropy network saturation and protocol stress testing.
 
-### 1. The Obsidian Citadel Architecture
-A decoupled, event-driven orchestration hub.
-- **Signal-Space bus** for module-to-module pub/sub telemetry
-- **Sovereign Ergo IRC** — local coordination channel, zero cloud dependency
-- **RSA-4096 Vault** with cryptographic admin gating (the private key stays on your machine — everyone else earns access)
+## 🛠️ TECHNICAL ARMORY
+*   **Languages**: Sovereign-Go 1.24.1 (Native Core), Python 3.12 (Orchestration).
+*   **AI Backend**: Local Ollama Swarm (RTX 2060 SUPER Optimized).
+*   **Interface**: GTK-3.0 High-Density Apex Dashboard.
+*   **Communication**: X25519 E2E Encrypted WebSockets & IRC.
 
-### 2. Classic Brain (No LLMs, No Tokens, No Leaks)
-- ELIZA-style Rogerian reflection for conversational depth
-- Keyword intent dispatch with persona-weighted responses
-- Per-user memory + self-training Markov chain persisted to disk
-- Drop-in replacement for any LLM provider
+## 🚀 INSTALLATION (SOVEREIGN_MODE)
 
-### 3. Trinity Audit Engine
-Autonomous gatekeeper for locked files and privileged commands.
-- SHA-256 Proof-of-Compute challenge (difficulty scales with user reputation)
-- CTCP VERSION + WHOIS forensic fingerprinting
-- Three-agent heuristic consensus (Judge / Hunter / Architect) — **no network calls**
-- Pass → access code issued. Fail → threat registry entry + ticket.
-
-### 4. Polyglot Execution Path
-- Auto-resolver identifies shebangs and signatures, wraps execution in the right runtime
-- Python 2.7 ↔ 3.12 parity for legacy and modern offensive tools in a single session
-
----
-
-## // PLATFORM_SUPPORT
-
-| Platform | Status | Installer | Notes |
-|----------|--------|-----------|-------|
-| **Linux** (Debian/Ubuntu/Kali) | Full | `./install.sh` | Native target — everything works |
-| **macOS** (12+) | Good | `./install-macos.sh` | GUI + IRC + Classic Brain work. Some offensive modules require `brew install` of their tools |
-| **Windows 10/11** | Partial | `.\install-windows.ps1` | GUI runs. For full offensive module support use **WSL2 + Kali** |
-| **Docker** | Full | `docker compose up` | Headless / server-side operator mode |
-
-Offensive modules that shell out to Linux-only tools (`iptables`, `aircrack-ng`, `tcpdump`, etc.) will display a "tool not available" message on other platforms instead of crashing.
+1.  **Environment Setup**:
+    ```bash
+    ./scripts/setup_sovereign.sh
+    ```
+2.  **Go Runtime**: Ensure `~/go_sovereign/bin` is in your PATH.
+3.  **Launch Dashboard**:
+    ```bash
+    python3 shadowcypher.py
+    ```
 
 ---
-
-## // MISSION_READY_BOOTSTRAP
-
-```bash
-# Linux (Debian / Ubuntu / Kali)
-git clone https://github.com/jakes1345/ShadowCypher.git && cd ShadowCypher
-./install.sh && shadowcypher
-
-# macOS
-./install-macos.sh && python3 -m shadowcypher.app
-
-# Windows (elevated PowerShell)
-.\install-windows.ps1
-python -m shadowcypher.app
-```
-
-First launch opens a welcome dialog — pick a handle, the rest is configured automatically. No `config.json` hand-editing, no API keys to paste.
-
-**Sovereign IRC** (local Ergo server for cross-module bot coordination) is **off by default**. Enable by setting `irc.sovereign_enabled: true` in `config.json` and running your own Ergo daemon. Everyone else just uses external IRC (Libera by default).
-
----
-
-## // THE_OATH
-
-> **"if it phones home it isnt yours. if you cant pull the plug and have it still work its not yours either. build the thing. own the keys. trust nobody including me."**
->
-> — anon, somewhere
-
----
-
-### [ MISSION_CONTROL // jakes1345 ]
-**Engineered for the Unseen. Built for the Sovereign. Owned by you alone.**
+*Developed for the Shadows. Sovereign in the Light.*

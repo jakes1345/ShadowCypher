@@ -3,11 +3,14 @@
 import os
 import base64
 import hashlib
+import shutil
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
+from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
+from shadowcypher.core.bus import bus
 
 
 class ShadowCrypt:
@@ -84,7 +87,7 @@ class StealthHoneypot:
                 self.active = True
                 logger.info("security", f"Stealth Honeypot active on {self.bind_addr}:{self.port}")
             except Exception as e:
-                logger.error("security", f"Honeypot bind failure: {e}")
+                logger.error("security", f"SELINUX_POLICY_INJECTION_FAILED: {e}")
                 self.active = False
                 return
 
@@ -133,3 +136,80 @@ class StealthHoneypot:
                 self._sock.close()
             except Exception:
                 pass
+
+
+class IdentityHardener:
+    """Manages tactical legitimacy for offensive infrastructure."""
+
+    def execute_flash_wipe(self):
+        """Emergency purge of session data and ephemeral keys."""
+        logger.warning("security", "ALER_REACTION: Executing Spectre-Class Flash-Wipe...")
+        
+        # 1. Clear session memory
+        from shadowcypher.core.hub import hub
+        hub.telemetry["missions_total"] = 0
+        hub.active_missions.clear()
+        
+        # 2. Lock forensics (rename to hidden)
+        forensic_dir = os.path.join(str(config.project_root), "forensics")
+        if os.path.exists(forensic_dir):
+            hidden_dir = os.path.join(str(config.project_root), f".forensics_{os.urandom(4).hex()}")
+            try:
+                os.rename(forensic_dir, hidden_dir)
+                logger.info("security", f"LOCKDOWN: Forensics vault relocated to {hidden_dir}")
+            except Exception: pass
+            
+        # 3. Terminate all active tunnels
+        from shadowcypher.core.runner import runner
+        runner.cleanup()
+        
+        bus.publish("security_lockdown", {"status": "ENCRYPTED"})
+
+    def get_hardware_footprint(self) -> str:
+        """Generates a stable hardware fingerprint for admin recognition."""
+        import platform
+        import uuid
+        raw = f"{platform.node()}:{uuid.getnode()}:{platform.processor()}"
+        return hashlib.sha256(raw.encode()).hexdigest()
+
+    @staticmethod
+    def provision_letsencrypt(domain: str, webroot: str = "/var/www/html"):
+        """
+        Automates Certbot to acquire real, CA-signed SSL certificates.
+        Effectively bypasses 'Not Secure' warnings on phishing deployments.
+        """
+        from shadowcypher.core.runner import runner
+        logger.info("security", f"PROVISIONING_CERTIFICATE: {domain}")
+        # Standard certbot command for manual/automated DNS/Webroot validation
+        cmd = [
+            "certbot", "certonly", 
+            "--manual", 
+            "--preferred-challenges", "dns",
+            "-d", domain,
+            "--non-interactive", "--agree-tos",
+            "--register-unsafely-without-email"
+        ]
+        return runner.execute_task("LE_PROVISION", cmd)
+
+    @staticmethod
+    def setup_cloudflare_bridge(port: int, proto: str = "http"):
+        """
+        Engages a Cloudflare Tunnel (Argo) for automated HTTPS/SSL 
+        without domain registration or firewall exposure.
+        """
+        from shadowcypher.core.runner import runner
+        logger.info("security", f"ENGAGING_CLOUDFLARE_BRIDGE: {proto}://127.0.0.1:{port}")
+        # This provides a valid *.trycloudflare.com certificate instantly
+        cmd = ["cloudflared", "tunnel", "--url", f"{proto}://127.0.0.1:{port}"]
+        return runner.execute_task("CF_TUNNEL", cmd)
+
+    @staticmethod
+    def expose_sovereign_hub():
+        """Publicly exposes the Sovereign Hub to the global internet."""
+        irc_port = config.get("irc", "hub_irc_port", default=6667)
+        logger.info("security", f"HUB_EXPOSURE: Tunneling native IRC port {irc_port}")
+        # Use TCP protocol for raw IRC
+        return IdentityHardener.setup_cloudflare_bridge(irc_port, proto="tcp")
+
+
+hardener = IdentityHardener()

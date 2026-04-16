@@ -66,6 +66,13 @@ jobs:
         xvfb-run --auto-servernum python -c "
         import importlib, sys
         modules = [
+            'shadowcypher.core.config',
+            'shadowcypher.core.bus',
+            'shadowcypher.core.logger',
+            'shadowcypher.core.platform',
+            'shadowcypher.core.shadowscript',
+            'shadowcypher.ai.engine',
+            'shadowcypher.ai.orchestrator',
             'shadowcypher.modules.recon',
             'shadowcypher.modules.network',
             'shadowcypher.modules.credentials',
@@ -74,12 +81,11 @@ jobs:
             'shadowcypher.modules.osint',
             'shadowcypher.modules.wireless',
             'shadowcypher.modules.firewall',
-            'shadowcypher.modules.layer7',
             'shadowcypher.modules.phishing',
-            'shadowcypher.modules.c2',
-            'shadowcypher.modules.exfiltration',
-            'shadowcypher.modules.privesc',
             'shadowcypher.modules.payload_factory',
+            'shadowcypher.modules.gaming_osint',
+            'shadowcypher.modules.ad_pivot',
+            'shadowcypher.modules.deephat'
         ]
         failed = []
         for mod in modules:

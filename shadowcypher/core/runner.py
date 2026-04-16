@@ -26,6 +26,16 @@ class Runner:
         if self.platform.IS_LINUX:
             env["RUSTFLAGS"] = "-C target-cpu=native -C linker=mold"
             env['LDFLAGS'] = "-fuse-ld=mold"
+        
+        # STEALTH: Global Proxy Injection
+        from shadowcypher.core.config import config
+        proxy = config.get("stealth", "proxy_url")
+        if proxy:
+            env["HTTP_PROXY"] = proxy
+            env["HTTPS_PROXY"] = proxy
+            env["ALL_PROXY"] = proxy
+            env["NO_PROXY"] = "localhost,127.0.0.1"
+            
         return env
 
     def stop_task(self, task_id: str) -> None:
@@ -85,6 +95,14 @@ class Runner:
                     args = ["pkexec"] + args[1:]
                 elif self.platform.IS_WINDOWS:
                     args = ["powershell", "Start-Process", "-Verb", "runAs"] + args[1:]
+
+            # 4. STEALTH: Proxychains Wrapping (Linux only, if privacy enforced)
+            if self.platform.IS_LINUX and not is_shell and config.get("stealth", "enforce_privacy"):
+                import shutil
+                if shutil.which("proxychains4"):
+                    args = ["proxychains4", "-q"] + args
+                elif shutil.which("proxychains"):
+                    args = ["proxychains", "-q"] + args
 
             proc = subprocess.Popen(
                 args, shell=is_shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

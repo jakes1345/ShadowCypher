@@ -84,6 +84,7 @@ class TerminalPage(Gtk.Box):
         self.terminal.spawn_shell()
         
         scroll = Gtk.ScrolledWindow()
+        scroll.set_propagate_natural_width(False)
         scroll.add(self.terminal)
         self.pack_start(scroll, True, True, 0)
         

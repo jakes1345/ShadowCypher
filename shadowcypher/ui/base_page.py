@@ -36,13 +36,32 @@ class BasePage(Gtk.Box):
         self.metric_strip.set_margin_start(20); self.metric_strip.set_margin_end(20)
         self.main_pod.pack_start(self.metric_strip, False, False, 0)
 
-        # 3. Workspace / Controls Area
+        # 3. Tactical Environment (H-Box)
+        self.tactical_env = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        self.main_pod.pack_start(self.tactical_env, True, True, 0)
+
         self.workspace = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        self.workspace.set_margin_top(20)
-        self.workspace.set_margin_bottom(20)
-        self.workspace.set_margin_start(20)
-        self.workspace.set_margin_end(20)
-        self.main_pod.pack_start(self.workspace, False, False, 0)
+        self.workspace.set_margin_top(20); self.workspace.set_margin_bottom(20)
+        self.workspace.set_margin_start(20); self.workspace.set_margin_end(20)
+        self.tactical_env.pack_start(self.workspace, True, True, 0)
+
+        # 3b. Intelligence Sidebar (Righty) - Fills the 'Barren' space
+        self.intel_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        self.intel_sidebar.set_size_request(380, -1)
+        self.intel_sidebar.set_margin_start(10)
+        self.intel_sidebar.set_margin_end(10)
+        self.intel_sidebar.set_margin_top(20)
+        
+        intel_header = Gtk.Label()
+        intel_header.set_markup("<span size='small' weight='bold' color='#94a3b8'>// IN-MEMORY_INTELLIGENCE</span>")
+        intel_header.set_halign(Gtk.Align.START)
+        self.intel_sidebar.pack_start(intel_header, False, False, 0)
+        
+        self.mission_state_lbl = Gtk.Label(label="STATE: ANALYZING_VECTORS...")
+        self.mission_state_lbl.set_halign(Gtk.Align.START)
+        self.intel_sidebar.pack_start(self.mission_state_lbl, False, False, 10)
+        
+        self.tactical_env.pack_end(self.intel_sidebar, False, False, 0)
 
         # 4. Apex Terminal (Mission Oversight)
         self.terminal = TacticalTerminal(height=340)

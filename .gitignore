@@ -76,3 +76,4 @@ temp/
 out/
 dist/
 build/
+bin/go/

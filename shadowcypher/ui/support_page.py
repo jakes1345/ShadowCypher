@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from shadowcypher.core.logger import logger
 from shadowcypher.core.irc import IRCClient
+from shadowcypher.core.sovereign import SovereignClient
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import TacticalTerminal, DataPod, TacticalHeader
 from shadowcypher.core.config import config
@@ -52,8 +53,9 @@ class SupportPage(Gtk.Box):
         self._last_typing_sent = 0
         
         # Sovereign Internal State (Ergo IRC via IRCClient)
-        self._sov_irc: IRCClient | None = None
+        self._sov_irc: SovereignClient | None = None
         self._sov_connected = False
+        self._sov_loop_thread = None
         self._sov_users = []          # list of nicks in current channel
         self._sov_nick = "Operator"
         self._sov_channel = "#general"
@@ -122,6 +124,11 @@ class SupportPage(Gtk.Box):
         self.sov_disconnect_btn.get_style_context().add_class("destructive-action")
         self.sov_disconnect_btn.connect("clicked", lambda b: self._sov_disconnect())
         conn_row.pack_start(self.sov_disconnect_btn, False, False, 0)
+
+        self.sov_crawl_btn = Gtk.Button(label="\U0001f50e Crawl")
+        self.sov_crawl_btn.connect("clicked", self._on_crawl_network)
+        conn_row.pack_start(self.sov_crawl_btn, False, False, 0)
+        
         sidebar.pack_end(conn_row, False, False, 0)
 
         hbox.pack_start(sidebar, False, False, 0)
@@ -169,6 +176,7 @@ class SupportPage(Gtk.Box):
         self.sov_chat_view.get_style_context().add_class("terminal-view")
 
         self.sov_chat_scroll = Gtk.ScrolledWindow()
+        self.sov_chat_scroll.set_propagate_natural_width(False)
         self.sov_chat_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.sov_chat_scroll.set_min_content_height(400)
         self.sov_chat_scroll.add(self.sov_chat_view)
@@ -214,6 +222,7 @@ class SupportPage(Gtk.Box):
         self.sov_pm_view.get_style_context().add_class("terminal-view")
 
         pm_scroll = Gtk.ScrolledWindow()
+        pm_scroll.set_propagate_natural_width(False)
         pm_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         pm_scroll.add(self.sov_pm_view)
         self.sov_pm_scroll = pm_scroll
@@ -302,6 +311,7 @@ class SupportPage(Gtk.Box):
         self.sov_user_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.sov_user_list.connect("button-press-event", self._on_sov_user_click)
         user_scroll = Gtk.ScrolledWindow()
+        user_scroll.set_propagate_natural_width(False)
         user_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         user_scroll.add(self.sov_user_list)
         user_vbox.pack_start(user_scroll, True, True, 0)
@@ -337,6 +347,7 @@ class SupportPage(Gtk.Box):
             self.threat_tree.append_column(column)
             
         scroll = Gtk.ScrolledWindow()
+        scroll.set_propagate_natural_width(False)
         scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scroll.add(self.threat_tree)
         vbox.pack_start(scroll, True, True, 0)
@@ -483,6 +494,7 @@ class SupportPage(Gtk.Box):
         self.user_listbox.connect("button-press-event", self._on_user_right_click)
 
         user_scroll = Gtk.ScrolledWindow()
+        user_scroll.set_propagate_natural_width(False)
         user_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         user_scroll.add(self.user_listbox)
         user_vbox.pack_start(user_scroll, True, True, 0)
@@ -832,41 +844,30 @@ class SupportPage(Gtk.Box):
         clean = _re.sub(r'[^A-Za-z0-9_\-\[\]\\`^{}]', '', raw_handle)
         self._sov_nick = clean[:32] if clean else "Operator"
 
-        self._sov_irc = IRCClient(
-            server="127.0.0.1",
-            port=6667,
-            channel=self._sov_channel,
-            nick=self._sov_nick,
-            use_ssl=False,
-            auto_reconnect=True,
-            max_reconnect_delay=60,
+        self._sov_irc = SovereignClient(
+            host="127.0.0.1",
+            port=8888,
+            nick=self._sov_nick
         )
 
-        # Wire up all callbacks (they fire from the IRC thread, so use GLib.idle_add)
-        self._sov_irc.on_message(lambda nick, chan, msg, src:
-            GLib.idle_add(self._sov_on_irc_message, nick, chan, msg))
-        self._sov_irc.on_system(lambda msg:
-            GLib.idle_add(self._sov_sys, msg))
-        self._sov_irc.on_connect(lambda:
-            GLib.idle_add(self._sov_on_connect))
-        self._sov_irc.on_userlist(lambda names:
-            GLib.idle_add(self._sov_on_irc_userlist, names))
-        self._sov_irc.on_whois(lambda info:
-            GLib.idle_add(self._sov_on_irc_whois, info))
-        self._sov_irc.on_private(lambda nick, msg, src:
-            GLib.idle_add(self._sov_on_irc_private, nick, msg))
-        self._sov_irc.on_join(lambda nick:
-            GLib.idle_add(self._sov_on_irc_join, nick))
-        self._sov_irc.on_part(lambda nick:
-            GLib.idle_add(self._sov_on_irc_part, nick))
-        self._sov_irc.on_topic(lambda topic, setter:
-            GLib.idle_add(self._sov_on_irc_topic, topic, setter))
-        self._sov_irc.on_nick_change(lambda old, new:
-            GLib.idle_add(self._sov_on_irc_nick_change, old, new))
-        self._sov_irc.on_kick(lambda kicker, kicked, reason:
-            GLib.idle_add(self._sov_on_irc_kick, kicker, kicked, reason))
-        self._sov_irc.on_disconnect(lambda:
-            GLib.idle_add(self._sov_on_disconnect))
+        # Wire up all callbacks (JSON protocol)
+        self._sov_irc.on("chat", lambda d: GLib.idle_add(self._sov_on_irc_message, d.get("nick"), d.get("channel"), d.get("text")))
+        self._sov_irc.on("sys", lambda d: GLib.idle_add(self._sov_sys, d.get("text")))
+        self._sov_irc.on("join", lambda d: GLib.idle_add(self._sov_on_irc_join, d.get("nick")))
+        self._sov_irc.on("unmask_report", lambda d: GLib.idle_add(self._on_unmask_result, d))
+        self._sov_irc.on("unmask_report_all", lambda d: GLib.idle_add(self._on_unmask_result_all, d))
+        self._sov_irc.on("disconnect", lambda d: GLib.idle_add(self._sov_on_disconnect))
+        
+        # Start connection in background loop
+        def run_loop():
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(self._sov_irc.connect())
+        
+        self._sov_loop_thread = threading.Thread(target=run_loop, daemon=True)
+        self._sov_loop_thread.start()
+        self._sov_on_connect() # Optimistic state
 
         self._sov_irc.connect()
 
@@ -1406,6 +1407,15 @@ class SupportPage(Gtk.Box):
             else:
                 self._sov_sys("Usage: /oper <name> <password>")
 
+        elif cmd == "/unmask":
+            # GOD_MODE: Command-level unmasking request
+            target = args.strip()
+            loop = asyncio.get_event_loop()
+            if target:
+                loop.create_task(self._sov_irc.send({"type": "unmask", "target": target}))
+            else:
+                loop.create_task(self._sov_irc.send({"type": "unmask"}))
+
         elif cmd == "/raw":
             if args:
                 irc._send_raw(args)
@@ -1853,8 +1863,10 @@ class SupportPage(Gtk.Box):
         output_view = Gtk.TextView(buffer=self.ticket_buffer)
         output_view.set_editable(False)
         output_view.set_monospace(True)
+        output_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         output_view.get_style_context().add_class("terminal-view")
         scroll = Gtk.ScrolledWindow()
+        scroll.set_propagate_natural_width(False)
         scroll.set_vexpand(True)
         scroll.set_min_content_height(350)
         scroll.add(output_view)
@@ -2081,3 +2093,77 @@ class SupportPage(Gtk.Box):
             btn.get_style_context().add_class(style)
         btn.connect("clicked", handler)
         return btn
+    def _on_crawl_network(self, btn):
+        self._sov_sys("NEXUS_SYNC: Attempting global node discovery...")
+        threading.Thread(target=self._crawl_task, daemon=True).start()
+
+    def _crawl_task(self):
+        import requests
+        try:
+            nexus_url = config.get("stealth", "nexus_relay_url", default="http://127.0.0.1:9999")
+            resp = requests.get(f"{nexus_url}/api/nexus/nodes", timeout=5)
+            if resp.status_code == 200:
+                nodes = resp.json()
+                if not nodes:
+                    GLib.idle_add(self._sov_sys, "NEXUS_INFO: No other public nodes discovered.")
+                    return
+                GLib.idle_add(self._show_nodes_dialog, nodes)
+            else:
+                GLib.idle_add(self._sov_sys, f"NEXUS_ERROR: Directory unreachable (Status {resp.status_code})")
+        except Exception as e:
+            GLib.idle_add(self._sov_sys, f"NEXUS_FAULT: {e}")
+
+    def _show_nodes_dialog(self, nodes):
+        dialog = Gtk.Dialog(title="GLOBAL_SHADOW_NODES", parent=self.get_toplevel(), modal=True)
+        dialog.set_default_size(400, 300)
+        box = dialog.get_content_area()
+        box.set_spacing(10)
+        box.set_margin_start(10); box.set_margin_end(10); box.set_margin_top(10)
+
+        list_box = Gtk.ListBox()
+        for nid, n in nodes.items():
+            row = Gtk.Box(spacing=10)
+            row.pack_start(Gtk.Label(label=f"{n['name']} ({n['host']}:{n['port']})"), True, True, 0)
+            btn = Gtk.Button(label="Connect")
+            btn.connect("clicked", lambda b, host=n['host'], port=n['port']: self._connect_to_remote(dialog, host, port))
+            row.pack_end(btn, False, False, 0)
+            list_box.add(row)
+
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_propagate_natural_width(False)
+        scroll.add(list_box)
+        box.pack_start(scroll, True, True, 0)
+        
+        dialog.show_all()
+        dialog.run()
+        dialog.destroy()
+
+    def _connect_to_remote(self, dialog, host, port):
+        dialog.response(Gtk.ResponseType.OK)
+        # Update config temporarily (or permanently if desired)
+        self._config.set("irc", "sovereign_server", host)
+        self._config.set("irc", "sovereign_port", port)
+        self._sov_disconnect()
+        self._sov_connect()
+
+    def _sov_sys(self, msg):
+        end = self.sov_chat_buf.get_end_iter()
+        self.sov_chat_buf.insert_with_tags_by_name(end, f"[*] {msg}\n", "system")
+        if self._sov_active_pm == None:
+            self._scroll_to_bottom(self.sov_chat_scroll)
+    def _on_unmask_result(self, d):
+        target = d.get("target")
+        data = d.get("data", {})
+        msg = f"[GOD_MODE] UNMASK_REPORT for {target}:\n"
+        msg += f"  IP: {data.get('ip')}\n"
+        msg += f"  OS: {data.get('os')} ({data.get('distro')})\n"
+        msg += f"  Platform: {data.get('platform')}\n"
+        msg += f"  UA: {data.get('agent')}\n"
+        self._sov_sys(msg)
+
+    def _on_unmask_result_all(self, d):
+        nodes = d.get("nodes", {})
+        msg = f"[GOD_MODE] FULL_SPECTRUM_UNMASK ({len(nodes)} nodes):\n"
+        for nick, data in nodes.items():
+            msg += f"  {nick} -> {data.get('ip')} | {data.get('os')} | {data.get('distro')}\n"
+        self._sov_sys(msg)

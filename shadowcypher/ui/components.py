@@ -5,7 +5,7 @@ Grouped, high-performance GTK components for the Apex Predator HUD.
 
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, GLib
+from gi.repository import Gtk, Gdk, GLib, Pango
 import math
 
 class TacticalTerminal(Gtk.Box):
@@ -16,10 +16,12 @@ class TacticalTerminal(Gtk.Box):
         self.text_view.set_editable(False)
         self.text_view.set_cursor_visible(False)
         self.text_view.get_style_context().add_class("terminal-view")
+        self.text_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         self.text_view.set_size_request(-1, height)
 
         self.scroll = Gtk.ScrolledWindow()
         self.scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.scroll.set_propagate_natural_width(False)
         self.scroll.add(self.text_view)
         self.pack_start(self.scroll, True, True, 0)
         self._create_tags()
@@ -88,6 +90,7 @@ class DataPod(Gtk.Box):
         self.pack_start(self.lbl_title, False, False, 0)
         
         self.lbl_value = Gtk.Label(label=initial_value)
+        self.lbl_value.set_ellipsize(gi.repository.Pango.EllipsizeMode.END)
         self.lbl_value.get_style_context().add_class("metric-value")
         self.pack_start(self.lbl_value, False, False, 0)
 
