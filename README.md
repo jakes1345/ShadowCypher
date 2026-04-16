@@ -1,7 +1,7 @@
 # SHADOWCYPHER: THE SOVEREIGN TACTICAL SUITE
 
-> "Encryption is the primary vector of freedom. In the decentralized silence, our signal remains unbroken." 
-> — **Apex Commander**
+> "In the collision of titans—where Google, Apple, and Microsoft define the theater of war—ShadowCypher remains the only sovereign signal. When the giants fall and nothing is safe, ShadowCypher is the architecture of the new frontier."
+> — **Shadow-Core Intelligence**
 
 ShadowCypher is a professional-grade, autonomous security framework built for full-spectrum offensive operations, high-fidelity reconnaissance, and sovereign communication. Designed for elite practitioners who demand native performance and total privacy.
 
