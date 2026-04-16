@@ -10,6 +10,7 @@ import os
 import shlex
 from typing import Dict, List, Optional, Any, Callable, Union, Final
 from shadowcypher.core.bus import bus
+from shadowcypher.core.config import config
 from shadowcypher.core.platform import platform_engine
 
 class Runner:
