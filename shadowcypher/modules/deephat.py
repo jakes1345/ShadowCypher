@@ -19,7 +19,7 @@ class DeepHat:
         self.orch = AIOrchestrator()
         self.payload_dir = Path("payloads")
         self.payload_dir.mkdir(exist_ok=True)
-        self.heretic_model = "gemma-4-heretic:latest"
+        self.heretic_model = "shadow-ai"
         
     def forge_weapon(self, target_desc, category="exploit", language="python"):
         """Forge a high-powered weapon using the Heretic persona."""

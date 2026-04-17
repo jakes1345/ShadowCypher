@@ -1,66 +1,119 @@
 package main
 
 import (
-	"bufio"
-	"database/sql"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"log"
-	"net"
 	"net/http"
-	"strings"
+	"os"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
-	_ "modernc.org/sqlite" // Pure Go SQLite (No CGO required)
 )
-
-// SovereignRelay V2.1 — Static Native Backbone (Pure Go).
-// 100% Portable. zero-dependency runtime.
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
 type Message struct {
-	Type    string `json:"type"`
-	Nick    string `json:"nick,omitempty"`
-	Channel string `json:"channel,omitempty"`
-	Text    string `json:"text,omitempty"`
-	Target  string `json:"target,omitempty"`
+	Type    string   `json:"type"`
+	Nick    string   `json:"nick,omitempty"`
+	Channel string   `json:"channel,omitempty"`
+	Text    string   `json:"text,omitempty"`
+	Target  string   `json:"target,omitempty"`
+	Peers   []string `json:"peers,omitempty"`
+	MissionID string `json:"mission_id,omitempty"`
+}
+
+type RelayStatus struct {
+	ShadowID   string   `json:"shadow_id"`
+	Uptime     string   `json:"uptime"`
+	PeersCount int      `json:"peers_count"`
+	Peers      []string `json:"peers"`
+	ClientsCount int    `json:"clients_count"`
 }
 
 type RelayServer struct {
 	clients    map[chan Message]string
+	peers      map[string]time.Time 
 	clientsMux sync.Mutex
+	peersMux   sync.Mutex
 	broadcast  chan Message
-	db         *sql.DB
+	beaconURL  string
+	shadowID   string
+	startTime  time.Time
 }
 
-func NewRelayServer() *RelayServer {
-	// Initialize Pure Go Persistent Tactical Registry
-	db, err := sql.Open("sqlite", "./sovereign.db")
-	if err != nil {
-		log.Fatalf("DB_INIT_FAILED: %v", err)
-	}
+func (s *RelayServer) GenerateShadowID() {
+	b := make([]byte, 8)
+	rand.Read(b)
+	s.shadowID = hex.EncodeToString(b)
+}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (
-		nick TEXT PRIMARY KEY,
-		xp INTEGER DEFAULT 0,
-		level INTEGER DEFAULT 1,
-		power TEXT DEFAULT 'user',
-		last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	)`)
-	if err != nil {
-		log.Fatalf("SCHEMA_INIT_FAILED: %v", err)
-	}
-
-	return &RelayServer{
+func NewRelayServer(beacon string) *RelayServer {
+	s := &RelayServer{
 		clients:   make(map[chan Message]string),
+		peers:     make(map[string]time.Time),
 		broadcast: make(chan Message),
-		db:        db,
+		beaconURL: beacon,
+		startTime: time.Now(),
+	}
+	s.GenerateShadowID()
+	log.Printf("\u26a1 ABSOLUT_GHOST: Transient Identity Initialized [%s]", s.shadowID)
+	return s
+}
+
+// ── SWARM: Gossip Protocol ──────────────────────────────────────
+
+func (s *RelayServer) gossip() {
+	ticker := time.NewTicker(30 * time.Second)
+	for range ticker.C {
+		s.peersMux.Lock()
+		activePeers := make([]string, 0, len(s.peers))
+		for p, lastSeen := range s.peers {
+			if time.Since(lastSeen) < 10*time.Minute {
+				activePeers = append(activePeers, p)
+			}
+		}
+		s.peersMux.Unlock()
+
+		if len(activePeers) > 0 {
+			msg := Message{Type: "gossip", Peers: activePeers}
+			s.broadcast <- msg
+			log.Printf("[SWARM] Gossiping %d peers to local clients", len(activePeers))
+		}
 	}
 }
+
+// ── Admin API: Telemetry ────────────────────────────────────────
+
+func (s *RelayServer) handleStatus(w http.ResponseWriter, r *http.Request) {
+	s.peersMux.Lock()
+	activePeers := make([]string, 0, len(s.peers))
+	for p := range s.peers {
+		activePeers = append(activePeers, p)
+	}
+	s.peersMux.Unlock()
+
+	s.clientsMux.Lock()
+	clientsLen := len(s.clients)
+	s.clientsMux.Unlock()
+
+	status := RelayStatus{
+		ShadowID:     s.shadowID,
+		Uptime:       time.Since(s.startTime).String(),
+		PeersCount:   len(activePeers),
+		Peers:        activePeers,
+		ClientsCount: clientsLen,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
+}
+
+// ── WebSocket: Swarm Delivery ───────────────────────────────────
 
 func (s *RelayServer) handleWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -80,61 +133,66 @@ func (s *RelayServer) handleWS(w http.ResponseWriter, r *http.Request) {
 		s.clientsMux.Unlock()
 	}()
 
-	log.Printf("[UNMASK] WebSocket incoming from %s", r.RemoteAddr)
+	// Broadcaster loop for this client
+	go func() {
+		for msg := range ch {
+			if err := conn.WriteJSON(msg); err != nil {
+				break
+			}
+		}
+	}()
 
 	for {
-		_, msgBytes, err := conn.ReadMessage()
+		mt, msgBytes, err := conn.ReadMessage()
 		if err != nil {
 			break
 		}
+
+		if mt == websocket.BinaryMessage {
+			s.handleBinaryFrame(msgBytes)
+			continue
+		}
+
 		var msg Message
 		if err := json.Unmarshal(msgBytes, &msg); err == nil {
-			if msg.Type == "auth" {
-				s.clientsMux.Lock()
-				s.clients[ch] = msg.Nick
-				s.clientsMux.Unlock()
-				s.registerUser(msg.Nick)
+			if msg.Type == "gossip" {
+				s.syncPeers(msg.Peers)
 			}
 			s.broadcast <- msg
 		}
 	}
 }
 
-func (s *RelayServer) registerUser(nick string) {
-	_, _ = s.db.Exec("INSERT OR IGNORE INTO users (nick) VALUES (?)", nick)
-	_, _ = s.db.Exec("UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE nick = ?", nick)
+func (s *RelayServer) handleTitanFrame(data []byte) {
+	if len(data) < 3 { return }
+	
+	opCode := data[0]
+	missionID := (uint16(data[1]) << 8) | uint16(data[2])
+	
+	switch opCode {
+	case 0xA1: // AI_DELEGATION
+		log.Printf("[TITAN] INGESTED: Autonomous Intelligence Link (MSN:%d)", missionID)
+		// Route to OpenControl Gateway if target specified in next bytes
+	case 0xB2: // SWARM_SYNC
+		log.Printf("[TITAN] INGESTED: High-Velocity Swarm Discovery (MSN:%d)", missionID)
+	case 0xC3: // MEM_STRIKE
+		log.Printf("[TITAN] INGESTED: DIRECT_MEMORY_STRIKE (MSN:%d)", missionID)
+	}
 }
 
-func (s *RelayServer) handleIRC(conn net.Conn) {
-	defer conn.Close()
-	scanner := bufio.NewScanner(conn)
-	var nick string
+func (s *RelayServer) handleBinaryFrame(data []byte) {
+	if len(data) < 1 { return }
+	if data[0] == 0x99 {
+		s.handleTitanFrame(data[1:])
+		return
+	}
+}
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Split(line, " ")
-		if len(parts) < 2 {
-			continue
-		}
-
-		cmd := strings.ToUpper(parts[0])
-		switch cmd {
-		case "NICK":
-			nick = parts[1]
-			s.registerUser(nick)
-		case "USER":
-			fmt.Fprintf(conn, ":sovereign 001 %s :Welcome to Sovereign Hub (Native Pure-Go)\r\n", nick)
-			fmt.Fprintf(conn, ":sovereign 376 %s :End of MOTD\r\n", nick)
-		case "PRIVMSG":
-			target := parts[1]
-			text := strings.Join(parts[2:], " ")
-			if strings.HasPrefix(text, ":") {
-				text = text[1:]
-			}
-			s.broadcast <- Message{Type: "chat", Nick: nick, Channel: target, Text: text}
-		case "PING":
-			fmt.Fprintf(conn, "PONG %s\r\n", parts[1])
-		}
+func (s *RelayServer) syncPeers(peers []string) {
+	s.peersMux.Lock()
+	defer s.peersMux.Unlock()
+	for _, p := range peers {
+		s.peers[p] = time.Now()
 	}
 }
 
@@ -142,28 +200,48 @@ func (s *RelayServer) startBroadcaster() {
 	for msg := range s.broadcast {
 		s.clientsMux.Lock()
 		for ch := range s.clients {
-			ch <- msg
+			select {
+			case ch <- msg:
+			default:
+			}
 		}
 		s.clientsMux.Unlock()
 	}
 }
 
+func (s *RelayServer) pulse() {
+	ticker := time.NewTicker(5 * time.Second)
+	for range ticker.C {
+		s.peersMux.Lock()
+		count := len(s.peers)
+		s.peersMux.Unlock()
+
+		msg := Message{
+			Type: "status",
+			Text: s.shadowID,
+			Peers: []string{s.startTime.Format(time.RFC3339)}, // Hack to send uptime via existing struct
+			Target: string(rune(count)), // Sending count as char to save bytes
+		}
+		s.broadcast <- msg
+	}
+}
+
 func main() {
-	server := NewRelayServer()
+	port := "8888"
+	if p := os.Getenv("SHADOW_PORT"); p != "" {
+		port = p
+	}
+
+	server := NewRelayServer("")
 	go server.startBroadcaster()
+	go server.gossip()
+	go server.pulse()
 
-	// High-Concurrency Multi-plex Listening Engine
 	http.HandleFunc("/ws", server.handleWS)
-	go func() {
-		log.Println("[GO_CORE] Sovereign WS Relay active on :8888")
-		_ = http.ListenAndServe(":8888", nil)
-	}()
+	http.HandleFunc("/api/status", server.handleStatus)
 
-	ln, _ := net.Listen("tcp", ":6667")
-	log.Println("[GO_CORE] Sovereign IRC Relay active on :6667")
-	for {
-		conn, _ := ln.Accept()
-		go server.handleIRC(conn)
-		// Rate limiting and de-cloaking probes could go here
+	log.Printf("\u26a1 SWARM_BRIDGE_ACTIVE: Frequency :%s", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatalf("NATIVE_FATAL: %v", err)
 	}
 }

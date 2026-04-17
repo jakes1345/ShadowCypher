@@ -38,6 +38,7 @@ class NexusRelay:
         self.app.router.add_get("/api/nexus/status", self.handle_status)
         self.app.router.add_get("/api/nexus/tunnel", self.handle_tunnel)
         self.app.router.add_get("/api/nexus/nodes", self.handle_list_nodes)
+        self.app.router.add_get("/api/nexus/swarm", self.handle_swarm_sync) # P2P SWARM SYNC
         self.app.router.add_post("/api/nexus/register", self.handle_register_node)
         self.app.router.add_options("/{tail:.*}", self.handle_options)
         self.app.middlewares.append(self.cors_middleware)
@@ -82,7 +83,7 @@ class NexusRelay:
         
         # CoTURN style shared secret auth
         password = base64.b64encode(
-            hmac.new(self.secret.encode(), username.encode(), hashlib.sha1).digest()
+            hmac.new(self.secret.encode(), username.encode(), hashlib.sha256).digest()
         ).decode()
 
         relay_host = config.get("irc", "sovereign_server", default="127.0.0.1")
@@ -192,13 +193,23 @@ class NexusRelay:
         except Exception as e:
             return web.Response(status=500, text=str(e))
 
+    async def handle_swarm_sync(self, request):
+        """Returns a list of active P2P Swarm Nodes for the ShadowScript Engine."""
+        now = time.time()
+        peers = [f"{v['host']}:{v['port']}" for v in self.nodes.values() if now - v["last_seen"] < 600]
+        return web.json_response({"peers": peers, "version": "1.0-SWARM"})
+
     async def start(self):
-        """Launch the Nexus Relay service."""
+        """Launch the Nexus Relay service with NetBoozt socket optimizations."""
+        import socket
         runner = web.AppRunner(self.app)
         await runner.setup()
-        site = web.TCPSite(runner, self.host, self.port)
+        
+        # Optimize parent listener socket
+        site = web.TCPSite(runner, self.host, self.port, backlog=128)
         await site.start()
-        logger.info("nexus", f"NEXUS_RELAY: Protocol bridge active on {self.host}:{self.port}")
+        
+        logger.info("nexus", f"NEXUS_RELAY: Swarm-Optimized bridge active on {self.host}:{self.port}")
 
 # Global instance for orchestration
 nexus = NexusRelay()

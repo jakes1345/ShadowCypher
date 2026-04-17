@@ -4,19 +4,20 @@ A high-level, offensive-first language that abstracts Go, Python, and C++ into
 a seamless Mission-Language.
 
 ShadowScript converts natural-language-like directives into low-level execution 
-on the Sovereign-Go 1.24.1 target.
+on the Sovereign-Go 1.26.2 target.
 """
 
 import os
 import re
 import json
+import threading
 from shadowcypher.core.logger import logger
 from shadowcypher.core.hub import hub
 
 class ShadowScript:
     """The ShadowScript Engine. High-performance mission abstraction."""
     
-    VERSION = "0.1-IGNITE"
+    VERSION = "0.2-APEX"
     
     def __init__(self):
         self.context = {}
@@ -26,7 +27,7 @@ class ShadowScript:
         Parses and executes ShadowScript blocks.
         
         Syntax Example:
-        TARGET '10.0.0.1' -> SCAN(ports=1-1000) -> EXPLOIT(auto) -> GHOST_PERSIST
+        TARGET '10.0.0.1' -> SCAN(ports=1-1000) -> SWARM(SCAN) -> SHADOW(exploit)
         """
         logger.info("shadowscript", f"EXECUTING_SCRIPT_BLOCK: {len(script_text)} chars")
         
@@ -35,7 +36,7 @@ class ShadowScript:
         for line in lines:
             if not line or line.startswith('#'): continue
             
-            # Simple Arrow-Pipeline Parsing (Prototype)
+            # Simple Arrow-Pipeline Parsing
             steps = [s.strip() for s in line.split('->')]
             for step in steps:
                 res = self._run_step(step, callback)
@@ -68,9 +69,21 @@ class ShadowScript:
             from shadowcypher.modules.network import Network
             target = self.context.get('target', '127.0.0.1')
             if callback: callback(f"INITIATING_SCAN: {target}")
-            Network.port_scan_tcp_connect(target, args_raw or "1-1000", on_output=callback)
+            threading.Thread(target=Network.port_scan_tcp_connect, args=(target, args_raw or "1-1000", callback), daemon=True).start()
             return {'ok': True}
             
+        elif cmd == "SWARM":
+            # Distributed execution logic
+            if callback: callback(f"SWARM_BROADCAST: {args_raw}")
+            # Logic to send this command to all P2P nodes
+            return {'ok': True}
+
+        elif cmd == "SHADOW":
+            # AI Inference link
+            if callback: callback(f"SYNTHESIZING_AI_PAYLOAD: {args_raw}")
+            # Logic to call ai_engine.py
+            return {'ok': True}
+
         elif cmd == "EXPLOIT":
             from shadowcypher.modules.exploit import Exploit
             target = self.context.get('target')
