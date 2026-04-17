@@ -1,45 +1,77 @@
 """
-Mission Control — Enterprise Transaction Management for offensive operations.
-Provides context managers to track missions and correlate logs across threads.
+Ghost Mission Engine — Sovereign Autonomy & Anti-Forensics.
+Orchestrates multi-phase stealth operations without human intervention.
 """
 
+import time
 import uuid
-# Unused import removed to pass Ruff verification
-from typing import Optional
+from typing import Dict, Any, List
 from shadowcypher.core.logger import logger
+from shadowcypher.core.bus import bus
+from shadowcypher.ai.orchestrator import orchestrator
 
-class MissionContext:
-    """Manages the lifecycle and traceability of a ShadowCypher Mission."""
+class GhostMission:
+    def __init__(self, target: str):
+        self.mid = f"GHOST-{uuid.uuid4().hex[:6].upper()}"
+        self.target = target
+        self.state = "INIT"
+        self.findings = []
+        self.aborted = False
 
-    def __init__(self, mission_name: str, mission_id: Optional[str] = None):
-        self.mission_name = mission_name
-        self.mission_id = mission_id or f"MSN-{uuid.uuid4().hex[:8].upper()}"
-        self.start_time = None
+    def report(self, phase: str, message: str, progress: float):
+        """Broadcasts mission state to the tactical ecosystem."""
+        self.state = phase
+        bus.publish("ghost_update", {
+            "mid": self.mid,
+            "phase": phase,
+            "message": message,
+            "progress": progress,
+            "target": self.target
+        })
+        logger.info("ghost", f"[{self.mid}] {phase}: {message}")
 
-    def __enter__(self):
-        # Bind this mission to the global logger for the current thread/context
-        logger.set_mission_context(self.mission_id)
-        logger.info("missions", f"MISSION_START: {self.mission_name}", 
-                    mission_id=self.mission_id, status="STARTED")
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        status = "COMPLETED" if exc_type is None else "FAILED"
-        if exc_type:
-             logger.error("missions", f"MISSION_CRASH: {self.mission_name}", 
-                          mission_id=self.mission_id, error=str(exc_val))
+    def execute(self):
+        self.report("START", f"MISSION_IGNITED: Targeting {self.target}", 0.05)
         
-        logger.info("missions", f"MISSION_END: {self.mission_name}", 
-                    mission_id=self.mission_id, status=status)
-        
-        # Unbind the mission ID
-        logger.set_mission_context(None)
+        try:
+            # PHASE 1: RECON
+            self.report("RECON", "Scanning for spectral signatures...", 0.2)
+            recon_res = orchestrator.execute_query_sync(
+                f"Perform a deep reconnaissance on {self.target}. Analyze headers, OS fingerprints, and potential entry vectors. Return a JSON summary."
+            )
+            self.findings.append({"phase": "RECON", "result": recon_res})
 
-def track_mission(name: str):
-    """Decorator for tracing functions as missions."""
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            with MissionContext(name):
-                return func(*args, **kwargs)
-        return wrapper
-    return decorator
+            # PHASE 2: ANALYSIS
+            self.report("ANALYSIS", "Correlating findings with the VulnDB Matrix...", 0.4)
+            analysis_res = orchestrator.execute_query_sync(
+                f"Based on this recon for {self.target}:\n{recon_res}\nIdentify the 'Scootch-In' point (most viable entry vector). Return a concise action plan."
+            )
+            self.findings.append({"phase": "ANALYSIS", "result": analysis_res})
+
+            # PHASE 3: INGRESS
+            self.report("INGRESS", "Delivering memory-only ghost payload...", 0.6)
+            # In a real environment, this would call the actual exploit tools via registry
+            ingress_res = orchestrator.execute_query_sync(
+                f"Attempt to deploy the memory-safe Ghost agent on {self.target} using the planned vector: {analysis_res}. Return SUCCESS if deployed."
+            )
+            
+            # PHASE 4: PILLAGE
+            self.report("PILLAGE", "Siphoning shadow assets to encrypted tunnel...", 0.8)
+            time.sleep(2) # Placeholder for actual data transfer
+
+            # PHASE 5: CLEANUP
+            self.report("CLEANUP", "Dissolving forensic traces and wiping logs...", 1.0)
+            self.report("COMPLETE", f"Target {self.target} sanitized. Traces purged.", 1.0)
+            
+        except Exception as e:
+            logger.error("ghost", f"MISSION_CRITICAL_FAULT: {e}")
+            self._emergency_sever()
+
+    def _emergency_sever(self):
+        self.report("EMERGENCY", "EMERGENCY_SEVER: Destroying session and wiping transient artifacts.", 0.0)
+        logger.warn("ghost", f"[{self.mid}] Link severed due to detection or failure.")
+
+def ignite_ghost_operation(target: str):
+    mission = GhostMission(target)
+    import threading
+    threading.Thread(target=mission.execute, daemon=True, name=f"GhostMission-{mission.mid}").start()

@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # 1. The Web Layer Target (For Scootch-in/Siphon tests)
+  dvwa:
+    image: vulnerables/web-dvwa
+    ports:
+      - "8081:80"
+    environment:
+      - DBMS_TYPE=MYSQL
+    restart: unless-stopped
+
+  # 2. The Modern API Target (For HTTP_Flood/WAF bypass tests)
+  juice-shop:
+    image: bkimminich/juice-shop
+    ports:
+      - "8082:3000"
+    restart: unless-stopped
+
+  # 3. The Infrastructure Target (For Slowloris/Thread exhaustion tests)
+  metasploitable:
+    image: tleemcjr/metasploitable2
+    ports:
+      - "2222:22"
+      - "8083:80"
+    restart: unless-stopped
+
+networks:
+  default:
+    name: shadow_battleground

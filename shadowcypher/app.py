@@ -11,6 +11,10 @@ from shadowcypher.core.logger import logger
 from shadowcypher.core.security import StealthHoneypot
 from shadowcypher.core.identity import identity
 from shadowcypher.core.bus import bus
+from shadowcypher.core.platform import platform_engine
+
+# --- PHASE SIGMA: Weapon Alignment ---
+hub.register_arsenal()
 
 class ShadowCypherWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
@@ -29,7 +33,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         Gdk.set_allowed_backends("x11,wayland,*")
 
         # Load branding assets
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "native/icons/shadowcypher-256.png")
+        from shadowcypher.core.platform import platform_engine
+        icon_path = platform_engine.resolve_path("native", "icons", "shadowcypher-256.png")
         if os.path.exists(icon_path):
             self.set_icon_from_file(icon_path)
 
@@ -129,50 +134,81 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.show_all()
 
     def _start_sovereign_hub(self):
-        # FIXME: cleanup this mess
-        from shadowcypher.core.sovereign import SovereignServer
-        import asyncio
+        """Launches the native signal plane and orchestrates bot ignition."""
+        import subprocess
         import threading
+        from shadowcypher.core.platform import platform_engine
         
-        def run_srv():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            srv = SovereignServer(host="127.0.0.1", port=8888)
+        relay_bin = platform_engine.resolve_path("native", "relay", "shadow-relay")
+        if not os.path.exists(relay_bin):
+            logger.error("hub", "NATIVE_FATAL: Shadow-Relay binary missing. Swarm signal blocked.")
+            return
+
+        def monitor_process(proc):
+            for line in proc.stdout:
+                if "TITAN" in line or "SWARM" in line:
+                    logger.debug("relay", line.strip())
+            proc.wait()
+            logger.warn("hub", "RELAY_DISCONNECT: Native core has terminated.")
+
+        # Ignite the Go Relay
+        self.relay_proc = subprocess.Popen(
+            [relay_bin],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            preexec_fn=os.setsid
+        )
+        threading.Thread(target=monitor_process, args=(self.relay_proc,), daemon=True).start()
+
+        # Ignition Sequence: Wait for the Bridge to lock on before starting the Bot
+        def post_ignition():
+            from shadowcypher.core.hub import hub
+            logger.info("hub", "IGNITION_WAIT: Synchronizing with native signal plane...")
             
-            # Start the Bot Client 2 seconds after server init
-            def ignite_bot():
-                time.sleep(2)
+            # Smart Wait (Max 10s)
+            for _ in range(20):
+                if hasattr(hub, 'bridge') and hub.bridge.connected:
+                    break
+                time.sleep(0.5)
+            
+            try:
                 from shadowcypher.core.irc_bot import sentinel
                 sentinel.start()
-                logger.info("hub", "SENTINEL_IGNITION: ShadowSentinel bot joined the hub.")
-            
-            threading.Thread(target=ignite_bot, daemon=True).start()
-            loop.run_until_complete(srv.start())
+                logger.info("hub", "SENTINEL_IGNITION: ShadowSentinel joined the native swarm.")
+            except Exception as e:
+                logger.error("hub", f"SENTINEL_FAILURE: {e}")
 
-        t = threading.Thread(target=run_srv, daemon=True)
-        t.start()
-        logger.info("hub", "SOVEREIGN_IGNITION: War-Room server launched in background.")
+        threading.Thread(target=post_ignition, daemon=True).start()
 
     def _pulse_tick(self) -> bool:
         from shadowcypher.core.platform import platform_engine
         from shadowcypher.core.hub import hub
+        from shadowcypher.core.audit import auditor
         
         try:
-            # Use Native Platform Vitals instead of overhead-heavy psutil
+            # 1. Performance Vitals
             vitals = platform_engine.get_system_vitals()
             cpu, mem = vitals["cpu"], vitals["mem"]
-            
-            # Update Visual Pulse (Mono-bar aesthetic)
             self.cpu_label.set_text(f"CPU_LOAD: [{'|'*int(cpu/10)}{'.'*(10-int(cpu/10))}] {cpu:.1f}%")
             self.mem_label.set_text(f"MEM_PRESSURE: [{'|'*int(mem/10)}{'.'*(10-int(mem/10))}] {mem:.1f}%")
             
-            # Fetch tactical data from the Hub
+            # 2. Tactical Metrics
             summary = hub.get_tactical_summary()
+            swarm_count = summary.get("telemetry", {}).get("swarm_nodes", 0)
             self.net_label.set_text(f"NET_ENTROPY: {summary.get('telemetry', {}).get('load_avg', 0):.2f}bps")
+            self.irc_label.set_markup(f"SWARM_NODES: <span color='#22c55e'>{swarm_count} ACTIVE</span>")
+            
+            # 3. EMPIRICAL_VERIFICATION: The Heart of Truth
+            # Run a lightweight health check (don't run full AI sanity every second)
+            health = auditor.verify_relay_link()
+            fid_color = "#22c55e" if health["status"] == "PASS" else "#f87171"
             
             # Update Coordinate Status
-            status_text = f"CITADEL_NOMINAL | MISSIONS: {summary.get('active_missions')} | LOAD: {vitals['p_load']:.2f}"
-            self.status_label.set_text(status_text)
+            status_text = (f"FIDELITY: <span color='{fid_color}'>LIVE</span> | "
+                           f"MSN: {summary.get('active_missions')} | "
+                           f"ID: {summary.get('telemetry', {}).get('shadow_id', '???')}")
+            self.status_label.set_markup(status_text)
         except Exception:
             pass
         return True
@@ -199,6 +235,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("---", "COVERT-INTEL"),
             ("\U0001f4e1", "Signal Analysis"),
             ("\U0001f50e", "Spectral Intelligence"),
+            ("\U0001f47b", "Ghost Ops Infiltration"),
             ("\U0001f310", "Infrastructure Recon"),
             ("\U0001f3af", "Vulnerability Sweep"),
             ("\U0001f3ae", "Gaming Asset Audit"),
@@ -209,6 +246,9 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f4a3", "Zero-Day Strike"),
             ("\U0001f511", "Key Harvester"),
             ("\U0001f4f6", "Wireless Saturation"),
+            ("---", "LANGUAGE_SOVEREIGNTY"),
+            ("\u2728", "ShadowScript Lab"),
+            ("\U0001f4dc", "Omni-Grammar Bible"),
             ("---", "SOVEREIGN-OPS"),
             ("\U0001f6e1", "Citadel Breach"),
             ("\U0001f528", "Privilege Escalation"),
@@ -273,6 +313,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Zero-Day Strike": "exploit_page.ExploitPage",
                 "Key Harvester": "credentials_page.CredentialsPage",
                 "Wireless Saturation": "wireless_page.WirelessPage",
+                "ShadowScript Lab": "shadowscript_page.ShadowScriptPage",
+                "Omni-Grammar Bible": "shadowscript_page.ShadowScriptBible",
                 "Citadel Breach": "ad_page.AdPage",
                 "Privilege Escalation": "ad_attacks_page.ADAttacksPage",
                 "Perimeter Shield": "firewall_page.FirewallPage",
@@ -280,6 +322,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Active Link Manager": "session_page.SessionPage",
                 "Hub Settings": "admin_page.AdminPage",
                 "Tactical HUD": "combat_page.CombatDeck",
+                "Ghost Ops Infiltration": "ghost_page.GhostDeck",
                 "God-Panel (Latent Matrix)": "admin_page.AdminPage",
                 "Wraith Protocol": "admin_page.AdminPage",
             }

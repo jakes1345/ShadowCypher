@@ -1,0 +1,6 @@
+# MISSION_01: First Sovereign Ignition
+    
+TARGET("192.168.1.1")
+SWARM()
+STRIKE("recon_mode_alpha")
+!sys("echo SHADOWCYPHER_LANGUAGE_NATIVE_EXECUTION_SUCCESSFUL")

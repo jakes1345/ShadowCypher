@@ -353,95 +353,26 @@ class AgentRouter:
     def _run_agent(self, spec: AgentSpec, model: str, query: str,
                    callback: Callable = None, tools_enabled: bool = True,
                    max_cycles: int = 15) -> str:
-        """Execute an agent with autonomous tool-use loop."""
-        from shadowcypher.ai.orchestrator import AIOrchestrator, TOOL_DEFINITIONS
+        """Execute an agent using the unified MetaChain orchestrator."""
+        from shadowcypher.ai.orchestrator import orchestrator
+        
+        result = [None]
+        event = threading.Event()
+        
+        def on_complete(res):
+            result[0] = res
+            event.set()
 
-        # Build tool definitions filtered to this agent's access
-        tool_section = ""
-        if tools_enabled and spec.tool_access:
-            if "all" in spec.tool_access:
-                tool_section = TOOL_DEFINITIONS
-            else:
-                tool_section = self._filter_tools(spec.tool_access)
-
-        system_prompt = spec.system_prompt
-        if tool_section:
-            system_prompt += (
-                f"\n\n{tool_section}\n"
-                "When you need to use a tool, wrap it in <TOOL_CALL>{{\"tool\":\"name\",\"args\":{{...}}}}</TOOL_CALL> tags.\n"
-                "When you have the final answer, respond normally without tool calls."
-            )
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": query},
-        ]
-
-        # Tool executor (reuse orchestrator's)
-        orch = AIOrchestrator()
-
-        for cycle in range(max_cycles):
-            try:
-                # Build conversation text for Ollama
-                if len(messages) > 2:
-                    conv_text = "\n".join(
-                        f"{m['role'].upper()}: {m['content']}" for m in messages
-                    )
-                    prompt_content = conv_text
-                else:
-                    prompt_content = messages[-1]["content"]
-
-                payload = {
-                    "model": model,
-                    "messages": messages,
-                    "stream": False,
-                    "options": {
-                        "num_predict": spec.max_tokens,
-                        "temperature": spec.temperature,
-                        "top_p": 0.9,
-                        "repeat_penalty": 1.1,
-                    },
-                }
-
-                req = urllib.request.Request(
-                    f"{OLLAMA_BASE}/api/chat",
-                    data=json.dumps(payload).encode(),
-                    headers={"Content-Type": "application/json"},
-                )
-                with urllib.request.urlopen(req, timeout=300) as resp:
-                    data = json.loads(resp.read())
-
-                ai_raw = data.get("message", {}).get("content", "")
-
-                # Check for tool calls
-                tool_match = re.search(r"<TOOL_CALL>(.*?)</TOOL_CALL>", ai_raw, re.DOTALL)
-                if tool_match and tools_enabled:
-                    js = orch._fuzzy_json_repair(tool_match.group(1))
-                    if js:
-                        t_name = js.get("tool", "")
-                        t_args = js.get("args", {})
-                        if callback:
-                            callback(f"[{spec.name}] TOOL: {t_name}")
-                        output = orch._execute_tool(t_name, t_args, callback)
-                        if len(output) > 8000:
-                            output = output[:8000] + "\n[TRUNCATED]"
-                        messages.append({"role": "assistant", "content": ai_raw})
-                        messages.append({"role": "user", "content": f"[TOOL_RESULT]\n{output}"})
-                        continue
-
-                # No tool call = final answer
-                if callback:
-                    callback(ai_raw)
-                return ai_raw
-
-            except Exception as e:
-                err = f"[{spec.name}] ERROR: {e}"
-                logger.error("agents", err)
-                if callback:
-                    callback(err)
-                return err
-
-        return f"[{spec.name}] TIMEOUT: Reached max cycles ({max_cycles})"
+        orchestrator.execute_query_async(
+            query, 
+            callback=callback, 
+            on_complete=on_complete, 
+            agent_role=spec.id
+        )
+        
+        # Block until complete (for sync dispatch)
+        event.wait(timeout=600)
+        return result[0] or "TIMEOUT: Mission failed to synchronize."
 
     def _filter_tools(self, categories: list) -> str:
         """Filter TOOL_DEFINITIONS to only include tools for given categories."""

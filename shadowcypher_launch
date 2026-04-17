@@ -1,47 +1,70 @@
 #!/bin/bash
+# --- SHADOWCYPHER TACTICAL BOOTLOADER v6.0 (PHASE_SIGMA) ---
+# Clean, Location-Independent, and Self-Healing.
 
-# --- SHADOWCYPHER OVERLORD MASTER LAUNCHER V2 (QUANTUM_EDITION) ---
-# This script initializes the unified AI environment and launches the core suite.
+# 1. Resolve Canonical Path (Follow Symlinks)
+PROJECT_ROOT="$(dirname "$(readlink -f "$0")")"
+VENV_PATH="$PROJECT_ROOT/venv"
+ALT_VENV="$PROJECT_ROOT/ai_engine/meta-venv"
 
-PROJECT_ROOT="/home/jack/ShadowCypher"
-VENV_PATH="$PROJECT_ROOT/ai_engine/meta-venv"
-CLAUDE_FULL="/home/jack/dev-full-claude/cli-dev"
+echo -e "\033[36m[BOOT] INITIALIZING_SOVEREIGN_STACK: $PROJECT_ROOT\033[0m"
 
-echo -e "\033[92m[OVERLORD] Initializing ShadowCypher Integrated Engine...\033[0m"
+# 2. Self-Healing Compilation: Go Relay & Arsenal Primitives
+function sync_native() {
+    # Sync Relay
+    RELAY_SRC="$PROJECT_ROOT/shadowcypher/native/relay/relay.go"
+    RELAY_BIN="$PROJECT_ROOT/shadowcypher/native/relay/shadow-relay"
+    if [[ ! -f "$RELAY_BIN" || "$RELAY_SRC" -nt "$RELAY_BIN" ]]; then
+        echo -e "\033[90m[BUILD] Synchronizing Native Core (Go Relay)...\033[0m"
+        (cd "$PROJECT_ROOT/shadowcypher/native/relay/" && go build -o shadow-relay relay.go)
+    fi
 
-# 1. Integrity Check: Project Path
-if [ ! -d "$PROJECT_ROOT" ]; then
-    echo -e "\033[91m[ERROR] Project root not found at $PROJECT_ROOT\033[0m"
-    exit 1
-fi
+    # Sync Arsenal
+    PRIM_DIR="$PROJECT_ROOT/shadowcypher/arsenal/primitives"
+    echo -e "\e[36m[SIGMA] Verifying Native Arsenal Primitives...\e[0m"
+    # Find all main.go files in subdirectories
+    find "$PRIM_DIR" -name "main.go" | while read go_file; do
+        target_dir=$(dirname "$go_file")
+        bin_name="$target_dir/$(basename "$target_dir")"
+        if [[ ! -f "$bin_name" || "$go_file" -nt "$bin_name" ]]; then
+            echo -e "  \u26a1 Compiling $(basename "$target_dir")..."
+            (cd "$target_dir" && go build -o "$(basename "$target_dir")" main.go)
+        fi
+    done
+}
+sync_native
 
-# 2. Sync the environment (Professional Auto-Repair)
-if [ ! -d "$VENV_PATH" ]; then
-    echo -e "\033[91m[ERROR] AI Engine Virtual Environment missing at $VENV_PATH\033[0m"
-    exit 1
-fi
-
-source "$VENV_PATH/bin/activate"
-
-# 3. Quantum Core Verification
-if [ -f "$CLAUDE_FULL" ]; then
-    echo -e "\033[96m[INFO] QUANTUM_CORE_DETECTED: Full 88-Feature Arsenal Active.\033[0m"
-    export SHADOW_QUANTUM_PATH="$CLAUDE_FULL"
+# 3. Virtual Environment Sync: Prioritize High-Fidelity Meta-Venv
+if [ -d "$ALT_VENV" ]; then
+    echo -e "\033[35m[INFO] NEURAL_SYNC: Using High-Fidelity Meta-Venv.\033[0m"
+    source "$ALT_VENV/bin/activate"
+elif [ -d "$VENV_PATH" ]; then
+    source "$VENV_PATH/bin/activate"
 else
-    echo -e "\033[93m[WARN] Quantum Core not found. Standard AI mode active.\033[0m"
+    echo -e "\033[33m[WARN] Virtual environment not found. Using system python.\033[0m"
 fi
 
-# 4. Export Global Tactical Variables
-export PYTHONPATH=$PYTHONPATH:$PROJECT_ROOT
-export COMPLETION_MODEL="ShadowSentinel-V1"
+# 4. Global Tactical Environment
+export PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/ai_engine:$PYTHONPATH"
+export SHADOW_PORT=8888
+export TOR_STRICT=false
 
-# 5. Background Services (Tor + Local Sovereign Check)
-TOR_STATUS=$(systemctl is-active tor 2>/dev/null || echo "inactive")
-if [ "$TOR_STATUS" != "active" ]; then
-    echo -e "\033[93m[WARN] Tor is NOT active. Launching in non-anonymous mode...\033[0m"
+# 5. Integrate Claude-Dev Arsenal (Quantum-Core)
+CLAUDE_FULL="/home/jack/dev-full-claude/cli-dev"
+if [ -f "$CLAUDE_FULL" ]; then
+    export SHADOW_QUANTUM_PATH="$CLAUDE_FULL"
+    echo -e "\033[35m[INFO] ARSENAL_ACTIVE: Quantum-Core features integrated.\033[0m"
 fi
 
-# 6. Launch Sequence
-# Note: SovereignServer starts automatically inside app.py via the hub integration
-echo -e "\033[92m[OVERLORD] Launching ShadowCypher Core...\033[0m"
+# 6. Pre-Flight Neural Check (Ollama)
+if ! curl -s http://127.0.0.1:11434/api/tags > /dev/null; then
+    echo -e "\033[31m[FATAL] NEURAL_LINK_LOSS: Ollama is unreachable. Mission aborted.\033[0m"
+    exit 1
+fi
+
+# 7. Cleanup Trap (Graceful Shutdown)
+trap 'kill $(jobs -p) 2>/dev/null; echo -e "\n\033[31m[EXIT] Tactical shutdown complete.\033[0m"; exit' EXIT
+
+# 8. Ignition
+echo -e "\e[32m[SIGMA] ShadowCypher Ignition Sequence Complete.\e[0m"
 python3 "$PROJECT_ROOT/shadowcypher/app.py" "$@"
