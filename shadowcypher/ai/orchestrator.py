@@ -6,6 +6,11 @@ from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
 
 # Import AutoAgent Core
+import sys
+import os
+from shadowcypher.core.config import config
+sys.path.append(os.path.join(str(config.project_root), "ai_engine"))
+
 from ai_engine.autoagent import MetaChain, Agent
 from ai_engine.autoagent.registry import registry
 from ai_engine.autoagent.main import run_in_client
@@ -15,10 +20,15 @@ class AIOrchestrator:
     ShadowCypher AI Orchestrator — The Unified Autonomous Brain.
     Integrates HKUDS-2025 MetaChain for recursive task resolution.
     """
-    def __init__(self, model="qwen2.5-coder:7b"):
+    def __init__(self, model="ollama/shadow-ai:latest"):
         self.default_model = model
         self.registry = registry
         self._active_missions = {}
+        
+        # Configure LiteLLM for local Ollama connectivity
+        import litellm
+        litellm.api_base = "http://localhost:11434"
+        
         # Warm-boot the brain once during startup
         self.client = MetaChain()
 
@@ -58,7 +68,8 @@ class AIOrchestrator:
             name=spec.name,
             model=spec.model if spec.model != "shadowcypher-ai" else self.default_model,
             instructions=spec.system_prompt,
-            functions=list(self.registry.tools.values())
+            functions=list(self.registry.tools.values()),
+            tool_choice="required"
         )
 
         def _run():
