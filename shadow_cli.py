@@ -46,6 +46,10 @@ def stream_callback(msg: str):
 def engage_terminal():
     print_banner()
     
+    # Arm the core with tactical primitives
+    from shadowcypher.core.hub import hub
+    hub.register_arsenal()
+    
     # Subscribe to tactical bus to show background logs in real-time
     def _bus_listener():
         while True:

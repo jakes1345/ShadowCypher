@@ -30,10 +30,13 @@ class RelayBridge:
         self.connected = False
 
     async def connect(self):
+        self.loop = asyncio.get_event_loop()
+        self.websocket = None
         retry_delay = 1
         while self._running:
             try:
                 async with websockets.connect(self.uri) as websocket:
+                    self.websocket = websocket
                     self.connected = True
                     logger.info("hub", "RELAY_BRIDGE: Native signal link established.")
                     retry_delay = 1 # Reset retry delay on success
@@ -42,9 +45,18 @@ class RelayBridge:
                         self._handle_signal(data)
             except Exception as e:
                 self.connected = False
+                self.websocket = None
                 logger.debug("hub", f"RELAY_BRIDGE_DISCONNECT: {e}. Retrying in {retry_delay}s...")
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, 30) # Exponential backoff
+
+    async def send(self, data: dict):
+        """Injects a signal into the native Go-relay swarm."""
+        if self.websocket:
+            try:
+                await self.websocket.send(json.dumps(data))
+            except:
+                pass
 
     def _handle_signal(self, data: dict):
         typ = data.get("type")
@@ -203,8 +215,28 @@ class ShadowHub:
         bus.subscribe("intel_found", self._on_intel_discovered)
         bus.subscribe("sisyphus_report", self._on_health_report)
         bus.subscribe("pulse_anomaly", self._on_pulse_anomaly)
+        
+        # Bridge all tactical events to the native Relay for live HUD orchestration
+        bus.subscribe("module_log", self._forward_to_relay)
+        bus.subscribe("ghost_update", self._forward_to_relay)
+        bus.subscribe("telemetry_update", self._forward_to_relay)
 
-    def _on_intel_discovered(self, intel: Dict[str, Any]) -> None:
+    def _forward_to_relay(self, data: Dict[str, Any]) -> None:
+        """Proxies internal bus events to the native Go-relay signal swarm."""
+        if hasattr(self, 'relay_bridge') and self.relay_bridge.connected:
+            # We wrap the bus data into a 'chat' type for the relay to broadcast
+            msg = {
+                "type": "chat",
+                "nick": "core",
+                "text": json.dumps(data)
+            }
+            # We need a way to send from the bridge
+            asyncio.run_coroutine_threadsafe(
+                self.relay_bridge.send(msg), 
+                self.relay_bridge.loop
+            )
+
+    async def _on_intel_discovered(self, intel: Dict[str, Any]) -> None:
         # Fuses raw intel into the decision engine
         typ = intel.get("type", "UNKNOWN")
         ip = intel.get("ip", "LOCAL")
