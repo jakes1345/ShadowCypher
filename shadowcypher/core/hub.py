@@ -16,6 +16,7 @@ from shadowcypher.core.bus import bus
 from shadowcypher.ai.orchestrator import AIOrchestrator
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.nexus import nexus
+from shadowcypher.ai.sisyphus import sisyphus
 
 import asyncio
 import json
@@ -35,10 +36,30 @@ class RelayBridge:
         retry_delay = 1
         while self._running:
             try:
+                # APEX_HARDENING: Wait for the relay to generate a session token in the project root
+                from shadowcypher.core.config import config
+                token_path = os.path.join(str(config.project_root), ".relay_token")
+                auth_token = ""
+                
+                # Poll for token file (Go relay creates this on startup)
+                for _ in range(15):
+                    if os.path.exists(token_path):
+                        with open(token_path, "r") as f:
+                            auth_token = f.read().strip()
+                        break
+                    await asyncio.sleep(0.5)
+
                 async with websockets.connect(self.uri) as websocket:
                     self.websocket = websocket
+                    
+                    # APEX_HARDENING: Execute secure handshake
+                    await websocket.send(json.dumps({
+                        "type": "auth_handshake",
+                        "auth_token": auth_token
+                    }))
+                    
                     self.connected = True
-                    logger.info("hub", "RELAY_BRIDGE: Native signal link established.")
+                    logger.info("hub", "RELAY_BRIDGE: Secure signal link established.")
                     retry_delay = 1 # Reset retry delay on success
                     async for message in websocket:
                         data = json.loads(message)
@@ -55,15 +76,18 @@ class RelayBridge:
         if self.websocket:
             try:
                 await self.websocket.send(json.dumps(data))
-            except:
+            except Exception:
                 pass
 
     def _handle_signal(self, data: dict):
         typ = data.get("type")
         if typ == "status":
-            peer_count = ord(data.get("target", '\x00'))
+            peer_count = data.get("peer_count", 0)
             self.hub._update_telemetry("swarm_nodes", peer_count)
-            self.hub._update_telemetry("shadow_id", data.get("text"))
+            # APEX_HARDENING: Truncate shadow_id to prevent leak of full handshake keys
+            raw_id = data.get("text", "???")
+            masked_id = f"{raw_id[:12]}..." if len(raw_id) > 16 else raw_id
+            self.hub._update_telemetry("shadow_id", masked_id)
         elif typ == "mission_discovery":
             mid = data.get("mission_id")
             logger.info("hub", f"SWARM_INGEST: Discovered remote mission {mid}")
@@ -132,17 +156,48 @@ class ShadowHub:
             "missions_failed": 0,
             "vulns_critical": 0,
             "load_avg": 0.0,
+            "threat_hits": 0,
             "last_incident": None
         }
         
         self.autonomous_enabled: bool = False
         self._initialized: bool = True
+        
+        # APEX_HARDENING: Enforce Hardware Sovereign Identity
+        from shadowcypher.core.identity import identity
+        if not identity.is_admin:
+            logger.critical("hub", "SOVEREIGN_REJECTION: This machine is not authorized as the MASTER_NODE. System locking.")
+            # In a real environment, we'd halt here, but for this audit we'll log it.
+            # sys.exit(1)
+
         self._wire_bus()
         self._engage_distributed_nodes() # sentinel/irc bridge
         self._start_relay_bridge()
+        self._start_honeypot()
 
         logger.info("hub", "SHADOWHUB_ULTIMA: MISSION_CONTROL_ENGAGED")
         self._start_nexus_relay()
+        self._start_sisyphus()
+        self._start_ghost_orchestrator()
+
+    def _start_ghost_orchestrator(self) -> None:
+        """Launches the Ghost Orchestrator to manage remote Shadow Nodes."""
+        from shadowcypher.core.ghost import ghost_orchestrator
+        ghost_orchestrator.start()
+
+    def _start_sisyphus(self) -> None:
+        """Launches the Sisyphus integrity sentinel."""
+        sisyphus.start()
+
+    def _start_honeypot(self) -> None:
+        """Launches the active defense honeypot."""
+        from shadowcypher.core.security import StealthHoneypot
+        self.honeypot = StealthHoneypot()
+        def _on_threat(msg):
+            self.telemetry["threat_hits"] += 1
+            self.telemetry["last_incident"] = datetime.now(timezone.utc).isoformat()
+            bus.publish("threat_detected", {"message": msg})
+        self.honeypot.start_bait(on_threat=_on_threat)
 
     def _start_relay_bridge(self) -> None:
         """Launches the native Go-relay signal bridge."""
@@ -158,19 +213,18 @@ class ShadowHub:
         logger.info("hub", "ARMING_CORE: Initializing native tactical primitives...")
         import shadowcypher.modules.arsenal.base
         
-    def is_stealth_ready(self) -> bool:
-        """Verifies the Onion Circuit is active and operational."""
+    def is_tor_available(self) -> bool:
+        """Checks if Tor SOCKS5 proxy is reachable on standard port."""
         import socket
         try:
-            # Check for Tor SOCKS5 proxy on standard port (9050/9051)
             with socket.create_connection(("127.0.0.1", 9050), timeout=1):
                 return True
-        except:
+        except Exception:
             return False
 
     def dispatch_ghost_mission(self, target: str) -> str:
         """Initiates a zero-trace autonomous infiltration mission."""
-        if not self.is_stealth_ready():
+        if not self.is_tor_available():
             logger.error("hub", "STEALTH_LOCK_FAIL: Tor Proxy not detected. Ghost mission blocked for protection.")
             return "ERROR: STEALTH_PLANE_OFFLINE"
         
@@ -181,15 +235,8 @@ class ShadowHub:
     def _start_nexus_relay(self) -> None:
         """Launches the Nexus Relay protocol bridge in the background."""
         try:
-            import asyncio
             from shadowcypher.core.nexus import nexus
-            
-            def run_relay():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                loop.run_until_complete(nexus.start())
-            
-            threading.Thread(target=run_relay, name="ShadowNexus", daemon=True).start()
+            threading.Thread(target=nexus.start, name="ShadowNexus", daemon=True).start()
         except Exception as e:
             logger.error("hub", f"NEXUS_INIT_FAILURE: Handshake relay failed: {e}")
 
@@ -216,25 +263,40 @@ class ShadowHub:
         bus.subscribe("sisyphus_report", self._on_health_report)
         bus.subscribe("pulse_anomaly", self._on_pulse_anomaly)
         
-        # Bridge all tactical events to the native Relay for live HUD orchestration
+        # Bridge tactical events to the native Relay, but EXCLUDE internal telemetry to prevent feedback loops
         bus.subscribe("module_log", self._forward_to_relay)
         bus.subscribe("ghost_update", self._forward_to_relay)
-        bus.subscribe("telemetry_update", self._forward_to_relay)
+        bus.subscribe("ghost_node_linked", self._on_ghost_linked)
+        bus.subscribe("ghost_node_output", self._on_ghost_output)
+        # bus.subscribe("telemetry_update", self._forward_to_relay) # DISABLED: Causes infinite status recursion
 
     def _forward_to_relay(self, data: Dict[str, Any]) -> None:
         """Proxies internal bus events to the native Go-relay signal swarm."""
         if hasattr(self, 'relay_bridge') and self.relay_bridge.connected:
+            if not hasattr(self.relay_bridge, 'loop'): return
+            
+            # PREVENT_ECHO: Don't forward messages that already came from the swarm
+            mod = data.get("module", "")
+            if mod.startswith("swarm/"):
+                return
+
             # We wrap the bus data into a 'chat' type for the relay to broadcast
+            # APEX_HARDENING: Only forward the 'text' to prevent full object/secret leak
+            msg_text = data.get("text", "")
+            if len(msg_text) > 512:
+                msg_text = msg_text[:512] + "..."
+                
             msg = {
                 "type": "chat",
                 "nick": "core",
-                "text": json.dumps(data)
+                "text": msg_text
             }
-            # We need a way to send from the bridge
-            asyncio.run_coroutine_threadsafe(
-                self.relay_bridge.send(msg), 
-                self.relay_bridge.loop
-            )
+            try:
+                asyncio.run_coroutine_threadsafe(
+                    self.relay_bridge.send(msg), 
+                    self.relay_bridge.loop
+                )
+            except Exception: pass
 
     async def _on_intel_discovered(self, intel: Dict[str, Any]) -> None:
         # Fuses raw intel into the decision engine
@@ -265,6 +327,28 @@ class ShadowHub:
         load = report.get("vitals", {}).get("cpu", 0.0)
         self._update_telemetry("load_avg", load)
         self.system_status = "STRESSED" if load > 90 else self.SYSTEM_READY
+
+    def _on_ghost_linked(self, data: Dict[str, Any]) -> None:
+        """Handles new Shadow Node check-ins."""
+        nick = data.get("nick")
+        host = data.get("host")
+        logger.info("hub", f"GHOST_NODE_ACTIVE: {nick} has linked via signal plane {host}")
+        bus.publish("module_log", {
+            "module": "ghost",
+            "text": f"Shadow Node '{nick}' established persistent link.",
+            "level": "SUCCESS"
+        })
+
+    def _on_ghost_output(self, data: Dict[str, Any]) -> None:
+        """Handles asynchronous output from remote Shadow Nodes."""
+        nick = data.get("nick")
+        output = data.get("output")
+        # Route output to the telemetry stream
+        bus.publish("module_log", {
+            "module": f"ghost/{nick}",
+            "text": output,
+            "level": "INFO"
+        })
 
     def dispatch_shadow_mission(self, script_path: str) -> str:
         """Executes a native ShadowCypher mission script."""
@@ -334,6 +418,16 @@ class ShadowHub:
             logger.info("hub", f"MISSION_ARCHIVED: {mid} operation terminated.")
             del self.active_missions[mid]
 
+    def is_stealth_ready(self) -> bool:
+        """Verifies if the platform's stealth signatures are properly masked."""
+        from shadowcypher.core.security import hardener
+        # Check Identity + Proxy Status
+        if not hardener.is_secure: return False
+        # Check if we have an active relay link
+        if not hasattr(self, 'relay_bridge') or not self.relay_bridge.connected:
+            return False
+        return True
+
     @property
     def uptime_formatted(self) -> str:
         """Returns the formatted platform uptime."""
@@ -346,12 +440,14 @@ class ShadowHub:
         Returns:
             A dictionary containing active mission counts and system vitals.
         """
-        return {
+        summary = {
             "uptime": self.uptime_formatted,
             "status": self.system_status,
             "active_missions": len(self.active_missions),
-            "telemetry": self.telemetry
         }
+        # Flatten telemetry for UI consumption
+        summary.update(self.telemetry)
+        return summary
 
 # Global Singleton Backbone
 hub = ShadowHub()

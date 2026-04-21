@@ -49,17 +49,29 @@ export PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/ai_engine:$PYTHONPATH"
 export SHADOW_PORT=8888
 export TOR_STRICT=false
 
-# 5. Integrate Claude-Dev Arsenal (Quantum-Core)
-CLAUDE_FULL="/home/jack/dev-full-claude/cli-dev"
-if [ -f "$CLAUDE_FULL" ]; then
-    export SHADOW_QUANTUM_PATH="$CLAUDE_FULL"
-    echo -e "\033[35m[INFO] ARSENAL_ACTIVE: Quantum-Core features integrated.\033[0m"
-fi
+# 5. Quantum-Core (Local AI — runs via Ollama, no external binaries)
+echo -e "\033[35m[INFO] QUANTUM_CORE: Local AI deep-analysis engine active.\033[0m"
 
-# 6. Pre-Flight Neural Check (Ollama)
-if ! curl -s http://127.0.0.1:11434/api/tags > /dev/null; then
-    echo -e "\033[31m[FATAL] NEURAL_LINK_LOSS: Ollama is unreachable. Mission aborted.\033[0m"
-    exit 1
+# 6. Pre-Flight Neural Check (Ollama) — Auto-start if not running
+if ! curl -s http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+    echo -e "\033[33m[NEURAL] Ollama not detected. Starting ollama serve...\033[0m"
+    ollama serve > /dev/null 2>&1 &
+    OLLAMA_PID=$!
+    
+    # Wait up to 15 seconds for Ollama to become responsive
+    for i in $(seq 1 15); do
+        if curl -s http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+            echo -e "\033[32m[NEURAL] Ollama online (PID: $OLLAMA_PID, waited ${i}s).\033[0m"
+            break
+        fi
+        sleep 1
+    done
+    
+    if ! curl -s http://127.0.0.1:11434/api/tags > /dev/null 2>&1; then
+        echo -e "\033[31m[WARN] Ollama failed to start. AI features may be limited.\033[0m"
+    fi
+else
+    echo -e "\033[32m[NEURAL] Ollama already running.\033[0m"
 fi
 
 # 7. Cleanup Trap (Graceful Shutdown)

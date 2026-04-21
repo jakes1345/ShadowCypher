@@ -5,6 +5,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from shadowcypher.modules.osint import OSINT
+from shadowcypher.modules.osint_deep import DeepOSINT
 from shadowcypher.ui.base_page import BasePage
 
 
@@ -13,6 +14,7 @@ class OSINTPage(BasePage):
 
     def __init__(self):
         super().__init__("\U0001f50e OSINT / Intelligence")
+        self._deep_osint = DeepOSINT()
 
         # Target input
         row1 = Gtk.Box(spacing=8)
@@ -31,19 +33,34 @@ class OSINTPage(BasePage):
         self.workspace.pack_start(row1, False, False, 0)
 
         # Action buttons
-        btn_box = Gtk.Box(spacing=8)
-        for label, handler in [
+        btn_flow = Gtk.FlowBox()
+        btn_flow.set_valign(Gtk.Align.START)
+        btn_flow.set_max_children_per_line(6)
+        btn_flow.set_selection_mode(Gtk.SelectionMode.NONE)
+        btn_flow.set_row_spacing(6)
+        btn_flow.set_column_spacing(6)
+
+        actions = [
             ("SSL Cert", self._on_ssl),
             ("HTTP Headers", self._on_headers),
             ("Tech Detect", self._on_tech),
             ("MX/SPF Check", self._on_mx),
             ("Subnet/ASN", self._on_subnet),
             ("Zone Transfer", self._on_zone),
-        ]:
-            btn_box.pack_start(self.make_action_btn(label, handler), False, False, 0)
+            ("Social Footprint", self._on_social),
+            ("Email Audit", self._on_email),
+            ("GHunt Pivot", self._on_ghunt),
+            ("Wayback Recon", self._on_wayback),
+        ]
+        for label, handler in actions:
+            btn = self.make_action_btn(label, handler)
+            btn_flow.add(btn)
 
-        btn_box.pack_end(self.build_stop_button(), False, False, 0)
-        self.workspace.pack_start(btn_box, False, False, 0)
+        self.workspace.pack_start(btn_flow, False, False, 10)
+        
+        stop_box = Gtk.Box(spacing=10)
+        stop_box.pack_end(self.build_stop_button(), False, False, 0)
+        self.workspace.pack_start(stop_box, False, False, 0)
 
         self.build_terminal()
 
@@ -101,3 +118,27 @@ class OSINTPage(BasePage):
             return
         self.clear_output(f"Attempting zone transfer: {target}...\n\n")
         self.run_job(OSINT.zone_transfer(target, on_output=self.on_output, on_complete=self.on_complete))
+
+    def _on_social(self, btn):
+        target = self._get_target()
+        if not target: return
+        self.terminal.log(f"INITIATING_SOCIAL_FOOTPRINT_SEARCH: {target}", "OSINT")
+        self._deep_osint.social_footprint(target, on_output=self.on_output)
+
+    def _on_email(self, btn):
+        target = self._get_target()
+        if not target: return
+        self.terminal.log(f"INITIATING_DEEP_EMAIL_AUDIT: {target}", "OSINT")
+        self._deep_osint.email_audit(target, on_output=self.on_output)
+
+    def _on_ghunt(self, btn):
+        target = self._get_target()
+        if not target: return
+        self.terminal.log(f"INITIATING_GHUNT_PIVOT: {target}", "OSINT")
+        self.run_job(self._deep_osint.ghunt_pivot(target, on_output=self.on_output))
+
+    def _on_wayback(self, btn):
+        target = self._get_target()
+        if not target: return
+        self.terminal.log(f"INITIATING_WAYBACK_RECON: {target}", "OSINT")
+        self.run_job(self._deep_osint.wayback_recon(target, on_output=self.on_output))

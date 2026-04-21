@@ -1,5 +1,5 @@
 """
-Network Module — Apex Intelligence Build.
+Network Module — Enterprise Intelligence Build.
 Handles packet-level operations, ARP sweeps, service fingerprinting, and OS detection.
 """
 
@@ -145,6 +145,10 @@ class Network(BaseModule):
     def service_scan(self, target, ports="1-1024", on_output=None):
         """Instance-method alias for service_fingerprint."""
         return Network.service_fingerprint(target, ports, on_output)
+
+    def traffic_monitor(self, interface=None, on_output=None):
+        """Instance-method alias for network_monitor."""
+        return Network.network_monitor(interface, on_output)
 
     def ai_network_audit(self, target, on_output=None):
         """Escalate to the Swarm for deep-packet network analysis."""

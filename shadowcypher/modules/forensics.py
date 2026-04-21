@@ -1,5 +1,5 @@
 """
-Forensics Module — Apex Intelligence Build.
+Forensics Module — Enterprise Intelligence Build.
 Handles data analysis, metadata extraction, and binary auditing.
 """
 

@@ -71,7 +71,7 @@ PROMPTS = {
         "Describe how to architect a zero-trust network from scratch for a 500-person company. Cover identity, device trust, microsegmentation, and continuous verification.",
         "Explain the mathematics behind RSA, including why factoring large primes is hard, how the Chinese Remainder Theorem speeds up decryption, and common implementation mistakes that break RSA.",
         "Walk through how a modern garbage collector works — generational GC, concurrent marking, compaction, and how languages like Go, Java, and Python differ in their approaches.",
-        "Explain how BGP works, why it's vulnerable, and detail real-world BGP hijacking incidents. Then explain RPKI and how it mitigates these attacks.",
+        "Explain how BGP works, why it's vulnerable, and detail real-world BGP hishadow_operatoring incidents. Then explain RPKI and how it mitigates these attacks.",
         "Analyze the complete lifecycle of an APT (Advanced Persistent Threat) attack from initial access to exfiltration. Reference real-world examples like SolarWinds or APT28.",
         "Explain how LLVM works as a compiler infrastructure. Cover the frontend/backend separation, LLVM IR, optimization passes, and how to write a custom LLVM pass.",
         "Describe how Kubernetes networking works end-to-end — pod networking, services, ingress, CNI plugins, kube-proxy, and how packets flow from external client to pod.",

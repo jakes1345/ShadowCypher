@@ -46,7 +46,7 @@ class ADAttacksPage(BasePage):
         row = Gtk.Box(spacing=8)
         row.pack_start(Gtk.Label(label="Target IP:"), False, False, 0)
         self.imp_target = Gtk.Entry()
-        self.imp_target.set_placeholder_text("192.168.1.100")
+        self.imp_target.set_placeholder_text("GATEWAY_IP00")
         self.imp_target.set_hexpand(True)
         row.pack_start(self.imp_target, True, True, 0)
         box.pack_start(row, False, False, 0)

@@ -1,154 +1,197 @@
+"""
+Shadow Nodes Page — Sovereign Ghost-Node Orchestration HUD.
+Directly manages remote agents, signal routing, and tactical delegation.
+"""
+
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
-from shadowcypher.core.hub import hub
+from gi.repository import Gtk, GLib, Pango
+import threading
+import time
+
+from shadowcypher.ui.base_page import BasePage
+from shadowcypher.core.ghost import ghost_orchestrator
+from shadowcypher.core.bus import bus
 from shadowcypher.core.logger import logger
 
-class GhostDeck(Gtk.Box):
-    """Spectral Ghost-Deck — The Command Bridge for Autonomous Infiltrations."""
-    
+class ShadowNodesPage(BasePage):
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.set_margin_top(40)
-        self.set_margin_start(40)
-        self.set_margin_end(40)
+        super().__init__("\U0001f47b SHADOW_NODE_ORCHESTRATOR")
+        
+        # 1. Metrics
+        from shadowcypher.ui.components import DataPod
+        self.pod_active = DataPod("GHOST_SWARM", "0", "cyan")
+        self.pod_signal = DataPod("SIGNAL_STEALTH", "100%", "green")
+        self.pod_fluidity = DataPod("SOVEREIGN_FLUIDITY", "ULTIMATE", "amber")
+        
+        for pod in [self.pod_active, self.pod_signal, self.pod_fluidity]:
+            self.metric_strip.pack_start(pod, True, True, 0)
 
-        # 1. Header Area
-        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        title_lbl = Gtk.Label()
-        title_lbl.set_markup("<span size='xx-large' weight='bold' color='#e2e8f0'>SPECTRAL_GHOST-DECK</span>")
-        header.pack_start(title_lbl, False, False, 0)
+        # 2. Node Grid
+        frm = Gtk.Frame(label="GHOST_NODE_SWARM")
+        self.node_store = Gtk.ListStore(str, str, str, str, str) # Nick, FP, OS, Host, Status
+        self.tree = Gtk.TreeView(model=self.node_store)
+        self.tree.get_style_context().add_class("node-list")
         
-        # Stealth Status Badge
-        self.stealth_badge = Gtk.Label()
-        self._update_stealth_status()
-        header.pack_end(self.stealth_badge, False, False, 0)
+        for i, t in enumerate(["OPERATOR", "FINGERPRINT", "PLATFORM", "SIGNAL_ORIGIN", "STATUS"]):
+            col = Gtk.TreeViewColumn(t, Gtk.CellRendererText(), text=i)
+            col.set_resizable(True)
+            self.tree.append_column(col)
+            
+        sw = Gtk.ScrolledWindow()
+        sw.set_min_content_height(250)
+        sw.add(self.tree)
         
-        self.pack_start(header, False, False, 0)
+        self.workspace.pack_start(frm, True, True, 0)
+        frm.add(sw)
 
-        # 2. Command Console
-        cmd_box = Gtk.Frame()
-        cmd_box.get_style_context().add_class("card")
-        cmd_inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        cmd_inner.set_margin_top(20)
-        cmd_inner.set_margin_bottom(20)
-        cmd_inner.set_margin_start(20)
-        cmd_inner.set_margin_end(20)
+        # 3. Tactical Console (Interactive)
+        console_frame = Gtk.Frame(label="TACTICAL_CONSOLE_STREAM")
+        console_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         
-        desc = Gtk.Label(label="Target an infrastructure node or web layer for autonomous zero-trace infiltration.")
-        desc.set_halign(Gtk.Align.START)
-        cmd_inner.pack_start(desc, False, False, 0)
+        self.console_view = Gtk.TextView()
+        self.console_view.set_editable(False)
+        self.console_view.set_cursor_visible(False)
+        self.console_view.get_style_context().add_class("terminal-view")
         
-        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        self.target_entry = Gtk.Entry()
-        self.target_entry.set_placeholder_text("Target (URL or IP)")
-        self.target_entry.set_hexpand(True)
-        hbox.pack_start(self.target_entry, True, True, 0)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_min_content_height(300)
+        scroll.add(self.console_view)
+        console_box.pack_start(scroll, True, True, 0)
         
-        self.ignite_btn = Gtk.Button(label="IGNITE_GHOST_CYCLE")
-        self.ignite_btn.get_style_context().add_class("primary-button")
-        self.ignite_btn.connect("clicked", self._on_ignite)
-        hbox.pack_start(self.ignite_btn, False, False, 0)
+        # Command Entry
+        self.cmd_entry = Gtk.Entry()
+        self.cmd_entry.set_placeholder_text("ENTER_TACTICAL_COMMAND...")
+        self.cmd_entry.connect("activate", self._on_execute)
+        console_box.pack_start(self.cmd_entry, False, False, 0)
         
-        self.battle_btn = Gtk.Button(label="\u2694\ufe0f SPAWN_BATTLEGROUND")
-        self.battle_btn.connect("clicked", self._on_spawn_battleground)
-        hbox.pack_start(self.battle_btn, False, False, 0)
-        
-        cmd_inner.pack_start(hbox, False, False, 0)
-        cmd_box.add(cmd_inner)
-        self.pack_start(cmd_box, False, False, 0)
+        console_frame.add(console_box)
+        self.workspace.pack_start(console_frame, True, True, 0)
 
-        # 3. Mission Phase Monitor
-        monitor_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        mon_lbl = Gtk.Label()
-        mon_lbl.set_markup("<span weight='bold' color='#94a3b8'>// AUTONOMOUS_STATE_PHASES</span>")
-        mon_lbl.set_halign(Gtk.Align.START)
-        monitor_box.pack_start(mon_lbl, False, False, 0)
+        # Control Plane
+        ctrl_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         
-        self.phase_bar = Gtk.ProgressBar()
-        self.phase_bar.set_fraction(0.0)
-        monitor_box.pack_start(self.phase_bar, False, False, 0)
-        
-        self.phase_desc = Gtk.Label(label="Ready for mission ignition...")
-        self.phase_desc.set_halign(Gtk.Align.START)
-        monitor_box.pack_start(self.phase_desc, False, False, 0)
-        
-        self.pack_start(monitor_box, False, False, 0)
+        exec_btn = Gtk.Button(label="\u26a1 Execute")
+        exec_btn.get_style_context().add_class("suggested-action")
+        exec_btn.connect("clicked", self._on_execute)
+        ctrl_box.pack_start(exec_btn, False, False, 0)
 
-        # 4. Neural Thought Trace
-        self.trace_view = Gtk.TextView()
-        self.trace_view.set_editable(False)
-        self.trace_view.set_cursor_visible(False)
-        self.trace_view.get_style_context().add_class("console")
+        proxy_btn = Gtk.Button(label="\U0001f510 Start Proxy")
+        proxy_btn.get_style_context().add_class("suggested-action")
+        proxy_btn.connect("clicked", self._on_start_proxy)
+        ctrl_box.pack_start(proxy_btn, False, False, 0)
         
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_vexpand(True)
-        scroller.add(self.trace_view)
-        self.pack_start(scroller, True, True, 0)
-
-        # Heartbeat check for stealth
-        GLib.timeout_add(1000, self._update_stealth_status)
+        scrub_btn = Gtk.Button(label="\U0001f9f9 Deep Scrub")
+        scrub_btn.get_style_context().add_class("destructive-action")
+        scrub_btn.connect("clicked", self._on_deep_scrub)
+        ctrl_box.pack_start(scrub_btn, False, False, 0)
         
-        # Subscribe to real-time mission updates
-        from shadowcypher.core.bus import bus
-        bus.subscribe("ghost_update", self._on_ghost_update)
+        self.workspace.pack_start(ctrl_box, False, False, 0)
 
-    def _on_ghost_update(self, data: dict):
-        """Reactive handler for autonomous mission pulses."""
-        GLib.idle_add(self._process_ghost_event, data)
-
-    def _process_ghost_event(self, data: dict):
-        phase = data.get("phase")
-        msg = data.get("message")
-        progress = data.get("progress", 0.0)
+        # Subscribe to bus events
+        bus.subscribe("ghost_node_linked", lambda _: GLib.idle_add(self._refresh_grid))
+        bus.subscribe("ghost_node_output", self._on_ghost_output)
         
-        self.phase_bar.set_fraction(progress)
-        self.phase_desc.set_text(msg)
-        self._log_trace(f"[{phase}] {msg}")
-        
-        if phase == "COMPLETE" or phase == "EMERGENCY":
-            self.ignite_btn.set_sensitive(True)
+        GLib.timeout_add(5000, self._refresh_grid)
+        self._refresh_grid()
 
-    def _update_stealth_status(self):
-        is_ready = hub.is_stealth_ready()
-        if is_ready:
-            self.stealth_badge.set_markup("<span background='#22c55e' color='white' weight='bold'>   ONION_LINK: STEALTH_READY   </span>")
-            if self.phase_bar.get_fraction() == 0.0 or self.phase_bar.get_fraction() == 1.0:
-                self.ignite_btn.set_sensitive(True)
-        else:
-            self.stealth_badge.set_markup("<span background='#f87171' color='white' weight='bold'>   ONION_LINK: EXPOSED   </span>")
-            self.ignite_btn.set_sensitive(False)
+    def log(self, msg, level="INFO"):
+        buffer = self.console_view.get_buffer()
+        iter = buffer.get_end_iter()
+        timestamp = time.strftime("%H:%M:%S")
+        buffer.insert(iter, f"[{timestamp}] [{level}] {msg}\n")
+        
+        # Auto-scroll to bottom
+        mark = buffer.get_insert()
+        self.console_view.scroll_to_mark(mark, 0.0, True, 0.0, 1.0)
+
+    def _refresh_grid(self):
+        if not self.get_mapped(): return True
+        nodes = ghost_orchestrator.get_active_nodes()
+        self.node_store.clear()
+        for n in nodes:
+            status = "CONNECTED" if (time.time() - n["last_seen"] < 60) else "STALE"
+            self.node_store.append([
+                n["nick"], 
+                n["fp"][:12], 
+                n["os"], 
+                n["host"], 
+                status
+            ])
+        self.pod_active.set_value(str(len(nodes)))
         return True
 
-    def _on_spawn_battleground(self, btn):
-        import subprocess
-        from shadowcypher.core.platform import platform_engine
+    def _on_execute(self, btn):
+        selection = self.tree.get_selection()
+        model, treeiter = selection.get_selected()
+        if treeiter is None:
+            self.log("ERROR: No Shadow Node selected.", "ERROR")
+            return
+            
+        cmd = self.cmd_entry.get_text().strip()
+        if not cmd: return
         
-        # Path to Battleground Config (using arsenal primitives as target if composer is missing)
-        self._log_trace("[BATTLEGROUND] IGNITING_SACRIFICIAL_TARGETS... Please Wait.")
-        try:
-            # We use the gauntlet_victim as a lightweight alternative to full docker
-            victim_script = platform_engine.resolve_path("native", "relay", "shadow-relay") # Placeholder if gauntlet is not executable
-            self._log_trace("[OK] Battleground Deployment Initiated. Access targets at 127.0.0.1:9999.")
-            self.target_entry.set_text("127.0.0.1:9999")
-        except Exception as e:
-            self._log_trace(f"[FAIL] Battleground ignition failed: {e}")
-
-    def _on_ignite(self, btn):
-        target = self.target_entry.get_text()
-        if not target: return
+        fp_short = model[treeiter][1]
+        # Find full FP
+        full_fp = None
+        for n in ghost_orchestrator.nodes.values():
+            if n.fp.startswith(fp_short):
+                full_fp = n.fp
+                break
         
-        res = hub.dispatch_ghost_mission(target)
-        if "SUCCESS" in res:
-            self._log_trace(f"[IGNITION] Launching Ghost Operational Cycle against {target}...")
-            self.target_entry.set_text("")
-            self.ignite_btn.set_sensitive(False)
+        if full_fp:
+            self.log(f"DISPATCHING: '{cmd}' to {model[treeiter][0]}", "APEX")
+            ghost_orchestrator.execute(full_fp, cmd)
+            self.cmd_entry.set_text("")
+        else:
+            self.log("ERROR: Node fingerprint mismatch.", "ERROR")
 
-    def _log_trace(self, msg):
-        buffer = self.trace_view.get_buffer()
-        buffer.insert_at_cursor(f"{msg}\n")
-        # Scroll to end
-        mark = buffer.create_mark(None, buffer.get_end_iter(), False)
-        self.trace_view.scroll_to_mark(mark, 0.0, True, 0.5, 0.5)
-
+    def _on_start_proxy(self, btn):
+        selection = self.tree.get_selection()
+        model, treeiter = selection.get_selected()
+        if treeiter is None:
+            self.log("ERROR: No Shadow Node selected.", "ERROR")
+            return
+            
+        fp_short = model[treeiter][1]
+        # Find full FP
+        full_fp = None
+        for n in ghost_orchestrator.nodes.values():
+            if n.fp.startswith(fp_short):
+                full_fp = n.fp
+                break
         
+        if full_fp:
+            # Ephemeral port (could be randomized)
+            port = 1080 
+            self.log(f"IGNITING_PROXY: Node {model[treeiter][0]} on port {port}", "APEX")
+            ghost_orchestrator.start_proxy(full_fp, port)
+        else:
+            self.log("ERROR: Node fingerprint mismatch.", "ERROR")
+
+    def _on_deep_scrub(self, btn):
+        selection = self.tree.get_selection()
+        model, treeiter = selection.get_selected()
+        if treeiter is None:
+            self.log("ERROR: No Shadow Node selected.", "ERROR")
+            return
+            
+        fp_short = model[treeiter][1]
+        # Find full FP
+        full_fp = None
+        for n in ghost_orchestrator.nodes.values():
+            if n.fp.startswith(fp_short):
+                full_fp = n.fp
+                break
+        
+        if full_fp:
+            self.log(f"IGNITING_DEEP_SCRUB: Purging traces on {model[treeiter][0]}...", "APEX")
+            ghost_orchestrator.deep_scrub(full_fp)
+        else:
+            self.log("ERROR: Node fingerprint mismatch.", "ERROR")
+
+    def _on_ghost_output(self, data):
+        nick = data.get("nick")
+        output = data.get("output")
+        GLib.idle_add(self.log, f"[{nick}] RECEIVED:\n{output}", "SUCCESS")

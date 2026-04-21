@@ -1,5 +1,5 @@
 """
-Wireless Module — Apex Intelligence Build.
+Wireless Module — Enterprise Intelligence Build.
 Handles Aircrack-ng suite integration, WPA/WPA2 audits, and deauth attacks.
 """
 

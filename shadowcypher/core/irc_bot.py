@@ -88,7 +88,17 @@ class ShadowSentinel:
             self._sov_irc.on_message(self._handle_sov_message)
             self._sov_irc.on_private(lambda n, m, s: self._handle_sov_message(n, self._bot_nick, m, s))
             self._sov_irc.on_join(self._handle_join)
-            threading.Timer(3.0, self._sov_irc.connect).start()
+            
+            def _sov_boot():
+                self._sov_irc.connect()
+                # Autojoin and identify
+                time.sleep(2)
+                if config.get("irc", "sasl_pass", default=""):
+                    self._sov_irc._send_raw(f"PRIVMSG NickServ :IDENTIFY {config.irc.sasl_pass}")
+                self._sov_irc._send_raw(f"JOIN #general")
+                self._sov_irc._send_raw(f"JOIN #intel")
+
+            threading.Thread(target=_sov_boot, daemon=True).start()
 
         self._active = True
 
@@ -587,22 +597,71 @@ def cmd_dice(nick, target, args, reply, admin):
 
 @hook.command("calc")
 def cmd_calc(nick, target, args, reply, admin):
-    """Safe math eval."""
+    """Safe math eval — AST walker, no eval()."""
     if not args:
         return reply("Usage: !calc <expression>")
     import ast
+    import operator
+
+    expr = args.strip()
+    if len(expr) > 200:
+        return reply("Expression too long.")
+
+    _ops = {
+        ast.Add: operator.add, ast.Sub: operator.sub,
+        ast.Mult: operator.mul, ast.Div: operator.truediv,
+        ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod,
+        ast.Pow: operator.pow, ast.USub: operator.neg, ast.UAdd: operator.pos,
+    }
+
+    def _walk(node):
+        if isinstance(node, ast.Expression):
+            return _walk(node.body)
+        if isinstance(node, ast.Constant):
+            if not isinstance(node.value, (int, float)):
+                raise ValueError("non-numeric literal")
+            return node.value
+        if isinstance(node, ast.BinOp) and type(node.op) in _ops:
+            left, right = _walk(node.left), _walk(node.right)
+            if isinstance(node.op, ast.Pow) and (abs(right) > 100 or abs(left) > 1e6):
+                raise ValueError("pow out of bounds")
+            return _ops[type(node.op)](left, right)
+        if isinstance(node, ast.UnaryOp) and type(node.op) in _ops:
+            return _ops[type(node.op)](_walk(node.operand))
+        raise ValueError(f"disallowed node: {type(node).__name__}")
+
     try:
-        # Only allow safe math operations
-        tree = ast.parse(args.strip(), mode='eval')
-        for node in ast.walk(tree):
-            if not isinstance(node, (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Constant,
-                                     ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod,
-                                     ast.FloorDiv, ast.USub, ast.UAdd)):
-                return reply("Only math expressions allowed.")
-        result = eval(compile(tree, '<calc>', 'eval'))
-        reply(f"\x0303[CALC]\x03 {args.strip()} = \x02{result}\x02")
+        tree = ast.parse(expr, mode='eval')
+        result = _walk(tree)
+        reply(f"\x0303[CALC]\x03 {expr} = \x02{result}\x02")
     except Exception as e:
         reply(f"Calc error: {e}")
+
+@hook.command("register")
+def cmd_register(nick, target, args, reply, admin):
+    """Register the bot's nick with NickServ. Usage: !register <password>"""
+    if not admin: return reply("ADMIN_ONLY")
+    if not args: return reply("Usage: !register <password>")
+    reply(f"Registering as {nick}...")
+    sentinel.client._send_raw(f"PRIVMSG NickServ :REGISTER {args} {nick}@shadowcypher.site")
+
+@hook.command("unmask")
+def cmd_unmask(nick, target, args, reply, admin):
+    """Perform a high-fidelity unmasking of a user. Usage: !unmask <target>"""
+    if not args: return reply("Usage: !unmask <target>")
+    who = args.strip()
+    reply(f"\u26a1 INITIATING_UNMASK: Targeting {who} via Sovereign Spectrum...")
+    # Signal the Hub to perform the unmasking
+    bus.publish("module_log", {"module": "bot", "text": f"UNMASK_REQUEST: {who}", "level": "INFO"})
+    # In a real setup, we'd wait for a response or query the forensic registry
+    from shadowcypher.core.forensics import registry
+    threat = registry.get_threat_by_handle(who)
+    if threat:
+        ip = threat.get("hostmask", "HIDDEN")
+        mac = threat.get("hw_mac", "MASKED")
+        reply(f"\U0001f50e UNMASKED [{who}]: IP={ip} | MAC={mac} | STATUS=RECON_COMPLETE")
+    else:
+        reply(f"\u26d4 UNMASK_FAILED: {who} not found in the forensic registry.")
 
 @hook.command("ping")
 def cmd_ping(nick, target, args, reply, admin):

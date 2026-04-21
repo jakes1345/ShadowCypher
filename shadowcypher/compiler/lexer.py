@@ -22,10 +22,11 @@ class ShadowLexer:
     
     KEYWORDS = {
         "SWARM", "STRIKE", "TARGET", "AI", "VAR", "IF", "FOR", "UNSAFE",
-        "U64", "U32", "U8", "VOID", "MAP", "FILTER", "YIELD"
+        "U64", "U32", "U8", "VOID", "MAP", "FILTER", "YIELD",
+        "WHILE", "RETURN", "IMPORT", "EXPORT", "ASYNC", "AWAIT",
     }
     REGISTERS = {"RAX", "RBX", "RCX", "RDX", "RSP", "RBP", "RIP"}
-    OPERATORS = {"=", "->", "|", "+", "-", "*", "/", "&", "!", "=="}
+    OPERATORS = {"=", "->", "|", "+", "-", "*", "/", "&", "!", "==", "!=", ">=", "<="}
     
     def tokenize(self, code: str) -> List[Token]:
         tokens = []

@@ -26,7 +26,9 @@ class Logger:
         
         # 1. Apex Standard Logger (Human Readable)
         self._std_logger = logging.getLogger("ShadowCypher")
-        self._std_logger.setLevel(logging.INFO)
+        import os
+        lvl_name = os.getenv("SHADOW_LOG_LEVEL", "INFO").upper()
+        self._std_logger.setLevel(getattr(logging, lvl_name, logging.INFO))
         # Use RotatingFileHandler (Max 10MB per file, 5 backups)
         handler = RotatingFileHandler(self.log_file, maxBytes=10*1024*1024, backupCount=5)
         formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s')

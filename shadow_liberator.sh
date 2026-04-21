@@ -1,10 +1,10 @@
 #!/bin/bash
-# SHADOW_LIBERATOR v1.0 — Freeing the Citadel from Verizon Moderation
+# SHADOW_LIBERATOR v1.0 — Freeing the Citadel from ISP_INFRASTRUCTURE Moderation
 # Hardens the network stack and mask's the signal from ISP telemetry.
 
 echo -e "\033[0;35m[!] INITIATING OPERATION: BROKEN GLASS...\033[0m"
 
-# ── 1. DNS SOVEREIGNTY (Bypass Verizon DNS Hijacking) ────────────
+# ── 1. DNS SOVEREIGNTY (Bypass ISP_INFRASTRUCTURE DNS Hishadow_operatoring) ────────────
 echo "[*] DECOUPLING DNS FROM ISP: Forcing Cloudflare 1.1.1.1..."
 sudo mkdir -p /etc/resolvconf/resolv.conf.d 2>/dev/null
 echo "nameserver 1.1.1.1" | sudo tee /etc/resolv.conf > /dev/null
@@ -26,7 +26,7 @@ fi
 sudo systemctl enable tor --now
 echo -e "\033[0;32m[OK] GHOST_GATEWAY_ACTIVE: SOCKS5 ready on 127.0.0.1:9050\033[0m"
 
-# ── 4. VERIZON_SHIELD ───────────────────────────────────────────
-echo "[*] HARDENING LOCAL STACK: Dropping Verizon Probes..."
-sudo ufw deny from 192.168.1.1 to any 2>/dev/null # Example firewall hardening
+# ── 4. ISP_INFRASTRUCTURE_SHIELD ───────────────────────────────────────────
+echo "[*] HARDENING LOCAL STACK: Dropping ISP_INFRASTRUCTURE Probes..."
+sudo ufw deny from GATEWAY_IP to any 2>/dev/null # Example firewall hardening
 echo -e "\033[0;32m[!] UNCONTROLLED STATUS: ACHIEVED\033[0m"

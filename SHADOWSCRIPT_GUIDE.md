@@ -7,7 +7,7 @@ Welcome to the architecture of the First Sovereign Century. ShadowScript is desi
 ### 1. Variables & Targets
 ShadowScript uses smart-typing. It knows what a target is without you defining it.
 ```shadowscript
-var target = "192.168.1.1"
+var target = "GATEWAY_IP"
 var cloud_nexus = "shadow-hub.onion"
 ```
 

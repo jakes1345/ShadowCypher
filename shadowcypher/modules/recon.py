@@ -1,5 +1,5 @@
 """
-Recon Module — Apex Sovereign Build.
+Recon Module — Enterprise Sovereign Build.
 High-fidelity cross-platform discovery and service mapping.
 """
 

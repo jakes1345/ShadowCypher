@@ -152,7 +152,7 @@ class AIProvider:
         elif self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         if self.id == "openrouter":
-            headers["HTTP-Referer"] = "https://github.com/jakes1345/ShadowCypher"
+            headers["HTTP-Referer"] = "https://github.com/shadow_admin1345/ShadowCypher"
             headers["X-Title"] = "ShadowCypher"
         return headers
 

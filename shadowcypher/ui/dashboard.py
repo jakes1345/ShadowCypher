@@ -11,9 +11,11 @@ import math
 import psutil
 import time
 import shutil
+from shadowcypher.ai.sisyphus import sisyphus
 
 from shadowcypher.core.hub import hub
 from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
 from shadowcypher.ui.components import TacticalTerminal
 
 
@@ -45,77 +47,51 @@ class ArcGauge(Gtk.DrawingArea):
         cy = self._size / 2 + 5
         radius = (self._size / 2) - 14
 
-        # Background
-        cr.set_source_rgba(0.02, 0.04, 0.06, 0)
-        cr.paint()
+        cr.set_antialias(cairo.ANTIALIAS_BEST)
 
-        # Track arc (270 degrees, gap at bottom)
-        start_angle = 0.75 * math.pi  # 135 degrees
-        end_angle = 2.25 * math.pi    # 405 degrees
-        arc_range = end_angle - start_angle
-
-        # Background track
+        # 1. Background Ring
         cr.set_line_width(8)
-        cr.set_source_rgba(0.15, 0.2, 0.25, 0.5)
-        cr.arc(cx, cy, radius, start_angle, end_angle)
+        cr.set_source_rgba(0.08, 0.12, 0.2, 0.6)
+        cr.arc(cx, cy, radius, 0.75 * math.pi, 2.25 * math.pi)
         cr.stroke()
 
-        # Value arc
+        # 2. Progress Arc
         if self._value > 0:
-            val_angle = start_angle + (self._value / 100.0) * arc_range
+            cr.set_line_width(10)
             r, g, b = self._accent
-
-            # Color shift based on value (green -> yellow -> red)
-            if self._value > 85:
-                r, g, b = 0.96, 0.25, 0.37  # Rose
-            elif self._value > 65:
-                r, g, b = 0.96, 0.62, 0.04  # Amber
-
-            # Gradient glow effect
-            cr.set_line_width(8)
+            # Color escalation
+            if self._value > 85: r, g, b = 0.96, 0.25, 0.37
+            elif self._value > 65: r, g, b = 0.96, 0.62, 0.04
+            
             cr.set_source_rgba(r, g, b, 0.9)
-            cr.arc(cx, cy, radius, start_angle, val_angle)
+            angle = 0.75 * math.pi + (self._value / 100.0) * (1.5 * math.pi)
+            cr.arc(cx, cy, radius, 0.75 * math.pi, angle)
             cr.stroke()
 
-            # Outer glow
-            cr.set_line_width(12)
-            cr.set_source_rgba(r, g, b, 0.12)
-            cr.arc(cx, cy, radius, start_angle, val_angle)
+            # Glow
+            cr.set_line_width(2)
+            cr.set_source_rgba(r, g, b, 0.3)
+            cr.arc(cx, cy, radius + 4, 0.75 * math.pi, angle)
             cr.stroke()
 
-        # Tick marks
-        cr.set_line_width(1)
-        for i in range(0, 101, 10):
-            angle = start_angle + (i / 100.0) * arc_range
-            inner = radius - 12
-            outer = radius - 6
-            cr.set_source_rgba(0.4, 0.5, 0.6, 0.4)
-            cr.move_to(cx + inner * math.cos(angle), cy + inner * math.sin(angle))
-            cr.line_to(cx + outer * math.cos(angle), cy + outer * math.sin(angle))
-            cr.stroke()
-
-        # Center value text
-        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        cr.set_font_size(28)
+        # 3. Text & Labels
+        cr.select_font_face("Inter", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        cr.set_font_size(24)
         val_text = f"{self._value:.0f}{self._unit}"
         extents = cr.text_extents(val_text)
-        cr.set_source_rgba(0.94, 0.97, 0.97, 1.0)
+        cr.set_source_rgba(1, 1, 1, 1)
         cr.move_to(cx - extents.width / 2, cy + extents.height / 2 - 2)
         cr.show_text(val_text)
 
-        # Title above gauge
         cr.set_font_size(10)
         cr.set_source_rgba(0.58, 0.64, 0.7, 1.0)
         title_ext = cr.text_extents(self._title)
-        cr.move_to(cx - title_ext.width / 2, 14)
+        cr.move_to(cx - title_ext.width / 2, 12)
         cr.show_text(self._title)
 
-        # Subtitle below gauge
         if self._subtitle:
-            cr.set_font_size(10)
-            cr.set_source_rgba(0.45, 0.52, 0.58, 0.8)
             sub_ext = cr.text_extents(self._subtitle)
-            cr.move_to(cx - sub_ext.width / 2, self._size + 20)
+            cr.move_to(cx - sub_ext.width / 2, self._size + 24)
             cr.show_text(self._subtitle)
 
 
@@ -151,17 +127,17 @@ class DashboardPage(Gtk.Box):
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroll.set_propagate_natural_width(False)
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-        content.set_margin_top(20)
-        content.set_margin_bottom(20)
-        content.set_margin_start(24)
-        content.set_margin_end(24)
+        content.set_margin_top(12)
+        content.set_margin_bottom(12)
+        content.set_margin_start(20)
+        content.set_margin_end(20)
 
         # ── Header ──
         header = Gtk.Box(spacing=12)
         title_lbl = Gtk.Label(xalign=0)
         title_lbl.set_markup(
             "<span font_weight='900' size='large' color='#00d4ff'>"
-            "OPERATIONAL OVERVIEW</span>"
+            "SHADOW_NODE_HUD</span>"
         )
         header.pack_start(title_lbl, False, False, 0)
 
@@ -176,33 +152,43 @@ class DashboardPage(Gtk.Box):
         gauge_row = Gtk.Box(spacing=20, homogeneous=False)
 
         # Gauges panel (left)
-        gauges_box = Gtk.Box(spacing=15, homogeneous=True)
-        gauges_box.get_style_context().add_class("citadel-pulse") # Use pulse styling for consistency
+        gauges_box = Gtk.Box(spacing=15, homogeneous=False)
+        gauges_box.get_style_context().add_class("citadel-pulse")
 
-        self.gauge_cpu = ArcGauge("CPU LOAD", "%", (0, 1.0, 0.61), 180)
-        self.gauge_ram = ArcGauge("MEMORY", "%", (0.6, 0.4, 1.0), 180)
-        self.gauge_disk = ArcGauge("DISK", "%", (1.0, 0.6, 0.1), 180)
+        self.gauge_cpu = ArcGauge("CPU LOAD", "%", (0, 1.0, 0.61), 120)
+        self.gauge_ram = ArcGauge("MEMORY", "%", (0.6, 0.4, 1.0), 120)
+        self.gauge_disk = ArcGauge("DISK", "%", (1.0, 0.6, 0.1), 120)
 
-        gauges_box.pack_start(self.gauge_cpu, True, True, 10)
-        gauges_box.pack_start(self.gauge_ram, True, True, 10)
-        gauges_box.pack_start(self.gauge_disk, True, True, 10)
+        for g in [self.gauge_cpu, self.gauge_ram, self.gauge_disk]:
+            gauges_box.pack_start(g, True, True, 5)
         gauge_row.pack_start(gauges_box, True, True, 0)
 
         # Stats panel (right)
-        stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        stats_box.set_size_request(240, -1)
+        stats_box = Gtk.Grid()
+        stats_box.set_column_spacing(24)
+        stats_box.set_row_spacing(10)
+        stats_box.set_valign(Gtk.Align.START)
 
         self.stat_ai = MiniStat("AI_CORE", "NOMINAL", "#8b5cf6")
         self.stat_missions = MiniStat("ACTIVE_MISSIONS", "0", "#f43f5e")
-        self.stat_pulse = MiniStat("SPECTRAL_PULSE", "NOMINAL", "#00ff9d")
         self.stat_uptime = MiniStat("MISSION_UPTIME", "0:00:00", "#38bdf8")
-        self.stat_net = MiniStat("NET_IO_PRESSURE", "0 B/s", "#64748b")
         self.stat_stealth = MiniStat("STEALTH_SIGNATURE", "4/5 ACTIVE", "#fbbf24")
+        self.stat_threats = MiniStat("THREAT_INTEL", "0 HITS", "#f97316")
+        self.stat_integrity = MiniStat("CORE_INTEGRITY", "VERIFIED", "#10b981")
+        self.stat_relay = MiniStat("SHADOW_PLANE", "SECURE", "#0ea5e9")
+        self.stat_net = MiniStat("GHOST_IO_SPEED", "0 B/s", "#64748b")
+        self.stat_pulse = MiniStat("ENTROPY_SIGNATURE", "NOMINAL", "#00ff9d")
 
-        for stat in [self.stat_ai, self.stat_missions, self.stat_pulse, self.stat_uptime, self.stat_net, self.stat_stealth]:
-            stats_box.pack_start(stat, False, False, 0)
+        stats_list = [
+            self.stat_ai, self.stat_missions, self.stat_uptime,
+            self.stat_stealth, self.stat_threats, self.stat_integrity,
+            self.stat_relay, self.stat_net, self.stat_pulse
+        ]
         
-        gauge_row.pack_start(stats_box, False, False, 0)
+        for i, stat in enumerate(stats_list):
+            stats_box.attach(stat, i % 3, i // 3, 1, 1)
+        
+        gauge_row.pack_start(stats_box, True, True, 10)
         content.pack_start(gauge_row, False, False, 0)
 
         # ── Arsenal Grid ──
@@ -236,21 +222,19 @@ class DashboardPage(Gtk.Box):
             ("responder", "Responder"),
         ]
 
+        self._arsenal_rows = {}
         for cmd, label in tools:
-            found = shutil.which(cmd) is not None
             tb = Gtk.Box(spacing=8)
             tb.get_style_context().add_class("card")
             dot = Gtk.Label()
-            dot.set_markup(
-                f"<span color='{'#10b981' if found else '#475569'}'>●</span>"
-            )
+            dot.set_markup("<span color='#475569'>●</span>") # Default to dim/searching
             tb.pack_start(dot, False, False, 4)
             nm = Gtk.Label(label=label, xalign=0)
             nm.set_ellipsize(Pango.EllipsizeMode.END)
-            if not found:
-                nm.get_style_context().add_class("dim-label")
+            nm.get_style_context().add_class("dim-label")
             tb.pack_start(nm, True, True, 0)
             arsenal_flow.add(tb)
+            self._arsenal_rows[cmd] = (dot, nm)
 
         content.pack_start(arsenal_flow, False, False, 0)
 
@@ -262,7 +246,7 @@ class DashboardPage(Gtk.Box):
         )
         content.pack_start(feed_lbl, False, False, 2)
 
-        self.terminal = TacticalTerminal(height=200)
+        self.terminal = TacticalTerminal(height=160)
         content.pack_start(self.terminal, True, True, 0)
 
         scroll.add(content)
@@ -273,6 +257,10 @@ class DashboardPage(Gtk.Box):
         self._last_t = time.time()
         GLib.timeout_add(1500, self._tick)
         GLib.idle_add(self._init_once)
+        
+        # Async Arsenal Audit (Prevents UI hang on constructor)
+        import threading
+        threading.Thread(target=self._async_arsenal_audit, daemon=True).start()
 
         bus.subscribe("mission_update",
                       lambda m: GLib.idle_add(
@@ -285,6 +273,15 @@ class DashboardPage(Gtk.Box):
 
         self.terminal.log("ShadowCypher operational. All systems ready.", "SYSTEM")
         self.show_all()
+
+    def _async_arsenal_audit(self):
+        """Checks for tool availability without blocking the main thread."""
+        for cmd, (dot, nm) in self._arsenal_rows.items():
+            found = shutil.which(cmd) is not None
+            if found:
+                GLib.idle_add(dot.set_markup, "<span color='#10b981'>●</span>")
+                GLib.idle_add(nm.get_style_context().remove_class, "dim-label")
+            time.sleep(0.01) # Tiny yield to keep thread pool breathing
 
     def _init_once(self):
         """One-shot init for AI + stealth."""
@@ -309,47 +306,39 @@ class DashboardPage(Gtk.Box):
         return False
 
     def _tick(self):
-        """Live data refresh."""
+        """Live data refresh for all tactical and security metrics."""
+        if not self.get_mapped():
+            return True
         try:
-            # Gauges
+            # 1. System Gauges
             cpu = psutil.cpu_percent()
             mem = psutil.virtual_memory()
             disk = psutil.disk_usage("/")
 
-            GLib.idle_add(self.gauge_cpu.set_value, cpu,
-                          f"{psutil.cpu_count()} cores · {psutil.cpu_freq().current:.0f}MHz"
-                          if psutil.cpu_freq() else f"{psutil.cpu_count()} cores")
-            GLib.idle_add(self.gauge_ram.set_value, mem.percent,
-                          f"{mem.used / (1024**3):.1f} / {mem.total / (1024**3):.1f} GB")
-            GLib.idle_add(self.gauge_disk.set_value, disk.percent,
-                          f"{disk.free / (1024**3):.0f} GB free")
+            GLib.idle_add(self.gauge_cpu.set_value, cpu)
+            GLib.idle_add(self.gauge_ram.set_value, mem.percent)
+            GLib.idle_add(self.gauge_disk.set_value, disk.percent)
 
-            # Network rate
-            now = time.time()
-            net = psutil.net_io_counters()
-            dt = now - self._last_t
-            if dt > 0 and self._last_net > 0:
-                rate = (net.bytes_sent - self._last_net) / dt
-                if rate > 1048576:
-                    self.stat_net.set_value(f"{rate/1048576:.1f} MB/s")
-                elif rate > 1024:
-                    self.stat_net.set_value(f"{rate/1024:.1f} KB/s")
-                else:
-                    self.stat_net.set_value(f"{rate:.0f} B/s")
-            self._last_net = net.bytes_sent
-            self._last_t = now
+            # 2. Mission & System Stats
+            summary = hub.get_tactical_summary()
+            
+            # Map stats safely
+            stat_map = {
+                self.stat_missions: str(summary.get("active_missions", 0)),
+                self.stat_uptime: summary.get("uptime", "0:00:00"),
+                self.stat_integrity: "VERIFIED" if sisyphus.is_stable else "TAMPERED",
+                self.stat_threats: f"{summary.get('threat_hits', 0)} HITS",
+                self.stat_stealth: "ACTIVE" if hub.is_stealth_ready() else "EXPOSED"
+            }
+            
+            for widget, val in stat_map.items():
+                widget.set_value(val)
 
-            # Hub
-            s = hub.get_tactical_summary()
-            self.stat_missions.set_value(str(s["active_missions"]))
-            self.stat_uptime.set_value(s["uptime"])
+            # Signal Bridge (Go Relay)
+            relay_lbl = "SECURE" if (hasattr(hub, 'relay_bridge') and hub.relay_bridge.connected) else "OFFLINE"
+            self.stat_relay.set_value(relay_lbl)
 
-            # Pulse
-            from shadowcypher.core.pulse import pulse
-            score = pulse.last_anomaly_score
-            pulse_lbl = "NOMINAL" if score < 2.5 else f"ANOMALY ({score:.1f})"
-            self.stat_pulse.set_value(pulse_lbl)
-
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("ui", f"DASHBOARD_TICK_FAILURE: {e}")
+            
         return True

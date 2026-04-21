@@ -59,7 +59,7 @@ def verify_admin(irc_nick: Optional[str] = None) -> bool:
     - Local (irc_nick=None): Checks machine handle + crypto key proof.
       Used by the UI to gate admin features.
     - IRC (irc_nick provided): Checks the IRC nick against the admin_list.
-      Only authorized nicks (e.g. 'jack', 'ShadowSentinel') get admin.
+      Only authorized nicks (e.g. 'shadow_operator', 'ShadowSentinel') get admin.
     """
     from shadowcypher.core.config import config
     
@@ -164,19 +164,9 @@ class Identity:
 
     @property
     def handle(self) -> str:
-        # Load custom handle from config (overrides for both admin and op)
         custom = config.get("identity", "handle", default="")
         if custom:
             return custom
-        
-        if self._is_admin:
-            return _ADMIN_HANDLE
-        return "SC_OPERATOR"
-        # Load custom handle from config (overrides for both admin and op)
-        custom = config.get("identity", "handle", default="")
-        if custom:
-            return custom
-        
         if self._is_admin:
             return _ADMIN_HANDLE
         return "SC_OPERATOR"

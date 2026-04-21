@@ -140,6 +140,12 @@ class StealthHoneypot:
 
 class IdentityHardener:
     """Manages tactical legitimacy for offensive infrastructure."""
+    
+    @property
+    def is_secure(self) -> bool:
+        """Verifies machine handle and cryptographic alignment."""
+        from shadowcypher.core.identity import identity
+        return identity.is_admin
 
     def execute_flash_wipe(self):
         """Emergency purge of session data and ephemeral keys."""

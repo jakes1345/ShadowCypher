@@ -11,4 +11,4 @@ Modules:
 """
 
 __version__ = "3.0.0"
-__author__ = "Jack"
+__author__ = "shadow_operator"

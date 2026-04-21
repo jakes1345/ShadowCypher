@@ -26,6 +26,7 @@ class WebAttacksPage(BasePage):
         notebook = Gtk.Notebook()
         notebook.append_page(self._build_nuclei_tab(), Gtk.Label(label="Nuclei"))
         notebook.append_page(self._build_ffuf_tab(), Gtk.Label(label="Ffuf Fuzzing"))
+        notebook.append_page(self._build_mhddos_tab(), Gtk.Label(label="MHDDoS (Elite)"))
         self.workspace.pack_start(notebook, False, False, 0)
 
     def _build_nuclei_tab(self):
@@ -107,6 +108,70 @@ class WebAttacksPage(BasePage):
         box.pack_start(btn_row, False, False, 0)
 
         return box
+
+    def _build_mhddos_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(12)
+        box.set_margin_bottom(12)
+
+        row = Gtk.Box(spacing=8)
+        row.pack_start(Gtk.Label(label="Target:"), False, False, 0)
+        self.mh_target = Gtk.Entry()
+        self.mh_target.set_placeholder_text("https://target.com OR ip:port")
+        self.mh_target.set_hexpand(True)
+        row.pack_start(self.mh_target, True, True, 0)
+        box.pack_start(row, False, False, 0)
+
+        row2 = Gtk.Box(spacing=8)
+        row2.pack_start(Gtk.Label(label="Method:"), False, False, 0)
+        self.mh_method = Gtk.ComboBoxText()
+        for m in ["GET", "POST", "CFB", "CFBUAM", "OVH", "RHEX", "STOMP", "TCP", "UDP", "SYN"]:
+            self.mh_method.append_text(m)
+        self.mh_method.set_active(0)
+        row2.pack_start(self.mh_method, False, False, 0)
+
+        row2.pack_start(Gtk.Label(label="Threads:"), False, False, 0)
+        self.mh_threads = Gtk.Entry()
+        self.mh_threads.set_text("100")
+        self.mh_threads.set_width_chars(6)
+        row2.pack_start(self.mh_threads, False, False, 0)
+
+        row2.pack_start(Gtk.Label(label="Duration (s):"), False, False, 0)
+        self.mh_duration = Gtk.Entry()
+        self.mh_duration.set_text("60")
+        self.mh_duration.set_width_chars(6)
+        row2.pack_start(self.mh_duration, False, False, 0)
+        box.pack_start(row2, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=8)
+        btn_row.pack_start(
+            self.make_action_btn("\U0001f525 Ignite MHDDoS", self._on_mhddos, "danger-btn"),
+            False,
+            False,
+            0,
+        )
+        box.pack_start(btn_row, False, False, 0)
+
+        return box
+
+    def _on_mhddos(self, btn):
+        target = self.mh_target.get_text().strip()
+        method = self.mh_method.get_active_text()
+        threads = int(self.mh_threads.get_text().strip() or "100")
+        duration = int(self.mh_duration.get_text().strip() or "60")
+        
+        self.clear_output(f"IGNITING_MHDDoS_STRIKE: {target} [{method}]\n\n")
+        self.run_job(
+            WebAttacks.mhddos_strike(
+                target,
+                method=method,
+                threads=threads,
+                duration=duration,
+                on_output=self.on_output
+            )
+        )
 
     def _on_nuclei(self, btn):
         target = self.nuclei_target.get_text().strip()

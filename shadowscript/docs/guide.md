@@ -7,7 +7,7 @@ ShadowScript is an Omni-Paradigm Programming Language designed for **Sovereign T
 ### `TARGET(addr)`
 Locks the Mission Kernel onto a specific coordinate (IP/Domain).
 ```shadow
-TARGET("192.168.1.1")
+TARGET("GATEWAY_IP")
 ```
 
 ### `SWARM()`
@@ -34,7 +34,7 @@ Executes a native Linux/Windows/macOS system call via the Apex Platform Engine.
 ## 4. GHOST-SIGNAL PROTOCOLS (Tier-5 Invisibility)
 
 ### Phantom-MAC (Hardware Masking)
-Always run `scripts/phantom_mac.sh` before connecting. This randomizes your NIC identifier, making your device appear as a new, anonymous piece of hardware to the Verizon gateway.
+Always run `scripts/phantom_mac.sh` before connecting. This randomizes your NIC identifier, making your device appear as a new, anonymous piece of hardware to the ISP_INFRASTRUCTURE gateway.
 
 ### DNS Blackout (Spectrum Isolation)
 Run `scripts/dns_blackout.sh` to kill Port 53 clear-text leaks. All queries move through ShadowCypher's encrypted tunnel, invisible to ISP-level Deep Packet Inspection.
@@ -47,7 +47,7 @@ The Shadow-Relay natively injects **Chaff** (random noise packets) and **Jitter*
 To be truly untraceable by State-level actors (CIA/NSA):
 1.  **Device Correlation**: Disable all Bluetooth and Wi-Fi on your mobile devices within a 50ft radius of your tactical station. 
 2.  **Faraday Isolation**: Keep mobile devices in a physical Faraday bag during high-stakes missions.
-3.  **SON Disablement**: Ensure 'Self-Organizing Network' is **OFF** in the Verizon (192.168.1.1) Advanced Settings to prevent the router from "steering" your device onto observable frequencies.
+3.  **SON Disablement**: Ensure 'Self-Organizing Network' is **OFF** in the ISP_INFRASTRUCTURE (GATEWAY_IP) Advanced Settings to prevent the router from "steering" your device onto observable frequencies.
 
 **THE CITADEL HAS NO DOORS. ONLY SHADOWS.**
 

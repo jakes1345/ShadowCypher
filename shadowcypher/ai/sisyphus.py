@@ -55,8 +55,11 @@ class Sisyphus:
 
     def _init_integrity_baseline(self):
         """Build initial baseline hashes for core framework files. 
-        Re-baselined for APEX v2.2.0 Hardening.
+        Supports static hash persistence to avoid developer false-positives.
         """
+        import json
+        self.integrity_file = os.path.join(str(self.project_root), "shadowcypher", "core", "integrity.json")
+        
         core_files = [
             "shadowcypher/app.py",
             "shadowcypher/core/hub.py",
@@ -65,12 +68,36 @@ class Sisyphus:
             "shadowcypher/core/irc_bot.py",
             "shadowcypher/core/forensics.py"
         ]
+
+        # Load static hashes if they exist
+        static_hashes = {}
+        if os.path.exists(self.integrity_file):
+            try:
+                with open(self.integrity_file, "r") as f:
+                    static_hashes = json.load(f)
+                logger.info("sisyphus", "INTEGRITY_BASELINE: Loaded static hashes from integrity.json")
+            except Exception as e:
+                logger.warning("sisyphus", f"INTEGRITY_BASELINE: Failed to load static hashes: {e}")
+
         for rel_path in core_files:
             abs_path = os.path.join(str(self.project_root), rel_path)
             if os.path.exists(abs_path):
-                # We take the CURRENT state as the new GOLDEN baseline
-                self._integrity_map[rel_path] = self._get_file_hash(abs_path)
-        logger.info("sisyphus", "INTEGRITY_BASELINE: RE-SYNCHRONIZED [APEX_UPGRADE_ACCEPTED]")
+                if rel_path in static_hashes:
+                    self._integrity_map[rel_path] = static_hashes[rel_path]
+                else:
+                    # Capture current state if not in static map
+                    current_hash = self._get_file_hash(abs_path)
+                    self._integrity_map[rel_path] = current_hash
+                    static_hashes[rel_path] = current_hash
+
+        # Persist the baseline if we captured new files
+        if not os.path.exists(self.integrity_file):
+            try:
+                with open(self.integrity_file, "w") as f:
+                    json.dump(static_hashes, f, indent=4)
+                logger.info("sisyphus", "INTEGRITY_BASELINE: Created initial static baseline.")
+            except Exception:
+                pass
 
     def _get_file_hash(self, path: str) -> str:
         """High-performance SHA256 hashing for file integrity."""
@@ -104,6 +131,7 @@ class Sisyphus:
         while self._active:
             try:
                 report = self._execute_audit()
+                self._last_report = report # CACHE THE REPORT
                 self._analyze_and_report(report)
                 time.sleep(self.scan_interval)
             except Exception as e:
@@ -119,8 +147,8 @@ class Sisyphus:
         }
 
     def _check_vitals(self) -> Dict[str, float]:
-        """Collect high-fidelity system metrics."""
-        cpu = psutil.cpu_percent(interval=1)
+        """Collect high-fidelity system metrics (Non-blocking)."""
+        cpu = psutil.cpu_percent(interval=None) # NON-BLOCKING
         ram = psutil.virtual_memory().percent
         disk = psutil.disk_usage(str(self.project_root)).percent
         return {"cpu": cpu, "ram": ram, "disk": disk}
@@ -159,22 +187,27 @@ class Sisyphus:
         return vulns
 
     def _check_framework_health(self) -> Dict[str, List[str]]:
-        """Deep syntax and structural validation of the codebase."""
+        """Differential syntax validation—only audits files that have mutated."""
         results = {"syntax": [], "orphans": []}
         src_dir = os.path.join(str(self.project_root), "shadowcypher")
         
+        if not hasattr(self, "_mtime_cache"): self._mtime_cache = {}
+
         for root, _, files in os.walk(src_dir):
             if "__pycache__" in root or "tests" in root: continue
             for f in files:
                 if not f.endswith(".py"): continue
                 path = os.path.join(root, f)
                 try:
+                    mtime = os.path.getmtime(path)
+                    if self._mtime_cache.get(path) == mtime: continue
+                    
+                    self._mtime_cache[path] = mtime
                     with open(path, "r", encoding="utf-8") as fh:
                         compile(fh.read(), path, "exec")
                 except SyntaxError as e:
                     results["syntax"].append(f"{os.path.basename(f)}:L{e.lineno}")
-                except Exception:
-                    pass
+                except Exception: pass
         return results
 
     def _analyze_and_report(self, report: Dict[str, Any]):
@@ -230,8 +263,49 @@ class Sisyphus:
         return summary
 
     def get_quick_report(self) -> Dict[str, Any]:
-        """Immediate on-demand audit for the UI Dashboard."""
-        return self._execute_audit()
+        """Immediate access to the LATEST cached audit report."""
+        if not self._last_report:
+            return self._execute_audit()
+        return self._last_report
+
+    @property
+    def is_stable(self) -> bool:
+        """Instant stability indicator using cached state."""
+        if not self._last_report:
+            return True
+        i = self._last_report.get("integrity", [])
+        f = self._last_report.get("framework", {}).get("syntax", [])
+        return len(i) == 0 and len(f) == 0
+
+    def generate_baseline(self):
+        """Forces a recalculation and persistence of the integrity baseline."""
+        logger.info("sisyphus", "REGENERATING_BASELINE: Manual override requested.")
+        new_hashes = {}
+        core_files = [
+            "shadowcypher/app.py",
+            "shadowcypher/core/hub.py",
+            "shadowcypher/core/bus.py",
+            "shadowcypher/ai/orchestrator.py",
+            "shadowcypher/core/irc_bot.py",
+            "shadowcypher/core/forensics.py"
+        ]
+        for rel_path in core_files:
+            abs_path = os.path.join(str(self.project_root), rel_path)
+            if os.path.exists(abs_path):
+                h = self._get_file_hash(abs_path)
+                new_hashes[rel_path] = h
+                self._integrity_map[rel_path] = h
+        
+        try:
+            import json
+            with open(self.integrity_file, "w") as f:
+                json.dump(new_hashes, f, indent=4)
+            logger.info("sisyphus", "BASELINE_REGULARIZED: Static hashes updated.")
+        except Exception as e:
+            logger.error("sisyphus", f"BASELINE_PERSIST_FAILED: {e}")
+        
+        # Trigger an immediate audit to clear cached 'TAMPERED' status
+        self._last_report = self._execute_audit()
 
 # Singleton Sentinel Instance
 sisyphus = Sisyphus()

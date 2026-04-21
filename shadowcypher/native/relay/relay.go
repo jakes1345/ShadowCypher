@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"sync"
@@ -14,17 +15,25 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			return false
+		}
+		return host == "127.0.0.1" || host == "::1"
+	},
 }
 
 type Message struct {
-	Type    string   `json:"type"`
-	Nick    string   `json:"nick,omitempty"`
-	Channel string   `json:"channel,omitempty"`
-	Text    string   `json:"text,omitempty"`
-	Target  string   `json:"target,omitempty"`
-	Peers   []string `json:"peers,omitempty"`
-	MissionID string `json:"mission_id,omitempty"`
+	Type      string   `json:"type"`
+	Nick      string   `json:"nick,omitempty"`
+	Channel   string   `json:"channel,omitempty"`
+	Text      string   `json:"text,omitempty"`
+	Target    string   `json:"target,omitempty"`
+	Peers     []string `json:"peers,omitempty"`
+	PeerCount int      `json:"peer_count,omitempty"`
+	MissionID string   `json:"mission_id,omitempty"`
+	Auth      string   `json:"auth_token,omitempty"`
 }
 
 type RelayStatus struct {
@@ -43,6 +52,7 @@ type RelayServer struct {
 	broadcast  chan Message
 	beaconURL  string
 	shadowID   string
+	authToken  string // The "Sovereign Key"
 	startTime  time.Time
 }
 
@@ -50,6 +60,14 @@ func (s *RelayServer) GenerateShadowID() {
 	b := make([]byte, 8)
 	rand.Read(b)
 	s.shadowID = hex.EncodeToString(b)
+	
+	// Generate a unique session token
+	t := make([]byte, 16)
+	rand.Read(t)
+	s.authToken = hex.EncodeToString(t)
+	
+	// Save token to temporary file for Python to read (Citadel Handshake)
+	os.WriteFile(".relay_token", []byte(s.authToken), 0600)
 }
 
 func NewRelayServer(beacon string) *RelayServer {
@@ -62,6 +80,7 @@ func NewRelayServer(beacon string) *RelayServer {
 	}
 	s.GenerateShadowID()
 	log.Printf("\u26a1 ABSOLUT_GHOST: Transient Identity Initialized [%s]", s.shadowID)
+	log.Printf("\u1f512 SOVEREIGN_KEY_GENERATED: citadel-to-relay handshake ready.")
 	return s
 }
 
@@ -82,7 +101,6 @@ func (s *RelayServer) gossip() {
 		if len(activePeers) > 0 {
 			msg := Message{Type: "gossip", Peers: activePeers}
 			s.broadcast <- msg
-			log.Printf("[SWARM] Gossiping %d peers to local clients", len(activePeers))
 		}
 	}
 }
@@ -90,6 +108,12 @@ func (s *RelayServer) gossip() {
 // ── Admin API: Telemetry ────────────────────────────────────────
 
 func (s *RelayServer) handleStatus(w http.ResponseWriter, r *http.Request) {
+	host, _, _ := net.SplitHostPort(r.RemoteAddr)
+	if host != "127.0.0.1" && host != "::1" {
+		http.Error(w, "SOVEREIGN_REJECTION", 403)
+		return
+	}
+
 	s.peersMux.Lock()
 	activePeers := make([]string, 0, len(s.peers))
 	for p := range s.peers {
@@ -123,9 +147,22 @@ func (s *RelayServer) handleWS(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	ch := make(chan Message)
+	
+	// APEX_HARDENING: Initial Handshake
+	_, msgBytes, err := conn.ReadMessage()
+	if err != nil { return }
+	
+	var authMsg Message
+	if err := json.Unmarshal(msgBytes, &authMsg); err != nil || authMsg.Auth != s.authToken {
+		log.Printf("[REJECT] UNAUTHORIZED_CONNECTION_ATTEMPT: IP %s", r.RemoteAddr)
+		return
+	}
+
 	s.clientsMux.Lock()
-	s.clients[ch] = "anonymous"
+	s.clients[ch] = "authenticated_citadel"
 	s.clientsMux.Unlock()
+
+	log.Printf("[AUTH] CITADEL_LINKED: Secure signal bridge established.")
 
 	defer func() {
 		s.clientsMux.Lock()
@@ -172,7 +209,6 @@ func (s *RelayServer) handleTitanFrame(data []byte) {
 	switch opCode {
 	case 0xA1: // AI_DELEGATION
 		log.Printf("[TITAN] INGESTED: Autonomous Intelligence Link (MSN:%d)", missionID)
-		// Route to OpenControl Gateway if target specified in next bytes
 	case 0xB2: // SWARM_SYNC
 		log.Printf("[TITAN] INGESTED: High-Velocity Swarm Discovery (MSN:%d)", missionID)
 	case 0xC3: // MEM_STRIKE
@@ -217,10 +253,10 @@ func (s *RelayServer) pulse() {
 		s.peersMux.Unlock()
 
 		msg := Message{
-			Type: "status",
-			Text: s.shadowID,
-			Peers: []string{s.startTime.Format(time.RFC3339)}, // Hack to send uptime via existing struct
-			Target: string(rune(count)), // Sending count as char to save bytes
+			Type:      "status",
+			Text:      s.shadowID,
+			PeerCount: count,
+			Peers:     []string{s.startTime.Format(time.RFC3339)},
 		}
 		s.broadcast <- msg
 	}
@@ -240,8 +276,8 @@ func main() {
 	http.HandleFunc("/ws", server.handleWS)
 	http.HandleFunc("/api/status", server.handleStatus)
 
-	log.Printf("\u26a1 SWARM_BRIDGE_ACTIVE: Frequency :%s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	log.Printf("\u26a1 SWARM_BRIDGE_ACTIVE: Secure Signal Plane :%s", port)
+	if err := http.ListenAndServe("127.0.0.1:"+port, nil); err != nil {
 		log.Fatalf("NATIVE_FATAL: %v", err)
 	}
 }

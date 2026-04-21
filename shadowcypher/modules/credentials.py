@@ -1,5 +1,5 @@
 """
-Credentials Module — Apex Intelligence Build.
+Credentials Module — Enterprise Intelligence Build.
 Handles brute-force operations (hydra), hash cracking (hashcat/john),
 hash identification, and macOS Keychain auditing.
 """

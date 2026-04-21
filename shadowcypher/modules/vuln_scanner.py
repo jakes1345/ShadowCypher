@@ -1,10 +1,12 @@
 """
-Vulnerability Scanner Module — Apex Intelligence Build.
+Vulnerability Scanner Module — Enterprise Intelligence Build.
 Handles Nuclei, Sqlmap, Nikto, and automated vulnerability verification.
 """
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target
+from ai_engine.autoagent.registry import register_tool
+import os
 
 class VulnScanner(BaseModule):
     """The 'Spectre' engine for vulnerability detection."""
@@ -12,7 +14,14 @@ class VulnScanner(BaseModule):
     def __init__(self):
         super().__init__(module_name="vuln_scanner")
 
-    def nuclei_scan(self, target, tags=None, on_output=None):
+    @register_tool("vuln_nuclei_scan")
+    def nuclei_scan(self, target: str, tags: str = None, on_output=None):
+        """
+        Perform a Nuclei vulnerability scan on a target.
+        Args:
+            target: The target URL or IP.
+            tags: Optional tags to filter templates (e.g., 'cve,crit').
+        """
         if not validate_target(target): return
         
         self.log(f"INITIATING_NUCLEI_SCAN: {target}")
@@ -23,7 +32,13 @@ class VulnScanner(BaseModule):
         
         return self.execute(f"NUCLEI_{target}", args, callback=on_output)
 
-    def sqlmap_scan(self, target, on_output=None):
+    @register_tool("vuln_sqlmap_scan")
+    def sqlmap_scan(self, target: str, on_output=None):
+        """
+        Perform an automated SQL injection audit using Sqlmap.
+        Args:
+            target: The target URL.
+        """
         if not validate_target(target): return
         
         self.log(f"INITIATING_SQLMAP_SCAN: {target}")
@@ -32,7 +47,13 @@ class VulnScanner(BaseModule):
         args = [sqlmap, "-u", target, "--batch", "--random-agent", "--level=2"]
         return self.execute(f"SQLMAP_{target}", args, callback=on_output)
 
-    def nikto_scan(self, target, on_output=None):
+    @register_tool("vuln_nikto_scan")
+    def nikto_scan(self, target: str, on_output=None):
+        """
+        Perform a web server vulnerability scan using Nikto.
+        Args:
+            target: The target host/URL.
+        """
         if not validate_target(target): return
         
         self.log(f"INITIATING_NIKTO_SCAN: {target}")
@@ -52,5 +73,15 @@ class VulnScanner(BaseModule):
         if on_output: on_output(f"[SCAN] INITIATING_SHADOW_ZERO_DAY_AUDIT: {target}...\n")
         
         desc = f"Analyze service responses for {target}. Detect non-standard buffer behavior and memory corruption indicators. Synthesize a proof-of-concept for discovered anomalies."
-        filename = deephat.forge_weapon(desc, category="audit")
-        return deephat.execute_payload(filename, on_output=on_output)
+        
+        # Forge the arsenal shards
+        shards_str = deephat.forge_weapon(desc, category="audit")
+        shards = [s.strip() for s in shards_str.split(",")]
+        
+        results = []
+        for shard in shards:
+            full_path = os.path.join("payloads", shard)
+            res = deephat.execute_payload(full_path, on_output=on_output)
+            results.append(res)
+            
+        return " | ".join(results)
