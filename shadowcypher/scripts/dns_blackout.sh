@@ -1,30 +1,59 @@
-#!/bin/bash
-# ── DNS_BLACKOUT v1.0 — Sovereign Spectrum Isolation ─────────────
-# Forcefully redirects all DNS traffic through an encrypted tunnel 
-# and drops any clear-text attempts from reaching the Verizon router.
+#!/usr/bin/env bash
+# ==============================================================================
+# SHADOWCYPHER // SECURE DNS ENFORCEMENT
+# ==============================================================================
+# Configures systemd-resolved for strict DNS-over-TLS (DoT) and enforces
+# iptables rules to prevent clear-text DNS leakage.
 
-echo -e "\033[0;36m[BLACKOUT] INITIATING_SPECTRUM_ISOLATION...\033[0m"
+set -euo pipefail
 
-# 1. Configure Systemd-Resolved for DNS-over-TLS
-echo "[Resolve]
+# --- Typography & Colors ---
+CYAN='\033[1;36m'
+GREEN='\033[1;32m'
+RED='\033[1;31m'
+NC='\033[0m'
+
+log_info() { echo -e "${CYAN}[INFO]${NC} $1"; }
+log_succ() { echo -e "${GREEN}[OK]${NC}   $1"; }
+log_err()  { echo -e "${RED}[FAIL]${NC} $1"; exit 1; }
+
+if [ "$EUID" -ne 0 ]; then
+    log_err "This script requires root privileges. Please run with sudo."
+fi
+
+log_info "Initiating Secure DNS-over-TLS (DoT) configuration..."
+
+# 1. Systemd-Resolved Configuration
+log_info "Writing systemd-resolved configuration..."
+cat <<EOF > /etc/systemd/resolved.conf
+[Resolve]
 DNS=1.1.1.1 9.9.9.9
 DNSOverTLS=yes
-Domains=~." | sudo tee /etc/systemd/resolved.conf > /dev/null
+Domains=~.
+EOF
 
-sudo systemctl restart systemd-resolved
+log_info "Restarting systemd-resolved service..."
+systemctl restart systemd-resolved
+log_succ "Systemd-resolved configured for DoT."
 
-# 2. Hardening the Gateway (The Verizon Drop)
-# We block all outbound traffic on port 53 (DNS) that IS NOT internal/encrypted.
-echo -e "\033[0;33m[BLACKOUT] APPLYING_FIREWALL_KILL_SWITCH (Port 53 Drop)...\033[0m"
+# 2. Firewall Enforcement (Prevent Port 53 Leakage)
+log_info "Applying egress firewall rules to block clear-text DNS (Port 53)..."
 
-# Block clear-text DNS to the ISP router
-sudo iptables -A OUTPUT -d 192.168.1.1 -p udp --dport 53 -j DROP
-sudo iptables -A OUTPUT -d 192.168.1.1 -p tcp --dport 53 -j DROP
+# Ensure we don't duplicate rules if run multiple times
+iptables -D OUTPUT -p udp --dport 53 -j REJECT 2>/dev/null || true
+iptables -D OUTPUT -p tcp --dport 53 -j REJECT 2>/dev/null || true
 
-# Block all other clear-text DNS globally to prevent "leakage"
-sudo iptables -A OUTPUT -p udp --dport 53 -j REJECT
-sudo iptables -A OUTPUT -p tcp --dport 53 -j REJECT
+# Block all clear-text DNS outbound
+iptables -A OUTPUT -p udp --dport 53 -j REJECT
+iptables -A OUTPUT -p tcp --dport 53 -j REJECT
+
+log_succ "Iptables egress rules applied."
 
 # 3. Validation
-echo -e "\033[0;32m[BLACKOUT] ISOLATION_COMPLETE.\033[0m"
-echo -e "\033[0;32m[BLACKOUT] Your browsing history is now invisible to Verizon DPI.\033[0m"
+echo ""
+echo -e "${GREEN}==============================================================================${NC}"
+echo -e "${GREEN}[SUCCESS] Secure DNS Enforcement Active.${NC}"
+echo -e "All DNS queries are now routed over TLS (Port 853)."
+echo -e "Clear-text queries (Port 53) are strictly rejected at the firewall level."
+echo -e "${GREEN}==============================================================================${NC}"
+
