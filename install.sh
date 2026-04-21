@@ -1,11 +1,24 @@
-#!/bin/bash
-# ShadowCypher: Apex Deployment Engine (V22)
-# Google-grade tactical installation for high-fidelity security operations.
+#!/usr/bin/env bash
+# ==============================================================================
+# SHADOWCYPHER // LOCAL ENVIRONMENT BOOTSTRAP
+# ==============================================================================
+# Automated local installation and dependency resolution script.
 
 set -e
 
-# ── 0. Initialization ──
-echo -e "\033[1;36m[SHADOW] INITIATING_APEX_DEPLOYMENT_V22...\033[0m"
+# --- Colors & Logging ---
+CYAN='\033[1;36m'
+GREEN='\033[1;32m'
+RED='\033[1;31m'
+NC='\033[0m'
+
+log_step() { echo -e "${CYAN}[SYSTEM]${NC} $1"; }
+log_succ() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_err()  { echo -e "${RED}[FATAL]${NC} $1"; exit 1; }
+
+# --- 0. Initialization ---
+log_step "Initializing ShadowCypher local deployment..."
+
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 ICON_PATH="$APP_DIR/native/icons/shadowcypher-256.png"
 LOCAL_BIN="$HOME/.local/bin"
@@ -16,8 +29,8 @@ mkdir -p "$LOCAL_BIN" "$DESKTOP_DIR"
 mkdir -p "$APP_DIR/wordlists" "$APP_DIR/findings" "$APP_DIR/reports" \
          "$APP_DIR/logs" "$APP_DIR/tools"
 
-# ── 1. Dependency Synchronization ──
-echo "[SHADOW] Synchronizing enterprise ecosystem..."
+# --- 1. Python Environment ---
+log_step "Resolving Python dependencies and virtual environment..."
 if command -v python3 &>/dev/null; then
     if [ ! -d "$APP_DIR/venv" ]; then
         python3 -m venv "$APP_DIR/venv"
@@ -25,26 +38,27 @@ if command -v python3 &>/dev/null; then
     source "$APP_DIR/venv/bin/activate"
     pip install --upgrade pip -q
     pip install -r "$APP_DIR/requirements.txt" -q
-    echo "[SHADOW] Ecosystem stabilized."
+    log_succ "Python ecosystem synchronized."
 else
-    echo -e "\033[1;31m[ERROR] Python 3 not found. Deployment critical failure.\033[0m"
-    exit 1
+    log_err "Python 3 is required but not found in PATH."
 fi
 
-# ── 2. Pre-Flight Audit (Overlord Protocol) ──
-echo "[SHADOW] Engaging Apex Overlord for pre-flight stability audit..."
+# --- 2. Pre-Flight Audit ---
+log_step "Executing system stability audit..."
 source "$APP_DIR/venv/bin/activate"
-python3 "$APP_DIR/shadowcypher_overlord_audit.py" || { echo "[ERROR] System instability detected. Aborting."; exit 1; }
+if [ -f "$APP_DIR/shadowcypher_overlord_audit.py" ]; then
+    python3 "$APP_DIR/shadowcypher_overlord_audit.py" || log_err "System audit failed. Deployment aborted."
+fi
 
-# ── 3. High-Fidelity Launcher ──
-echo "[SHADOW] Engineering tactical launcher..."
+# --- 3. Executable Wrapper ---
+log_step "Generating local executable wrapper..."
 cat <<LAUNCHER > "$APP_DIR/shadowcypher_launch"
-#!/bin/bash
-# ShadowCypher Universal Entry Point
+#!/usr/bin/env bash
+# ShadowCypher Local Launcher
 export PATH="\$PATH:$LOCAL_BIN:$APP_DIR/tools"
 cd "$APP_DIR"
 
-# Wavelet & GUI Synchronization
+# Wayland compatibility enforcement
 if [ -n "\$WAYLAND_DISPLAY" ]; then
     export GDK_BACKEND=wayland
 elif [ -z "\$DISPLAY" ]; then
@@ -52,43 +66,40 @@ elif [ -z "\$DISPLAY" ]; then
 fi
 
 source "$APP_DIR/venv/bin/activate"
-python3 -m shadowcypher.app "\$@"
+exec python3 -m shadowcypher.app "\$@"
 LAUNCHER
+
 chmod +x "$APP_DIR/shadowcypher_launch"
 ln -sf "$APP_DIR/shadowcypher_launch" "$LOCAL_BIN/shadowcypher"
 
-# ── 4. Mainframe Identity (Desktop) ──
-echo "[SHADOW] Registering Premium Identity..."
+# --- 4. Desktop Integration ---
+log_step "Registering desktop environment integration..."
 cat <<DESKTOP > "$DESKTOP_FILE"
 [Desktop Entry]
 Version=3.0
 Type=Application
 Name=ShadowCypher
-GenericName=Autonomous SIGINT Platform
-Comment=Enterprise-grade offensive security suite with Wavelet Pulse detection.
+GenericName=Tactical Security Suite
+Comment=Enterprise-grade offensive security and intelligence platform.
 Exec=$LOCAL_BIN/shadowcypher
 Icon=$ICON_PATH
 Path=$APP_DIR
 Terminal=false
 Categories=System;Security;Network;
-Keywords=hacking;security;sigint;pulse;ai;matrix;
+Keywords=security;pentest;sigint;
 StartupNotify=true
 StartupWMClass=org.shadowcypher.ShadowCypher
 DESKTOP
+
 chmod +x "$DESKTOP_FILE"
 
 if command -v update-desktop-database &>/dev/null; then
     update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
 fi
 
-# ── 5. Deployment Report ──
-echo -e "\n\033[1;32m┌────────────────────────────────────────────────────────────┐"
-echo "│  SHADOWCYPHER APEX DEPLOYMENT COMPLETE (V22)               │"
-echo "├────────────────────────────────────────────────────────────┤"
-echo "│                                                            │"
-echo "│  [ENTRY]    shadowcypher                                   │"
-echo "│  [ENGINE]   V3 Autonomous (ShadowPulse SIGINT Active)      │"
-echo "│  [PATH]     $LOCAL_BIN                                     │"
-echo "│                                                            │"
-echo "└────────────────────────────────────────────────────────────┘\033[0m"
-echo "[SHADOW] SYSTEM_NOMINAL. STANDING BY FOR COMMAND."
+# --- 5. Finalization ---
+echo ""
+log_succ "Deployment finalized successfully."
+echo -e "  -> Executable Path: ${CYAN}$LOCAL_BIN/shadowcypher${NC}"
+echo -e "  -> Base Directory:  ${CYAN}$APP_DIR${NC}"
+echo -e "Ready for execution."
