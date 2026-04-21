@@ -441,18 +441,19 @@ class AIPage(BasePage):
             # Direct Quantum Handoff
             self.terminal.log("QUANTUM_HANDOFF: Escalating mission to Ultraplan Agent...", "SYSTEM")
             self.quantum_revealer.set_reveal_child(True)
-            self.pod_status.update_value("PLANNING")
-            
+            self.pod_status.set_value("PLANNING")
+
             from shadowcypher.ai.engine import ai_engine
+
             def _quantum_complete(result):
+                GLib.idle_add(self.pod_status.set_value, "IDLE")
                 GLib.idle_add(self._on_mission_done, result)
-                
+
             ai_engine.execute_quantum_task(
-                msg, 
-                on_output=lambda x: GLib.idle_add(self.terminal.log, x, "QUANTUM")
+                msg,
+                on_output=lambda x: GLib.idle_add(self.terminal.log, x, "QUANTUM"),
+                on_complete=_quantum_complete,
             )
-            # Since Quantum runs via runner.execute_task, we should ideally trigger _complete
-            # For now, let's pulse the status as 'COMPLETE' after a short delay or on stream end
         else:
             hub.orchestrator.execute_query_async(
                 msg,

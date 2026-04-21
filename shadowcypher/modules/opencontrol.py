@@ -10,12 +10,14 @@ import uuid
 from typing import Dict, List, Any, Optional
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.logger import logger
+from shadowcypher.core.config import config
 from ai_engine.autoagent.registry import register_tool
 
 class OpenControlClient:
     """Client for the OpenControl Infrastructure Gateway."""
-    def __init__(self, endpoint: str = "http://127.0.0.1:9090", api_key: str = ""):
-        self.endpoint = endpoint
+    def __init__(self, endpoint: str = None, api_key: str = None):
+        self.endpoint = endpoint or config.get("opencontrol", "endpoint", default="http://127.0.0.1:9090")
+        api_key = api_key or config.get("opencontrol", "api_key", default="")
         self.headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
     def list_nodes(self) -> List[Dict[str, Any]]:
@@ -78,8 +80,17 @@ class OpenControlModule(BaseModule):
         self.client = OpenControlClient()
 
     def run(self, **kwargs):
-        # Implementation for manual UI-driven tasks
-        pass
+        """Delegate to the underlying OpenControlClient instead of silently no-op'ing."""
+        action = kwargs.get("action")
+        if not action:
+            return {"status": "error", "message": "opencontrol.run: missing 'action' kwarg"}
+        fn = getattr(self.client, action, None)
+        if not callable(fn):
+            return {"status": "error", "message": f"opencontrol.run: unknown action '{action}'"}
+        try:
+            return {"status": "ok", "result": fn(**{k: v for k, v in kwargs.items() if k != "action"})}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
 # Legacy export for existing scripts
 oc_module = OpenControlModule()

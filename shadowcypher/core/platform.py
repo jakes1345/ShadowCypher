@@ -74,13 +74,20 @@ class ShadowPlatform:
             if ShadowPlatform.IS_LINUX:
                 with open("/proc/loadavg", "r") as f:
                     vitals["p_load"] = float(f.read().split()[0])
-                # Simplified memory check for performance
+                # Robust memory check
+                mem_total = 0
+                mem_avail = 0
                 with open("/proc/meminfo", "r") as f:
-                    for _ in range(3): # Just need the first few lines
-                        line = f.readline()
-                        if "MemTotal" in line: total = int(line.split()[1])
-                        if "MemAvailable" in line: avail = int(line.split()[1])
-                    vitals["mem"] = (1 - avail / total) * 100
+                    for line in f:
+                        if "MemTotal" in line:
+                            mem_total = int(line.split()[1])
+                        elif "MemAvailable" in line:
+                            mem_avail = int(line.split()[1])
+                        if mem_total and mem_avail:
+                            break
+                if mem_total:
+                    vitals["mem"] = (1 - mem_avail / mem_total) * 100
+                    vitals["cpu"] = (vitals["p_load"] / os.cpu_count()) * 100
         except: pass
         return vitals
 
@@ -88,5 +95,25 @@ class ShadowPlatform:
     def detect_virtualization() -> str:
         if os.path.exists("/.dockerenv"): return "DOCKER"
         return "HOST"
+
+    @staticmethod
+    def get_firewall_backend() -> str:
+        """Detects the primary firewall backend for the current platform."""
+        if ShadowPlatform.IS_LINUX:
+            try:
+                # Check for nftables first (modern standard)
+                if subprocess.call(["which", "nft"], stdout=subprocess.DEVNULL) == 0:
+                    return "NFTABLES"
+                # Check for legacy iptables
+                if subprocess.call(["which", "iptables"], stdout=subprocess.DEVNULL) == 0:
+                    return "IPTABLES"
+                return "GENERIC_LINUX"
+            except:
+                return "UNSUPPORTED"
+        elif ShadowPlatform.IS_WINDOWS:
+            return "WINDOWS_DEFENDER"
+        elif ShadowPlatform.IS_MACOS:
+            return "PF"
+        return "UNKNOWN"
 
 platform_engine = ShadowPlatform()

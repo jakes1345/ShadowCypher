@@ -47,7 +47,7 @@ class BasePage(Gtk.Box):
 
         # 3b. Intelligence Sidebar (Righty) - Fills the 'Barren' space
         self.intel_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        self.intel_sidebar.set_size_request(380, -1)
+        self.intel_sidebar.set_size_request(300, -1)
         self.intel_sidebar.set_margin_start(10)
         self.intel_sidebar.set_margin_end(10)
         self.intel_sidebar.set_margin_top(20)

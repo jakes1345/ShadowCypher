@@ -66,7 +66,10 @@ class AdminPage(BasePage):
         # ── 3. Sovereign Spectrum Audit (Node Discovery) ── Moved to Sidebar
         frm_nodes = Gtk.Frame(label="Sovereign Hub Spectrum Audit")
         box_nodes = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        box_nodes.set_margin_all(10)
+        box_nodes.set_margin_start(10)
+        box_nodes.set_margin_end(10)
+        box_nodes.set_margin_top(10)
+        box_nodes.set_margin_bottom(10)
         
         self.node_list_box = Gtk.ListBox()
         self.node_list_box.get_style_context().add_class("node-list")
@@ -85,7 +88,10 @@ class AdminPage(BasePage):
         # ── 4. Ghost-Hose Control (Hidden) ──
         frm_ghost = Gtk.Frame(label="Ghost-Hose (High-Entropy Saturation)")
         box_ghost = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        box_ghost.set_margin_all(10)
+        box_ghost.set_margin_start(10)
+        box_ghost.set_margin_end(10)
+        box_ghost.set_margin_top(10)
+        box_ghost.set_margin_bottom(10)
 
         self.ent_target = Gtk.Entry()
         self.ent_target.set_placeholder_text("Target IP:Port")
@@ -120,7 +126,10 @@ class AdminPage(BasePage):
         # ── 5. Citadel Emergency Lockdown ── Moved to Sidebar
         frm_lock = Gtk.Frame(label="Wraith Protocol (Emergency)")
         box_lock = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box_lock.set_margin_all(10)
+        box_lock.set_margin_start(10)
+        box_lock.set_margin_end(10)
+        box_lock.set_margin_top(10)
+        box_lock.set_margin_bottom(10)
         
         btn_wipe = Gtk.Button(label="\u2622 EXECUTE SPECTRE FLASH-WIPE")
         btn_wipe.get_style_context().add_class("destructive-action")
@@ -137,7 +146,10 @@ class AdminPage(BasePage):
         # ── 6. Public Sovereign Bridge ──
         frm_pub = Gtk.Frame(label="Global Sovereign Bridge (Expose Hub)")
         box_pub = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        box_pub.set_margin_all(10)
+        box_pub.set_margin_start(10)
+        box_pub.set_margin_end(10)
+        box_pub.set_margin_top(10)
+        box_pub.set_margin_bottom(10)
         
         self.btn_pub = Gtk.Button(label="Go Public (Cloudflare Tunnel)")
         self.btn_pub.connect("clicked", self._on_go_public)
@@ -149,7 +161,10 @@ class AdminPage(BasePage):
         # ── 7. 24/7 Cloud Orchestration (Always-On Hub) ──
         frm_cloud = Gtk.Frame(label="24/7 Cloud Orchestration (Fly.io/VPS)")
         box_cloud = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        box_cloud.set_margin_all(10)
+        box_cloud.set_margin_start(10)
+        box_cloud.set_margin_end(10)
+        box_cloud.set_margin_top(10)
+        box_cloud.set_margin_bottom(10)
         
         self.btn_cloud = Gtk.Button(label="Generate 24/7 Deploy Artifacts")
         self.btn_cloud.connect("clicked", self._on_gen_deploy)
@@ -163,10 +178,19 @@ class AdminPage(BasePage):
 
     def _tick(self):
         """Update live telemetry."""
+        if not self.get_mapped():
+            return True
         from shadowcypher.core.hub import hub
         summary = hub.get_tactical_summary()
         self.pod_uptime.set_value(summary["uptime"])
-        self._on_refresh_nodes(None)
+        
+        # Throttled node refresh
+        if not hasattr(self, "_node_tick_count"): self._node_tick_count = 0
+        self._node_tick_count += 1
+        if self._node_tick_count >= 5:
+            self._on_refresh_nodes(None)
+            self._node_tick_count = 0
+            
         return True
 
     def _on_refresh_nodes(self, btn):
@@ -175,18 +199,18 @@ class AdminPage(BasePage):
         for child in self.node_list_box.get_children():
             self.node_list_box.remove(child)
             
-        from shadowcypher.core.sovereign import server_instance
-        if server_instance:
-            for nick, data in server_instance._unmasked_cache.items():
+        from shadowcypher.core.nexus import nexus
+        if nexus:
+            for node_id, data in nexus.nodes.items():
                 row = Gtk.ListBoxRow()
                 box = Gtk.Box(spacing=10)
-                box.pack_start(Gtk.Label(label=f"{nick} ({data['ip']})"), True, True, 0)
+                box.pack_start(Gtk.Label(label=f"{node_id} ({data['host']})"), True, True, 0)
                 
                 # De-cloaked info
                 info = f"LOCAL_IPS: {','.join(data.get('local_ips', []))} | HW_MAC: {data.get('hw_mac')}"
                 box.pack_start(Gtk.Label(label=info), False, False, 0)
                 
-                box.pack_start(Gtk.Label(label=f"OS: {data['os']}"), False, False, 0)
+                box.pack_start(Gtk.Label(label=f"OS: {data.get('os', 'Unknown')}"), False, False, 0)
                 row.add(box)
                 self.node_list_box.add(row)
         self.node_list_box.show_all()

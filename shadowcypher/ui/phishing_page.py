@@ -5,7 +5,7 @@ import json
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
 
-class PhishPage(Gtk.Box):
+class PhishingPage(Gtk.Box):
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         self.set_margin_top(40)
@@ -130,4 +130,4 @@ class PhishPage(Gtk.Box):
         self.victim_list.show_all()
 
 # For dynamic loading in app.py
-PhishingPage = PhishPage
+# PhishingPage class is exported by default

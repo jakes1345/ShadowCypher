@@ -15,6 +15,7 @@ from typing import Dict, Any, Optional, List
 from aiohttp import web
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
+from shadowcypher.core.sovereign_chat import sovereign_chat_server
 
 class NexusRelay:
     """
@@ -23,44 +24,89 @@ class NexusRelay:
     2. CORS-enabled REST API for protocol handshakes.
     3. UDP/TCP Relay orchestration for P2P bypass.
     4. Sovereign Node Discovery & Registration.
+    5. Sovereign Chat WebSocket bridge.
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 9999):
-        self.host = host
-        self.port = port
-        self.secret = config.get("irc", "hub_secret", default="shadow_master_secret")
-        self.nodes: Dict[str, dict] = {} # node_id -> metadata
+    def __init__(self, host: str = "127.0.0.1", port: int = 9988):
+        self.host = os.environ.get("SHADOWCYPHER_NEXUS_HOST", host)
+        self.port = int(os.environ.get("SHADOWCYPHER_NEXUS_PORT", port))
+        secret = os.environ.get("SHADOWCYPHER_HUB_SECRET") or config.get("irc", "hub_secret", default=None)
+        if not secret or secret == "REPLACE_WITH_SECURE_HUB_SECRET":
+            raise RuntimeError(
+                "HUB_SECRET_UNSET: Nexus refuses to start without a real hub secret. "
+                "Set SHADOWCYPHER_HUB_SECRET env var or [irc].hub_secret in config to a random 32+ byte token."
+            )
+        self.secret = secret
+        self.nodes_file = os.path.join(str(config.project_root), "nodes.json")
+        self.nodes: Dict[str, dict] = self._load_nodes()
         self.app = web.Application()
         self._setup_routes()
+
+    def _load_nodes(self) -> Dict[str, dict]:
+        """Deep-dive persistence: Recovery of the signal plane."""
+        if os.path.exists(self.nodes_file):
+            try:
+                with open(self.nodes_file, "r") as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        return {}
+
+    def _save_nodes(self):
+        """Persistent snapshot of the swarm."""
+        try:
+            with open(self.nodes_file, "w") as f:
+                json.dump(self.nodes, f)
+        except Exception:
+            pass
 
     def _setup_routes(self):
         self.app.router.add_get("/api/nexus/ice", self.handle_ice_request)
         self.app.router.add_get("/api/nexus/status", self.handle_status)
         self.app.router.add_get("/api/nexus/tunnel", self.handle_tunnel)
         self.app.router.add_get("/api/nexus/nodes", self.handle_list_nodes)
-        self.app.router.add_get("/api/nexus/swarm", self.handle_swarm_sync) # P2P SWARM SYNC
+        self.app.router.add_get("/api/nexus/swarm", self.handle_swarm_sync) 
+        self.app.router.add_get("/api/nexus/chat", self.handle_chat_ws) 
         self.app.router.add_post("/api/nexus/register", self.handle_register_node)
         self.app.router.add_options("/{tail:.*}", self.handle_options)
         self.app.middlewares.append(self.cors_middleware)
 
+    @staticmethod
+    def _allowed_origin(request) -> str:
+        """Match request Origin against SHADOWCYPHER_ALLOWED_ORIGINS whitelist.
+
+        Env var is comma-separated (e.g. "https://shadowcypher.site,https://app.shadowcypher.site").
+        Returns the echoed Origin if allowed, else empty string (browser will block).
+        Default whitelist is https://shadowcypher.site only — no `*` wildcard.
+        """
+        raw = os.environ.get("SHADOWCYPHER_ALLOWED_ORIGINS", "https://shadowcypher.site")
+        allowed = {o.strip() for o in raw.split(",") if o.strip()}
+        origin = request.headers.get("Origin", "")
+        return origin if origin in allowed else ""
+
     @web.middleware
     async def cors_middleware(self, request, handler):
-        """Universal CORS bridge for cross-origin tactical UIs."""
         if request.method == "OPTIONS":
             return await self.handle_options(request)
-        
         response = await handler(request)
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        allowed = self._allowed_origin(request)
+        if allowed:
+            response.headers["Access-Control-Allow-Origin"] = allowed
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            response.headers["Vary"] = "Origin"
         return response
 
     async def handle_options(self, request):
+        allowed = self._allowed_origin(request)
+        if not allowed:
+            return web.Response(status=403)
         return web.Response(status=204, headers={
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allowed,
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, Authorization",
             "Access-Control-Max-Age": "86400",
+            "Vary": "Origin",
         })
 
     async def handle_status(self, request):
@@ -69,152 +115,85 @@ class NexusRelay:
             "node": "NEXUS-ALPHA",
             "load": 0.0,
             "uptime": int(time.time()),
-            "protocols": ["UDP", "TCP", "TURN", "STUN"]
+            "protocols": ["UDP", "TCP", "TURN", "STUN", "WS-CHAT"]
         })
 
+    async def handle_chat_ws(self, request):
+        """Bridge to the Sovereign Chat engine."""
+        return await sovereign_chat_server._ws_handler(request)
+
     async def handle_ice_request(self, request):
-        """
-        Generates time-limited TURN/STUN credentials for WebRTC/P2P bypass.
-        Format: username=timestamp:nick, password=hmac(secret, username)
-        """
         user_nick = request.query.get("nick", "anonymous")
-        timestamp = int(time.time()) + 36000  # 10 hour validity
+        timestamp = int(time.time()) + 36000  
         username = f"{timestamp}:{user_nick}"
-        
-        # CoTURN style shared secret auth
-        password = base64.b64encode(
-            hmac.new(self.secret.encode(), username.encode(), hashlib.sha256).digest()
-        ).decode()
+        password = hmac.HMAC(self.secret.encode(), username.encode(), hashlib.sha256).digest()
+        password_b64 = base64.b64encode(password).decode()
 
-        relay_host = config.get("irc", "sovereign_server", default="127.0.0.1")
-        
-        ice_servers = [
-            {"urls": f"stun:{relay_host}:3478"},
-            {
-                "urls": f"turn:{relay_host}:3478?transport=udp",
-                "username": username,
-                "credential": password
-            },
-            {
-                "urls": f"turn:{relay_host}:3478?transport=tcp",
-                "username": username,
-                "credential": password
-            }
-        ]
-
-        logger.info("nexus", f"ICE_CREDENTIALS_GENERATED: {user_nick} (exp: {timestamp})")
-        return web.json_response({"iceServers": ice_servers})
-
-    async def handle_tunnel(self, request):
-        """
-        WebSocket-over-CORS Tunnel. 
-        Enables raw TCP/UDP proxying from browsers or restricted networks 
-        through the Nexus Relay protocol.
-        """
-        ws = web.WebSocketResponse()
-        await ws.prepare(request)
-        
-        target_reader = None
-        target_writer = None
-
-        try:
-            # First frame must be config
-            msg = await ws.receive()
-            if msg.type == web.WSMsgType.TEXT:
-                data = json.loads(msg.data)
-                host = data.get("host")
-                port = data.get("port")
-                proto = data.get("proto", "tcp")
-                
-                logger.info("nexus", f"TUNNEL_INITIATED: {proto}://{host}:{port}")
-                
-                if proto == "tcp":
-                    target_reader, target_writer = await asyncio.open_connection(host, port)
-                    
-                    async def ws_to_tcp():
-                        try:
-                            async for m in ws:
-                                if m.type == web.WSMsgType.BINARY:
-                                    target_writer.write(m.data)
-                                    await target_writer.drain()
-                                elif m.type == web.WSMsgType.CLOSE:
-                                    break
-                        except Exception:
-                            pass
-                        finally:
-                            if target_writer:
-                                target_writer.close()
-
-                    async def tcp_to_ws():
-                        try:
-                            while not ws.closed:
-                                chunk = await target_reader.read(8192)
-                                if not chunk:
-                                    break
-                                await ws.send_bytes(chunk)
-                        except Exception:
-                            pass
-                        finally:
-                            await ws.close()
-
-                    await asyncio.gather(ws_to_tcp(), tcp_to_ws())
-        except Exception as e:
-            logger.error("nexus", f"TUNNEL_FATAL_ERROR: {e}")
-        finally:
-            if not ws.closed:
-                await ws.close()
-            return ws
-
-    async def handle_list_nodes(self, request):
-        """Returns a list of active Sovereign hubs registered with this Nexus."""
-        # Filter stale nodes (> 5 mins)
-        now = time.time()
-        active_nodes = {k: v for k, v in self.nodes.items() if now - v["last_seen"] < 300}
-        return web.json_response(active_nodes)
+        return web.json_response({
+            "username": username,
+            "password": password_b64,
+            "ttl": 36000,
+            "iceServers": [
+                {"urls": "stun:stun.l.google.com:19302"},
+                {"urls": "turn:turn.shadowcypher.site:3478", "username": username, "credential": password_b64}
+            ]
+        })
 
     async def handle_register_node(self, request):
-        """Allows a Sovereign hub to announce its existence to the network."""
         try:
             data = await request.json()
-            node_id = data.get("node_id")
+            node_id = data.get("id")
             if not node_id:
-                return web.Response(status=400, text="MISSING_NODE_ID")
+                return web.json_response({"error": "Missing node ID"}, status=400)
             
             self.nodes[node_id] = {
-                "host": data.get("host", request.remote),
-                "port": data.get("port", 8888),
-                "name": data.get("name", "ShadowNode"),
-                "load": data.get("load", 0.0),
-                "users": data.get("users", 0),
-                "last_seen": time.time()
+                "addr": request.remote,
+                "info": data.get("info", {}),
+                "last_seen": int(time.time())
             }
-            logger.info("nexus", f"NODE_REGISTERED: {node_id} at {self.nodes[node_id]['host']}:{self.nodes[node_id]['port']}")
-            return web.json_response({"status": "REGISTERED"})
+            self._save_nodes()
+            return web.json_response({"status": "REGISTERED", "id": node_id})
         except Exception as e:
-            return web.Response(status=500, text=str(e))
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def handle_list_nodes(self, request):
+        return web.json_response(self.nodes)
+
+    async def handle_tunnel(self, request):
+        target = request.query.get("target")
+        if not target or target not in self.nodes:
+            return web.json_response({"error": "Target node not found"}, status=404)
+        return web.json_response({"endpoint": self.nodes[target]["addr"]})
 
     async def handle_swarm_sync(self, request):
-        """Returns a list of active P2P Swarm Nodes for the ShadowScript Engine."""
-        now = time.time()
-        peers = [f"{v['host']}:{v['port']}" for v in self.nodes.values() if now - v["last_seen"] < 600]
-        return web.json_response({"peers": peers, "version": "1.0-SWARM"})
+        return web.json_response({"swarm_count": len(self.nodes), "peers": list(self.nodes.keys())})
 
-    async def start(self):
-        """Launch the Nexus Relay service with NetBoozt socket optimizations."""
-        import socket
+    def start(self):
+        logger.info("nexus", f"STARTING_NEXUS_RELAY on {self.host}:{self.port}")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         runner = web.AppRunner(self.app)
-        await runner.setup()
-        
-        # Optimize parent listener socket
-        site = web.TCPSite(runner, self.host, self.port, backlog=128)
-        await site.start()
-        
-        logger.info("nexus", f"NEXUS_RELAY: Swarm-Optimized bridge active on {self.host}:{self.port}")
+        loop.run_until_complete(runner.setup())
+        site = web.TCPSite(runner, self.host, self.port)
+        loop.run_until_complete(site.start())
+        loop.run_forever()
 
-# Global instance for orchestration
-nexus = NexusRelay()
+# Lazy singleton — building NexusRelay() now would fail-fast on missing hub secret,
+# which would break `import shadowcypher.core.nexus` in CI/test contexts.
+_nexus_instance: Optional[NexusRelay] = None
+
+def get_nexus() -> NexusRelay:
+    global _nexus_instance
+    if _nexus_instance is None:
+        _nexus_instance = NexusRelay()
+    return _nexus_instance
+
+class _NexusProxy:
+    """Backwards-compatible proxy: legacy callers do `from .nexus import nexus; nexus.start()`."""
+    def __getattr__(self, name):
+        return getattr(get_nexus(), name)
+
+nexus = _NexusProxy()
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(nexus.start())
-    loop.run_forever()
+    get_nexus().start()

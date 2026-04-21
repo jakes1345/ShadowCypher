@@ -29,7 +29,7 @@ class AISettings(BaseSettings):
     n_gpu_layers: int = 35
     providers: Dict[str, Any] = {}
     model_file: str = "shadowcypher-ai-q4km.gguf"
-    model_repo: str = "jakes1345/shadowcypher-ai"
+    model_repo: str = "shadow_admin1345/shadowcypher-ai"
 
 class ToolPaths(BaseSettings):
     nmap: str = "nmap"

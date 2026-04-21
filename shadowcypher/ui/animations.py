@@ -1,8 +1,10 @@
 """Animated visualizations — radar sweep, glitch effect, CRT scanlines, pulse grid."""
 
+import os
 import random
 import math
 import time
+import subprocess
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -390,10 +392,19 @@ class TerminalBoot(Gtk.DrawingArea):
     def __init__(self):
         super().__init__()
         self.lines: list[str] = []
+        try:
+            import psutil
+            mem_mb = psutil.virtual_memory().total // (1024*1024)
+        except Exception:
+            mem_mb = 8192
+        try:
+            cpu_name = subprocess.check_output(['grep', '-m1', 'model name', '/proc/cpuinfo'], text=True).split(': ')[1].strip() if os.path.exists('/proc/cpuinfo') else 'GENERIC_APEX_CORE'
+        except Exception:
+            cpu_name = 'GENERIC_APEX_CORE'
         self.boot_lines = [
             "BIOS POST... OK",
-            f"Memory test: {psutil.virtual_memory().total // (1024*1024)} MB ... PASS",
-            f"CPU: {subprocess.check_output(['grep', '-m1', 'model name', '/proc/cpuinfo'], text=True).split(': ')[1].strip() if os.path.exists('/proc/cpuinfo') else 'GENERIC_APEX_CORE'} ... ONLINE",
+            f"Memory test: {mem_mb} MB ... PASS",
+            f"CPU: {cpu_name} ... ONLINE",
             "GPU: [AUTODETECTING_VULKAN_GPGPU] ... COMPATIBLE",
             "Loading kernel... done",
             "Mounting filesystems... done",

@@ -1,5 +1,5 @@
 """
-Firewall Module — Apex Sovereign Build.
+Firewall Module — Enterprise Sovereign Build.
 High-fidelity cross-platform defense (iptables / pfctl / netsh).
 """
 
@@ -160,16 +160,16 @@ class Firewall(BaseModule):
         return runner.execute_task("SOVEREIGN_LOCKDOWN", cmd, callback=on_output)
 
     @staticmethod
-    def ghost_mode(on_output=None):
-        """GHOST_MODE: Silently drop all incoming packets."""
+    def stealth_mode(on_output=None):
+        """STEALTH_MODE: Silently drop all incoming packets."""
         from shadowcypher.core.runner import runner
         if platform_engine.IS_LINUX:
             cmd = ["sudo", "iptables", "-P", "INPUT", "DROP"]
         elif platform_engine.IS_WINDOWS:
             cmd = ["netsh", "advfirewall", "set", "allprofiles", "firewallpolicy", "blockinbound,allowoutbound"]
         else:
-            cmd = ["echo", "Ghost Mode enabled."]
-        return runner.execute_task("GHOST_MODE", cmd, callback=on_output)
+            cmd = ["echo", "Stealth Mode enabled."]
+        return runner.execute_task("STEALTH_MODE", cmd, callback=on_output)
 
     @staticmethod
     def get_active_connections(on_output=None):

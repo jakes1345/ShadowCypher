@@ -150,7 +150,7 @@ class CombatDeck(BasePage):
         method_map = {
             "xss": web_forge.xss_scan,
             "csrf": web_forge.csrf_generate,
-            "clickjack": web_forge.clickjack_test,
+            "clickshadow_operator": web_forge.clickshadow_operator_test,
             "cors": web_forge.cors_test,
             "headers": web_forge.header_audit,
             "subdomain": web_forge.subdomain_takeover,

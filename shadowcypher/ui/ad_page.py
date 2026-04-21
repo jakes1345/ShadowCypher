@@ -23,7 +23,7 @@ class AdPage(BasePage):
         deck = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
         
         self.target_entry = Gtk.Entry()
-        self.target_entry.set_placeholder_text("MISSION_TARGET_SPEC (e.g. 192.168.1.100)")
+        self.target_entry.set_placeholder_text("MISSION_TARGET_SPEC (e.g. GATEWAY_IP00)")
         deck.pack_start(self.target_entry, False, False, 0)
         
         btn = self.make_action_btn("⚡ INITIATE_DOMAIN_RECON", self._on_mission)

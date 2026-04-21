@@ -44,7 +44,7 @@ class ShadowMemory:
             logger.error("ai", f"MEM_FAILURE: Could not initialize ShadowMemory - {e}")
             self.memory = None
 
-    def store(self, content: str, user_id: str = "jack", metadata: dict = None):
+    def store(self, content: str, user_id: str = "shadow_operator", metadata: dict = None):
         """Store a tactical fact or mission learning."""
         if not self.memory: return
         try:
@@ -53,7 +53,7 @@ class ShadowMemory:
         except Exception as e:
             logger.error("ai", f"MEM_FAULT: Failed to record fact - {e}")
 
-    def recall(self, query: str, user_id: str = "jack") -> list:
+    def recall(self, query: str, user_id: str = "shadow_operator") -> list:
         """Recall relevant tactical historical context."""
         if not self.memory: return []
         try:
@@ -63,7 +63,7 @@ class ShadowMemory:
             logger.error("ai", f"MEM_SEARCH_FAULT: {e}")
             return []
 
-    def get_user_profile(self, user_id: str = "jack"):
+    def get_user_profile(self, user_id: str = "shadow_operator"):
         """Fetch the full tactical profile of the operator."""
         if not self.memory: return {}
         try:

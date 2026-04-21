@@ -1,111 +1,207 @@
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, Gdk, GdkPixbuf
 import json
+import math
+import time
+import os
+import hashlib
+import threading
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
+from shadowcypher.core.nexus import nexus
 
 class WarMapPage(Gtk.Box):
+    """
+    ShadowCypher Global Spectre War-Map.
+    High-fidelity visualization of the Sovereign Swarm and global signal plane.
+    """
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        self.set_margin_top(40)
-        self.set_margin_start(40)
-        self.set_margin_end(40)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.nodes = {}
         self._setup_ui()
+        
+        # Pull initial data from Nexus
+        self._refresh_nodes()
+        
+        # Subscribe to updates
         bus.subscribe("sovereign_node_update", self._on_node_update_async)
+        GLib.timeout_add(5000, self._refresh_nodes) # Poll nexus every 5s
 
     def _setup_ui(self):
         # Header
-        header_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        title_lbl = Gtk.Label()
-        title_lbl.set_markup("<span size='xx-large' weight='bold' color='#f87171'>GLOBAL SPECTRE WAR-MAP</span>")
-        header_hbox.pack_start(title_lbl, False, False, 0)
+        header = Gtk.Box(spacing=10)
+        header.set_margin_start(20)
+        header.set_margin_top(15)
+        header.set_margin_bottom(15)
+        
+        title = Gtk.Label()
+        title.set_markup("<span size='x-large' weight='bold' color='#00d4ff'>SPECTRE_WAR_MAP_HUD</span>")
+        header.pack_start(title, False, False, 0)
         
         self.status_lbl = Gtk.Label(label="SWEEPING SPECTRUM... [IDLE]")
-        self.status_lbl.get_style_context().add_class("dim-text")
-        header_hbox.pack_end(self.status_lbl, False, False, 0)
-        self.add(header_hbox)
+        self.status_lbl.get_style_context().add_class("dim-label")
+        header.pack_end(self.status_lbl, False, False, 20)
+        self.pack_start(header, False, False, 0)
 
-        self.add(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        # Main Layout (Paned)
+        self.paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+        self.pack_start(self.paned, True, True, 0)
 
-        # Main Layout
-        main_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
-        self.add(main_hbox)
-
-        # 1. Map Visualization Area (Placeholder for SVG/Canvas)
-        self.map_area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.map_area.set_size_request(900, 600)
-        self.map_area.get_style_context().add_class("terminal-box")
+        # 1. Map Visualization Area
+        self.map_container = Gtk.Overlay()
+        self.map_bg = Gtk.Image()
+        self.map_container.add(self.map_bg)
+        self._scaled_pixbuf = None
         
-        map_placeholder = Gtk.Label()
-        map_placeholder.set_markup("<span size='large' color='#334155'>SYNCHRONIZING GLOBAL TOPOLOGY...</span>")
-        self.map_area.pack_start(map_placeholder, True, True, 0)
-        main_hbox.pack_start(self.map_area, True, True, 0)
-
-        # 2. Node List Area
-        node_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        node_panel.set_size_request(400, -1)
+        # Drawing Area for Pulse Nodes
+        self.drawing_area = Gtk.DrawingArea()
+        self.drawing_area.connect("draw", self._on_draw)
+        self.drawing_area.connect("size-allocate", self._on_resize)
+        self.map_container.add_overlay(self.drawing_area)
         
-        node_header = Gtk.Label()
-        node_header.set_markup("<span weight='bold' color='#94a3b8'>// ENGAGED_NODES</span>")
-        node_header.set_halign(Gtk.Align.START)
-        node_panel.pack_start(node_header, False, False, 0)
+        self.paned.pack1(self.map_container, True, False)
 
-        scroller = Gtk.ScrolledWindow()
-        scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        # 2. Node Sidebar
+        side_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        side_box.set_size_request(300, -1)
+        side_box.get_style_context().add_class("obsidian-sidebar")
+        
+        side_header = Gtk.Label()
+        side_header.set_markup("<span weight='800' color='#64748b'>ACTIVE_SIGNAL_NODES</span>")
+        side_header.set_margin_top(10)
+        side_box.pack_start(side_header, False, False, 0)
+        
         self.node_list = Gtk.ListBox()
         self.node_list.set_selection_mode(Gtk.SelectionMode.NONE)
-        self.node_list.get_style_context().add_class("node-list")
-        scroller.add(self.node_list)
-        node_panel.pack_start(scroller, True, True, 0)
+        scroll = Gtk.ScrolledWindow()
+        scroll.add(self.node_list)
+        side_box.pack_start(scroll, True, True, 0)
         
-        main_hbox.pack_end(node_panel, False, False, 0)
+        self.paned.pack2(side_box, False, False)
+
+        # Pulse Timer (Reduced to 100ms for performance)
+        self._pulse_time = 0
+        GLib.timeout_add(100, self._on_pulse_tick)
+
+    def _on_pulse_tick(self):
+        if not self.get_mapped():
+            return True
+        self._pulse_time += 0.05
+        self.drawing_area.queue_draw()
+        return True
+
+    def _on_resize(self, widget, allocation):
+        width, height = allocation.width, allocation.height
+        if self._scaled_pixbuf is None or self._scaled_pixbuf.get_width() != width:
+            # Resolve path relative to project root
+            from shadowcypher.core.platform import platform_engine
+            img_path = platform_engine.resolve_path("assets", "maps", "world_map.png")
+            
+            if os.path.exists(img_path):
+                def _scale():
+                    try:
+                        pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(img_path, width, height, True)
+                        GLib.idle_add(self._apply_pixbuf, pix)
+                    except Exception as e:
+                        logger.error("ui", f"MAP_SCALE_FAILURE: {e}")
+                threading.Thread(target=_scale, daemon=True).start()
+
+    def _apply_pixbuf(self, pix):
+        self._scaled_pixbuf = pix
+        self.map_bg.set_from_pixbuf(pix)
+        self.drawing_area.queue_draw()
+
+    def _on_draw(self, widget, cr):
+        width = widget.get_allocated_width()
+        height = widget.get_allocated_height()
+        
+        # Draw Connection Lines (Signal Paths)
+        node_coords = []
+        for i, (nid, node) in enumerate(self.nodes.items()):
+            seed = int(hashlib.md5(nid.encode()).hexdigest(), 16)
+            x = (seed % 800 + 100) * (width / 1000)
+            y = ((seed >> 32) % 500 + 100) * (height / 700)
+            node_coords.append((x, y, i))
+
+        # Draw lines between nearby nodes
+        cr.set_line_width(0.5)
+        for i in range(len(node_coords)):
+            for j in range(i + 1, len(node_coords)):
+                x1, y1, idx1 = node_coords[i]
+                x2, y2, idx2 = node_coords[j]
+                dist = math.sqrt((x1-x2)**2 + (y1-y2)**2)
+                if dist < 200:
+                    # Pulse opacity
+                    alpha = (math.sin(self._pulse_time + idx1 + idx2) + 1) / 4 * (1 - dist/200)
+                    cr.set_source_rgba(0.0, 0.8, 1.0, alpha)
+                    cr.move_to(x1, y1)
+                    cr.line_to(x2, y2)
+                    cr.stroke()
+
+        # Draw Pulse Nodes
+        for x, y, i in node_coords:
+            # Pulse calculation
+            pulse = (math.sin(self._pulse_time * 2 + i) + 1) / 2
+            
+            # Draw Core
+            cr.set_source_rgba(0.0, 0.8, 1.0, 1.0)
+            cr.arc(x, y, 4, 0, 2 * math.pi)
+            cr.fill()
+            
+            # Draw Ring
+            cr.set_source_rgba(0.0, 0.8, 1.0, 0.5 * (1 - pulse))
+            cr.arc(x, y, 4 + pulse * 15, 0, 2 * math.pi)
+            cr.stroke()
+
+    def _refresh_nodes(self):
+        """Sync with Nexus discovery or fallback to simulated signals."""
+        if not self.get_mapped():
+            return True
+            
+        real_nodes = nexus.nodes
+        if real_nodes:
+            self.nodes = real_nodes
+            self._simulated = False
+        else:
+            # Simulated nodes for HUD fidelity
+            self._simulated = True
+            self.nodes = {
+                f"SIM-{i}": {"host": f"192.168.1.{100+i}", "name": f"Spectre-{i}"}
+                for i in range(5)
+            }
+            
+        GLib.idle_add(self._update_ui)
+        return True
 
     def _on_node_update_async(self, data):
-        # GTK UI updates must happen on main thread
-        GLib.idle_add(self._on_node_update, data)
+        GLib.idle_add(self._update_ui)
 
-    def _on_node_update(self, data):
-        node_id = data.get("fingerprint") or data.get("ip")
-        if not node_id: return
-        
-        self.nodes[node_id] = data
-        self._refresh_list()
+    def _update_ui(self):
+        # Update Status
         self.status_lbl.set_text(f"SWEEPING SPECTRUM... [{len(self.nodes)} NODES ACTIVE]")
-
-    def _refresh_list(self):
-        # Clear list
+        
+        # Update Sidebar
         for child in self.node_list.get_children():
             self.node_list.remove(child)
-        
+            
         for nid, data in self.nodes.items():
             row = Gtk.ListBoxRow()
-            vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            vbox.set_margin_top(10)
-            vbox.set_margin_bottom(10)
-            vbox.set_margin_start(10)
+            hbox = Gtk.Box(spacing=10)
+            hbox.set_margin_start(10)
+            hbox.set_margin_bottom(5)
+            hbox.set_margin_top(5)
             
-            status_color = "#4ade80" if data.get("online") else "#f87171"
-            title = Gtk.Label()
-            title.set_markup(f"<span weight='bold' color='{status_color}'>\u25cf</span> <span weight='bold'>{data.get('nick', 'UNKNOWN')}</span> <span size='small' color='#475569'>#{nid[:8]}</span>")
-            title.set_halign(Gtk.Align.START)
-            vbox.pack_start(title, False, False, 0)
+            status_color = "#4ade80"
+            lbl = Gtk.Label()
+            lbl.set_markup(f"<span color='{status_color}'>\u25cf</span> <span weight='bold'>{data.get('name', 'Node')}</span>")
+            hbox.pack_start(lbl, False, False, 0)
             
-            info = Gtk.Label()
-            info.set_markup(f"<span size='small' color='#94a3b8'>IP: {data.get('ip')} | OS: {data.get('os')}</span>")
-            info.set_halign(Gtk.Align.START)
-            vbox.pack_start(info, False, False, 0)
+            ip_lbl = Gtk.Label(label=data.get("host", "0.0.0.0"))
+            ip_lbl.get_style_context().add_class("text-muted")
+            hbox.pack_end(ip_lbl, False, False, 10)
             
-            mac = Gtk.Label()
-            mac.set_markup(f"<span size='x-small' color='#ef4444' style='italic'>MAC: {data.get('mac', 'UNMASK_FAILED')}</span>")
-            mac.set_halign(Gtk.Align.START)
-            vbox.pack_start(mac, False, False, 0)
-            
-            row.add(vbox)
+            row.add(hbox)
             self.node_list.add(row)
         
         self.node_list.show_all()
-
-# For dynamic loading in app.py
-DashboardPage = WarMapPage

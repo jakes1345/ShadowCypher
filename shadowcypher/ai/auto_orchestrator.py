@@ -74,11 +74,21 @@ class AutoOrchestrator:
     def execute_mission(self, query: str, callback=None, on_complete=None):
         """Thread-safe synchronous entry point for the ShadowHub."""
         def _wrapper():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(self.run_mission_async(query, callback))
+            loop = None
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(self.run_mission_async(query, callback))
+            except Exception as e:
+                result = f"AUTON_CRASH: {e}"
+            finally:
+                if loop is not None:
+                    try:
+                        loop.close()
+                    except Exception:
+                        pass
             if on_complete: on_complete(result)
-        
+
         threading.Thread(target=_wrapper, daemon=True).start()
 
 # Global Bridge
