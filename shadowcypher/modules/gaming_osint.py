@@ -1,13 +1,13 @@
 """
-ShadowCypher Gaming OSINT Engine — Multi-Platform Asset Discovery.
+Digital Asset Discovery Engine — Multi-Platform Footprint Analysis.
 
 Features:
-- Steam library sync (local .acf manifests + API)
-- Steam Web API integration (owned games, player profile, wishlist)
-- Live deal tracking (Steam featured specials, free games)
-- Multi-platform free game discovery (Reddit, Epic, GOG)
-- Steam Store deep search
-- Game price history via IsThereAnyDeal
+- Steam library sync (local .acf manifests + API) for footprint correlation
+- Steam Web API integration (target app ownership, profile, wishlist)
+- Live asset tracking (platform featured items, free assets)
+- Multi-platform asset discovery (Reddit, Epic, GOG)
+- Steam Store deep search for target profiling
+- Price history analysis via IsThereAnyDeal
 """
 
 import os
@@ -22,9 +22,9 @@ from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.config import config
 
 
-class GamingAssetScraper:
-    """Autonomous OSINT Scraper for Multi-Platform Asset Discovery.
-    Handles Steam, Epic Games, GOG, and Prime Gaming."""
+class DigitalAssetDiscovery:
+    """Autonomous OSINT Scraper for Multi-Platform Target Asset Discovery.
+    Handles Steam, Epic Games, GOG, and Prime Gaming footprints."""
 
     STEAM_API_BASE = "https://api.steampowered.com"
     STEAM_STORE_BASE = "https://store.steampowered.com"
@@ -39,7 +39,7 @@ class GamingAssetScraper:
         self.itad_key = os.environ.get("ITAD_API_KEY", "")
         self._session = requests.Session()
         self._session.headers.update({
-            "User-Agent": "ShadowCypher-OSINT/3.0 (Gaming Asset Discovery Engine)"
+            "User-Agent": "DigitalAssetDiscovery/3.0 (Target Footprint Analysis)"
         })
         self._cache = {}
         self._cache_ttl = 300  # 5 minute cache
@@ -62,11 +62,11 @@ class GamingAssetScraper:
         return bool(self.steam_api_key and self.steam_id)
 
     # ══════════════════════════════════════════════════
-    # ── Local Library Scanning ──
+    # ── Local Footprint Scanning ──
     # ══════════════════════════════════════════════════
 
     def scan_local_library(self):
-        """Scan local Steam installations for installed games via .acf manifests."""
+        """Scan local installations for target footprint via manifests."""
         search_paths = []
 
         if platform_engine.IS_LINUX:
@@ -85,7 +85,7 @@ class GamingAssetScraper:
                 "C:\\Program Files\\Steam\\steamapps\\",
             ]
 
-        # Also check libraryfolders.vdf for extra Steam libraries
+        # Also check libraryfolders.vdf for extra libraries
         for base in list(search_paths):
             vdf_path = os.path.join(base, "libraryfolders.vdf")
             if os.path.exists(vdf_path):
@@ -115,7 +115,7 @@ class GamingAssetScraper:
                 app_id = match.group(1)
                 self.local_library.add(app_id)
 
-                # Parse ACF for game name and install size
+                # Parse ACF for app name and install size
                 try:
                     acf_path = os.path.join(steam_dir, fname)
                     with open(acf_path) as f:
@@ -135,11 +135,11 @@ class GamingAssetScraper:
                         "name": f"App {app_id}", "size_bytes": 0, "state": 0, "path": steam_dir
                     }
 
-        logger.info("gaming", f"LOCAL_LIBRARY_SYNC: {len(self.local_library)} games found")
+        logger.info("osint", f"LOCAL_FOOTPRINT_SYNC: {len(self.local_library)} assets found")
         return list(self.local_library)
 
     def get_local_library_summary(self):
-        """Get a formatted summary of the local Steam library."""
+        """Get a formatted summary of the local asset footprint."""
         if not self.local_library_details:
             self.scan_local_library()
 
@@ -153,9 +153,9 @@ class GamingAssetScraper:
         )
 
         return {
-            "total_games": len(games),
+            "total_assets": len(games),
             "total_size_gb": round(size_gb, 2),
-            "games": [
+            "assets": [
                 {
                     "app_id": aid,
                     "name": info["name"],
@@ -167,11 +167,11 @@ class GamingAssetScraper:
         }
 
     # ══════════════════════════════════════════════════
-    # ── Steam Web API Integration ──
+    # ── Platform API Integration ──
     # ══════════════════════════════════════════════════
 
     def _steam_api(self, endpoint, params=None):
-        """Make an authenticated Steam Web API call."""
+        """Make an authenticated Platform Web API call."""
         if not self.steam_api_key:
             return {"error": "NO_API_KEY — Set STEAM_API_KEY env var or use Settings"}
         p = params or {}
@@ -181,14 +181,14 @@ class GamingAssetScraper:
             r.raise_for_status()
             return r.json()
         except Exception as e:
-            logger.error("gaming", f"Steam API error: {e}")
+            logger.error("osint", f"Platform API error: {e}")
             return {"error": str(e)}
 
     def get_owned_games(self, steam_id=None):
-        """Get full library of owned games from Steam API."""
+        """Get full library of owned assets from the Platform API."""
         sid = steam_id or self.steam_id
         if not sid:
-            return {"error": "NO_STEAM_ID — Set STEAM_ID env var or use Settings"}
+            return {"error": "NO_TARGET_ID — Set STEAM_ID env var or use Settings"}
         data = self._steam_api("IPlayerService/GetOwnedGames/v1/", {
             "steamid": sid,
             "include_appinfo": "true",
@@ -198,40 +198,40 @@ class GamingAssetScraper:
         games = response.get("games", [])
         return {
             "total": response.get("game_count", len(games)),
-            "games": sorted(games, key=lambda g: g.get("playtime_forever", 0), reverse=True),
+            "assets": sorted(games, key=lambda g: g.get("playtime_forever", 0), reverse=True),
         }
 
     def get_player_profile(self, steam_id=None):
-        """Get player profile summary."""
+        """Get target profile summary."""
         sid = steam_id or self.steam_id
         if not sid:
-            return {"error": "NO_STEAM_ID"}
+            return {"error": "NO_TARGET_ID"}
         data = self._steam_api("ISteamUser/GetPlayerSummaries/v2/", {"steamids": sid})
         players = data.get("response", {}).get("players", [])
         return players[0] if players else {"error": "PROFILE_NOT_FOUND"}
 
     def get_recently_played(self, steam_id=None, count=10):
-        """Get recently played games."""
+        """Get recently active assets."""
         sid = steam_id or self.steam_id
         if not sid:
-            return {"error": "NO_STEAM_ID"}
+            return {"error": "NO_TARGET_ID"}
         data = self._steam_api("IPlayerService/GetRecentlyPlayedGames/v1/", {
             "steamid": sid, "count": str(count)
         })
         return data.get("response", {}).get("games", [])
 
     def get_friend_list(self, steam_id=None):
-        """Get friend list."""
+        """Get social network list."""
         sid = steam_id or self.steam_id
         if not sid:
-            return {"error": "NO_STEAM_ID"}
+            return {"error": "NO_TARGET_ID"}
         data = self._steam_api("ISteamUser/GetFriendList/v1/", {
             "steamid": sid, "relationship": "friend"
         })
         return data.get("friendslist", {}).get("friends", [])
 
     # ══════════════════════════════════════════════════
-    # ── Steam Store API (No API Key Needed) ──
+    # ── Global Market OSINT ──
     # ══════════════════════════════════════════════════
 
     def _cached_get(self, url, key, ttl=None):
@@ -247,11 +247,11 @@ class GamingAssetScraper:
             self._cache[key] = {"data": data, "ts": now}
             return data
         except Exception as e:
-            logger.error("gaming", f"Store API error [{key}]: {e}")
+            logger.error("osint", f"Market API error [{key}]: {e}")
             return {}
 
     def get_featured_deals(self):
-        """Get featured games with discounts from Steam store."""
+        """Get featured assets with active promotions from the platform."""
         data = self._cached_get(
             f"{self.STEAM_STORE_BASE}/api/featuredcategories",
             "featured_cats"
@@ -275,11 +275,11 @@ class GamingAssetScraper:
                     "already_owned": str(item.get("id", "")) in self.local_library,
                 })
 
-        logger.info("gaming", f"DEALS_FETCHED: {sum(len(v) for v in result.values())} items")
+        logger.info("osint", f"PROMOTIONS_FETCHED: {sum(len(v) for v in result.values())} items")
         return result
 
     def get_app_details(self, app_id):
-        """Get full details for a specific Steam app."""
+        """Get full details for a specific application asset."""
         data = self._cached_get(
             f"{self.STEAM_STORE_BASE}/api/appdetails?appids={app_id}",
             f"app_{app_id}",
@@ -288,7 +288,7 @@ class GamingAssetScraper:
         return data.get(str(app_id), {}).get("data", {})
 
     def search_store(self, term, max_results=25):
-        """Search the Steam store."""
+        """Search the platform store."""
         try:
             r = self._session.get(
                 f"{self.STEAM_STORE_BASE}/api/storesearch/",
@@ -306,11 +306,11 @@ class GamingAssetScraper:
                 "linux": item.get("platforms", {}).get("linux", False),
             } for item in items]
         except Exception as e:
-            logger.error("gaming", f"Store search error: {e}")
+            logger.error("osint", f"Market search error: {e}")
             return []
 
     def find_free_games_steam(self):
-        """Find currently free-to-keep promotions on Steam (100% discount)."""
+        """Find currently free promotional assets on the platform."""
         deals = self.get_featured_deals()
         free = []
         for item in deals.get("specials", []):
@@ -319,7 +319,7 @@ class GamingAssetScraper:
         return free
 
     # ══════════════════════════════════════════════════
-    # ── Multi-Platform Free Game Discovery ──
+    # ── Multi-Platform Free Asset Discovery ──
     # ══════════════════════════════════════════════════
 
     def fetch_global_assets(self):
@@ -327,7 +327,7 @@ class GamingAssetScraper:
         self.scan_local_library()
         categorized = {"Steam": [], "Epic": [], "GOG": [], "Prime": [], "Other": []}
 
-        # 1. Reddit r/FreeGameFindings
+        # 1. Reddit r/FreeGameFindings (For identifying broad promotional vectors)
         try:
             resp = self._session.get(self.REDDIT_FREE_URL, timeout=10)
             if resp.status_code == 200:
@@ -362,38 +362,38 @@ class GamingAssetScraper:
                     else:
                         categorized["Other"].append(found)
         except Exception as e:
-            logger.error("gaming", f"Reddit scrape failed: {e}")
+            logger.error("osint", f"Feed scrape failed: {e}")
 
-        # 2. Steam featured free games (100% off specials)
+        # 2. Steam featured free assets
         try:
             steam_free = self.find_free_games_steam()
             for item in steam_free:
                 if not any(f["title"] == item["name"] for f in categorized["Steam"]):
                     categorized["Steam"].insert(0, {
-                        "title": f"🎁 FREE: {item['name']}",
+                        "title": f"FREE ASSET: {item['name']}",
                         "url": f"https://store.steampowered.com/app/{item['app_id']}",
                         "score": 9999,
-                        "source": "steam_store",
+                        "source": "store",
                         "original_price": item["original_price"],
                     })
         except Exception as e:
-            logger.error("gaming", f"Steam free scan failed: {e}")
+            logger.error("osint", f"Platform free scan failed: {e}")
 
         total = sum(len(v) for v in categorized.values())
-        logger.info("gaming", f"GLOBAL_DISCOVERY: {total} free assets found")
+        logger.info("osint", f"GLOBAL_DISCOVERY: {total} free assets found")
         return categorized
 
     # ══════════════════════════════════════════════════
-    # ── Wishlist & Deal Sniping ──
+    # ── Target List Monitoring ──
     # ══════════════════════════════════════════════════
 
     def get_wishlist(self, steam_id=None):
-        """Get a user's Steam wishlist (public profiles only)."""
+        """Get a user's target list (public profiles only)."""
         sid = steam_id or self.steam_id
         if not sid:
-            return {"error": "NO_STEAM_ID"}
+            return {"error": "NO_TARGET_ID"}
         try:
-            # Steam wishlist is paginated
+            # Target list is paginated
             all_items = {}
             page = 0
             while True:
@@ -440,11 +440,11 @@ class GamingAssetScraper:
             wishlist.sort(key=lambda x: (-x["discount_pct"], x["priority"]))
             return wishlist
         except Exception as e:
-            logger.error("gaming", f"Wishlist fetch error: {e}")
+            logger.error("osint", f"Target list fetch error: {e}")
             return {"error": str(e)}
 
-    def snipe_wishlist_deals(self, steam_id=None):
-        """Find games on your wishlist that are currently on sale."""
+    def monitor_target_wishlist(self, steam_id=None):
+        """Find priority target assets that are currently experiencing pricing changes."""
         wishlist = self.get_wishlist(steam_id)
         if isinstance(wishlist, dict) and "error" in wishlist:
             return wishlist
@@ -452,4 +452,7 @@ class GamingAssetScraper:
 
 
 # Global singleton
-scraper = GamingAssetScraper()
+asset_discovery = DigitalAssetDiscovery()
+# For backward compatibility if other modules depend on the old name
+scraper = asset_discovery
+
