@@ -133,8 +133,8 @@ source venv/bin/activate
 pip install --upgrade pip --quiet || true
 
 if [ -f "requirements.txt" ]; then
-    echo " -> Installing dependencies (timeout 120s to prevent apt hang)..."
-    timeout 120s pip install -r requirements.txt --quiet || echo "[!] Warning: Dependency installation timed out or failed. You may need to run 'pip install -r requirements.txt' manually in /opt/shadowcypher/venv."
+    echo " -> Installing dependencies (this may take a few minutes)..."
+    pip install -r requirements.txt > /var/log/shadowcypher_install.log 2>&1 || echo "[!] Warning: Dependency installation failed. Check /var/log/shadowcypher_install.log and run 'pip install -r requirements.txt' manually in /opt/shadowcypher/venv."
 fi
 
 [ -f "${INSTALL_DIR}/run.sh" ] && chmod +x "${INSTALL_DIR}/run.sh"
@@ -174,27 +174,15 @@ POSTRM_EOF
 chmod 0755 "${BUILD_DIR}/DEBIAN/postrm"
 
 # --- Staging & Security Excludes ---
-log_info "Staging application files with strict security excludes..."
-rsync -a \
-    --exclude='.git' --exclude='.github' --exclude='.gitignore' \
-    --exclude='.claude' --exclude='.sisyphus' --exclude='.vscode' \
-    --exclude='.ruff_cache' --exclude='.cursor' \
-    --exclude='venv' --exclude='test_venv' --exclude='ai_engine/meta-venv' \
-    --exclude='__pycache__' --exclude='*.pyc' \
-    --exclude='build' --exclude='*.deb' \
-    --exclude='bin/go/**' --exclude='distill/checkpoints/**' \
-    --exclude='logs/**' --exclude='*.log' \
-    --exclude='findings' --exclude='loot' --exclude='reports' \
-    --exclude='sessions' --exclude='tickets' --exclude='scratch' \
-    --exclude='shadow_test' --exclude='dashboard*.png' \
-    --exclude='*.gguf' --exclude='models' --exclude='wordlists' \
-    --exclude='*.pem' --exclude='!shadowcypher/core/admin_public.pem' \
-    --exclude='*.key' --exclude='.session-secret' --exclude='session.secret' \
-    --exclude='.env*' --exclude='admin_private*' --exclude='auth.json' \
-    --exclude='credentials' --exclude='extracted_creds.txt' \
-    --exclude='config.json' --exclude='config/local_config.py' \
-    --exclude='*.db' --exclude='*.sqlite' \
-    ./ "${BUILD_DIR}/opt/${PACKAGE_NAME}/"
+log_info "Staging application files with strict whitelisting..."
+for item in shadowcypher native scripts requirements.txt config.example.json run.sh pyproject.toml README.md; do
+    if [ -e "$item" ]; then
+        cp -r "$item" "${BUILD_DIR}/opt/${PACKAGE_NAME}/"
+    fi
+done
+
+# Clean pycache to ensure pristine state
+find "${BUILD_DIR}/opt/${PACKAGE_NAME}" -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
 
 if [ -f "shadowcypher/core/admin_public.pem" ]; then
     mkdir -p "${BUILD_DIR}/opt/${PACKAGE_NAME}/shadowcypher/core"
@@ -208,9 +196,9 @@ LEAKED="$(find "${BUILD_DIR}/opt/${PACKAGE_NAME}" \
        -o -name '*.key' \
        -o -name '.session-secret' \
        -o -name 'session.secret' \
-       -o -name '.env' \
+       -o -name '.env*' \
        -o -name 'admin_private*' \
-       -o -name 'auth.json' \) 2>/dev/null | grep -v '/bin/go/' || true)"
+       -o -name 'auth.json' \) 2>/dev/null || true)"
 
 if [ -n "${LEAKED}" ]; then
     log_err "FATAL SEC-AUDIT FAILURE. Secrets leaked into staging tree:\n${LEAKED}"
