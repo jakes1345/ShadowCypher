@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
-"""
-ShadowCypher Namecheap Apex Sync — Sovereign DNS Orchestration.
-Automates the Dynamic DNS update for shadowcypher.site.
-"""
+# ==============================================================================
+# SHADOWCYPHER // DYNAMIC DNS CONFIGURATION UTILITY
+# ==============================================================================
+# Automates the Dynamic DNS update sequence for Namecheap domains.
+# Ensures the specified domain records point to the current public IP address.
 
 import requests
 import sys
 import os
 import time
+import logging
 from typing import Optional
+
+# Enterprise Logging Setup
+logging.basicConfig(level=logging.INFO, format='%(asctime)s | [%(levelname)s] | %(message)s', datefmt='%H:%M:%S')
 
 DOMAIN = "shadowcypher.site"
 HOSTS = ["@", "www", "nexus", "api"]
-PASSWORD = "9c7b940d90c745858a566ce9f3c8cffb"
+PASSWORD = os.environ.get("NAMECHEAP_DDNS_PASS", "YOUR_NAMECHEAP_DDNS_PASSWORD")
 
 def get_public_ip() -> Optional[str]:
-    """Retrieves the current public IP via multiple spectral hubs."""
+    """Retrieves the current public IP using standard resolution endpoints."""
     endpoints = [
         "https://api.ipify.org",
         "https://ifconfig.me/ip",
@@ -31,7 +36,7 @@ def get_public_ip() -> Optional[str]:
     return None
 
 def update_dns(host: str, domain: str, password: str, ip: str):
-    """Executes the Namecheap Dynamic DNS handshake."""
+    """Executes the Namecheap Dynamic DNS update."""
     url = "https://dynamicdns.parkengine.com/update"
     params = {
         "host": host,
@@ -41,35 +46,41 @@ def update_dns(host: str, domain: str, password: str, ip: str):
     }
     
     try:
-        print(f"[\033[0;34mSYNC\033[0m] Sending signal for {host}.{domain} -> {ip}...")
+        logging.info(f"Synchronizing record: {host}.{domain} -> {ip}")
         response = requests.get(url, params=params, timeout=10)
         if response.status_code == 200:
             if "<ErrCount>0</ErrCount>" in response.text:
-                print(f"[\033[0;32mSUCCESS\033[0m] {host}.{domain} updated successfully.")
+                logging.info(f"Success: {host}.{domain} updated.")
             else:
-                print(f"[\033[0;31mERROR\033[0m] Namecheap API returned internal error for {host}.")
+                logging.error(f"Namecheap API Error for {host}. Details: {response.text}")
         else:
-            print(f"[\033[0;31mFAIL\033[0m] HTTP {response.status_code} on update attempt.")
+            logging.error(f"HTTP {response.status_code} received during update for {host}.")
     except Exception as e:
-        print(f"[\033[0;31mFAIL\033[0m] Synchronisation heartbeat failed: {e}")
+        logging.error(f"Network error during synchronization: {e}")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
          PASSWORD = sys.argv[1]
 
-    if PASSWORD == "YOUR_DDNS_PASSWORD":
-        print("[\033[0;33mWARN\033[0m] No DDNS password provided. Set NAMECHEAP_DDNS_PASS env or pass as arg.")
+    print("\n==============================================================================")
+    print(" SHADOWCYPHER // DYNAMIC DNS CONFIGURATION UTILITY")
+    print("==============================================================================\n")
+
+    if PASSWORD == "YOUR_NAMECHEAP_DDNS_PASSWORD":
+        logging.warning("No DDNS password provided. Export NAMECHEAP_DDNS_PASS or pass as argument.")
         sys.exit(1)
 
-    print("\033[0;36mSHADOWCYPHER_DNS_SYNC: INITIATING_HANDSHAKE...\033[0m")
+    logging.info("Initiating DNS synchronization sequence...")
     
     current_ip = get_public_ip()
     if not current_ip:
-        print("[\033[0;31mFATAL\033[0m] Could not resolve public IP. Signal lost.")
+        logging.error("Failed to resolve public IP address. Aborting.")
         sys.exit(1)
         
     for h in HOSTS:
         update_dns(h, DOMAIN, PASSWORD, current_ip)
         time.sleep(1) # Rate-limit protection
 
-    print("\033[0;32mORCHESTRATION_COMPLETE: Domain shadowcypher.site is live on spectrum.\033[0m")
+    print("\n==============================================================================")
+    print(" [SUCCESS] DNS SYNCHRONIZATION COMPLETE")
+    print("==============================================================================\n")
