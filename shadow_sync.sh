@@ -3,19 +3,8 @@
 # Automates Go-Sovereign validation, Relay Re-compilation, and Swarm-State Sync.
 
 # ── 1. ENVIRONMENT VALIDATION ────────────────────────────────────
-export PATH=/home/jack/go_sovereign/bin:$PATH
-GO_VER=$(go version 2>/dev/null)
-
-if [[ $GO_VER == *"go1.26.2"* ]]; then
-    echo -e "\033[0;32m[OK] SOVEREIGN_GO_1.26.2: NOMINAL\033[0m"
-else
-    echo -e "\033[0;31m[!] TOOLCHAIN_REGRESSION: Re-aligning to Go 1.26.2...\033[0m"
-    # Re-installation logic could go here if needed.
-fi
-
-# ── 2. SWARM_RELAY RE-COMPILATION ────────────────────────────────
-echo "[*] AUDITING NATIVE CORE: Shadow-Relay..."
-cd /home/jack/ShadowCypher/shadowcypher/native/relay
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" \u0026\u0026 pwd)"
+cd "$SCRIPT_DIR/shadowcypher/native/relay"
 go build -o shadow-relay relay.go
 if [ $? -eq 0 ]; then
     echo -e "\033[0;32m[OK] SWARM_CORE: COMPILED_SUCCESSFULLY\033[0m"

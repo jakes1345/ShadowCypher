@@ -52,8 +52,26 @@ class Logger:
     def _timestamp() -> str:
         return datetime.now(timezone.utc).isoformat()
 
+    def _sanitize(self, text: Any) -> Any:
+        """Scrubs identifiable information from strings and objects."""
+        if isinstance(text, str):
+            # Replace home directory with generic path
+            import os
+            home = os.path.expanduser("~")
+            if home in text:
+                text = text.replace(home, "/opt/shadowcypher")
+            return text
+        elif isinstance(text, dict):
+            return {k: self._sanitize(v) for k, v in text.items()}
+        elif isinstance(text, list):
+            return [self._sanitize(i) for i in text]
+        return text
+
     def log(self, level: str, module: str, message: str, **extra):
         """Write a structured log entry."""
+        message = self._sanitize(message)
+        extra = self._sanitize(extra)
+        
         entry = {
             "timestamp": self._timestamp(),
             "level": level.upper(),

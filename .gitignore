@@ -77,3 +77,33 @@ out/
 dist/
 build/
 bin/go/
+
+# Runtime state & forensic artifacts
+integrity.json
+shadowcypher/core/integrity.json
+user_db/
+data/
+forensics/
+sessions/
+
+# Local tactical configs (contains WireGuard private keys, swarm fingerprints)
+configs/
+
+# Test artifacts
+test_venv/
+test_out.txt
+
+# Root-level screenshot captures
+dashboard*.png
+
+# Compiled arsenal binaries (commit source only)
+shadowcypher/arsenal/primitives/slowloris/slowloris
+
+# Rust build output
+**/target/
+Cargo.lock
+
+# Compiled native binaries (source-only repo)
+shadowcypher/native/nexus/nexus_amd64
+shadowcypher/native/nexus/nexus_arm64
+shadowcypher/native/nexus/nexus_hybrid

@@ -35,6 +35,13 @@ class ShadowPlatform:
         return os.path.join(cls.ROOT, base, *parts)
 
     @classmethod
+    def get_master_key_path(cls) -> str:
+        """Locates the master cryptographic key based on the host OS."""
+        if cls.IS_WINDOWS:
+            return "C:\\ProgramData\\ShadowCypher\\master.key"
+        return "/etc/shadowcypher/master.key"
+
+    @classmethod
     def get_component_status(cls) -> Dict[str, bool]:
         """Catalogs which ecosystem modules are currently available."""
         return {k: os.path.exists(cls.resolve_path(k)) for k in cls.COMPONENTS}
