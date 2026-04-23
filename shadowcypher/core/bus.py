@@ -25,7 +25,7 @@ class ShadowBus:
 
     def publish(self, event_type: str, data: Any, ui_thread: bool = False):
         """
-        Broadcats an event across the Citadel.
+        Broadcasts an event to all registered listeners.
         Supports automatic async resolution and GLib UI proxying.
         """
         with self._lock:

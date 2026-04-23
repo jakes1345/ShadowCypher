@@ -90,12 +90,15 @@ class Kairos:
                     potential_ip = ips[0] if ips else "TARGET"
                     db.log_vulnerability(potential_ip, 0, "unknown", severity="MEDIUM", payload=line)
                     
-                    # If high-value target, escalate
+                    # If high-value target, escalate via the hub
                     if "critical" in line.lower() or "rce" in line.lower():
                         try:
-                            from shadowcypher.ai.orchestrator import AIOrchestrator
-                            orch = AIOrchestrator()
-                            orch.queue_mission(f"Critical vulnerability identified: {line[:50]}. Initiate escalation audit on {potential_ip}")
+                            from shadowcypher.core.hub import hub
+                            hub.dispatch_mission(
+                                f"Critical vulnerability observed in tool output: {line[:120]}. "
+                                f"Plan follow-up verification on {potential_ip}.",
+                                agent_role="red_team",
+                            )
                         except Exception: pass
                 break  # One alert per line
 
