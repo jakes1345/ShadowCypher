@@ -32,6 +32,7 @@ sessions/
 tickets/
 .session-secret
 .drm-lockout
+.relay_token
 
 # Machine Specific Fingerprints (REDACTED FOR GITHUB)
 machines.json

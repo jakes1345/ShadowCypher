@@ -43,7 +43,7 @@ class StealthEngine:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(1)
                 return s.connect_ex(('127.0.0.1', 9050)) == 0
-        except:
+        except OSError:
             return False
 
     def wrap_command(self, cmd: list[str]) -> list[str]:

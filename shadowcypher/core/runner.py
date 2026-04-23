@@ -45,7 +45,7 @@ class Runner:
                 proc = self.active_processes[task_id]
                 try:
                     proc.terminate()
-                    # FIXME: handle signal 9 gracefully
+                    # SIGTERM first; escalate to SIGKILL after 2s if still alive.
                     def force_kill():
                         if proc.poll() is None:
                             proc.kill()
@@ -91,11 +91,18 @@ class Runner:
                     args = prefix + args
             
             # 3. Platform-Aware Elevation
-            if not is_shell and isinstance(args, list) and args[0] == "sudo":
+            if not is_shell and isinstance(args, list) and args and args[0] == "sudo":
                 if self.platform.IS_LINUX:
                     args = ["pkexec"] + args[1:]
-                elif self.platform.IS_WINDOWS:
-                    args = ["powershell", "Start-Process", "-Verb", "runAs"] + args[1:]
+                elif self.platform.IS_WINDOWS and len(args) > 1:
+                    # Windows: wrap the target in a Start-Process RunAs invocation.
+                    exe = args[1]
+                    arg_list = args[2:]
+                    ps_cmd = f"Start-Process -Verb RunAs -FilePath '{exe}'"
+                    if arg_list:
+                        joined = ",".join(f"'{a}'" for a in arg_list)
+                        ps_cmd += f" -ArgumentList {joined}"
+                    args = ["powershell", "-NoProfile", "-Command", ps_cmd]
 
             # 4. STEALTH: Proxychains Wrapping (Linux only, if privacy enforced)
             if self.platform.IS_LINUX and not is_shell and config.get("stealth", "enforce_privacy"):

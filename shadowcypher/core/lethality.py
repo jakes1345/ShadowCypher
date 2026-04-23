@@ -58,7 +58,7 @@ class LethalityAudit:
                 s.settimeout(1.0)
                 s.connect(("127.0.0.1", 11434))
                 return "PASS [Local Inference Cluster Online]"
-        except:
+        except OSError:
             return "WARNING [Cloud-Only Mode]"
 
     def _audit_arsenal(self) -> str:

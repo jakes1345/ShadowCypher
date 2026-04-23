@@ -87,7 +87,7 @@ class StealthHoneypot:
                 self.active = True
                 logger.info("security", f"Stealth Honeypot active on {self.bind_addr}:{self.port}")
             except Exception as e:
-                logger.error("security", f"SELINUX_POLICY_INJECTION_FAILED: {e}")
+                logger.error("security", f"HONEYPOT_BIND_FAILED {self.bind_addr}:{self.port}: {e}")
                 self.active = False
                 return
 
@@ -149,7 +149,7 @@ class IdentityHardener:
 
     def execute_flash_wipe(self):
         """Emergency purge of session data and ephemeral keys."""
-        logger.warning("security", "ALER_REACTION: Executing Spectre-Class Flash-Wipe...")
+        logger.warning("security", "ALERT_REACTION: Executing flash-wipe sequence...")
         
         # 1. Clear session memory
         from shadowcypher.core.hub import hub

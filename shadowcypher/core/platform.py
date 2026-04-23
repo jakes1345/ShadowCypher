@@ -94,14 +94,36 @@ class ShadowPlatform:
                             break
                 if mem_total:
                     vitals["mem"] = (1 - mem_avail / mem_total) * 100
-                    vitals["cpu"] = (vitals["p_load"] / os.cpu_count()) * 100
-        except: pass
+                    cpu_count = os.cpu_count() or 1
+                    vitals["cpu"] = (vitals["p_load"] / cpu_count) * 100
+        except (OSError, ValueError):
+            pass
         return vitals
 
     @staticmethod
     def detect_virtualization() -> str:
         if os.path.exists("/.dockerenv"): return "DOCKER"
         return "HOST"
+
+    @staticmethod
+    def audit_tool_path(tool_name: str) -> Optional[str]:
+        """Return the absolute path to `tool_name` if installed, else None.
+
+        Checks, in order: the system PATH (shutil.which) and the local
+        project `tools/` directory. Unlike `config.get_tool_path`, this
+        returns None on miss so callers can use truthy checks.
+        """
+        import shutil
+        sys_path = shutil.which(tool_name)
+        if sys_path:
+            return sys_path
+        local_dir = os.path.join(ShadowPlatform.ROOT, "tools")
+        if os.path.isdir(local_dir):
+            for root, _, files in os.walk(local_dir):
+                for f in files:
+                    if f.lower() == tool_name.lower() or f.lower() == f"{tool_name.lower()}.sh":
+                        return os.path.join(root, f)
+        return None
 
     @staticmethod
     def get_firewall_backend() -> str:
@@ -115,7 +137,7 @@ class ShadowPlatform:
                 if subprocess.call(["which", "iptables"], stdout=subprocess.DEVNULL) == 0:
                     return "IPTABLES"
                 return "GENERIC_LINUX"
-            except:
+            except (OSError, FileNotFoundError):
                 return "UNSUPPORTED"
         elif ShadowPlatform.IS_WINDOWS:
             return "WINDOWS_DEFENDER"
