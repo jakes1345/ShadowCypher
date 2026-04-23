@@ -78,7 +78,7 @@ def run_diagnostics():
 
     # Phase 2: Host Masking (Firewall Restrictions)
     log.info("Phase 2: Enforcing Inbound Firewall Restrictions (Stealth Profile)")
-    Firewall.ghost_mode(on_output=lambda x: log.info(f"Firewall Policy: {x.strip()}"))
+    Firewall.stealth_mode(on_output=lambda x: log.info(f"Firewall Policy: {x.strip()}"))
     log.info("Stealth Profile active. Inbound traffic explicitly dropped.")
 
     # Phase 3: Traffic Generation & Load Profiling

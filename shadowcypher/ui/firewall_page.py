@@ -112,8 +112,8 @@ class FirewallPage(BasePage):
         Firewall.sovereign_lockdown(self.on_output)
 
     def _on_ghost(self, btn):
-        self.clear_output("ACTIVATING_GHOST_MODE: Silencing inbound signal...\n")
-        Firewall.ghost_mode(self.on_output)
+        self.clear_output("ACTIVATING_STEALTH_MODE: Silencing inbound signal...\n")
+        Firewall.stealth_mode(self.on_output)
 
     def _refresh_radar(self):
         """Heartbeat: Update the Live Connection Radar."""

@@ -390,3 +390,6 @@ layer7.http_flood = layer7.http_volumetric_test
 layer7.slowloris = layer7.partial_header_exhaustion
 layer7.rudy = layer7.slow_post_exhaustion
 layer7.get_flood_stats = layer7.get_test_stats
+
+# Back-compat alias
+Layer7 = ApplicationStressTest

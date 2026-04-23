@@ -384,3 +384,6 @@ class MeshRelay(BaseModule):
 
 # Maintained for backward compatibility
 shadow_swarm = MeshRelay()
+
+# Back-compat alias — older callers referenced ShadowSwarm for MeshRelay
+ShadowSwarm = MeshRelay
