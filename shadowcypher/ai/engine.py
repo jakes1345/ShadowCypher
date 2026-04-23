@@ -520,80 +520,20 @@ class AIEngine:
     def execute_quantum_task(self, prompt: str,
                              on_output: Optional[Callable[[str], None]] = None,
                              on_complete: Optional[Callable[[str], None]] = None):
-        """Execute a high-stakes task using the Quantum-Core (local AI with deep-analysis mode).
-
-        Quantum-Core runs entirely through the local Ollama instance with a specialized
-        system prompt that enables deep reasoning, multi-step analysis, and autonomous
-        task decomposition. on_complete fires once with the aggregated final text (or an
-        error marker) so callers can clear UI state instead of hanging.
-        """
+        """Execute a high-stakes task using the autonomous AutoOrchestrator bridge."""
         if on_output:
-            on_output("[QUANTUM] Engaging Quantum-Core via local AI engine...\n")
+            on_output("[QUANTUM] Engaging Autonomous MetaChain for deep tactical execution...\n")
 
-        system_prompt = (
-            "You are Quantum-Core, the deep-analysis engine of ShadowCypher. "
-            "You operate in high-fidelity mode: break complex tasks into steps, "
-            "reason through each step explicitly, verify your conclusions, "
-            "and provide actionable output. You have full knowledge of offensive "
-            "security, network analysis, forensics, and system administration. "
-            "Be precise, technical, and thorough."
+        from shadowcypher.ai.auto_orchestrator import auto_orch
+        
+        logger.info("ai", "QUANTUM_ORCHESTRATION: Delegating to AutoAgent foundation")
+        
+        # We wrap the on_output to match the callback signature expected by auto_orch
+        auto_orch.execute_mission(
+            query=prompt,
+            callback=on_output,
+            on_complete=on_complete
         )
-
-        logger.info("ai", "QUANTUM_GATE_OPEN: Local deep-analysis mode engaged")
-
-        def _quantum_run():
-            aggregated: list[str] = []
-
-            def _emit(text: str):
-                if text:
-                    aggregated.append(text)
-                    if on_output:
-                        on_output(text)
-
-            final_result = ""
-            try:
-                final_text = self._ollama_stream("/api/chat", {
-                    "model": self._model_name or config.get("ai", "model", default="gemma4"),
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "stream": True,
-                    "options": {"temperature": 0.2, "num_predict": 4096},
-                }, on_token=_emit, timeout=300)
-
-                if final_text:
-                    final_result = final_text.strip() or "[QUANTUM] Empty response"
-                else:
-                    # Fallback: non-streaming
-                    resp = self._ollama_request("/api/chat", {
-                        "model": self._model_name or config.get("ai", "model", default="gemma4"),
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": prompt},
-                        ],
-                        "stream": False,
-                        "options": {"temperature": 0.2, "num_predict": 4096},
-                    }, timeout=300)
-                    if resp:
-                        final_result = resp.get("message", {}).get("content", "[QUANTUM] No response")
-                        _emit(final_result)
-                    else:
-                        final_result = "[QUANTUM] Engine offline. Ensure Ollama is running."
-                        _emit(final_result + "\n")
-            except Exception as e:
-                final_result = f"[QUANTUM_ERROR] {e}"
-                _emit(final_result + "\n")
-                logger.error("ai", f"QUANTUM_FAULT: {e}")
-            finally:
-                if on_complete:
-                    try:
-                        on_complete(final_result)
-                    except Exception as cb_err:
-                        logger.error("ai", f"QUANTUM_COMPLETE_CALLBACK_FAULT: {cb_err}")
-
-        import threading
-        threading.Thread(target=_quantum_run, daemon=True, name="QuantumCore").start()
 
     def unload(self):
         """Unload model from memory."""

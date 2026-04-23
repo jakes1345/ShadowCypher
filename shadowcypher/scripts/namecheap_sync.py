@@ -9,15 +9,11 @@ import requests
 import sys
 import os
 import time
-import logging
-from typing import Optional
+from shadowcypher.core.logger import logger
 
-# Enterprise Logging Setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s | [%(levelname)s] | %(message)s', datefmt='%H:%M:%S')
-
-DOMAIN = "shadowcypher.site"
-HOSTS = ["@", "www", "nexus", "api"]
-PASSWORD = os.environ.get("NAMECHEAP_DDNS_PASS", "YOUR_NAMECHEAP_DDNS_PASSWORD")
+DOMAIN = os.environ.get("NAMECHEAP_DOMAIN", "shadowcypher.site")
+HOSTS = os.environ.get("NAMECHEAP_HOSTS", "@,www,nexus,api").split(",")
+PASSWORD = os.environ.get("NAMECHEAP_DDNS_PASS")
 
 def get_public_ip() -> Optional[str]:
     """Retrieves the current public IP using standard resolution endpoints."""
@@ -46,17 +42,17 @@ def update_dns(host: str, domain: str, password: str, ip: str):
     }
     
     try:
-        logging.info(f"Synchronizing record: {host}.{domain} -> {ip}")
+        logger.info("dns", f"Synchronizing record: {host}.{domain} -> {ip}")
         response = requests.get(url, params=params, timeout=10)
         if response.status_code == 200:
             if "<ErrCount>0</ErrCount>" in response.text:
-                logging.info(f"Success: {host}.{domain} updated.")
+                logger.info("dns", f"Success: {host}.{domain} updated.")
             else:
-                logging.error(f"Namecheap API Error for {host}. Details: {response.text}")
+                logger.error("dns", f"Namecheap API Error for {host}. Details: {response.text}")
         else:
-            logging.error(f"HTTP {response.status_code} received during update for {host}.")
+            logger.error("dns", f"HTTP {response.status_code} received during update for {host}.")
     except Exception as e:
-        logging.error(f"Network error during synchronization: {e}")
+        logger.error("dns", f"Network error during synchronization: {e}")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
@@ -66,15 +62,15 @@ if __name__ == "__main__":
     print(" SHADOWCYPHER // DYNAMIC DNS CONFIGURATION UTILITY")
     print("==============================================================================\n")
 
-    if PASSWORD == "YOUR_NAMECHEAP_DDNS_PASSWORD":
-        logging.warning("No DDNS password provided. Export NAMECHEAP_DDNS_PASS or pass as argument.")
+    if not PASSWORD:
+        logger.warning("dns", "No DDNS password provided. Export NAMECHEAP_DDNS_PASS or pass as argument.")
         sys.exit(1)
 
-    logging.info("Initiating DNS synchronization sequence...")
+    logger.info("dns", "Initiating DNS synchronization sequence...")
     
     current_ip = get_public_ip()
     if not current_ip:
-        logging.error("Failed to resolve public IP address. Aborting.")
+        logger.error("dns", "Failed to resolve public IP address. Aborting.")
         sys.exit(1)
         
     for h in HOSTS:

