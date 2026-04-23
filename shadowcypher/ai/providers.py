@@ -46,9 +46,9 @@ PROVIDERS = {
         "base_url": "https://api.anthropic.com/v1",
         "api_format": "anthropic",
         "env_key": "ANTHROPIC_API_KEY",
-        "default_model": "claude-sonnet-4-20250514",
+        "default_model": "claude-sonnet-4-6",
         "free": False,
-        "description": "Claude Sonnet/Opus. Best for complex reasoning and code.",
+        "description": "Claude Sonnet/Opus/Haiku. Best for complex reasoning and code.",
     },
     "google": {
         "name": "Google Gemini",
@@ -64,7 +64,7 @@ PROVIDERS = {
         "base_url": "https://openrouter.ai/api/v1",
         "api_format": "openai",
         "env_key": "OPENROUTER_API_KEY",
-        "default_model": "anthropic/claude-sonnet-4-20250514",
+        "default_model": "anthropic/claude-sonnet-4-6",
         "free": False,
         "description": "Multi-model gateway. Access 200+ models with one key.",
     },
@@ -383,12 +383,13 @@ class AIProvider:
         known = {
             "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1", "o1-mini", "o3-mini"],
             "anthropic": [
-                "claude-3-5-sonnet-latest", 
-                "claude-3-5-haiku-latest", 
+                "claude-opus-4-7",
+                "claude-sonnet-4-6",
+                "claude-haiku-4-5-20251001",
+                "claude-sonnet-4-20250514",
+                "claude-3-5-sonnet-latest",
+                "claude-3-5-haiku-latest",
                 "claude-3-opus-latest",
-                "claude-3-5-sonnet-20241022",
-                "claude-sonnet-4-20250514-ULTRATHINK", # Experimental Flag Simulation
-                "claude-sonnet-4-20250514-ULTRAPLAN"
             ],
             "google": ["gemini-2.0-pro-exp", "gemini-2.5-pro", "gemini-2.0-flash-exp", "gemini-1.5-pro"],
             "groq": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],

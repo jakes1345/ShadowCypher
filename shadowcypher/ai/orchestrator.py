@@ -179,12 +179,12 @@ class AIOrchestrator:
         """Repair malformed JSON from models."""
         try:
             return json.loads(text)
-        except:
+        except json.JSONDecodeError:
             # Simple cleanup for common LLM markdown errors
             cleaned = text.strip().strip("```json").strip("```")
             try:
                 return json.loads(cleaned)
-            except:
+            except json.JSONDecodeError:
                 return None
 
 # Singleton Export
