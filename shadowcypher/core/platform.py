@@ -106,6 +106,17 @@ class ShadowPlatform:
         return "HOST"
 
     @staticmethod
+    def get_net_info_cmd() -> List[str]:
+        """Return the platform-native command that prints routing info."""
+        if ShadowPlatform.IS_LINUX:
+            return ["ip", "route"]
+        if ShadowPlatform.IS_MACOS:
+            return ["netstat", "-rn"]
+        if ShadowPlatform.IS_WINDOWS:
+            return ["route", "print"]
+        return ["netstat", "-rn"]
+
+    @staticmethod
     def audit_tool_path(tool_name: str) -> Optional[str]:
         """Return the absolute path to `tool_name` if installed, else None.
 

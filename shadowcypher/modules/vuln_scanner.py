@@ -67,21 +67,34 @@ class VulnScanner(BaseModule):
         self.log(f"AUDIT_REQUESTED: {target}", "SYSTEM")
         return hub.dispatch_mission(f"Execute a high-intensity vulnerability audit and exploit verification on {target}")
 
-    def shadow_zero_day_scan(self, target, on_output=None):
-        """2026 Heuristic Scan: AI-driven zero-day detection via abnormal service behavior."""
+    def ai_heuristic_scan(self, target, on_output=None):
+        """AI-assisted heuristic scan.
+
+        Asks the DeepHat planner to flag anomalous service behaviour on the
+        target. This does NOT discover zero-days — it synthesises analysis
+        scripts that a human operator then reviews and executes. Kept as a
+        planning aid, not an autonomous exploit tool.
+        """
         from shadowcypher.modules.deephat import deephat
-        if on_output: on_output(f"[SCAN] INITIATING_SHADOW_ZERO_DAY_AUDIT: {target}...\n")
-        
-        desc = f"Analyze service responses for {target}. Detect non-standard buffer behavior and memory corruption indicators. Synthesize a proof-of-concept for discovered anomalies."
-        
-        # Forge the arsenal shards
+        if on_output:
+            on_output(f"[SCAN] Launching AI heuristic analysis on {target}...\n")
+
+        desc = (
+            f"Analyse service responses for {target}. Flag non-standard buffer behaviour "
+            "and memory-corruption indicators. Produce diagnostic scripts a human can review — "
+            "do NOT execute exploits."
+        )
+
         shards_str = deephat.forge_weapon(desc, category="audit")
-        shards = [s.strip() for s in shards_str.split(",")]
-        
+        shards = [s.strip() for s in shards_str.split(",") if s.strip()]
+
         results = []
         for shard in shards:
             full_path = os.path.join("payloads", shard)
             res = deephat.execute_payload(full_path, on_output=on_output)
             results.append(res)
-            
-        return " | ".join(results)
+
+        return " | ".join(results) if results else "NO_SHARDS_GENERATED"
+
+    # Legacy alias — older UI code may still reference this.
+    shadow_zero_day_scan = ai_heuristic_scan

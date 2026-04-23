@@ -94,8 +94,12 @@ class OSINT:
             on_output("[AI] CORRELATING_IDENTITY_METADATA...")
         
         orch = AIOrchestrator()
-        # Uses DeepHat-V1's reasoning to crawl and summarize OSINT findings
-        response = orch.execute_query(f"Perform a deep dive OSINT search and identity analysis for: {query}. Summarize key findings and technical footprints. Use stealth check for all web requests.", callback=on_output)
+        # Uses the local reasoning model to synthesize OSINT findings.
+        response = orch.execute_query_sync(
+            f"Perform a deep dive OSINT search and identity analysis for: {query}. "
+            "Summarize key findings and technical footprints. "
+            "Use stealth check for all web requests."
+        )
         
         if on_output:
             on_output(f"[AI] INTEL_SYNTHESIS_COMPLETE: {response[:200]}...")
