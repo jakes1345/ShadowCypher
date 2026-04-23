@@ -131,7 +131,8 @@ class Credentials(BaseModule):
         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".hash") as tf:
             tf.write(hash_str)
             t_path = tf.name
-        args = ["john", f"--format={htype}", f"--wordlist={wordlist or self.get_tool_path('rockyou')}", t_path]
+        wl = wordlist or "/usr/share/wordlists/rockyou.txt"
+        args = ["john", f"--format={htype}", f"--wordlist={wl}", t_path]
         return self.execute("JOHN", args, callback=on_output)
 
     def audit_macos_keychain(self, on_output=None):

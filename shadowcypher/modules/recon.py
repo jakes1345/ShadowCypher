@@ -31,7 +31,8 @@ class Recon(BaseModule):
             else: match = None
             
             return match.group(1) if match else "127.0.0.1"
-        except: return "127.0.0.1"
+        except (subprocess.CalledProcessError, OSError, AttributeError):
+            return "127.0.0.1"
 
     def pulse_target(self, target, stype="Quick Port Scan", on_output=None):
         if not validate_target(target): return

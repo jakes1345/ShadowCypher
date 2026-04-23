@@ -44,8 +44,11 @@ class SovereignRelay(BaseModule):
         
         # Detect primary interface
         try:
-            iface = subprocess.check_output("ip route get 8.8.8.8 | grep -oP 'dev \\K\\S+'", shell=True).decode().strip()
-        except:
+            iface = subprocess.check_output(
+                "ip route get 8.8.8.8 | grep -oP 'dev \\K\\S+'",
+                shell=True,
+            ).decode().strip()
+        except (subprocess.CalledProcessError, OSError):
             iface = "eth0"
 
         config = f"""[Interface]
@@ -76,7 +79,7 @@ PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING 
         try:
             s.connect(('8.8.8.8', 1))
             ip = s.getsockname()[0]
-        except:
+        except OSError:
             ip = '127.0.0.1'
         finally:
             s.close()
@@ -100,8 +103,12 @@ AllowedIPs = {client_ip}/32
         with open(os.path.join(self.base_dir, "wg0.conf"), "a") as f:
             f.write(server_snippet)
             
-        # Client Config
-        endpoint = self._get_public_ip() + ":51820"
+        # Client Config — refuse to generate a config with a stub endpoint.
+        public_ip = self._get_public_ip()
+        if not public_ip:
+            logger.error("relay", "add_client aborted: public IP unavailable")
+            return None
+        endpoint = f"{public_ip}:51820"
         client_config = f"""[Interface]
 PrivateKey = {keys['private']}
 Address = {client_ip}/24
@@ -120,20 +127,36 @@ PersistentKeepalive = 25
         logger.info("relay", f"CLIENT_PROVISIONED: Name={name} IP={client_ip}")
         return client_conf_path
 
-    def _get_public_ip(self):
-        try:
-            return requests.get("https://api.ipify.org").text
-        except:
-            return "YOUR_PUBLIC_IP"
+    def _get_public_ip(self) -> Optional[str]:
+        """Return the machine's current public IPv4, or None if unreachable.
 
-    def generate_qr(self, config_path: str):
+        Returning None instead of a placeholder string prevents callers from
+        silently writing a literal 'YOUR_PUBLIC_IP' into generated client
+        configs — the caller must now handle the missing-IP case explicitly.
+        """
+        try:
+            r = requests.get("https://api.ipify.org", timeout=5)
+            if r.status_code == 200 and r.text:
+                return r.text.strip()
+        except (requests.RequestException, OSError) as e:
+            logger.warning("relay", f"public-IP lookup failed: {e}")
+        return None
+
+    def generate_qr(self, config_path: str) -> Optional[str]:
         """Generate a QR code for mobile scanning."""
         qr_path = config_path.replace(".conf", ".png")
         try:
-            subprocess.run(["qrencode", "-t", "ansiutf8", "-r", config_path], capture_output=True) # For terminal display
-            subprocess.run(["qrencode", "-o", qr_path, "-r", config_path])
-            return qr_path
-        except:
+            subprocess.run(
+                ["qrencode", "-t", "ansiutf8", "-r", config_path],
+                capture_output=True, timeout=10,
+            )  # terminal display
+            subprocess.run(
+                ["qrencode", "-o", qr_path, "-r", config_path],
+                capture_output=True, timeout=10,
+            )
+            return qr_path if os.path.exists(qr_path) else None
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as e:
+            logger.warning("relay", f"qrencode failed: {e}")
             return None
 
 sovereign_relay = SovereignRelay()

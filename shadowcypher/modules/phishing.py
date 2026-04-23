@@ -75,24 +75,37 @@ class SocialEngineeringAssessment:
         return task_id
 
     @staticmethod
-    def start_secure_tunnel(port, mode="cloudflare", on_output=None):
-        """Secure the infrastructure with an HTTPS tunnel."""
+    def start_secure_tunnel(port, mode="cloudflare", on_output=None, domain: str = ""):
+        """Secure the infrastructure with an HTTPS tunnel.
+
+        Args:
+            port: Local port the backend is bound to.
+            mode: One of 'cloudflare', 'ngrok', 'certbot', 'ssh'.
+            domain: Required only for mode='certbot' — the FQDN for which a
+                Let's Encrypt certificate should be issued.
+        """
         logger.info("social_eng", f"ENGAGING_SECURE_TUNNEL: {mode} (port {port})")
         if on_output:
             on_output(f"[INFRASTRUCTURE] INITIATING_HTTPS_TUNNEL: {mode.upper()}...\n")
-            
+
         if mode == "cloudflare":
             cmd = ["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{port}"]
             return runner.execute_task("TUNNEL_CLOUDFLARE", cmd, callback=on_output)
-        elif mode == "ngrok":
+        if mode == "ngrok":
             cmd = ["ngrok", "http", str(port)]
             return runner.execute_task("TUNNEL_NGROK", cmd, callback=on_output)
-        elif mode == "certbot":
+        if mode == "certbot":
+            if not domain:
+                msg = "TUNNEL_CERTBOT_REJECTED: mode='certbot' requires a real `domain=` arg"
+                if on_output:
+                    on_output(msg)
+                logger.error("social_eng", msg)
+                return None
             from shadowcypher.core.security import hardener
-            return hardener.provision_letsencrypt("your-domain.com", webroot=os.getcwd())
-        else:
-            cmd = ["ssh", "-R", f"80:localhost:{port}", "nokey@localhost.run"]
-            return runner.execute_task("TUNNEL_SSH", cmd, callback=on_output)
+            return hardener.provision_letsencrypt(domain, webroot=os.getcwd())
+        # Default: reverse-SSH tunnel via serveo/localhost.run
+        cmd = ["ssh", "-R", f"80:localhost:{port}", "nokey@localhost.run"]
+        return runner.execute_task("TUNNEL_SSH", cmd, callback=on_output)
 
     @staticmethod
     def generate_fake_recaptcha(payload, target_os="windows"):
