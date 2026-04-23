@@ -338,3 +338,6 @@ class LoadInjector(BaseModule):
 
 # Maintained for backward compatibility
 ghost_hose = LoadInjector()
+
+# Back-compat alias expected by modules/__init__.py and ui_integrity.py
+GhostHose = LoadInjector
