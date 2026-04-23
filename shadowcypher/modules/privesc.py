@@ -44,7 +44,7 @@ class PrivEsc(BaseModule):
 
     @staticmethod
     def find_writable_dirs(on_output: Optional[Callable] = None):
-        """Find world-writable directories (potential for hishadow_operator)."""
+        """Find world-writable directories (potential for hijacking)."""
         return runner.execute_task(
             "WRITABLE_DIRS",
             ["bash", "-c", "find / -writable -type d -not -path '*/proc/*' -not -path '*/sys/*' 2>/dev/null | head -50"],
@@ -200,11 +200,11 @@ class PrivEsc(BaseModule):
             callback=on_output,
         )
 
-    # ── PATH Hishadow_operator ──
+    # ── PATH Hijacking ──
 
     @staticmethod
-    def check_path_hishadow_operator(on_output: Optional[Callable] = None):
-        """Check for writable directories in PATH (path hishadow_operator vector)."""
+    def check_path_hijacking(on_output: Optional[Callable] = None):
+        """Check for writable directories in PATH (path hijacking vector)."""
         script = (
             "echo '=== PATH directories ==='; "
             "echo $PATH | tr ':' '\\n'; "
@@ -215,7 +215,7 @@ class PrivEsc(BaseModule):
             "done"
         )
         return runner.execute_task(
-            "PATH_HIshadow_operator",
+            "PATH_HIJACKING",
             ["bash", "-c", script],
             callback=on_output,
         )
@@ -235,7 +235,7 @@ class PrivEsc(BaseModule):
             ("Capabilities", self.check_capabilities),
             ("Writable Dirs", self.find_writable_dirs),
             ("Sensitive Files", self.find_sensitive_files),
-            ("PATH Hishadow_operator", self.check_path_hishadow_operator),
+            ("PATH Hijacking", self.check_path_hijacking),
         ]
 
         task_ids = []

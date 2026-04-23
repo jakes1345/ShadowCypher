@@ -77,13 +77,18 @@ class CombatDeck(BasePage):
         forge_box.set_margin_bottom(10)
 
         self.forge_combo = Gtk.ComboBoxText()
-        self.forge_combo.append("wasm_spray", "WASM Heap Spray")
-        self.forge_combo.append("jit_bypass", "JIT Bypass Pattern")
-        self.forge_combo.append("flash_legacy", "Flash Legacy Emulation")
+        self.forge_combo.append("xss",       "XSS Scan (Reflected)")
+        self.forge_combo.append("csrf",      "CSRF PoC Generator")
+        self.forge_combo.append("clickjack", "Clickjacking Test")
+        self.forge_combo.append("cors",      "CORS Misconfiguration")
+        self.forge_combo.append("headers",   "Security Header Audit")
+        self.forge_combo.append("subdomain", "Subdomain Takeover")
+        self.forge_combo.append("lfi",       "LFI Scan")
+        self.forge_combo.append("redirect",  "Open Redirect Scan")
         self.forge_combo.set_active(0)
         forge_box.pack_start(self.forge_combo, False, False, 0)
 
-        self.wasm_btn = self.make_action_btn("GENERATE HARNESS", self._on_forge_click)
+        self.wasm_btn = self.make_action_btn("RUN WEB TEST", self._on_forge_click)
         forge_box.pack_start(self.wasm_btn, False, False, 0)
 
         forge_frame.add(forge_box)
@@ -139,26 +144,40 @@ class CombatDeck(BasePage):
         return False
 
     def _on_forge_click(self, btn):
+        import threading
         from shadowcypher.modules.web_exploit_v2 import web_forge
+        from shadowcypher.core.sanitize import validate_target
 
         exploit_type = self.forge_combo.get_active_id()
         if not exploit_type:
             self.log("ERROR: Select an exploit type", "error")
             return
 
-        # Map combo IDs to actual WebForge methods
-        method_map = {
-            "xss": web_forge.xss_scan,
-            "csrf": web_forge.csrf_generate,
-            "clickshadow_operator": web_forge.clickshadow_operator_test,
-            "cors": web_forge.cors_test,
-            "headers": web_forge.header_audit,
-            "subdomain": web_forge.subdomain_takeover,
-            "lfi": web_forge.lfi_scan,
-            "redirect": web_forge.open_redirect_scan,
+        target = self.target_entry.get_text().strip()
+        if not target:
+            self.log("ERROR: Specify a target URL/host in the Target field", "error")
+            return
+        if not validate_target(target):
+            self.log(f"REJECTED: Invalid target '{target}'", "error")
+            return
+
+        def cb(line):
+            GLib.idle_add(self.log, str(line), "system")
+
+        dispatch = {
+            "xss":       lambda: web_forge.xss_scan(target, cb),
+            "csrf":      lambda: web_forge.csrf_generate(target, "POST", cb),
+            "clickjack": lambda: web_forge.clickjack_test(target, cb),
+            "cors":      lambda: web_forge.cors_test(target, cb),
+            "headers":   lambda: web_forge.header_audit(target, cb),
+            "subdomain": lambda: web_forge.subdomain_takeover(target, cb),
+            "lfi":       lambda: web_forge.lfi_scan(target, "id", cb),
+            "redirect":  lambda: web_forge.open_redirect_scan(target, "url", cb),
         }
-        handler = method_map.get(exploit_type)
-        if handler:
-            self.log(f"FORGE_STARTING: {exploit_type.upper()}", "ai")
-        else:
+        handler = dispatch.get(exploit_type)
+        if not handler:
             self.log(f"FORGE_ERROR: Unknown exploit type '{exploit_type}'", "error")
+            return
+
+        self.log(f"FORGE_STARTING: {exploit_type.upper()} -> {target}", "ai")
+        threading.Thread(target=handler, daemon=True).start()
