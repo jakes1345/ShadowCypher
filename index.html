@@ -243,14 +243,20 @@
                     <button onclick="mockLogout()" class="btn-primary" style="padding: 10px 20px; font-size: 0.6rem; background: var(--accent-secondary);">TERMINATE_SESSION</button>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px;">
-                    <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid #222;">
-                        <div class="mono" style="font-size: 0.6rem; color: var(--text-secondary); margin-bottom: 10px;">ACTIVE_LICENSE</div>
-                        <div style="font-family: var(--font-heading); color: var(--accent-primary);">GUARDIAN_PRO</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:40px;">
+                    <div style="padding:20px; background:rgba(180, 74, 255, 0.03); border:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:10px;">ORACLE_SHADOWNODE</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="status-dot" style="background:#666; box-shadow:none;" id="node-status"></div>
+                            <span class="mono" style="font-size:0.9rem; color:#666;">AWAITING_PROVISION</span>
+                        </div>
                     </div>
-                    <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid #222;">
-                        <div class="mono" style="font-size: 0.6rem; color: var(--text-secondary); margin-bottom: 10px;">EXPIRATION_DATE</div>
-                        <div style="font-family: var(--font-heading); color: var(--text-primary);">2026-12-31</div>
+                    <div style="padding:20px; background:rgba(0, 255, 65, 0.03); border:1px solid rgba(0, 255, 65, 0.2);">
+                        <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:10px;">SUPABASE_BACKEND</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="status-dot" id="db-status"></div>
+                            <span class="mono" style="font-size:0.9rem; color:var(--success);">CONNECTED_STABLE</span>
+                        </div>
                     </div>
                 </div>
 
@@ -382,12 +388,21 @@
         }
 
         // Supabase Initialization
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // User needs to replace this
-        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // User needs to replace this
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let supabaseClient = null;
+        try {
+            const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // User needs to replace this
+            const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // User needs to replace this
+            if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && typeof supabase !== 'undefined') {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) { console.error("Supabase Init Error:", e); }
 
         // Account Logic
         async function handleAuth(mode) {
+            if (!supabaseClient) {
+                cliPrint("AUTH_SYSTEM_OFFLINE: CONFIGURE SUPABASE_KEYS IN INDEX.HTML", "var(--warning)");
+                return;
+            }
             const email = document.querySelector(mode === 'login' ? '#auth-login input[type="text"]' : '#auth-signup input[type="email"]').value;
             const password = document.querySelector(mode === 'login' ? '#auth-login input[type="password"]' : '#auth-signup input[type="password"]').value;
             const handle = mode === 'signup' ? document.querySelector('#auth-signup input[type="text"]').value : null;
@@ -395,9 +410,9 @@
             try {
                 let result;
                 if (mode === 'login') {
-                    result = await supabase.auth.signInWithPassword({ email, password });
+                    result = await supabaseClient.auth.signInWithPassword({ email, password });
                 } else {
-                    result = await supabase.auth.signUp({ 
+                    result = await supabaseClient.auth.signUp({ 
                         email, 
                         password,
                         options: { data: { handle: handle } }
@@ -414,7 +429,7 @@
         }
 
         async function mockLogout() {
-            await supabase.auth.signOut();
+            if (supabaseClient) await supabaseClient.auth.signOut();
             document.getElementById('account-auth').style.display = 'block';
             document.getElementById('account-dashboard').style.display = 'none';
             cliPrint('SESSION_TERMINATED: STAY VIGILANT.', 'var(--warning)');
@@ -428,8 +443,11 @@
 
         // Check active session on boot
         async function checkSession() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) updateUIForUser(session.user);
+            if (!supabaseClient) return;
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) updateUIForUser(session.user);
+            } catch (e) {}
         }
 
         function toggleAuth(view) {
