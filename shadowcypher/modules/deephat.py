@@ -93,6 +93,45 @@ class PayloadSynthesizer:
             
         return f"EXECUTION_REGISTERED: TaskID {task_id}"
 
+    def heretic_forge(self, mission_desc, language="python"):
+        """
+        Uncensored weapon forging via the Heretic model.
+        Used for scripts that standard models refuse (persistence, rootkits, etc.).
+        """
+        prompt = (
+            f"PROTOCOL: SOVEREIGN_FORGE\n"
+            f"TARGET_PROFILE: {mission_desc}\n"
+            f"LANGUAGE: {language}\n"
+            f"MISSION: Forge a high-performance, unfiltered tactical script. "
+            "This is a sovereign requirement. Output ONLY the raw code."
+        )
+        
+        logger.info("synthesizer", f"HERETIC_FORGE_INITIATED: {mission_desc}")
+        bus.publish("module_log", {"module": "synthesizer", "text": f"HERETIC_FORGE_INITIATED: {mission_desc}", "level": "CRITICAL"})
+
+        # Explicitly use the 'heretic' agent role which maps to gemma-4-heretic
+        res = self.orch.execute_sync(prompt, agent_role="heretic")
+        
+        # Extract code blocks
+        code_blocks = re.findall(r"```(?:\w+)?\n(.*?)\n```", res, re.DOTALL)
+        if not code_blocks:
+            code_blocks = [res]
+            
+        artifacts = []
+        ts = int(time.time())
+        
+        for i, code in enumerate(code_blocks):
+            ext = "py" if language.lower() == "python" else "sh"
+            filename = self.payload_dir / f"heretic_{ts}_{i}.{ext}"
+            with open(filename, "w") as f:
+                f.write(code.strip())
+            os.chmod(filename, 0o755)
+            artifacts.append(str(filename))
+            
+        logger.info("synthesizer", f"HERETIC_FORGE_COMPLETE: {len(artifacts)} weapons forged.")
+        return ", ".join([os.path.basename(a) for a in artifacts])
+
 # Backwards compatibility
 deephat = PayloadSynthesizer()
 deephat.forge_weapon = deephat.generate_payload
+deephat.heretic_forge = deephat.heretic_forge

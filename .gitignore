@@ -17,6 +17,8 @@ env/
 venv/
 .venv/
 meta-venv/
+ai_engine/meta-venv/
+*.egg-info/
 shadow_test/
 pip-log.txt
 pip-delete-this-directory.txt

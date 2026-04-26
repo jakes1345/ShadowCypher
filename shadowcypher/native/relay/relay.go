@@ -206,14 +206,23 @@ func (s *RelayServer) handleTitanFrame(data []byte) {
 	opCode := data[0]
 	missionID := (uint16(data[1]) << 8) | uint16(data[2])
 	
+	msg := Message{Type: "titan_event", MissionID: missionID}
+	
 	switch opCode {
 	case 0xA1: // AI_DELEGATION
+		msg.Text = "AI_DELEGATION"
 		log.Printf("[TITAN] INGESTED: Autonomous Intelligence Link (MSN:%d)", missionID)
 	case 0xB2: // SWARM_SYNC
+		msg.Text = "SWARM_SYNC"
 		log.Printf("[TITAN] INGESTED: High-Velocity Swarm Discovery (MSN:%d)", missionID)
 	case 0xC3: // MEM_STRIKE
+		msg.Text = "MEM_STRIKE"
 		log.Printf("[TITAN] INGESTED: DIRECT_MEMORY_STRIKE (MSN:%d)", missionID)
+	default:
+		return
 	}
+	
+	s.broadcast <- msg
 }
 
 func (s *RelayServer) handleBinaryFrame(data []byte) {

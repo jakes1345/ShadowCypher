@@ -13,90 +13,79 @@ from shadowcypher.core.bus import bus
 from shadowcypher.ai.orchestrator import orchestrator
 
 
-class GhostMission:
+class SovereignGhostMission(GhostMission):
+    """
+    Sovereign Apex Build — A truly autonomous mission engine that 
+    executes real tools instead of just planning.
+    """
     def __init__(self, target: str):
-        self.mid = f"GHOST-{uuid.uuid4().hex[:6].upper()}"
-        self.target = target
-        self.state = "INIT"
-        self.findings: List[Dict[str, Any]] = []
-        self.aborted = False
+        super().__init__(target)
+        from shadowcypher.core.platform import platform_engine
+        self.engine = platform_engine
 
-    def report(self, phase: str, message: str, progress: float):
-        self.state = phase
-        bus.publish("ghost_update", {
-            "mid": self.mid,
-            "phase": phase,
-            "message": message,
-            "progress": progress,
-            "target": self.target,
-        })
-        logger.info("ghost", f"[{self.mid}] {phase}: {message}")
-
-    def _run_phase(self, phase: str, prompt: str, progress: float, label: str) -> str:
-        self.report(phase, label, progress)
+    def _execute_recon_tool(self):
+        """Execute real nmap scan for the RECON phase."""
+        self.report("RECON", "Executing Nmap Service Discovery...", 0.15)
+        nmap = self.engine.get_cmd("nmap")
         try:
-            result = orchestrator.execute_query_sync(prompt)
+            import subprocess
+            res = subprocess.check_output([nmap, "-F", "-sV", "--version-light", self.target], text=True, timeout=120)
+            return res
         except Exception as e:
-            logger.error("ghost", f"[{self.mid}] {phase} failed: {e}")
-            result = f"[error] {e}"
-        self.findings.append({"phase": phase, "result": result})
-        return result
+            return f"RECON_TOOL_ERROR: {e}"
 
     def execute(self):
-        self.report("START", f"Mission started: target={self.target}", 0.05)
+        self.report("START", f"Sovereign Mission Ignite: target={self.target}", 0.05)
         try:
-            recon = self._run_phase(
-                "RECON",
-                f"Perform non-intrusive reconnaissance on {self.target}. "
-                "Enumerate open ports, response headers, and OS fingerprints. "
-                "Return a JSON summary with keys: ports, headers, os_guess, risks.",
-                0.20,
-                "Running reconnaissance",
+            # Phase 1: REAL RECON
+            recon_raw = self._execute_recon_tool()
+            self.findings.append({"phase": "RECON_RAW", "result": recon_raw})
+            
+            # Use AI to summarize the raw recon
+            recon_summary = self._run_phase(
+                "RECON_AI",
+                f"Analyze this raw nmap output for {self.target}:\n{recon_raw}\n"
+                "Extract open ports, services, and versions. Identify the most "
+                "critical entry vector. Return JSON with 'services' and 'prime_vector'.",
+                0.30,
+                "AI analyzing tactical recon"
             )
+
+            # Phase 2: Vulnerability Matching
             analysis = self._run_phase(
                 "ANALYSIS",
-                f"Given this recon output for {self.target}:\n{recon}\n"
-                "Identify the highest-value testable entry vector and explain the "
-                "specific CVE or misconfiguration it maps to. Return a concise plan.",
-                0.40,
-                "Correlating findings",
+                f"Target: {self.target}\nRecon: {recon_summary}\n"
+                "Search your internal vulnerability database (CVE/Exploit-DB) for the "
+                "services identified. Determine if any 403/401 bypass or RCE is possible. "
+                "Provide a ranked list of exploitability.",
+                0.50,
+                "Correlating vulnerabilities"
             )
-            self._run_phase(
-                "INGRESS_PLAN",
-                f"Draft a safe proof-of-concept command sequence that would validate "
-                f"the entry vector identified in the analysis for {self.target}. "
-                f"Do NOT execute. Return the commands as a numbered list.\n{analysis}",
-                0.60,
-                "Drafting proof-of-concept",
-            )
-            self._run_phase(
-                "EXFIL_PLAN",
-                f"List the data classes that would be in scope for extraction on "
-                f"{self.target} under the engagement rules of the earlier analysis. "
-                f"Return a bullet list — do not exfiltrate.",
-                0.80,
-                "Planning exfiltration scope",
-            )
+
+            # Phase 3: Ingress Validation (Safe Probes)
+            if "403" in recon_raw or "Forbidden" in recon_raw:
+                self.report("BYPASS_403", "Triggering automated 403 bypass sequence...", 0.70)
+                from shadowcypher.modules.web_attacks import WebAttacks
+                # We'll run this in parallel but wait for a snippet
+                WebAttacks.bypass_403_test(f"http://{self.target}", "/", on_output=lambda m: self.report("BYPASS_403", m, 0.75))
+
+            # Phase 4: Final Report
             self._run_phase(
                 "REPORT",
-                "Summarize the engagement so far as a markdown report with "
-                "Findings / Evidence / Recommendations sections.",
+                "Synthesize the raw recon, AI analysis, and bypass results into a "
+                "Sovereign Tactical Briefing. Include Next-Step recommendations.",
                 1.00,
-                "Writing report",
+                "Finalizing Intelligence Briefing"
             )
-            self.report("COMPLETE", f"Mission {self.mid} complete. Review findings for approval.", 1.0)
+            
+            self.report("COMPLETE", f"Mission {self.mid} terminated. Intelligence Secured.", 1.0)
+            
         except Exception as e:
-            logger.error("ghost", f"MISSION_CRITICAL_FAULT: {e}")
+            logger.error("ghost", f"SOVEREIGN_MISSION_FAULT: {e}")
             self._emergency_sever()
 
-    def _emergency_sever(self):
-        self.aborted = True
-        self.report("ABORTED", "Mission aborted due to critical fault.", 0.0)
-        logger.warn("ghost", f"[{self.mid}] Mission severed — review the findings log.")
-
-
 def ignite_ghost_operation(target: str):
-    mission = GhostMission(target)
+    mission = SovereignGhostMission(target)
     import threading
     threading.Thread(
         target=mission.execute, daemon=True, name=f"GhostMission-{mission.mid}"

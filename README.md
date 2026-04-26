@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">SHADOWCYPHER</h1>
-<h3 align="center">The Sovereign Tactical Suite</h3>
+<h3 align="center">Sovereign Tactical Suite + Personal Security Platform</h3>
 
 <p align="center">
   <em>"In the collision of titans—where Google, Apple, and Microsoft define the theater of war—ShadowCypher remains the only sovereign signal. When the giants fall and nothing is safe, ShadowCypher is the architecture of the new frontier."</em><br/>
@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.0.0--sovereign-00d4ff?style=flat-square" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-4.0.0--ghost-00d4ff?style=flat-square" alt="Version"/>
   <img src="https://img.shields.io/badge/python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/go-1.24+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go"/>
   <img src="https://img.shields.io/badge/AI-Ollama%20(Local)-black?style=flat-square" alt="AI"/>
@@ -37,7 +37,7 @@ ShadowCypher is a dual-core system. The orchestration layer runs on **Python 3.1
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    SHADOWCYPHER v3.0.0                          │
+│                    SHADOWCYPHER v4.0.0                          │
 ├────────────────────┬────────────────────┬───────────────────────┤
 │   GTK-3.0 UI       │   AI Engine        │   Native Core (Go)   │
 │   ─────────────    │   ──────────       │   ────────────────   │
@@ -119,6 +119,48 @@ The infrastructure that keeps you connected, encrypted, and invisible.
 | **God-Panel** | Full-spectrum system control. Live subsystem matrix showing the status of every service (Ollama, Go Relay, Sovereign Chat, Sisyphus, IRC Sentinel) with real-time latency probes. AI model hot-swapping. Integrity baseline regeneration. Process termination. Threat registry viewer. |
 | **Sisyphus Sentinel** | Continuous integrity monitoring. SHA-256 hashes every Python source file in the project on a 60-second cycle. Detects unauthorized modifications, syntax corruption, and dependency tampering. Broadcasts alerts via the event bus when violations are detected. Named after the myth—because guarding code integrity is a task that never ends. |
 | **Citadel Security** | AES-256-GCM vault encryption with PBKDF2 key derivation (200,000 iterations). RSA-OAEP asymmetric ticket encryption for admin-user communication. Hardware fingerprinting for machine-level identity verification. SSH honeypot (port 2222) that mimics OpenSSH 7.4 to bait and log adversaries. |
+
+### 👻 GHOST-PROTOCOL — Operational Anonymity & Anti-Forensics
+
+The F-Society layer. Total operational invisibility for when you absolutely cannot be seen.
+
+| Module | What It Does |
+|---|---|
+| **Ghost Mode** | One-command total invisibility. 8 layers: iptables kill-switch (forces ALL traffic through Tor), MAC randomization, hostname/timezone neutralization, DNS leak prevention, RAM-only workspace, system log suppression. Full state restore on disengage. |
+| **Shadow Audit** | Comprehensive anonymity chain validator. Tests Tor, DNS leaks, MAC fingerprinting, hostname/timezone exposure, firewall rules, mesh key permissions, WireGuard config, browser fingerprints. Returns an anonymity score with auto-fix capability. |
+| **Traffic Mirage** | Deep packet inspection evasion. obfs4 bridge configuration (makes Tor look like HTTPS), realistic cover traffic generation, DNS tunneling setup, traffic timing obfuscation via `tc netem` to defeat correlation attacks. |
+| **Dead Drop** | Anti-forensics toolkit. 7-pass secure file shredding with random rename before unlink, swap partition sanitization, free-space wiping, LUKS-encrypted USB dead drop creation, and emergency PANIC button that destroys all keys, databases, configs, and logs instantly. |
+| **Trace Eraser** | Deep forensic log cleaner. Scrubs shell histories (12 types), system logs (auth, syslog, kern, daemon), application traces, systemd journal, wtmp/btmp/lastlog, thumbnail caches, and recently-used files. Timestamp obfuscation mode randomizes file access times. |
+| **Tor Cloak** | Full Tor lifecycle manager. Start/stop/verify Tor, circuit rotation via ControlPort, torified fetch and shell sessions, IP protection hardening (DNS redirect, WebRTC leak info, MAC check). |
+
+### 🛡️ GUARDIAN — Personal Device Security
+
+Protect everything you own. Phones, PCs, tablets, routers, TVs, IoT devices.
+
+| Module | What It Does |
+|---|---|
+| **Network Scan** | Discovers every device on your network via ARP/nmap. Fingerprints ports, identifies OS, flags dangerous services (Telnet, SMB, TR-069, UPnP). Risk assessment per device. |
+| **Router Audit** | Audits your home router for exposed management ports, ISP remote access (TR-069), UPnP, and weak DNS config. Provides actionable hardening recommendations. |
+| **Device Monitor** | Continuous 24/7 threat monitoring. Detects new devices joining your network, ARP spoofing attacks, and device disappearances. Real-time alerting. |
+| **Auto-Harden** | One-command machine hardening: unattended security updates, SSH root login disable, iptables default-DROP policy, core dump disable, sensitive file permission lockdown. |
+| **Deep Audit** | Local machine security audit: SUID binary check, SSH configuration review, world-writable file scan, failed login analysis, listening service inventory. |
+
+---
+
+## shadow-cli — AI Security Assistant
+
+ShadowCypher ships with `shadow-cli`, an AI-powered command-line security assistant that can call all ShadowCypher tools through natural language.
+
+```bash
+shadow-cli                              # Interactive mode
+shadow-cli -p "scan my network"         # Discovers all devices on your LAN
+shadow-cli -p "engage ghost mode"       # Activates total invisibility
+shadow-cli -p "am I anonymous?"         # Runs full anonymity audit
+shadow-cli -p "audit my router"         # Checks router for vulnerabilities
+shadow-cli -p "check my traffic"        # Analyzes network traffic patterns
+```
+
+Powered by an MCP (Model Context Protocol) server that exposes 9 security tools to any compatible AI assistant.
 
 ---
 
@@ -291,5 +333,9 @@ The authors assume no liability for misuse. You are the operator. You own your a
 </p>
 
 <p align="center">
-  <strong>ShadowCypher v3.0.0-sovereign</strong> · Built with Go, Python, Cairo, and conviction.
+  <strong>ShadowCypher v4.0.0-ghost</strong> · Built with Go, Python, Cairo, and conviction.
+</p>
+
+<p align="center">
+  <a href="https://shadowcypher.site">shadowcypher.site</a> · <a href="https://github.com/jakes1345/ShadowCypher">GitHub</a>
 </p>

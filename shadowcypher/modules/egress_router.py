@@ -19,12 +19,15 @@ class EgressRouter:
     def get_current_egress_ip(self):
         """Fetches the current external IP routing."""
         try:
-            # Uses curl over Tor if active, otherwise standard network
-            cmd = ["curl", "-s", "https://api.ipify.org"]
             if self.active:
-                cmd = ["torify"] + cmd
+                # Route both DNS and HTTP through Tor SOCKS proxy to prevent DNS leaks
+                cmd = ["curl", "-s", "--max-time", "10",
+                       "--socks5-hostname", "127.0.0.1:9050",
+                       "https://api.ipify.org"]
+            else:
+                cmd = ["curl", "-s", "--max-time", "5", "https://api.ipify.org"]
                 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
             return result.stdout.strip()
         except Exception as e:
             logger.error("egress", f"Failed to fetch egress IP: {e}")

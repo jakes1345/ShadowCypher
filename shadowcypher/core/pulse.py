@@ -1,18 +1,8 @@
-"""
-ShadowPulse — Advanced Wavelet Signal Intelligence (SIGINT) Engine.
-Implements non-stationary transient detection via Wavelet Scattering Transforms (WST).
-Designed for detecting covert channels and hardware-level defensive artifacts.
-"""
-
-import math
-import time
+import numpy as np
 import threading
+import time
 from typing import List, Dict, Any, Optional
-
-try:
-    import numpy as np
-except ImportError:
-    np = None
+from scipy.ndimage import gaussian_laplace
 
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
@@ -20,12 +10,13 @@ from shadowcypher.core.bus import bus
 class ShadowPulse:
     """
     The mathematical 'Sixth Sense' of ShadowCypher.
-    Analyzes high-noise temporal signals to identify hidden anomalies.
+    Analyzes high-noise temporal signals using Scale-Space Analysis (DSP core of WST).
+    Designed for detecting non-stationary transients and hardware artifacts.
     """
 
     def __init__(self):
         self._active = False
-        self._samples: Dict[str, List[float]] = {}
+        self._samples: Dict[str, np.ndarray] = {}
         self._max_history = 1024
         self._lock = threading.Lock()
         
@@ -38,45 +29,54 @@ class ShadowPulse:
         """Ingest a temporal data point (e.g. packet size, CPU spike)."""
         with self._lock:
             if stream_id not in self._samples:
-                self._samples[stream_id] = []
+                self._samples[stream_id] = np.zeros(self._max_history)
             
-            self._samples[stream_id].append(value)
-            
-            # Maintenance: maintain history window
-            if len(self._samples[stream_id]) > self._max_history:
-                self._samples[stream_id].pop(0)
+            # Shift existing data and append new value
+            samples_array = self._samples[stream_id]
+            samples_array[:-1] = samples_array[1:]
+            samples_array[-1] = value
 
     def analyze_spectrum(self, stream_id: str) -> Dict[str, Any]:
         """
-        Performs a 'Lightweight WST' audit on the requested stream.
-        Detects translation-invariant transients and harmonic interference.
+        Performs Scale-Space Analysis (Approximation of WST) on the requested stream.
+        Detects translation-invariant transients by analyzing feature energy across scales.
         """
         with self._lock:
-            data = self._samples.get(stream_id, [])
-            if len(data) < 64:
+            data = self._samples.get(stream_id)
+            if data is None or np.sum(np.abs(data)) == 0:
                 return {"status": "INSUFFICIENT_DATA"}
 
-        # 1. Zero-Order: Low-pass Smoothing (Averaging)
-        s0 = sum(data) / len(data)
+        # --- DSP CORE: Scale-Space Analysis using Gaussian Derivatives ---
+        
+        # 1. Define Scales (Sigma)
+        # We analyze features across multiple scales (sigma) to capture multi-resolution information.
+        # Ensure we have enough data points for a valid logspace
+        num_scales = max(4, int(np.ceil(np.log2(len(data)))))
+        sigmas = np.logspace(np.log10(0.5), np.log10(10.0), num=num_scales)
+        
+        scale_energies = []
+        
+        # 2. Calculate Scale-Space Coefficients
+        for sigma in sigmas:
+            # Apply Gaussian Laplacian to capture local curvature/transients
+            laplacian_filtered = gaussian_laplace(data, sigma=sigma)
+            
+            # The energy at this scale is the L2 norm of the filtered signal
+            energy = np.linalg.norm(laplacian_filtered)
+            scale_energies.append(energy)
 
-        # 2. First-Order: Wavelet Modulus (Transient Extraction)
-        # We simulate a Morlet-style modulus by analyzing absolute differences 
-        # at multiple scales (J1, J2).
-        diffs = [abs(data[i] - data[i-1]) for i in range(1, len(data))]
-        s1 = sum(diffs) / len(diffs)
-
-        # 3. Second-Order: Scatter interference (Anomaly Scoring)
-        # Identify non-linear shifts in the transient amplitude.
-        s2 = sum(abs(v - s1) for v in diffs) / len(diffs) if diffs else 0
-
-        # 4. Score Calculation (Z-Score approximation)
-        # If S2 (Interference) spikes significantly above S1 (Transients), 
-        # it indicates a non-stationary transient (Covert Channel / Exploit Payload).
-        score = (s2 / (s1 + 1e-6)) if s1 > 0 else 0
+        scale_energies = np.array(scale_energies)
+        
+        # 3. Anomaly Scoring (Non-Stationarity Metric)
+        mean_energy = np.mean(scale_energies)
+        max_energy = np.max(scale_energies)
+        
+        # Score calculation: High ratio indicates non-stationarity/transient event.
+        score = (max_energy / (mean_energy + 1e-9))
         
         self.last_anomaly_score = score
-        # Lower threshold for high-fidelity detection (WST sensitivity)
-        is_safe = score < 1.5 
+        # Threshold calibrated for high-fidelity detection
+        is_safe = score < 2.8 
         
         if not is_safe and self.is_nominal:
             self.is_nominal = False
@@ -88,10 +88,9 @@ class ShadowPulse:
 
         return {
             "stream": stream_id,
-            "s0_baseline": round(s0, 4),
-            "s_transient": round(s1, 4),
-            "s_scattering": round(s2, 4),
-            "anomaly_score": round(score, 4),
+            "s_scale_mean_energy": round(float(mean_energy), 4),
+            "s_max_scale_energy": round(float(max_energy), 4),
+            "s_anomaly_score": round(float(score), 4),
             "status": "CAUTION" if not is_safe else "NOMINAL",
             "throttle": self.throttle_active
         }
@@ -110,7 +109,7 @@ class ShadowPulse:
         """Flush the spectrum buffers."""
         with self._lock:
             if stream_id:
-                self._samples[stream_id] = []
+                self._samples[stream_id] = np.zeros(self._max_history)
             else:
                 self._samples = {}
         logger.info("pulse", "SPECTRUM_BUFFERS_FLUSHED")

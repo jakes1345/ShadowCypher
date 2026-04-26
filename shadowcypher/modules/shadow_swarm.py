@@ -148,7 +148,9 @@ class MeshRelay(BaseModule):
         self._on_message = on_message
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server_sock.bind(("0.0.0.0", self.port))
+        # SECURITY: Default to loopback. Require explicit opt-in for external listeners.
+        bind_addr = os.environ.get("SHADOWCYPHER_MESH_BIND", "127.0.0.1")
+        self.server_sock.bind((bind_addr, self.port))
         self.running = True
 
         threading.Thread(target=self._listen_loop, daemon=True, name="MeshListener").start()
