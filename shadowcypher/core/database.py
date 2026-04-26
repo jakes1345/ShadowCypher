@@ -82,6 +82,17 @@ class TacticalDatabase:
                     cracked BOOLEAN
                 )
             """)
+            # Operator Accounts
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS operators (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT UNIQUE,
+                    handle TEXT,
+                    api_key TEXT UNIQUE,
+                    role TEXT DEFAULT 'OPERATOR',
+                    created_at TEXT
+                )
+            """)
             self.conn.commit()
             cursor.close()
 
@@ -138,4 +149,22 @@ class TacticalDatabase:
         return row[0] if row else 0
 
 
+    def register_operator(self, email, handle, api_key, role="OPERATOR"):
+        now = datetime.now().isoformat()
+        self._execute(
+            "INSERT OR IGNORE INTO operators (email, handle, api_key, role, created_at) VALUES (?, ?, ?, ?, ?)",
+            (email, handle, api_key, role, now),
+        )
+
+    def get_operator(self, email):
+        return self._execute("SELECT * FROM operators WHERE email = ?", (email,), fetch=True)
+
 db = TacticalDatabase()
+
+# Auto-register the requested Lead Operator
+db.register_operator(
+    email="ixchats@gmail.com",
+    handle="IX_COMMANDER",
+    api_key="sc_live_f7a8b9c0d1e2f3g4h5i6j7k8l9m0n1o2",
+    role="LEAD_OPERATOR"
+)
