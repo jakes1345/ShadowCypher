@@ -93,12 +93,9 @@ class Kairos:
                     # If high-value target, escalate via the hub
                     if "critical" in line.lower() or "rce" in line.lower():
                         try:
-                            from shadowcypher.core.hub import hub
-                            hub.dispatch_mission(
-                                f"Critical vulnerability observed in tool output: {line[:120]}. "
-                                f"Plan follow-up verification on {potential_ip}.",
-                                agent_role="red_team",
-                            )
+                            from shadowcypher.core.missions import ignite_ghost_operation
+                            ignite_ghost_operation(potential_ip)
+                            logger.info("kairos", f"AUTO_MISSION_IGNITED: Triggered Ghost Operation for high-risk target {potential_ip}")
                         except Exception: pass
                 break  # One alert per line
 
@@ -118,11 +115,7 @@ class Kairos:
                     cred_hash = hash_match.group(1) if hash_match else None
                     
                     if password or cred_hash:
-                        db.cursor.execute(
-                            "INSERT INTO credentials_sink (target_ip, service, username, password, hash, cracked) VALUES (?, ?, ?, ?, ?, ?)",
-                            (potential_ip, "unknown", username, password, cred_hash, False)
-                        )
-                        db.conn.commit()
+                        db.log_credential(potential_ip, "unknown", username, password, cred_hash, False)
                 except Exception: pass
                 break
 

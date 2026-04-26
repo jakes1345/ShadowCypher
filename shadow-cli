@@ -1,0 +1,42 @@
+#!/bin/bash
+# ═══════════════════════════════════════════════════════════════
+# shadow-cli — ShadowCypher AI Assistant
+# Powered by free-code (Claude Code) + ShadowCypher MCP tools
+# ═══════════════════════════════════════════════════════════════
+#
+# This wraps the free-code CLI with ShadowCypher's MCP server
+# auto-connected, so the AI can call all security tools natively.
+#
+# Usage:
+#   shadow-cli                    — Interactive REPL
+#   shadow-cli -p "scan my network"
+#   shadow-cli -p "engage ghost mode"
+#   shadow-cli -p "audit my router"
+#   shadow-cli -p "check if I'm anonymous"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLI_DIR="/home/jack/dev-full-claude"
+CLI_BIN="${CLI_DIR}/cli"
+
+# Check if free-code binary exists
+if [ ! -x "$CLI_BIN" ]; then
+    echo "Error: free-code binary not found at $CLI_BIN"
+    echo "Build it: cd $CLI_DIR && bun run build"
+    exit 1
+fi
+
+# Set ShadowCypher context
+export SHADOWCYPHER_ROOT="${SCRIPT_DIR}"
+export SHADOWCYPHER_MCP="python3 ${SCRIPT_DIR}/shadowcypher/mcp_server.py"
+
+# System prompt injection for security context
+export CLAUDE_CODE_SYSTEM_PROMPT_APPEND="
+You are shadow-cli, a sovereign AI security assistant powered by ShadowCypher.
+You have access to ShadowCypher MCP tools for network scanning, ghost mode,
+anonymity auditing, Tor management, trace erasing, and device security.
+When the user asks about security, anonymity, or privacy, use the
+shadowcypher_* tools. Be direct, technical, and operational.
+"
+
+# Launch the CLI
+exec "$CLI_BIN" "$@"

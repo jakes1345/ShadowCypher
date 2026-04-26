@@ -95,6 +95,15 @@ class RelayBridge:
             # (Logic for remote mission tracking)
         elif typ == "intel":
             bus.publish("intel_found", data.get("payload", {}))
+        elif typ == "titan_event":
+            mid = data.get("mission_id")
+            event_type = data.get("text")
+            logger.info("hub", f"TITAN_INGEST: [{event_type}] MissionID={mid}")
+            bus.publish("module_log", {
+                "module": "titan",
+                "text": f"Sovereign Titan Event: {event_type} (MSN:{mid})",
+                "level": "WARNING"
+            })
         elif typ == "chat":
             # Forward swarm chat to tactical logs
             bus.publish("module_log", {
@@ -179,6 +188,25 @@ class ShadowHub:
         self._start_nexus_relay()
         self._start_sisyphus()
         self._start_ghost_orchestrator()
+        self._start_training_range()
+
+    def _start_training_range(self) -> None:
+        """Launches the Citadel Training Range (vulnerable lab) in the background."""
+        import subprocess
+        try:
+            # Check if already running on port 5000
+            import socket
+            with socket.socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+                if s.connect_ex(('127.0.0.1', 5000)) == 0:
+                    logger.info("hub", "TRAINING_RANGE: Already active on port 5000.")
+                    return
+
+            script_path = os.path.join(os.getcwd(), "launch_training_range.sh")
+            if os.path.exists(script_path):
+                subprocess.Popen(["bash", script_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                logger.info("hub", "TRAINING_RANGE: Auto-launching Citadel Lab...")
+        except Exception as e:
+            logger.error("hub", f"TRAINING_RANGE_FAIL: Could not auto-launch lab: {e}")
 
     def _start_ghost_orchestrator(self) -> None:
         """Launches the Ghost Orchestrator to manage remote Shadow Nodes."""
