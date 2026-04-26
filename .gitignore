@@ -113,3 +113,8 @@ shadowcypher/native/nexus/nexus_hybrid
 
 # Local scrub secrets — NEVER commit
 .scrub_secrets.local
+
+# Phantom submodule paths
+ai_engine/
+irc/ergo-src/
+research/SWAv2-Legacy/
