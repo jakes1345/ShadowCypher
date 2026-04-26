@@ -110,3 +110,6 @@ Cargo.lock
 shadowcypher/native/nexus/nexus_amd64
 shadowcypher/native/nexus/nexus_arm64
 shadowcypher/native/nexus/nexus_hybrid
+
+# Local scrub secrets — NEVER commit
+.scrub_secrets.local
