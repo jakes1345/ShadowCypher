@@ -31,12 +31,20 @@ import {
   listIncidents,
   ackIncident,
 } from "./guardian";
+import { createCheckout, createPortal, handleWebhook } from "./billing";
+import { dbSelect } from "./supabase";
 
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   ENVIRONMENT: string;
   ALLOWED_ORIGINS: string;
+  // Billing (set via wrangler secret put)
+  STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
+  STRIPE_PRICE_GUARDIAN_PRO: string;
+  STRIPE_PRICE_OPERATOR: string;
+  SITE_URL: string;
 }
 
 interface SupabaseUser {
@@ -149,15 +157,31 @@ async function handleMe(req: Request, env: Env, cors: HeadersInit): Promise<Resp
   const meta = user.user_metadata as {
     handle?: string;
     api_key_created_at?: string;
-    plan?: string;
   };
+
+  // Plan + subscription state come from public.profiles (source of truth, updated by Stripe webhook)
+  type ProfileRow = {
+    plan: string;
+    subscription_status: string | null;
+    current_period_end: string | null;
+    cancel_at_period_end: boolean;
+  };
+  const profiles = await dbSelect<ProfileRow>(env, "profiles", {
+    select: "plan,subscription_status,current_period_end,cancel_at_period_end",
+    filters: { user_id: `eq.${user.id}` },
+    limit: 1,
+  });
+  const profile = profiles[0];
 
   return json(
     {
       id: user.id,
       email: user.email,
       handle: meta.handle ?? user.email.split("@")[0],
-      plan: meta.plan ?? "community",
+      plan: profile?.plan ?? "community",
+      subscription_status: profile?.subscription_status ?? null,
+      current_period_end: profile?.current_period_end ?? null,
+      cancel_at_period_end: profile?.cancel_at_period_end ?? false,
       key_created_at: meta.api_key_created_at ?? user.created_at,
     },
     {},
@@ -233,6 +257,11 @@ export default {
                 "GET /v1/incidents?open=1",
                 "POST /v1/incidents/ack?incident_id=",
               ],
+              billing: [
+                "POST /v1/billing/checkout",
+                "POST /v1/billing/portal",
+                "POST /v1/billing/webhook",
+              ],
             },
           },
           {},
@@ -242,12 +271,16 @@ export default {
       if (path === "/v1/health") {
         return json({ ok: true, environment: env.ENVIRONMENT, ts: Date.now() }, {}, cors);
       }
+      // Stripe webhook is unauthenticated (signature-verified inside the handler).
+      // Stripe sends raw body; we don't apply CORS here.
+      if (path === "/v1/billing/webhook" && req.method === "POST") return handleWebhook(req, env, cors);
+
       if (path === "/v1/me" && req.method === "GET") return handleMe(req, env, cors);
       if (path === "/v1/keys/rotate" && req.method === "POST") return handleRotate(req, env, cors);
       if (path === "/v1/keys/revoke" && req.method === "POST") return handleRevoke(req, env, cors);
 
-      // Guardian endpoints — all require auth, resolve user once, dispatch
-      const guardianRoutes: Record<string, (req: Request, env: Env, user: { id: string; email: string }, cors: HeadersInit) => Promise<Response>> = {
+      // Authed routes — resolve user once, dispatch
+      const authedRoutes: Record<string, (req: Request, env: Env, user: { id: string; email: string }, cors: HeadersInit) => Promise<Response>> = {
         "POST /v1/agents/register":   registerAgent,
         "POST /v1/agents/heartbeat":  heartbeatAgent,
         "POST /v1/scans":             uploadScan,
@@ -256,9 +289,11 @@ export default {
         "POST /v1/incidents":         createIncident,
         "GET /v1/incidents":          listIncidents,
         "POST /v1/incidents/ack":     ackIncident,
+        "POST /v1/billing/checkout":  createCheckout,
+        "POST /v1/billing/portal":    createPortal,
       };
       const routeKey = `${req.method} ${path}`;
-      const handler = guardianRoutes[routeKey];
+      const handler = authedRoutes[routeKey];
       if (handler) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
