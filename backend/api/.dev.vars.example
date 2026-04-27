@@ -1,0 +1,4 @@
+# Copy to .dev.vars (gitignored) for local `wrangler dev`
+# Production secrets go via `wrangler secret put` — never commit them
+SUPABASE_URL=https://umruqwvyipylfslwwozj.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=PASTE_YOUR_ROTATED_SERVICE_ROLE_KEY_HERE

@@ -118,3 +118,8 @@ shadowcypher/native/nexus/nexus_hybrid
 ai_engine/
 irc/ergo-src/
 research/SWAv2-Legacy/
+
+# Cloudflare Worker (backend/api)
+backend/api/node_modules/
+backend/api/.dev.vars
+backend/api/.wrangler/

@@ -1,0 +1,14 @@
+name = "shadowcypher-api"
+main = "src/index.ts"
+compatibility_date = "2026-04-26"
+compatibility_flags = ["nodejs_compat"]
+
+# Custom domain: api.shadowcypher.site (configured via Cloudflare dashboard or `wrangler deploy`)
+routes = [
+  { pattern = "api.shadowcypher.site", custom_domain = true }
+]
+
+# Public-safe vars (committed to git). Secrets go via `wrangler secret put`.
+[vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://shadowcypher.site,https://www.shadowcypher.site,https://dev.shadowcypher.site,http://localhost:8081"
