@@ -430,10 +430,29 @@
             }
         }
 
+        // Generate cryptographically random per-user API key
+        function generateApiKey() {
+            const bytes = new Uint8Array(24);
+            crypto.getRandomValues(bytes);
+            const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+            return `sc_live_${hex}`;
+        }
+
+        // Ensure the signed-in user has an api_key in their metadata; mint one if missing
+        async function ensureApiKey(user) {
+            if (user?.user_metadata?.api_key) return user.user_metadata.api_key;
+            const apiKey = generateApiKey();
+            const { data, error } = await supabaseClient.auth.updateUser({
+                data: { api_key: apiKey, api_key_created_at: new Date().toISOString() }
+            });
+            if (error) { cliPrint(`API_KEY_PROVISION_FAILED: ${error.message}`, 'var(--critical)'); return null; }
+            return apiKey;
+        }
+
         // Account Logic
         async function handleAuth(mode) {
             if (!supabaseClient) {
-                cliPrint("AUTH_SYSTEM_OFFLINE: CONFIGURE SUPABASE_KEYS IN INDEX.HTML", "var(--warning)");
+                cliPrint("Auth offline — Supabase keys not configured.", "var(--warning)");
                 return;
             }
             const email = document.querySelector(mode === 'login' ? '#auth-login input[type="text"]' : '#auth-signup input[type="email"]').value;
@@ -445,19 +464,19 @@
                 if (mode === 'login') {
                     result = await supabaseClient.auth.signInWithPassword({ email, password });
                 } else {
-                    result = await supabaseClient.auth.signUp({ 
-                        email, 
+                    result = await supabaseClient.auth.signUp({
+                        email,
                         password,
-                        options: { data: { handle: handle } }
+                        options: { data: { handle, api_key: generateApiKey(), api_key_created_at: new Date().toISOString() } }
                     });
                 }
 
                 if (result.error) throw result.error;
-                
-                cliPrint(`SESSION_AUTHORIZED: WELCOME ${handle || email}`, 'var(--success)');
+
+                cliPrint(`Signed in: ${handle || email}`, 'var(--success)');
                 updateUIForUser(result.data.user);
             } catch (err) {
-                cliPrint(`AUTH_ERROR: ${err.message}`, 'var(--critical)');
+                cliPrint(`Sign-in error: ${err.message}`, 'var(--critical)');
             }
         }
 
@@ -468,10 +487,19 @@
             cliPrint('SESSION_TERMINATED: STAY VIGILANT.', 'var(--warning)');
         }
 
-        function updateUIForUser(user) {
+        async function updateUIForUser(user) {
             document.getElementById('account-auth').style.display = 'none';
             document.getElementById('account-dashboard').style.display = 'block';
-            document.querySelector('#account-dashboard h2').innerText = `COMMANDER_${user.user_metadata.handle || user.email.split('@')[0]}`.toUpperCase();
+            const name = user.user_metadata?.handle || user.email.split('@')[0];
+            document.querySelector('#account-dashboard h2').innerText = `Welcome, ${name}`;
+
+            // Show this user's REAL api key (mint one if first login predates the feature)
+            const apiKey = await ensureApiKey(user);
+            const keyEl = document.getElementById('api-key');
+            if (keyEl && apiKey) {
+                keyEl.dataset.realKey = apiKey;
+                keyEl.innerText = apiKey.slice(0, 12) + '…' + apiKey.slice(-4);
+            }
         }
 
         // Check active session on boot
@@ -489,10 +517,14 @@
         }
 
         function copyKey() {
-            const key = document.getElementById('api-key');
-            navigator.clipboard.writeText('sc_live_f7a8b9c0d1e2f3g4h5i6j7k8l9m0n1o2');
-            key.innerText = 'KEY_COPIED_TO_CLIPBOARD';
-            setTimeout(() => key.innerText = 'sc_live_************************', 2000);
+            const keyEl = document.getElementById('api-key');
+            const real = keyEl?.dataset?.realKey;
+            if (!real) { cliPrint('No API key available — sign in first.', 'var(--warning)'); return; }
+            navigator.clipboard.writeText(real).then(() => {
+                const original = keyEl.innerText;
+                keyEl.innerText = 'Copied to clipboard';
+                setTimeout(() => keyEl.innerText = original, 2000);
+            });
         }
 
         // Boot
