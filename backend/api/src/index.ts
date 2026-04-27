@@ -33,6 +33,7 @@ import {
 } from "./guardian";
 import { createCheckout, createPortal, handleWebhook } from "./billing";
 import { dbSelect } from "./supabase";
+import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -160,18 +161,16 @@ async function handleMe(req: Request, env: Env, cors: HeadersInit): Promise<Resp
   };
 
   // Plan + subscription state come from public.profiles (source of truth, updated by Stripe webhook)
-  type ProfileRow = {
-    plan: string;
-    subscription_status: string | null;
-    current_period_end: string | null;
-    cancel_at_period_end: boolean;
-  };
+  type ProfileRow = ProfileForPlan & { cancel_at_period_end: boolean };
   const profiles = await dbSelect<ProfileRow>(env, "profiles", {
-    select: "plan,subscription_status,current_period_end,cancel_at_period_end",
+    select: "plan,subscription_status,current_period_end,cancel_at_period_end,trial_ends_at",
     filters: { user_id: `eq.${user.id}` },
     limit: 1,
   });
   const profile = profiles[0];
+  const effectivePlan = getEffectivePlan(profile);
+  const trialDays = trialDaysRemaining(profile);
+  const inTrial = trialDays > 0 && (profile?.plan ?? "community") === "community";
 
   return json(
     {
@@ -179,6 +178,10 @@ async function handleMe(req: Request, env: Env, cors: HeadersInit): Promise<Resp
       email: user.email,
       handle: meta.handle ?? user.email.split("@")[0],
       plan: profile?.plan ?? "community",
+      effective_plan: effectivePlan,
+      in_trial: inTrial,
+      trial_ends_at: profile?.trial_ends_at ?? null,
+      trial_days_remaining: trialDays,
       subscription_status: profile?.subscription_status ?? null,
       current_period_end: profile?.current_period_end ?? null,
       cancel_at_period_end: profile?.cancel_at_period_end ?? false,

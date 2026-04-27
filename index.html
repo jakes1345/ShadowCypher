@@ -191,6 +191,41 @@
                     <a onclick="upgradeTo('operator')" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;cursor:pointer;">SUBSCRIBE — $49/mo</a>
                 </div>
             </div>
+
+            <!-- Feature comparison table -->
+            <div style="max-width:1000px;margin:80px auto 0;text-align:left;">
+                <h3 style="font-size:1.2rem;letter-spacing:3px;color:var(--accent-primary);margin-bottom:30px;text-transform:uppercase;font-family:var(--font-mono);">// What you get on each plan</h3>
+                <div style="border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;background:rgba(180,74,255,0.02);">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                        <thead>
+                            <tr style="background:rgba(180,74,255,0.08);border-bottom:1px solid var(--glass-border);">
+                                <th style="padding:18px 20px;text-align:left;color:var(--text-secondary);font-weight:500;letter-spacing:2px;font-size:0.7rem;text-transform:uppercase;">Feature</th>
+                                <th style="padding:18px 20px;text-align:center;color:#fff;font-weight:700;letter-spacing:1px;">Community</th>
+                                <th style="padding:18px 20px;text-align:center;color:var(--accent-primary);font-weight:700;letter-spacing:1px;">Guardian Pro</th>
+                                <th style="padding:18px 20px;text-align:center;color:var(--accent-primary);font-weight:700;letter-spacing:1px;">Operator</th>
+                            </tr>
+                        </thead>
+                        <tbody style="color:#ddd;">
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">CLI toolkit + 29 tactical scripts</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">On-demand network scan</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">24/7 continuous monitoring</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Real-time threat alerts (ARP spoof, new device)</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Devices monitored simultaneously</td><td style="text-align:center;">1</td><td style="text-align:center;">10</td><td style="text-align:center;">Unlimited</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Scan history retention</td><td style="text-align:center;">7 days</td><td style="text-align:center;">90 days</td><td style="text-align:center;">Unlimited</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Auto-hardening (firewall, SSH, services)</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Ghost Mode (8-layer anonymity)</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">AI security assistant</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Team accounts + shared dashboards</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">AI Autopilot missions</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Threat intel feed</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td></tr>
+                            <tr><td style="padding:14px 20px;">Priority support</td><td style="text-align:center;color:#666;">community</td><td style="text-align:center;">email</td><td style="text-align:center;">email + chat</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="color:var(--text-secondary);font-size:0.75rem;margin-top:20px;text-align:center;">
+                    All paid plans start with a <strong style="color:var(--accent-primary);">14-day free trial</strong>. Cancel any time, no questions. Test-mode payments use Stripe card <code style="color:var(--accent-primary);">4242 4242 4242 4242</code>.
+                </p>
+            </div>
         </div>
     </div>
 
@@ -594,9 +629,19 @@
             // Call the real backend to verify the key round-trips and pull live plan/profile
             try {
                 const me = await callApi('/v1/me');
-                cliPrint(`API verified · plan=${me.plan} · ${me.email}`, 'var(--success)');
+                const effective = me.effective_plan || me.plan || 'community';
+                cliPrint(`API verified · plan=${effective} · ${me.email}`, 'var(--success)');
                 const planBadge = document.querySelector('#account-dashboard .status-badge');
-                if (planBadge) planBadge.innerHTML = `<div class="status-dot"></div>Plan: ${me.plan}`;
+                if (planBadge) {
+                    let label = `Plan: ${effective.replace('_', ' ')}`;
+                    if (me.in_trial) label += ` · trial: ${me.trial_days_remaining}d left`;
+                    planBadge.innerHTML = `<div class="status-dot"></div>${escapeHtml(label)}`;
+                }
+
+                // Trial near-expiry nudge
+                if (me.in_trial && me.trial_days_remaining <= 3) {
+                    showApiBanner(`Your Pro trial ends in ${me.trial_days_remaining} day(s). Subscribe to keep alerts, multi-device monitoring, and history.`);
+                }
 
                 // If user has a paid subscription, show "Manage subscription" button
                 if (me.plan && me.plan !== 'community') {
@@ -666,8 +711,10 @@
                 showApiBanner(null);
             } catch (err) {
                 console.warn('[guardian] refresh failed', err.message);
-                if (err.message.includes('db_select_failed') || err.message.includes('500')) {
-                    showApiBanner('Backend tables missing — run the SQL migrations in Supabase (0001_guardian_idempotent.sql + 0002_billing_idempotent.sql).');
+                if (err.message.includes('plan_required')) {
+                    showApiBanner('This feature requires a paid plan. <a onclick="navTo(\'pricing\', document.getElementById(\'nav-pricing\'))" style="color:var(--accent-primary);cursor:pointer;">See pricing →</a>');
+                } else if (err.message.includes('db_select_failed') || err.message.includes('500')) {
+                    showApiBanner('Backend tables missing — run the SQL migrations in Supabase (0001_guardian_idempotent.sql + 0002_billing_idempotent.sql + 0003_trial_and_limits.sql).');
                 } else if (err.message.includes('key_not_found')) {
                     showApiBanner('Your API key is invalid or revoked. Click MINT KEY to issue a new one.');
                 } else {
