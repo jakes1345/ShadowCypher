@@ -414,6 +414,22 @@
             }
         } catch (e) { console.error("Supabase Init Error:", e); }
 
+        // Toast helper for auth + status messages
+        function cliPrint(msg, color) {
+            const log = document.getElementById('swarm-log');
+            const line = document.createElement('div');
+            line.style.color = color || 'var(--accent-primary)';
+            line.style.fontSize = '0.75rem';
+            line.style.fontFamily = 'var(--font-mono, monospace)';
+            line.textContent = `> ${msg}`;
+            if (log) {
+                log.prepend(line);
+                while (log.childElementCount > 12) log.removeChild(log.lastChild);
+            } else {
+                console.log('[shadowcypher]', msg);
+            }
+        }
+
         // Account Logic
         async function handleAuth(mode) {
             if (!supabaseClient) {
