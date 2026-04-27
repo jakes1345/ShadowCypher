@@ -487,18 +487,53 @@
             cliPrint('SESSION_TERMINATED: STAY VIGILANT.', 'var(--warning)');
         }
 
+        // Backend API base — overrideable via window.SHADOWCYPHER_API for local dev
+        const API_BASE = window.SHADOWCYPHER_API || 'https://api.shadowcypher.site';
+
+        async function callApi(path, opts = {}) {
+            const apiKey = document.getElementById('api-key')?.dataset?.realKey;
+            const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+            if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+            const resp = await fetch(`${API_BASE}${path}`, { ...opts, headers });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(data.error || data.message || `HTTP ${resp.status}`);
+            return data;
+        }
+
         async function updateUIForUser(user) {
             document.getElementById('account-auth').style.display = 'none';
             document.getElementById('account-dashboard').style.display = 'block';
             const name = user.user_metadata?.handle || user.email.split('@')[0];
             document.querySelector('#account-dashboard h2').innerText = `Welcome, ${name}`;
 
-            // Show this user's REAL api key (mint one if first login predates the feature)
+            // Mint key if missing, then show it
             const apiKey = await ensureApiKey(user);
             const keyEl = document.getElementById('api-key');
             if (keyEl && apiKey) {
                 keyEl.dataset.realKey = apiKey;
                 keyEl.innerText = apiKey.slice(0, 12) + '…' + apiKey.slice(-4);
+            }
+
+            // Call the real backend to verify the key round-trips and pull live plan/profile
+            try {
+                const me = await callApi('/v1/me');
+                cliPrint(`API verified · plan=${me.plan} · ${me.email}`, 'var(--success)');
+                const planBadge = document.querySelector('#account-dashboard .status-badge');
+                if (planBadge) planBadge.innerHTML = `<div class="status-dot"></div>Plan: ${me.plan}`;
+            } catch (err) {
+                cliPrint(`API check failed: ${err.message}`, 'var(--warning)');
+            }
+        }
+
+        async function rotateKey() {
+            try {
+                const result = await callApi('/v1/keys/rotate', { method: 'POST' });
+                const keyEl = document.getElementById('api-key');
+                keyEl.dataset.realKey = result.api_key;
+                keyEl.innerText = result.api_key.slice(0, 12) + '…' + result.api_key.slice(-4);
+                cliPrint('API key rotated. Old key now invalid.', 'var(--success)');
+            } catch (err) {
+                cliPrint(`Rotate failed: ${err.message}`, 'var(--critical)');
             }
         }
 
