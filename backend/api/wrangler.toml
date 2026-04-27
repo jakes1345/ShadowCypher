@@ -13,3 +13,4 @@ workers_dev = true
 [vars]
 ENVIRONMENT = "production"
 ALLOWED_ORIGINS = "https://shadowcypher.site,https://www.shadowcypher.site,https://dev.shadowcypher.site,http://localhost:8081"
+SITE_URL = "https://shadowcypher.site"
