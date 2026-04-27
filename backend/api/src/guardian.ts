@@ -8,10 +8,25 @@
 
 import type { Env } from "./index";
 import { dbInsert, dbSelect, dbUpdate, dbUpsert } from "./supabase";
+import {
+  getEffectivePlan,
+  getLimits,
+  planRequired,
+  type ProfileForPlan,
+} from "./plans";
 
 interface AuthedUser {
   id: string;
   email: string;
+}
+
+async function getProfile(env: Env, userId: string): Promise<ProfileForPlan | null> {
+  const rows = await dbSelect<ProfileForPlan>(env, "profiles", {
+    select: "plan,trial_ends_at,subscription_status,current_period_end",
+    filters: { user_id: `eq.${userId}` },
+    limit: 1,
+  });
+  return rows[0] ?? null;
 }
 
 interface RegisterBody {
@@ -57,6 +72,32 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
 export async function registerAgent(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
   const body = (await req.json().catch(() => ({}))) as RegisterBody;
   if (!body.hostname) return json({ error: "hostname_required" }, { status: 400 }, cors);
+
+  // Plan gate: enforce maxAgents (existing same hostname is upsert, not new — exempt)
+  const profile = await getProfile(env, user.id);
+  const plan = getEffectivePlan(profile);
+  const limits = getLimits(plan);
+
+  const existingByHost = await dbSelect<{ id: string }>(env, "agents", {
+    select: "id",
+    filters: { user_id: `eq.${user.id}`, hostname: `eq.${body.hostname}` },
+    limit: 1,
+  });
+  if (existingByHost.length === 0) {
+    const allAgents = await dbSelect<{ id: string }>(env, "agents", {
+      select: "id",
+      filters: { user_id: `eq.${user.id}` },
+      limit: limits.maxAgents + 1,
+    });
+    if (allAgents.length >= limits.maxAgents) {
+      return planRequired(
+        ["guardian_pro", "operator"],
+        plan,
+        `Plan ${plan} is limited to ${limits.maxAgents} agent(s). Upgrade to register more.`,
+        cors
+      );
+    }
+  }
 
   const agent = await dbUpsert<{ id: string }>(
     env,
@@ -162,13 +203,19 @@ export async function listDevices(req: Request, env: Env, user: AuthedUser, cors
 }
 
 export async function recentScans(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
+  // Plan gate: free tier sees only last 7 days; Pro = 90 days; Operator = unlimited
+  const profile = await getProfile(env, user.id);
+  const plan = getEffectivePlan(profile);
+  const limits = getLimits(plan);
+  const cutoff = new Date(Date.now() - limits.scanHistoryDays * 86400000).toISOString();
+
   const scans = await dbSelect(env, "scans", {
     select: "id,scan_type,target,duration_ms,device_count,started_at",
-    filters: { user_id: `eq.${user.id}` },
+    filters: { user_id: `eq.${user.id}`, started_at: `gte.${cutoff}` },
     order: "started_at.desc",
     limit: 25,
   });
-  return json({ scans }, {}, cors);
+  return json({ scans, plan, history_days: limits.scanHistoryDays }, {}, cors);
 }
 
 // ─── Incidents ──────────────────────────────────────────────────────────────
