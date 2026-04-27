@@ -172,7 +172,7 @@
                         <li>Mobile companion</li>
                         <li>Family dashboard</li>
                     </ul>
-                    <a onclick="navTo('account')" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;">GET STARTED</a>
+                    <a onclick="upgradeTo('guardian_pro')" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;cursor:pointer;">SUBSCRIBE — $9.99/mo</a>
                 </div>
                 <div class="price-card">
                     <div class="price-tier">OPERATOR</div>
@@ -187,7 +187,7 @@
                         <li>Priority support</li>
                         <li>Threat intel feed</li>
                     </ul>
-                    <a onclick="navTo('account')" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;">GET STARTED</a>
+                    <a onclick="upgradeTo('operator')" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;cursor:pointer;">SUBSCRIBE — $49/mo</a>
                 </div>
             </div>
         </div>
@@ -530,8 +530,32 @@
                 cliPrint(`API verified · plan=${me.plan} · ${me.email}`, 'var(--success)');
                 const planBadge = document.querySelector('#account-dashboard .status-badge');
                 if (planBadge) planBadge.innerHTML = `<div class="status-dot"></div>Plan: ${me.plan}`;
+
+                // If user has a paid subscription, show "Manage subscription" button
+                if (me.plan && me.plan !== 'community') {
+                    let btn = document.getElementById('manage-sub-btn');
+                    if (!btn) {
+                        btn = document.createElement('button');
+                        btn.id = 'manage-sub-btn';
+                        btn.className = 'btn-primary';
+                        btn.style.cssText = 'margin-top:20px;font-size:0.7rem;padding:10px 20px;background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);';
+                        btn.textContent = 'Manage subscription';
+                        btn.onclick = manageSubscription;
+                        document.querySelector('#account-dashboard .status-badge')?.parentElement?.appendChild(btn);
+                    }
+                }
             } catch (err) {
                 cliPrint(`API check failed: ${err.message}`, 'var(--warning)');
+            }
+
+            // Handle ?checkout=success returns from Stripe
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('checkout') === 'success') {
+                cliPrint('Subscription active. Welcome to Pro.', 'var(--success)');
+                history.replaceState(null, '', window.location.pathname);
+            } else if (params.get('checkout') === 'canceled') {
+                cliPrint('Checkout canceled.', 'var(--warning)');
+                history.replaceState(null, '', window.location.pathname);
             }
 
             // Pull real Guardian data and start auto-refresh
@@ -595,6 +619,38 @@
                     ${escapeHtml(inc.title)} · ${ack}
                 </div>`;
             }).join('');
+        }
+
+        async function upgradeTo(plan) {
+            // Require login first
+            const apiKey = document.getElementById('api-key')?.dataset?.realKey;
+            if (!apiKey) {
+                cliPrint('Sign in first to subscribe.', 'var(--warning)');
+                navTo('account', document.getElementById('nav-account'));
+                return;
+            }
+            try {
+                const resp = await callApi('/v1/billing/checkout', {
+                    method: 'POST',
+                    body: JSON.stringify({ plan }),
+                });
+                if (resp.url) {
+                    window.location.href = resp.url;   // Stripe-hosted Checkout
+                } else {
+                    cliPrint('No checkout URL returned.', 'var(--critical)');
+                }
+            } catch (err) {
+                cliPrint(`Checkout failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function manageSubscription() {
+            try {
+                const resp = await callApi('/v1/billing/portal', { method: 'POST' });
+                if (resp.url) window.location.href = resp.url;
+            } catch (err) {
+                cliPrint(`Portal failed: ${err.message}`, 'var(--critical)');
+            }
         }
 
         async function ackIncident(id) {
