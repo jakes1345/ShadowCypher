@@ -47,9 +47,9 @@
     <div id="page-home" class="page active">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;height:calc(100vh - 200px);align-items:center;">
             <div class="hero-container" style="text-align:left;">
-                <div class="status-badge"><div class="status-dot"></div>v4.0.0 // GHOST PROTOCOL ACTIVE</div>
-                <h1 class="hero-title" style="font-size:3.5rem;">SOVEREIGN<br><span style="color:var(--accent-primary);">AUTONOMY.</span></h1>
-                <p class="hero-subtitle">The premier sovereign tactical suite. Ghost-grade operational invisibility. AI-powered security assistant. Personal device protection for everything you own.</p>
+                <div class="status-badge"><div class="status-dot"></div>v4.0 · Now in production</div>
+                <h1 class="hero-title" style="font-size:3.5rem;">Enterprise security,<br><span style="color:var(--accent-primary);">sovereign by design.</span></h1>
+                <p class="hero-subtitle">A unified security platform for offensive testing, anonymity, and personal device protection. Local-first AI. Zero telemetry. Built for operators and engineers who need to verify, not trust.</p>
                 <div style="display:flex;gap:20px;flex-wrap:wrap;">
                     <a onclick="navTo('arsenal',document.getElementById('nav-arsenal'))" class="btn-primary">Engage Arsenal</a>
                     <a onclick="navTo('guardian',document.getElementById('nav-guardian'))" class="btn-primary" style="background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);">Guardian Shield</a>
@@ -87,8 +87,8 @@
     <!-- GHOST PROTOCOL -->
     <div id="page-ghost" class="page">
         <div class="content-section">
-            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">👻 Ghost Protocol</h2>
-            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;">Total operational invisibility. One command. Eight layers. No trace. Inspired by F-Society — when you absolutely cannot be seen.</p>
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Ghost Protocol</h2>
+            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;">An eight-layer anonymity stack for high-risk research and red-team engagements. One command engages the chain; one command restores normal state. Designed for engineers who need verifiable operational privacy.</p>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;">
                 <div class="module-card" style="clip-path:none;border-left:3px solid var(--accent-primary);">
                     <h3 class="mono" style="margin-bottom:20px;">8 LAYERS OF INVISIBILITY</h3>
@@ -124,8 +124,8 @@
     <!-- GUARDIAN -->
     <div id="page-guardian" class="page">
         <div class="content-section">
-            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">🛡️ Guardian</h2>
-            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;">Personal security for everything you own. Your phone. Your router. Your PC. Your tablet. Your TV. Every device on your network — protected.</p>
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Guardian</h2>
+            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;">Continuous security monitoring for every device on your network — phones, laptops, routers, smart TVs, IoT. Discovery, hardening, and 24/7 threat detection from a single dashboard.</p>
             <div class="arsenal-grid">
                 <div class="module-card"><h3 class="mono" style="color:var(--success);margin-bottom:15px;">NETWORK SCAN</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Discovers every device on your WiFi. Identifies phones, laptops, smart TVs, IoT devices. Flags dangerous open ports and services.</p><div class="badge-free">FREE</div></div>
                 <div class="module-card"><h3 class="mono" style="color:var(--success);margin-bottom:15px;">ROUTER AUDIT</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Checks your router for Telnet, TR-069, UPnP, and FTP exposure. Most home routers have at least one critical vulnerability.</p><div class="badge-free">FREE</div></div>
@@ -198,38 +198,38 @@
         <div class="content-section" style="max-width: 600px;">
             <div id="account-auth" class="module-card" style="padding: 50px;">
                 <div id="auth-login">
-                    <h2 style="font-size: 2rem; margin-bottom: 30px;">OPERATOR_LOGIN</h2>
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Sign in</h2>
                     <div style="margin-bottom: 20px;">
-                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">CREDENTIAL_ID</label>
-                        <input type="text" class="cli-input" placeholder="EMAIL_OR_HANDLE" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Email</label>
+                        <input type="text" class="cli-input" placeholder="you@company.com" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
                     </div>
                     <div style="margin-bottom: 30px;">
-                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">ACCESS_TOKEN</label>
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Password</label>
                         <input type="password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
                     </div>
-                    <button onclick="handleAuth('login')" class="btn-primary" style="width: 100%;">AUTHORIZE_SESSION</button>
+                    <button onclick="handleAuth('login')" class="btn-primary" style="width: 100%;">Sign in</button>
                     <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
-                        NEW_OPERATOR? <a onclick="toggleAuth('signup')" style="color: var(--accent-primary); cursor: pointer;">INITIALIZE_IDENTITY</a>
+                        New here? <a onclick="toggleAuth('signup')" style="color: var(--accent-primary); cursor: pointer;">Create account</a>
                     </p>
                 </div>
 
                 <div id="auth-signup" style="display: none;">
-                    <h2 style="font-size: 2rem; margin-bottom: 30px;">INITIALIZE_IDENTITY</h2>
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Create your account</h2>
                     <div style="margin-bottom: 20px;">
-                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">OPERATOR_HANDLE</label>
-                        <input type="text" class="cli-input" placeholder="NICKNAME" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Display name</label>
+                        <input type="text" class="cli-input" placeholder="Jane Doe" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
                     </div>
                     <div style="margin-bottom: 20px;">
-                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">EMAIL_SIGNAL</label>
-                        <input type="email" class="cli-input" placeholder="EMAIL" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Email</label>
+                        <input type="email" class="cli-input" placeholder="you@company.com" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
                     </div>
                     <div style="margin-bottom: 30px;">
-                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">ACCESS_TOKEN</label>
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Password</label>
                         <input type="password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
                     </div>
-                    <button onclick="handleAuth('signup')" class="btn-primary" style="width: 100%;">CREATE_IDENTITY</button>
+                    <button onclick="handleAuth('signup')" class="btn-primary" style="width: 100%;">Create account</button>
                     <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
-                        EXISTING_OPERATOR? <a onclick="toggleAuth('login')" style="color: var(--accent-primary); cursor: pointer;">LOGIN_SESSION</a>
+                        Already have an account? <a onclick="toggleAuth('login')" style="color: var(--accent-primary); cursor: pointer;">Sign in</a>
                     </p>
                 </div>
             </div>
@@ -237,10 +237,10 @@
             <div id="account-dashboard" class="module-card" style="display: none; padding: 40px; clip-path: none;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px;">
                     <div>
-                        <h2 style="font-size: 2rem;">COMMANDER_DASHBOARD</h2>
-                        <div class="status-badge" style="margin-top: 10px;"><div class="status-dot"></div>RANK: ELITE_OPERATOR</div>
+                        <h2 style="font-size: 2rem;">Operator dashboard</h2>
+                        <div class="status-badge" style="margin-top: 10px;"><div class="status-dot"></div>Plan: Guardian Pro</div>
                     </div>
-                    <button onclick="mockLogout()" class="btn-primary" style="padding: 10px 20px; font-size: 0.6rem; background: var(--accent-secondary);">TERMINATE_SESSION</button>
+                    <button onclick="mockLogout()" class="btn-primary" style="padding: 10px 20px; font-size: 0.6rem; background: var(--accent-secondary);">Sign out</button>
                 </div>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:40px;">
@@ -248,43 +248,43 @@
                         <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:10px;">ORACLE_SHADOWNODE</div>
                         <div style="display:flex; align-items:center; gap:10px;">
                             <div class="status-dot" style="background:#666; box-shadow:none;" id="node-status"></div>
-                            <span class="mono" style="font-size:0.9rem; color:#666;">AWAITING_PROVISION</span>
+                            <span class="mono" style="font-size:0.9rem; color:#666;">Not provisioned</span>
                         </div>
                     </div>
                     <div style="padding:20px; background:rgba(0, 255, 65, 0.03); border:1px solid rgba(0, 255, 65, 0.2);">
                         <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:10px;">SUPABASE_BACKEND</div>
                         <div style="display:flex; align-items:center; gap:10px;">
                             <div class="status-dot" id="db-status"></div>
-                            <span class="mono" style="font-size:0.9rem; color:var(--success);">CONNECTED_STABLE</span>
+                            <span class="mono" style="font-size:0.9rem; color:var(--success);">Connected</span>
                         </div>
                     </div>
                 </div>
 
                 <div style="margin-bottom: 40px;">
-                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// SYSTEM_API_KEYS</h3>
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// API keys</h3>
                     <div style="background: #000; padding: 20px; border: 1px solid #222; display: flex; justify-content: space-between; align-items: center;">
                         <code id="api-key" style="font-size: 0.8rem; color: var(--success);">sc_live_************************</code>
                         <button onclick="copyKey()" class="mono" style="background: transparent; border: 1px solid var(--accent-primary); color: var(--accent-primary); padding: 5px 15px; font-size: 0.6rem; cursor: pointer;">COPY</button>
                     </div>
-                    <p style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 10px;">KEEP THIS KEY SECRET. IT GRANTS FULL ACCESS TO YOUR SHADOWNODES.</p>
+                    <p style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 10px;">Treat this key like a password. It grants full access to your nodes.</p>
                 </div>
 
                 <div style="margin-bottom: 40px;">
-                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// SOVEREIGN_CHAT_ROOMS</h3>
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Encrypted channels</h3>
                     <div style="display: grid; gap: 10px;">
                         <div style="padding: 15px; background: rgba(180, 74, 255, 0.05); border-left: 3px solid var(--accent-primary); display: flex; justify-content: space-between; align-items: center;">
-                            <span class="mono" style="font-size: 0.8rem;">#GHOST_OPS</span>
-                            <span style="font-size: 0.6rem; color: var(--success);">ENCRYPTED_SIGNAL_LOCK</span>
+                            <span class="mono" style="font-size: 0.8rem;">#general</span>
+                            <span style="font-size: 0.6rem; color: var(--success);">End-to-end encrypted</span>
                         </div>
                         <div style="padding: 15px; background: rgba(255, 255, 255, 0.02); border-left: 3px solid #333; display: flex; justify-content: space-between; align-items: center; opacity: 0.5;">
-                            <span class="mono" style="font-size: 0.8rem;">#GLOBAL_FLEET</span>
-                            <span style="font-size: 0.6rem; color: #666;">RESTRICTED_ACCESS</span>
+                            <span class="mono" style="font-size: 0.8rem;">#ops-fleet</span>
+                            <span style="font-size: 0.6rem; color: #666;">Pro plan required</span>
                         </div>
                     </div>
                 </div>
 
                 <div>
-                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// RECENT_SECURITY_INCIDENTS</h3>
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Recent security events</h3>
                     <div style="font-size: 0.75rem; color: #666; line-height: 2;">
                         [2026-04-25 18:44] - <span style="color: var(--warning);">WARN:</span> NEW DEVICE (TV_LIVING_ROOM) JOINED<br>
                         [2026-04-25 14:12] - <span style="color: var(--success);">INFO:</span> ROUTER_AUDIT_COMPLETE (0 VULNS)<br>
