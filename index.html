@@ -621,13 +621,19 @@
             }).join('');
         }
 
-        // Single Stripe Payment Link hosting both Guardian Pro ($9.99/mo) and Operator ($49/mo) tiers.
-        // The user picks their tier on Stripe's page. The webhook reads the actual price_id chosen
-        // and the price_id → plan mapping in Worker secrets (STRIPE_PRICE_GUARDIAN_PRO / _OPERATOR)
-        // determines which plan to set on profiles.
-        const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/7sY9AL7gF0Ja0yO95o6Vq00';
+        // Stripe Payment Links per tier. Webhook resolves the actual plan via price_id mapping
+        // in Worker secrets (STRIPE_PRICE_GUARDIAN_PRO / _OPERATOR), and maps user via client_reference_id.
+        const STRIPE_PAYMENT_LINKS = {
+            guardian_pro: 'https://buy.stripe.com/3cIfZ9cAZ77yftI5Tc6Vq02',
+            operator:     'https://buy.stripe.com/7sY9ALgRf63ubds0yS6Vq01',
+        };
 
-        async function upgradeTo(_plan /* tier chosen on Stripe page */) {
+        async function upgradeTo(plan) {
+            const link = STRIPE_PAYMENT_LINKS[plan];
+            if (!link) {
+                cliPrint(`${plan} payment link not configured.`, 'var(--warning)');
+                return;
+            }
             if (!supabaseClient) {
                 cliPrint('Auth offline — try again in a moment.', 'var(--warning)');
                 return;
@@ -638,7 +644,7 @@
                 navTo('account', document.getElementById('nav-account'));
                 return;
             }
-            const url = new URL(STRIPE_PAYMENT_LINK);
+            const url = new URL(link);
             url.searchParams.set('client_reference_id', session.user.id);
             url.searchParams.set('prefilled_email', session.user.email);
             window.location.href = url.toString();
