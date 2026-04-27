@@ -40,6 +40,7 @@
             <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
             <a onclick="navTo('pricing',this)" id="nav-pricing" class="nav-tab">Pro</a>
             <a onclick="navTo('account',this)" id="nav-account" class="nav-tab">Account</a>
+            <a onclick="signOut()" id="nav-signout" class="nav-tab" style="display:none;color:var(--accent-secondary);">Sign out</a>
         </div>
     </nav>
 
@@ -446,55 +447,84 @@
             return `sc_live_${hex}`;
         }
 
-        // Ensure the signed-in user has an api_key in their metadata; mint one if missing
+        // Ensure the signed-in user has an api_key in their metadata; mint one if missing.
+        // Requires an active session (so it works post email-confirmation).
         async function ensureApiKey(user) {
             if (user?.user_metadata?.api_key) return user.user_metadata.api_key;
+            if (!supabaseClient) return null;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) return null;
             const apiKey = generateApiKey();
-            const { data, error } = await supabaseClient.auth.updateUser({
-                data: { api_key: apiKey, api_key_created_at: new Date().toISOString() }
+            const { error } = await supabaseClient.auth.updateUser({
+                data: { ...(user.user_metadata || {}), api_key: apiKey, api_key_created_at: new Date().toISOString() }
             });
-            if (error) { cliPrint(`API_KEY_PROVISION_FAILED: ${error.message}`, 'var(--critical)'); return null; }
+            if (error) { cliPrint(`Could not mint API key: ${error.message}`, 'var(--critical)'); return null; }
             return apiKey;
         }
 
-        // Account Logic
         async function handleAuth(mode) {
             if (!supabaseClient) {
-                cliPrint("Auth offline — Supabase keys not configured.", "var(--warning)");
+                cliPrint("Auth offline — try again in a moment.", "var(--warning)");
                 return;
             }
-            const email = document.querySelector(mode === 'login' ? '#auth-login input[type="text"]' : '#auth-signup input[type="email"]').value;
+            const email = document.querySelector(mode === 'login' ? '#auth-login input[type="text"]' : '#auth-signup input[type="email"]').value.trim();
             const password = document.querySelector(mode === 'login' ? '#auth-login input[type="password"]' : '#auth-signup input[type="password"]').value;
-            const handle = mode === 'signup' ? document.querySelector('#auth-signup input[type="text"]').value : null;
+            const handle = mode === 'signup' ? document.querySelector('#auth-signup input[type="text"]').value.trim() : null;
+            if (!email || !password) { cliPrint('Email and password required.', 'var(--warning)'); return; }
 
             try {
-                let result;
                 if (mode === 'login') {
-                    result = await supabaseClient.auth.signInWithPassword({ email, password });
+                    const result = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (result.error) throw result.error;
+                    cliPrint(`Signed in: ${result.data.user.email}`, 'var(--success)');
+                    // onAuthStateChange will pick up the SIGNED_IN event and call updateUIForUser
                 } else {
-                    result = await supabaseClient.auth.signUp({
+                    const result = await supabaseClient.auth.signUp({
                         email,
                         password,
-                        options: { data: { handle, api_key: generateApiKey(), api_key_created_at: new Date().toISOString() } }
+                        options: { data: { handle: handle || email.split('@')[0], api_key: generateApiKey(), api_key_created_at: new Date().toISOString() } }
                     });
+                    if (result.error) throw result.error;
+                    if (result.data.session) {
+                        // Email confirmation disabled — user logged in immediately
+                        cliPrint(`Account created: ${email}`, 'var(--success)');
+                    } else {
+                        // Email confirmation required — show banner
+                        cliPrint(`Account created. Check ${email} for a confirmation link.`, 'var(--success)');
+                        showAuthBanner(`We sent a confirmation link to <strong>${escapeHtml(email)}</strong>. Click it, then come back here and sign in.`, 'info');
+                    }
                 }
-
-                if (result.error) throw result.error;
-
-                cliPrint(`Signed in: ${handle || email}`, 'var(--success)');
-                updateUIForUser(result.data.user);
             } catch (err) {
-                cliPrint(`Sign-in error: ${err.message}`, 'var(--critical)');
+                let msg = err.message || 'unknown';
+                if (msg.toLowerCase().includes('email not confirmed')) {
+                    msg = 'Email not confirmed yet — click the link we sent you, then try again.';
+                }
+                cliPrint(`Auth: ${msg}`, 'var(--critical)');
+                showAuthBanner(msg, 'error');
             }
         }
 
-        async function mockLogout() {
+        function showAuthBanner(html, kind) {
+            let banner = document.getElementById('auth-banner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'auth-banner';
+                banner.style.cssText = 'margin-bottom:20px;padding:15px;border-radius:4px;font-size:0.85rem;';
+                document.getElementById('account-auth')?.prepend(banner);
+            }
+            banner.style.background = kind === 'error' ? 'rgba(255,0,60,0.08)' : 'rgba(180,74,255,0.08)';
+            banner.style.borderLeft = `3px solid ${kind === 'error' ? 'var(--accent-secondary)' : 'var(--accent-primary)'}`;
+            banner.style.color = kind === 'error' ? 'var(--accent-secondary)' : '#ddd';
+            banner.innerHTML = html;
+        }
+
+        async function signOut() {
             if (supabaseClient) await supabaseClient.auth.signOut();
-            document.getElementById('account-auth').style.display = 'block';
-            document.getElementById('account-dashboard').style.display = 'none';
-            if (window._guardianTimer) { clearInterval(window._guardianTimer); window._guardianTimer = null; }
+            // onAuthStateChange will fire SIGNED_OUT and clean up the UI
             cliPrint('Signed out.', 'var(--warning)');
         }
+        // Keep the old name pointing at the new function for the inline onclick handler
+        const mockLogout = signOut;
 
         // Backend API base — overrideable via window.SHADOWCYPHER_API for local dev
         // Using workers.dev URL until api.shadowcypher.site custom domain is bound
@@ -513,15 +543,22 @@
         async function updateUIForUser(user) {
             document.getElementById('account-auth').style.display = 'none';
             document.getElementById('account-dashboard').style.display = 'block';
+            const signoutLink = document.getElementById('nav-signout');
+            if (signoutLink) signoutLink.style.display = '';
             const name = user.user_metadata?.handle || user.email.split('@')[0];
             document.querySelector('#account-dashboard h2').innerText = `Welcome, ${name}`;
 
             // Mint key if missing, then show it
             const apiKey = await ensureApiKey(user);
             const keyEl = document.getElementById('api-key');
-            if (keyEl && apiKey) {
-                keyEl.dataset.realKey = apiKey;
-                keyEl.innerText = apiKey.slice(0, 12) + '…' + apiKey.slice(-4);
+            if (keyEl) {
+                if (apiKey) {
+                    keyEl.dataset.realKey = apiKey;
+                    keyEl.innerText = apiKey.slice(0, 12) + '…' + apiKey.slice(-4);
+                } else {
+                    keyEl.innerText = 'no key — click "Mint key" →';
+                    addMintKeyButton(user);
+                }
             }
 
             // Call the real backend to verify the key round-trips and pull live plan/profile
@@ -564,6 +601,30 @@
             window._guardianTimer = setInterval(refreshGuardian, 30000);
         }
 
+        function addMintKeyButton(user) {
+            if (document.getElementById('mint-key-btn')) return;
+            const keyEl = document.getElementById('api-key');
+            if (!keyEl?.parentElement) return;
+            const btn = document.createElement('button');
+            btn.id = 'mint-key-btn';
+            btn.className = 'mono';
+            btn.style.cssText = 'margin-left:10px;background:var(--accent-primary);color:#000;border:none;padding:5px 12px;font-size:0.65rem;cursor:pointer;font-weight:700;';
+            btn.textContent = 'MINT KEY';
+            btn.onclick = async () => {
+                btn.disabled = true; btn.textContent = '...';
+                const apiKey = await ensureApiKey(user);
+                if (apiKey) {
+                    keyEl.dataset.realKey = apiKey;
+                    keyEl.innerText = apiKey.slice(0, 12) + '…' + apiKey.slice(-4);
+                    btn.remove();
+                    cliPrint('API key minted. Copy it now.', 'var(--success)');
+                } else {
+                    btn.disabled = false; btn.textContent = 'MINT KEY';
+                }
+            };
+            keyEl.parentElement.appendChild(btn);
+        }
+
         async function refreshGuardian() {
             try {
                 const [devicesResp, incidentsResp] = await Promise.all([
@@ -572,9 +633,29 @@
                 ]);
                 renderDevices(devicesResp.devices || []);
                 renderIncidents(incidentsResp.incidents || []);
+                showApiBanner(null);
             } catch (err) {
                 console.warn('[guardian] refresh failed', err.message);
+                if (err.message.includes('db_select_failed') || err.message.includes('500')) {
+                    showApiBanner('Backend tables missing — run the SQL migrations in Supabase (0001_guardian_idempotent.sql + 0002_billing_idempotent.sql).');
+                } else if (err.message.includes('key_not_found')) {
+                    showApiBanner('Your API key is invalid or revoked. Click MINT KEY to issue a new one.');
+                } else {
+                    showApiBanner(`Backend error: ${err.message}`);
+                }
             }
+        }
+
+        function showApiBanner(msg) {
+            let banner = document.getElementById('api-banner');
+            if (!msg) { banner?.remove(); return; }
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'api-banner';
+                banner.style.cssText = 'margin-bottom:20px;padding:15px;border-radius:4px;font-size:0.85rem;background:rgba(255,160,0,0.08);border-left:3px solid var(--warning);color:#ffb84d;';
+                document.getElementById('account-dashboard')?.prepend(banner);
+            }
+            banner.textContent = msg;
         }
 
         function renderDevices(devices) {
@@ -685,7 +766,25 @@
             }
         }
 
-        // Check active session on boot
+        // Reactive auth state listener — handles sign in, sign out, token refresh, email confirmation
+        function wireAuthState() {
+            if (!supabaseClient) return;
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (session) {
+                    updateUIForUser(session.user);
+                    document.getElementById('auth-banner')?.remove();
+                } else {
+                    document.getElementById('account-auth').style.display = 'block';
+                    document.getElementById('account-dashboard').style.display = 'none';
+                    const signoutLink = document.getElementById('nav-signout');
+                    if (signoutLink) signoutLink.style.display = 'none';
+                    if (window._guardianTimer) { clearInterval(window._guardianTimer); window._guardianTimer = null; }
+                    document.getElementById('api-banner')?.remove();
+                }
+            });
+        }
+
+        // One-shot bootstrap — checks active session on page load (onAuthStateChange covers everything after)
         async function checkSession() {
             if (!supabaseClient) return;
             try {
@@ -712,6 +811,7 @@
 
         // Boot
         window.addEventListener('load',()=>{
+            wireAuthState();
             checkSession();
             updateIndicator(document.querySelector('.nav-tab.active'));
             // Hex dump
