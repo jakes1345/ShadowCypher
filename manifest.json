@@ -1,0 +1,20 @@
+{
+  "name": "ShadowCypher",
+  "short_name": "ShadowCypher",
+  "description": "Enterprise tactical security platform — continuous network monitoring, anonymity, and personal device protection.",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020202",
+  "theme_color": "#b44aff",
+  "categories": ["security", "productivity", "utilities"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Account", "url": "/?nav=account", "description": "Operator dashboard" },
+    { "name": "Pricing", "url": "/?nav=pricing", "description": "Plans and pricing" }
+  ],
+  "screenshots": []
+}
