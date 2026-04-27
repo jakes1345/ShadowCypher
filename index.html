@@ -211,7 +211,37 @@
                     <button onclick="handleAuth('login')" class="btn-primary" style="width: 100%;">Sign in</button>
                     <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
                         New here? <a onclick="toggleAuth('signup')" style="color: var(--accent-primary); cursor: pointer;">Create account</a>
+                        &nbsp;·&nbsp;
+                        <a onclick="toggleAuth('forgot')" style="color: var(--accent-primary); cursor: pointer;">Forgot password?</a>
                     </p>
+                </div>
+
+                <div id="auth-forgot" style="display: none;">
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Reset password</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">
+                        Enter your email. We'll send you a link to set a new password.
+                    </p>
+                    <div style="margin-bottom: 30px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Email</label>
+                        <input type="email" id="forgot-email" class="cli-input" placeholder="you@company.com" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <button onclick="handleForgotPassword()" class="btn-primary" style="width: 100%;">Send reset link</button>
+                    <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
+                        <a onclick="toggleAuth('login')" style="color: var(--accent-primary); cursor: pointer;">Back to sign in</a>
+                    </p>
+                </div>
+
+                <div id="auth-reset" style="display: none;">
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Set new password</h2>
+                    <div style="margin-bottom: 20px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">New password</label>
+                        <input type="password" id="reset-password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <div style="margin-bottom: 30px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Confirm</label>
+                        <input type="password" id="reset-password-confirm" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <button onclick="handlePasswordReset()" class="btn-primary" style="width: 100%;">Update password</button>
                 </div>
 
                 <div id="auth-signup" style="display: none;">
@@ -766,10 +796,17 @@
             }
         }
 
-        // Reactive auth state listener — handles sign in, sign out, token refresh, email confirmation
+        // Reactive auth state listener — handles sign in, sign out, token refresh, email confirmation,
+        // password recovery (PASSWORD_RECOVERY event when user lands from a Supabase reset email)
         function wireAuthState() {
             if (!supabaseClient) return;
             supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (event === 'PASSWORD_RECOVERY') {
+                    // User clicked reset link — show the "set new password" form
+                    navTo('account', document.getElementById('nav-account'));
+                    toggleAuth('reset');
+                    return;
+                }
                 if (session) {
                     updateUIForUser(session.user);
                     document.getElementById('auth-banner')?.remove();
@@ -794,8 +831,47 @@
         }
 
         function toggleAuth(view) {
-            document.getElementById('auth-login').style.display = view === 'login' ? 'block' : 'none';
-            document.getElementById('auth-signup').style.display = view === 'signup' ? 'block' : 'none';
+            ['login', 'signup', 'forgot', 'reset'].forEach(v => {
+                const el = document.getElementById(`auth-${v}`);
+                if (el) el.style.display = (view === v) ? 'block' : 'none';
+            });
+        }
+
+        async function handleForgotPassword() {
+            if (!supabaseClient) { cliPrint('Auth offline.', 'var(--warning)'); return; }
+            const email = document.getElementById('forgot-email').value.trim();
+            if (!email) { cliPrint('Email required.', 'var(--warning)'); return; }
+            try {
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/?reset=1`
+                });
+                if (error) throw error;
+                showAuthBanner(`Reset link sent to <strong>${escapeHtml(email)}</strong>. Click it from your inbox.`, 'info');
+                cliPrint(`Password reset email sent to ${email}.`, 'var(--success)');
+            } catch (err) {
+                cliPrint(`Reset failed: ${err.message}`, 'var(--critical)');
+                showAuthBanner(err.message, 'error');
+            }
+        }
+
+        async function handlePasswordReset() {
+            if (!supabaseClient) { cliPrint('Auth offline.', 'var(--warning)'); return; }
+            const pw = document.getElementById('reset-password').value;
+            const pw2 = document.getElementById('reset-password-confirm').value;
+            if (!pw || pw.length < 6) { cliPrint('Password must be at least 6 chars.', 'var(--warning)'); return; }
+            if (pw !== pw2) { cliPrint('Passwords do not match.', 'var(--critical)'); return; }
+            try {
+                const { error } = await supabaseClient.auth.updateUser({ password: pw });
+                if (error) throw error;
+                cliPrint('Password updated. You are signed in.', 'var(--success)');
+                showAuthBanner('Password updated. Redirecting…', 'info');
+                history.replaceState(null, '', window.location.pathname);
+                // onAuthStateChange will surface the dashboard
+                setTimeout(() => navTo('account', document.getElementById('nav-account')), 800);
+            } catch (err) {
+                cliPrint(`Update failed: ${err.message}`, 'var(--critical)');
+                showAuthBanner(err.message, 'error');
+            }
         }
 
         function copyKey() {
