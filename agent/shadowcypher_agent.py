@@ -1,0 +1,335 @@
+#!/usr/bin/env python3
+"""
+ShadowCypher Guardian Agent
+============================
+
+Small daemon that runs on a user's machine, scans their local network, and ships
+results to the ShadowCypher API. Detects new devices, ARP spoofing, port changes,
+and posts incidents the user sees on shadowcypher.site dashboard.
+
+Install:
+    pip install requests
+    python3 shadowcypher_agent.py init     # writes ~/.shadowcypher/config.json
+    python3 shadowcypher_agent.py run      # runs in foreground (or via systemd)
+
+Config (~/.shadowcypher/config.json):
+    {
+      "api_base": "https://shadowcypher-api.shadowcypher.workers.dev",
+      "api_key": "sc_live_<your_key_from_dashboard>",
+      "scan_interval_sec": 600,
+      "heartbeat_interval_sec": 60
+    }
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import platform
+import re
+import socket
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+try:
+    import requests
+except ImportError:
+    print("[!] missing dependency: pip install requests", file=sys.stderr)
+    sys.exit(2)
+
+CONFIG_DIR = Path.home() / ".shadowcypher"
+CONFIG_PATH = CONFIG_DIR / "config.json"
+STATE_PATH = CONFIG_DIR / "state.json"
+DEFAULT_API = "https://shadowcypher-api.shadowcypher.workers.dev"
+AGENT_VERSION = "0.2.0"
+
+
+# ─── Config / state ─────────────────────────────────────────────────────────
+
+
+def load_config() -> dict[str, Any]:
+    if not CONFIG_PATH.exists():
+        sys.exit(f"[!] config not found at {CONFIG_PATH} — run: shadowcypher_agent.py init")
+    with CONFIG_PATH.open() as f:
+        cfg = json.load(f)
+    if not cfg.get("api_key", "").startswith("sc_live_"):
+        sys.exit("[!] api_key in config is missing or malformed")
+    cfg.setdefault("api_base", DEFAULT_API)
+    cfg.setdefault("scan_interval_sec", 600)
+    cfg.setdefault("heartbeat_interval_sec", 60)
+    return cfg
+
+
+def load_state() -> dict[str, Any]:
+    if STATE_PATH.exists():
+        with STATE_PATH.open() as f:
+            return json.load(f)
+    return {}
+
+
+def save_state(state: dict[str, Any]) -> None:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    with STATE_PATH.open("w") as f:
+        json.dump(state, f, indent=2)
+    STATE_PATH.chmod(0o600)
+
+
+def cmd_init() -> None:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    if CONFIG_PATH.exists():
+        print(f"[*] config already exists at {CONFIG_PATH}")
+    else:
+        api_key = input("Paste your API key (sc_live_…): ").strip()
+        if not api_key.startswith("sc_live_"):
+            sys.exit("[!] invalid key format")
+        cfg = {
+            "api_base": DEFAULT_API,
+            "api_key": api_key,
+            "scan_interval_sec": 600,
+            "heartbeat_interval_sec": 60,
+        }
+        with CONFIG_PATH.open("w") as f:
+            json.dump(cfg, f, indent=2)
+        CONFIG_PATH.chmod(0o600)
+        print(f"[+] wrote {CONFIG_PATH}")
+
+
+# ─── API client ─────────────────────────────────────────────────────────────
+
+
+class ApiClient:
+    def __init__(self, base: str, key: str) -> None:
+        self.base = base.rstrip("/")
+        self.session = requests.Session()
+        self.session.headers.update({
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            "User-Agent": f"shadowcypher-agent/{AGENT_VERSION}",
+        })
+
+    def post(self, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        resp = self.session.post(f"{self.base}{path}", json=body or {}, timeout=15)
+        resp.raise_for_status()
+        return resp.json() if resp.text else {}
+
+    def get(self, path: str) -> dict[str, Any]:
+        resp = self.session.get(f"{self.base}{path}", timeout=15)
+        resp.raise_for_status()
+        return resp.json()
+
+
+# ─── Scanners ───────────────────────────────────────────────────────────────
+
+
+def scan_arp_table() -> list[dict[str, Any]]:
+    """Read the OS ARP cache for known LAN devices. No raw sockets needed."""
+    devices: list[dict[str, Any]] = []
+    try:
+        if platform.system() == "Linux":
+            output = subprocess.check_output(["ip", "neigh"], text=True, timeout=10)
+            # 192.168.1.1 dev wlan0 lladdr aa:bb:cc:dd:ee:ff REACHABLE
+            for line in output.splitlines():
+                m = re.match(r"^(\S+)\s+dev\s+\S+\s+lladdr\s+([0-9a-f:]+)\s+(\S+)", line)
+                if m and m.group(3) in ("REACHABLE", "STALE", "DELAY", "PROBE"):
+                    devices.append({"ip": m.group(1), "mac": m.group(2)})
+        else:
+            output = subprocess.check_output(["arp", "-a"], text=True, timeout=10)
+            for line in output.splitlines():
+                m = re.search(r"\(([\d.]+)\) at ([0-9a-f:]+)", line, re.IGNORECASE)
+                if m:
+                    devices.append({"ip": m.group(1), "mac": m.group(2).lower()})
+    except (subprocess.SubprocessError, FileNotFoundError) as e:
+        print(f"[!] arp scan failed: {e}", file=sys.stderr)
+    return devices
+
+
+def reverse_dns(ip: str) -> str | None:
+    try:
+        return socket.gethostbyaddr(ip)[0]
+    except (OSError, socket.herror):
+        return None
+
+
+def quick_port_scan(ip: str, ports: list[int], timeout: float = 0.4) -> list[int]:
+    """Fast TCP connect scan against a small port set."""
+    open_ports: list[int] = []
+    for p in ports:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(timeout)
+                if s.connect_ex((ip, p)) == 0:
+                    open_ports.append(p)
+        except OSError:
+            continue
+    return open_ports
+
+
+def fingerprint_device_type(open_ports: list[int], hostname: str | None) -> str:
+    if 7547 in open_ports or 53 in open_ports or 80 in open_ports and 443 in open_ports:
+        return "router"
+    if 8009 in open_ports or 8008 in open_ports:
+        return "tv"
+    if 62078 in open_ports:
+        return "phone"
+    if hostname and re.search(r"iphone|ipad|android|pixel", hostname, re.I):
+        return "phone"
+    if hostname and re.search(r"echo|alexa|nest|hue", hostname, re.I):
+        return "iot"
+    if open_ports:
+        return "pc"
+    return "unknown"
+
+
+def scan_network(deep: bool = True) -> list[dict[str, Any]]:
+    """ARP cache + reverse DNS + light port probe + simple device-type heuristic."""
+    common_ports = [22, 23, 53, 80, 443, 445, 8008, 8009, 8080, 7547, 62078]
+    devices = scan_arp_table()
+    for d in devices:
+        ip = d.get("ip")
+        if not ip:
+            continue
+        d["hostname"] = reverse_dns(ip)
+        if deep:
+            d["open_ports"] = quick_port_scan(ip, common_ports)
+            d["device_type"] = fingerprint_device_type(d["open_ports"], d.get("hostname"))
+    return devices
+
+
+def detect_arp_anomalies(devices: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Flag duplicate MACs across multiple IPs, or duplicate IPs across MACs (classic ARP spoof)."""
+    anomalies: list[dict[str, Any]] = []
+    by_mac: dict[str, list[str]] = {}
+    by_ip: dict[str, list[str]] = {}
+    for d in devices:
+        mac, ip = d.get("mac"), d.get("ip")
+        if mac and ip:
+            by_mac.setdefault(mac, []).append(ip)
+            by_ip.setdefault(ip, []).append(mac)
+    for mac, ips in by_mac.items():
+        if len(set(ips)) > 1:
+            anomalies.append({"kind": "duplicate_mac", "mac": mac, "ips": ips})
+    for ip, macs in by_ip.items():
+        if len(set(macs)) > 1:
+            anomalies.append({"kind": "duplicate_ip", "ip": ip, "macs": macs})
+    return anomalies
+
+
+# ─── Commands ───────────────────────────────────────────────────────────────
+
+
+def ensure_agent(api: ApiClient, state: dict[str, Any]) -> str:
+    if state.get("agent_id"):
+        return state["agent_id"]
+    body = {
+        "hostname": platform.node() or socket.gethostname(),
+        "os": f"{platform.system()} {platform.release()}",
+        "agent_version": AGENT_VERSION,
+    }
+    resp = api.post("/v1/agents/register", body)
+    state["agent_id"] = resp["agent_id"]
+    save_state(state)
+    print(f"[+] registered agent {state['agent_id']}")
+    return state["agent_id"]
+
+
+def cycle(cfg: dict[str, Any], api: ApiClient, state: dict[str, Any]) -> None:
+    agent_id = ensure_agent(api, state)
+    api.post(f"/v1/agents/heartbeat?agent_id={agent_id}")
+
+    t0 = time.time()
+    devices = scan_network(deep=True)
+    duration_ms = int((time.time() - t0) * 1000)
+
+    payload = {
+        "agent_id": agent_id,
+        "scan_type": "network",
+        "target": "lan",
+        "duration_ms": duration_ms,
+        "devices": devices,
+        "result": {"raw_count": len(devices)},
+    }
+    scan_resp = api.post("/v1/scans", payload)
+    print(f"[+] scan {scan_resp.get('scan_id', '?')[:8]} · "
+          f"{len(devices)} devices · {duration_ms}ms · "
+          f"{scan_resp.get('new_device_incidents', 0)} new")
+
+    for anomaly in detect_arp_anomalies(devices):
+        api.post("/v1/incidents", {
+            "agent_id": agent_id,
+            "severity": "critical",
+            "category": "arp_spoof",
+            "title": f"Possible ARP anomaly: {anomaly['kind']}",
+            "detail": json.dumps(anomaly),
+            "data": anomaly,
+        })
+        print(f"[!] arp anomaly raised: {anomaly['kind']}")
+
+
+def cmd_run(cfg: dict[str, Any]) -> None:
+    api = ApiClient(cfg["api_base"], cfg["api_key"])
+    state = load_state()
+
+    # Sanity-check key against /v1/me before starting the loop
+    try:
+        me = api.get("/v1/me")
+        print(f"[+] authenticated as {me['email']} (plan: {me['plan']})")
+    except requests.HTTPError as e:
+        sys.exit(f"[!] auth failed: {e.response.status_code} {e.response.text}")
+
+    interval = max(60, int(cfg["scan_interval_sec"]))
+    hb_interval = max(30, int(cfg["heartbeat_interval_sec"]))
+    print(f"[*] running · scan every {interval}s · heartbeat every {hb_interval}s")
+
+    last_scan = 0.0
+    while True:
+        try:
+            now = time.time()
+            agent_id = ensure_agent(api, state)
+            api.post(f"/v1/agents/heartbeat?agent_id={agent_id}")
+            if now - last_scan >= interval:
+                cycle(cfg, api, state)
+                last_scan = now
+            time.sleep(hb_interval)
+        except KeyboardInterrupt:
+            print("\n[*] stopped")
+            return
+        except requests.RequestException as e:
+            print(f"[!] network/api error: {e}", file=sys.stderr)
+            time.sleep(15)
+        except Exception as e:
+            print(f"[!] unexpected: {e}", file=sys.stderr)
+            time.sleep(30)
+
+
+def cmd_once(cfg: dict[str, Any]) -> None:
+    """Run a single scan cycle and exit (for cron / one-off invocation)."""
+    api = ApiClient(cfg["api_base"], cfg["api_key"])
+    state = load_state()
+    cycle(cfg, api, state)
+
+
+# ─── main ───────────────────────────────────────────────────────────────────
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="ShadowCypher Guardian Agent")
+    parser.add_argument("command", choices=["init", "run", "once"])
+    args = parser.parse_args()
+
+    if args.command == "init":
+        cmd_init()
+        return
+
+    cfg = load_config()
+    if args.command == "run":
+        cmd_run(cfg)
+    elif args.command == "once":
+        cmd_once(cfg)
+
+
+if __name__ == "__main__":
+    main()

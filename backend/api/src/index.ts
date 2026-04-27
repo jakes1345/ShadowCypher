@@ -1,20 +1,36 @@
 /**
  * ShadowCypher Backend API — Cloudflare Worker entry point.
  *
- * Endpoints:
- *   GET  /v1/health        — liveness probe (no auth)
- *   GET  /v1/me            — return current user profile (auth: Bearer sc_live_…)
- *   POST /v1/keys/rotate   — issue a new api key for current user (auth)
- *   POST /v1/keys/revoke   — invalidate current key (auth)
+ * v1/auth:
+ *   GET  /v1/health             — liveness probe (no auth)
+ *   GET  /v1/me                 — current user profile
+ *   POST /v1/keys/rotate        — issue a new api key
+ *   POST /v1/keys/revoke        — invalidate current key
  *
- * Auth:
- *   Authorization: Bearer sc_live_<48 hex chars>
- *   The key is matched against `auth.users.raw_user_meta_data->>api_key` via service-role.
+ * v1/guardian:
+ *   POST /v1/agents/register    — register an agent install
+ *   POST /v1/agents/heartbeat   — agent heartbeat (?agent_id=)
+ *   POST /v1/scans              — upload scan results + auto-detect new devices
+ *   GET  /v1/devices            — list all devices for the current user
+ *   GET  /v1/scans/recent       — recent scan history
+ *   POST /v1/incidents          — agent raises a security incident
+ *   GET  /v1/incidents          — list incidents (?open=1 for unacked only)
+ *   POST /v1/incidents/ack      — acknowledge an incident (?incident_id=)
  *
- * Secrets (set via `wrangler secret put`):
- *   SUPABASE_URL                — https://<project>.supabase.co
- *   SUPABASE_SERVICE_ROLE_KEY   — service_role JWT (NEVER in code)
+ * Auth: Authorization: Bearer sc_live_<48 hex chars>
+ * Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (set via `wrangler secret put`)
  */
+
+import {
+  registerAgent,
+  heartbeatAgent,
+  uploadScan,
+  listDevices,
+  recentScans,
+  createIncident,
+  listIncidents,
+  ackIncident,
+} from "./guardian";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -202,14 +218,21 @@ export default {
         return json(
           {
             service: "shadowcypher-api",
-            version: "0.1.0",
+            version: "0.2.0",
             environment: env.ENVIRONMENT,
             docs: "https://github.com/jakes1345/ShadowCypher/blob/main/backend/api/README.md",
             endpoints: {
-              "GET /v1/health": "liveness probe (no auth)",
-              "GET /v1/me": "current user profile (Bearer key)",
-              "POST /v1/keys/rotate": "issue new API key (Bearer key)",
-              "POST /v1/keys/revoke": "invalidate current key (Bearer key)",
+              auth: ["GET /v1/health", "GET /v1/me", "POST /v1/keys/rotate", "POST /v1/keys/revoke"],
+              guardian: [
+                "POST /v1/agents/register",
+                "POST /v1/agents/heartbeat?agent_id=",
+                "POST /v1/scans",
+                "GET /v1/devices",
+                "GET /v1/scans/recent",
+                "POST /v1/incidents",
+                "GET /v1/incidents?open=1",
+                "POST /v1/incidents/ack?incident_id=",
+              ],
             },
           },
           {},
@@ -222,6 +245,27 @@ export default {
       if (path === "/v1/me" && req.method === "GET") return handleMe(req, env, cors);
       if (path === "/v1/keys/rotate" && req.method === "POST") return handleRotate(req, env, cors);
       if (path === "/v1/keys/revoke" && req.method === "POST") return handleRevoke(req, env, cors);
+
+      // Guardian endpoints — all require auth, resolve user once, dispatch
+      const guardianRoutes: Record<string, (req: Request, env: Env, user: { id: string; email: string }, cors: HeadersInit) => Promise<Response>> = {
+        "POST /v1/agents/register":   registerAgent,
+        "POST /v1/agents/heartbeat":  heartbeatAgent,
+        "POST /v1/scans":             uploadScan,
+        "GET /v1/devices":            listDevices,
+        "GET /v1/scans/recent":       recentScans,
+        "POST /v1/incidents":         createIncident,
+        "GET /v1/incidents":          listIncidents,
+        "POST /v1/incidents/ack":     ackIncident,
+      };
+      const routeKey = `${req.method} ${path}`;
+      const handler = guardianRoutes[routeKey];
+      if (handler) {
+        const key = extractKey(req);
+        if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
+        const user = await findUserByKey(env, key);
+        if (!user) return json({ error: "key_not_found" }, { status: 401 }, cors);
+        return handler(req, env, { id: user.id, email: user.email }, cors);
+      }
 
       return json({ error: "not_found", path }, { status: 404 }, cors);
     } catch (err) {

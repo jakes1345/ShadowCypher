@@ -3,10 +3,11 @@ main = "src/index.ts"
 compatibility_date = "2026-04-26"
 compatibility_flags = ["nodejs_compat"]
 
-# Custom domain api.shadowcypher.site is bound MANUALLY in the Cloudflare dashboard
-# (Workers & Pages → shadowcypher-api → Settings → Triggers → Custom Domains)
-# because the domain is in a different Cloudflare account than the one wrangler is logged into.
 workers_dev = true
+
+# Custom domain api.shadowcypher.site — re-enable AFTER manually deleting the old
+# A/CNAME record at Cloudflare → DNS → Records, then redeploy.
+# routes = [{ pattern = "api.shadowcypher.site", custom_domain = true }]
 
 # Public-safe vars (committed to git). Secrets go via `wrangler secret put`.
 [vars]

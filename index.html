@@ -283,12 +283,20 @@
                     </div>
                 </div>
 
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Devices on your network <span id="device-count" style="color:var(--text-secondary);font-size:0.7rem;"></span></h3>
+                    <div id="device-list" style="display:grid; gap:8px;">
+                        <div style="padding:15px; background:rgba(255,255,255,0.02); border:1px dashed var(--glass-border); color:var(--text-secondary); font-size:0.8rem;">
+                            No agents reporting yet. Install the Guardian agent to populate this list:<br>
+                            <code style="color:var(--accent-primary);">python3 agent/shadowcypher_agent.py init &amp;&amp; python3 agent/shadowcypher_agent.py run</code>
+                        </div>
+                    </div>
+                </div>
+
                 <div>
-                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Recent security events</h3>
-                    <div style="font-size: 0.75rem; color: #666; line-height: 2;">
-                        [2026-04-25 18:44] - <span style="color: var(--warning);">WARN:</span> NEW DEVICE (TV_LIVING_ROOM) JOINED<br>
-                        [2026-04-25 14:12] - <span style="color: var(--success);">INFO:</span> ROUTER_AUDIT_COMPLETE (0 VULNS)<br>
-                        [2026-04-24 02:01] - <span style="color: var(--critical);">CRIT:</span> BLOCKED ARP_SPOOF ATTEMPT FROM 192.168.1.104
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Recent security events <span id="incident-count" style="color:var(--text-secondary);font-size:0.7rem;"></span></h3>
+                    <div id="incident-list" style="font-size: 0.75rem; color: #888; line-height: 2;">
+                        <span style="color:#666;">No incidents yet — install the Guardian agent to start receiving real alerts.</span>
                     </div>
                 </div>
             </div>
@@ -484,7 +492,8 @@
             if (supabaseClient) await supabaseClient.auth.signOut();
             document.getElementById('account-auth').style.display = 'block';
             document.getElementById('account-dashboard').style.display = 'none';
-            cliPrint('SESSION_TERMINATED: STAY VIGILANT.', 'var(--warning)');
+            if (window._guardianTimer) { clearInterval(window._guardianTimer); window._guardianTimer = null; }
+            cliPrint('Signed out.', 'var(--warning)');
         }
 
         // Backend API base — overrideable via window.SHADOWCYPHER_API for local dev
@@ -524,6 +533,82 @@
             } catch (err) {
                 cliPrint(`API check failed: ${err.message}`, 'var(--warning)');
             }
+
+            // Pull real Guardian data and start auto-refresh
+            await refreshGuardian();
+            if (window._guardianTimer) clearInterval(window._guardianTimer);
+            window._guardianTimer = setInterval(refreshGuardian, 30000);
+        }
+
+        async function refreshGuardian() {
+            try {
+                const [devicesResp, incidentsResp] = await Promise.all([
+                    callApi('/v1/devices'),
+                    callApi('/v1/incidents'),
+                ]);
+                renderDevices(devicesResp.devices || []);
+                renderIncidents(incidentsResp.incidents || []);
+            } catch (err) {
+                console.warn('[guardian] refresh failed', err.message);
+            }
+        }
+
+        function renderDevices(devices) {
+            const list = document.getElementById('device-list');
+            const count = document.getElementById('device-count');
+            if (!list) return;
+            count.textContent = devices.length ? `(${devices.length})` : '';
+            if (!devices.length) return;
+            list.innerHTML = devices.map(d => {
+                const ports = (d.open_ports || []).join(', ');
+                const seen = new Date(d.last_seen_at).toLocaleString();
+                const trustColor = d.trusted ? 'var(--success)' : 'var(--text-secondary)';
+                return `<div style="padding:12px 16px; background:rgba(180,74,255,0.04); border-left:3px solid var(--accent-primary); display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:16px; align-items:center; font-size:0.8rem;">
+                    <div><strong style="color:#fff;">${escapeHtml(d.hostname || d.ip || d.mac)}</strong><br><span class="mono" style="font-size:0.65rem; color:${trustColor};">${escapeHtml(d.mac)}</span></div>
+                    <div><span class="mono" style="color:var(--text-secondary);">${escapeHtml(d.ip || '')}</span></div>
+                    <div><span style="color:var(--accent-primary); font-size:0.7rem;">${escapeHtml(d.device_type || 'unknown')}</span>${ports ? `<br><span class="mono" style="font-size:0.65rem; color:#888;">ports: ${escapeHtml(ports)}</span>` : ''}</div>
+                    <div style="font-size:0.65rem; color:#666;">${escapeHtml(seen)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderIncidents(incidents) {
+            const list = document.getElementById('incident-list');
+            const count = document.getElementById('incident-count');
+            if (!list) return;
+            const open = incidents.filter(i => !i.acknowledged);
+            count.textContent = incidents.length ? `(${open.length} open / ${incidents.length} total)` : '';
+            if (!incidents.length) {
+                list.innerHTML = '<span style="color:#666;">No incidents yet — install the Guardian agent to start receiving real alerts.</span>';
+                return;
+            }
+            const sevColor = { info: 'var(--success)', warning: 'var(--warning)', critical: 'var(--critical)' };
+            list.innerHTML = incidents.slice(0, 25).map(inc => {
+                const ts = new Date(inc.created_at).toLocaleString();
+                const c = sevColor[inc.severity] || 'var(--text-secondary)';
+                const ack = inc.acknowledged
+                    ? `<span style="color:#555; font-size:0.65rem;">acked</span>`
+                    : `<a onclick="ackIncident('${inc.id}')" style="color:var(--accent-primary); cursor:pointer; font-size:0.65rem;">ack</a>`;
+                return `<div style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    [<span style="color:#666;">${escapeHtml(ts)}</span>]
+                    <span style="color:${c}; text-transform:uppercase; font-weight:700;">${escapeHtml(inc.severity)}:</span>
+                    ${escapeHtml(inc.title)} · ${ack}
+                </div>`;
+            }).join('');
+        }
+
+        async function ackIncident(id) {
+            try {
+                await callApi(`/v1/incidents/ack?incident_id=${encodeURIComponent(id)}`, { method: 'POST' });
+                cliPrint(`Incident acked.`, 'var(--success)');
+                refreshGuardian();
+            } catch (err) {
+                cliPrint(`Ack failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         }
 
         async function rotateKey() {
