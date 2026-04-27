@@ -198,6 +198,24 @@ export default {
     const path = url.pathname;
 
     try {
+      if (path === "/" || path === "") {
+        return json(
+          {
+            service: "shadowcypher-api",
+            version: "0.1.0",
+            environment: env.ENVIRONMENT,
+            docs: "https://github.com/jakes1345/ShadowCypher/blob/main/backend/api/README.md",
+            endpoints: {
+              "GET /v1/health": "liveness probe (no auth)",
+              "GET /v1/me": "current user profile (Bearer key)",
+              "POST /v1/keys/rotate": "issue new API key (Bearer key)",
+              "POST /v1/keys/revoke": "invalidate current key (Bearer key)",
+            },
+          },
+          {},
+          cors
+        );
+      }
       if (path === "/v1/health") {
         return json({ ok: true, environment: env.ENVIRONMENT, ts: Date.now() }, {}, cors);
       }
