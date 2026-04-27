@@ -488,7 +488,8 @@
         }
 
         // Backend API base — overrideable via window.SHADOWCYPHER_API for local dev
-        const API_BASE = window.SHADOWCYPHER_API || 'https://api.shadowcypher.site';
+        // Using workers.dev URL until api.shadowcypher.site custom domain is bound
+        const API_BASE = window.SHADOWCYPHER_API || 'https://shadowcypher-api.shadowcypher.workers.dev';
 
         async function callApi(path, opts = {}) {
             const apiKey = document.getElementById('api-key')?.dataset?.realKey;
