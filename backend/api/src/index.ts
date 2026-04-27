@@ -32,6 +32,8 @@ import {
   ackIncident,
 } from "./guardian";
 import { createCheckout, createPortal, handleWebhook } from "./billing";
+import { getPreferences, updatePreferences, sendTest } from "./notifications";
+import { handleQuery as assistantQuery } from "./assistant";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -46,6 +48,15 @@ export interface Env {
   STRIPE_PRICE_GUARDIAN_PRO: string;
   STRIPE_PRICE_OPERATOR: string;
   SITE_URL: string;
+  // Notifications (P4B)
+  RESEND_API_KEY: string;
+  RESEND_FROM_EMAIL: string;
+  PUSH_VAPID_PUBLIC_KEY: string;
+  PUSH_VAPID_PRIVATE_KEY: string;
+  PUSH_VAPID_SUBJECT: string;
+  // AI assistant (P4C)
+  ANTHROPIC_API_KEY: string;
+  ANTHROPIC_MODEL: string;
 }
 
 interface SupabaseUser {
@@ -265,6 +276,14 @@ export default {
                 "POST /v1/billing/portal",
                 "POST /v1/billing/webhook",
               ],
+              notifications: [
+                "GET /v1/notifications/preferences",
+                "POST /v1/notifications/preferences",
+                "POST /v1/notifications/test",
+              ],
+              assistant: [
+                "POST /v1/assistant/query",
+              ],
             },
           },
           {},
@@ -294,6 +313,10 @@ export default {
         "POST /v1/incidents/ack":     ackIncident,
         "POST /v1/billing/checkout":  createCheckout,
         "POST /v1/billing/portal":    createPortal,
+        "GET /v1/notifications/preferences":  getPreferences,
+        "POST /v1/notifications/preferences": updatePreferences,
+        "POST /v1/notifications/test":        sendTest,
+        "POST /v1/assistant/query":           assistantQuery,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];

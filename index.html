@@ -364,10 +364,47 @@
                     </div>
                 </div>
 
-                <div>
+                <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Recent security events <span id="incident-count" style="color:var(--text-secondary);font-size:0.7rem;"></span></h3>
                     <div id="incident-list" style="font-size: 0.75rem; color: #888; line-height: 2;">
                         <span style="color:#666;">No incidents yet — install the Guardian agent to start receiving real alerts.</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Notifications</h3>
+                    <div id="notif-prefs" style="display:grid; gap:14px; font-size:0.85rem;">
+                        <label style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+                            <input type="checkbox" id="notif-email" style="accent-color:var(--accent-primary);">
+                            <span>Email me when an incident is raised</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:12px; font-size:0.8rem; color:var(--text-secondary);">
+                            <span style="width:80px;">Min severity</span>
+                            <select id="notif-severity" class="mono" style="background:#000; border:1px solid #333; color:#fff; padding:6px 10px; font-size:0.75rem;">
+                                <option value="info">info (everything)</option>
+                                <option value="warning" selected>warning</option>
+                                <option value="critical">critical only</option>
+                            </select>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+                            <input type="checkbox" id="notif-push" style="accent-color:var(--accent-primary);">
+                            <span>Browser push notifications (this device)</span>
+                        </label>
+                        <div style="display:flex; gap:10px; margin-top:6px;">
+                            <button onclick="saveNotifPrefs()" class="btn-primary" style="padding:8px 18px; font-size:0.7rem;">Save</button>
+                            <button onclick="testNotif()" style="padding:8px 18px; font-size:0.7rem; background:transparent; border:1px solid var(--accent-primary); color:var(--accent-primary); cursor:pointer;">Send test</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// AI assistant <span style="font-size:0.6rem; color:var(--text-secondary);">(Pro)</span></h3>
+                    <div style="background:rgba(180,74,255,0.04); border:1px solid var(--glass-border); padding:20px; border-radius:6px;">
+                        <div id="assistant-output" style="font-size:0.85rem; line-height:1.7; min-height:60px; color:#ddd; margin-bottom:14px; white-space:pre-wrap;">Ask anything about your network: <em style="color:var(--text-secondary);">"What devices are new this week?"</em>, <em style="color:var(--text-secondary);">"Is my router safe?"</em>, <em style="color:var(--text-secondary);">"Are there any open critical incidents?"</em></div>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="assistant-input" placeholder="Ask the assistant..." onkeydown="if(event.key==='Enter')askAssistant()" style="flex:1; padding:12px 14px; border:1px solid #333; background:#000; color:#fff; font-size:0.85rem;">
+                            <button onclick="askAssistant()" id="assistant-btn" class="btn-primary" style="padding:0 24px; font-size:0.7rem;">Ask</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -679,6 +716,9 @@
             await refreshGuardian();
             if (window._guardianTimer) clearInterval(window._guardianTimer);
             window._guardianTimer = setInterval(refreshGuardian, 30000);
+
+            // Load notification prefs
+            loadNotifPrefs().catch(() => {});
         }
 
         function addMintKeyButton(user) {
@@ -819,6 +859,86 @@
                 if (resp.url) window.location.href = resp.url;
             } catch (err) {
                 cliPrint(`Portal failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── Notifications ────────────────────────────────────────
+        async function loadNotifPrefs() {
+            try {
+                const { preferences } = await callApi('/v1/notifications/preferences');
+                document.getElementById('notif-email').checked = preferences.email_enabled !== false;
+                document.getElementById('notif-severity').value = preferences.email_severity || 'warning';
+                document.getElementById('notif-push').checked = !!preferences.push_enabled;
+            } catch (err) { console.warn('[notif] load failed', err.message); }
+        }
+
+        async function saveNotifPrefs() {
+            const body = {
+                email_enabled: document.getElementById('notif-email').checked,
+                email_severity: document.getElementById('notif-severity').value,
+                push_enabled: document.getElementById('notif-push').checked,
+            };
+            // If push enabled, request browser permission + register subscription
+            if (body.push_enabled && 'serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    const perm = await Notification.requestPermission();
+                    if (perm === 'granted') {
+                        // Subscription requires VAPID public key from server; if not set, just toggle the flag
+                        // Real subscription wiring happens once VAPID keys are configured in Worker
+                        cliPrint('Push permission granted. (Server-side VAPID keys still need to be configured to actually deliver pushes.)', 'var(--success)');
+                    } else {
+                        body.push_enabled = false;
+                        document.getElementById('notif-push').checked = false;
+                        cliPrint('Push permission denied.', 'var(--warning)');
+                    }
+                } catch (e) { console.warn('[push] subscribe failed', e); }
+            }
+            try {
+                await callApi('/v1/notifications/preferences', { method: 'POST', body: JSON.stringify(body) });
+                cliPrint('Notification preferences saved.', 'var(--success)');
+            } catch (err) {
+                cliPrint(`Save failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function testNotif() {
+            try {
+                const result = await callApi('/v1/notifications/test', { method: 'POST' });
+                let msg = 'Test dispatched.';
+                if (result.email_sent) msg += ' Email sent ✓';
+                if (result.push_sent) msg += ' Push sent ✓';
+                if (result.reason) msg += ` (${result.reason})`;
+                if (!result.email_sent && !result.push_sent) msg += ' (Nothing actually sent — check that Pro is active and at least one channel is enabled.)';
+                cliPrint(msg, result.email_sent || result.push_sent ? 'var(--success)' : 'var(--warning)');
+            } catch (err) {
+                cliPrint(`Test failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── AI assistant ────────────────────────────────────────
+        async function askAssistant() {
+            const input = document.getElementById('assistant-input');
+            const out = document.getElementById('assistant-output');
+            const btn = document.getElementById('assistant-btn');
+            const question = input.value.trim();
+            if (!question) return;
+            btn.disabled = true; btn.textContent = '...';
+            out.textContent = 'Thinking...';
+            try {
+                const resp = await callApi('/v1/assistant/query', { method: 'POST', body: JSON.stringify({ question }) });
+                out.textContent = resp.answer || '(no response)';
+                input.value = '';
+            } catch (err) {
+                if (err.message.includes('plan_required')) {
+                    out.innerHTML = `<span style="color:var(--warning);">AI assistant requires Guardian Pro or Operator. <a onclick="navTo('pricing', document.getElementById('nav-pricing'))" style="color:var(--accent-primary); cursor:pointer;">See pricing →</a></span>`;
+                } else if (err.message.includes('assistant_not_configured')) {
+                    out.innerHTML = `<span style="color:var(--warning);">AI assistant isn't fully configured yet — site owner needs to set the Anthropic API key.</span>`;
+                } else {
+                    out.innerHTML = `<span style="color:var(--critical);">${escapeHtml(err.message)}</span>`;
+                }
+            } finally {
+                btn.disabled = false; btn.textContent = 'Ask';
             }
         }
 
