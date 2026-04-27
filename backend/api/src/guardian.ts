@@ -14,6 +14,7 @@ import {
   planRequired,
   type ProfileForPlan,
 } from "./plans";
+import { dispatchIncidentNotification } from "./notifications";
 
 interface AuthedUser {
   id: string;
@@ -235,6 +236,21 @@ export async function createIncident(req: Request, env: Env, user: AuthedUser, c
     detail: body.detail ?? null,
     data: body.data ?? {},
   });
+
+  // Fire-and-forget notification dispatch (non-blocking; log failures only)
+  try {
+    await dispatchIncidentNotification(env, {
+      id: inc.id,
+      severity: body.severity,
+      category: body.category,
+      title: body.title,
+      detail: body.detail ?? null,
+      user_id: user.id,
+    }, user.email);
+  } catch (e) {
+    console.warn("[notify] dispatch failed", e instanceof Error ? e.message : e);
+  }
+
   return json({ incident_id: inc.id, created_at: inc.created_at }, {}, cors);
 }
 
