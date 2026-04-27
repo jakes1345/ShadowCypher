@@ -839,18 +839,31 @@
 
         async function handleForgotPassword() {
             if (!supabaseClient) { cliPrint('Auth offline.', 'var(--warning)'); return; }
-            const email = document.getElementById('forgot-email').value.trim();
-            if (!email) { cliPrint('Email required.', 'var(--warning)'); return; }
+            const raw = document.getElementById('forgot-email').value;
+            const email = raw.trim().toLowerCase();
+            if (!email) {
+                showAuthBanner('Email required.', 'error'); return;
+            }
+            // Strict client-side validation so we surface bad input clearly before Supabase rejects it
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showAuthBanner(`That doesn't look like a valid email address. You typed: <code>${escapeHtml(raw)}</code>`, 'error');
+                return;
+            }
             try {
                 const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
                     redirectTo: `${window.location.origin}/?reset=1`
                 });
                 if (error) throw error;
-                showAuthBanner(`Reset link sent to <strong>${escapeHtml(email)}</strong>. Click it from your inbox.`, 'info');
+                showAuthBanner(`Reset link sent to <strong>${escapeHtml(email)}</strong>. Click it from your inbox (also check spam).`, 'info');
                 cliPrint(`Password reset email sent to ${email}.`, 'var(--success)');
             } catch (err) {
-                cliPrint(`Reset failed: ${err.message}`, 'var(--critical)');
-                showAuthBanner(err.message, 'error');
+                let msg = err.message || 'unknown';
+                if (msg.toLowerCase().includes('invalid format')) {
+                    msg = `Supabase rejected the email format. Make sure it's exactly the address you signed up with — no extra characters or spaces. (You typed: ${email})`;
+                }
+                cliPrint(`Reset failed: ${msg}`, 'var(--critical)');
+                showAuthBanner(msg, 'error');
             }
         }
 
