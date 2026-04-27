@@ -621,27 +621,34 @@
             }).join('');
         }
 
+        // Stripe Payment Links per plan (Stripe-hosted, no backend session creation needed).
+        // We pass client_reference_id = supabase user_id so the webhook can map the payment to the right user.
+        const STRIPE_PAYMENT_LINKS = {
+            guardian_pro: 'https://buy.stripe.com/7sY9AL7gF0Ja0yO95o6Vq00',
+            operator:     null,   // TODO: paste second Payment Link here
+        };
+
         async function upgradeTo(plan) {
-            // Require login first
-            const apiKey = document.getElementById('api-key')?.dataset?.realKey;
-            if (!apiKey) {
-                cliPrint('Sign in first to subscribe.', 'var(--warning)');
+            const link = STRIPE_PAYMENT_LINKS[plan];
+            if (!link) {
+                cliPrint(`${plan} payment link not configured yet.`, 'var(--warning)');
+                return;
+            }
+            // Require login so we can pass user_id through to the webhook
+            if (!supabaseClient) {
+                cliPrint('Auth offline — try again in a moment.', 'var(--warning)');
+                return;
+            }
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                cliPrint('Sign in first to subscribe — your plan will auto-activate after payment.', 'var(--warning)');
                 navTo('account', document.getElementById('nav-account'));
                 return;
             }
-            try {
-                const resp = await callApi('/v1/billing/checkout', {
-                    method: 'POST',
-                    body: JSON.stringify({ plan }),
-                });
-                if (resp.url) {
-                    window.location.href = resp.url;   // Stripe-hosted Checkout
-                } else {
-                    cliPrint('No checkout URL returned.', 'var(--critical)');
-                }
-            } catch (err) {
-                cliPrint(`Checkout failed: ${err.message}`, 'var(--critical)');
-            }
+            const url = new URL(link);
+            url.searchParams.set('client_reference_id', session.user.id);
+            url.searchParams.set('prefilled_email', session.user.email);
+            window.location.href = url.toString();
         }
 
         async function manageSubscription() {

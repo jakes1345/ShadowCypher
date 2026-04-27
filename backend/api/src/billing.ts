@@ -187,35 +187,47 @@ export async function handleWebhook(req: Request, env: Env, cors: HeadersInit): 
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const customerId = (obj.customer as string) || null;
-        const subId = (obj.id as string) || (obj.subscription as string) || null;
+        const clientRefId = (obj.client_reference_id as string) || null;  // Payment Link path
+        const metaUserId = ((obj.metadata as Record<string, string>)?.supabase_user_id) || null;
+        const subId =
+          event.type === "checkout.session.completed"
+            ? ((obj.subscription as string) || null)
+            : ((obj.id as string) || null);
         const status = (obj.status as string) || null;
         const periodEnd = (obj.current_period_end as number) || null;
         const cancelAtEnd = Boolean(obj.cancel_at_period_end);
         const items = ((obj.items as Record<string, unknown>)?.data as Array<{ price: { id: string } }>) || [];
         const priceId = items[0]?.price?.id;
-        const plan = priceId ? planFromPriceId(env, priceId) : "community";
-        if (!customerId) break;
+        const plan = priceId ? planFromPriceId(env, priceId) : "guardian_pro"; // default to pro for Payment Link checkouts pre-subscription event
 
-        const profiles = await dbSelect<Profile>(env, "profiles", {
-          select: "user_id",
-          filters: { stripe_customer_id: `eq.${customerId}` },
-          limit: 1,
-        });
-        if (!profiles[0]) break;
+        // Find target profile: prefer customer_id, fall back to client_reference_id (Payment Links), then metadata
+        let targetUserId: string | null = null;
+        if (customerId) {
+          const byCustomer = await dbSelect<Profile>(env, "profiles", {
+            select: "user_id",
+            filters: { stripe_customer_id: `eq.${customerId}` },
+            limit: 1,
+          });
+          if (byCustomer[0]) targetUserId = byCustomer[0].user_id;
+        }
+        if (!targetUserId && clientRefId) targetUserId = clientRefId;
+        if (!targetUserId && metaUserId) targetUserId = metaUserId;
+        if (!targetUserId) {
+          console.warn("[webhook] no user resolved for event", event.type);
+          break;
+        }
 
-        await dbUpdate(
-          env,
-          "profiles",
-          { user_id: `eq.${profiles[0].user_id}` },
-          {
-            plan,
-            stripe_subscription_id: subId,
-            subscription_status: status,
-            current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-            cancel_at_period_end: cancelAtEnd,
-            updated_at: new Date().toISOString(),
-          }
-        );
+        const patch: Record<string, unknown> = {
+          plan,
+          subscription_status: status,
+          cancel_at_period_end: cancelAtEnd,
+          updated_at: new Date().toISOString(),
+        };
+        if (subId) patch.stripe_subscription_id = subId;
+        if (customerId) patch.stripe_customer_id = customerId;
+        if (periodEnd) patch.current_period_end = new Date(periodEnd * 1000).toISOString();
+
+        await dbUpdate(env, "profiles", { user_id: `eq.${targetUserId}` }, patch);
         break;
       }
 
