@@ -399,6 +399,29 @@
                 </div>
 
                 <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Teams <span style="font-size:0.6rem; color:var(--text-secondary);">(Operator)</span></h3>
+                    <div id="teams-section">
+                        <div id="team-invites" style="margin-bottom:16px;"></div>
+                        <div id="team-list" style="margin-bottom:16px; font-size:0.8rem;"></div>
+                        <div style="display:flex; gap:10px; align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label class="mono" style="font-size:0.6rem;color:var(--text-secondary);display:block;margin-bottom:6px;">New team name</label>
+                                <input type="text" id="team-name-input" placeholder="My Family" style="width:100%; padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.85rem;">
+                            </div>
+                            <button onclick="createTeam()" class="btn-primary" style="padding:10px 20px; font-size:0.7rem;">Create</button>
+                        </div>
+                        <div id="team-invite-block" style="margin-top:14px; display:none;">
+                            <label class="mono" style="font-size:0.6rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Invite member by email</label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="email" id="team-invite-email" placeholder="member@example.com" style="flex:1; padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.85rem;">
+                                <select id="team-invite-target" class="mono" style="background:#000; border:1px solid #333; color:#fff; padding:6px 10px; font-size:0.7rem;"></select>
+                                <button onclick="inviteToTeam()" class="btn-primary" style="padding:10px 20px; font-size:0.7rem;">Invite</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// AI assistant <span style="font-size:0.6rem; color:var(--text-secondary);">(Pro)</span></h3>
                     <div style="background:rgba(180,74,255,0.04); border:1px solid var(--glass-border); padding:20px; border-radius:6px;">
                         <div id="assistant-output" style="font-size:0.85rem; line-height:1.7; min-height:60px; color:#ddd; margin-bottom:14px; white-space:pre-wrap;">Ask anything about your network: <em style="color:var(--text-secondary);">"What devices are new this week?"</em>, <em style="color:var(--text-secondary);">"Is my router safe?"</em>, <em style="color:var(--text-secondary);">"Are there any open critical incidents?"</em></div>
@@ -720,8 +743,9 @@
             if (window._guardianTimer) clearInterval(window._guardianTimer);
             window._guardianTimer = setInterval(refreshGuardian, 30000);
 
-            // Load notification prefs
+            // Load notification prefs + teams
             loadNotifPrefs().catch(() => {});
+            loadTeams().catch(() => {});
         }
 
         function addMintKeyButton(user) {
@@ -916,6 +940,111 @@
                 cliPrint(msg, result.email_sent || result.push_sent ? 'var(--success)' : 'var(--warning)');
             } catch (err) {
                 cliPrint(`Test failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── Teams ───────────────────────────────────────────────
+        async function loadTeams() {
+            try {
+                const [teamsResp, invitesResp] = await Promise.all([
+                    callApi('/v1/teams'),
+                    callApi('/v1/teams/invites'),
+                ]);
+                renderTeams(teamsResp.teams || []);
+                renderInvites(invitesResp.invites || []);
+            } catch (err) {
+                if (err.message.includes('plan_required')) {
+                    document.getElementById('teams-section').innerHTML = '<p style="font-size:0.85rem;color:var(--text-secondary);">Teams require the <strong>Operator</strong> plan. Members of an Operator team automatically inherit Pro features.</p>';
+                } else {
+                    console.warn('[teams] load failed', err.message);
+                }
+            }
+        }
+
+        function renderTeams(teams) {
+            const list = document.getElementById('team-list');
+            const target = document.getElementById('team-invite-target');
+            const inviteBlock = document.getElementById('team-invite-block');
+            if (!list) return;
+            if (!teams.length) {
+                list.innerHTML = '<span style="color:var(--text-secondary);">No teams yet — create one below to share Pro features with family or coworkers.</span>';
+                if (inviteBlock) inviteBlock.style.display = 'none';
+                return;
+            }
+            list.innerHTML = teams.map(t => {
+                const role = t.is_owner ? 'owner' : t.role;
+                const action = t.is_owner ? '' : ` <a onclick="leaveTeam('${t.id}')" style="color:var(--accent-secondary);cursor:pointer;font-size:0.7rem;">leave</a>`;
+                return `<div style="padding:10px 14px; background:rgba(180,74,255,0.04); border-left:3px solid var(--accent-primary); margin-bottom:6px;"><strong>${escapeHtml(t.name)}</strong> · <span style="color:var(--text-secondary);font-size:0.7rem;">${role}</span>${action}</div>`;
+            }).join('');
+            const ownedTeams = teams.filter(t => t.is_owner);
+            if (ownedTeams.length && target && inviteBlock) {
+                target.innerHTML = ownedTeams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+                inviteBlock.style.display = '';
+            } else if (inviteBlock) {
+                inviteBlock.style.display = 'none';
+            }
+        }
+
+        function renderInvites(invites) {
+            const el = document.getElementById('team-invites');
+            if (!el) return;
+            if (!invites.length) { el.innerHTML = ''; return; }
+            el.innerHTML = invites.map(i =>
+                `<div style="padding:10px 14px; background:rgba(255,184,77,0.06); border-left:3px solid var(--warning); margin-bottom:6px; font-size:0.85rem;">
+                    Invited to <strong>${escapeHtml(i.team_name)}</strong> ·
+                    <a onclick="acceptInvite('${i.team_id}')" style="color:var(--accent-primary);cursor:pointer;">accept</a>
+                </div>`
+            ).join('');
+        }
+
+        async function createTeam() {
+            const name = document.getElementById('team-name-input').value.trim();
+            if (!name) { cliPrint('Team name required.', 'var(--warning)'); return; }
+            try {
+                await callApi('/v1/teams', { method: 'POST', body: JSON.stringify({ name }) });
+                document.getElementById('team-name-input').value = '';
+                cliPrint(`Team created: ${name}`, 'var(--success)');
+                loadTeams();
+            } catch (err) {
+                if (err.message.includes('plan_required')) {
+                    cliPrint('Creating teams requires the Operator plan.', 'var(--warning)');
+                } else {
+                    cliPrint(`Create failed: ${err.message}`, 'var(--critical)');
+                }
+            }
+        }
+
+        async function inviteToTeam() {
+            const team_id = document.getElementById('team-invite-target').value;
+            const email = document.getElementById('team-invite-email').value.trim();
+            if (!team_id || !email) { cliPrint('Team and email required.', 'var(--warning)'); return; }
+            try {
+                await callApi('/v1/teams/invite', { method: 'POST', body: JSON.stringify({ team_id, email }) });
+                document.getElementById('team-invite-email').value = '';
+                cliPrint(`Invited ${email}.`, 'var(--success)');
+            } catch (err) {
+                cliPrint(`Invite failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function acceptInvite(team_id) {
+            try {
+                await callApi('/v1/teams/accept', { method: 'POST', body: JSON.stringify({ team_id }) });
+                cliPrint('Joined team.', 'var(--success)');
+                loadTeams();
+            } catch (err) {
+                cliPrint(`Accept failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function leaveTeam(team_id) {
+            if (!confirm('Leave this team? You will lose any plan inheritance from it.')) return;
+            try {
+                await callApi('/v1/teams/leave', { method: 'POST', body: JSON.stringify({ team_id }) });
+                cliPrint('Left team.', 'var(--success)');
+                loadTeams();
+            } catch (err) {
+                cliPrint(`Leave failed: ${err.message}`, 'var(--critical)');
             }
         }
 
