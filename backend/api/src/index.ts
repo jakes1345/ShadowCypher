@@ -34,6 +34,14 @@ import {
 import { createCheckout, createPortal, handleWebhook } from "./billing";
 import { getPreferences, updatePreferences, sendTest } from "./notifications";
 import { handleQuery as assistantQuery } from "./assistant";
+import {
+  createTeam,
+  listTeams,
+  inviteMember,
+  listInvites,
+  acceptInvite,
+  leaveTeam,
+} from "./teams";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -284,6 +292,14 @@ export default {
               assistant: [
                 "POST /v1/assistant/query",
               ],
+              teams: [
+                "POST /v1/teams",
+                "GET /v1/teams",
+                "POST /v1/teams/invite",
+                "GET /v1/teams/invites",
+                "POST /v1/teams/accept",
+                "POST /v1/teams/leave",
+              ],
             },
           },
           {},
@@ -317,6 +333,12 @@ export default {
         "POST /v1/notifications/preferences": updatePreferences,
         "POST /v1/notifications/test":        sendTest,
         "POST /v1/assistant/query":           assistantQuery,
+        "POST /v1/teams":                     createTeam,
+        "GET /v1/teams":                      listTeams,
+        "POST /v1/teams/invite":              inviteMember,
+        "GET /v1/teams/invites":              listInvites,
+        "POST /v1/teams/accept":              acceptInvite,
+        "POST /v1/teams/leave":               leaveTeam,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];
