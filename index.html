@@ -423,13 +423,44 @@
 
                 <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// AI assistant <span style="font-size:0.6rem; color:var(--text-secondary);">(Pro)</span></h3>
-                    <div style="background:rgba(180,74,255,0.04); border:1px solid var(--glass-border); padding:20px; border-radius:6px;">
+                    <div style="background:rgba(180,74,255,0.04); border:1px solid var(--glass-border); padding:20px; border-radius:6px; margin-bottom:14px;">
                         <div id="assistant-output" style="font-size:0.85rem; line-height:1.7; min-height:60px; color:#ddd; margin-bottom:14px; white-space:pre-wrap;">Ask anything about your network: <em style="color:var(--text-secondary);">"What devices are new this week?"</em>, <em style="color:var(--text-secondary);">"Is my router safe?"</em>, <em style="color:var(--text-secondary);">"Are there any open critical incidents?"</em></div>
                         <div style="display:flex; gap:10px;">
                             <input type="text" id="assistant-input" placeholder="Ask the assistant..." onkeydown="if(event.key==='Enter')askAssistant()" style="flex:1; padding:12px 14px; border:1px solid #333; background:#000; color:#fff; font-size:0.85rem;">
                             <button onclick="askAssistant()" id="assistant-btn" class="btn-primary" style="padding:0 24px; font-size:0.7rem;">Ask</button>
                         </div>
+                        <div id="assistant-usage" style="margin-top:10px; font-size:0.7rem; color:var(--text-secondary);"></div>
                     </div>
+                    <details style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); padding:16px 20px; border-radius:6px; font-size:0.85rem;">
+                        <summary style="cursor:pointer; color:var(--accent-primary); font-family:var(--font-mono); font-size:0.75rem; letter-spacing:1px;">AI provider settings (BYOK / Ollama)</summary>
+                        <div style="margin-top:14px; color:#ccc;">
+                            <p style="margin:0 0 12px;font-size:0.8rem;color:var(--text-secondary);">By default, queries use the platform's AI key with a monthly quota. Switch to your own Anthropic key (BYOK) or a self-hosted Ollama for unmetered access.</p>
+                            <div style="margin-bottom:12px;">
+                                <label class="mono" style="font-size:0.65rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Your Anthropic API key (sk-ant-…)</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="password" id="byok-input" placeholder="sk-ant-…" style="flex:1;padding:8px 12px;border:1px solid #333;background:#000;color:#fff;font-size:0.8rem;">
+                                    <button onclick="saveByok()" class="btn-primary" style="padding:8px 16px;font-size:0.7rem;">Save</button>
+                                    <button onclick="clearByok()" style="padding:8px 16px;font-size:0.7rem;background:transparent;border:1px solid #444;color:#aaa;cursor:pointer;">Clear</button>
+                                </div>
+                                <span id="byok-status" style="font-size:0.7rem;color:var(--text-secondary);"></span>
+                            </div>
+                            <div>
+                                <label class="mono" style="font-size:0.65rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Ollama public URL (https://your-tunnel.example.com)</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="url" id="ollama-input" placeholder="https://ollama.example.com" style="flex:1;padding:8px 12px;border:1px solid #333;background:#000;color:#fff;font-size:0.8rem;">
+                                    <button onclick="saveOllama()" class="btn-primary" style="padding:8px 16px;font-size:0.7rem;">Save</button>
+                                    <button onclick="clearOllama()" style="padding:8px 16px;font-size:0.7rem;background:transparent;border:1px solid #444;color:#aaa;cursor:pointer;">Clear</button>
+                                </div>
+                                <span id="ollama-status" style="font-size:0.7rem;color:var(--text-secondary);"></span>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <div style="margin-top: 60px; padding-top: 40px; border-top: 1px solid var(--glass-border);">
+                    <h3 class="mono" style="font-size: 0.85rem; color: var(--accent-secondary); margin-bottom: 14px;">// Danger zone</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Permanently delete your account and all data (devices, scans, incidents, teams). This cannot be undone.</p>
+                    <button onclick="deleteAccount()" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid var(--accent-secondary);color:var(--accent-secondary);cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;">DELETE MY ACCOUNT</button>
                 </div>
             </div>
         </div>
@@ -743,9 +774,10 @@
             if (window._guardianTimer) clearInterval(window._guardianTimer);
             window._guardianTimer = setInterval(refreshGuardian, 30000);
 
-            // Load notification prefs + teams
+            // Load notification prefs + teams + AI usage
             loadNotifPrefs().catch(() => {});
             loadTeams().catch(() => {});
+            loadAiUsage().catch(() => {});
         }
 
         function addMintKeyButton(user) {
@@ -1045,6 +1077,89 @@
                 loadTeams();
             } catch (err) {
                 cliPrint(`Leave failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── AI provider settings + usage ────────────────────────
+        async function loadAiUsage() {
+            try {
+                const u = await callApi('/v1/assistant/usage');
+                const meter = document.getElementById('assistant-usage');
+                if (!meter) return;
+                let parts = [];
+                parts.push(`Provider: <strong style="color:#fff;">${escapeHtml(u.provider)}</strong>`);
+                if (u.provider === 'platform') {
+                    parts.push(`Quota: <strong style="color:#fff;">${u.count}/${u.cap}</strong> queries this month`);
+                    if (u.cap > 0) {
+                        const pct = Math.min(100, Math.round(100 * u.count / u.cap));
+                        parts.push(`<span style="color:${pct >= 90 ? 'var(--accent-secondary)' : pct >= 70 ? 'var(--warning)' : 'var(--success)'}">(${pct}%)</span>`);
+                    }
+                }
+                if (u.byok_configured) parts.push(`BYOK: <code>…${escapeHtml(u.byok_last4 || '')}</code>`);
+                if (u.ollama_url) parts.push(`Ollama: ${escapeHtml(u.ollama_url)}`);
+                meter.innerHTML = parts.join(' · ');
+
+                // Pre-fill BYOK / Ollama status lines if details panel exists
+                const byokStatus = document.getElementById('byok-status');
+                if (byokStatus) byokStatus.textContent = u.byok_configured ? `Active: …${u.byok_last4}` : 'Not set.';
+                const ollStatus = document.getElementById('ollama-status');
+                if (ollStatus) ollStatus.textContent = u.ollama_url ? `Active: ${u.ollama_url}` : 'Not set.';
+            } catch (err) {
+                console.warn('[ai] usage load failed', err.message);
+            }
+        }
+
+        async function saveByok() {
+            const key = document.getElementById('byok-input').value.trim();
+            if (!key) { cliPrint('Paste your Anthropic key first.', 'var(--warning)'); return; }
+            try {
+                await callApi('/v1/assistant/byok', { method: 'POST', body: JSON.stringify({ api_key: key }) });
+                document.getElementById('byok-input').value = '';
+                cliPrint('BYOK saved. Future queries route through your key.', 'var(--success)');
+                loadAiUsage();
+            } catch (err) {
+                cliPrint(`Save failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function clearByok() {
+            try {
+                await callApi('/v1/assistant/byok', { method: 'POST', body: JSON.stringify({ clear: true }) });
+                cliPrint('BYOK cleared. Reverted to platform AI.', 'var(--warning)');
+                loadAiUsage();
+            } catch (err) { cliPrint(`Clear failed: ${err.message}`, 'var(--critical)'); }
+        }
+
+        async function saveOllama() {
+            const url = document.getElementById('ollama-input').value.trim();
+            if (!url) { cliPrint('Paste your Ollama public URL.', 'var(--warning)'); return; }
+            try {
+                await callApi('/v1/assistant/ollama', { method: 'POST', body: JSON.stringify({ url }) });
+                cliPrint(`Ollama saved: ${url}`, 'var(--success)');
+                loadAiUsage();
+            } catch (err) {
+                cliPrint(`Save failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function clearOllama() {
+            try {
+                await callApi('/v1/assistant/ollama', { method: 'POST', body: JSON.stringify({ clear: true }) });
+                cliPrint('Ollama URL cleared.', 'var(--warning)');
+                loadAiUsage();
+            } catch (err) { cliPrint(`Clear failed: ${err.message}`, 'var(--critical)'); }
+        }
+
+        async function deleteAccount() {
+            const confirmEmail = prompt('Type your email to confirm deletion. This is permanent.');
+            if (!confirmEmail) return;
+            try {
+                await callApi('/v1/me/delete', { method: 'POST', body: JSON.stringify({ confirm_email: confirmEmail }) });
+                cliPrint('Account deleted. Goodbye.', 'var(--warning)');
+                if (supabaseClient) await supabaseClient.auth.signOut();
+                setTimeout(() => window.location.href = '/', 1200);
+            } catch (err) {
+                cliPrint(`Delete failed: ${err.message}`, 'var(--critical)');
             }
         }
 

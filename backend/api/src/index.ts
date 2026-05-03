@@ -33,7 +33,12 @@ import {
 } from "./guardian";
 import { createCheckout, createPortal, handleWebhook } from "./billing";
 import { getPreferences, updatePreferences, sendTest } from "./notifications";
-import { handleQuery as assistantQuery } from "./assistant";
+import {
+  handleQuery as assistantQuery,
+  getUsage as assistantUsage,
+  setByok as assistantSetByok,
+  setOllama as assistantSetOllama,
+} from "./assistant";
 import {
   createTeam,
   listTeams,
@@ -65,6 +70,8 @@ export interface Env {
   // AI assistant (P4C)
   ANTHROPIC_API_KEY: string;
   ANTHROPIC_MODEL: string;
+  // BYOK encryption (P4F)
+  BYOK_ENCRYPTION_SECRET: string;
 }
 
 interface SupabaseUser {
@@ -166,6 +173,40 @@ function generateApiKey(): string {
 }
 
 // ─── Handlers ───────────────────────────────────────────────────────────────
+
+/**
+ * POST /v1/me/delete — hard delete the user's account and all data.
+ * Requires the Bearer api_key (proves ownership). Cascade-deletes all child rows
+ * via foreign-key constraints on the auth.users id.
+ */
+async function deleteAccount(req: Request, env: Env, user: { id: string; email: string }, cors: HeadersInit): Promise<Response> {
+  const body = (await req.json().catch(() => ({}))) as { confirm_email?: string };
+  if ((body.confirm_email || "").trim().toLowerCase() !== user.email.toLowerCase()) {
+    return new Response(
+      JSON.stringify({ error: "confirm_email_must_match", expected: user.email }),
+      { status: 400, headers: { "Content-Type": "application/json", ...cors } }
+    );
+  }
+  // Delete via Supabase Admin API — cascades through profiles, agents, devices, scans, incidents, team_members, notification_prefs
+  const resp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
+    method: "DELETE",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    console.error("[delete] failed", resp.status, txt);
+    return new Response(
+      JSON.stringify({ error: "delete_failed", detail: txt }),
+      { status: 500, headers: { "Content-Type": "application/json", ...cors } }
+    );
+  }
+  return new Response(JSON.stringify({ deleted: true }), {
+    headers: { "Content-Type": "application/json", ...cors },
+  });
+}
 
 async function handleMe(req: Request, env: Env, cors: HeadersInit): Promise<Response> {
   const key = extractKey(req);
@@ -291,6 +332,12 @@ export default {
               ],
               assistant: [
                 "POST /v1/assistant/query",
+                "GET /v1/assistant/usage",
+                "POST /v1/assistant/byok",
+                "POST /v1/assistant/ollama",
+              ],
+              account: [
+                "POST /v1/me/delete",
               ],
               teams: [
                 "POST /v1/teams",
@@ -333,6 +380,10 @@ export default {
         "POST /v1/notifications/preferences": updatePreferences,
         "POST /v1/notifications/test":        sendTest,
         "POST /v1/assistant/query":           assistantQuery,
+        "GET /v1/assistant/usage":            assistantUsage,
+        "POST /v1/assistant/byok":            assistantSetByok,
+        "POST /v1/assistant/ollama":          assistantSetOllama,
+        "POST /v1/me/delete":                 deleteAccount,
         "POST /v1/teams":                     createTeam,
         "GET /v1/teams":                      listTeams,
         "POST /v1/teams/invite":              inviteMember,
