@@ -161,10 +161,12 @@ async function verifyStripeSignature(
   return diff === 0;
 }
 
-function planFromPriceId(env: Env, priceId: string): string {
-  if (priceId === env.STRIPE_PRICE_GUARDIAN_PRO) return "guardian_pro";
-  if (priceId === env.STRIPE_PRICE_OPERATOR) return "operator";
-  return "community";
+function planFromPriceId(env: Env, priceId: string): { plan: string; interval: "month" | "year" } {
+  if (priceId === env.STRIPE_PRICE_GUARDIAN_PRO) return { plan: "guardian_pro", interval: "month" };
+  if (priceId === env.STRIPE_PRICE_OPERATOR) return { plan: "operator", interval: "month" };
+  if (priceId === env.STRIPE_PRICE_GUARDIAN_PRO_ANNUAL) return { plan: "guardian_pro", interval: "year" };
+  if (priceId === env.STRIPE_PRICE_OPERATOR_ANNUAL) return { plan: "operator", interval: "year" };
+  return { plan: "community", interval: "month" };
 }
 
 export async function handleWebhook(req: Request, env: Env, cors: HeadersInit): Promise<Response> {
@@ -198,7 +200,9 @@ export async function handleWebhook(req: Request, env: Env, cors: HeadersInit): 
         const cancelAtEnd = Boolean(obj.cancel_at_period_end);
         const items = ((obj.items as Record<string, unknown>)?.data as Array<{ price: { id: string } }>) || [];
         const priceId = items[0]?.price?.id;
-        const plan = priceId ? planFromPriceId(env, priceId) : "guardian_pro"; // default to pro for Payment Link checkouts pre-subscription event
+        const { plan, interval } = priceId
+          ? planFromPriceId(env, priceId)
+          : { plan: "guardian_pro" as const, interval: "month" as const };
 
         // Find target profile: prefer customer_id, fall back to client_reference_id (Payment Links), then metadata
         let targetUserId: string | null = null;
@@ -219,6 +223,7 @@ export async function handleWebhook(req: Request, env: Env, cors: HeadersInit): 
 
         const patch: Record<string, unknown> = {
           plan,
+          billing_interval: interval,
           subscription_status: status,
           cancel_at_period_end: cancelAtEnd,
           updated_at: new Date().toISOString(),
