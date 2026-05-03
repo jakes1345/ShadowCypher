@@ -15,6 +15,7 @@ import {
   type ProfileForPlan,
 } from "./plans";
 import { dispatchIncidentNotification } from "./notifications";
+import { dispatchIncidentWebhook } from "./webhooks";
 
 interface AuthedUser {
   id: string;
@@ -238,18 +239,18 @@ export async function createIncident(req: Request, env: Env, user: AuthedUser, c
   });
 
   // Fire-and-forget notification dispatch (non-blocking; log failures only)
-  try {
-    await dispatchIncidentNotification(env, {
-      id: inc.id,
-      severity: body.severity,
-      category: body.category,
-      title: body.title,
-      detail: body.detail ?? null,
-      user_id: user.id,
-    }, user.email);
-  } catch (e) {
-    console.warn("[notify] dispatch failed", e instanceof Error ? e.message : e);
-  }
+  const incidentForDispatch = {
+    id: inc.id,
+    severity: body.severity,
+    category: body.category,
+    title: body.title,
+    detail: body.detail ?? null,
+    user_id: user.id,
+  };
+  try { await dispatchIncidentNotification(env, incidentForDispatch, user.email); }
+  catch (e) { console.warn("[notify] dispatch failed", e instanceof Error ? e.message : e); }
+  try { await dispatchIncidentWebhook(env, incidentForDispatch); }
+  catch (e) { console.warn("[webhook] dispatch failed", e instanceof Error ? e.message : e); }
 
   return json({ incident_id: inc.id, created_at: inc.created_at }, {}, cors);
 }

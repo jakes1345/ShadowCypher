@@ -372,6 +372,49 @@
                     </div>
                 </div>
 
+                <div style="margin-bottom: 40px;" id="dashboard-stats">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Your activity</h3>
+                    <div id="stat-cards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px;">
+                        <div style="padding:14px 16px; background:rgba(180,74,255,0.04); border:1px solid var(--glass-border);">
+                            <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); letter-spacing:1px;">DEVICES</div>
+                            <div id="stat-devices" style="font-size:1.6rem; font-weight:900; color:#fff; margin-top:4px;">—</div>
+                        </div>
+                        <div style="padding:14px 16px; background:rgba(180,74,255,0.04); border:1px solid var(--glass-border);">
+                            <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); letter-spacing:1px;">SCANS</div>
+                            <div id="stat-scans" style="font-size:1.6rem; font-weight:900; color:#fff; margin-top:4px;">—</div>
+                        </div>
+                        <div style="padding:14px 16px; background:rgba(180,74,255,0.04); border:1px solid var(--glass-border);">
+                            <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); letter-spacing:1px;">INCIDENTS</div>
+                            <div id="stat-incidents" style="font-size:1.6rem; font-weight:900; color:#fff; margin-top:4px;">—</div>
+                        </div>
+                        <div style="padding:14px 16px; background:rgba(180,74,255,0.04); border:1px solid var(--glass-border);">
+                            <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); letter-spacing:1px;">OPEN ALERTS</div>
+                            <div id="stat-open" style="font-size:1.6rem; font-weight:900; color:var(--warning); margin-top:4px;">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Webhooks <span style="font-size:0.6rem; color:var(--text-secondary);">(Pro)</span></h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Forward incident events to Slack, Discord, PagerDuty, or any HTTPS URL. HMAC-SHA256 signed via per-webhook secret.</p>
+                    <div id="webhooks-list" style="margin-bottom:14px;"></div>
+                    <details style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); padding:14px 18px; border-radius:6px;">
+                        <summary style="cursor:pointer; color:var(--accent-primary); font-family:var(--font-mono); font-size:0.75rem;">+ Add webhook</summary>
+                        <div style="margin-top:14px; display:grid; gap:10px;">
+                            <input type="url" id="wh-url" placeholder="https://hooks.slack.com/services/..." style="padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.85rem;">
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" id="wh-label" placeholder="Label (optional, e.g. 'Slack #ops')" style="flex:1; padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.8rem;">
+                                <select id="wh-severity" style="background:#000; border:1px solid #333; color:#fff; padding:6px 10px; font-size:0.75rem;">
+                                    <option value="info">all (info+)</option>
+                                    <option value="warning" selected>warning+</option>
+                                    <option value="critical">critical only</option>
+                                </select>
+                                <button onclick="createWebhook()" class="btn-primary" style="padding:8px 16px; font-size:0.7rem;">Add</button>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
                 <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Notifications</h3>
                     <div id="notif-prefs" style="display:grid; gap:14px; font-size:0.85rem;">
@@ -457,10 +500,33 @@
                     </details>
                 </div>
 
-                <div style="margin-top: 60px; padding-top: 40px; border-top: 1px solid var(--glass-border);">
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 14px;">// Your data</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Export everything ShadowCypher has on you as a single JSON file (GDPR portability).</p>
+                    <button onclick="exportData()" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;">EXPORT MY DATA</button>
+                </div>
+
+                <div style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--glass-border);">
                     <h3 class="mono" style="font-size: 0.85rem; color: var(--accent-secondary); margin-bottom: 14px;">// Danger zone</h3>
                     <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Permanently delete your account and all data (devices, scans, incidents, teams). This cannot be undone.</p>
                     <button onclick="deleteAccount()" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid var(--accent-secondary);color:var(--accent-secondary);cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;">DELETE MY ACCOUNT</button>
+                </div>
+
+                <!-- Onboarding wizard overlay -->
+                <div id="onboarding-overlay" style="display:none; position:fixed; inset:0; background:rgba(2,2,2,0.92); z-index:5000; backdrop-filter:blur(8px); padding:40px 20px; overflow-y:auto;">
+                    <div style="max-width:520px; margin:80px auto; background:var(--bg-surface); border:1px solid var(--accent-primary); padding:36px 32px;">
+                        <div class="mono" style="font-size:0.65rem; color:var(--accent-primary); letter-spacing:3px; margin-bottom:8px;">// 3-STEP SETUP</div>
+                        <h2 style="font-size:1.6rem; color:#fff; margin:0 0 8px;" id="onboard-title">Welcome to ShadowCypher</h2>
+                        <p id="onboard-desc" style="color:var(--text-secondary); font-size:0.9rem; line-height:1.7;"></p>
+                        <pre id="onboard-code" style="background:#000; border:1px solid var(--glass-border); padding:14px 16px; font-size:0.75rem; color:var(--accent-primary); overflow-x:auto; margin:16px 0; display:none;"></pre>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px;">
+                            <span class="mono" id="onboard-pos" style="font-size:0.65rem; color:var(--text-secondary); letter-spacing:2px;">1 / 3</span>
+                            <div style="display:flex; gap:10px;">
+                                <button onclick="dismissOnboarding()" style="padding:8px 14px; background:transparent; border:1px solid #444; color:#aaa; font-size:0.7rem; cursor:pointer;">Skip</button>
+                                <button id="onboard-next" onclick="nextOnboarding()" class="btn-primary" style="padding:8px 18px; font-size:0.7rem;">Next →</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -471,6 +537,7 @@
         <p style="color:var(--text-secondary);font-size:0.8rem;">v4.0.0-ghost · Built with Go, Python, Cairo, and conviction.</p>
         <div style="margin-top:20px;display:flex;gap:30px;justify-content:center;flex-wrap:wrap;">
             <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">GitHub</a>
+            <a href="/docs.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">API Docs</a>
             <a href="/privacy.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Privacy</a>
             <a href="/terms.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Terms</a>
             <a href="mailto:hello@shadowcypher.site" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Contact</a>
@@ -774,10 +841,15 @@
             if (window._guardianTimer) clearInterval(window._guardianTimer);
             window._guardianTimer = setInterval(refreshGuardian, 30000);
 
-            // Load notification prefs + teams + AI usage
+            // Load notification prefs + teams + AI usage + webhooks + stats
             loadNotifPrefs().catch(() => {});
             loadTeams().catch(() => {});
             loadAiUsage().catch(() => {});
+            loadWebhooks().catch(() => {});
+            loadStats().catch(() => {});
+
+            // First-time onboarding (only fires if localStorage flag absent)
+            setTimeout(() => startOnboarding(), 600);
         }
 
         function addMintKeyButton(user) {
@@ -1148,6 +1220,163 @@
                 cliPrint('Ollama URL cleared.', 'var(--warning)');
                 loadAiUsage();
             } catch (err) { cliPrint(`Clear failed: ${err.message}`, 'var(--critical)'); }
+        }
+
+        // ─── Webhooks ─────────────────────────────────────────────
+        async function loadWebhooks() {
+            try {
+                const { webhooks } = await callApi('/v1/webhooks');
+                renderWebhooks(webhooks || []);
+            } catch (err) {
+                if (!err.message.includes('plan_required')) console.warn('[wh] load failed', err.message);
+            }
+        }
+
+        function renderWebhooks(whs) {
+            const list = document.getElementById('webhooks-list');
+            if (!list) return;
+            const active = whs.filter(w => w.is_active);
+            if (!active.length) {
+                list.innerHTML = '<span style="color:var(--text-secondary); font-size:0.8rem;">No webhooks yet. Forward incidents to Slack/Discord/PagerDuty/anywhere.</span>';
+                return;
+            }
+            list.innerHTML = active.map(w => {
+                const status = w.last_status === null ? 'never called' : `last: ${w.last_status} at ${new Date(w.last_called_at).toLocaleString()}`;
+                return `<div style="padding:12px 14px; background:rgba(180,74,255,0.04); border-left:3px solid var(--accent-primary); margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:0.85rem;"><strong>${escapeHtml(w.label || w.url.slice(0, 40))}</strong> <span style="color:var(--text-secondary); font-size:0.7rem;">· ≥${escapeHtml(w.min_severity)}</span></div>
+                        <div style="display:flex; gap:8px;">
+                            <a onclick="testWebhook('${w.id}')" style="color:var(--accent-primary); cursor:pointer; font-size:0.7rem;">test</a>
+                            <a onclick="deleteWebhook('${w.id}')" style="color:var(--accent-secondary); cursor:pointer; font-size:0.7rem;">delete</a>
+                        </div>
+                    </div>
+                    <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:4px;">${escapeHtml(status)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function createWebhook() {
+            const url = document.getElementById('wh-url').value.trim();
+            const label = document.getElementById('wh-label').value.trim();
+            const min_severity = document.getElementById('wh-severity').value;
+            if (!url) { cliPrint('URL required.', 'var(--warning)'); return; }
+            try {
+                const r = await callApi('/v1/webhooks', { method: 'POST', body: JSON.stringify({ url, label, min_severity }) });
+                document.getElementById('wh-url').value = '';
+                document.getElementById('wh-label').value = '';
+                cliPrint(`Webhook added. Signing secret: ${r.signing_secret.slice(0, 16)}…`, 'var(--success)');
+                loadWebhooks();
+            } catch (err) {
+                if (err.message.includes('plan_required')) cliPrint('Webhooks require Pro.', 'var(--warning)');
+                else cliPrint(`Add failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function testWebhook(id) {
+            try {
+                const r = await callApi('/v1/webhooks/test', { method: 'POST', body: JSON.stringify({ id }) });
+                cliPrint(r.ok ? `Test delivered (${r.status})` : `Test failed (${r.status})`, r.ok ? 'var(--success)' : 'var(--critical)');
+            } catch (err) {
+                cliPrint(`Test failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function deleteWebhook(id) {
+            if (!confirm('Delete this webhook?')) return;
+            try {
+                await callApi('/v1/webhooks/delete', { method: 'POST', body: JSON.stringify({ id }) });
+                cliPrint('Webhook deleted.', 'var(--warning)');
+                loadWebhooks();
+            } catch (err) { cliPrint(`Delete failed: ${err.message}`, 'var(--critical)'); }
+        }
+
+        // ─── Stats ────────────────────────────────────────────────
+        async function loadStats() {
+            try {
+                const s = await callApi('/v1/me/stats');
+                document.getElementById('stat-devices').textContent = s.counts.devices;
+                document.getElementById('stat-scans').textContent = s.counts.scans;
+                document.getElementById('stat-incidents').textContent = s.counts.incidents;
+                document.getElementById('stat-open').textContent = s.counts.open_incidents;
+            } catch (err) { console.warn('[stats] load failed', err.message); }
+        }
+
+        // ─── Data export ──────────────────────────────────────────
+        async function exportData() {
+            const apiKey = document.getElementById('api-key')?.dataset?.realKey;
+            if (!apiKey) { cliPrint('No API key.', 'var(--warning)'); return; }
+            try {
+                const resp = await fetch(`${API_BASE}/v1/me/export`, {
+                    headers: { Authorization: `Bearer ${apiKey}` },
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `shadowcypher-export-${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                cliPrint('Export downloaded.', 'var(--success)');
+            } catch (err) {
+                cliPrint(`Export failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── Onboarding wizard ────────────────────────────────────
+        const ONBOARD_STEPS = [
+            {
+                title: "Welcome to ShadowCypher",
+                desc: "You're set up with a 14-day Guardian Pro trial. Three quick steps to get value out of the platform — let's go.",
+                code: null,
+            },
+            {
+                title: "Step 1: Install the agent",
+                desc: "The Guardian agent runs on a machine on your network and reports devices/incidents back to your dashboard. Free tier supports 1 agent.",
+                code: "# On any Linux/macOS machine:\ncd ~ && git clone https://github.com/jakes1345/ShadowCypher.git\ncd ShadowCypher/agent\n./setup.sh\n./shadow-agent init   # paste your API key from this dashboard\n./shadow-agent run",
+            },
+            {
+                title: "Step 2: Watch it work",
+                desc: "Within ~10 seconds the agent registers, scans your LAN, and posts results. Refresh the dashboard — your devices, recent scans, and any new-device incidents will appear.",
+                code: null,
+            },
+            {
+                title: "Step 3: Stay protected",
+                desc: "Wire up notifications below (email + Slack/Discord webhooks) so you hear about threats in real time. Your trial includes everything Pro — see what you'll keep when you subscribe.",
+                code: null,
+            },
+        ];
+        let onboardIdx = 0;
+
+        function startOnboarding() {
+            if (localStorage.getItem('sc_onboard_done') === '1') return;
+            onboardIdx = 0;
+            renderOnboardingStep();
+            document.getElementById('onboarding-overlay').style.display = 'block';
+        }
+
+        function renderOnboardingStep() {
+            const s = ONBOARD_STEPS[onboardIdx];
+            document.getElementById('onboard-title').textContent = s.title;
+            document.getElementById('onboard-desc').textContent = s.desc;
+            const codeEl = document.getElementById('onboard-code');
+            if (s.code) { codeEl.style.display = 'block'; codeEl.textContent = s.code; }
+            else { codeEl.style.display = 'none'; }
+            document.getElementById('onboard-pos').textContent = `${onboardIdx + 1} / ${ONBOARD_STEPS.length}`;
+            document.getElementById('onboard-next').textContent = onboardIdx === ONBOARD_STEPS.length - 1 ? 'Done' : 'Next →';
+        }
+
+        function nextOnboarding() {
+            onboardIdx++;
+            if (onboardIdx >= ONBOARD_STEPS.length) { dismissOnboarding(); return; }
+            renderOnboardingStep();
+        }
+
+        function dismissOnboarding() {
+            localStorage.setItem('sc_onboard_done', '1');
+            document.getElementById('onboarding-overlay').style.display = 'none';
         }
 
         async function deleteAccount() {
