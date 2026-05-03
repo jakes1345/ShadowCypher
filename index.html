@@ -501,6 +501,17 @@
                 </div>
 
                 <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Recent activity</h3>
+                    <div id="audit-list" style="font-size:0.78rem; color:#aaa; line-height:1.8;"></div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 14px;">// Two-factor auth</h3>
+                    <div id="mfa-status" style="font-size:0.85rem;">checking…</div>
+                    <p style="font-size:0.75rem;color:var(--text-secondary);margin-top:10px;">Use any TOTP app (Authy, Google Authenticator, 1Password, Bitwarden). Enrollment is handled by Supabase — paste your account password to enroll.</p>
+                </div>
+
+                <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 14px;">// Your data</h3>
                     <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Export everything ShadowCypher has on you as a single JSON file (GDPR portability).</p>
                     <button onclick="exportData()" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;">EXPORT MY DATA</button>
@@ -538,6 +549,8 @@
         <div style="margin-top:20px;display:flex;gap:30px;justify-content:center;flex-wrap:wrap;">
             <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">GitHub</a>
             <a href="/docs.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">API Docs</a>
+            <a href="/roadmap.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Roadmap</a>
+            <a href="/status.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Status</a>
             <a href="/privacy.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Privacy</a>
             <a href="/terms.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Terms</a>
             <a href="mailto:hello@shadowcypher.site" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Contact</a>
@@ -841,12 +854,14 @@
             if (window._guardianTimer) clearInterval(window._guardianTimer);
             window._guardianTimer = setInterval(refreshGuardian, 30000);
 
-            // Load notification prefs + teams + AI usage + webhooks + stats
+            // Load notification prefs + teams + AI usage + webhooks + stats + audit + mfa
             loadNotifPrefs().catch(() => {});
             loadTeams().catch(() => {});
             loadAiUsage().catch(() => {});
             loadWebhooks().catch(() => {});
             loadStats().catch(() => {});
+            loadAudit().catch(() => {});
+            loadMfa().catch(() => {});
 
             // First-time onboarding (only fires if localStorage flag absent)
             setTimeout(() => startOnboarding(), 600);
@@ -1288,6 +1303,96 @@
                 cliPrint('Webhook deleted.', 'var(--warning)');
                 loadWebhooks();
             } catch (err) { cliPrint(`Delete failed: ${err.message}`, 'var(--critical)'); }
+        }
+
+        // ─── Audit log ────────────────────────────────────────────
+        async function loadAudit() {
+            try {
+                const { events } = await callApi('/v1/me/audit');
+                renderAudit(events || []);
+            } catch (err) { console.warn('[audit] load failed', err.message); }
+        }
+
+        function renderAudit(events) {
+            const list = document.getElementById('audit-list');
+            if (!list) return;
+            if (!events.length) {
+                list.innerHTML = '<span style="color:var(--text-secondary);">No recent activity.</span>';
+                return;
+            }
+            const labels = {
+                signin: 'Signed in',
+                signout: 'Signed out',
+                key_rotated: 'API key rotated',
+                key_revoked: 'API key revoked',
+                plan_changed: 'Plan changed',
+                account_deleted: 'Account scheduled for deletion',
+                webhook_added: 'Webhook added',
+                webhook_deleted: 'Webhook deleted',
+                team_created: 'Team created',
+                team_joined: 'Team joined',
+                totp_enabled: '2FA enabled',
+                totp_disabled: '2FA disabled',
+                export_downloaded: 'Data exported',
+                byok_set: 'BYOK key set',
+                byok_cleared: 'BYOK key cleared',
+            };
+            list.innerHTML = events.slice(0, 15).map(e => {
+                const ts = new Date(e.created_at).toLocaleString();
+                const lbl = labels[e.event_type] || e.event_type;
+                const ip = e.ip ? ` <span style="color:var(--text-secondary);font-size:0.7rem;">· ${escapeHtml(e.ip)}</span>` : '';
+                return `<div>[<span style="color:var(--text-secondary);">${escapeHtml(ts)}</span>] ${escapeHtml(lbl)}${ip}</div>`;
+            }).join('');
+        }
+
+        // ─── 2FA / MFA ────────────────────────────────────────────
+        async function loadMfa() {
+            const out = document.getElementById('mfa-status');
+            if (!out) return;
+            try {
+                const m = await callApi('/v1/me/mfa');
+                if (m.enabled) {
+                    out.innerHTML = `<span style="color:var(--success);">2FA enabled</span> · ${m.factor_count} TOTP factor(s) · <a onclick="disable2FA()" style="color:var(--accent-secondary);cursor:pointer;font-size:0.8rem;">disable</a>`;
+                } else {
+                    out.innerHTML = `<span style="color:var(--text-secondary);">2FA not enabled.</span> <button onclick="enroll2FA()" style="margin-left:10px;padding:6px 14px;font-size:0.7rem;background:var(--accent-primary);color:#000;border:none;cursor:pointer;font-weight:700;">ENABLE 2FA</button>`;
+                }
+            } catch (err) { out.textContent = `(unable to load: ${err.message})`; }
+        }
+
+        async function enroll2FA() {
+            if (!supabaseClient) return;
+            try {
+                const { data, error } = await supabaseClient.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'ShadowCypher TOTP' });
+                if (error) throw error;
+                const totp = data.totp;
+                const code = prompt(`Scan this QR or paste the secret into your TOTP app:\n\nSecret: ${totp.secret}\n\nThen enter the 6-digit code from the app:`);
+                if (!code) return;
+                const challenge = await supabaseClient.auth.mfa.challenge({ factorId: data.id });
+                if (challenge.error) throw challenge.error;
+                const verify = await supabaseClient.auth.mfa.verify({ factorId: data.id, challengeId: challenge.data.id, code });
+                if (verify.error) throw verify.error;
+                cliPrint('2FA enabled.', 'var(--success)');
+                loadMfa();
+            } catch (err) {
+                cliPrint(`2FA enrollment failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function disable2FA() {
+            if (!supabaseClient) return;
+            if (!confirm('Disable 2FA? Your account will be password-only again.')) return;
+            try {
+                const { data: factors, error } = await supabaseClient.auth.mfa.listFactors();
+                if (error) throw error;
+                const totp = (factors.totp || [])[0];
+                if (!totp) { cliPrint('No factor to disable.', 'var(--warning)'); return; }
+                const unenroll = await supabaseClient.auth.mfa.unenroll({ factorId: totp.id });
+                if (unenroll.error) throw unenroll.error;
+                cliPrint('2FA disabled.', 'var(--warning)');
+                loadMfa();
+            } catch (err) {
+                cliPrint(`Disable failed: ${err.message}`, 'var(--critical)');
+            }
         }
 
         // ─── Stats ────────────────────────────────────────────────

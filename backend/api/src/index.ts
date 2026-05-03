@@ -49,6 +49,8 @@ import {
 } from "./teams";
 import { createWebhook, listWebhooks, deleteWebhook, testWebhook } from "./webhooks";
 import { exportData, getStats } from "./account";
+import { listAudit, audit, clientHints } from "./audit";
+import { getMfaStatus } from "./mfa";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -62,6 +64,8 @@ export interface Env {
   STRIPE_WEBHOOK_SECRET: string;
   STRIPE_PRICE_GUARDIAN_PRO: string;
   STRIPE_PRICE_OPERATOR: string;
+  STRIPE_PRICE_GUARDIAN_PRO_ANNUAL: string;
+  STRIPE_PRICE_OPERATOR_ANNUAL: string;
   SITE_URL: string;
   // Notifications (P4B)
   RESEND_API_KEY: string;
@@ -189,7 +193,9 @@ async function deleteAccount(req: Request, env: Env, user: { id: string; email: 
       { status: 400, headers: { "Content-Type": "application/json", ...cors } }
     );
   }
-  // Delete via Supabase Admin API — cascades through profiles, agents, devices, scans, incidents, team_members, notification_prefs
+  // Audit BEFORE we delete — once delete cascades, we can't add the entry
+  await audit(env, user.id, "account_deleted", clientHints(req));
+  // Delete via Supabase Admin API — cascades through profiles, agents, devices, scans, incidents, team_members, notification_prefs, audit_log
   const resp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
     method: "DELETE",
     headers: {
@@ -270,6 +276,7 @@ async function handleRotate(req: Request, env: Env, cors: HeadersInit): Promise<
   });
   if (!ok) return json({ error: "rotate_failed" }, { status: 500 }, cors);
 
+  audit(env, user.id, "key_rotated", clientHints(req));
   return json({ api_key: newKey }, {}, cors);
 }
 
@@ -287,6 +294,7 @@ async function handleRevoke(req: Request, env: Env, cors: HeadersInit): Promise<
   });
   if (!ok) return json({ error: "revoke_failed" }, { status: 500 }, cors);
 
+  audit(env, user.id, "key_revoked", clientHints(req));
   return json({ revoked: true }, {}, cors);
 }
 
@@ -342,6 +350,8 @@ export default {
                 "POST /v1/me/delete",
                 "GET /v1/me/export",
                 "GET /v1/me/stats",
+                "GET /v1/me/audit",
+                "GET /v1/me/mfa",
               ],
               webhooks: [
                 "POST /v1/webhooks",
@@ -396,6 +406,8 @@ export default {
         "POST /v1/me/delete":                 deleteAccount,
         "GET /v1/me/export":                  exportData,
         "GET /v1/me/stats":                   getStats,
+        "GET /v1/me/audit":                   listAudit,
+        "GET /v1/me/mfa":                     getMfaStatus,
         "POST /v1/webhooks":                  createWebhook,
         "GET /v1/webhooks":                   listWebhooks,
         "POST /v1/webhooks/delete":           deleteWebhook,
