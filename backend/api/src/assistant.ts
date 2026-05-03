@@ -1,24 +1,57 @@
 /**
- * Phase 4C — AI security assistant.
+ * Phase 4C + 4F — AI security assistant with cost protection.
  *
- * Endpoint: POST /v1/assistant/query  { question: string }
- *   Authenticated. Pro/Operator/Trial only (community gets 402).
- *   Pulls the user's recent devices/scans/incidents, formats a prompt,
- *   calls Anthropic Claude, returns a plain-English answer.
+ * Three providers (chosen per-user via profiles.ai_provider):
+ *   1. "platform"  — uses platform's Anthropic key (default), counted against monthly plan quota
+ *   2. "byok"      — uses user's own Anthropic key, stored encrypted; no quota
+ *   3. "ollama"    — calls a user-provided Ollama-compatible endpoint; no quota
  *
- * Why server-side: keeps the Anthropic key out of the browser, lets us
- * inject the user's data without exposing the data model to the client.
+ * Monthly quotas (queries/month):
+ *   community     — 0  (assistant disabled, returns 402)
+ *   guardian_pro  — 50
+ *   operator      — 500
+ *
+ * BYOK keys are encrypted at rest using AES-GCM with the Worker's BYOK_ENCRYPTION_SECRET.
+ *
+ * Endpoints:
+ *   POST /v1/assistant/query                  — submit a question
+ *   GET  /v1/assistant/usage                  — current month's usage + plan cap
+ *   POST /v1/assistant/byok                   — set/clear BYOK Anthropic key
+ *   POST /v1/assistant/ollama                 — set/clear Ollama URL
  *
  * Secrets:
- *   ANTHROPIC_API_KEY    — sk-ant-… from console.anthropic.com
- *   ANTHROPIC_MODEL      — defaults to claude-haiku-4-5-20251001
+ *   ANTHROPIC_API_KEY            — platform key (used when ai_provider='platform')
+ *   ANTHROPIC_MODEL              — defaults to claude-haiku-4-5-20251001
+ *   BYOK_ENCRYPTION_SECRET       — 32-byte (or longer) random; used to AES-GCM encrypt user keys
  */
 
 import type { Env } from "./index";
-import { dbSelect } from "./supabase";
+import { dbSelect, dbUpdate } from "./supabase";
 import { getEffectivePlan, planRequired, type ProfileForPlan } from "./plans";
 
 interface AuthedUser { id: string; email: string; }
+
+const QUOTA_BY_PLAN: Record<string, number> = {
+  community: 0,
+  guardian_pro: 50,
+  operator: 500,
+};
+
+const SYSTEM_PROMPT = `You are the ShadowCypher security assistant — a calm, terse, technically precise advisor that helps the user understand their network, devices, and security posture. You answer based ONLY on the user's data summary provided in the user message. If the data doesn't answer the question, say so. Never invent device names, IPs, or events. Keep responses under 200 words unless the user asks for more depth. Use plain language; avoid hype words like "tactical", "ghost", "sovereign". Format as 2-4 short paragraphs or a brief bulleted list. End with one concrete next step.`;
+
+interface ProfileFull extends ProfileForPlan {
+  user_id: string;
+  ai_query_count: number;
+  ai_query_period_start: string;
+  ai_provider: "platform" | "byok" | "ollama";
+  ai_byok_key_encrypted: string | null;
+  ai_byok_key_last4: string | null;
+  ai_ollama_url: string | null;
+}
+
+interface DeviceRow { mac: string; ip: string | null; hostname: string | null; vendor: string | null; device_type: string | null; open_ports: number[] | null; last_seen_at: string; trusted: boolean; }
+interface IncidentRow { severity: string; category: string; title: string; created_at: string; acknowledged: boolean; }
+interface ScanRow { scan_type: string; device_count: number | null; started_at: string; }
 
 const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): Response =>
   new Response(JSON.stringify(body), {
@@ -26,11 +59,151 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
     headers: { "Content-Type": "application/json", ...cors, ...(init.headers || {}) },
   });
 
-const SYSTEM_PROMPT = `You are the ShadowCypher security assistant — a calm, terse, technically precise advisor that helps the user understand their network, devices, and security posture. You answer based ONLY on the user's data summary provided in the user message. If the data doesn't answer the question, say so. Never invent device names, IPs, or events. Keep responses under 200 words unless the user asks for more depth. Use plain language; avoid hype words like "tactical", "ghost", "sovereign". Format short answers as 2-4 short paragraphs or a brief bulleted list. End with one concrete next step the user can take.`;
+// ─── BYOK encryption (AES-GCM) ─────────────────────────────────────────────
 
-interface DeviceRow { mac: string; ip: string | null; hostname: string | null; vendor: string | null; device_type: string | null; open_ports: number[] | null; last_seen_at: string; trusted: boolean; }
-interface IncidentRow { severity: string; category: string; title: string; created_at: string; acknowledged: boolean; }
-interface ScanRow { scan_type: string; device_count: number | null; started_at: string; }
+async function deriveKey(secret: string): Promise<CryptoKey> {
+  const buf = new TextEncoder().encode(secret);
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return crypto.subtle.importKey("raw", hash, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+}
+
+async function encrypt(secret: string, plaintext: string): Promise<string> {
+  const key = await deriveKey(secret);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plaintext))
+  );
+  const combined = new Uint8Array(iv.length + ct.length);
+  combined.set(iv, 0);
+  combined.set(ct, iv.length);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function decrypt(secret: string, ciphertext: string): Promise<string> {
+  const key = await deriveKey(secret);
+  const combined = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0));
+  const iv = combined.slice(0, 12);
+  const ct = combined.slice(12);
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+  return new TextDecoder().decode(pt);
+}
+
+// ─── Profile + quota helpers ───────────────────────────────────────────────
+
+async function getProfile(env: Env, userId: string): Promise<ProfileFull | null> {
+  const rows = await dbSelect<ProfileFull>(env, "profiles", {
+    select: "user_id,plan,trial_ends_at,subscription_status,current_period_end,ai_query_count,ai_query_period_start,ai_provider,ai_byok_key_encrypted,ai_byok_key_last4,ai_ollama_url",
+    filters: { user_id: `eq.${userId}` },
+    limit: 1,
+  });
+  return rows[0] ?? null;
+}
+
+/** Returns the current month's usage + quota, rolling over the period if >30 days passed. */
+async function rolloverIfNeeded(env: Env, profile: ProfileFull): Promise<{ count: number; reset: boolean }> {
+  const periodStart = new Date(profile.ai_query_period_start).getTime();
+  const ageMs = Date.now() - periodStart;
+  if (ageMs > 30 * 86400000) {
+    await dbUpdate(env, "profiles", { user_id: `eq.${profile.user_id}` }, {
+      ai_query_count: 0,
+      ai_query_period_start: new Date().toISOString(),
+    });
+    return { count: 0, reset: true };
+  }
+  return { count: profile.ai_query_count, reset: false };
+}
+
+async function incrementUsage(env: Env, userId: string, by = 1): Promise<void> {
+  // Fetch current then write — small race window acceptable for usage metering
+  const rows = await dbSelect<{ ai_query_count: number }>(env, "profiles", {
+    select: "ai_query_count",
+    filters: { user_id: `eq.${userId}` },
+    limit: 1,
+  });
+  const next = (rows[0]?.ai_query_count ?? 0) + by;
+  await dbUpdate(env, "profiles", { user_id: `eq.${userId}` }, { ai_query_count: next });
+}
+
+// ─── Endpoints ──────────────────────────────────────────────────────────────
+
+export async function getUsage(req: Request, env: Env, user: AuthedUser, cors: HeadersInit): Promise<Response> {
+  const profile = await getProfile(env, user.id);
+  if (!profile) return json({ error: "profile_not_found" }, { status: 404 }, cors);
+  const plan = getEffectivePlan(profile);
+  const { count } = await rolloverIfNeeded(env, profile);
+  const cap = QUOTA_BY_PLAN[plan] ?? 0;
+  return json({
+    plan,
+    provider: profile.ai_provider,
+    count,
+    cap,
+    remaining: Math.max(0, cap - count),
+    period_start: profile.ai_query_period_start,
+    byok_configured: !!profile.ai_byok_key_encrypted,
+    byok_last4: profile.ai_byok_key_last4,
+    ollama_url: profile.ai_ollama_url,
+  }, {}, cors);
+}
+
+export async function setByok(req: Request, env: Env, user: AuthedUser, cors: HeadersInit): Promise<Response> {
+  const body = (await req.json().catch(() => ({}))) as { api_key?: string | null; clear?: boolean };
+  if (body.clear || body.api_key === null || body.api_key === "") {
+    await dbUpdate(env, "profiles", { user_id: `eq.${user.id}` }, {
+      ai_provider: "platform",
+      ai_byok_key_encrypted: null,
+      ai_byok_key_last4: null,
+    });
+    return json({ cleared: true }, {}, cors);
+  }
+  if (!body.api_key || !body.api_key.startsWith("sk-ant-")) {
+    return json({ error: "invalid_anthropic_key_format" }, { status: 400 }, cors);
+  }
+  if (!env.BYOK_ENCRYPTION_SECRET) {
+    return json({ error: "byok_not_supported_on_this_deployment" }, { status: 503 }, cors);
+  }
+  const encrypted = await encrypt(env.BYOK_ENCRYPTION_SECRET, body.api_key);
+  const last4 = body.api_key.slice(-4);
+  await dbUpdate(env, "profiles", { user_id: `eq.${user.id}` }, {
+    ai_provider: "byok",
+    ai_byok_key_encrypted: encrypted,
+    ai_byok_key_last4: last4,
+  });
+  return json({ saved: true, last4 }, {}, cors);
+}
+
+export async function setOllama(req: Request, env: Env, user: AuthedUser, cors: HeadersInit): Promise<Response> {
+  const body = (await req.json().catch(() => ({}))) as { url?: string | null; clear?: boolean };
+  if (body.clear || body.url === null || body.url === "") {
+    await dbUpdate(env, "profiles", { user_id: `eq.${user.id}` }, {
+      ai_provider: "platform",
+      ai_ollama_url: null,
+    });
+    return json({ cleared: true }, {}, cors);
+  }
+  if (!body.url || !/^https?:\/\//i.test(body.url)) {
+    return json({ error: "url_must_start_with_http_or_https" }, { status: 400 }, cors);
+  }
+  // Only allow public URLs (block obvious private ranges to prevent SSRF surprises against the Worker)
+  // Allow localhost / 127.x for explicit user opt-in (they're calling from their own browser context anyway? no — Worker calls. So this is a real concern.)
+  // For safety: only allow https + non-private hostnames. User's local Ollama needs a public tunnel (cloudflared / ngrok).
+  try {
+    const u = new URL(body.url);
+    const blocked = /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.|192\.168\.|169\.254\.)/i;
+    if (blocked.test(u.hostname)) {
+      return json({
+        error: "private_host_not_allowed",
+        hint: "Expose Ollama via cloudflared/ngrok and use the public URL — the Worker can't reach your LAN.",
+      }, { status: 400 }, cors);
+    }
+  } catch {
+    return json({ error: "invalid_url" }, { status: 400 }, cors);
+  }
+  await dbUpdate(env, "profiles", { user_id: `eq.${user.id}` }, {
+    ai_provider: "ollama",
+    ai_ollama_url: body.url,
+  });
+  return json({ saved: true, url: body.url }, {}, cors);
+}
 
 export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors: HeadersInit): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as { question?: string };
@@ -38,94 +211,122 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
   if (!question) return json({ error: "question_required" }, { status: 400 }, cors);
   if (question.length > 800) return json({ error: "question_too_long" }, { status: 400 }, cors);
 
+  const profile = await getProfile(env, user.id);
+  if (!profile) return json({ error: "profile_not_found" }, { status: 404 }, cors);
+  const plan = getEffectivePlan(profile);
+
   // Plan gate
-  const profileRows = await dbSelect<ProfileForPlan>(env, "profiles", {
-    select: "plan,trial_ends_at,subscription_status,current_period_end",
-    filters: { user_id: `eq.${user.id}` },
-    limit: 1,
-  });
-  const plan = getEffectivePlan(profileRows[0]);
   if (plan === "community") {
     return planRequired(["guardian_pro", "operator"], plan, "AI assistant requires Guardian Pro or Operator.", cors);
   }
 
-  if (!env.ANTHROPIC_API_KEY) {
-    return json({
-      error: "assistant_not_configured",
-      message: "AI assistant is not yet configured on this deployment. The site owner needs to set ANTHROPIC_API_KEY as a Worker secret.",
-    }, { status: 503 }, cors);
+  // Quota check (only for platform-provided AI; BYOK and Ollama are user-funded)
+  if (profile.ai_provider === "platform") {
+    const { count } = await rolloverIfNeeded(env, profile);
+    const cap = QUOTA_BY_PLAN[plan] ?? 0;
+    if (count >= cap) {
+      return json({
+        error: "quota_exceeded",
+        plan,
+        count,
+        cap,
+        period_resets_at: new Date(new Date(profile.ai_query_period_start).getTime() + 30 * 86400000).toISOString(),
+        hint: "Switch to BYOK (your own Anthropic key) or Ollama (self-hosted) for unmetered access.",
+      }, { status: 429 }, cors);
+    }
   }
 
-  // Pull the user's data summary
+  // Build data-grounded prompt
   const [devices, incidents, scans] = await Promise.all([
-    dbSelect<DeviceRow>(env, "devices", {
-      select: "mac,ip,hostname,vendor,device_type,open_ports,last_seen_at,trusted",
-      filters: { user_id: `eq.${user.id}` },
-      order: "last_seen_at.desc",
-      limit: 30,
-    }),
-    dbSelect<IncidentRow>(env, "incidents", {
-      select: "severity,category,title,created_at,acknowledged",
-      filters: { user_id: `eq.${user.id}` },
-      order: "created_at.desc",
-      limit: 20,
-    }),
-    dbSelect<ScanRow>(env, "scans", {
-      select: "scan_type,device_count,started_at",
-      filters: { user_id: `eq.${user.id}` },
-      order: "started_at.desc",
-      limit: 10,
-    }),
+    dbSelect<DeviceRow>(env, "devices", { select: "mac,ip,hostname,vendor,device_type,open_ports,last_seen_at,trusted", filters: { user_id: `eq.${user.id}` }, order: "last_seen_at.desc", limit: 30 }),
+    dbSelect<IncidentRow>(env, "incidents", { select: "severity,category,title,created_at,acknowledged", filters: { user_id: `eq.${user.id}` }, order: "created_at.desc", limit: 20 }),
+    dbSelect<ScanRow>(env, "scans", { select: "scan_type,device_count,started_at", filters: { user_id: `eq.${user.id}` }, order: "started_at.desc", limit: 10 }),
   ]);
+  const userMessage = `My data:\n\n${formatSummary(devices, incidents, scans)}\n\nMy question: ${question}`;
 
-  const summary = formatSummary(devices, incidents, scans);
-  const userMessage = `My data:\n\n${summary}\n\nMy question: ${question}`;
-
-  const model = env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
+  // Dispatch to chosen provider
   try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 600,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userMessage }],
-      }),
-    });
-    if (!resp.ok) {
-      const err = await resp.text();
-      console.error("[assistant] anthropic error", resp.status, err);
-      return json({ error: "ai_error", status: resp.status }, { status: 502 }, cors);
+    let answer: string;
+    let modelLabel: string;
+
+    if (profile.ai_provider === "ollama" && profile.ai_ollama_url) {
+      ({ answer, modelLabel } = await queryOllama(profile.ai_ollama_url, userMessage));
+    } else if (profile.ai_provider === "byok" && profile.ai_byok_key_encrypted) {
+      if (!env.BYOK_ENCRYPTION_SECRET) {
+        return json({ error: "byok_decryption_unavailable" }, { status: 503 }, cors);
+      }
+      const userKey = await decrypt(env.BYOK_ENCRYPTION_SECRET, profile.ai_byok_key_encrypted);
+      ({ answer, modelLabel } = await queryAnthropic(userKey, env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001", userMessage));
+    } else {
+      // Platform provider
+      if (!env.ANTHROPIC_API_KEY) {
+        return json({ error: "platform_ai_not_configured", hint: "Configure your own Anthropic key (BYOK) or Ollama URL in the dashboard." }, { status: 503 }, cors);
+      }
+      ({ answer, modelLabel } = await queryAnthropic(env.ANTHROPIC_API_KEY, env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001", userMessage));
+      // Only platform provider counts against quota
+      await incrementUsage(env, user.id, 1);
     }
-    const data = (await resp.json()) as { content?: Array<{ type: string; text?: string }>; model?: string; usage?: unknown };
-    const text = (data.content || []).filter((c) => c.type === "text").map((c) => c.text || "").join("\n").trim();
+
     return json({
-      answer: text || "(no answer returned)",
-      model: data.model || model,
+      answer,
+      model: modelLabel,
+      provider: profile.ai_provider,
       data_summary: { devices: devices.length, incidents: incidents.length, scans: scans.length },
     }, {}, cors);
   } catch (e) {
-    console.error("[assistant] fetch failed", e);
-    return json({ error: "ai_unreachable" }, { status: 502 }, cors);
+    console.error("[assistant] failed", e);
+    return json({ error: "ai_error", message: e instanceof Error ? e.message : "unknown" }, { status: 502 }, cors);
   }
+}
+
+async function queryAnthropic(apiKey: string, model: string, userMessage: string): Promise<{ answer: string; modelLabel: string }> {
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({
+      model,
+      max_tokens: 600,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+    }),
+  });
+  if (!resp.ok) throw new Error(`anthropic_${resp.status}:${await resp.text()}`);
+  const data = (await resp.json()) as { content?: Array<{ type: string; text?: string }>; model?: string };
+  const text = (data.content || []).filter((c) => c.type === "text").map((c) => c.text || "").join("\n").trim();
+  return { answer: text || "(no answer)", modelLabel: data.model || model };
+}
+
+async function queryOllama(baseUrl: string, userMessage: string): Promise<{ answer: string; modelLabel: string }> {
+  const url = baseUrl.replace(/\/$/, "") + "/api/chat";
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      model: "llama3.1:8b",
+      stream: false,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userMessage },
+      ],
+      options: { num_predict: 600 },
+    }),
+  });
+  if (!resp.ok) throw new Error(`ollama_${resp.status}:${await resp.text()}`);
+  const data = (await resp.json()) as { message?: { content?: string }; model?: string };
+  return { answer: data.message?.content?.trim() || "(no answer)", modelLabel: data.model || "ollama" };
 }
 
 function formatSummary(devices: DeviceRow[], incidents: IncidentRow[], scans: ScanRow[]): string {
   const lines: string[] = [];
-  lines.push(`DEVICES (${devices.length} total, last seen first):`);
-  if (!devices.length) lines.push("  (no devices yet — agent not installed or no scans run)");
+  lines.push(`DEVICES (${devices.length}):`);
+  if (!devices.length) lines.push("  (none — agent not installed)");
   for (const d of devices.slice(0, 20)) {
     const ports = (d.open_ports || []).slice(0, 8).join(",");
     const trust = d.trusted ? " [trusted]" : "";
-    lines.push(`  - ${d.hostname || d.ip || d.mac} | type=${d.device_type || "unknown"} | ports=[${ports}] | last_seen=${d.last_seen_at}${trust}`);
+    lines.push(`  - ${d.hostname || d.ip || d.mac} | type=${d.device_type || "unknown"} | ports=[${ports}] | seen=${d.last_seen_at}${trust}`);
   }
   lines.push("");
-  lines.push(`INCIDENTS (${incidents.length} total, last 20):`);
+  lines.push(`INCIDENTS (${incidents.length}):`);
   if (!incidents.length) lines.push("  (none)");
   for (const i of incidents) {
     const ack = i.acknowledged ? " [acked]" : "";
