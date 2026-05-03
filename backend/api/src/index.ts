@@ -47,6 +47,8 @@ import {
   acceptInvite,
   leaveTeam,
 } from "./teams";
+import { createWebhook, listWebhooks, deleteWebhook, testWebhook } from "./webhooks";
+import { exportData, getStats } from "./account";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -338,6 +340,14 @@ export default {
               ],
               account: [
                 "POST /v1/me/delete",
+                "GET /v1/me/export",
+                "GET /v1/me/stats",
+              ],
+              webhooks: [
+                "POST /v1/webhooks",
+                "GET /v1/webhooks",
+                "POST /v1/webhooks/delete",
+                "POST /v1/webhooks/test",
               ],
               teams: [
                 "POST /v1/teams",
@@ -384,6 +394,12 @@ export default {
         "POST /v1/assistant/byok":            assistantSetByok,
         "POST /v1/assistant/ollama":          assistantSetOllama,
         "POST /v1/me/delete":                 deleteAccount,
+        "GET /v1/me/export":                  exportData,
+        "GET /v1/me/stats":                   getStats,
+        "POST /v1/webhooks":                  createWebhook,
+        "GET /v1/webhooks":                   listWebhooks,
+        "POST /v1/webhooks/delete":           deleteWebhook,
+        "POST /v1/webhooks/test":             testWebhook,
         "POST /v1/teams":                     createTeam,
         "GET /v1/teams":                      listTeams,
         "POST /v1/teams/invite":              inviteMember,
