@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authorize device — ShadowCypher</title>
+    <link rel="icon" type="image/png" href="/icon-192.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        body { background: var(--bg-base); color: #ddd; font-family: var(--font-main); display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+        .panel { max-width: 480px; width: 100%; background: var(--bg-surface); border: 1px solid var(--accent-primary); padding: 36px 32px; }
+        .code-input { width: 100%; padding: 18px; background: #000; border: 2px solid #333; color: #fff; font-family: var(--font-mono); font-size: 1.6rem; letter-spacing: 6px; text-align: center; text-transform: uppercase; }
+        .code-input:focus { outline: none; border-color: var(--accent-primary); }
+        button { font-family: var(--font-mono); cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <a href="/" style="color:var(--accent-primary);font-family:var(--font-mono);font-size:0.7rem;text-decoration:none;letter-spacing:2px;">← SHADOWCYPHER</a>
+        <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:3px;margin-top:30px;">// CLI / AGENT AUTHORIZATION</div>
+        <h1 style="font-size:1.8rem;color:#fff;margin:8px 0 6px;">Authorize device</h1>
+        <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.6;margin-bottom:24px;">Enter the code shown by <code style="color:var(--accent-primary);">shadow-agent login</code>.</p>
+
+        <input type="text" id="user-code" class="code-input mono" maxlength="9" placeholder="XXXX-XXXX" autocomplete="off">
+        <p id="status-line" style="font-size:0.8rem;color:var(--text-secondary);margin:14px 0;min-height:1.4rem;"></p>
+
+        <div style="display:flex; gap:10px; margin-top:8px;">
+            <button onclick="handle('authorize')" id="authorize-btn" class="btn-primary" style="flex:1;padding:14px;font-size:0.75rem;">Authorize</button>
+            <button onclick="handle('deny')" style="flex:1;padding:14px;font-size:0.75rem;background:transparent;border:1px solid #444;color:#aaa;">Deny</button>
+        </div>
+
+        <p style="margin-top:30px; padding-top:20px; border-top:1px solid var(--glass-border); color:var(--text-secondary); font-size:0.7rem; line-height:1.7;">
+            Once authorized, the device will receive your current API key. You can revoke it any time from <a href="/?nav=account" style="color:var(--accent-primary);">your account</a>.
+        </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://umruqwvyipylfslwwozj.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcnVxd3Z5aXB5bGZzbHd3b3pqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyNDY1NzYsImV4cCI6MjA5MjgyMjU3Nn0.KSjgi54wIOZ_6LSp6Bs_plmtyeOKpul8FXwQhHqwtm4';
+        const API_BASE = 'https://shadowcypher-api.shadowcypher.workers.dev';
+
+        const supa = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+        // Pre-fill from ?code= query param
+        const params = new URLSearchParams(window.location.search);
+        const initialCode = params.get('code');
+        if (initialCode) document.getElementById('user-code').value = initialCode.toUpperCase();
+
+        const status = document.getElementById('status-line');
+        const inp = document.getElementById('user-code');
+
+        // Auto-uppercase + auto-insert dash
+        inp.addEventListener('input', () => {
+            let v = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (v.length > 4) v = v.slice(0, 4) + '-' + v.slice(4, 8);
+            inp.value = v;
+        });
+
+        async function getApiKey() {
+            if (!supa) return null;
+            const { data: { session } } = await supa.auth.getSession();
+            if (!session) return null;
+            const meta = session.user.user_metadata || {};
+            return meta.api_key || null;
+        }
+
+        async function handle(action) {
+            status.textContent = '';
+            const code = inp.value.trim().toUpperCase();
+            if (!code || code.length < 9) { status.textContent = 'Enter the full 8-character code.'; return; }
+
+            const apiKey = await getApiKey();
+            if (!apiKey) {
+                status.innerHTML = '<a href="/?nav=account" style="color:var(--accent-primary);">Sign in first</a> to authorize.';
+                return;
+            }
+
+            try {
+                const resp = await fetch(API_BASE + '/v1/auth/device/authorize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + apiKey,
+                    },
+                    body: JSON.stringify({ user_code: code, deny: action === 'deny' }),
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || 'failed');
+                if (action === 'deny') {
+                    status.innerHTML = '<span style="color:var(--warning);">Denied.</span> You can close this tab.';
+                } else {
+                    status.innerHTML = `<span style="color:var(--success);">✓ Authorized:</span> ${data.client_label || 'device'}. You can close this tab — the device will continue automatically.`;
+                }
+            } catch (err) {
+                status.innerHTML = '<span style="color:var(--accent-secondary);">Error: ' + (err.message || 'unknown') + '</span>';
+            }
+        }
+    </script>
+</body>
+</html>
