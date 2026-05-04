@@ -51,6 +51,7 @@ import { createWebhook, listWebhooks, deleteWebhook, testWebhook } from "./webho
 import { exportData, getStats } from "./account";
 import { listAudit, audit, clientHints } from "./audit";
 import { getMfaStatus } from "./mfa";
+import { startDeviceAuth, pollDeviceAuth, authorizeDeviceAuth } from "./device_auth";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -353,6 +354,11 @@ export default {
                 "GET /v1/me/audit",
                 "GET /v1/me/mfa",
               ],
+              cli_auth: [
+                "POST /v1/auth/device",
+                "POST /v1/auth/device/poll",
+                "POST /v1/auth/device/authorize",
+              ],
               webhooks: [
                 "POST /v1/webhooks",
                 "GET /v1/webhooks",
@@ -380,6 +386,10 @@ export default {
       // Stripe sends raw body; we don't apply CORS here.
       if (path === "/v1/billing/webhook" && req.method === "POST") return handleWebhook(req, env, cors);
 
+      // Device-authorization flow — kickoff + poll are unauthenticated (the device_code IS the secret)
+      if (path === "/v1/auth/device" && req.method === "POST") return startDeviceAuth(req, env, undefined, cors);
+      if (path === "/v1/auth/device/poll" && req.method === "POST") return pollDeviceAuth(req, env, undefined, cors);
+
       if (path === "/v1/me" && req.method === "GET") return handleMe(req, env, cors);
       if (path === "/v1/keys/rotate" && req.method === "POST") return handleRotate(req, env, cors);
       if (path === "/v1/keys/revoke" && req.method === "POST") return handleRevoke(req, env, cors);
@@ -404,6 +414,7 @@ export default {
         "POST /v1/assistant/byok":            assistantSetByok,
         "POST /v1/assistant/ollama":          assistantSetOllama,
         "POST /v1/me/delete":                 deleteAccount,
+        "POST /v1/auth/device/authorize":     authorizeDeviceAuth,
         "GET /v1/me/export":                  exportData,
         "GET /v1/me/stats":                   getStats,
         "GET /v1/me/audit":                   listAudit,

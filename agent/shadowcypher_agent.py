@@ -83,7 +83,10 @@ def cmd_init() -> None:
     if CONFIG_PATH.exists():
         print(f"[*] config already exists at {CONFIG_PATH}")
     else:
-        api_key = input("Paste your API key (sc_live_…): ").strip()
+        print("[*] paste your API key, or press Enter to use browser login")
+        api_key = input("API key (sc_live_…): ").strip()
+        if not api_key:
+            return cmd_login()
         if not api_key.startswith("sc_live_"):
             sys.exit("[!] invalid key format")
         cfg = {
@@ -96,6 +99,81 @@ def cmd_init() -> None:
             json.dump(cfg, f, indent=2)
         CONFIG_PATH.chmod(0o600)
         print(f"[+] wrote {CONFIG_PATH}")
+
+
+def cmd_login() -> None:
+    """Browser-based auth — no paste-key needed. RFC 8628 device flow."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    label = f"shadow-agent on {platform.node() or socket.gethostname()}"
+
+    print("[*] requesting authorization code...")
+    try:
+        resp = requests.post(
+            f"{DEFAULT_API}/v1/auth/device",
+            json={"client_label": label},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.RequestException as e:
+        sys.exit(f"[!] failed to start device auth: {e}")
+
+    user_code = data["user_code"]
+    device_code = data["device_code"]
+    verification_uri = data["verification_uri_complete"]
+    interval = max(2, int(data.get("interval", 5)))
+    expires_in = int(data.get("expires_in", 600))
+
+    print()
+    print("=" * 60)
+    print(f"  Open this URL in your browser:")
+    print(f"    {verification_uri}")
+    print()
+    print(f"  Or visit https://shadowcypher.site/device and enter:")
+    print(f"    {user_code}")
+    print("=" * 60)
+    print()
+    print(f"[*] waiting for authorization (expires in {expires_in}s)...")
+
+    deadline = time.time() + expires_in
+    while time.time() < deadline:
+        try:
+            poll = requests.post(
+                f"{DEFAULT_API}/v1/auth/device/poll",
+                json={"device_code": device_code},
+                timeout=15,
+            )
+            body = poll.json() if poll.text else {}
+        except requests.RequestException:
+            time.sleep(interval)
+            continue
+
+        status = body.get("status")
+        if status == "pending":
+            time.sleep(interval)
+            continue
+        if status == "authorized":
+            api_key = body["api_key"]
+            cfg = {
+                "api_base": DEFAULT_API,
+                "api_key": api_key,
+                "scan_interval_sec": 600,
+                "heartbeat_interval_sec": 60,
+            }
+            with CONFIG_PATH.open("w") as f:
+                json.dump(cfg, f, indent=2)
+            CONFIG_PATH.chmod(0o600)
+            print(f"[+] authorized as {body.get('email', '?')}")
+            print(f"[+] wrote {CONFIG_PATH}")
+            print(f"[*] now run: ./shadow-agent run")
+            return
+        if status == "denied":
+            sys.exit("[!] authorization denied")
+        if status in ("expired", "consumed"):
+            sys.exit(f"[!] code {status} — try again")
+        sys.exit(f"[!] unexpected status: {status}")
+
+    sys.exit("[!] timed out waiting for authorization")
 
 
 # ─── API client ─────────────────────────────────────────────────────────────
@@ -317,11 +395,14 @@ def cmd_once(cfg: dict[str, Any]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="ShadowCypher Guardian Agent")
-    parser.add_argument("command", choices=["init", "run", "once"])
+    parser.add_argument("command", choices=["init", "login", "run", "once"])
     args = parser.parse_args()
 
     if args.command == "init":
         cmd_init()
+        return
+    if args.command == "login":
+        cmd_login()
         return
 
     cfg = load_config()
