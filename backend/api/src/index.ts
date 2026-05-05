@@ -52,6 +52,7 @@ import { exportData, getStats } from "./account";
 import { listAudit, audit, clientHints } from "./audit";
 import { getMfaStatus } from "./mfa";
 import { startDeviceAuth, pollDeviceAuth, authorizeDeviceAuth } from "./device_auth";
+import { getMyReferral, claimReferral } from "./referrals";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -359,6 +360,10 @@ export default {
                 "POST /v1/auth/device/poll",
                 "POST /v1/auth/device/authorize",
               ],
+              referrals: [
+                "GET /v1/referrals/me",
+                "POST /v1/referrals/claim",
+              ],
               webhooks: [
                 "POST /v1/webhooks",
                 "GET /v1/webhooks",
@@ -415,6 +420,8 @@ export default {
         "POST /v1/assistant/ollama":          assistantSetOllama,
         "POST /v1/me/delete":                 deleteAccount,
         "POST /v1/auth/device/authorize":     authorizeDeviceAuth,
+        "GET /v1/referrals/me":               getMyReferral,
+        "POST /v1/referrals/claim":           claimReferral,
         "GET /v1/me/export":                  exportData,
         "GET /v1/me/stats":                   getStats,
         "GET /v1/me/audit":                   listAudit,
