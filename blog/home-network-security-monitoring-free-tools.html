@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Network Security Monitoring: Free Tools That Actually Work | ShadowCypher</title>
+    <meta name="description" content="Most people's home networks are completely unmonitored. Here are the free tools that actually detect intruders, rogue devices, and suspicious activity — no enterprise budget required.">
+    <meta name="keywords" content="home network security monitoring, free network security tools, detect intruder on wifi, network security free, monitor home network, wifi security monitoring, router security check">
+    <meta property="og:title" content="Home Network Security Monitoring: Free Tools That Actually Work">
+    <meta property="og:description" content="Stop flying blind on your home network. These free tools catch intruders and suspicious activity.">
+    <meta property="og:type" content="article">
+    <link rel="canonical" href="https://shadowcypher.site/blog/home-network-security-monitoring-free-tools.html">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent-primary: #b44aff; --accent-secondary: #00ff41; --bg: #020202; --text: #e0e0e0; --text-secondary: #777; --glass-border: rgba(180,74,255,0.15); --font-mono: 'JetBrains Mono', monospace; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; line-height: 1.75; }
+        nav { padding: 20px 40px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: var(--accent-primary); text-decoration: none; font-family: var(--font-mono); font-size: 0.85rem; }
+        nav .logo { font-size: 1.2rem; font-weight: 900; letter-spacing: 4px; color: #fff; }
+        main { max-width: 780px; margin: 0 auto; padding: 60px 24px 100px; }
+        .meta { font-size: 0.75rem; color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 40px; display: flex; gap: 24px; }
+        h1 { font-size: 2.4rem; font-weight: 900; line-height: 1.2; margin-bottom: 20px; }
+        h1 span { color: var(--accent-primary); }
+        h2 { font-size: 1.3rem; font-weight: 700; color: #fff; margin: 48px 0 16px; }
+        p { color: #c0c0c0; margin-bottom: 20px; font-size: 1rem; }
+        pre { background: #0a0a0a; border: 1px solid var(--glass-border); padding: 20px; border-radius: 6px; overflow-x: auto; margin: 24px 0; font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-secondary); line-height: 1.6; }
+        code { font-family: var(--font-mono); color: var(--accent-primary); font-size: 0.88em; }
+        .callout { background: rgba(180,74,255,0.06); border-left: 3px solid var(--accent-primary); padding: 18px 22px; border-radius: 0 6px 6px 0; margin: 28px 0; font-size: 0.92rem; }
+        .callout.danger { border-color: #ff4444; background: rgba(255,68,68,0.06); }
+        .callout strong { color: var(--accent-primary); }
+        .callout.danger strong { color: #ff6666; }
+        .cta { background: rgba(180,74,255,0.08); border: 1px solid var(--glass-border); padding: 36px; text-align: center; border-radius: 8px; margin-top: 60px; }
+        .cta h3 { font-size: 1.4rem; margin-bottom: 12px; }
+        .cta p { color: var(--text-secondary); margin-bottom: 24px; }
+        .btn { display: inline-block; background: var(--accent-primary); color: #000; font-weight: 700; padding: 14px 32px; text-decoration: none; font-size: 0.85rem; letter-spacing: 1px; font-family: var(--font-mono); }
+        footer { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 0.75rem; border-top: 1px solid var(--glass-border); }
+        ol { padding-left: 22px; color: #c0c0c0; margin-bottom: 20px; }
+        ul { padding-left: 22px; color: #c0c0c0; margin-bottom: 20px; }
+        li { margin-bottom: 10px; }
+        .step { display: flex; gap: 16px; align-items: flex-start; margin: 20px 0; }
+        .step-num { width: 28px; height: 28px; min-width: 28px; background: var(--accent-primary); color: #000; font-weight: 900; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-top: 2px; }
+        .step-body { flex: 1; }
+        .step-body strong { color: #fff; display: block; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/" class="logo">SHADOWCYPHER</a>
+    <div style="display:flex;gap:28px;">
+        <a href="/blog/">Blog</a>
+        <a href="/#guardian">Guardian</a>
+        <a href="/shadow.html">Shadow AI</a>
+    </div>
+</nav>
+
+<main>
+    <div class="meta">
+        <span>MAY 05, 2026</span>
+        <span>NETWORK SECURITY</span>
+        <span>9 MIN READ</span>
+    </div>
+
+    <h1>Home Network Security Monitoring: <span>Free Tools</span> That Actually Work</h1>
+
+    <p>The average home network has 15 to 30 connected devices. Smart TVs, thermostats, cameras, game consoles, phones, laptops, and a router that probably hasn't been patched in two years. And most people have zero visibility into what any of those devices are doing.</p>
+
+    <p>This guide covers the free tools that give you real monitoring — not just a device list, but actual alerts when something suspicious happens.</p>
+
+    <div class="callout danger">
+        <strong>The problem you probably don't know you have:</strong> Compromised IoT devices are used as botnets for months or years before the owner notices. Your smart bulb or printer could be participating in DDoS attacks right now. You'd never know without monitoring.
+    </div>
+
+    <h2>Step 1: Know What's on Your Network</h2>
+    <p>You can't monitor what you can't see. Start with a device inventory.</p>
+
+    <pre># nmap — find all active devices on your local subnet
+sudo nmap -sn 192.168.1.0/24
+
+# Or with MAC address and vendor lookup:
+sudo nmap -sn -PE --send-ip 192.168.1.0/24
+
+# Output shows: IP, MAC, vendor (inferred from MAC OUI)
+# Look for anything you don't recognize</pre>
+
+    <p>Most home routers also show connected devices in their admin panel (usually at <code>192.168.1.1</code> or <code>192.168.0.1</code>). Cross-reference: if a device shows up in nmap but not your router's list, something is wrong.</p>
+
+    <h2>Step 2: Watch for New Devices Joining</h2>
+    <p><code>arpwatch</code> emails you every time a new device appears on your network or an existing device's MAC address changes (which could mean ARP spoofing).</p>
+
+    <pre>sudo apt install arpwatch
+sudo systemctl enable arpwatch
+sudo systemctl start arpwatch
+
+# Edit /etc/arpwatch.conf to set your email address
+# New device → email alert within seconds</pre>
+
+    <p>This runs silently in the background. The only time you hear from it is when something new shows up or a device behaves strangely.</p>
+
+    <h2>Step 3: Monitor Your Router for Open Ports</h2>
+    <p>Many home routers expose administrative interfaces to the internet by mistake. Check yours:</p>
+
+    <pre># Check if your router has management ports open externally
+# First, find your public IP
+curl -s ifconfig.me
+
+# Then scan from a different network or use Shodan:
+# shodan.io/host/<your_public_ip>
+
+# Common dangerous open ports on routers:
+# 23 (Telnet), 80/443 (web admin), 7547 (TR-069 ISP management)
+# 8080/8443 (alternate HTTP admin), 1900 (UPnP)</pre>
+
+    <div class="callout">
+        <strong>Port 7547 is particularly dangerous.</strong> TR-069 is the protocol ISPs use to remotely manage your router. If it's exposed to the internet (not just your ISP), attackers can exploit it to take full control of your router — this was the vector for the Mirai botnet's router attack wave.
+    </div>
+
+    <h2>Step 4: DNS Leak Testing</h2>
+    <p>Your DNS queries reveal every domain you visit. If your DNS is leaking through your ISP instead of your configured resolver, you lose both privacy and the blocking benefits of tools like Pi-hole.</p>
+
+    <pre># Check which DNS servers you're actually using
+cat /etc/resolv.conf
+
+# Run a leak test from the terminal
+nslookup myip.opendns.com resolver1.opendns.com
+
+# Or visit dnsleaktest.com for a browser-based test</pre>
+
+    <p>If the DNS servers shown are not the ones you configured, your VPN is leaking or your router is overriding your settings.</p>
+
+    <h2>Step 5: Firewall Audit</h2>
+    <p>Most Linux systems ship with a firewall that's either misconfigured or disabled. Check yours:</p>
+
+    <pre># Check ufw status
+sudo ufw status verbose
+
+# If inactive, enable with sane defaults:
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh   # only if you need SSH
+sudo ufw enable
+
+# Check iptables directly
+sudo iptables -L -n --line-numbers</pre>
+
+    <h2>Automating All of This: ShadowCypher Guardian</h2>
+    <p>The above steps cover a lot of ground — but they're manual. If you run them once and forget, you're back to flying blind within a week as your network changes.</p>
+
+    <p>ShadowCypher Guardian automates the entire loop. It's a Python agent that runs continuously and checks:</p>
+    <ul>
+        <li>ARP table for spoofing and new device arrivals</li>
+        <li>Router for commonly exploited open ports (Telnet, TR-069, UPnP)</li>
+        <li>DNS configuration for unexpected resolvers</li>
+        <li>Firewall rules for gaps</li>
+        <li>System hardening (SSH root login, world-writable files, core dumps)</li>
+    </ul>
+
+    <p>Every finding creates an incident in your dashboard and a push notification on your phone. You don't need to log in and check — you get alerted when something changes.</p>
+
+    <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+            <strong>Install the agent</strong>
+            <pre style="margin:8px 0;">pip install shadowcypher-agent</pre>
+        </div>
+    </div>
+    <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+            <strong>Authenticate (30 seconds)</strong>
+            <pre style="margin:8px 0;">shadow-agent init</pre>
+        </div>
+    </div>
+    <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+            <strong>Start monitoring</strong>
+            <pre style="margin:8px 0;">shadow-agent run</pre>
+        </div>
+    </div>
+
+    <p>The free tier includes unlimited device inventory, incident logging, and push notifications. No credit card required.</p>
+
+    <div class="cta">
+        <h3>Your network is probably being watched. Start watching back.</h3>
+        <p>ShadowCypher Guardian free tier — device inventory, incident feed, push alerts. Under 5 minutes to set up.</p>
+        <a href="https://shadowcypher.site/#guardian" class="btn">START MONITORING FREE</a>
+    </div>
+</main>
+
+<footer>
+    &copy; 2026 ShadowCypher. Sovereign security infrastructure. &nbsp;·&nbsp; <a href="/blog/" style="color:var(--text-secondary);">More articles</a>
+</footer>
+</body>
+</html>

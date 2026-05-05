@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign AI Assistant: Run Your Own AI on Android With Zero Cloud Dependency | ShadowCypher</title>
+    <meta name="description" content="What does a truly sovereign AI assistant look like? One that runs on your hardware, stores nothing externally, and can't be shut down, censored, or data-mined. Here's how to build one.">
+    <meta name="keywords" content="sovereign AI assistant, private AI no cloud, self-hosted AI android, local LLM android, offline AI assistant, no cloud AI, private AI phone, llama.cpp android, open source AI assistant">
+    <meta property="og:title" content="Sovereign AI: Run Your Own AI Assistant With Zero Cloud Dependency">
+    <meta property="og:description" content="A complete guide to building an AI assistant that runs entirely on your hardware with no cloud dependency.">
+    <meta property="og:type" content="article">
+    <link rel="canonical" href="https://shadowcypher.site/blog/sovereign-ai-assistant-no-cloud-android.html">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent-primary: #b44aff; --accent-secondary: #00ff41; --bg: #020202; --text: #e0e0e0; --text-secondary: #777; --glass-border: rgba(180,74,255,0.15); --font-mono: 'JetBrains Mono', monospace; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; line-height: 1.75; }
+        nav { padding: 20px 40px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: var(--accent-primary); text-decoration: none; font-family: var(--font-mono); font-size: 0.85rem; }
+        nav .logo { font-size: 1.2rem; font-weight: 900; letter-spacing: 4px; color: #fff; }
+        main { max-width: 780px; margin: 0 auto; padding: 60px 24px 100px; }
+        .meta { font-size: 0.75rem; color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 40px; display: flex; gap: 24px; }
+        h1 { font-size: 2.4rem; font-weight: 900; line-height: 1.2; margin-bottom: 20px; }
+        h1 span { color: var(--accent-primary); }
+        h2 { font-size: 1.3rem; font-weight: 700; color: #fff; margin: 48px 0 16px; }
+        p { color: #c0c0c0; margin-bottom: 20px; font-size: 1rem; }
+        pre { background: #0a0a0a; border: 1px solid var(--glass-border); padding: 20px; border-radius: 6px; overflow-x: auto; margin: 24px 0; font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-secondary); line-height: 1.6; }
+        code { font-family: var(--font-mono); color: var(--accent-primary); font-size: 0.88em; }
+        .callout { background: rgba(180,74,255,0.06); border-left: 3px solid var(--accent-primary); padding: 18px 22px; border-radius: 0 6px 6px 0; margin: 28px 0; font-size: 0.92rem; }
+        .callout strong { color: var(--accent-primary); }
+        .cta { background: rgba(180,74,255,0.08); border: 1px solid var(--glass-border); padding: 36px; text-align: center; border-radius: 8px; margin-top: 60px; }
+        .cta h3 { font-size: 1.4rem; margin-bottom: 12px; }
+        .cta p { color: var(--text-secondary); margin-bottom: 24px; }
+        .btn { display: inline-block; background: var(--accent-primary); color: #000; font-weight: 700; padding: 14px 32px; text-decoration: none; font-size: 0.85rem; letter-spacing: 1px; font-family: var(--font-mono); }
+        .btn-outline { display: inline-block; border: 1px solid var(--accent-primary); color: var(--accent-primary); font-weight: 700; padding: 14px 32px; text-decoration: none; font-size: 0.85rem; letter-spacing: 1px; font-family: var(--font-mono); margin-left: 12px; }
+        footer { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 0.75rem; border-top: 1px solid var(--glass-border); }
+        ul { padding-left: 22px; color: #c0c0c0; margin-bottom: 20px; }
+        li { margin-bottom: 10px; }
+        .principle { padding: 18px 22px; border: 1px solid var(--glass-border); border-radius: 6px; margin: 14px 0; display: flex; gap: 16px; align-items: flex-start; }
+        .principle .icon { font-size: 1.4rem; min-width: 32px; }
+        .principle strong { display: block; color: #fff; margin-bottom: 4px; }
+        .principle span { font-size: 0.88rem; color: #aaa; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/" class="logo">SHADOWCYPHER</a>
+    <div style="display:flex;gap:28px;">
+        <a href="/blog/">Blog</a>
+        <a href="/shadow.html">Shadow AI</a>
+        <a href="/#guardian">Guardian</a>
+    </div>
+</nav>
+
+<main>
+    <div class="meta">
+        <span>MAY 05, 2026</span>
+        <span>PRIVACY & SOVEREIGNTY</span>
+        <span>11 MIN READ</span>
+    </div>
+
+    <h1>Sovereign AI: Run Your Own <span>AI Assistant</span> With Zero Cloud Dependency</h1>
+
+    <p>Every mainstream AI assistant — ChatGPT, Google Gemini, Copilot, Claude — runs on someone else's hardware. Your queries are transmitted over the internet, processed on remote servers, and stored according to the provider's privacy policy. In most cases, you have no meaningful control over what happens to your data after it leaves your device.</p>
+
+    <p>Sovereignty means something different. Your AI, on your hardware, under your rules. Completely offline capable. Impossible to censor or throttle. No subscription that can be revoked. No training data leak. This guide explains how to build that — specifically on Android, which most people carry 24/7.</p>
+
+    <h2>The Four Pillars of AI Sovereignty</h2>
+
+    <div class="principle">
+        <div class="icon">🖥️</div>
+        <div>
+            <strong>Local compute</strong>
+            <span>The model runs on your device's CPU/GPU/NPU. No API calls. No internet required for inference.</span>
+        </div>
+    </div>
+    <div class="principle">
+        <div class="icon">🔒</div>
+        <div>
+            <strong>Local storage</strong>
+            <span>Model weights, conversation history, and memory are stored on your device. Nothing is uploaded.</span>
+        </div>
+    </div>
+    <div class="principle">
+        <div class="icon">🔓</div>
+        <div>
+            <strong>Open weights</strong>
+            <span>The model's weights are openly licensed (Llama, Gemma, Mistral, Phi). You can inspect, fine-tune, or replace them.</span>
+        </div>
+    </div>
+    <div class="principle">
+        <div class="icon">⚡</div>
+        <div>
+            <strong>Open runtime</strong>
+            <span>The inference engine is open source (llama.cpp, MLC-LLM, Ollama). No black-box SDK required to run it.</span>
+        </div>
+    </div>
+
+    <h2>Why Android Specifically?</h2>
+    <p>Android phones are the most capable portable computers most people own. A 2023-era flagship has a Snapdragon 8 Gen 2 with a dedicated NPU capable of 26 TOPS — fast enough to run a 4B parameter model at conversational speeds. And unlike iPhones, Android lets you sideload apps, install package managers like Termux, and run background services with full control.</p>
+
+    <p>The fact that you already carry it everywhere means your sovereign AI goes everywhere with you — no need to pull out a laptop or connect to a server.</p>
+
+    <h2>Model Selection: What Actually Runs Well on a Phone</h2>
+    <p>Not every open-weight model is practical on a phone. You need a quantized model small enough to fit in RAM while leaving headroom for other apps.</p>
+
+    <ul>
+        <li><strong>Gemma 4B Q4_K_M (~2.5 GB)</strong> — Google's model, excellent instruction following, runs at ~15 tok/s on SD 8 Gen 1. Best balance of quality and speed for conversational use.</li>
+        <li><strong>Llama 3.1 8B Q3_K_S (~3.5 GB)</strong> — Meta's model, stronger at reasoning and coding. Tight fit on 6 GB devices; comfortable on 8 GB.</li>
+        <li><strong>Phi-4 Mini 3.8B (~2.2 GB)</strong> — Microsoft's small model, exceptional at math and logical reasoning relative to its size.</li>
+        <li><strong>Mistral 7B Q2_K (~2.7 GB)</strong> — If you want the best raw language quality at 7B with maximum compression.</li>
+    </ul>
+
+    <div class="callout">
+        <strong>Quantization matters:</strong> Q4_K_M is the sweet spot — about 25% quality loss vs FP16, but 4x smaller. Q2_K is smaller still but noticeably degraded. For a 4B model, Q4_K_M is almost always the right choice.
+    </div>
+
+    <h2>Shadow AI: The Packaged Option</h2>
+    <p>Shadow AI is a pre-built Android app that ships with everything assembled: llama.cpp compiled for Android with GPU offloading, a Gemma 4B model ready to download on first launch, a chat interface, and an always-on background service that monitors for security threats using the same local model.</p>
+
+    <p>Install time is under 10 minutes including model download. No Termux, no compilation, no configuration files.</p>
+
+    <pre># Download the APK from GitHub Releases:
+https://github.com/jakes1345/ShadowCypher/releases
+
+# Requirements:
+# - Android 10+
+# - Snapdragon 8 Gen 1 or newer (or Tensor G2+, Dimensity 9000+)
+# - 6 GB RAM minimum
+# - 3 GB free storage</pre>
+
+    <h2>The Manual Route: Termux + llama.cpp</h2>
+    <p>If you want complete control — specific model, specific quantization, custom system prompts, local API access:</p>
+
+    <pre># 1. Install Termux from F-Droid (not Play Store)
+# 2. In Termux:
+pkg install clang cmake git python
+
+# 3. Build llama.cpp
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp && mkdir build && cd build
+cmake .. -DGGML_OPENMP=ON -DGGML_VULKAN=ON  # Vulkan = GPU acceleration
+make llama-server -j4
+
+# 4. Download a model (example: Gemma 4B Q4_K_M)
+pip install huggingface_hub
+huggingface-cli download google/gemma-4b-GGUF gemma-4b-q4_k_m.gguf \
+  --local-dir ~/models/
+
+# 5. Start the inference server
+./llama-server -m ~/models/gemma-4b-q4_k_m.gguf \
+  --host 127.0.0.1 --port 11434 \
+  --n-gpu-layers 20 --ctx-size 4096</pre>
+
+    <p>The server runs at <code>http://localhost:11434</code> and is API-compatible with Ollama, so any Ollama-compatible app can use it as a backend. Your queries never leave the device.</p>
+
+    <h2>Adding Memory and Context Persistence</h2>
+    <p>A sovereign AI should remember things across sessions. LLMs are stateless — they forget everything when the context window ends. You need an external memory layer.</p>
+    <p>Shadow AI handles this via <code>ShadowMemoryCore</code>: a local SQLite database on-device that stores named memories, retrieves relevant ones at prompt time, and injects them into the system context. No cloud sync. No vector database subscription. Pure local SQLite.</p>
+    <p>For the Termux route, you can build something similar: store conversation summaries in SQLite, retrieve recent ones and prepend them to the system prompt at each session start.</p>
+
+    <h2>The Security Integration: Guardian</h2>
+    <p>Shadow AI integrates with ShadowCypher Guardian, giving the local AI access to your network security context. When the background service detects a suspicious notification, a malicious URL in your clipboard, or a new device on your network, it routes the event through the local model for analysis — completely offline.</p>
+    <p>The Guardian cloud dashboard shows incidents, scan results, and device inventory. The AI explains them in plain language when you ask. Still no cloud inference — the explanation runs locally, and the dashboard just stores structured data.</p>
+
+    <div class="cta">
+        <h3>Your AI. Your hardware. Your rules.</h3>
+        <p>Shadow AI is free, open source, and runs entirely on your Android phone. No cloud. No subscription. No data harvesting.</p>
+        <a href="/shadow.html" class="btn">GET SHADOW AI</a>
+        <a href="https://github.com/jakes1345/ShadowCypher" class="btn-outline">VIEW SOURCE</a>
+    </div>
+</main>
+
+<footer>
+    &copy; 2026 ShadowCypher. Sovereign security infrastructure. &nbsp;·&nbsp; <a href="/blog/" style="color:var(--text-secondary);">More articles</a>
+</footer>
+</body>
+</html>

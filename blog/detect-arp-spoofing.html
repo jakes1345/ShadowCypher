@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Detect ARP Spoofing on Your Home Network | ShadowCypher</title>
+    <meta name="description" content="ARP spoofing lets attackers intercept your traffic before you notice. Learn how to detect it with free tools — and how ShadowCypher Guardian catches it automatically.">
+    <meta name="keywords" content="ARP spoofing detection, home network security, man in the middle attack, network monitoring, ARP poisoning, free network security tools">
+    <meta property="og:title" content="How to Detect ARP Spoofing on Your Home Network">
+    <meta property="og:description" content="Learn to detect ARP poisoning attacks before they intercept your data. Free tools included.">
+    <meta property="og:type" content="article">
+    <link rel="canonical" href="https://shadowcypher.site/blog/detect-arp-spoofing.html">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent-primary: #b44aff;
+            --accent-secondary: #00ff41;
+            --bg: #020202;
+            --text: #e0e0e0;
+            --text-secondary: #777;
+            --glass-border: rgba(180,74,255,0.15);
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; line-height: 1.75; }
+        nav { padding: 20px 40px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: var(--accent-primary); text-decoration: none; font-family: var(--font-mono); font-size: 0.85rem; }
+        nav .logo { font-size: 1.2rem; font-weight: 900; letter-spacing: 4px; color: #fff; }
+        main { max-width: 780px; margin: 0 auto; padding: 60px 24px 100px; }
+        .meta { font-size: 0.75rem; color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 40px; display: flex; gap: 24px; }
+        h1 { font-size: 2.6rem; font-weight: 900; line-height: 1.2; margin-bottom: 20px; }
+        h1 span { color: var(--accent-primary); }
+        h2 { font-size: 1.3rem; font-weight: 700; color: #fff; margin: 48px 0 16px; }
+        p { color: #c0c0c0; margin-bottom: 20px; font-size: 1rem; }
+        pre { background: #0a0a0a; border: 1px solid var(--glass-border); padding: 20px; border-radius: 6px; overflow-x: auto; margin: 24px 0; font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-secondary); line-height: 1.6; }
+        code { font-family: var(--font-mono); color: var(--accent-primary); font-size: 0.88em; }
+        .callout { background: rgba(180,74,255,0.06); border-left: 3px solid var(--accent-primary); padding: 18px 22px; border-radius: 0 6px 6px 0; margin: 28px 0; font-size: 0.92rem; }
+        .callout strong { color: var(--accent-primary); }
+        .cta { background: rgba(180,74,255,0.08); border: 1px solid var(--glass-border); padding: 36px; text-align: center; border-radius: 8px; margin-top: 60px; }
+        .cta h3 { font-size: 1.4rem; margin-bottom: 12px; }
+        .cta p { color: var(--text-secondary); margin-bottom: 24px; }
+        .btn { display: inline-block; background: var(--accent-primary); color: #000; font-weight: 700; padding: 14px 32px; text-decoration: none; font-size: 0.85rem; letter-spacing: 1px; font-family: var(--font-mono); }
+        footer { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 0.75rem; border-top: 1px solid var(--glass-border); }
+        ul { padding-left: 22px; color: #c0c0c0; margin-bottom: 20px; }
+        li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/" class="logo">SHADOWCYPHER</a>
+    <div style="display:flex;gap:28px;">
+        <a href="/blog/">Blog</a>
+        <a href="/#guardian">Guardian</a>
+        <a href="/shadow.html">Shadow AI</a>
+    </div>
+</nav>
+
+<main>
+    <div class="meta">
+        <span>MAY 05, 2026</span>
+        <span>NETWORK SECURITY</span>
+        <span>8 MIN READ</span>
+    </div>
+
+    <h1>How to Detect <span>ARP Spoofing</span> on Your Home Network</h1>
+
+    <p>Your home router hands out IP addresses. Every device on the network trusts those mappings. ARP spoofing abuses that trust — an attacker on your local network sends fake ARP replies, redirecting your traffic through their machine before it reaches the router. You keep browsing. They read everything.</p>
+
+    <p>The scary part: it works silently. There's no error, no slowdown, no warning. Unless you're specifically watching for it, you won't know it's happening.</p>
+
+    <h2>What Is ARP, and Why Can It Be Spoofed?</h2>
+    <p>ARP (Address Resolution Protocol) maps IP addresses to MAC addresses. When your laptop wants to talk to <code>192.168.1.1</code>, it broadcasts: "Who has <code>192.168.1.1</code>? Tell me your MAC." Your router replies. Your laptop caches that reply.</p>
+    <p>The problem: ARP is stateless. Any device on the network can send an unsolicited ARP reply, and most operating systems will update their cache. No authentication, no verification. This was designed for trusted networks in the 1980s and has never been patched at the protocol level.</p>
+
+    <h2>Who's Actually at Risk?</h2>
+    <p>If your network is locked down with a strong Wi-Fi password and no guests, your risk is lower — but not zero. ARP spoofing attacks can come from:</p>
+    <ul>
+        <li>A compromised device already on your network (malware pivot)</li>
+        <li>A guest device used by someone who's not fully trustworthy</li>
+        <li>An attacker who cracked or brute-forced your Wi-Fi password</li>
+        <li>A rogue device on a shared apartment/building network</li>
+    </ul>
+
+    <h2>Manual Detection: Check the ARP Table</h2>
+    <p>The fastest manual check is to look at your ARP table and flag any IP address that maps to more than one MAC address. Two IPs sharing a MAC means one of them is spoofed.</p>
+
+    <pre># Linux / macOS
+arp -a
+
+# Windows
+arp -a
+
+# Look for duplicate MAC addresses:
+# ? (192.168.1.1) at aa:bb:cc:dd:ee:ff [ether] on eth0
+# ? (192.168.1.100) at aa:bb:cc:dd:ee:ff [ether] on eth0  ← same MAC = suspicious</pre>
+
+    <p>If your router's IP and another device's IP share the same MAC, you're likely under an ARP poisoning attack. The attacker's machine is impersonating your gateway.</p>
+
+    <h2>Using arpwatch for Continuous Monitoring</h2>
+    <p><code>arpwatch</code> is a classic Unix tool that watches ARP traffic and emails you when a MAC address changes for an IP it's seen before.</p>
+
+    <pre>sudo apt install arpwatch       # Debian/Ubuntu
+sudo systemctl enable arpwatch
+sudo systemctl start arpwatch</pre>
+
+    <p>Configure it to email you by editing <code>/etc/arpwatch.conf</code>. Every time an IP gets remapped to a new MAC, you'll get an alert. It's lightweight and runs as a daemon.</p>
+
+    <h2>Using Wireshark / tshark for Packet Analysis</h2>
+    <p>If you want to see the attack in real time, filter ARP traffic in Wireshark:</p>
+
+    <pre># tshark (CLI)
+sudo tshark -i eth0 -f "arp" -Y "arp.duplicate-address-detected"
+
+# Or watch for ARP replies flooding in
+sudo tshark -i eth0 -f "arp" | grep "is-at"</pre>
+
+    <p>Legitimate networks see ARP replies only when a device first joins or when the cache expires. If you see a flood of ARP replies, or the same IP-to-MAC pairing change multiple times per second, that's the fingerprint of an active spoof.</p>
+
+    <h2>Static ARP Entries (Prevention)</h2>
+    <p>For your most critical devices — the router, a NAS, a work machine — you can set static ARP entries. These can't be overwritten by spoofed ARP replies.</p>
+
+    <pre># Linux: add a permanent ARP entry for your router
+sudo arp -s 192.168.1.1 aa:bb:cc:dd:ee:ff
+
+# Make it permanent (add to /etc/rc.local or a systemd service):
+arp -s 192.168.1.1 aa:bb:cc:dd:ee:ff</pre>
+
+    <div class="callout">
+        <strong>Limitation:</strong> Static ARP only protects that specific device. It won't detect attacks targeting other devices on the same network. For full coverage, you need network-wide monitoring.
+    </div>
+
+    <h2>Router-Level Defenses</h2>
+    <p>Some routers support Dynamic ARP Inspection (DAI), which validates ARP packets against a trusted DHCP binding table. Check your router's admin panel under "Security" or "LAN settings." Most consumer routers don't support it — it's typically a feature of business-grade hardware (Ubiquiti, Cisco, Netgear managed switches).</p>
+
+    <h2>Automated Detection with ShadowCypher Guardian</h2>
+    <p>All of the above requires either manual checking or configuring multiple daemons on a Linux machine. ShadowCypher Guardian automates the entire detection loop.</p>
+    <p>The Guardian agent runs continuously on any Linux machine or Android phone on your network. It reads the ARP table on every scan cycle, tracks MAC-to-IP bindings over time, and raises a high-severity incident automatically if any binding changes unexpectedly.</p>
+
+    <pre># Install Guardian agent (one-time setup)
+pip install shadowcypher-agent
+shadow-agent init   # authenticates via device flow
+shadow-agent run    # starts continuous monitoring</pre>
+
+    <p>You'll get a push notification and dashboard alert the moment spoofing is detected — not after you manually run <code>arp -a</code> and notice something weird.</p>
+
+    <div class="cta">
+        <h3>Stop checking manually. Start watching automatically.</h3>
+        <p>ShadowCypher Guardian monitors your network 24/7. Free tier available — no credit card required.</p>
+        <a href="https://shadowcypher.site/#guardian" class="btn">INSTALL GUARDIAN FREE</a>
+    </div>
+</main>
+
+<footer>
+    &copy; 2026 ShadowCypher. Sovereign security infrastructure. &nbsp;·&nbsp; <a href="/blog/" style="color:var(--text-secondary);">More articles</a>
+</footer>
+</body>
+</html>

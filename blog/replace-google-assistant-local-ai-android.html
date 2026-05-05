@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Replace Google Assistant with a Local AI on Android (No Cloud) | ShadowCypher</title>
+    <meta name="description" content="Run a private, cloud-free AI assistant on your Android phone. No Google, no data harvesting, no subscription. Here's exactly how to do it with Shadow AI and llama.cpp.">
+    <meta name="keywords" content="replace google assistant android, local AI android, private AI assistant, no cloud AI, offline AI assistant android, llama android, gemma android, Bixby alternative">
+    <meta property="og:title" content="Replace Google Assistant with a Local AI on Android">
+    <meta property="og:description" content="Run a private AI assistant on your phone with no cloud dependency. Step-by-step guide.">
+    <meta property="og:type" content="article">
+    <link rel="canonical" href="https://shadowcypher.site/blog/replace-google-assistant-local-ai-android.html">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent-primary: #b44aff; --accent-secondary: #00ff41; --bg: #020202; --text: #e0e0e0; --text-secondary: #777; --glass-border: rgba(180,74,255,0.15); --font-mono: 'JetBrains Mono', monospace; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; line-height: 1.75; }
+        nav { padding: 20px 40px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: var(--accent-primary); text-decoration: none; font-family: var(--font-mono); font-size: 0.85rem; }
+        nav .logo { font-size: 1.2rem; font-weight: 900; letter-spacing: 4px; color: #fff; }
+        main { max-width: 780px; margin: 0 auto; padding: 60px 24px 100px; }
+        .meta { font-size: 0.75rem; color: var(--text-secondary); font-family: var(--font-mono); margin-bottom: 40px; display: flex; gap: 24px; }
+        h1 { font-size: 2.6rem; font-weight: 900; line-height: 1.2; margin-bottom: 20px; }
+        h1 span { color: var(--accent-primary); }
+        h2 { font-size: 1.3rem; font-weight: 700; color: #fff; margin: 48px 0 16px; }
+        p { color: #c0c0c0; margin-bottom: 20px; font-size: 1rem; }
+        pre { background: #0a0a0a; border: 1px solid var(--glass-border); padding: 20px; border-radius: 6px; overflow-x: auto; margin: 24px 0; font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-secondary); line-height: 1.6; }
+        code { font-family: var(--font-mono); color: var(--accent-primary); font-size: 0.88em; }
+        .callout { background: rgba(180,74,255,0.06); border-left: 3px solid var(--accent-primary); padding: 18px 22px; border-radius: 0 6px 6px 0; margin: 28px 0; font-size: 0.92rem; }
+        .callout strong { color: var(--accent-primary); }
+        .cta { background: rgba(180,74,255,0.08); border: 1px solid var(--glass-border); padding: 36px; text-align: center; border-radius: 8px; margin-top: 60px; }
+        .cta h3 { font-size: 1.4rem; margin-bottom: 12px; }
+        .cta p { color: var(--text-secondary); margin-bottom: 24px; }
+        .btn { display: inline-block; background: var(--accent-primary); color: #000; font-weight: 700; padding: 14px 32px; text-decoration: none; font-size: 0.85rem; letter-spacing: 1px; font-family: var(--font-mono); }
+        footer { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 0.75rem; border-top: 1px solid var(--glass-border); }
+        table { width: 100%; border-collapse: collapse; margin: 28px 0; font-size: 0.88rem; }
+        th { text-align: left; padding: 10px 14px; background: rgba(180,74,255,0.08); color: var(--accent-primary); font-family: var(--font-mono); font-size: 0.75rem; border-bottom: 1px solid var(--glass-border); }
+        td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #bbb; }
+        ul { padding-left: 22px; color: #c0c0c0; margin-bottom: 20px; }
+        li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/" class="logo">SHADOWCYPHER</a>
+    <div style="display:flex;gap:28px;">
+        <a href="/blog/">Blog</a>
+        <a href="/shadow.html">Shadow AI</a>
+        <a href="/#guardian">Guardian</a>
+    </div>
+</nav>
+
+<main>
+    <div class="meta">
+        <span>MAY 05, 2026</span>
+        <span>MOBILE SECURITY</span>
+        <span>10 MIN READ</span>
+    </div>
+
+    <h1>Replace Google Assistant with a <span>Local AI</span> on Android</h1>
+
+    <p>Every time you talk to Google Assistant, Bixby, or Siri, your query is sent to a cloud server, logged, associated with your account, and used to train future models. This isn't conspiracy — it's in the privacy policies. You are the training data.</p>
+
+    <p>There's an alternative. Modern open-source language models — Gemma 4, Llama 3.1, Phi-4 — run entirely on device on a Samsung Galaxy S23 or newer. No internet required. No data leaves your phone. The model runs locally using your phone's NPU/GPU, and inference happens in seconds.</p>
+
+    <h2>Why This Is Now Practical</h2>
+    <p>Until 2024, running a capable LLM on a phone meant crippled 1B parameter models with GPT-2-era coherence. That changed fast. Gemma 4B runs comfortably on 6GB RAM with Snapdragon 8 Gen 1+. The quality gap between a local model and GPT-3.5 is now negligible for most everyday tasks.</p>
+
+    <table>
+        <tr><th>Assistant</th><th>Processes data</th><th>Offline capable</th><th>Learns from you</th></tr>
+        <tr><td>Google Assistant</td><td>Google servers</td><td>No</td><td>Yes (logs retained)</td></tr>
+        <tr><td>Bixby</td><td>Samsung servers</td><td>Partial</td><td>Yes</td></tr>
+        <tr><td>Siri</td><td>Apple servers</td><td>Partial</td><td>Anonymized</td></tr>
+        <tr><td><strong>Shadow AI</strong></td><td><strong>Your phone only</strong></td><td><strong>Yes</strong></td><td><strong>Never leaves device</strong></td></tr>
+    </table>
+
+    <h2>Hardware Requirements</h2>
+    <p>You need a reasonably modern Android device. The practical minimum:</p>
+    <ul>
+        <li>Snapdragon 8 Gen 1 or newer (or equivalent Dimensity/Tensor chip)</li>
+        <li>6 GB RAM minimum, 8 GB recommended</li>
+        <li>Android 10+ (for background service support)</li>
+        <li>3 GB free storage for model weights</li>
+    </ul>
+    <p>The Samsung Galaxy S22/S23/S24 series, Google Pixel 7+, and OnePlus 10 Pro all qualify comfortably.</p>
+
+    <h2>Option 1: Shadow AI (Pre-packaged, Easiest)</h2>
+    <p>Shadow AI is a pre-packaged Android app that ships with llama.cpp compiled for Android, a Gemma 4B model, and an always-on background service that monitors your device, detects phishing/malicious URLs, and answers questions entirely on-device.</p>
+
+    <pre># Download from GitHub Releases
+https://github.com/jakes1345/ShadowCypher/releases
+
+# Enable sideloading:
+# Settings → Apps → Special app access → Install unknown apps
+# → Allow from your browser/file manager
+
+# Install the APK, grant permissions, tap "Start Shadow"</pre>
+
+    <p>On first launch, Shadow downloads a quantized Gemma 4B model (~2.2 GB) and starts the inference server locally on port 11434. From there, the chat interface connects to localhost — zero cloud dependency.</p>
+
+    <div class="callout">
+        <strong>Pro tip:</strong> Shadow AI integrates with ShadowCypher Guardian. When your phone detects a suspicious notification or URL, the local model analyzes it immediately and alerts you — no round-trip to a cloud API, no latency, no logs.
+    </div>
+
+    <h2>Option 2: Manual Setup with Termux + llama.cpp</h2>
+    <p>If you want full control over the model and parameters:</p>
+
+    <pre># Install Termux from F-Droid (not Play Store — the Play Store version is outdated)
+# Then inside Termux:
+
+pkg update && pkg upgrade
+pkg install clang cmake git
+
+# Clone and build llama.cpp with Android GPU support
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp
+mkdir build && cd build
+cmake .. -DGGML_OPENMP=ON
+make -j$(nproc)
+
+# Download a quantized model (Gemma 4B Q4_K_M, ~2.5 GB)
+# Use huggingface-cli or wget from Hugging Face model hub
+
+# Run the inference server
+./llama-server -m /path/to/gemma-4b-q4_k_m.gguf \
+  --host 0.0.0.0 --port 11434 \
+  --n-gpu-layers 20 \
+  --ctx-size 4096</pre>
+
+    <p>With GPU offloading enabled, Gemma 4B achieves around 12–18 tok/s on a Snapdragon 8 Gen 1 — fast enough for fluid conversation.</p>
+
+    <h2>Replacing the Default Assistant</h2>
+    <p>On Android, you can set any app as your default assistant. On Samsung:</p>
+    <ul>
+        <li><strong>Settings → General management → Language → Default apps → Digital assistant app</strong></li>
+        <li>Select Shadow AI (or your Termux-based app if you built a launcher)</li>
+    </ul>
+    <p>Now holding the home button opens your local model instead of Google Assistant or Bixby.</p>
+
+    <h2>What the Local Model Can and Can't Do</h2>
+    <p>A local 4B model excels at: drafting text, answering questions, summarizing content, writing code, explaining concepts, and on-device security analysis (URL analysis, notification triage).</p>
+    <p>It struggles with: very recent events (knowledge cutoff), math-heavy problems, tasks requiring persistent memory across sessions (without an external memory store), and anything that genuinely requires internet access.</p>
+    <p>For 80% of what people use voice assistants for, the local model is equal or better — and it never reports back to anyone.</p>
+
+    <div class="cta">
+        <h3>Shadow AI is free to download and fully open source.</h3>
+        <p>Local inference. Always-on background protection. Integrates with ShadowCypher Guardian for network security.</p>
+        <a href="/shadow.html" class="btn">DOWNLOAD SHADOW AI</a>
+    </div>
+</main>
+
+<footer>
+    &copy; 2026 ShadowCypher. Sovereign security infrastructure. &nbsp;·&nbsp; <a href="/blog/" style="color:var(--text-secondary);">More articles</a>
+</footer>
+</body>
+</html>

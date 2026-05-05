@@ -381,6 +381,19 @@
                     <button onclick="mockLogout()" class="btn-primary" style="padding: 10px 20px; font-size: 0.6rem; background: var(--accent-secondary);">Sign out</button>
                 </div>
 
+                <!-- Referral promo banner (shown for free/community plan users) -->
+                <div id="referral-promo-banner" style="display:none; background:linear-gradient(135deg,rgba(180,74,255,0.12),rgba(180,74,255,0.04)); border:1px solid rgba(180,74,255,0.35); padding:20px 24px; border-radius:8px; margin-bottom:28px; justify-content:space-between; align-items:center; gap:20px;">
+                    <div>
+                        <div class="mono" style="font-size:0.65rem; color:var(--accent-primary); letter-spacing:2px; margin-bottom:6px;">REFERRAL PROGRAM</div>
+                        <div style="font-size:0.95rem; font-weight:600; color:#fff; margin-bottom:4px;">Invite a friend — get 30 days of Pro free</div>
+                        <div style="font-size:0.78rem; color:var(--text-secondary);">Share your referral link. Every friend who subscribes extends your Pro access by 30 days.</div>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-shrink:0;">
+                        <button onclick="scrollToReferral()" class="btn-primary" style="padding:10px 20px; font-size:0.7rem; white-space:nowrap;">Get my link</button>
+                        <a href="/#pricing" onclick="navTo('pricing')" style="padding:10px 20px; font-size:0.7rem; background:transparent; border:1px solid var(--accent-primary); color:var(--accent-primary); cursor:pointer; font-family:var(--font-mono); white-space:nowrap; text-decoration:none; display:inline-flex; align-items:center;">Upgrade</a>
+                    </div>
+                </div>
+
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:40px;">
                     <div style="padding:20px; background:rgba(180, 74, 255, 0.03); border:1px solid var(--glass-border);">
                         <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:10px;">ORACLE_SHADOWNODE</div>
@@ -916,6 +929,12 @@
                     let label = `Plan: ${effective.replace('_', ' ')}`;
                     if (me.in_trial) label += ` · trial: ${me.trial_days_remaining}d left`;
                     planBadge.innerHTML = `<div class="status-dot"></div>${escapeHtml(label)}`;
+                }
+
+                // Referral promo banner: show for free (community) users, hide for paid
+                const promoBanner = document.getElementById('referral-promo-banner');
+                if (promoBanner) {
+                    promoBanner.style.display = (effective === 'community') ? 'flex' : 'none';
                 }
 
                 // Trial near-expiry nudge
@@ -1467,6 +1486,11 @@
                 cliPrint('Webhook deleted.', 'var(--warning)');
                 loadWebhooks();
             } catch (err) { cliPrint(`Delete failed: ${err.message}`, 'var(--critical)'); }
+        }
+
+        function scrollToReferral() {
+            const el = document.getElementById('referral-block');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         // ─── Referrals ────────────────────────────────────────────

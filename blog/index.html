@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShadowCypher Blog — Network Security & Sovereign AI</title>
+    <meta name="description" content="Practical guides on home network security, local AI assistants, open-source monitoring tools, and digital sovereignty. No fluff, no paywalls.">
+    <meta name="keywords" content="network security blog, local AI guide, home network monitoring, ARP spoofing, sovereign AI, privacy security">
+    <link rel="canonical" href="https://shadowcypher.site/blog/">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent-primary: #b44aff; --accent-secondary: #00ff41; --bg: #020202; --text: #e0e0e0; --text-secondary: #777; --glass-border: rgba(180,74,255,0.15); --font-mono: 'JetBrains Mono', monospace; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; line-height: 1.75; }
+        nav { padding: 20px 40px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: var(--accent-primary); text-decoration: none; font-family: var(--font-mono); font-size: 0.85rem; }
+        nav .logo { font-size: 1.2rem; font-weight: 900; letter-spacing: 4px; color: #fff; }
+        main { max-width: 900px; margin: 0 auto; padding: 80px 24px 100px; }
+        .page-header { margin-bottom: 60px; }
+        .page-header .label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-primary); letter-spacing: 3px; margin-bottom: 16px; }
+        h1 { font-size: 3rem; font-weight: 900; line-height: 1.1; }
+        h1 span { color: var(--accent-primary); }
+        .subtitle { color: var(--text-secondary); margin-top: 16px; font-size: 1.05rem; max-width: 520px; }
+        .posts { display: grid; gap: 24px; }
+        .post-card { background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); padding: 32px; border-radius: 8px; transition: border-color 0.2s; text-decoration: none; display: block; }
+        .post-card:hover { border-color: var(--accent-primary); }
+        .post-meta { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-secondary); margin-bottom: 12px; display: flex; gap: 20px; }
+        .post-tag { color: var(--accent-primary); }
+        .post-title { font-size: 1.35rem; font-weight: 700; color: #fff; margin-bottom: 10px; line-height: 1.3; }
+        .post-excerpt { font-size: 0.9rem; color: #999; line-height: 1.65; }
+        .post-cta { display: inline-block; margin-top: 16px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-primary); letter-spacing: 1px; }
+        .featured { border-color: rgba(180,74,255,0.4); background: rgba(180,74,255,0.04); }
+        footer { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 0.75rem; border-top: 1px solid var(--glass-border); margin-top: 60px; }
+        footer a { color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/" class="logo">SHADOWCYPHER</a>
+    <div style="display:flex;gap:28px;">
+        <a href="/#guardian">Guardian</a>
+        <a href="/shadow.html">Shadow AI</a>
+        <a href="/#pricing">Pricing</a>
+    </div>
+</nav>
+
+<main>
+    <div class="page-header">
+        <div class="label">// KNOWLEDGE BASE</div>
+        <h1>Security guides.<br><span>No fluff.</span></h1>
+        <p class="subtitle">Practical articles on network security, local AI, and building systems you actually control.</p>
+    </div>
+
+    <div class="posts">
+        <a href="detect-arp-spoofing.html" class="post-card featured">
+            <div class="post-meta">
+                <span>MAY 05, 2026</span>
+                <span class="post-tag">NETWORK SECURITY</span>
+                <span>8 MIN READ</span>
+            </div>
+            <div class="post-title">How to Detect ARP Spoofing on Your Home Network</div>
+            <div class="post-excerpt">ARP spoofing lets attackers silently intercept your traffic. Learn to detect it with free tools — and how ShadowCypher Guardian catches it automatically so you don't have to check manually.</div>
+            <span class="post-cta">READ ARTICLE →</span>
+        </a>
+
+        <a href="replace-google-assistant-local-ai-android.html" class="post-card">
+            <div class="post-meta">
+                <span>MAY 05, 2026</span>
+                <span class="post-tag">MOBILE SECURITY</span>
+                <span>10 MIN READ</span>
+            </div>
+            <div class="post-title">Replace Google Assistant with a Local AI on Android (No Cloud)</div>
+            <div class="post-excerpt">Run a private, cloud-free AI assistant on your Android phone using Gemma 4B or Llama 3.1. No Google, no data harvesting, no subscription. Complete setup guide with Shadow AI and Termux.</div>
+            <span class="post-cta">READ ARTICLE →</span>
+        </a>
+
+        <a href="open-source-home-network-security-monitor.html" class="post-card">
+            <div class="post-meta">
+                <span>MAY 05, 2026</span>
+                <span class="post-tag">NETWORK SECURITY</span>
+                <span>12 MIN READ</span>
+            </div>
+            <div class="post-title">Open Source Home Network Security Monitor: The Best Options in 2026</div>
+            <div class="post-excerpt">Compare Suricata, Zeek, arpwatch, ntopng, Pi-hole, and ShadowCypher Guardian. Which tools actually cover the threats that matter on a home network — without enterprise hardware requirements.</div>
+            <span class="post-cta">READ ARTICLE →</span>
+        </a>
+
+        <a href="home-network-security-monitoring-free-tools.html" class="post-card">
+            <div class="post-meta">
+                <span>MAY 05, 2026</span>
+                <span class="post-tag">NETWORK SECURITY</span>
+                <span>9 MIN READ</span>
+            </div>
+            <div class="post-title">Home Network Security Monitoring: Free Tools That Actually Work</div>
+            <div class="post-excerpt">Most people's home networks are completely unmonitored. Here are the free tools that detect intruders, rogue devices, open router ports, and DNS leaks — no enterprise budget required.</div>
+            <span class="post-cta">READ ARTICLE →</span>
+        </a>
+
+        <a href="sovereign-ai-assistant-no-cloud-android.html" class="post-card">
+            <div class="post-meta">
+                <span>MAY 05, 2026</span>
+                <span class="post-tag">PRIVACY & SOVEREIGNTY</span>
+                <span>11 MIN READ</span>
+            </div>
+            <div class="post-title">Sovereign AI: Run Your Own AI Assistant With Zero Cloud Dependency</div>
+            <div class="post-excerpt">What does a truly sovereign AI look like? One that runs on your hardware, stores nothing externally, and can't be censored or data-mined. A complete guide to building it on Android.</div>
+            <span class="post-cta">READ ARTICLE →</span>
+        </a>
+    </div>
+</main>
+
+<footer>
+    &copy; 2026 ShadowCypher. Sovereign security infrastructure.<br>
+    <a href="/">Home</a> &nbsp;·&nbsp; <a href="/#guardian">Guardian</a> &nbsp;·&nbsp; <a href="/shadow.html">Shadow AI</a> &nbsp;·&nbsp; <a href="/#pricing">Pricing</a>
+</footer>
+</body>
+</html>
