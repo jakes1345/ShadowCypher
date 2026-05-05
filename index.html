@@ -738,6 +738,25 @@
             shutter.classList.remove('active');
         }
 
+        // ─── Native app mode (Capacitor) ──────────────────────────────────────
+        // When running as an installed app, skip the marketing homepage and go
+        // straight to the dashboard. Hide marketing-only nav items.
+        const IS_NATIVE = !!(window.Capacitor?.isNativePlatform?.() ||
+                             navigator.userAgent.includes('wv') && window.location.protocol !== 'https:' ||
+                             window.matchMedia('(display-mode: standalone)').matches);
+
+        if (IS_NATIVE) {
+            document.addEventListener('DOMContentLoaded', () => {
+                // Hide marketing nav tabs the app doesn't need
+                ['nav-home', 'nav-arsenal', 'nav-ghost', 'nav-pricing'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+                // Navigate straight to account/dashboard
+                navTo('account', document.getElementById('nav-account'));
+            });
+        }
+
         // Supabase Initialization
         let supabaseClient = null;
         try {
