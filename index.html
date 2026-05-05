@@ -132,14 +132,79 @@
     <div id="page-guardian" class="page">
         <div class="content-section">
             <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Guardian</h2>
-            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;">Continuous security monitoring for every device on your network — phones, laptops, routers, smart TVs, IoT. Discovery, hardening, and 24/7 threat detection from a single dashboard.</p>
-            <div class="arsenal-grid">
-                <div class="module-card"><h3 class="mono" style="color:var(--success);margin-bottom:15px;">NETWORK SCAN</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Discovers every device on your WiFi. Identifies phones, laptops, smart TVs, IoT devices. Flags dangerous open ports and services.</p><div class="badge-free">FREE</div></div>
-                <div class="module-card"><h3 class="mono" style="color:var(--success);margin-bottom:15px;">ROUTER AUDIT</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Checks your router for Telnet, TR-069, UPnP, and FTP exposure. Most home routers have at least one critical vulnerability.</p><div class="badge-free">FREE</div></div>
-                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">24/7 MONITORING</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Continuous threat detection. ARP spoofing alerts. New device notifications. Unauthorized access warnings. Never sleep unprotected.</p><div class="badge-pro">PRO</div></div>
-                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">AUTO-HARDEN</h3><p style="font-size:0.85rem;color:var(--text-secondary);">One-click machine hardening. Firewall rules, SSH lockdown, unattended updates, core dump disable, sensitive file permissions.</p><div class="badge-pro">PRO</div></div>
-                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">AI ASSISTANT</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Ask "is my network secure?" in plain English. The AI scans, analyzes, and gives you actionable recommendations automatically.</p><div class="badge-pro">PRO</div></div>
-                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">GHOST MODE</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Total operational invisibility. Tor routing, MAC randomization, DNS protection, log suppression. Become a ghost on the internet.</p><div class="badge-pro">PRO</div></div>
+            <p style="color:var(--text-secondary);margin-bottom:30px;max-width:700px;">Continuous network monitoring from a daemon running on your machine. Discovers every device, detects ARP spoofing, router exposure, and unauthorized access — all surfaced here in real time.</p>
+
+            <!-- Agent status bar -->
+            <div id="guardian-agent-bar" style="margin-bottom:30px;padding:16px 20px;background:rgba(180,74,255,0.04);border:1px solid var(--glass-border);border-radius:6px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div id="agent-status-dot" style="width:10px;height:10px;border-radius:50%;background:#555;flex-shrink:0;"></div>
+                        <span id="agent-status-label" class="mono" style="font-size:0.8rem;color:var(--text-secondary);">No agent connected</span>
+                    </div>
+                    <div style="display:flex;gap:24px;font-size:0.75rem;color:var(--text-secondary);">
+                        <span>Devices: <strong id="stat-devices" style="color:#fff;">—</strong></span>
+                        <span>Open incidents: <strong id="stat-incidents" style="color:#fff;">—</strong></span>
+                        <span>Last scan: <strong id="stat-last-scan" style="color:#fff;">—</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Install section (shown when no agent) -->
+            <div id="guardian-install" style="display:none;margin-bottom:40px;padding:24px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(0,255,127,0.02);">
+                <h3 class="mono" style="color:var(--success);margin-bottom:16px;font-size:0.9rem;">// Install Guardian Agent</h3>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:20px;">Run this on any Linux or macOS machine on your network. It will scan every 10 minutes and report back here.</p>
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:0.7rem;color:#666;margin-bottom:6px;font-family:var(--font-mono);letter-spacing:1px;">STEP 1 — DOWNLOAD &amp; INSTALL</div>
+                    <div style="background:#000;border:1px solid #333;padding:12px 16px;border-radius:4px;font-family:var(--font-mono);font-size:0.78rem;color:#0f0;position:relative;">
+                        <span id="install-cmd-1">curl -sSL https://shadowcypher.site/agent/install.sh | bash</span>
+                        <button onclick="copyInstallCmd(1)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:1px solid #333;color:#888;padding:4px 10px;font-size:0.65rem;cursor:pointer;border-radius:3px;">copy</button>
+                    </div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:0.7rem;color:#666;margin-bottom:6px;font-family:var(--font-mono);letter-spacing:1px;">STEP 2 — CONNECT YOUR ACCOUNT</div>
+                    <div style="background:#000;border:1px solid #333;padding:12px 16px;border-radius:4px;font-family:var(--font-mono);font-size:0.78rem;color:#0f0;position:relative;">
+                        <span id="install-cmd-2">shadow-agent init</span>
+                        <button onclick="copyInstallCmd(2)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:1px solid #333;color:#888;padding:4px 10px;font-size:0.65rem;cursor:pointer;border-radius:3px;">copy</button>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:0.7rem;color:#666;margin-bottom:6px;font-family:var(--font-mono);letter-spacing:1px;">STEP 3 — START MONITORING</div>
+                    <div style="background:#000;border:1px solid #333;padding:12px 16px;border-radius:4px;font-family:var(--font-mono);font-size:0.78rem;color:#0f0;position:relative;">
+                        <span id="install-cmd-3">shadow-agent run</span>
+                        <button onclick="copyInstallCmd(3)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:1px solid #333;color:#888;padding:4px 10px;font-size:0.65rem;cursor:pointer;border-radius:3px;">copy</button>
+                    </div>
+                </div>
+                <p style="font-size:0.75rem;color:#555;margin-top:14px;">Or manually: <a href="https://github.com/jakes1345/ShadowCypher/tree/main/agent" style="color:var(--accent-primary);">view agent source on GitHub</a></p>
+            </div>
+
+            <!-- Connected agents list -->
+            <div id="guardian-agents-section" style="display:none;margin-bottom:40px;">
+                <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:16px;">// Connected agents</h3>
+                <div id="agents-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+            </div>
+
+            <!-- Device list -->
+            <div style="margin-bottom:40px;">
+                <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:16px;">// Network devices <span id="device-count" style="color:var(--text-secondary);font-size:0.8rem;"></span></h3>
+                <div id="device-list" style="display:flex;flex-direction:column;gap:6px;">
+                    <span style="color:#666;font-size:0.85rem;">No devices yet — install the agent to start scanning.</span>
+                </div>
+            </div>
+
+            <!-- Incident feed -->
+            <div style="margin-bottom:40px;">
+                <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:16px;">// Incidents <span id="incident-count" style="color:var(--text-secondary);font-size:0.8rem;"></span></h3>
+                <div id="incident-list" style="font-size:0.82rem;line-height:2;">
+                    <span style="color:#666;">No incidents yet — install the Guardian agent to start receiving real alerts.</span>
+                </div>
+            </div>
+
+            <!-- Recent scans -->
+            <div style="margin-bottom:40px;">
+                <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:16px;">// Recent scans</h3>
+                <div id="scan-list" style="font-size:0.8rem;color:var(--text-secondary);">
+                    <span style="color:#666;">No scans yet.</span>
+                </div>
             </div>
         </div>
     </div>
@@ -912,25 +977,85 @@
 
         async function refreshGuardian() {
             try {
-                const [devicesResp, incidentsResp] = await Promise.all([
+                const [agentsResp, devicesResp, incidentsResp, scansResp] = await Promise.all([
+                    callApi('/v1/agents'),
                     callApi('/v1/devices'),
                     callApi('/v1/incidents'),
+                    callApi('/v1/scans/recent'),
                 ]);
+                renderAgents(agentsResp.agents || []);
                 renderDevices(devicesResp.devices || []);
                 renderIncidents(incidentsResp.incidents || []);
+                renderScans(scansResp.scans || []);
                 showApiBanner(null);
             } catch (err) {
                 console.warn('[guardian] refresh failed', err.message);
                 if (err.message.includes('plan_required')) {
                     showApiBanner('This feature requires a paid plan. <a onclick="navTo(\'pricing\', document.getElementById(\'nav-pricing\'))" style="color:var(--accent-primary);cursor:pointer;">See pricing →</a>');
                 } else if (err.message.includes('db_select_failed') || err.message.includes('500')) {
-                    showApiBanner('Backend tables missing — run the SQL migrations in Supabase (0001_guardian_idempotent.sql + 0002_billing_idempotent.sql + 0003_trial_and_limits.sql).');
+                    showApiBanner('Backend tables missing — run the SQL migrations in Supabase.');
                 } else if (err.message.includes('key_not_found')) {
                     showApiBanner('Your API key is invalid or revoked. Click MINT KEY to issue a new one.');
                 } else {
                     showApiBanner(`Backend error: ${err.message}`);
                 }
             }
+        }
+
+        function renderAgents(agents) {
+            const dot = document.getElementById('agent-status-dot');
+            const label = document.getElementById('agent-status-label');
+            const section = document.getElementById('guardian-agents-section');
+            const install = document.getElementById('guardian-install');
+            const list = document.getElementById('agents-list');
+            if (!agents.length) {
+                dot.style.background = '#555';
+                label.textContent = 'No agent connected';
+                install.style.display = 'block';
+                section.style.display = 'none';
+                return;
+            }
+            install.style.display = 'none';
+            section.style.display = 'block';
+            const anyOnline = agents.some(a => a.online);
+            dot.style.background = anyOnline ? 'var(--success)' : 'var(--warning)';
+            label.textContent = anyOnline
+                ? `${agents.filter(a => a.online).length} agent${agents.filter(a=>a.online).length>1?'s':''} online`
+                : 'Agent offline — last seen ' + new Date(agents[0].last_seen_at).toLocaleString();
+            list.innerHTML = agents.map(a => {
+                const since = a.last_seen_at ? new Date(a.last_seen_at).toLocaleString() : 'never';
+                const statusColor = a.online ? 'var(--success)' : '#888';
+                return `<div style="padding:12px 16px;background:rgba(180,74,255,0.04);border-left:3px solid ${statusColor};display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <div>
+                        <strong style="color:#fff;font-family:var(--font-mono);font-size:0.85rem;">${escapeHtml(a.hostname)}</strong>
+                        <span style="margin-left:10px;font-size:0.7rem;color:${statusColor};">${a.online ? '● ONLINE' : '○ OFFLINE'}</span>
+                    </div>
+                    <div style="font-size:0.72rem;color:#666;">${escapeHtml(a.os || '')} · v${escapeHtml(a.agent_version || '?')} · last seen ${escapeHtml(since)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderScans(scans) {
+            const list = document.getElementById('scan-list');
+            if (!list) return;
+            if (!scans.length) { list.innerHTML = '<span style="color:#666;">No scans yet.</span>'; return; }
+            const typeColor = { network:'var(--accent-primary)', router:'var(--warning)', dns:'var(--success)', firewall:'var(--success)', system:'var(--warning)', port:'#888', arp:'var(--critical)' };
+            list.innerHTML = scans.map(s => {
+                const ts = new Date(s.started_at).toLocaleString();
+                const c = typeColor[s.scan_type] || '#888';
+                return `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;gap:16px;align-items:center;">
+                    <span class="mono" style="color:${c};font-size:0.7rem;text-transform:uppercase;min-width:80px;">${escapeHtml(s.scan_type)}</span>
+                    <span style="color:#666;font-size:0.72rem;">${escapeHtml(ts)}</span>
+                    ${s.device_count != null ? `<span style="color:var(--text-secondary);font-size:0.72rem;">${s.device_count} devices</span>` : ''}
+                    ${s.duration_ms != null ? `<span style="color:#555;font-size:0.7rem;">${s.duration_ms}ms</span>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function copyInstallCmd(step) {
+            const el = document.getElementById(`install-cmd-${step}`);
+            if (!el) return;
+            navigator.clipboard.writeText(el.textContent).then(() => cliPrint(`Step ${step} command copied.`, 'var(--success)'));
         }
 
         function showApiBanner(msg) {
@@ -948,8 +1073,10 @@
         function renderDevices(devices) {
             const list = document.getElementById('device-list');
             const count = document.getElementById('device-count');
+            const stat = document.getElementById('stat-devices');
             if (!list) return;
             count.textContent = devices.length ? `(${devices.length})` : '';
+            if (stat) stat.textContent = devices.length || '0';
             if (!devices.length) return;
             list.innerHTML = devices.map(d => {
                 const ports = (d.open_ports || []).join(', ');
@@ -967,9 +1094,13 @@
         function renderIncidents(incidents) {
             const list = document.getElementById('incident-list');
             const count = document.getElementById('incident-count');
+            const stat = document.getElementById('stat-incidents');
+            const scanStat = document.getElementById('stat-last-scan');
             if (!list) return;
             const open = incidents.filter(i => !i.acknowledged);
             count.textContent = incidents.length ? `(${open.length} open / ${incidents.length} total)` : '';
+            if (stat) stat.textContent = open.length || '0';
+            if (scanStat && incidents[0]) scanStat.textContent = new Date(incidents[0].created_at).toLocaleTimeString();
             if (!incidents.length) {
                 list.innerHTML = '<span style="color:#666;">No incidents yet — install the Guardian agent to start receiving real alerts.</span>';
                 return;

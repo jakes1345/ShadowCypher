@@ -116,6 +116,23 @@ export async function registerAgent(req: Request, env: Env, user: AuthedUser, co
   return json({ agent_id: agent.id }, {}, cors);
 }
 
+export async function listAgents(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
+  const agents = await dbSelect(env, "agents", {
+    select: "id,hostname,os,agent_version,last_seen_at,created_at",
+    filters: { user_id: `eq.${user.id}` },
+    order: "last_seen_at.desc",
+    limit: 50,
+  });
+  const now = Date.now();
+  const enriched = agents.map((a: Record<string, unknown>) => ({
+    ...a,
+    online: a.last_seen_at
+      ? now - new Date(a.last_seen_at as string).getTime() < 90_000
+      : false,
+  }));
+  return json({ agents: enriched }, {}, cors);
+}
+
 export async function heartbeatAgent(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
   const url = new URL(req.url);
   const agentId = url.searchParams.get("agent_id");

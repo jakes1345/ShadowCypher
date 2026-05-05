@@ -22,6 +22,7 @@
  */
 
 import {
+  listAgents,
   registerAgent,
   heartbeatAgent,
   uploadScan,
@@ -323,6 +324,7 @@ export default {
             endpoints: {
               auth: ["GET /v1/health", "GET /v1/me", "POST /v1/keys/rotate", "POST /v1/keys/revoke"],
               guardian: [
+                "GET /v1/agents",
                 "POST /v1/agents/register",
                 "POST /v1/agents/heartbeat?agent_id=",
                 "POST /v1/scans",
@@ -401,6 +403,7 @@ export default {
 
       // Authed routes — resolve user once, dispatch
       const authedRoutes: Record<string, (req: Request, env: Env, user: { id: string; email: string }, cors: HeadersInit) => Promise<Response>> = {
+        "GET /v1/agents":             listAgents,
         "POST /v1/agents/register":   registerAgent,
         "POST /v1/agents/heartbeat":  heartbeatAgent,
         "POST /v1/scans":             uploadScan,
