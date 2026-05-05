@@ -45,7 +45,7 @@ CONFIG_DIR = Path.home() / ".shadowcypher"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 STATE_PATH = CONFIG_DIR / "state.json"
 DEFAULT_API = "https://shadowcypher-api.shadowcypher.workers.dev"
-AGENT_VERSION = "0.2.0"
+AGENT_VERSION = "0.3.0"
 
 
 # ─── Config / state ─────────────────────────────────────────────────────────
@@ -277,6 +277,128 @@ def scan_network(deep: bool = True) -> list[dict[str, Any]]:
     return devices
 
 
+def audit_router(devices: list[dict[str, Any]]) -> dict[str, Any]:
+    """Check the gateway router for dangerous exposed services."""
+    dangerous = {21: "FTP", 23: "Telnet", 7547: "TR-069", 1900: "UPnP", 8080: "HTTP-alt", 8443: "HTTPS-alt"}
+    findings: list[dict[str, Any]] = []
+    gateway_ip: str | None = None
+
+    # Try to find the default gateway
+    try:
+        out = subprocess.check_output(["ip", "route"], text=True, timeout=5)
+        for line in out.splitlines():
+            if line.startswith("default"):
+                parts = line.split()
+                via_idx = parts.index("via") if "via" in parts else -1
+                if via_idx >= 0 and via_idx + 1 < len(parts):
+                    gateway_ip = parts[via_idx + 1]
+                    break
+    except (subprocess.SubprocessError, FileNotFoundError, ValueError):
+        pass
+
+    if not gateway_ip:
+        # Fall back to lowest-IP device tagged as router
+        routers = [d for d in devices if d.get("device_type") == "router"]
+        if routers:
+            gateway_ip = routers[0].get("ip")
+
+    if not gateway_ip:
+        return {"gateway": None, "findings": []}
+
+    open_ports = quick_port_scan(gateway_ip, list(dangerous.keys()), timeout=1.0)
+    for p in open_ports:
+        findings.append({"port": p, "service": dangerous[p], "severity": "critical" if p in (23, 7547) else "warning"})
+
+    return {"gateway": gateway_ip, "open_ports": open_ports, "findings": findings}
+
+
+def check_dns_leak() -> dict[str, Any]:
+    """Detect if DNS queries resolve through unexpected resolvers."""
+    expected_private = ["1.1.1.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "208.67.222.222", "208.67.220.220"]
+    resolvers: list[str] = []
+
+    try:
+        with open("/etc/resolv.conf") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("nameserver"):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        resolvers.append(parts[1])
+    except OSError:
+        pass
+
+    leaking = [r for r in resolvers if not (
+        r.startswith("127.") or r.startswith("192.168.") or
+        r.startswith("10.") or r.startswith("172.") or
+        r in expected_private
+    )]
+    return {"resolvers": resolvers, "unexpected": leaking, "leak_detected": len(leaking) > 0}
+
+
+def check_firewall() -> dict[str, Any]:
+    """Check local firewall status (ufw or iptables)."""
+    result: dict[str, Any] = {"active": False, "tool": None, "details": ""}
+
+    # Try ufw first
+    try:
+        out = subprocess.check_output(["ufw", "status"], text=True, timeout=5, stderr=subprocess.DEVNULL)
+        result["tool"] = "ufw"
+        result["active"] = "Status: active" in out
+        result["details"] = out.splitlines()[0] if out else ""
+        return result
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+    # Fall back to iptables rule count
+    try:
+        out = subprocess.check_output(["iptables", "-L", "--line-numbers"], text=True, timeout=5, stderr=subprocess.DEVNULL)
+        rules = [l for l in out.splitlines() if l and not l.startswith("Chain") and not l.startswith("num") and not l.startswith("target")]
+        result["tool"] = "iptables"
+        result["active"] = len(rules) > 0
+        result["details"] = f"{len(rules)} rules"
+        return result
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+    return result
+
+
+def check_system_hardening() -> dict[str, Any]:
+    """Check common local security hardening issues."""
+    issues: list[dict[str, Any]] = []
+
+    # SSH: PermitRootLogin
+    try:
+        out = subprocess.check_output(["sshd", "-T"], text=True, timeout=5, stderr=subprocess.DEVNULL)
+        for line in out.splitlines():
+            if line.startswith("permitrootlogin") and "yes" in line.lower():
+                issues.append({"check": "ssh_root_login", "severity": "critical", "detail": "SSH allows root login"})
+            if line.startswith("passwordauthentication") and "yes" in line.lower():
+                issues.append({"check": "ssh_password_auth", "severity": "warning", "detail": "SSH allows password auth (prefer keys)"})
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+    # World-writable passwd/shadow
+    for path in ["/etc/passwd", "/etc/shadow"]:
+        try:
+            st = os.stat(path)
+            if st.st_mode & 0o002:
+                issues.append({"check": "world_writable", "severity": "critical", "detail": f"{path} is world-writable"})
+        except OSError:
+            pass
+
+    # Core dumps enabled
+    try:
+        out = subprocess.check_output(["ulimit", "-c"], text=True, timeout=3, shell=True, stderr=subprocess.DEVNULL).strip()
+        if out != "0":
+            issues.append({"check": "core_dumps", "severity": "warning", "detail": f"Core dumps enabled (limit: {out})"})
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+    return {"issues": issues, "score": max(0, 100 - len(issues) * 20)}
+
+
 def detect_arp_anomalies(devices: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Flag duplicate MACs across multiple IPs, or duplicate IPs across MACs (classic ARP spoof)."""
     anomalies: list[dict[str, Any]] = []
@@ -318,23 +440,23 @@ def cycle(cfg: dict[str, Any], api: ApiClient, state: dict[str, Any]) -> None:
     agent_id = ensure_agent(api, state)
     api.post(f"/v1/agents/heartbeat?agent_id={agent_id}")
 
+    # ── Network scan ──────────────────────────────────────────────────────────
     t0 = time.time()
     devices = scan_network(deep=True)
     duration_ms = int((time.time() - t0) * 1000)
-
-    payload = {
+    scan_resp = api.post("/v1/scans", {
         "agent_id": agent_id,
         "scan_type": "network",
         "target": "lan",
         "duration_ms": duration_ms,
         "devices": devices,
         "result": {"raw_count": len(devices)},
-    }
-    scan_resp = api.post("/v1/scans", payload)
-    print(f"[+] scan {scan_resp.get('scan_id', '?')[:8]} · "
+    })
+    print(f"[+] network scan {scan_resp.get('scan_id', '?')[:8]} · "
           f"{len(devices)} devices · {duration_ms}ms · "
           f"{scan_resp.get('new_device_incidents', 0)} new")
 
+    # ── ARP anomaly detection ─────────────────────────────────────────────────
     for anomaly in detect_arp_anomalies(devices):
         api.post("/v1/incidents", {
             "agent_id": agent_id,
@@ -344,7 +466,94 @@ def cycle(cfg: dict[str, Any], api: ApiClient, state: dict[str, Any]) -> None:
             "detail": json.dumps(anomaly),
             "data": anomaly,
         })
-        print(f"[!] arp anomaly raised: {anomaly['kind']}")
+        print(f"[!] arp anomaly: {anomaly['kind']}")
+
+    # ── Router audit ──────────────────────────────────────────────────────────
+    router = audit_router(devices)
+    if router["findings"]:
+        api.post("/v1/scans", {
+            "agent_id": agent_id,
+            "scan_type": "router",
+            "target": router.get("gateway", "gateway"),
+            "result": router,
+        })
+        for f in router["findings"]:
+            api.post("/v1/incidents", {
+                "agent_id": agent_id,
+                "severity": f["severity"],
+                "category": "router_exposure",
+                "title": f"Router exposes {f['service']} (port {f['port']})",
+                "detail": f"Gateway {router.get('gateway')} has {f['service']} open",
+                "data": f,
+            })
+            print(f"[!] router: {f['service']} exposed on port {f['port']}")
+    else:
+        print(f"[+] router audit: clean (gateway {router.get('gateway')})")
+
+    # ── DNS leak check ────────────────────────────────────────────────────────
+    dns = check_dns_leak()
+    api.post("/v1/scans", {
+        "agent_id": agent_id,
+        "scan_type": "dns",
+        "target": "resolvers",
+        "result": dns,
+    })
+    if dns["leak_detected"]:
+        api.post("/v1/incidents", {
+            "agent_id": agent_id,
+            "severity": "warning",
+            "category": "dns_leak",
+            "title": f"DNS leak detected — {len(dns['unexpected'])} unexpected resolver(s)",
+            "detail": f"Unexpected: {', '.join(dns['unexpected'])}",
+            "data": dns,
+        })
+        print(f"[!] dns leak: {dns['unexpected']}")
+    else:
+        print(f"[+] dns check: clean ({len(dns['resolvers'])} resolver(s))")
+
+    # ── Firewall check ────────────────────────────────────────────────────────
+    fw = check_firewall()
+    api.post("/v1/scans", {
+        "agent_id": agent_id,
+        "scan_type": "firewall",
+        "target": "local",
+        "result": fw,
+    })
+    if not fw["active"]:
+        api.post("/v1/incidents", {
+            "agent_id": agent_id,
+            "severity": "warning",
+            "category": "firewall_disabled",
+            "title": "No active firewall detected on this machine",
+            "detail": f"Checked: ufw, iptables — neither appears active",
+            "data": fw,
+        })
+        print("[!] firewall: not active")
+    else:
+        print(f"[+] firewall: active ({fw['tool']} — {fw['details']})")
+
+    # ── System hardening check (runs every 6 cycles to avoid noise) ───────────
+    cycle_count = state.get("cycle_count", 0) + 1
+    state["cycle_count"] = cycle_count
+    save_state(state)
+    if cycle_count % 6 == 1:
+        hardening = check_system_hardening()
+        api.post("/v1/scans", {
+            "agent_id": agent_id,
+            "scan_type": "system",
+            "target": "local",
+            "result": hardening,
+        })
+        for issue in hardening["issues"]:
+            api.post("/v1/incidents", {
+                "agent_id": agent_id,
+                "severity": issue["severity"],
+                "category": "hardening",
+                "title": issue["detail"],
+                "detail": f"Check: {issue['check']}",
+                "data": issue,
+            })
+        print(f"[+] system hardening: score {hardening['score']}/100 · {len(hardening['issues'])} issues")
 
 
 def cmd_run(cfg: dict[str, Any]) -> None:
