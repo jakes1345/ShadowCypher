@@ -123,3 +123,9 @@ research/SWAv2-Legacy/
 backend/api/node_modules/
 backend/api/.dev.vars
 backend/api/.wrangler/
+
+# Capacitor
+node_modules/
+www/
+android/
+ios/
