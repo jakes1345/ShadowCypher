@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow AI — Your Phone's Sovereign Intelligence</title>
+    <meta name="description" content="Shadow replaces Bixby, Siri, and Google Assistant with a fully private, on-device AI that never phones home. Open source. Zero cloud. 100% yours.">
+    <link rel="icon" type="image/png" href="/icon-192.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        body { background: #020202; color: #ddd; font-family: 'Outfit', sans-serif; overflow-x: hidden; }
+
+        .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 24px; position: relative; }
+        .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, rgba(180,74,255,0.12) 0%, transparent 70%); pointer-events: none; }
+
+        .orb { width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #d480ff, #7000cc); box-shadow: 0 0 60px rgba(180,74,255,0.5), 0 0 120px rgba(180,74,255,0.2); margin: 0 auto 40px; animation: pulse 3s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 60px rgba(180,74,255,0.5), 0 0 120px rgba(180,74,255,0.2); transform: scale(1); } 50% { box-shadow: 0 0 80px rgba(180,74,255,0.7), 0 0 160px rgba(180,74,255,0.3); transform: scale(1.04); } }
+
+        .badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; padding: 5px 14px; border: 1px solid rgba(180,74,255,0.4); color: #b44aff; border-radius: 2px; margin-bottom: 24px; text-transform: uppercase; }
+        h1 { font-size: clamp(2.8rem, 7vw, 5.5rem); font-weight: 900; line-height: 1.05; color: #fff; margin-bottom: 24px; letter-spacing: -1px; }
+        h1 span { color: #b44aff; }
+        .hero-sub { font-size: clamp(1rem, 2.5vw, 1.3rem); color: #aaa; max-width: 640px; margin: 0 auto 40px; line-height: 1.7; font-weight: 300; }
+
+        .cta-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+        .btn-primary { display: inline-block; padding: 16px 32px; background: #b44aff; color: #fff; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; border: none; cursor: pointer; transition: background 0.2s, box-shadow 0.2s; }
+        .btn-primary:hover { background: #c060ff; box-shadow: 0 0 30px rgba(180,74,255,0.4); }
+        .btn-ghost { display: inline-block; padding: 16px 32px; border: 1px solid rgba(180,74,255,0.4); color: #b44aff; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; transition: border-color 0.2s, background 0.2s; }
+        .btn-ghost:hover { background: rgba(180,74,255,0.06); border-color: #b44aff; }
+
+        .vs-strip { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #555; }
+        .vs-strip span { color: #333; }
+        .vs-strip strong { color: #666; }
+
+        section { max-width: 1100px; margin: 0 auto; padding: 100px 24px; }
+
+        .section-label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; color: #b44aff; text-transform: uppercase; margin-bottom: 16px; }
+        .section-title { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; color: #fff; margin-bottom: 16px; line-height: 1.15; }
+        .section-sub { font-size: 1rem; color: #888; max-width: 560px; line-height: 1.7; font-weight: 300; }
+
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1px; background: rgba(180,74,255,0.1); margin-top: 60px; }
+        .feature { background: #020202; padding: 36px 32px; }
+        .feature-icon { font-size: 1.6rem; margin-bottom: 16px; }
+        .feature h3 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 10px; font-family: 'JetBrains Mono', monospace; }
+        .feature p { font-size: 0.85rem; color: #777; line-height: 1.7; font-weight: 300; }
+        .feature .tag { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.58rem; letter-spacing: 2px; padding: 2px 8px; margin-top: 12px; background: rgba(0,255,65,0.06); color: #00ff41; border: 1px solid rgba(0,255,65,0.15); }
+
+        .comparison { margin-top: 60px; border: 1px solid rgba(180,74,255,0.15); border-radius: 4px; overflow: hidden; }
+        .comparison table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .comparison th { padding: 18px 20px; text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; background: rgba(180,74,255,0.05); border-bottom: 1px solid rgba(180,74,255,0.1); }
+        .comparison th:not(:first-child) { text-align: center; }
+        .comparison td { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); color: #aaa; }
+        .comparison td:not(:first-child) { text-align: center; }
+        .comparison tr:last-child td { border-bottom: none; }
+        .yes { color: #00ff41; font-weight: 700; }
+        .no { color: #ff003c; }
+        .col-shadow { color: #b44aff; font-weight: 700; }
+
+        .how-it-works { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 40px; margin-top: 60px; counter-reset: step; }
+        .step { position: relative; padding-left: 24px; counter-increment: step; }
+        .step::before { content: '0' counter(step); position: absolute; left: 0; top: 0; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #b44aff; }
+        .step h3 { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 8px; margin-top: 4px; }
+        .step p { font-size: 0.82rem; color: #666; line-height: 1.7; font-weight: 300; }
+
+        .integration-box { margin-top: 60px; padding: 40px; border: 1px solid rgba(180,74,255,0.2); background: rgba(180,74,255,0.03); border-radius: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+        @media (max-width: 700px) { .integration-box { grid-template-columns: 1fr; } }
+        .integration-box h3 { font-size: 1.3rem; font-weight: 800; color: #fff; margin-bottom: 12px; }
+        .integration-box p { font-size: 0.85rem; color: #777; line-height: 1.7; font-weight: 300; margin-bottom: 20px; }
+        .flow { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; display: flex; flex-direction: column; gap: 8px; }
+        .flow-item { padding: 10px 14px; background: rgba(0,0,0,0.4); border-left: 2px solid #b44aff; color: #aaa; }
+        .flow-item span { color: #b44aff; margin-right: 8px; }
+        .flow-arrow { color: #333; padding-left: 14px; font-size: 0.7rem; }
+
+        .download-section { text-align: center; padding: 100px 24px; border-top: 1px solid rgba(180,74,255,0.1); }
+        .download-section h2 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; color: #fff; margin-bottom: 16px; }
+        .download-section p { color: #777; font-size: 0.95rem; max-width: 500px; margin: 0 auto 40px; line-height: 1.7; font-weight: 300; }
+        .requirements { display: inline-flex; gap: 24px; flex-wrap: wrap; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #555; margin-top: 24px; }
+        .requirements span::before { content: '· '; }
+
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; background: rgba(2,2,2,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(180,74,255,0.08); }
+        .nav-logo { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #fff; text-decoration: none; letter-spacing: 2px; }
+        .nav-logo span { color: #b44aff; }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-links a { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #666; text-decoration: none; letter-spacing: 1px; transition: color 0.2s; }
+        .nav-links a:hover { color: #b44aff; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">SHADOW<span>CYPHER</span></a>
+    <div class="nav-links">
+        <a href="/">Platform</a>
+        <a href="/shadow.html" style="color:#b44aff;">Shadow AI</a>
+        <a href="https://github.com/jakes1345/ShadowCypher" target="_blank">GitHub</a>
+        <a href="/?nav=account" class="btn-primary" style="padding:10px 20px;font-size:0.65rem;">Dashboard →</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="orb"></div>
+    <div class="badge">Beta — Open Source</div>
+    <h1>Your phone.<br><span>Your AI.</span><br>Nobody else's.</h1>
+    <p class="hero-sub">Shadow replaces Bixby, Siri, and Google Assistant with a fully sovereign AI that runs entirely on your device. No cloud. No data collection. No subscription. Just you and your phone.</p>
+    <div class="cta-row">
+        <a href="https://github.com/jakes1345/ShadowCypher/releases" class="btn-primary">Download APK (Beta)</a>
+        <a href="https://github.com/jakes1345/ShadowCypher/tree/main/agent" class="btn-ghost">View Source</a>
+    </div>
+    <div class="vs-strip">
+        <strong>Replaces:</strong>
+        <span>Bixby</span> · <span>Google Assistant</span> · <span>Siri</span> · <span>Cortana</span>
+        <span style="color:#b44aff;margin-left:8px;">100% on-device · Gemma-4 · Zero telemetry</span>
+    </div>
+</div>
+
+<!-- FEATURES -->
+<section>
+    <div class="section-label">What Shadow does</div>
+    <h2 class="section-title">A real assistant.<br>Not a data pipeline.</h2>
+    <p class="section-sub">Every other "AI assistant" is a microphone pointed at a server farm. Shadow runs the model on your CPU. Your conversations never leave your phone.</p>
+
+    <div class="features-grid">
+        <div class="feature">
+            <div class="feature-icon">🎙️</div>
+            <h3>Wake Word</h3>
+            <p>Say "Shadow" or "Hey Shadow" from anywhere — lock screen, any app, always-on. Triggers instantly without sending audio to any server.</p>
+            <span class="tag">On-device STT</span>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">🧠</div>
+            <h3>Local Gemma-4 Inference</h3>
+            <p>Runs Google's Gemma-4 model quantized to 4-bit directly on your Snapdragon processor. 5 tokens/sec on SD8 Gen2. No API key needed.</p>
+            <span class="tag">2.96 GB model</span>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">📞</div>
+            <h3>Device Control</h3>
+            <p>Call contacts, send SMS, set alarms, toggle Bluetooth/WiFi/flashlight, adjust volume, read battery and storage — fully voice-controlled.</p>
+            <span class="tag">Real commands</span>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">🛡️</div>
+            <h3>Phishing Detection</h3>
+            <p>Shadow reads your notifications and flags suspicious links, spoofed domains, and social engineering attempts before you tap them.</p>
+            <span class="tag">Heuristic + LLM</span>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">👁️</div>
+            <h3>Vision + Screen Reading</h3>
+            <p>Point your camera at anything — receipts, menus, signs, code — and ask Shadow about it. ML Kit OCR runs fully offline.</p>
+            <span class="tag">On-device OCR</span>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">🌐</div>
+            <h3>WiFi Security Monitor</h3>
+            <p>Every time you join a new network Shadow scans for devices and ships the results to your ShadowCypher Guardian dashboard.</p>
+            <span class="tag">Guardian-linked</span>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">💾</div>
+            <h3>Private Memory</h3>
+            <p>Shadow remembers context across sessions using an on-device SQLite database. No cloud sync. Your history stays on your phone.</p>
+            <span class="tag">Local SQLite</span>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">🔌</div>
+            <h3>Always-On Brain</h3>
+            <p>Runs as a foreground service with a watchdog that revives it if the OS kills it. Shadow is running whether or not you have the app open.</p>
+            <span class="tag">Persistent daemon</span>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">📦</div>
+            <h3>Swap Models Freely</h3>
+            <p>Not locked to Gemma-4. Download Hermes 3, Qwen 2.5, or any GGUF model from Hugging Face and switch with one tap — no PC required.</p>
+            <span class="tag">GGUF compatible</span>
+        </div>
+    </div>
+</section>
+
+<!-- COMPARISON -->
+<section style="padding-top: 0;">
+    <div class="section-label">vs. The competition</div>
+    <h2 class="section-title">They own your data.<br>Shadow doesn't.</h2>
+
+    <div class="comparison">
+        <table>
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th class="col-shadow">Shadow</th>
+                    <th>Bixby</th>
+                    <th>Google</th>
+                    <th>Siri</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Runs 100% on-device</td><td class="yes col-shadow">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+                <tr><td>No cloud account required</td><td class="yes col-shadow">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+                <tr><td>Zero telemetry / data collection</td><td class="yes col-shadow">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+                <tr><td>Open source</td><td class="yes col-shadow">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+                <tr><td>Swap AI models freely</td><td class="yes col-shadow">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+                <tr><td>Works offline completely</td><td class="yes col-shadow">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">Partial</td></tr>
+                <tr><td>Network security monitoring</td><td class="yes col-shadow">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+                <tr><td>Phishing detection</td><td class="yes col-shadow">✓</td><td class="no">✗</td><td class="no">Partial</td><td class="no">✗</td></tr>
+                <tr><td>Phone calls / SMS</td><td class="yes col-shadow">✓</td><td class="yes" style="color:#aaa;">✓</td><td class="yes" style="color:#aaa;">✓</td><td class="yes" style="color:#aaa;">✓</td></tr>
+                <tr><td>Free forever</td><td class="yes col-shadow">✓</td><td class="yes" style="color:#aaa;">✓</td><td class="yes" style="color:#aaa;">✓</td><td class="yes" style="color:#aaa;">✓</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="padding-top: 0;">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">Install once.<br>Own it forever.</h2>
+
+    <div class="how-it-works">
+        <div class="step">
+            <h3>Download the APK</h3>
+            <p>Sideload the APK from GitHub releases. No Play Store needed. No account. Enable "Install from unknown sources" in Settings → Apps.</p>
+        </div>
+        <div class="step">
+            <h3>Download a model</h3>
+            <p>Open Shadow and tap Download. Pick Gemma-4 (recommended) or any GGUF model. Downloads direct from Hugging Face — no PC required.</p>
+        </div>
+        <div class="step">
+            <h3>Set as default assistant</h3>
+            <p>Settings → Apps → Default apps → Digital assistant → Shadow. Now long-press power or use your gesture to summon it anywhere.</p>
+        </div>
+        <div class="step">
+            <h3>Connect to Guardian (optional)</h3>
+            <p>Log in with your ShadowCypher account and Shadow ships security events straight to your Guardian dashboard in real time.</p>
+        </div>
+    </div>
+</section>
+
+<!-- GUARDIAN INTEGRATION -->
+<section style="padding-top: 0;">
+    <div class="section-label">ShadowCypher integration</div>
+    <h2 class="section-title">Shadow watches your phone.<br>Guardian watches your network.</h2>
+    <p class="section-sub">Connect Shadow to your ShadowCypher account and get a unified view of every security event across every device on your network — from one dashboard.</p>
+
+    <div class="integration-box">
+        <div>
+            <h3>What gets sent to your dashboard</h3>
+            <p>Shadow ships events to Guardian only if you opt in with your API key. Everything is authenticated. Nothing is shared.</p>
+            <a href="/?nav=account" class="btn-primary" style="font-size:0.7rem;padding:14px 24px;">Open Guardian Dashboard →</a>
+        </div>
+        <div class="flow">
+            <div class="flow-item"><span>📱</span>Phishing notification detected</div>
+            <div class="flow-arrow">↓ POST /v1/incidents</div>
+            <div class="flow-item"><span>📡</span>New WiFi network joined → LAN scan</div>
+            <div class="flow-arrow">↓ POST /v1/scans</div>
+            <div class="flow-item"><span>🔗</span>Suspicious URL in clipboard</div>
+            <div class="flow-arrow">↓ POST /v1/incidents</div>
+            <div class="flow-item"><span>💓</span>Heartbeat every 8 hours</div>
+            <div class="flow-arrow">↓ POST /v1/agents/heartbeat</div>
+        </div>
+    </div>
+</section>
+
+<!-- DOWNLOAD CTA -->
+<div class="download-section">
+    <div class="badge">Beta — Free Forever</div>
+    <h2>Download Shadow</h2>
+    <p>Open source. Sideload-ready. No account required to use the AI. Guardian integration is optional.</p>
+    <div class="cta-row">
+        <a href="https://github.com/jakes1345/ShadowCypher/releases" class="btn-primary">Download APK (Beta)</a>
+        <a href="https://github.com/jakes1345/ShadowCypher" class="btn-ghost">Star on GitHub</a>
+    </div>
+    <div class="requirements">
+        <span>Android 10+</span>
+        <span>Snapdragon 8 Gen 1 or newer recommended</span>
+        <span>3 GB free storage for Gemma-4</span>
+        <span>ARM64</span>
+    </div>
+</div>
+
+</body>
+</html>
