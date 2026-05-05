@@ -989,19 +989,7 @@
             }).join('');
         }
 
-        // Stripe Payment Links per tier. Webhook resolves the actual plan via price_id mapping
-        // in Worker secrets (STRIPE_PRICE_GUARDIAN_PRO / _OPERATOR), and maps user via client_reference_id.
-        const STRIPE_PAYMENT_LINKS = {
-            guardian_pro: 'https://buy.stripe.com/3cIfZ9cAZ77yftI5Tc6Vq02',
-            operator:     'https://buy.stripe.com/7sY9ALgRf63ubds0yS6Vq01',
-        };
-
         async function upgradeTo(plan) {
-            const link = STRIPE_PAYMENT_LINKS[plan];
-            if (!link) {
-                cliPrint(`${plan} payment link not configured.`, 'var(--warning)');
-                return;
-            }
             if (!supabaseClient) {
                 cliPrint('Auth offline — try again in a moment.', 'var(--warning)');
                 return;
@@ -1012,10 +1000,16 @@
                 navTo('account', document.getElementById('nav-account'));
                 return;
             }
-            const url = new URL(link);
-            url.searchParams.set('client_reference_id', session.user.id);
-            url.searchParams.set('prefilled_email', session.user.email);
-            window.location.href = url.toString();
+            try {
+                cliPrint('Redirecting to checkout…', 'var(--text-secondary)');
+                const { url } = await callApi('/v1/billing/checkout', {
+                    method: 'POST',
+                    body: JSON.stringify({ plan }),
+                });
+                if (url) window.location.href = url;
+            } catch (err) {
+                cliPrint(`Checkout failed: ${err.message}`, 'var(--critical)');
+            }
         }
 
         async function manageSubscription() {
