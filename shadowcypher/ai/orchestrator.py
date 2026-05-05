@@ -45,6 +45,8 @@ class AIOrchestrator:
     @property
     def tool_definitions(self) -> str:
         """Dynamically generates the tool manifest from the unified Registry."""
+        if self.registry is None:
+            return "Available Tactical Tools:\n(registry not initialized)\n"
         info = self.registry.tools_info
         manifest = "Available Tactical Tools:\n"
         for name, tool in info.items():
