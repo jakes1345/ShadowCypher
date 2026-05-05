@@ -501,6 +501,22 @@
                 </div>
 
                 <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Refer a friend</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px;">Get <strong style="color:var(--accent-primary);">+30 days of Pro</strong> for every friend who subscribes from your link.</p>
+                    <div id="referral-block" style="background:rgba(180,74,255,0.04); border:1px solid var(--glass-border); padding:14px 18px; border-radius:6px;">
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <input type="text" id="referral-link" readonly style="flex:1; padding:10px 14px; background:#000; border:1px solid #333; color:#fff; font-family:var(--font-mono); font-size:0.78rem;" value="loading…">
+                            <button onclick="copyReferralLink()" class="btn-primary" style="padding:10px 18px; font-size:0.7rem;">Copy</button>
+                        </div>
+                        <div style="display:flex; gap:24px; margin-top:14px; font-size:0.75rem;">
+                            <div><span style="color:var(--text-secondary);">Signups:</span> <strong id="referral-signups" style="color:#fff;">—</strong></div>
+                            <div><span style="color:var(--text-secondary);">Rewards earned:</span> <strong id="referral-rewards" style="color:var(--accent-primary);">—</strong></div>
+                            <div><span style="color:var(--text-secondary);">Days credited:</span> <strong id="referral-days" style="color:var(--success);">—</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Recent activity</h3>
                     <div id="audit-list" style="font-size:0.78rem; color:#aaa; line-height:1.8;"></div>
                 </div>
@@ -854,7 +870,7 @@
             if (window._guardianTimer) clearInterval(window._guardianTimer);
             window._guardianTimer = setInterval(refreshGuardian, 30000);
 
-            // Load notification prefs + teams + AI usage + webhooks + stats + audit + mfa
+            // Load notification prefs + teams + AI usage + webhooks + stats + audit + mfa + referrals
             loadNotifPrefs().catch(() => {});
             loadTeams().catch(() => {});
             loadAiUsage().catch(() => {});
@@ -862,6 +878,9 @@
             loadStats().catch(() => {});
             loadAudit().catch(() => {});
             loadMfa().catch(() => {});
+            loadReferral().catch(() => {});
+            // Attribute referral if user came from /r/<code>
+            attributeReferralIfNeeded().catch(() => {});
 
             // First-time onboarding (only fires if localStorage flag absent)
             setTimeout(() => startOnboarding(), 600);
@@ -1303,6 +1322,45 @@
                 cliPrint('Webhook deleted.', 'var(--warning)');
                 loadWebhooks();
             } catch (err) { cliPrint(`Delete failed: ${err.message}`, 'var(--critical)'); }
+        }
+
+        // ─── Referrals ────────────────────────────────────────────
+        async function loadReferral() {
+            try {
+                const r = await callApi('/v1/referrals/me');
+                const link = document.getElementById('referral-link');
+                if (link) link.value = r.share_url || '(none)';
+                const sg = document.getElementById('referral-signups'); if (sg) sg.textContent = r.signups_attributed ?? 0;
+                const rw = document.getElementById('referral-rewards'); if (rw) rw.textContent = r.rewards_earned ?? 0;
+                const dy = document.getElementById('referral-days'); if (dy) dy.textContent = (r.days_credited_total ?? 0) + 'd';
+            } catch (err) { console.warn('[ref] load failed', err.message); }
+        }
+
+        function copyReferralLink() {
+            const link = document.getElementById('referral-link');
+            if (!link) return;
+            link.select();
+            navigator.clipboard.writeText(link.value).then(() => {
+                cliPrint('Referral link copied.', 'var(--success)');
+            });
+        }
+
+        async function attributeReferralIfNeeded() {
+            // Run on first authenticated session if a referral code is in localStorage
+            try {
+                const code = localStorage.getItem('sc_referral_code');
+                if (!code) return;
+                const result = await callApi('/v1/referrals/claim', { method: 'POST', body: JSON.stringify({ code }) });
+                if (result.ok) {
+                    cliPrint(`Welcome bonus active — referrer credited.`, 'var(--success)');
+                    localStorage.removeItem('sc_referral_code');
+                }
+            } catch (err) {
+                // Silent — common reasons (already_referred, claim_window_expired) shouldn't surface
+                if (err.message === 'already_referred' || err.message === 'claim_window_expired') {
+                    localStorage.removeItem('sc_referral_code');
+                }
+            }
         }
 
         // ─── Audit log ────────────────────────────────────────────

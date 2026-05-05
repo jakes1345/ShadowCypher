@@ -18,6 +18,7 @@
 
 import type { Env } from "./index";
 import { dbSelect, dbUpdate, dbUpsert } from "./supabase";
+import { applyReferralReward } from "./referrals";
 
 interface AuthedUser {
   id: string;
@@ -233,6 +234,13 @@ export async function handleWebhook(req: Request, env: Env, cors: HeadersInit): 
         if (periodEnd) patch.current_period_end = new Date(periodEnd * 1000).toISOString();
 
         await dbUpdate(env, "profiles", { user_id: `eq.${targetUserId}` }, patch);
+
+        // Credit referrer on first subscription (idempotent — skips if already redeemed)
+        if (event.type === "customer.subscription.created" || event.type === "checkout.session.completed") {
+          await applyReferralReward(env, targetUserId).catch((e) =>
+            console.warn("[webhook] referral reward failed", e instanceof Error ? e.message : e)
+          );
+        }
         break;
       }
 
