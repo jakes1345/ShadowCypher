@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHADOWCYPHER — Sovereign Tactical Suite</title>
+    <meta name="description" content="ShadowCypher: sovereign tactical security suite with Ghost Mode invisibility, AI-powered security assistant, and personal device protection. Zero telemetry. Zero compromise.">
+    <link rel="icon" type="image/png" href="/icon-192.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#b44aff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ShadowCypher">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    <canvas id="void-canvas" style="position:fixed;inset:0;z-index:-1;"></canvas>
+    <div id="hex-dump" style="position:fixed;inset:0;z-index:-1;opacity:0.04;font-family:var(--font-main);font-size:10px;color:var(--accent-primary);pointer-events:none;overflow:hidden;line-height:1.2;padding:20px;"></div>
+
+    <div class="hud-layer">
+        <div class="hud-corner corner-tl"></div>
+        <div class="hud-corner corner-tr"></div>
+        <div class="hud-corner corner-bl"></div>
+        <div class="hud-corner corner-br"></div>
+        <div class="scan-line"></div>
+    </div>
+
+    <!-- Page Shutter -->
+    <div class="page-shutter" id="pageShutter">
+        <div class="shutter-logo">SHADOWCYPHER</div>
+    </div>
+
+    <nav class="premium-nav">
+        <div class="logo-container" onclick="navTo('home')" style="display:flex;align-items:center;cursor:pointer;">
+            <div class="logo-text" style="font-family:var(--font-heading);font-size:1.8rem;letter-spacing:5px;">SHADOWCYPHER</div>
+        </div>
+        <div class="nav-tabs" id="navTabs">
+            <div class="nav-indicator" id="navIndicator"></div>
+            <a onclick="navTo('home',this)" id="nav-home" class="nav-tab active">Overview</a>
+            <a onclick="navTo('arsenal',this)" id="nav-arsenal" class="nav-tab">Arsenal</a>
+            <a onclick="navTo('ghost',this)" id="nav-ghost" class="nav-tab">Ghost</a>
+            <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
+            <a onclick="navTo('pricing',this)" id="nav-pricing" class="nav-tab">Pro</a>
+            <a onclick="navTo('account',this)" id="nav-account" class="nav-tab">Account</a>
+            <a onclick="signOut()" id="nav-signout" class="nav-tab" style="display:none;color:var(--accent-secondary);">Sign out</a>
+        </div>
+    </nav>
+
+    <!-- HOME -->
+    <div id="page-home" class="page active">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;height:calc(100vh - 200px);align-items:center;">
+            <div class="hero-container" style="text-align:left;">
+                <div class="status-badge"><div class="status-dot"></div>v4.0 · Now in production</div>
+                <h1 class="hero-title" style="font-size:3.5rem;">Enterprise security,<br><span style="color:var(--accent-primary);">sovereign by design.</span></h1>
+                <p class="hero-subtitle">A unified security platform for offensive testing, anonymity, and personal device protection. Local-first AI. Zero telemetry. Built for operators and engineers who need to verify, not trust.</p>
+                <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                    <a onclick="navTo('arsenal',document.getElementById('nav-arsenal'))" class="btn-primary">Engage Arsenal</a>
+                    <a onclick="navTo('guardian',document.getElementById('nav-guardian'))" class="btn-primary" style="background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);">Guardian Shield</a>
+                </div>
+                <div class="swarm-feed" style="margin-top:40px;width:100%;">
+                    <div class="mono" style="font-size:0.7rem;color:var(--accent-primary);margin-bottom:10px;opacity:0.6;">// LIVE_TELEMETRY</div>
+                    <div id="swarm-log" style="height:100px;overflow:hidden;border-left:2px solid var(--accent-primary);padding-left:20px;font-family:var(--font-main);font-size:0.8rem;line-height:2;"></div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:40px;">
+                <div class="stat-card"><div class="stat-num">29</div><div class="stat-label">TACTICAL SCRIPTS</div></div>
+                <div class="stat-card"><div class="stat-num">8</div><div class="stat-label">GHOST LAYERS</div></div>
+                <div class="stat-card"><div class="stat-num">110</div><div class="stat-label">TESTS PASSING</div></div>
+                <div class="stat-card"><div class="stat-num">9</div><div class="stat-label">MCP TOOLS</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ARSENAL -->
+    <div id="page-arsenal" class="page">
+        <div class="content-section">
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Tactical Arsenal</h2>
+            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:600px;">30+ purpose-built offensive and defensive modules. Every tool exists because it was needed in the field.</p>
+            <div class="arsenal-grid">
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">NEXUS-COMMAND</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Real-time HUD with Cairo gauges. Local AI inference via Ollama. Quantum-Core deep analysis. Network topology war-map. ShadowScript DSL.</p></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">COVERT-INTEL</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Nmap signal analysis. Sherlock OSINT across 300+ platforms. Infrastructure recon. Nuclei vulnerability sweep with ExploitDB correlation.</p></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">OFFENSIVE-LAB</h3><p style="font-size:0.85rem;color:var(--text-secondary);">AI-powered DeepHat Apex. Multi-platform payload forge. SQL injection, XSS, SSRF. Hydra/Hashcat cracking. Aircrack-ng wireless attacks.</p></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">SOVEREIGN-OPS</h3><p style="font-size:0.85rem;color:var(--text-secondary);">AES-256-GCM encrypted chat with X25519 forward secrecy. Go WebSocket relay. Sisyphus integrity sentinel. RSA-4096 admin identity.</p></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">SHADOW-CLI</h3><p style="font-size:0.85rem;color:var(--text-secondary);">AI security assistant. Natural language commands: "scan my network", "engage ghost mode", "am I anonymous?" — 9 MCP tools.</p></div>
+                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">SHADOWSCRIPT</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Custom tactical scripting language with hand-written lexer, recursive descent parser, and tree-walking interpreter for multi-tool orchestration.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GHOST PROTOCOL -->
+    <div id="page-ghost" class="page">
+        <div class="content-section">
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Ghost Protocol</h2>
+            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;">An eight-layer anonymity stack for high-risk research and red-team engagements. One command engages the chain; one command restores normal state. Designed for engineers who need verifiable operational privacy.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;">
+                <div class="module-card" style="clip-path:none;border-left:3px solid var(--accent-primary);">
+                    <h3 class="mono" style="margin-bottom:20px;">8 LAYERS OF INVISIBILITY</h3>
+                    <ul class="mono" style="font-size:0.75rem;color:var(--accent-primary);list-style:none;line-height:2.5;">
+                        <li>01 // TOR TRANSPARENT REDIRECT</li>
+                        <li>02 // IPTABLES KILL-SWITCH</li>
+                        <li>03 // MAC RANDOMIZATION</li>
+                        <li>04 // HOSTNAME NEUTRALIZE</li>
+                        <li>05 // TIMEZONE → UTC</li>
+                        <li>06 // DNS LEAK PREVENTION</li>
+                        <li>07 // RAM-ONLY WORKSPACE</li>
+                        <li>08 // LOG SUPPRESSION</li>
+                    </ul>
+                </div>
+                <div style="display:grid;gap:16px;">
+                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;">TRAFFIC MIRAGE</h3><p style="font-size:0.8rem;color:var(--text-secondary);">obfs4 bridges make Tor look like HTTPS. Cover traffic generation. Timing obfuscation defeats correlation attacks. DNS tunneling.</p></div>
+                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;">DEAD DROP</h3><p style="font-size:0.8rem;color:var(--text-secondary);">7-pass secure shredding. Swap sanitization. LUKS encrypted USB. Emergency PANIC button — destroys all keys, logs, and configs instantly.</p></div>
+                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;">SHADOW AUDIT</h3><p style="font-size:0.8rem;color:var(--text-secondary);">Full anonymity chain validation. DNS leaks, MAC fingerprinting, hostname exposure, timezone leaks, firewall rules. Anonymity score + auto-fix.</p></div>
+                </div>
+            </div>
+            <div style="margin-top:40px;padding:30px;background:var(--bg-surface);border:1px solid var(--glass-border);">
+                <div class="mono" style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:15px;">// USAGE</div>
+                <code class="mono" style="font-size:0.9rem;color:var(--accent-primary);line-height:2;">
+                    sudo python3 ghost_mode.py engage &nbsp;&nbsp;&nbsp;# Total invisibility<br>
+                    sudo python3 ghost_mode.py disengage # Restore normal<br>
+                    python3 shadow_audit.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Check anonymity score<br>
+                    python3 dead_drop.py panic &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# EMERGENCY: destroy everything
+                </code>
+            </div>
+        </div>
+    </div>
+
+    <!-- GUARDIAN -->
+    <div id="page-guardian" class="page">
+        <div class="content-section">
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Guardian</h2>
+            <p style="color:var(--text-secondary);margin-bottom:30px;max-width:700px;">Continuous network monitoring from a daemon running on your machine. Discovers every device, detects ARP spoofing, router exposure, and unauthorized access — all surfaced here in real time.</p>
+
+            <!-- Agent status bar -->
+            <div id="guardian-agent-bar" style="margin-bottom:30px;padding:16px 20px;background:rgba(180,74,255,0.04);border:1px solid var(--glass-border);border-radius:6px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div id="agent-status-dot" style="width:10px;height:10px;border-radius:50%;background:#555;flex-shrink:0;"></div>
+                        <span id="agent-status-label" class="mono" style="font-size:0.8rem;color:var(--text-secondary);">No agent connected</span>
+                    </div>
+                    <div style="display:flex;gap:24px;font-size:0.75rem;color:var(--text-secondary);">
+                        <span>Devices: <strong id="stat-devices" style="color:#fff;">—</strong></span>
+                        <span>Open incidents: <strong id="stat-incidents" style="color:#fff;">—</strong></span>
+                        <span>Last scan: <strong id="stat-last-scan" style="color:#fff;">—</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Install section (shown when no agent) -->
+            <div id="guardian-install" style="display:none;margin-bottom:40px;padding:24px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(0,255,127,0.02);">
+                <h3 class="mono" style="color:var(--success);margin-bottom:16px;font-size:0.9rem;">// Install Guardian Agent</h3>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:20px;">Run this on any Linux or macOS machine on your network. It will scan every 10 minutes and report back here.</p>
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:0.7rem;color:#666;margin-bottom:6px;font-family:var(--font-mono);letter-spacing:1px;">STEP 1 — DOWNLOAD &amp; INSTALL</div>
+                    <div style="background:#000;border:1px solid #333;padding:12px 16px;border-radius:4px;font-family:var(--font-mono);font-size:0.78rem;color:#0f0;position:relative;">
+                        <span id="install-cmd-1">curl -sSL https://shadowcypher.site/agent/install.sh | bash</span>
+                        <button onclick="copyInstallCmd(1)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:1px solid #333;color:#888;padding:4px 10px;font-size:0.65rem;cursor:pointer;border-radius:3px;">copy</button>
+                    </div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:0.7rem;color:#666;margin-bottom:6px;font-family:var(--font-mono);letter-spacing:1px;">STEP 2 — CONNECT YOUR ACCOUNT</div>
+                    <div style="background:#000;border:1px solid #333;padding:12px 16px;border-radius:4px;font-family:var(--font-mono);font-size:0.78rem;color:#0f0;position:relative;">
+                        <span id="install-cmd-2">shadow-agent init</span>
+                        <button onclick="copyInstallCmd(2)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:1px solid #333;color:#888;padding:4px 10px;font-size:0.65rem;cursor:pointer;border-radius:3px;">copy</button>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size:0.7rem;color:#666;margin-bottom:6px;font-family:var(--font-mono);letter-spacing:1px;">STEP 3 — START MONITORING</div>
+                    <div style="background:#000;border:1px solid #333;padding:12px 16px;border-radius:4px;font-family:var(--font-mono);font-size:0.78rem;color:#0f0;position:relative;">
+                        <span id="install-cmd-3">shadow-agent run</span>
+                        <button onclick="copyInstallCmd(3)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:1px solid #333;color:#888;padding:4px 10px;font-size:0.65rem;cursor:pointer;border-radius:3px;">copy</button>
+                    </div>
+                </div>
+                <p style="font-size:0.75rem;color:#555;margin-top:14px;">Or manually: <a href="https://github.com/jakes1345/ShadowCypher/tree/main/agent" style="color:var(--accent-primary);">view agent source on GitHub</a></p>
+            </div>
+
+            <!-- Connected agents list -->
+            <div id="guardian-agents-section" style="display:none;margin-bottom:40px;">
+                <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:16px;">// Connected agents</h3>
+                <div id="agents-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+            </div>
+
+            <!-- Device list -->
+            <div style="margin-bottom:40px;">
+                <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:16px;">// Network devices <span id="device-count" style="color:var(--text-secondary);font-size:0.8rem;"></span></h3>
+                <div id="device-list" style="display:flex;flex-direction:column;gap:6px;">
+                    <span style="color:#666;font-size:0.85rem;">No devices yet — install the agent to start scanning.</span>
+                </div>
+            </div>
+
+            <!-- Incident feed -->
+            <div style="margin-bottom:40px;">
+                <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:16px;">// Incidents <span id="incident-count" style="color:var(--text-secondary);font-size:0.8rem;"></span></h3>
+                <div id="incident-list" style="font-size:0.82rem;line-height:2;">
+                    <span style="color:#666;">No incidents yet — install the Guardian agent to start receiving real alerts.</span>
+                </div>
+            </div>
+
+            <!-- Recent scans -->
+            <div style="margin-bottom:40px;">
+                <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:16px;">// Recent scans</h3>
+                <div id="scan-list" style="font-size:0.8rem;color:var(--text-secondary);">
+                    <span style="color:#666;">No scans yet.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRICING -->
+    <div id="page-pricing" class="page">
+        <div class="content-section" style="text-align:center;">
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Go Pro</h2>
+            <p style="color:#bbb;margin-bottom:60px;max-width:600px;margin-left:auto;margin-right:auto;">Community edition is free forever. Pro unlocks the tools that make ShadowCypher a sovereign operating environment.</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:30px;max-width:1000px;margin:0 auto;">
+                <div class="price-card">
+                    <div class="price-tier">COMMUNITY</div>
+                    <div class="price-amount">$0</div>
+                    <div class="price-period">forever</div>
+                    <ul class="price-features">
+                        <li>Full CLI toolkit</li>
+                        <li>29 tactical scripts</li>
+                        <li>One-time network scan</li>
+                        <li>Basic router audit</li>
+                        <li>Local AI inference</li>
+                        <li>ShadowScript DSL</li>
+                    </ul>
+                    <a href="https://github.com/jakes1345/ShadowCypher" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;">CLONE REPO</a>
+                </div>
+                <div class="price-card featured">
+                    <div class="price-badge">MOST POPULAR</div>
+                    <div class="price-tier">GUARDIAN PRO</div>
+                    <div class="price-amount">$9<span style="font-size:1rem;">.99</span></div>
+                    <div class="price-period">/month</div>
+                    <ul class="price-features">
+                        <li>Everything in Community</li>
+                        <li>24/7 network monitoring</li>
+                        <li>ARP spoof alerts</li>
+                        <li>Auto-hardening</li>
+                        <li>Ghost Mode</li>
+                        <li>AI security assistant</li>
+                        <li>Mobile companion</li>
+                        <li>Family dashboard</li>
+                    </ul>
+                    <a onclick="upgradeTo('guardian_pro')" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;cursor:pointer;">SUBSCRIBE — $9.99/mo</a>
+                </div>
+                <div class="price-card">
+                    <div class="price-tier">OPERATOR</div>
+                    <div class="price-amount">$49</div>
+                    <div class="price-period">/month</div>
+                    <ul class="price-features">
+                        <li>Everything in Guardian</li>
+                        <li>AI Autopilot missions</li>
+                        <li>Swarm telemetry cloud</li>
+                        <li>Team collaboration</li>
+                        <li>Report generation</li>
+                        <li>Priority support</li>
+                        <li>Threat intel feed</li>
+                    </ul>
+                    <a onclick="upgradeTo('operator')" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;cursor:pointer;">SUBSCRIBE — $49/mo</a>
+                </div>
+            </div>
+
+            <!-- Feature comparison table -->
+            <div style="max-width:1000px;margin:80px auto 0;text-align:left;">
+                <h3 style="font-size:1.2rem;letter-spacing:3px;color:var(--accent-primary);margin-bottom:30px;text-transform:uppercase;font-family:var(--font-mono);">// What you get on each plan</h3>
+                <div style="border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;background:rgba(180,74,255,0.02);">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                        <thead>
+                            <tr style="background:rgba(180,74,255,0.08);border-bottom:1px solid var(--glass-border);">
+                                <th style="padding:18px 20px;text-align:left;color:var(--text-secondary);font-weight:500;letter-spacing:2px;font-size:0.7rem;text-transform:uppercase;">Feature</th>
+                                <th style="padding:18px 20px;text-align:center;color:#fff;font-weight:700;letter-spacing:1px;">Community</th>
+                                <th style="padding:18px 20px;text-align:center;color:var(--accent-primary);font-weight:700;letter-spacing:1px;">Guardian Pro</th>
+                                <th style="padding:18px 20px;text-align:center;color:var(--accent-primary);font-weight:700;letter-spacing:1px;">Operator</th>
+                            </tr>
+                        </thead>
+                        <tbody style="color:#ddd;">
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">CLI toolkit + 29 tactical scripts</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">On-demand network scan</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">24/7 continuous monitoring</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Real-time threat alerts (ARP spoof, new device)</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Devices monitored simultaneously</td><td style="text-align:center;">1</td><td style="text-align:center;">10</td><td style="text-align:center;">Unlimited</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Scan history retention</td><td style="text-align:center;">7 days</td><td style="text-align:center;">90 days</td><td style="text-align:center;">Unlimited</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Auto-hardening (firewall, SSH, services)</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Ghost Mode (8-layer anonymity)</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">AI security assistant</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Team accounts + shared dashboards</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">AI Autopilot missions</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td></tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Threat intel feed</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td></tr>
+                            <tr><td style="padding:14px 20px;">Priority support</td><td style="text-align:center;color:#666;">community</td><td style="text-align:center;">email</td><td style="text-align:center;">email + chat</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="color:var(--text-secondary);font-size:0.75rem;margin-top:20px;text-align:center;">
+                    All paid plans start with a <strong style="color:var(--accent-primary);">14-day free trial</strong>. Cancel any time, no questions. Test-mode payments use Stripe card <code style="color:var(--accent-primary);">4242 4242 4242 4242</code>.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACCOUNT -->
+    <div id="page-account" class="page">
+        <div class="content-section" style="max-width: 600px;">
+            <div id="account-auth" class="module-card" style="padding: 50px;">
+                <div id="auth-login">
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Sign in</h2>
+                    <div style="margin-bottom: 20px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Email</label>
+                        <input type="text" class="cli-input" placeholder="you@company.com" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <div style="margin-bottom: 30px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Password</label>
+                        <input type="password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <button onclick="handleAuth('login')" class="btn-primary" style="width: 100%;">Sign in</button>
+                    <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
+                        New here? <a onclick="toggleAuth('signup')" style="color: var(--accent-primary); cursor: pointer;">Create account</a>
+                        &nbsp;·&nbsp;
+                        <a onclick="toggleAuth('forgot')" style="color: var(--accent-primary); cursor: pointer;">Forgot password?</a>
+                    </p>
+                </div>
+
+                <div id="auth-forgot" style="display: none;">
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Reset password</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">
+                        Enter your email. We'll send you a link to set a new password.
+                    </p>
+                    <div style="margin-bottom: 30px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Email</label>
+                        <input type="email" id="forgot-email" class="cli-input" placeholder="you@company.com" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <button onclick="handleForgotPassword()" class="btn-primary" style="width: 100%;">Send reset link</button>
+                    <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
+                        <a onclick="toggleAuth('login')" style="color: var(--accent-primary); cursor: pointer;">Back to sign in</a>
+                    </p>
+                </div>
+
+                <div id="auth-reset" style="display: none;">
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Set new password</h2>
+                    <div style="margin-bottom: 20px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">New password</label>
+                        <input type="password" id="reset-password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <div style="margin-bottom: 30px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Confirm</label>
+                        <input type="password" id="reset-password-confirm" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <button onclick="handlePasswordReset()" class="btn-primary" style="width: 100%;">Update password</button>
+                </div>
+
+                <div id="auth-signup" style="display: none;">
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Create your account</h2>
+                    <div style="margin-bottom: 20px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Display name</label>
+                        <input type="text" class="cli-input" placeholder="Jane Doe" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Email</label>
+                        <input type="email" class="cli-input" placeholder="you@company.com" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <div style="margin-bottom: 30px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Password</label>
+                        <input type="password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    </div>
+                    <button onclick="handleAuth('signup')" class="btn-primary" style="width: 100%;">Create account</button>
+                    <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
+                        Already have an account? <a onclick="toggleAuth('login')" style="color: var(--accent-primary); cursor: pointer;">Sign in</a>
+                    </p>
+                </div>
+            </div>
+
+            <div id="account-dashboard" class="module-card" style="display: none; padding: 40px; clip-path: none;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px;">
+                    <div>
+                        <h2 style="font-size: 2rem;">Operator dashboard</h2>
+                        <div class="status-badge" style="margin-top: 10px;"><div class="status-dot"></div>Plan: Guardian Pro</div>
+                    </div>
+                    <button onclick="mockLogout()" class="btn-primary" style="padding: 10px 20px; font-size: 0.6rem; background: var(--accent-secondary);">Sign out</button>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:40px;">
+                    <div style="padding:20px; background:rgba(180, 74, 255, 0.03); border:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:10px;">ORACLE_SHADOWNODE</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="status-dot" style="background:#666; box-shadow:none;" id="node-status"></div>
+                            <span class="mono" style="font-size:0.9rem; color:#666;">Not provisioned</span>
+                        </div>
+                    </div>
+                    <div style="padding:20px; background:rgba(0, 255, 65, 0.03); border:1px solid rgba(0, 255, 65, 0.2);">
+                        <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:10px;">SUPABASE_BACKEND</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="status-dot" id="db-status"></div>
+                            <span class="mono" style="font-size:0.9rem; color:var(--success);">Connected</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// API keys</h3>
+                    <div style="background: #000; padding: 20px; border: 1px solid #222; display: flex; justify-content: space-between; align-items: center;">
+                        <code id="api-key" style="font-size: 0.8rem; color: var(--success);">sc_live_************************</code>
+                        <button onclick="copyKey()" class="mono" style="background: transparent; border: 1px solid var(--accent-primary); color: var(--accent-primary); padding: 5px 15px; font-size: 0.6rem; cursor: pointer;">COPY</button>
+                    </div>
+                    <p style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 10px;">Treat this key like a password. It grants full access to your nodes.</p>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Encrypted channels</h3>
+                    <div style="display: grid; gap: 10px;">
+                        <div style="padding: 15px; background: rgba(180, 74, 255, 0.05); border-left: 3px solid var(--accent-primary); display: flex; justify-content: space-between; align-items: center;">
+                            <span class="mono" style="font-size: 0.8rem;">#general</span>
+                            <span style="font-size: 0.6rem; color: var(--success);">End-to-end encrypted</span>
+                        </div>
+                        <div style="padding: 15px; background: rgba(255, 255, 255, 0.02); border-left: 3px solid #333; display: flex; justify-content: space-between; align-items: center; opacity: 0.5;">
+                            <span class="mono" style="font-size: 0.8rem;">#ops-fleet</span>
+                            <span style="font-size: 0.6rem; color: #666;">Pro plan required</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Devices on your network <span id="device-count" style="color:var(--text-secondary);font-size:0.7rem;"></span></h3>
+                    <div id="device-list" style="display:grid; gap:8px;">
+                        <div style="padding:15px; background:rgba(255,255,255,0.02); border:1px dashed var(--glass-border); color:var(--text-secondary); font-size:0.8rem;">
+                            No agents reporting yet. Install the Guardian agent to populate this list:<br>
+                            <code style="color:var(--accent-primary);">python3 agent/shadowcypher_agent.py init &amp;&amp; python3 agent/shadowcypher_agent.py run</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Recent security events <span id="incident-count" style="color:var(--text-secondary);font-size:0.7rem;"></span></h3>
+                    <div id="incident-list" style="font-size: 0.75rem; color: #888; line-height: 2;">
+                        <span style="color:#666;">No incidents yet — install the Guardian agent to start receiving real alerts.</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;" id="dashboard-stats">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Your activity</h3>
+                    <div id="stat-cards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px;">
+                        <div style="padding:14px 16px; background:rgba(180,74,255,0.04); border:1px solid var(--glass-border);">
+                            <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); letter-spacing:1px;">DEVICES</div>
+                            <div id="stat-devices" style="font-size:1.6rem; font-weight:900; color:#fff; margin-top:4px;">—</div>
+                        </div>
+                        <div style="padding:14px 16px; background:rgba(180,74,255,0.04); border:1px solid var(--glass-border);">
+                            <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); letter-spacing:1px;">SCANS</div>
+                            <div id="stat-scans" style="font-size:1.6rem; font-weight:900; color:#fff; margin-top:4px;">—</div>
+                        </div>
+                        <div style="padding:14px 16px; background:rgba(180,74,255,0.04); border:1px solid var(--glass-border);">
+                            <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); letter-spacing:1px;">INCIDENTS</div>
+                            <div id="stat-incidents" style="font-size:1.6rem; font-weight:900; color:#fff; margin-top:4px;">—</div>
+                        </div>
+                        <div style="padding:14px 16px; background:rgba(180,74,255,0.04); border:1px solid var(--glass-border);">
+                            <div class="mono" style="font-size:0.6rem; color:var(--text-secondary); letter-spacing:1px;">OPEN ALERTS</div>
+                            <div id="stat-open" style="font-size:1.6rem; font-weight:900; color:var(--warning); margin-top:4px;">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Webhooks <span style="font-size:0.6rem; color:var(--text-secondary);">(Pro)</span></h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Forward incident events to Slack, Discord, PagerDuty, or any HTTPS URL. HMAC-SHA256 signed via per-webhook secret.</p>
+                    <div id="webhooks-list" style="margin-bottom:14px;"></div>
+                    <details style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); padding:14px 18px; border-radius:6px;">
+                        <summary style="cursor:pointer; color:var(--accent-primary); font-family:var(--font-mono); font-size:0.75rem;">+ Add webhook</summary>
+                        <div style="margin-top:14px; display:grid; gap:10px;">
+                            <input type="url" id="wh-url" placeholder="https://hooks.slack.com/services/..." style="padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.85rem;">
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" id="wh-label" placeholder="Label (optional, e.g. 'Slack #ops')" style="flex:1; padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.8rem;">
+                                <select id="wh-severity" style="background:#000; border:1px solid #333; color:#fff; padding:6px 10px; font-size:0.75rem;">
+                                    <option value="info">all (info+)</option>
+                                    <option value="warning" selected>warning+</option>
+                                    <option value="critical">critical only</option>
+                                </select>
+                                <button onclick="createWebhook()" class="btn-primary" style="padding:8px 16px; font-size:0.7rem;">Add</button>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Notifications</h3>
+                    <div id="notif-prefs" style="display:grid; gap:14px; font-size:0.85rem;">
+                        <label style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+                            <input type="checkbox" id="notif-email" style="accent-color:var(--accent-primary);">
+                            <span>Email me when an incident is raised</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:12px; font-size:0.8rem; color:var(--text-secondary);">
+                            <span style="width:80px;">Min severity</span>
+                            <select id="notif-severity" class="mono" style="background:#000; border:1px solid #333; color:#fff; padding:6px 10px; font-size:0.75rem;">
+                                <option value="info">info (everything)</option>
+                                <option value="warning" selected>warning</option>
+                                <option value="critical">critical only</option>
+                            </select>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+                            <input type="checkbox" id="notif-push" style="accent-color:var(--accent-primary);">
+                            <span>Browser push notifications (this device)</span>
+                        </label>
+                        <div style="display:flex; gap:10px; margin-top:6px;">
+                            <button onclick="saveNotifPrefs()" class="btn-primary" style="padding:8px 18px; font-size:0.7rem;">Save</button>
+                            <button onclick="testNotif()" style="padding:8px 18px; font-size:0.7rem; background:transparent; border:1px solid var(--accent-primary); color:var(--accent-primary); cursor:pointer;">Send test</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Teams <span style="font-size:0.6rem; color:var(--text-secondary);">(Operator)</span></h3>
+                    <div id="teams-section">
+                        <div id="team-invites" style="margin-bottom:16px;"></div>
+                        <div id="team-list" style="margin-bottom:16px; font-size:0.8rem;"></div>
+                        <div style="display:flex; gap:10px; align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label class="mono" style="font-size:0.6rem;color:var(--text-secondary);display:block;margin-bottom:6px;">New team name</label>
+                                <input type="text" id="team-name-input" placeholder="My Family" style="width:100%; padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.85rem;">
+                            </div>
+                            <button onclick="createTeam()" class="btn-primary" style="padding:10px 20px; font-size:0.7rem;">Create</button>
+                        </div>
+                        <div id="team-invite-block" style="margin-top:14px; display:none;">
+                            <label class="mono" style="font-size:0.6rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Invite member by email</label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="email" id="team-invite-email" placeholder="member@example.com" style="flex:1; padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.85rem;">
+                                <select id="team-invite-target" class="mono" style="background:#000; border:1px solid #333; color:#fff; padding:6px 10px; font-size:0.7rem;"></select>
+                                <button onclick="inviteToTeam()" class="btn-primary" style="padding:10px 20px; font-size:0.7rem;">Invite</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// AI assistant <span style="font-size:0.6rem; color:var(--text-secondary);">(Pro)</span></h3>
+                    <div style="background:rgba(180,74,255,0.04); border:1px solid var(--glass-border); padding:20px; border-radius:6px; margin-bottom:14px;">
+                        <div id="assistant-output" style="font-size:0.85rem; line-height:1.7; min-height:60px; color:#ddd; margin-bottom:14px; white-space:pre-wrap;">Ask anything about your network: <em style="color:var(--text-secondary);">"What devices are new this week?"</em>, <em style="color:var(--text-secondary);">"Is my router safe?"</em>, <em style="color:var(--text-secondary);">"Are there any open critical incidents?"</em></div>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="assistant-input" placeholder="Ask the assistant..." onkeydown="if(event.key==='Enter')askAssistant()" style="flex:1; padding:12px 14px; border:1px solid #333; background:#000; color:#fff; font-size:0.85rem;">
+                            <button onclick="askAssistant()" id="assistant-btn" class="btn-primary" style="padding:0 24px; font-size:0.7rem;">Ask</button>
+                        </div>
+                        <div id="assistant-usage" style="margin-top:10px; font-size:0.7rem; color:var(--text-secondary);"></div>
+                    </div>
+                    <details style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); padding:16px 20px; border-radius:6px; font-size:0.85rem;">
+                        <summary style="cursor:pointer; color:var(--accent-primary); font-family:var(--font-mono); font-size:0.75rem; letter-spacing:1px;">AI provider settings (BYOK / Ollama)</summary>
+                        <div style="margin-top:14px; color:#ccc;">
+                            <p style="margin:0 0 12px;font-size:0.8rem;color:var(--text-secondary);">By default, queries use the platform's AI key with a monthly quota. Switch to your own Anthropic key (BYOK) or a self-hosted Ollama for unmetered access.</p>
+                            <div style="margin-bottom:12px;">
+                                <label class="mono" style="font-size:0.65rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Your Anthropic API key (sk-ant-…)</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="password" id="byok-input" placeholder="sk-ant-…" style="flex:1;padding:8px 12px;border:1px solid #333;background:#000;color:#fff;font-size:0.8rem;">
+                                    <button onclick="saveByok()" class="btn-primary" style="padding:8px 16px;font-size:0.7rem;">Save</button>
+                                    <button onclick="clearByok()" style="padding:8px 16px;font-size:0.7rem;background:transparent;border:1px solid #444;color:#aaa;cursor:pointer;">Clear</button>
+                                </div>
+                                <span id="byok-status" style="font-size:0.7rem;color:var(--text-secondary);"></span>
+                            </div>
+                            <div>
+                                <label class="mono" style="font-size:0.65rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Ollama public URL (https://your-tunnel.example.com)</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="url" id="ollama-input" placeholder="https://ollama.example.com" style="flex:1;padding:8px 12px;border:1px solid #333;background:#000;color:#fff;font-size:0.8rem;">
+                                    <button onclick="saveOllama()" class="btn-primary" style="padding:8px 16px;font-size:0.7rem;">Save</button>
+                                    <button onclick="clearOllama()" style="padding:8px 16px;font-size:0.7rem;background:transparent;border:1px solid #444;color:#aaa;cursor:pointer;">Clear</button>
+                                </div>
+                                <span id="ollama-status" style="font-size:0.7rem;color:var(--text-secondary);"></span>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Refer a friend</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px;">Get <strong style="color:var(--accent-primary);">+30 days of Pro</strong> for every friend who subscribes from your link.</p>
+                    <div id="referral-block" style="background:rgba(180,74,255,0.04); border:1px solid var(--glass-border); padding:14px 18px; border-radius:6px;">
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <input type="text" id="referral-link" readonly style="flex:1; padding:10px 14px; background:#000; border:1px solid #333; color:#fff; font-family:var(--font-mono); font-size:0.78rem;" value="loading…">
+                            <button onclick="copyReferralLink()" class="btn-primary" style="padding:10px 18px; font-size:0.7rem;">Copy</button>
+                        </div>
+                        <div style="display:flex; gap:24px; margin-top:14px; font-size:0.75rem;">
+                            <div><span style="color:var(--text-secondary);">Signups:</span> <strong id="referral-signups" style="color:#fff;">—</strong></div>
+                            <div><span style="color:var(--text-secondary);">Rewards earned:</span> <strong id="referral-rewards" style="color:var(--accent-primary);">—</strong></div>
+                            <div><span style="color:var(--text-secondary);">Days credited:</span> <strong id="referral-days" style="color:var(--success);">—</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Recent activity</h3>
+                    <div id="audit-list" style="font-size:0.78rem; color:#aaa; line-height:1.8;"></div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 14px;">// Two-factor auth</h3>
+                    <div id="mfa-status" style="font-size:0.85rem;">checking…</div>
+                    <p style="font-size:0.75rem;color:var(--text-secondary);margin-top:10px;">Use any TOTP app (Authy, Google Authenticator, 1Password, Bitwarden). Enrollment is handled by Supabase — paste your account password to enroll.</p>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 14px;">// Your data</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Export everything ShadowCypher has on you as a single JSON file (GDPR portability).</p>
+                    <button onclick="exportData()" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;">EXPORT MY DATA</button>
+                </div>
+
+                <div style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--glass-border);">
+                    <h3 class="mono" style="font-size: 0.85rem; color: var(--accent-secondary); margin-bottom: 14px;">// Danger zone</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Permanently delete your account and all data (devices, scans, incidents, teams). This cannot be undone.</p>
+                    <button onclick="deleteAccount()" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid var(--accent-secondary);color:var(--accent-secondary);cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;">DELETE MY ACCOUNT</button>
+                </div>
+
+                <!-- Onboarding wizard overlay -->
+                <div id="onboarding-overlay" style="display:none; position:fixed; inset:0; background:rgba(2,2,2,0.92); z-index:5000; backdrop-filter:blur(8px); padding:40px 20px; overflow-y:auto;">
+                    <div style="max-width:520px; margin:80px auto; background:var(--bg-surface); border:1px solid var(--accent-primary); padding:36px 32px;">
+                        <div class="mono" style="font-size:0.65rem; color:var(--accent-primary); letter-spacing:3px; margin-bottom:8px;">// 3-STEP SETUP</div>
+                        <h2 style="font-size:1.6rem; color:#fff; margin:0 0 8px;" id="onboard-title">Welcome to ShadowCypher</h2>
+                        <p id="onboard-desc" style="color:var(--text-secondary); font-size:0.9rem; line-height:1.7;"></p>
+                        <pre id="onboard-code" style="background:#000; border:1px solid var(--glass-border); padding:14px 16px; font-size:0.75rem; color:var(--accent-primary); overflow-x:auto; margin:16px 0; display:none;"></pre>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px;">
+                            <span class="mono" id="onboard-pos" style="font-size:0.65rem; color:var(--text-secondary); letter-spacing:2px;">1 / 3</span>
+                            <div style="display:flex; gap:10px;">
+                                <button onclick="dismissOnboarding()" style="padding:8px 14px; background:transparent; border:1px solid #444; color:#aaa; font-size:0.7rem; cursor:pointer;">Skip</button>
+                                <button id="onboard-next" onclick="nextOnboarding()" class="btn-primary" style="padding:8px 18px; font-size:0.7rem;">Next →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer style="text-align:center;padding:60px 20px;border-top:1px solid var(--glass-border);margin-top:60px;">
+        <p style="font-family:var(--font-heading);font-size:1.2rem;letter-spacing:5px;margin-bottom:10px;">SHADOWCYPHER</p>
+        <p style="color:var(--text-secondary);font-size:0.8rem;">v4.0.0-ghost · Built with Go, Python, Cairo, and conviction.</p>
+        <div style="margin-top:20px;display:flex;gap:30px;justify-content:center;flex-wrap:wrap;">
+            <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">GitHub</a>
+            <a href="/docs.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">API Docs</a>
+            <a href="/roadmap.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Roadmap</a>
+            <a href="/status.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Status</a>
+            <a href="/privacy.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Privacy</a>
+            <a href="/terms.html" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Terms</a>
+            <a href="mailto:hello@shadowcypher.site" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Contact</a>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // THREE.JS Background
+        const scene = new THREE.Scene(), camera = new THREE.Camera();
+        const renderer = new THREE.WebGLRenderer({canvas:document.getElementById('void-canvas'),alpha:true});
+        const geo = new THREE.PlaneGeometry(2,2);
+        const mat = new THREE.ShaderMaterial({
+            uniforms:{time:{value:0},resolution:{value:new THREE.Vector2(window.innerWidth,window.innerHeight)}},
+            vertexShader:`void main(){gl_Position=vec4(position,1.0);}`,
+            fragmentShader:`
+                precision highp float;
+                uniform float time;
+                uniform vec2 resolution;
+
+                // Value noise + FBM for organic enterprise-grade ambient gradients
+                float hash(vec2 p){p=fract(p*vec2(127.1,311.7));p+=dot(p,p+19.19);return fract(p.x*p.y);}
+                float vnoise(vec2 p){
+                    vec2 i=floor(p), f=fract(p);
+                    float a=hash(i), b=hash(i+vec2(1,0)), c=hash(i+vec2(0,1)), d=hash(i+vec2(1,1));
+                    vec2 u=f*f*(3.0-2.0*f);
+                    return mix(mix(a,b,u.x), mix(c,d,u.x), u.y);
+                }
+                float fbm(vec2 p){
+                    float v=0.0, a=0.5;
+                    for(int k=0;k<5;k++){ v+=a*vnoise(p); p*=2.02; a*=0.5; }
+                    return v;
+                }
+
+                void main(){
+                    vec2 uv=gl_FragCoord.xy/resolution.xy;
+                    float aspect=resolution.x/resolution.y;
+                    vec2 p=uv*vec2(aspect,1.0);
+                    float t=time*0.04;
+
+                    // Deep navy base
+                    vec3 col=vec3(0.012,0.012,0.028);
+
+                    // L1: slow drifting purple nebula via 2-domain FBM (no orbits)
+                    vec2 q=vec2(fbm(p*1.3+vec2(t,-t*0.6)), fbm(p*1.3+vec2(-t*0.7,t*0.5)));
+                    float neb=fbm(p*2.0+q*1.8+vec2(t*0.3,0.0));
+                    neb=smoothstep(0.35,0.95,neb);
+                    col+=mix(vec3(0.0), vec3(0.42,0.18,0.78), neb)*0.55;
+
+                    // L2: cool blue accent pocket, opposite-phase drift
+                    float blue=fbm(p*1.6-q*1.2+vec2(-t*0.5,t*0.4));
+                    blue=smoothstep(0.55,0.85,blue);
+                    col+=vec3(0.18,0.22,0.55)*blue*0.22;
+
+                    // L3: soft horizon glow band — diagonal, slow vertical breathe
+                    float band=exp(-pow((uv.y-0.55-0.04*sin(time*0.05))*4.5,2.0));
+                    col+=vec3(0.32,0.16,0.62)*band*0.18;
+
+                    // L4: faint orthogonal grid that softly breathes (radar-feel, no harsh lines)
+                    vec2 g=fract(uv*vec2(38.0,22.0))-0.5;
+                    float gridLine=smoothstep(0.49,0.50,max(abs(g.x),abs(g.y)));
+                    float breathe=0.5+0.5*sin(time*0.15);
+                    col+=vec3(0.18,0.10,0.32)*(1.0-gridLine)*0.05*(0.6+0.4*breathe);
+
+                    // L5: rare bokeh specks (lens dust feel) — sparse high-threshold hash
+                    vec2 cellId=floor(p*60.0);
+                    float spark=hash(cellId);
+                    if(spark>0.992){
+                        vec2 cf=fract(p*60.0)-0.5;
+                        float pulse=0.5+0.5*sin(time*0.4+spark*30.0);
+                        col+=vec3(0.55,0.35,0.95)*exp(-dot(cf,cf)*40.0)*0.35*pulse;
+                    }
+
+                    // Vignette to keep focus on content
+                    vec2 vc=uv-0.5;
+                    col*=1.0-dot(vc,vc)*0.55;
+
+                    gl_FragColor=vec4(col, 0.42);
+                }
+            `
+        });
+        scene.add(new THREE.Mesh(geo,mat));
+        function animate(t){mat.uniforms.time.value=t*0.001;renderer.render(scene,camera);requestAnimationFrame(animate);}
+        animate(0);
+        window.addEventListener('resize',()=>{mat.uniforms.resolution.value.set(window.innerWidth,window.innerHeight);renderer.setSize(window.innerWidth,window.innerHeight);});
+        renderer.setSize(window.innerWidth,window.innerHeight);
+
+        // Navigation
+        const shutter=document.getElementById('pageShutter');
+        const indicator=document.getElementById('navIndicator');
+        function updateIndicator(el){if(!el)return;indicator.style.width=el.offsetWidth+'px';indicator.style.left=el.offsetLeft+'px';}
+        async function navTo(pageId,el){
+            const target=document.getElementById('page-'+pageId);
+            if(!target||target.classList.contains('active'))return;
+            shutter.classList.add('active');
+            await new Promise(r=>setTimeout(r,500));
+            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+            target.classList.add('active');
+            const navEl=el||document.getElementById('nav-'+pageId);
+            if(navEl){navEl.classList.add('active');updateIndicator(navEl);}
+            window.scrollTo({top:0});
+            await new Promise(r=>setTimeout(r,100));
+            shutter.classList.remove('active');
+        }
+
+        // ─── Native app mode (Capacitor) ──────────────────────────────────────
+        // When running as an installed app, skip the marketing homepage and go
+        // straight to the dashboard. Hide marketing-only nav items.
+        const IS_NATIVE = !!(window.Capacitor?.isNativePlatform?.() ||
+                             navigator.userAgent.includes('wv') && window.location.protocol !== 'https:' ||
+                             window.matchMedia('(display-mode: standalone)').matches);
+
+        if (IS_NATIVE) {
+            document.addEventListener('DOMContentLoaded', () => {
+                // Hide marketing nav tabs the app doesn't need
+                ['nav-home', 'nav-arsenal', 'nav-ghost', 'nav-pricing'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+                // Navigate straight to account/dashboard
+                navTo('account', document.getElementById('nav-account'));
+            });
+        }
+
+        // Supabase Initialization
+        let supabaseClient = null;
+        try {
+            const SUPABASE_URL = 'https://umruqwvyipylfslwwozj.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcnVxd3Z5aXB5bGZzbHd3b3pqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyNDY1NzYsImV4cCI6MjA5MjgyMjU3Nn0.KSjgi54wIOZ_6LSp6Bs_plmtyeOKpul8FXwQhHqwtm4';
+            if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && typeof supabase !== 'undefined') {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) { console.error("Supabase Init Error:", e); }
+
+        // Toast helper for auth + status messages
+        function cliPrint(msg, color) {
+            const log = document.getElementById('swarm-log');
+            const line = document.createElement('div');
+            line.style.color = color || 'var(--accent-primary)';
+            line.style.fontSize = '0.75rem';
+            line.style.fontFamily = 'var(--font-mono, monospace)';
+            line.textContent = `> ${msg}`;
+            if (log) {
+                log.prepend(line);
+                while (log.childElementCount > 12) log.removeChild(log.lastChild);
+            } else {
+                console.log('[shadowcypher]', msg);
+            }
+        }
+
+        // Generate cryptographically random per-user API key
+        function generateApiKey() {
+            const bytes = new Uint8Array(24);
+            crypto.getRandomValues(bytes);
+            const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+            return `sc_live_${hex}`;
+        }
+
+        // Ensure the signed-in user has an api_key in their metadata; mint one if missing.
+        // Requires an active session (so it works post email-confirmation).
+        async function ensureApiKey(user) {
+            if (user?.user_metadata?.api_key) return user.user_metadata.api_key;
+            if (!supabaseClient) return null;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) return null;
+            const apiKey = generateApiKey();
+            const { error } = await supabaseClient.auth.updateUser({
+                data: { ...(user.user_metadata || {}), api_key: apiKey, api_key_created_at: new Date().toISOString() }
+            });
+            if (error) { cliPrint(`Could not mint API key: ${error.message}`, 'var(--critical)'); return null; }
+            return apiKey;
+        }
+
+        async function handleAuth(mode) {
+            if (!supabaseClient) {
+                cliPrint("Auth offline — try again in a moment.", "var(--warning)");
+                return;
+            }
+            const email = document.querySelector(mode === 'login' ? '#auth-login input[type="text"]' : '#auth-signup input[type="email"]').value.trim();
+            const password = document.querySelector(mode === 'login' ? '#auth-login input[type="password"]' : '#auth-signup input[type="password"]').value;
+            const handle = mode === 'signup' ? document.querySelector('#auth-signup input[type="text"]').value.trim() : null;
+            if (!email || !password) { cliPrint('Email and password required.', 'var(--warning)'); return; }
+
+            try {
+                if (mode === 'login') {
+                    const result = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (result.error) throw result.error;
+                    cliPrint(`Signed in: ${result.data.user.email}`, 'var(--success)');
+                    // onAuthStateChange will pick up the SIGNED_IN event and call updateUIForUser
+                } else {
+                    const result = await supabaseClient.auth.signUp({
+                        email,
+                        password,
+                        options: { data: { handle: handle || email.split('@')[0], api_key: generateApiKey(), api_key_created_at: new Date().toISOString() } }
+                    });
+                    if (result.error) throw result.error;
+                    if (result.data.session) {
+                        // Email confirmation disabled — user logged in immediately
+                        cliPrint(`Account created: ${email}`, 'var(--success)');
+                    } else {
+                        // Email confirmation required — show banner
+                        cliPrint(`Account created. Check ${email} for a confirmation link.`, 'var(--success)');
+                        showAuthBanner(`We sent a confirmation link to <strong>${escapeHtml(email)}</strong>. Click it, then come back here and sign in.`, 'info');
+                    }
+                }
+            } catch (err) {
+                let msg = err.message || 'unknown';
+                if (msg.toLowerCase().includes('email not confirmed')) {
+                    msg = 'Email not confirmed yet — click the link we sent you, then try again.';
+                }
+                cliPrint(`Auth: ${msg}`, 'var(--critical)');
+                showAuthBanner(msg, 'error');
+            }
+        }
+
+        function showAuthBanner(html, kind) {
+            let banner = document.getElementById('auth-banner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'auth-banner';
+                banner.style.cssText = 'margin-bottom:20px;padding:15px;border-radius:4px;font-size:0.85rem;';
+                document.getElementById('account-auth')?.prepend(banner);
+            }
+            banner.style.background = kind === 'error' ? 'rgba(255,0,60,0.08)' : 'rgba(180,74,255,0.08)';
+            banner.style.borderLeft = `3px solid ${kind === 'error' ? 'var(--accent-secondary)' : 'var(--accent-primary)'}`;
+            banner.style.color = kind === 'error' ? 'var(--accent-secondary)' : '#ddd';
+            banner.innerHTML = html;
+        }
+
+        async function signOut() {
+            if (supabaseClient) await supabaseClient.auth.signOut();
+            // onAuthStateChange will fire SIGNED_OUT and clean up the UI
+            cliPrint('Signed out.', 'var(--warning)');
+        }
+        // Keep the old name pointing at the new function for the inline onclick handler
+        const mockLogout = signOut;
+
+        // Backend API base — overrideable via window.SHADOWCYPHER_API for local dev
+        // Using workers.dev URL until api.shadowcypher.site custom domain is bound
+        const API_BASE = window.SHADOWCYPHER_API || 'https://shadowcypher-api.shadowcypher.workers.dev';
+
+        async function callApi(path, opts = {}) {
+            const apiKey = document.getElementById('api-key')?.dataset?.realKey;
+            const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+            if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+            const resp = await fetch(`${API_BASE}${path}`, { ...opts, headers });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(data.error || data.message || `HTTP ${resp.status}`);
+            return data;
+        }
+
+        async function updateUIForUser(user) {
+            document.getElementById('account-auth').style.display = 'none';
+            document.getElementById('account-dashboard').style.display = 'block';
+            const signoutLink = document.getElementById('nav-signout');
+            if (signoutLink) signoutLink.style.display = '';
+            const name = user.user_metadata?.handle || user.email.split('@')[0];
+            document.querySelector('#account-dashboard h2').innerText = `Welcome, ${name}`;
+
+            // Mint key if missing, then show it
+            const apiKey = await ensureApiKey(user);
+            const keyEl = document.getElementById('api-key');
+            if (keyEl) {
+                if (apiKey) {
+                    keyEl.dataset.realKey = apiKey;
+                    keyEl.innerText = apiKey.slice(0, 12) + '…' + apiKey.slice(-4);
+                } else {
+                    keyEl.innerText = 'no key — click "Mint key" →';
+                    addMintKeyButton(user);
+                }
+            }
+
+            // Call the real backend to verify the key round-trips and pull live plan/profile
+            try {
+                const me = await callApi('/v1/me');
+                const effective = me.effective_plan || me.plan || 'community';
+                cliPrint(`API verified · plan=${effective} · ${me.email}`, 'var(--success)');
+                const planBadge = document.querySelector('#account-dashboard .status-badge');
+                if (planBadge) {
+                    let label = `Plan: ${effective.replace('_', ' ')}`;
+                    if (me.in_trial) label += ` · trial: ${me.trial_days_remaining}d left`;
+                    planBadge.innerHTML = `<div class="status-dot"></div>${escapeHtml(label)}`;
+                }
+
+                // Trial near-expiry nudge
+                if (me.in_trial && me.trial_days_remaining <= 3) {
+                    showApiBanner(`Your Pro trial ends in ${me.trial_days_remaining} day(s). Subscribe to keep alerts, multi-device monitoring, and history.`);
+                }
+
+                // If user has a paid subscription, show "Manage subscription" button
+                if (me.plan && me.plan !== 'community') {
+                    let btn = document.getElementById('manage-sub-btn');
+                    if (!btn) {
+                        btn = document.createElement('button');
+                        btn.id = 'manage-sub-btn';
+                        btn.className = 'btn-primary';
+                        btn.style.cssText = 'margin-top:20px;font-size:0.7rem;padding:10px 20px;background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);';
+                        btn.textContent = 'Manage subscription';
+                        btn.onclick = manageSubscription;
+                        document.querySelector('#account-dashboard .status-badge')?.parentElement?.appendChild(btn);
+                    }
+                }
+            } catch (err) {
+                cliPrint(`API check failed: ${err.message}`, 'var(--warning)');
+            }
+
+            // Handle ?checkout=success returns from Stripe
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('checkout') === 'success') {
+                cliPrint('Subscription active. Welcome to Pro.', 'var(--success)');
+                history.replaceState(null, '', window.location.pathname);
+            } else if (params.get('checkout') === 'canceled') {
+                cliPrint('Checkout canceled.', 'var(--warning)');
+                history.replaceState(null, '', window.location.pathname);
+            }
+
+            // Pull real Guardian data and start auto-refresh
+            await refreshGuardian();
+            if (window._guardianTimer) clearInterval(window._guardianTimer);
+            window._guardianTimer = setInterval(refreshGuardian, 30000);
+
+            // Load notification prefs + teams + AI usage + webhooks + stats + audit + mfa + referrals
+            loadNotifPrefs().catch(() => {});
+            loadTeams().catch(() => {});
+            loadAiUsage().catch(() => {});
+            loadWebhooks().catch(() => {});
+            loadStats().catch(() => {});
+            loadAudit().catch(() => {});
+            loadMfa().catch(() => {});
+            loadReferral().catch(() => {});
+            // Attribute referral if user came from /r/<code>
+            attributeReferralIfNeeded().catch(() => {});
+
+            // First-time onboarding (only fires if localStorage flag absent)
+            setTimeout(() => startOnboarding(), 600);
+        }
+
+        function addMintKeyButton(user) {
+            if (document.getElementById('mint-key-btn')) return;
+            const keyEl = document.getElementById('api-key');
+            if (!keyEl?.parentElement) return;
+            const btn = document.createElement('button');
+            btn.id = 'mint-key-btn';
+            btn.className = 'mono';
+            btn.style.cssText = 'margin-left:10px;background:var(--accent-primary);color:#000;border:none;padding:5px 12px;font-size:0.65rem;cursor:pointer;font-weight:700;';
+            btn.textContent = 'MINT KEY';
+            btn.onclick = async () => {
+                btn.disabled = true; btn.textContent = '...';
+                const apiKey = await ensureApiKey(user);
+                if (apiKey) {
+                    keyEl.dataset.realKey = apiKey;
+                    keyEl.innerText = apiKey.slice(0, 12) + '…' + apiKey.slice(-4);
+                    btn.remove();
+                    cliPrint('API key minted. Copy it now.', 'var(--success)');
+                } else {
+                    btn.disabled = false; btn.textContent = 'MINT KEY';
+                }
+            };
+            keyEl.parentElement.appendChild(btn);
+        }
+
+        async function refreshGuardian() {
+            try {
+                const [agentsResp, devicesResp, incidentsResp, scansResp] = await Promise.all([
+                    callApi('/v1/agents'),
+                    callApi('/v1/devices'),
+                    callApi('/v1/incidents'),
+                    callApi('/v1/scans/recent'),
+                ]);
+                renderAgents(agentsResp.agents || []);
+                renderDevices(devicesResp.devices || []);
+                renderIncidents(incidentsResp.incidents || []);
+                renderScans(scansResp.scans || []);
+                showApiBanner(null);
+            } catch (err) {
+                console.warn('[guardian] refresh failed', err.message);
+                if (err.message.includes('plan_required')) {
+                    showApiBanner('This feature requires a paid plan. <a onclick="navTo(\'pricing\', document.getElementById(\'nav-pricing\'))" style="color:var(--accent-primary);cursor:pointer;">See pricing →</a>');
+                } else if (err.message.includes('db_select_failed') || err.message.includes('500')) {
+                    showApiBanner('Backend tables missing — run the SQL migrations in Supabase.');
+                } else if (err.message.includes('key_not_found')) {
+                    showApiBanner('Your API key is invalid or revoked. Click MINT KEY to issue a new one.');
+                } else {
+                    showApiBanner(`Backend error: ${err.message}`);
+                }
+            }
+        }
+
+        function renderAgents(agents) {
+            const dot = document.getElementById('agent-status-dot');
+            const label = document.getElementById('agent-status-label');
+            const section = document.getElementById('guardian-agents-section');
+            const install = document.getElementById('guardian-install');
+            const list = document.getElementById('agents-list');
+            if (!agents.length) {
+                dot.style.background = '#555';
+                label.textContent = 'No agent connected';
+                install.style.display = 'block';
+                section.style.display = 'none';
+                return;
+            }
+            install.style.display = 'none';
+            section.style.display = 'block';
+            const anyOnline = agents.some(a => a.online);
+            dot.style.background = anyOnline ? 'var(--success)' : 'var(--warning)';
+            label.textContent = anyOnline
+                ? `${agents.filter(a => a.online).length} agent${agents.filter(a=>a.online).length>1?'s':''} online`
+                : 'Agent offline — last seen ' + new Date(agents[0].last_seen_at).toLocaleString();
+            list.innerHTML = agents.map(a => {
+                const since = a.last_seen_at ? new Date(a.last_seen_at).toLocaleString() : 'never';
+                const statusColor = a.online ? 'var(--success)' : '#888';
+                return `<div style="padding:12px 16px;background:rgba(180,74,255,0.04);border-left:3px solid ${statusColor};display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <div>
+                        <strong style="color:#fff;font-family:var(--font-mono);font-size:0.85rem;">${escapeHtml(a.hostname)}</strong>
+                        <span style="margin-left:10px;font-size:0.7rem;color:${statusColor};">${a.online ? '● ONLINE' : '○ OFFLINE'}</span>
+                    </div>
+                    <div style="font-size:0.72rem;color:#666;">${escapeHtml(a.os || '')} · v${escapeHtml(a.agent_version || '?')} · last seen ${escapeHtml(since)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderScans(scans) {
+            const list = document.getElementById('scan-list');
+            if (!list) return;
+            if (!scans.length) { list.innerHTML = '<span style="color:#666;">No scans yet.</span>'; return; }
+            const typeColor = { network:'var(--accent-primary)', router:'var(--warning)', dns:'var(--success)', firewall:'var(--success)', system:'var(--warning)', port:'#888', arp:'var(--critical)' };
+            list.innerHTML = scans.map(s => {
+                const ts = new Date(s.started_at).toLocaleString();
+                const c = typeColor[s.scan_type] || '#888';
+                return `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;gap:16px;align-items:center;">
+                    <span class="mono" style="color:${c};font-size:0.7rem;text-transform:uppercase;min-width:80px;">${escapeHtml(s.scan_type)}</span>
+                    <span style="color:#666;font-size:0.72rem;">${escapeHtml(ts)}</span>
+                    ${s.device_count != null ? `<span style="color:var(--text-secondary);font-size:0.72rem;">${s.device_count} devices</span>` : ''}
+                    ${s.duration_ms != null ? `<span style="color:#555;font-size:0.7rem;">${s.duration_ms}ms</span>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function copyInstallCmd(step) {
+            const el = document.getElementById(`install-cmd-${step}`);
+            if (!el) return;
+            navigator.clipboard.writeText(el.textContent).then(() => cliPrint(`Step ${step} command copied.`, 'var(--success)'));
+        }
+
+        function showApiBanner(msg) {
+            let banner = document.getElementById('api-banner');
+            if (!msg) { banner?.remove(); return; }
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'api-banner';
+                banner.style.cssText = 'margin-bottom:20px;padding:15px;border-radius:4px;font-size:0.85rem;background:rgba(255,160,0,0.08);border-left:3px solid var(--warning);color:#ffb84d;';
+                document.getElementById('account-dashboard')?.prepend(banner);
+            }
+            banner.textContent = msg;
+        }
+
+        function renderDevices(devices) {
+            const list = document.getElementById('device-list');
+            const count = document.getElementById('device-count');
+            const stat = document.getElementById('stat-devices');
+            if (!list) return;
+            count.textContent = devices.length ? `(${devices.length})` : '';
+            if (stat) stat.textContent = devices.length || '0';
+            if (!devices.length) return;
+            list.innerHTML = devices.map(d => {
+                const ports = (d.open_ports || []).join(', ');
+                const seen = new Date(d.last_seen_at).toLocaleString();
+                const trustColor = d.trusted ? 'var(--success)' : 'var(--text-secondary)';
+                return `<div style="padding:12px 16px; background:rgba(180,74,255,0.04); border-left:3px solid var(--accent-primary); display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:16px; align-items:center; font-size:0.8rem;">
+                    <div><strong style="color:#fff;">${escapeHtml(d.hostname || d.ip || d.mac)}</strong><br><span class="mono" style="font-size:0.65rem; color:${trustColor};">${escapeHtml(d.mac)}</span></div>
+                    <div><span class="mono" style="color:var(--text-secondary);">${escapeHtml(d.ip || '')}</span></div>
+                    <div><span style="color:var(--accent-primary); font-size:0.7rem;">${escapeHtml(d.device_type || 'unknown')}</span>${ports ? `<br><span class="mono" style="font-size:0.65rem; color:#888;">ports: ${escapeHtml(ports)}</span>` : ''}</div>
+                    <div style="font-size:0.65rem; color:#666;">${escapeHtml(seen)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderIncidents(incidents) {
+            const list = document.getElementById('incident-list');
+            const count = document.getElementById('incident-count');
+            const stat = document.getElementById('stat-incidents');
+            const scanStat = document.getElementById('stat-last-scan');
+            if (!list) return;
+            const open = incidents.filter(i => !i.acknowledged);
+            count.textContent = incidents.length ? `(${open.length} open / ${incidents.length} total)` : '';
+            if (stat) stat.textContent = open.length || '0';
+            if (scanStat && incidents[0]) scanStat.textContent = new Date(incidents[0].created_at).toLocaleTimeString();
+            if (!incidents.length) {
+                list.innerHTML = '<span style="color:#666;">No incidents yet — install the Guardian agent to start receiving real alerts.</span>';
+                return;
+            }
+            const sevColor = { info: 'var(--success)', warning: 'var(--warning)', critical: 'var(--critical)' };
+            list.innerHTML = incidents.slice(0, 25).map(inc => {
+                const ts = new Date(inc.created_at).toLocaleString();
+                const c = sevColor[inc.severity] || 'var(--text-secondary)';
+                const ack = inc.acknowledged
+                    ? `<span style="color:#555; font-size:0.65rem;">acked</span>`
+                    : `<a onclick="ackIncident('${inc.id}')" style="color:var(--accent-primary); cursor:pointer; font-size:0.65rem;">ack</a>`;
+                return `<div style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    [<span style="color:#666;">${escapeHtml(ts)}</span>]
+                    <span style="color:${c}; text-transform:uppercase; font-weight:700;">${escapeHtml(inc.severity)}:</span>
+                    ${escapeHtml(inc.title)} · ${ack}
+                </div>`;
+            }).join('');
+        }
+
+        async function upgradeTo(plan) {
+            if (!supabaseClient) {
+                cliPrint('Auth offline — try again in a moment.', 'var(--warning)');
+                return;
+            }
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                cliPrint('Sign in first to subscribe — your plan will auto-activate after payment.', 'var(--warning)');
+                navTo('account', document.getElementById('nav-account'));
+                return;
+            }
+            try {
+                cliPrint('Redirecting to checkout…', 'var(--text-secondary)');
+                const { url } = await callApi('/v1/billing/checkout', {
+                    method: 'POST',
+                    body: JSON.stringify({ plan }),
+                });
+                if (url) window.location.href = url;
+            } catch (err) {
+                cliPrint(`Checkout failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function manageSubscription() {
+            try {
+                const resp = await callApi('/v1/billing/portal', { method: 'POST' });
+                if (resp.url) window.location.href = resp.url;
+            } catch (err) {
+                cliPrint(`Portal failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── Notifications ────────────────────────────────────────
+        async function loadNotifPrefs() {
+            try {
+                const { preferences } = await callApi('/v1/notifications/preferences');
+                document.getElementById('notif-email').checked = preferences.email_enabled !== false;
+                document.getElementById('notif-severity').value = preferences.email_severity || 'warning';
+                document.getElementById('notif-push').checked = !!preferences.push_enabled;
+            } catch (err) { console.warn('[notif] load failed', err.message); }
+        }
+
+        async function saveNotifPrefs() {
+            const body = {
+                email_enabled: document.getElementById('notif-email').checked,
+                email_severity: document.getElementById('notif-severity').value,
+                push_enabled: document.getElementById('notif-push').checked,
+            };
+            // If push enabled, request browser permission + register subscription
+            if (body.push_enabled && 'serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    const perm = await Notification.requestPermission();
+                    if (perm === 'granted') {
+                        // Subscription requires VAPID public key from server; if not set, just toggle the flag
+                        // Real subscription wiring happens once VAPID keys are configured in Worker
+                        cliPrint('Push permission granted. (Server-side VAPID keys still need to be configured to actually deliver pushes.)', 'var(--success)');
+                    } else {
+                        body.push_enabled = false;
+                        document.getElementById('notif-push').checked = false;
+                        cliPrint('Push permission denied.', 'var(--warning)');
+                    }
+                } catch (e) { console.warn('[push] subscribe failed', e); }
+            }
+            try {
+                await callApi('/v1/notifications/preferences', { method: 'POST', body: JSON.stringify(body) });
+                cliPrint('Notification preferences saved.', 'var(--success)');
+            } catch (err) {
+                cliPrint(`Save failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function testNotif() {
+            try {
+                const result = await callApi('/v1/notifications/test', { method: 'POST' });
+                let msg = 'Test dispatched.';
+                if (result.email_sent) msg += ' Email sent ✓';
+                if (result.push_sent) msg += ' Push sent ✓';
+                if (result.reason) msg += ` (${result.reason})`;
+                if (!result.email_sent && !result.push_sent) msg += ' (Nothing actually sent — check that Pro is active and at least one channel is enabled.)';
+                cliPrint(msg, result.email_sent || result.push_sent ? 'var(--success)' : 'var(--warning)');
+            } catch (err) {
+                cliPrint(`Test failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── Teams ───────────────────────────────────────────────
+        async function loadTeams() {
+            try {
+                const [teamsResp, invitesResp] = await Promise.all([
+                    callApi('/v1/teams'),
+                    callApi('/v1/teams/invites'),
+                ]);
+                renderTeams(teamsResp.teams || []);
+                renderInvites(invitesResp.invites || []);
+            } catch (err) {
+                if (err.message.includes('plan_required')) {
+                    document.getElementById('teams-section').innerHTML = '<p style="font-size:0.85rem;color:var(--text-secondary);">Teams require the <strong>Operator</strong> plan. Members of an Operator team automatically inherit Pro features.</p>';
+                } else {
+                    console.warn('[teams] load failed', err.message);
+                }
+            }
+        }
+
+        function renderTeams(teams) {
+            const list = document.getElementById('team-list');
+            const target = document.getElementById('team-invite-target');
+            const inviteBlock = document.getElementById('team-invite-block');
+            if (!list) return;
+            if (!teams.length) {
+                list.innerHTML = '<span style="color:var(--text-secondary);">No teams yet — create one below to share Pro features with family or coworkers.</span>';
+                if (inviteBlock) inviteBlock.style.display = 'none';
+                return;
+            }
+            list.innerHTML = teams.map(t => {
+                const role = t.is_owner ? 'owner' : t.role;
+                const action = t.is_owner ? '' : ` <a onclick="leaveTeam('${t.id}')" style="color:var(--accent-secondary);cursor:pointer;font-size:0.7rem;">leave</a>`;
+                return `<div style="padding:10px 14px; background:rgba(180,74,255,0.04); border-left:3px solid var(--accent-primary); margin-bottom:6px;"><strong>${escapeHtml(t.name)}</strong> · <span style="color:var(--text-secondary);font-size:0.7rem;">${role}</span>${action}</div>`;
+            }).join('');
+            const ownedTeams = teams.filter(t => t.is_owner);
+            if (ownedTeams.length && target && inviteBlock) {
+                target.innerHTML = ownedTeams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+                inviteBlock.style.display = '';
+            } else if (inviteBlock) {
+                inviteBlock.style.display = 'none';
+            }
+        }
+
+        function renderInvites(invites) {
+            const el = document.getElementById('team-invites');
+            if (!el) return;
+            if (!invites.length) { el.innerHTML = ''; return; }
+            el.innerHTML = invites.map(i =>
+                `<div style="padding:10px 14px; background:rgba(255,184,77,0.06); border-left:3px solid var(--warning); margin-bottom:6px; font-size:0.85rem;">
+                    Invited to <strong>${escapeHtml(i.team_name)}</strong> ·
+                    <a onclick="acceptInvite('${i.team_id}')" style="color:var(--accent-primary);cursor:pointer;">accept</a>
+                </div>`
+            ).join('');
+        }
+
+        async function createTeam() {
+            const name = document.getElementById('team-name-input').value.trim();
+            if (!name) { cliPrint('Team name required.', 'var(--warning)'); return; }
+            try {
+                await callApi('/v1/teams', { method: 'POST', body: JSON.stringify({ name }) });
+                document.getElementById('team-name-input').value = '';
+                cliPrint(`Team created: ${name}`, 'var(--success)');
+                loadTeams();
+            } catch (err) {
+                if (err.message.includes('plan_required')) {
+                    cliPrint('Creating teams requires the Operator plan.', 'var(--warning)');
+                } else {
+                    cliPrint(`Create failed: ${err.message}`, 'var(--critical)');
+                }
+            }
+        }
+
+        async function inviteToTeam() {
+            const team_id = document.getElementById('team-invite-target').value;
+            const email = document.getElementById('team-invite-email').value.trim();
+            if (!team_id || !email) { cliPrint('Team and email required.', 'var(--warning)'); return; }
+            try {
+                await callApi('/v1/teams/invite', { method: 'POST', body: JSON.stringify({ team_id, email }) });
+                document.getElementById('team-invite-email').value = '';
+                cliPrint(`Invited ${email}.`, 'var(--success)');
+            } catch (err) {
+                cliPrint(`Invite failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function acceptInvite(team_id) {
+            try {
+                await callApi('/v1/teams/accept', { method: 'POST', body: JSON.stringify({ team_id }) });
+                cliPrint('Joined team.', 'var(--success)');
+                loadTeams();
+            } catch (err) {
+                cliPrint(`Accept failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function leaveTeam(team_id) {
+            if (!confirm('Leave this team? You will lose any plan inheritance from it.')) return;
+            try {
+                await callApi('/v1/teams/leave', { method: 'POST', body: JSON.stringify({ team_id }) });
+                cliPrint('Left team.', 'var(--success)');
+                loadTeams();
+            } catch (err) {
+                cliPrint(`Leave failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── AI provider settings + usage ────────────────────────
+        async function loadAiUsage() {
+            try {
+                const u = await callApi('/v1/assistant/usage');
+                const meter = document.getElementById('assistant-usage');
+                if (!meter) return;
+                let parts = [];
+                parts.push(`Provider: <strong style="color:#fff;">${escapeHtml(u.provider)}</strong>`);
+                if (u.provider === 'platform') {
+                    parts.push(`Quota: <strong style="color:#fff;">${u.count}/${u.cap}</strong> queries this month`);
+                    if (u.cap > 0) {
+                        const pct = Math.min(100, Math.round(100 * u.count / u.cap));
+                        parts.push(`<span style="color:${pct >= 90 ? 'var(--accent-secondary)' : pct >= 70 ? 'var(--warning)' : 'var(--success)'}">(${pct}%)</span>`);
+                    }
+                }
+                if (u.byok_configured) parts.push(`BYOK: <code>…${escapeHtml(u.byok_last4 || '')}</code>`);
+                if (u.ollama_url) parts.push(`Ollama: ${escapeHtml(u.ollama_url)}`);
+                meter.innerHTML = parts.join(' · ');
+
+                // Pre-fill BYOK / Ollama status lines if details panel exists
+                const byokStatus = document.getElementById('byok-status');
+                if (byokStatus) byokStatus.textContent = u.byok_configured ? `Active: …${u.byok_last4}` : 'Not set.';
+                const ollStatus = document.getElementById('ollama-status');
+                if (ollStatus) ollStatus.textContent = u.ollama_url ? `Active: ${u.ollama_url}` : 'Not set.';
+            } catch (err) {
+                console.warn('[ai] usage load failed', err.message);
+            }
+        }
+
+        async function saveByok() {
+            const key = document.getElementById('byok-input').value.trim();
+            if (!key) { cliPrint('Paste your Anthropic key first.', 'var(--warning)'); return; }
+            try {
+                await callApi('/v1/assistant/byok', { method: 'POST', body: JSON.stringify({ api_key: key }) });
+                document.getElementById('byok-input').value = '';
+                cliPrint('BYOK saved. Future queries route through your key.', 'var(--success)');
+                loadAiUsage();
+            } catch (err) {
+                cliPrint(`Save failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function clearByok() {
+            try {
+                await callApi('/v1/assistant/byok', { method: 'POST', body: JSON.stringify({ clear: true }) });
+                cliPrint('BYOK cleared. Reverted to platform AI.', 'var(--warning)');
+                loadAiUsage();
+            } catch (err) { cliPrint(`Clear failed: ${err.message}`, 'var(--critical)'); }
+        }
+
+        async function saveOllama() {
+            const url = document.getElementById('ollama-input').value.trim();
+            if (!url) { cliPrint('Paste your Ollama public URL.', 'var(--warning)'); return; }
+            try {
+                await callApi('/v1/assistant/ollama', { method: 'POST', body: JSON.stringify({ url }) });
+                cliPrint(`Ollama saved: ${url}`, 'var(--success)');
+                loadAiUsage();
+            } catch (err) {
+                cliPrint(`Save failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function clearOllama() {
+            try {
+                await callApi('/v1/assistant/ollama', { method: 'POST', body: JSON.stringify({ clear: true }) });
+                cliPrint('Ollama URL cleared.', 'var(--warning)');
+                loadAiUsage();
+            } catch (err) { cliPrint(`Clear failed: ${err.message}`, 'var(--critical)'); }
+        }
+
+        // ─── Webhooks ─────────────────────────────────────────────
+        async function loadWebhooks() {
+            try {
+                const { webhooks } = await callApi('/v1/webhooks');
+                renderWebhooks(webhooks || []);
+            } catch (err) {
+                if (!err.message.includes('plan_required')) console.warn('[wh] load failed', err.message);
+            }
+        }
+
+        function renderWebhooks(whs) {
+            const list = document.getElementById('webhooks-list');
+            if (!list) return;
+            const active = whs.filter(w => w.is_active);
+            if (!active.length) {
+                list.innerHTML = '<span style="color:var(--text-secondary); font-size:0.8rem;">No webhooks yet. Forward incidents to Slack/Discord/PagerDuty/anywhere.</span>';
+                return;
+            }
+            list.innerHTML = active.map(w => {
+                const status = w.last_status === null ? 'never called' : `last: ${w.last_status} at ${new Date(w.last_called_at).toLocaleString()}`;
+                return `<div style="padding:12px 14px; background:rgba(180,74,255,0.04); border-left:3px solid var(--accent-primary); margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:0.85rem;"><strong>${escapeHtml(w.label || w.url.slice(0, 40))}</strong> <span style="color:var(--text-secondary); font-size:0.7rem;">· ≥${escapeHtml(w.min_severity)}</span></div>
+                        <div style="display:flex; gap:8px;">
+                            <a onclick="testWebhook('${w.id}')" style="color:var(--accent-primary); cursor:pointer; font-size:0.7rem;">test</a>
+                            <a onclick="deleteWebhook('${w.id}')" style="color:var(--accent-secondary); cursor:pointer; font-size:0.7rem;">delete</a>
+                        </div>
+                    </div>
+                    <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:4px;">${escapeHtml(status)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function createWebhook() {
+            const url = document.getElementById('wh-url').value.trim();
+            const label = document.getElementById('wh-label').value.trim();
+            const min_severity = document.getElementById('wh-severity').value;
+            if (!url) { cliPrint('URL required.', 'var(--warning)'); return; }
+            try {
+                const r = await callApi('/v1/webhooks', { method: 'POST', body: JSON.stringify({ url, label, min_severity }) });
+                document.getElementById('wh-url').value = '';
+                document.getElementById('wh-label').value = '';
+                cliPrint(`Webhook added. Signing secret: ${r.signing_secret.slice(0, 16)}…`, 'var(--success)');
+                loadWebhooks();
+            } catch (err) {
+                if (err.message.includes('plan_required')) cliPrint('Webhooks require Pro.', 'var(--warning)');
+                else cliPrint(`Add failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function testWebhook(id) {
+            try {
+                const r = await callApi('/v1/webhooks/test', { method: 'POST', body: JSON.stringify({ id }) });
+                cliPrint(r.ok ? `Test delivered (${r.status})` : `Test failed (${r.status})`, r.ok ? 'var(--success)' : 'var(--critical)');
+            } catch (err) {
+                cliPrint(`Test failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function deleteWebhook(id) {
+            if (!confirm('Delete this webhook?')) return;
+            try {
+                await callApi('/v1/webhooks/delete', { method: 'POST', body: JSON.stringify({ id }) });
+                cliPrint('Webhook deleted.', 'var(--warning)');
+                loadWebhooks();
+            } catch (err) { cliPrint(`Delete failed: ${err.message}`, 'var(--critical)'); }
+        }
+
+        // ─── Referrals ────────────────────────────────────────────
+        async function loadReferral() {
+            try {
+                const r = await callApi('/v1/referrals/me');
+                const link = document.getElementById('referral-link');
+                if (link) link.value = r.share_url || '(none)';
+                const sg = document.getElementById('referral-signups'); if (sg) sg.textContent = r.signups_attributed ?? 0;
+                const rw = document.getElementById('referral-rewards'); if (rw) rw.textContent = r.rewards_earned ?? 0;
+                const dy = document.getElementById('referral-days'); if (dy) dy.textContent = (r.days_credited_total ?? 0) + 'd';
+            } catch (err) { console.warn('[ref] load failed', err.message); }
+        }
+
+        function copyReferralLink() {
+            const link = document.getElementById('referral-link');
+            if (!link) return;
+            link.select();
+            navigator.clipboard.writeText(link.value).then(() => {
+                cliPrint('Referral link copied.', 'var(--success)');
+            });
+        }
+
+        async function attributeReferralIfNeeded() {
+            // Run on first authenticated session if a referral code is in localStorage
+            try {
+                const code = localStorage.getItem('sc_referral_code');
+                if (!code) return;
+                const result = await callApi('/v1/referrals/claim', { method: 'POST', body: JSON.stringify({ code }) });
+                if (result.ok) {
+                    cliPrint(`Welcome bonus active — referrer credited.`, 'var(--success)');
+                    localStorage.removeItem('sc_referral_code');
+                }
+            } catch (err) {
+                // Silent — common reasons (already_referred, claim_window_expired) shouldn't surface
+                if (err.message === 'already_referred' || err.message === 'claim_window_expired') {
+                    localStorage.removeItem('sc_referral_code');
+                }
+            }
+        }
+
+        // ─── Audit log ────────────────────────────────────────────
+        async function loadAudit() {
+            try {
+                const { events } = await callApi('/v1/me/audit');
+                renderAudit(events || []);
+            } catch (err) { console.warn('[audit] load failed', err.message); }
+        }
+
+        function renderAudit(events) {
+            const list = document.getElementById('audit-list');
+            if (!list) return;
+            if (!events.length) {
+                list.innerHTML = '<span style="color:var(--text-secondary);">No recent activity.</span>';
+                return;
+            }
+            const labels = {
+                signin: 'Signed in',
+                signout: 'Signed out',
+                key_rotated: 'API key rotated',
+                key_revoked: 'API key revoked',
+                plan_changed: 'Plan changed',
+                account_deleted: 'Account scheduled for deletion',
+                webhook_added: 'Webhook added',
+                webhook_deleted: 'Webhook deleted',
+                team_created: 'Team created',
+                team_joined: 'Team joined',
+                totp_enabled: '2FA enabled',
+                totp_disabled: '2FA disabled',
+                export_downloaded: 'Data exported',
+                byok_set: 'BYOK key set',
+                byok_cleared: 'BYOK key cleared',
+            };
+            list.innerHTML = events.slice(0, 15).map(e => {
+                const ts = new Date(e.created_at).toLocaleString();
+                const lbl = labels[e.event_type] || e.event_type;
+                const ip = e.ip ? ` <span style="color:var(--text-secondary);font-size:0.7rem;">· ${escapeHtml(e.ip)}</span>` : '';
+                return `<div>[<span style="color:var(--text-secondary);">${escapeHtml(ts)}</span>] ${escapeHtml(lbl)}${ip}</div>`;
+            }).join('');
+        }
+
+        // ─── 2FA / MFA ────────────────────────────────────────────
+        async function loadMfa() {
+            const out = document.getElementById('mfa-status');
+            if (!out) return;
+            try {
+                const m = await callApi('/v1/me/mfa');
+                if (m.enabled) {
+                    out.innerHTML = `<span style="color:var(--success);">2FA enabled</span> · ${m.factor_count} TOTP factor(s) · <a onclick="disable2FA()" style="color:var(--accent-secondary);cursor:pointer;font-size:0.8rem;">disable</a>`;
+                } else {
+                    out.innerHTML = `<span style="color:var(--text-secondary);">2FA not enabled.</span> <button onclick="enroll2FA()" style="margin-left:10px;padding:6px 14px;font-size:0.7rem;background:var(--accent-primary);color:#000;border:none;cursor:pointer;font-weight:700;">ENABLE 2FA</button>`;
+                }
+            } catch (err) { out.textContent = `(unable to load: ${err.message})`; }
+        }
+
+        async function enroll2FA() {
+            if (!supabaseClient) return;
+            try {
+                const { data, error } = await supabaseClient.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'ShadowCypher TOTP' });
+                if (error) throw error;
+                const totp = data.totp;
+                const code = prompt(`Scan this QR or paste the secret into your TOTP app:\n\nSecret: ${totp.secret}\n\nThen enter the 6-digit code from the app:`);
+                if (!code) return;
+                const challenge = await supabaseClient.auth.mfa.challenge({ factorId: data.id });
+                if (challenge.error) throw challenge.error;
+                const verify = await supabaseClient.auth.mfa.verify({ factorId: data.id, challengeId: challenge.data.id, code });
+                if (verify.error) throw verify.error;
+                cliPrint('2FA enabled.', 'var(--success)');
+                loadMfa();
+            } catch (err) {
+                cliPrint(`2FA enrollment failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        async function disable2FA() {
+            if (!supabaseClient) return;
+            if (!confirm('Disable 2FA? Your account will be password-only again.')) return;
+            try {
+                const { data: factors, error } = await supabaseClient.auth.mfa.listFactors();
+                if (error) throw error;
+                const totp = (factors.totp || [])[0];
+                if (!totp) { cliPrint('No factor to disable.', 'var(--warning)'); return; }
+                const unenroll = await supabaseClient.auth.mfa.unenroll({ factorId: totp.id });
+                if (unenroll.error) throw unenroll.error;
+                cliPrint('2FA disabled.', 'var(--warning)');
+                loadMfa();
+            } catch (err) {
+                cliPrint(`Disable failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── Stats ────────────────────────────────────────────────
+        async function loadStats() {
+            try {
+                const s = await callApi('/v1/me/stats');
+                document.getElementById('stat-devices').textContent = s.counts.devices;
+                document.getElementById('stat-scans').textContent = s.counts.scans;
+                document.getElementById('stat-incidents').textContent = s.counts.incidents;
+                document.getElementById('stat-open').textContent = s.counts.open_incidents;
+            } catch (err) { console.warn('[stats] load failed', err.message); }
+        }
+
+        // ─── Data export ──────────────────────────────────────────
+        async function exportData() {
+            const apiKey = document.getElementById('api-key')?.dataset?.realKey;
+            if (!apiKey) { cliPrint('No API key.', 'var(--warning)'); return; }
+            try {
+                const resp = await fetch(`${API_BASE}/v1/me/export`, {
+                    headers: { Authorization: `Bearer ${apiKey}` },
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `shadowcypher-export-${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                cliPrint('Export downloaded.', 'var(--success)');
+            } catch (err) {
+                cliPrint(`Export failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── Onboarding wizard ────────────────────────────────────
+        const ONBOARD_STEPS = [
+            {
+                title: "Welcome to ShadowCypher",
+                desc: "You're set up with a 14-day Guardian Pro trial. Three quick steps to get value out of the platform — let's go.",
+                code: null,
+            },
+            {
+                title: "Step 1: Install the agent",
+                desc: "The Guardian agent runs on a machine on your network and reports devices/incidents back to your dashboard. Free tier supports 1 agent.",
+                code: "# On any Linux/macOS machine:\ncd ~ && git clone https://github.com/jakes1345/ShadowCypher.git\ncd ShadowCypher/agent\n./setup.sh\n./shadow-agent init   # paste your API key from this dashboard\n./shadow-agent run",
+            },
+            {
+                title: "Step 2: Watch it work",
+                desc: "Within ~10 seconds the agent registers, scans your LAN, and posts results. Refresh the dashboard — your devices, recent scans, and any new-device incidents will appear.",
+                code: null,
+            },
+            {
+                title: "Step 3: Stay protected",
+                desc: "Wire up notifications below (email + Slack/Discord webhooks) so you hear about threats in real time. Your trial includes everything Pro — see what you'll keep when you subscribe.",
+                code: null,
+            },
+        ];
+        let onboardIdx = 0;
+
+        function startOnboarding() {
+            if (localStorage.getItem('sc_onboard_done') === '1') return;
+            onboardIdx = 0;
+            renderOnboardingStep();
+            document.getElementById('onboarding-overlay').style.display = 'block';
+        }
+
+        function renderOnboardingStep() {
+            const s = ONBOARD_STEPS[onboardIdx];
+            document.getElementById('onboard-title').textContent = s.title;
+            document.getElementById('onboard-desc').textContent = s.desc;
+            const codeEl = document.getElementById('onboard-code');
+            if (s.code) { codeEl.style.display = 'block'; codeEl.textContent = s.code; }
+            else { codeEl.style.display = 'none'; }
+            document.getElementById('onboard-pos').textContent = `${onboardIdx + 1} / ${ONBOARD_STEPS.length}`;
+            document.getElementById('onboard-next').textContent = onboardIdx === ONBOARD_STEPS.length - 1 ? 'Done' : 'Next →';
+        }
+
+        function nextOnboarding() {
+            onboardIdx++;
+            if (onboardIdx >= ONBOARD_STEPS.length) { dismissOnboarding(); return; }
+            renderOnboardingStep();
+        }
+
+        function dismissOnboarding() {
+            localStorage.setItem('sc_onboard_done', '1');
+            document.getElementById('onboarding-overlay').style.display = 'none';
+        }
+
+        async function deleteAccount() {
+            const confirmEmail = prompt('Type your email to confirm deletion. This is permanent.');
+            if (!confirmEmail) return;
+            try {
+                await callApi('/v1/me/delete', { method: 'POST', body: JSON.stringify({ confirm_email: confirmEmail }) });
+                cliPrint('Account deleted. Goodbye.', 'var(--warning)');
+                if (supabaseClient) await supabaseClient.auth.signOut();
+                setTimeout(() => window.location.href = '/', 1200);
+            } catch (err) {
+                cliPrint(`Delete failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // ─── AI assistant ────────────────────────────────────────
+        async function askAssistant() {
+            const input = document.getElementById('assistant-input');
+            const out = document.getElementById('assistant-output');
+            const btn = document.getElementById('assistant-btn');
+            const question = input.value.trim();
+            if (!question) return;
+            btn.disabled = true; btn.textContent = '...';
+            out.textContent = 'Thinking...';
+            try {
+                const resp = await callApi('/v1/assistant/query', { method: 'POST', body: JSON.stringify({ question }) });
+                out.textContent = resp.answer || '(no response)';
+                input.value = '';
+            } catch (err) {
+                if (err.message.includes('plan_required')) {
+                    out.innerHTML = `<span style="color:var(--warning);">AI assistant requires Guardian Pro or Operator. <a onclick="navTo('pricing', document.getElementById('nav-pricing'))" style="color:var(--accent-primary); cursor:pointer;">See pricing →</a></span>`;
+                } else if (err.message.includes('assistant_not_configured')) {
+                    out.innerHTML = `<span style="color:var(--warning);">AI assistant isn't fully configured yet — site owner needs to set the Anthropic API key.</span>`;
+                } else {
+                    out.innerHTML = `<span style="color:var(--critical);">${escapeHtml(err.message)}</span>`;
+                }
+            } finally {
+                btn.disabled = false; btn.textContent = 'Ask';
+            }
+        }
+
+        async function ackIncident(id) {
+            try {
+                await callApi(`/v1/incidents/ack?incident_id=${encodeURIComponent(id)}`, { method: 'POST' });
+                cliPrint(`Incident acked.`, 'var(--success)');
+                refreshGuardian();
+            } catch (err) {
+                cliPrint(`Ack failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        async function rotateKey() {
+            try {
+                const result = await callApi('/v1/keys/rotate', { method: 'POST' });
+                const keyEl = document.getElementById('api-key');
+                keyEl.dataset.realKey = result.api_key;
+                keyEl.innerText = result.api_key.slice(0, 12) + '…' + result.api_key.slice(-4);
+                cliPrint('API key rotated. Old key now invalid.', 'var(--success)');
+            } catch (err) {
+                cliPrint(`Rotate failed: ${err.message}`, 'var(--critical)');
+            }
+        }
+
+        // Reactive auth state listener — handles sign in, sign out, token refresh, email confirmation,
+        // password recovery (PASSWORD_RECOVERY event when user lands from a Supabase reset email)
+        function wireAuthState() {
+            if (!supabaseClient) return;
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (event === 'PASSWORD_RECOVERY') {
+                    // User clicked reset link — show the "set new password" form
+                    navTo('account', document.getElementById('nav-account'));
+                    toggleAuth('reset');
+                    return;
+                }
+                if (session) {
+                    updateUIForUser(session.user);
+                    document.getElementById('auth-banner')?.remove();
+                } else {
+                    document.getElementById('account-auth').style.display = 'block';
+                    document.getElementById('account-dashboard').style.display = 'none';
+                    const signoutLink = document.getElementById('nav-signout');
+                    if (signoutLink) signoutLink.style.display = 'none';
+                    if (window._guardianTimer) { clearInterval(window._guardianTimer); window._guardianTimer = null; }
+                    document.getElementById('api-banner')?.remove();
+                }
+            });
+        }
+
+        // One-shot bootstrap — checks active session on page load (onAuthStateChange covers everything after)
+        async function checkSession() {
+            if (!supabaseClient) return;
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) updateUIForUser(session.user);
+            } catch (e) {}
+        }
+
+        function toggleAuth(view) {
+            ['login', 'signup', 'forgot', 'reset'].forEach(v => {
+                const el = document.getElementById(`auth-${v}`);
+                if (el) el.style.display = (view === v) ? 'block' : 'none';
+            });
+        }
+
+        async function handleForgotPassword() {
+            if (!supabaseClient) { cliPrint('Auth offline.', 'var(--warning)'); return; }
+            const raw = document.getElementById('forgot-email').value;
+            const email = raw.trim().toLowerCase();
+            if (!email) {
+                showAuthBanner('Email required.', 'error'); return;
+            }
+            // Strict client-side validation so we surface bad input clearly before Supabase rejects it
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showAuthBanner(`That doesn't look like a valid email address. You typed: <code>${escapeHtml(raw)}</code>`, 'error');
+                return;
+            }
+            try {
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/?reset=1`
+                });
+                if (error) throw error;
+                showAuthBanner(`Reset link sent to <strong>${escapeHtml(email)}</strong>. Click it from your inbox (also check spam).`, 'info');
+                cliPrint(`Password reset email sent to ${email}.`, 'var(--success)');
+            } catch (err) {
+                let msg = err.message || 'unknown';
+                if (msg.toLowerCase().includes('invalid format')) {
+                    msg = `Supabase rejected the email format. Make sure it's exactly the address you signed up with — no extra characters or spaces. (You typed: ${email})`;
+                }
+                cliPrint(`Reset failed: ${msg}`, 'var(--critical)');
+                showAuthBanner(msg, 'error');
+            }
+        }
+
+        async function handlePasswordReset() {
+            if (!supabaseClient) { cliPrint('Auth offline.', 'var(--warning)'); return; }
+            const pw = document.getElementById('reset-password').value;
+            const pw2 = document.getElementById('reset-password-confirm').value;
+            if (!pw || pw.length < 6) { cliPrint('Password must be at least 6 chars.', 'var(--warning)'); return; }
+            if (pw !== pw2) { cliPrint('Passwords do not match.', 'var(--critical)'); return; }
+            try {
+                const { error } = await supabaseClient.auth.updateUser({ password: pw });
+                if (error) throw error;
+                cliPrint('Password updated. You are signed in.', 'var(--success)');
+                showAuthBanner('Password updated. Redirecting…', 'info');
+                history.replaceState(null, '', window.location.pathname);
+                // onAuthStateChange will surface the dashboard
+                setTimeout(() => navTo('account', document.getElementById('nav-account')), 800);
+            } catch (err) {
+                cliPrint(`Update failed: ${err.message}`, 'var(--critical)');
+                showAuthBanner(err.message, 'error');
+            }
+        }
+
+        function copyKey() {
+            const keyEl = document.getElementById('api-key');
+            const real = keyEl?.dataset?.realKey;
+            if (!real) { cliPrint('No API key available — sign in first.', 'var(--warning)'); return; }
+            navigator.clipboard.writeText(real).then(() => {
+                const original = keyEl.innerText;
+                keyEl.innerText = 'Copied to clipboard';
+                setTimeout(() => keyEl.innerText = original, 2000);
+            });
+        }
+
+        // Boot
+        // Register the service worker (PWA + web-push receiver)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('[sw] register failed', err));
+            });
+        }
+
+        window.addEventListener('load',()=>{
+            wireAuthState();
+            checkSession();
+            updateIndicator(document.querySelector('.nav-tab.active'));
+            // Hex dump — paused when app is backgrounded
+            const hex=document.getElementById('hex-dump');
+            let _hexTimer=null, _swarmTimer=null;
+            function _startAnimations(){
+                if(!_hexTimer) _hexTimer=setInterval(()=>{let t='';for(let i=0;i<400;i++){t+=Math.floor(Math.random()*16).toString(16).toUpperCase()+' ';if(i%20===0)t+='<br>';}if(hex)hex.innerHTML=t;},800);
+                // Swarm log
+                const log=document.getElementById('swarm-log');
+                const entries=["[GHOST] PING: {ip} → {ms}ms","[RELAY] SIGNAL_LOCK: {id}","[PULSE] VARIANCE: {var}","[SENTINEL] PEER_LINKED: {node}","[GUARD] DEVICE_OK: {dev}"];
+                if(!_swarmTimer) _swarmTimer=setInterval(()=>{
+                    if(!log)return;
+                    const e=entries[Math.floor(Math.random()*entries.length)].replace('{ip}','192.168.1.'+Math.floor(Math.random()*255)).replace('{ms}',Math.floor(Math.random()*50)).replace('{id}','NODE_'+Math.floor(Math.random()*1000)).replace('{var}',(Math.random()).toFixed(2)).replace('{node}','SHADOW_'+Math.floor(Math.random()*99)).replace('{dev}','iPhone_'+Math.floor(Math.random()*9));
+                    const d=document.createElement('div');d.style.opacity='0';d.style.transition='opacity 0.5s';d.innerHTML=e;log.prepend(d);
+                    setTimeout(()=>d.style.opacity='0.8',10);
+                    if(log.children.length>5)log.removeChild(log.lastChild);
+                },2500);
+            }
+            function _stopAnimations(){
+                clearInterval(_hexTimer); _hexTimer=null;
+                clearInterval(_swarmTimer); _swarmTimer=null;
+            }
+            _startAnimations();
+            // Pause all timers when app goes to background (battery saver for Android/PWA)
+            document.addEventListener('visibilitychange',()=>{
+                if(document.hidden){
+                    _stopAnimations();
+                    // Also pause Guardian polling
+                    if(window._guardianTimer){clearInterval(window._guardianTimer);window._guardianTimer=null;}
+                } else {
+                    _startAnimations();
+                    // Resume Guardian polling if user is signed in
+                    if(!window._guardianTimer && typeof refreshGuardian==='function'){
+                        refreshGuardian();
+                        window._guardianTimer=setInterval(refreshGuardian,30000);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
