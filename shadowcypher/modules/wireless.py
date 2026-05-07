@@ -7,6 +7,7 @@ import subprocess
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_interface
 from shadowcypher.core.platform import platform_engine
+from shadowcypher.core.stealth import require_stealth
 
 
 class Wireless(BaseModule):
@@ -89,6 +90,7 @@ class Wireless(BaseModule):
     @staticmethod
     def deauth(interface, bssid, client_mac=None, count=10, on_output=None, on_complete=None):
         """Send deauthentication frames to disconnect clients from an AP."""
+        require_stealth(on_output=on_output)
         if not Wireless._check_iface(interface):
             return
         from shadowcypher.core.runner import runner
@@ -104,6 +106,7 @@ class Wireless(BaseModule):
     @staticmethod
     def crack_wpa(cap_file, wordlist=None, on_output=None, on_complete=None):
         """Crack a WPA handshake capture file."""
+        require_stealth(on_output=on_output)
         from shadowcypher.core.runner import runner
         wordlist = wordlist or "/usr/share/wordlists/rockyou.txt"
         args = ["aircrack-ng", "-w", wordlist, cap_file]

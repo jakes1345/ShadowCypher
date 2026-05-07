@@ -19,6 +19,7 @@ from shadowcypher.core.module import BaseModule
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
 from shadowcypher.core.sanitize import validate_ip, validate_port
+from shadowcypher.core.stealth import require_stealth
 
 # Standard User-Agents for load generation profiles
 USER_AGENTS = [
@@ -84,6 +85,7 @@ class LoadInjector(BaseModule):
             duration: Auto-terminate after N seconds (0 = manual)
             on_output: Real-time output callback
         """
+        require_stealth(on_output=on_output)
         if self._active:
             if on_output:
                 on_output("[!] Load Injector already active. Terminate current test first.")

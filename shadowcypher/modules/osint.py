@@ -41,15 +41,21 @@ class OSINT:
 
     @staticmethod
     def tech_detect(target, on_output=None, on_complete=None):
-        """Detect web technologies."""
+        """Detect web technologies — uses whatweb if installed, falls back to httpx."""
         require_stealth(on_output=on_output)
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
-        from shadowcypher.core.config import config
-        whatweb = config.get_tool_path("whatweb")
+        import shutil
         url = target if target.startswith("http") else f"https://{target}"
-        return runner.execute_task(f"TECH_{target}", [whatweb, url], callback=on_output)
+        if shutil.which("whatweb"):
+            return runner.execute_task(f"TECH_{target}", ["whatweb", url], callback=on_output)
+        if shutil.which("httpx"):
+            args = ["httpx", "-u", url, "-silent", "-tech-detect", "-title", "-status-code", "-no-color"]
+            return runner.execute_task(f"TECH_{target}", args, callback=on_output)
+        if on_output:
+            on_output("[OSINT] No tech-detect tool found. Install: sudo apt install whatweb  OR  go install httpx@latest\n")
+        return None
 
     @staticmethod
     def email_mx_check(target, on_output=None):

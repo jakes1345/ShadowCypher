@@ -5,6 +5,7 @@ from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.logger import logger
 from shadowcypher.core.stealth import require_stealth
 import shlex
+import shutil
 import os
 
 
@@ -100,6 +101,59 @@ class WebAttacks:
         return runner.execute_task(
             "NUCLEI_UPDATE", ["nuclei", "-ut"], callback=on_output
         )
+
+    @staticmethod
+    def dir_bust(
+        url,
+        wordlist="/usr/share/wordlists/dirb/common.txt",
+        extensions="php,html,txt,js",
+        threads=50,
+        on_output=None,
+        on_complete=None,
+    ):
+        """
+        Directory and file brute-forcing with tool auto-selection:
+        feroxbuster > gobuster > ffuf (whichever is installed).
+        """
+        require_stealth(on_output=on_output)
+        if not validate_target(url):
+            if on_output:
+                on_output(f"[ERROR] Invalid URL: {url}")
+            return
+
+        if shutil.which("feroxbuster"):
+            args = [
+                "feroxbuster",
+                "--url", url,
+                "--wordlist", wordlist,
+                "--extensions", extensions,
+                "--threads", str(threads),
+                "--no-state",
+                "--quiet",
+            ]
+            logger.info("web", f"feroxbuster: {url}")
+            return runner.execute_task(f"FEROX_{url}", args, callback=on_output)
+
+        if shutil.which("gobuster"):
+            args = [
+                "gobuster", "dir",
+                "-u", url,
+                "-w", wordlist,
+                "-x", extensions,
+                "-t", str(threads),
+                "--no-error",
+                "-q",
+            ]
+            logger.info("web", f"gobuster: {url}")
+            return runner.execute_task(f"GOBUST_{url}", args, callback=on_output)
+
+        # ffuf fallback
+        from shadowcypher.core.config import config
+        ffuf = config.get_tool_path("ffuf")
+        fuzz_url = url.rstrip("/") + "/FUZZ"
+        args = [ffuf, "-c", "-w", wordlist, "-u", fuzz_url, "-t", str(threads), "-mc", "200,204,301,302,307,401,403"]
+        logger.info("web", f"ffuf fallback: {fuzz_url}")
+        return runner.execute_task(f"FFUF_DIR_{url}", args, callback=on_output)
 
     @staticmethod
     def mhddos_strike(target, method="GET", threads=100, duration=60, on_output=None):
