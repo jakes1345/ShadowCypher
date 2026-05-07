@@ -76,6 +76,8 @@ class AIEngine:
         """Stream a response from Ollama API."""
         url = f"{OLLAMA_BASE}{endpoint}"
         full_text = []
+        in_think = False
+        think_buf = []
         try:
             req = urllib.request.Request(
                 url,
@@ -91,9 +93,29 @@ class AIEngine:
                         chunk = json.loads(line.decode("utf-8"))
                         token = chunk.get("message", {}).get("content", "")
                         if token:
-                            full_text.append(token)
-                            if on_token:
-                                on_token(token)
+                            # Buffer and suppress <think>...</think> blocks
+                            think_buf.append(token)
+                            combined = "".join(think_buf)
+                            if "<think>" in combined:
+                                in_think = True
+                            if in_think:
+                                if "</think>" in combined:
+                                    in_think = False
+                                    after = combined.split("</think>", 1)[1]
+                                    think_buf = [after] if after else []
+                                    if after:
+                                        full_text.append(after)
+                                        if on_token:
+                                            on_token(after)
+                                # suppress tokens while inside <think>
+                                continue
+                            # No think block active — flush buffer
+                            out = "".join(think_buf)
+                            think_buf = []
+                            if out:
+                                full_text.append(out)
+                                if on_token:
+                                    on_token(out)
                         if chunk.get("done", False):
                             break
                     except json.JSONDecodeError:
@@ -102,6 +124,12 @@ class AIEngine:
             if on_token:
                 on_token(f"\n[Error] {e}")
         return "".join(full_text)
+
+    @staticmethod
+    def _strip_think(text: str) -> str:
+        """Strip <think>...</think> blocks that Qwen3 may emit despite /no_think."""
+        import re
+        return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
     @staticmethod
     def check_ollama() -> bool:
@@ -352,7 +380,7 @@ class AIEngine:
         }, timeout=300)
 
         if result and "message" in result:
-            response = result["message"].get("content", "")
+            response = self._strip_think(result["message"].get("content", ""))
             logger.info("ai", "Ollama generation complete")
             return response
         return "[Error] No response from Ollama"

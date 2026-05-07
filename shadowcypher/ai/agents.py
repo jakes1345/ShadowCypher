@@ -332,7 +332,9 @@ class AgentRouter:
             )
             with urllib.request.urlopen(req, timeout=30) as resp:
                 data = json.loads(resp.read())
-            answer = data.get("message", {}).get("content", "").strip().lower()
+            import re
+            raw = data.get("message", {}).get("content", "")
+            answer = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip().lower()
             # Extract just the agent ID
             for agent_id in AGENT_FLEET:
                 if agent_id in answer:
