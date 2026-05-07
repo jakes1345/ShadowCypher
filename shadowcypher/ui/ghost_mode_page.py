@@ -136,6 +136,35 @@ class GhostModePage(BasePage):
         harden_frame.add(harden_box)
         ctrl_col.pack_start(harden_frame, False, False, 0)
 
+        # Traffic Mirage
+        mirage_frame = Gtk.Frame(label="TRAFFIC MIRAGE")
+        mirage_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        mirage_box.set_margin_top(10); mirage_box.set_margin_bottom(10)
+        mirage_box.set_margin_start(10); mirage_box.set_margin_end(10)
+
+        mirage_desc = Gtk.Label()
+        mirage_desc.set_markup(
+            "<span size='x-small' color='#94a3b8'>"
+            "Traffic obfuscation: timing, decoys, protocol tunneling"
+            "</span>"
+        )
+        mirage_desc.set_xalign(0)
+        mirage_box.pack_start(mirage_desc, False, False, 0)
+
+        for label, mode in [
+            ("Analyze Fingerprint", "analyze"),
+            ("Generate Decoy Traffic", "decoy"),
+            ("Traffic Timing Obfuscation", "shape"),
+            ("DNS Tunnel", "dns-tunnel"),
+            ("Configure obfs4", "obfs4"),
+        ]:
+            btn = Gtk.Button(label=label)
+            btn.connect("clicked", lambda b, m=mode: self._on_mirage(m))
+            mirage_box.pack_start(btn, False, False, 0)
+
+        mirage_frame.add(mirage_box)
+        ctrl_col.pack_start(mirage_frame, False, False, 0)
+
         # Right: output console
         console_frame = Gtk.Frame(label="GHOST CONSOLE")
         console_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -324,3 +353,7 @@ class GhostModePage(BasePage):
             subprocess.Popen([term, "-e", f"sudo {sys.executable} {script} workspace"])
         else:
             self._log("[ERROR] No terminal emulator found (xterm/gnome-terminal/konsole)")
+
+    def _on_mirage(self, mode: str):
+        self._log(f"Traffic Mirage: {mode}...")
+        self.run_script("traffic_mirage.py", [mode])
