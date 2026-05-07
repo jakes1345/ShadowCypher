@@ -319,9 +319,10 @@ class AgentRouter:
                 "model": model,
                 "messages": [
                     {"role": "system", "content": "You are a task classifier. Respond with only a single word: the agent ID."},
-                    {"role": "user", "content": classify_prompt},
+                    {"role": "user", "content": f"/no_think\n{classify_prompt}"},
                 ],
                 "stream": False,
+                "think": False,
                 "options": {"num_predict": 10, "temperature": 0.0},
             }
             req = urllib.request.Request(

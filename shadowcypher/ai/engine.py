@@ -335,12 +335,14 @@ class AIEngine:
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        # Prepend /no_think to suppress Qwen3 chain-of-thought loops
+        messages.append({"role": "user", "content": f"/no_think\n{prompt}"})
 
         result = self._ollama_request("/api/chat", {
             "model": self._model_name,
             "messages": messages,
             "stream": False,
+            "think": False,
             "options": {
                 "num_predict": max_tokens,
                 "temperature": temperature,
@@ -407,12 +409,13 @@ class AIEngine:
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        messages.append({"role": "user", "content": f"/no_think\n{prompt}"})
 
         return self._ollama_stream("/api/chat", {
             "model": self._model_name,
             "messages": messages,
             "stream": True,
+            "think": False,
             "options": {
                 "num_predict": max_tokens,
                 "temperature": temperature,
