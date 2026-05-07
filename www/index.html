@@ -206,6 +206,25 @@
                     <span style="color:#666;">No scans yet.</span>
                 </div>
             </div>
+
+            <!-- Android Assistant -->
+            <div id="android-assistant-card" style="display:none;margin-bottom:40px;padding:24px;border:1px solid rgba(180,74,255,0.25);border-radius:6px;background:rgba(180,74,255,0.03);">
+                <h3 class="mono" style="color:var(--accent-primary);margin-bottom:12px;font-size:0.9rem;">// Shadow AI — Device Assistant</h3>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:20px;">Replace Bixby / Google Assistant with Shadow AI. Long-press Home to invoke.</p>
+                <div id="assistant-status-row" style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                    <div id="assistant-status-dot" style="width:8px;height:8px;border-radius:50%;background:#555;"></div>
+                    <span id="assistant-status-label" class="mono" style="font-size:0.75rem;color:var(--text-secondary);">Checking status…</span>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <button onclick="ShadowAssistant.show()" style="padding:10px 20px;background:linear-gradient(135deg,#7b2ff7,#b44aff);border:none;border-radius:4px;color:#fff;font-family:var(--font-main);font-size:0.82rem;cursor:pointer;letter-spacing:1px;">
+                        INVOKE ASSISTANT
+                    </button>
+                    <button onclick="ShadowAssistant.openSettings()" style="padding:10px 20px;background:transparent;border:1px solid rgba(180,74,255,0.4);border-radius:4px;color:var(--accent-primary);font-family:var(--font-main);font-size:0.82rem;cursor:pointer;letter-spacing:1px;">
+                        SET AS DEFAULT
+                    </button>
+                </div>
+                <p style="font-size:0.7rem;color:#475569;margin-top:16px;">Settings → Apps → Default Apps → Digital assistant → ShadowCypher</p>
+            </div>
         </div>
     </div>
 
@@ -1902,6 +1921,41 @@
                 }
             });
         });
+    </script>
+
+    <!-- Android Device Assistant -->
+    <script src="/assistant.js" defer></script>
+    <script>
+    // Show assistant card + update status when on Android Capacitor
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!window.Capacitor?.isNativePlatform()) return;
+        const card = document.getElementById('android-assistant-card');
+        if (card) card.style.display = 'block';
+
+        // Poll assistant status every 3s when guardian tab is active
+        async function refreshAssistantStatus() {
+            const plugin = window.Capacitor?.Plugins?.ShadowAssistant;
+            if (!plugin) return;
+            try {
+                const s = await plugin.checkAssistStatus();
+                const dot = document.getElementById('assistant-status-dot');
+                const lbl = document.getElementById('assistant-status-label');
+                if (!dot || !lbl) return;
+                if (s.ttsReady && s.sttAvailable) {
+                    dot.style.background = '#22c55e';
+                    lbl.textContent = s.wasAssistLaunch ? 'ACTIVE — Launched as default assistant' : 'READY — Set as default to enable long-press Home';
+                } else {
+                    dot.style.background = '#f59e0b';
+                    lbl.textContent = 'PARTIAL — ' + (s.ttsReady ? '' : 'TTS unavailable ') + (s.sttAvailable ? '' : 'STT unavailable');
+                }
+            } catch (e) {}
+        }
+
+        window.addEventListener('pageChanged', (e) => {
+            if (e.detail === 'guardian') refreshAssistantStatus();
+        });
+        refreshAssistantStatus();
+    });
     </script>
 </body>
 </html>
