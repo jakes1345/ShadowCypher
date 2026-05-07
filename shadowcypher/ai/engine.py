@@ -145,29 +145,93 @@ class AIEngine:
             return [m["name"] for m in result["models"]]
         return []
 
+    @staticmethod
+    def detect_vram_gb() -> float:
+        """Return total GPU VRAM in GB, or 0 if no GPU detected."""
+        try:
+            import subprocess
+            out = subprocess.check_output(
+                ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
+                timeout=5, stderr=subprocess.DEVNULL, text=True,
+            )
+            return sum(int(x.strip()) for x in out.strip().splitlines() if x.strip()) / 1024
+        except Exception:
+            pass
+        try:
+            import subprocess
+            out = subprocess.check_output(
+                ["rocm-smi", "--showmeminfo", "vram", "--json"],
+                timeout=5, stderr=subprocess.DEVNULL, text=True,
+            )
+            import json as _json
+            data = _json.loads(out)
+            total = sum(int(v.get("VRAM Total Memory (B)", 0)) for v in data.values() if isinstance(v, dict))
+            return total / (1024 ** 3)
+        except Exception:
+            pass
+        return 0.0
+
+    @staticmethod
+    def recommended_base_model(vram_gb: float = 0) -> dict:
+        """Return the recommended Dolphin model tier for the detected VRAM."""
+        if vram_gb <= 0:
+            vram_gb = AIEngine.detect_vram_gb()
+
+        if vram_gb >= 22:
+            return {
+                "model": "dolphin-mixtral:8x7b",
+                "size_gb": 26,
+                "tier": "elite",
+                "description": "Mixtral 8x7B uncensored — best reasoning, full MoE architecture",
+            }
+        if vram_gb >= 12:
+            return {
+                "model": "dolphin-llama3.1:8b-q8_0",
+                "size_gb": 8.5,
+                "tier": "pro",
+                "description": "Llama 3.1 8B Q8 uncensored — maximum quality 8B, fills 16GB cleanly",
+            }
+        if vram_gb >= 7:
+            return {
+                "model": "dolphin-llama3:8b",
+                "size_gb": 4.7,
+                "tier": "standard",
+                "description": "Llama 3 8B uncensored — zero refusals, strong reasoning",
+            }
+        return {
+            "model": "dolphin-mistral:7b",
+            "size_gb": 3.8,
+            "tier": "lite",
+            "description": "Mistral 7B uncensored — runs on 6GB VRAM or CPU",
+        }
+
     def _select_ollama_model(self) -> Optional[str]:
         """Select best available Ollama model for security work."""
         models = self.list_ollama_models()
         if not models:
             return None
 
-        # Preference order — ShadowCypher tuned models first, then capable generalists
+        # ShadowCypher tuned models first, then Dolphin tier, then generalist fallbacks
         preferences = [
-            "shadowcypher-ai",   # ShadowCypher primary — uncensored Qwen3.5 4B + cyber system prompt
-            "shadow-sec",        # Red Phantom — offensive security specialist
-            "shadow-uncensored", # Raw uncensored base
-            "shadow-coder",      # Coding specialist
-            "shadow-opus",       # Reasoning variant
-            "shadow-recon",      # OSINT specialist
-            "shadow-tool",       # Tool-calling lightweight
-            "qwen2.5-coder",    # Strong coder fallback
-            "qwen3",             # Qwen 3 reasoning
-            "llama3.1",          # Meta Llama fallback
-            "granite",           # IBM Granite fallback
+            "shadowcypher-ai",
+            "shadow-sec",
+            "shadow-uncensored",
+            "shadow-coder",
+            "shadow-opus",
+            "shadow-recon",
+            "shadow-tool",
+            "dolphin-mixtral",
+            "dolphin-llama3.1",
+            "dolphin-llama3",
+            "dolphin-mistral",
+            "dolphin",
+            "qwen2.5-coder",
+            "qwen3",
+            "llama3.1",
+            "granite",
             "qwen",
             "llama3",
             "mistral",
-            "dolphin",
         ]
 
         for pref in preferences:
@@ -175,7 +239,6 @@ class AIEngine:
                 if pref in model.lower():
                     return model
 
-        # Fall back to first available model
         return models[0] if models else None
 
     # ──────────────────────────────────────────────────────────────────
