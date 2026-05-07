@@ -27,6 +27,8 @@ class WebAttacksPage(BasePage):
         notebook.append_page(self._build_nuclei_tab(), Gtk.Label(label="Nuclei"))
         notebook.append_page(self._build_ffuf_tab(), Gtk.Label(label="Ffuf Fuzzing"))
         notebook.append_page(self._build_mhddos_tab(), Gtk.Label(label="MHDDoS (Elite)"))
+        notebook.append_page(self._build_sql_venom_tab(), Gtk.Label(label="SQL Venom"))
+        notebook.append_page(self._build_dir_buster_tab(), Gtk.Label(label="Dir Buster"))
         self.workspace.pack_start(notebook, False, False, 0)
 
     def _build_nuclei_tab(self):
@@ -208,3 +210,87 @@ class WebAttacksPage(BasePage):
                 on_complete=self.on_complete,
             )
         )
+
+    # ── SQL Venom tab (pure-Python SQLi, no sqlmap) ──────────────────────────
+
+    def _build_sql_venom_tab(self):
+        from shadowcypher.core.stealth import require_stealth
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12); box.set_margin_end(12)
+        box.set_margin_top(12); box.set_margin_bottom(12)
+
+        row = Gtk.Box(spacing=6)
+        row.pack_start(Gtk.Label(label="URL:"), False, False, 0)
+        self._sqv_url = Gtk.Entry(); self._sqv_url.set_placeholder_text("http://target.com/page?id=1")
+        self._sqv_url.set_hexpand(True); row.pack_start(self._sqv_url, True, True, 0)
+        box.pack_start(row, False, False, 0)
+
+        row2 = Gtk.Box(spacing=6)
+        row2.pack_start(Gtk.Label(label="Param:"), False, False, 0)
+        self._sqv_param = Gtk.Entry(); self._sqv_param.set_placeholder_text("id (leave blank = auto)"); self._sqv_param.set_width_chars(16)
+        row2.pack_start(self._sqv_param, False, False, 0)
+        self._sqv_dump = Gtk.CheckButton(label="--dump"); self._sqv_dump.set_active(False)
+        self._sqv_dbs = Gtk.CheckButton(label="--dbs"); self._sqv_dbs.set_active(False)
+        row2.pack_start(self._sqv_dump, False, False, 0)
+        row2.pack_start(self._sqv_dbs, False, False, 0)
+        box.pack_start(row2, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=6)
+        btn_row.pack_start(self.make_action_btn("Inject", self._on_sql_venom), False, False, 0)
+        box.pack_start(btn_row, False, False, 0)
+        return box
+
+    def _on_sql_venom(self, btn):
+        from shadowcypher.core.stealth import require_stealth
+        url = self._sqv_url.get_text().strip()
+        if not url: self.log("URL required.", "WARN"); return
+        require_stealth(on_output=self.on_output)
+        args = ["-u", url]
+        p = self._sqv_param.get_text().strip()
+        if p: args += ["-p", p]
+        if self._sqv_dump.get_active(): args.append("--dump")
+        if self._sqv_dbs.get_active(): args.append("--dbs")
+        self.run_script("sql_venom.py", args)
+
+    # ── Dir Buster tab (pure-Python, no feroxbuster/gobuster needed) ─────────
+
+    def _build_dir_buster_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12); box.set_margin_end(12)
+        box.set_margin_top(12); box.set_margin_bottom(12)
+
+        row = Gtk.Box(spacing=6)
+        row.pack_start(Gtk.Label(label="URL:"), False, False, 0)
+        self._db_url = Gtk.Entry(); self._db_url.set_placeholder_text("http://target.com")
+        self._db_url.set_hexpand(True); row.pack_start(self._db_url, True, True, 0)
+        box.pack_start(row, False, False, 0)
+
+        row2 = Gtk.Box(spacing=6)
+        row2.pack_start(Gtk.Label(label="Wordlist:"), False, False, 0)
+        self._db_wl = Gtk.Entry(); self._db_wl.set_placeholder_text("(built-in)"); self._db_wl.set_hexpand(True)
+        row2.pack_start(self._db_wl, True, True, 0)
+        row2.pack_start(Gtk.Label(label="Ext:"), False, False, 0)
+        self._db_ext = Gtk.Entry(); self._db_ext.set_text("php,html,txt"); self._db_ext.set_width_chars(16)
+        row2.pack_start(self._db_ext, False, False, 0)
+        row2.pack_start(Gtk.Label(label="Threads:"), False, False, 0)
+        self._db_threads = Gtk.SpinButton.new_with_range(1, 200, 10); self._db_threads.set_value(50)
+        row2.pack_start(self._db_threads, False, False, 0)
+        box.pack_start(row2, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=6)
+        btn_row.pack_start(self.make_action_btn("Bust", self._on_dir_buster), False, False, 0)
+        box.pack_start(btn_row, False, False, 0)
+        return box
+
+    def _on_dir_buster(self, btn):
+        from shadowcypher.core.stealth import require_stealth
+        url = self._db_url.get_text().strip()
+        if not url: self.log("URL required.", "WARN"); return
+        require_stealth(on_output=self.on_output)
+        args = [url]
+        wl = self._db_wl.get_text().strip()
+        if wl: args += ["-w", wl]
+        ext = self._db_ext.get_text().strip()
+        if ext: args += ["-x", ext]
+        args += ["-t", str(int(self._db_threads.get_value()))]
+        self.run_script("dir_buster.py", args)

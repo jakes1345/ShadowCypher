@@ -4,11 +4,17 @@ Directly integrated with ShadowComponents and ShadowHub.
 """
 
 import gi
+import subprocess
+import threading
+import sys
+import os
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 
 from shadowcypher.ui.components import TacticalTerminal, TacticalHeader
 from shadowcypher.core.hub import hub
+
+_SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "scripts")
 
 class BasePage(Gtk.Box):
     """
@@ -106,6 +112,30 @@ class BasePage(Gtk.Box):
         self.log("WINDOW_CLEAR", "SYSTEM")
         
     def on_output(self, text): self.log(text)
-    def on_complete(self, rc): 
+    def on_complete(self, rc):
         self.header.set_active(False)
         self.log(f"MISSION_FINALIZED_CODE: {rc}", "SUCCESS")
+
+    def run_script(self, script_name: str, args: list, sudo: bool = False):
+        """Run a script from shadowcypher/scripts/ as a subprocess, streaming output to terminal."""
+        script_path = os.path.abspath(os.path.join(_SCRIPTS_DIR, script_name))
+        if not os.path.exists(script_path):
+            self.log(f"[ERROR] Script not found: {script_name}", "ERROR")
+            return
+        cmd = (["sudo"] if sudo else []) + [sys.executable, script_path] + [str(a) for a in args]
+        self.header.set_active(True)
+        self.log(f"$ {' '.join(cmd)}", "EXEC")
+
+        def _worker():
+            try:
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                for line in proc.stdout:
+                    GLib.idle_add(self.terminal.log, line.rstrip(), "INFO")
+                rc = proc.wait()
+                GLib.idle_add(self.header.set_active, False)
+                GLib.idle_add(self.terminal.log, f"[exit {rc}]", "SUCCESS" if rc == 0 else "ERROR")
+            except Exception as e:
+                GLib.idle_add(self.terminal.log, f"[ERROR] {e}", "ERROR")
+                GLib.idle_add(self.header.set_active, False)
+
+        threading.Thread(target=_worker, daemon=True).start()

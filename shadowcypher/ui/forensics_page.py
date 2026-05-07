@@ -27,6 +27,7 @@ class ForensicsPage(BasePage):
 
         self._engine = Forensics()
         self._build_controls()
+        self._build_ops_section()
 
     def _build_controls(self):
         # File selection
@@ -111,3 +112,88 @@ class ForensicsPage(BasePage):
                 f,
                 on_output=lambda x: GLib.idle_add(self.log, x.strip(), "INFO"),
             )
+
+    # ── Ops section: Trace Eraser + Dead Drop ────────────────────────────────
+
+    def _build_ops_section(self):
+        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        self.workspace.pack_start(sep, False, False, 4)
+
+        ops_nb = Gtk.Notebook()
+        ops_nb.append_page(self._build_trace_eraser_tab(), Gtk.Label(label="Trace Eraser"))
+        ops_nb.append_page(self._build_dead_drop_tab(), Gtk.Label(label="Dead Drop"))
+        self.workspace.pack_start(ops_nb, False, False, 0)
+
+    def _build_trace_eraser_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.set_margin_start(10); box.set_margin_end(10)
+        box.set_margin_top(8); box.set_margin_bottom(8)
+
+        row = Gtk.Box(spacing=6)
+        self._te_deep = Gtk.CheckButton(label="--deep (incl. swap/kernel logs)")
+        self._te_timestamps = Gtk.CheckButton(label="--timestamps (normalize file times)")
+        row.pack_start(self._te_deep, False, False, 0)
+        row.pack_start(self._te_timestamps, False, False, 0)
+        box.pack_start(row, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=6)
+        btn_row.pack_start(self.make_action_btn("Erase Traces (root)", self._on_trace_eraser), False, False, 0)
+        box.pack_start(btn_row, False, False, 0)
+        return box
+
+    def _build_dead_drop_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.set_margin_start(10); box.set_margin_end(10)
+        box.set_margin_top(8); box.set_margin_bottom(8)
+
+        row = Gtk.Box(spacing=6)
+        row.pack_start(Gtk.Label(label="Target:"), False, False, 0)
+        self._dd_target = Gtk.Entry(); self._dd_target.set_placeholder_text("file/dir or /dev/sdX for USB")
+        self._dd_target.set_hexpand(True); row.pack_start(self._dd_target, True, True, 0)
+        box.pack_start(row, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=6)
+        for label, handler in [
+            ("Secure Delete", self._on_dd_shred),
+            ("Wipe Swap", self._on_dd_swap),
+            ("USB Dead Drop", self._on_dd_usb),
+            ("PANIC", self._on_dd_panic),
+        ]:
+            style = "destructive-action" if label == "PANIC" else "suggested-action"
+            btn = self.make_action_btn(label, handler, style=style)
+            btn_row.pack_start(btn, False, False, 0)
+        box.pack_start(btn_row, False, False, 0)
+        return box
+
+    def _on_trace_eraser(self, btn):
+        args = []
+        if self._te_deep.get_active(): args.append("--deep")
+        if self._te_timestamps.get_active(): args.append("--timestamps")
+        self.run_script("trace_eraser.py", args, sudo=True)
+
+    def _on_dd_shred(self, btn):
+        t = self._dd_target.get_text().strip()
+        if not t: self.log("Enter file/dir path.", "WARN"); return
+        self.run_script("dead_drop.py", ["shred", t], sudo=True)
+
+    def _on_dd_swap(self, btn):
+        self.run_script("dead_drop.py", ["swap"], sudo=True)
+
+    def _on_dd_usb(self, btn):
+        t = self._dd_target.get_text().strip()
+        if not t: self.log("Enter device path (e.g. /dev/sdb).", "WARN"); return
+        self.run_script("dead_drop.py", ["usb", t], sudo=True)
+
+    def _on_dd_panic(self, btn):
+        dlg = Gtk.MessageDialog(
+            transient_for=self.get_toplevel(),
+            flags=0,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.OK_CANCEL,
+            text="PANIC — destroy all sensitive data?",
+        )
+        dlg.format_secondary_text("This is irreversible. All sensitive files will be overwritten and deleted.")
+        resp = dlg.run()
+        dlg.destroy()
+        if resp == Gtk.ResponseType.OK:
+            self.run_script("dead_drop.py", ["panic"], sudo=True)

@@ -21,6 +21,7 @@ class CredentialsPage(BasePage):
         notebook.append_page(self._build_hydra_tab(), Gtk.Label(label="Hydra Brute Force"))
         notebook.append_page(self._build_hash_tab(), Gtk.Label(label="Hash Cracking"))
         notebook.append_page(self._build_identify_tab(), Gtk.Label(label="Hash Identify"))
+        notebook.append_page(self._build_cred_sprayer_tab(), Gtk.Label(label="Cred Sprayer"))
         notebook.append_page(self._build_deep_breach_tab(), Gtk.Label(label="Deep Breach"))
         self.workspace.pack_start(notebook, False, False, 0)
 
@@ -225,6 +226,67 @@ class CredentialsPage(BasePage):
     def _on_deep_breach(self, btn):
         email = self.breach_target.get_text().strip()
         self.terminal.log(f"INITIATING_DDEEPHAT_BREACH_CORRELATION: {email}", "AI")
-        # Instantiate Credentials once or use static if available
         c = Credentials()
         c.deep_leak_correlation(email, on_output=self.on_output)
+
+    # ── Cred Sprayer tab (pure-Python, SSH/FTP/HTTP) ─────────────────────────
+
+    def _build_cred_sprayer_tab(self):
+        from shadowcypher.core.stealth import require_stealth
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12); box.set_margin_end(12)
+        box.set_margin_top(8); box.set_margin_bottom(8)
+
+        row = Gtk.Box(spacing=6)
+        row.pack_start(Gtk.Label(label="Target:"), False, False, 0)
+        self._cs_target = Gtk.Entry(); self._cs_target.set_placeholder_text("IP or http://target/login")
+        self._cs_target.set_hexpand(True); row.pack_start(self._cs_target, True, True, 0)
+        row.pack_start(Gtk.Label(label="Service:"), False, False, 0)
+        self._cs_service = Gtk.ComboBoxText()
+        for s in ["ssh", "ftp", "http-post"]:
+            self._cs_service.append_text(s)
+        self._cs_service.set_active(0)
+        row.pack_start(self._cs_service, False, False, 0)
+        box.pack_start(row, False, False, 0)
+
+        row2 = Gtk.Box(spacing=6)
+        row2.pack_start(Gtk.Label(label="User:"), False, False, 0)
+        self._cs_user = Gtk.Entry(); self._cs_user.set_placeholder_text("single user (or leave blank)"); self._cs_user.set_width_chars(14)
+        row2.pack_start(self._cs_user, False, False, 0)
+        row2.pack_start(Gtk.Label(label="Userlist:"), False, False, 0)
+        self._cs_ulist = Gtk.Entry(); self._cs_ulist.set_placeholder_text("/path/to/users.txt"); self._cs_ulist.set_hexpand(True)
+        row2.pack_start(self._cs_ulist, True, True, 0)
+        box.pack_start(row2, False, False, 0)
+
+        row3 = Gtk.Box(spacing=6)
+        row3.pack_start(Gtk.Label(label="Passlist:"), False, False, 0)
+        self._cs_plist = Gtk.Entry(); self._cs_plist.set_placeholder_text("/path/to/passwords.txt"); self._cs_plist.set_hexpand(True)
+        row3.pack_start(self._cs_plist, True, True, 0)
+        row3.pack_start(Gtk.Label(label="Threads:"), False, False, 0)
+        self._cs_threads = Gtk.SpinButton.new_with_range(1, 100, 5); self._cs_threads.set_value(10)
+        row3.pack_start(self._cs_threads, False, False, 0)
+        box.pack_start(row3, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=6)
+        btn_row.pack_start(self.make_action_btn("Spray", self._on_cred_sprayer), False, False, 0)
+        box.pack_start(btn_row, False, False, 0)
+        return box
+
+    def _on_cred_sprayer(self, btn):
+        from shadowcypher.core.stealth import require_stealth
+        target = self._cs_target.get_text().strip()
+        plist = self._cs_plist.get_text().strip()
+        if not target or not plist:
+            self.terminal.log("Target and password list required.", "WARN")
+            return
+        require_stealth(on_output=self.on_output)
+        svc = self._cs_service.get_active_text()
+        args = ["-t", target, "-s", svc, "-P", plist]
+        user = self._cs_user.get_text().strip()
+        ulist = self._cs_ulist.get_text().strip()
+        if user:
+            args += ["-u", user]
+        elif ulist:
+            args += ["-U", ulist]
+        args += ["--threads", str(int(self._cs_threads.get_value()))]
+        self.run_script("cred_sprayer.py", args)
