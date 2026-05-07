@@ -15,6 +15,7 @@ from typing import Dict, Optional
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_target, validate_port
+from shadowcypher.core.stealth import require_stealth
 
 
 # ── Metric store (shared across test threads) ──
@@ -84,6 +85,8 @@ class ApplicationStressTest(BaseModule):
         Falls back to a pure-Python asyncio/threading approach using curl batch.
         Launches via runner.execute_task for consistent lifecycle management.
         """
+        require_stealth(on_output=on_output)
+
         if not validate_target(target_url):
             if on_output:
                 on_output(f"[APP_STRESS] FAULT: Invalid target configuration\n")

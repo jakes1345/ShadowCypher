@@ -5,6 +5,7 @@ import shlex
 from shadowcypher.core.runner import runner
 from shadowcypher.core.logger import logger
 from shadowcypher.core.sanitize import validate_target
+from shadowcypher.core.stealth import require_stealth
 
 
 class OSINT:
@@ -17,6 +18,7 @@ class OSINT:
     @staticmethod
     def ssl_cert_info(target, port=443, on_output=None, on_complete=None):
         """Fetch SSL certificate information."""
+        require_stealth(on_output=on_output)
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
@@ -28,6 +30,7 @@ class OSINT:
     @staticmethod
     def http_headers(target, on_output=None, on_complete=None):
         """Fetch HTTP headers."""
+        require_stealth(on_output=on_output)
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
@@ -39,6 +42,7 @@ class OSINT:
     @staticmethod
     def tech_detect(target, on_output=None, on_complete=None):
         """Detect web technologies."""
+        require_stealth(on_output=on_output)
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
@@ -48,8 +52,9 @@ class OSINT:
         return runner.execute_task(f"TECH_{target}", [whatweb, url], callback=on_output)
 
     @staticmethod
-    def email_mx_check(target):
+    def email_mx_check(target, on_output=None):
         """Check for MX and SPF records."""
+        require_stealth(on_output=on_output)
         if not validate_target(target):
             return f"[ERROR] Invalid target: {target}"
         try:
@@ -62,8 +67,9 @@ class OSINT:
             return f"Error: {e}"
 
     @staticmethod
-    def subnet_info(target):
+    def subnet_info(target, on_output=None):
         """Fetch subnet and ASN information."""
+        require_stealth(on_output=on_output)
         if not validate_target(target):
             return f"[ERROR] Invalid target: {target}"
         try:
@@ -76,6 +82,7 @@ class OSINT:
     @staticmethod
     def zone_transfer(target, on_output=None, on_complete=None):
         """Attempt a DNS zone transfer."""
+        require_stealth(on_output=on_output)
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return

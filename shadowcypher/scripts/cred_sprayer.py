@@ -12,7 +12,8 @@ Examples:
     python3 cred_sprayer.py -t http://target.com/login -s http-post -u admin -P rockyou.txt --data "user=^USER^&pass=^PASS^" --fail "Invalid"
 """
 
-import argparse, sys, time, socket, ftplib, threading
+import argparse, sys, time, socket, ftplib, threading, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
 
@@ -120,6 +121,15 @@ def main():
     # Auto-detect port
     default_ports = {"ssh":22,"ftp":21,"http-basic":80,"http-post":80,"smb":445}
     port = a.port if a.port else default_ports.get(a.service, 0)
+
+    # OPSEC gate — warn if running without stealth
+    try:
+        from shadowcypher.core.stealth import stealth
+        if not stealth.active:
+            print(f"  {C['R']}[!] STEALTH WARNING: Tor not active — your real IP will be logged by the target.{C['N']}")
+            print(f"  {C['Y']}    Start Ghost Mode or run: python3 scripts/tor_cloak.py start{C['N']}\n")
+    except Exception:
+        pass
 
     print(f"\n{C['B']}{'='*70}{C['N']}")
     print(f" {C['C']}SHADOWCYPHER // CREDENTIAL SPRAYER{C['N']}")

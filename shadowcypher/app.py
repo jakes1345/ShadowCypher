@@ -98,8 +98,10 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         
         self.net_label = Gtk.Label(label="NET_ENTROPY: 0.00bps")
         self.irc_label = Gtk.Label(label="COORDINATION: NOMINAL")
-        
-        for lbl in [self.net_label, self.irc_label]:
+        self.ghost_label = Gtk.Label()
+        self.ghost_label.set_markup("<span color='#f87171'>GHOST: INACTIVE</span>")
+
+        for lbl in [self.net_label, self.irc_label, self.ghost_label]:
             lbl.set_halign(Gtk.Align.START)
             self.pulse_box.pack_start(lbl, False, False, 5)
 
@@ -139,9 +141,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         # 4. Final Initialization
         self._page_registry = {}
         
-        # PRE-WARM: Load mission-critical pages immediately to ensure instant switching
-        GLib.idle_add(self._prewarm_pages)
-        
         self._switch_to_page("Central Command HUD")
         
         # Ensure sidebar selection reflects the initial page
@@ -153,67 +152,10 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         from shadowcypher.core.bus import bus
         bus.subscribe("new_ticket", self._on_new_ticket)
         
-        # Start High-Frequency Telemetry Tick
-        GLib.timeout_add(2000, self._pulse_tick)
-        
-        # --- Sovereign Ignition ---
-        self._start_sovereign_hub()
-        
+        # Telemetry tick — 3s is plenty, no need to hammer every 2s
+        GLib.timeout_add(3000, self._pulse_tick)
+
         self.show_all()
-
-    def _start_sovereign_hub(self):
-        """Launches the native signal plane and orchestrates bot ignition."""
-        import subprocess
-        import threading
-        from shadowcypher.core.platform import platform_engine
-        
-        relay_bin = platform_engine.resolve_path("native", "relay", "shadow-relay")
-        if not os.path.exists(relay_bin):
-            logger.error("hub", "NATIVE_FATAL: Shadow-Relay binary missing. Swarm signal blocked.")
-            return
-
-        def monitor_process(proc):
-            for line in proc.stdout:
-                if "TITAN" in line or "SWARM" in line:
-                    logger.debug("relay", line.strip())
-            proc.wait()
-            logger.warn("hub", "RELAY_DISCONNECT: Native core has terminated.")
-
-        # Purge stale session token to ensure fresh handshake
-        token_path = os.path.join(str(config.project_root), ".relay_token")
-        if os.path.exists(token_path):
-            try: os.remove(token_path)
-            except Exception: pass
-
-        # Ignite the Go Relay
-        self.relay_proc = subprocess.Popen(
-            [relay_bin],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            preexec_fn=os.setsid
-        )
-        threading.Thread(target=monitor_process, args=(self.relay_proc,), daemon=True).start()
-
-        # Ignition Sequence: Wait for the Bridge to lock on before starting the Bot
-        def post_ignition():
-            from shadowcypher.core.hub import hub
-            logger.info("hub", "IGNITION_WAIT: Synchronizing with native signal plane...")
-            
-            # Smart Wait (Max 10s)
-            for _ in range(20):
-                if hasattr(hub, 'relay_bridge') and hub.relay_bridge.connected:
-                    break
-                time.sleep(0.5)
-            
-            try:
-                from shadowcypher.core.irc_bot import sentinel
-                sentinel.start()
-                logger.info("hub", "SENTINEL_IGNITION: ShadowSentinel joined the native swarm.")
-            except Exception as e:
-                logger.error("hub", f"SENTINEL_FAILURE: {e}")
-
-        threading.Thread(target=post_ignition, daemon=True).start()
 
     def _pulse_tick(self) -> bool:
         from shadowcypher.core.platform import platform_engine
@@ -232,12 +174,27 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             self.net_label.set_text(f"NET_ENTROPY: {summary.get('telemetry', {}).get('load_avg', 0):.2f}bps")
             self.irc_label.set_markup(f"SWARM_NODES: <span color='#22c55e'>{swarm_count} ACTIVE</span>")
             
-            # 3. Relay status from cached hub state (NO socket connect per tick)
-            relay_ok = hasattr(hub, 'relay_bridge') and hub.relay_bridge.connected
-            fid_color = "#22c55e" if relay_ok else "#f87171"
-            
-            # Update Coordinate Status
-            status_text = (f"FIDELITY: <span color='{fid_color}'>{'LIVE' if relay_ok else 'SYNC'}</span> | "
+            # 3. Ghost Mode live status (cheap — just checks a file and a socket)
+            import socket as _sock, os as _os
+            ghost_active = _os.path.exists("/tmp/.ghost_mode_state")
+            tor_up = False
+            try:
+                s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
+                s.settimeout(0.3)
+                tor_up = s.connect_ex(("127.0.0.1", 9050)) == 0
+                s.close()
+            except Exception:
+                pass
+            if ghost_active and tor_up:
+                self.ghost_label.set_markup("<span color='#22c55e'>GHOST: ACTIVE ✓</span>")
+            elif tor_up:
+                self.ghost_label.set_markup("<span color='#f59e0b'>GHOST: TOR-ONLY</span>")
+            else:
+                self.ghost_label.set_markup("<span color='#f87171'>GHOST: INACTIVE</span>")
+
+            # 4. Footer status
+            fid_color = "#22c55e" if ghost_active else "#f87171"
+            status_text = (f"FIDELITY: <span color='{fid_color}'>{'GHOST' if ghost_active else 'EXPOSED'}</span> | "
                            f"MSN: {summary.get('active_missions')} | "
                            f"ID: {summary.get('telemetry', {}).get('shadow_id', '???')}")
             self.status_label.set_markup(status_text)
@@ -274,6 +231,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("---", "SOVEREIGN-OPS"),
             ("\U0001f4ac", "Sovereign Chat"),
             ("\U0001f47b", "Shadow Nodes"),
+            ("\U0001f47a", "Ghost Mode"),
             ("\U0001f50d", "Forensic Audit"),
             ("\U0001f6e0", "Hub Settings"),
             ("\U0001f5dd", "God-Panel"),
@@ -311,23 +269,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         if name:
             self._switch_to_page(name)
 
-    def _prewarm_pages(self):
-        """Staggered background loading of critical pages to prevent startup lag."""
-        critical_pages = ["Central Command HUD", "Spectre War-Map", "Spectral Intelligence", "Vulnerability Sweep", "God-Panel", "Sovereign Chat"]
-        
-        def load_one(index):
-            if index >= len(critical_pages):
-                return False
-            page = critical_pages[index]
-            if page not in self._page_registry:
-                # Load the page but DO NOT switch visibility
-                self._switch_to_page(page, make_visible=False)
-            GLib.timeout_add(400, load_one, index + 1)
-            return False
-
-        GLib.timeout_add(1000, load_one, 0) # Faster pre-warm after 1s
-        return False
-
     def _switch_to_page(self, name, make_visible=True, **kwargs):
         if name not in self._page_registry:
             mapping = {
@@ -342,6 +283,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Wireless Saturation": "wireless_page.WirelessPage",
                 "Sovereign Chat": "chat_page.SovereignChatPage",
                 "Shadow Nodes": "ghost_page.ShadowNodesPage",
+                "Ghost Mode": "ghost_mode_page.GhostModePage",
                 "Forensic Audit": "forensics_page.ForensicsPage",
                 "Hub Settings": "admin_page.AdminPage",
                 "God-Panel": "god_panel.GodPanel",

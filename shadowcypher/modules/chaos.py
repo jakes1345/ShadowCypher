@@ -10,14 +10,16 @@ import threading
 import time
 import logging
 from shadowcypher.core.logger import logger
+from shadowcypher.core.stealth import require_stealth
 
 class ChaosOrchestrator:
     def __init__(self):
         self.active = False
         self._threads = []
 
-    def start_udp_flood(self, target_ip, target_port, duration=60, threads=10):
+    def start_udp_flood(self, target_ip, target_port, duration=60, threads=10, on_output=None):
         """Orchestrate a UDP Load test with packet jitter."""
+        require_stealth(on_output=on_output)
         self.active = True
         logger.info("chaos", f"LOAD_TEST: Initiating UDP volumetric test on {target_ip}:{target_port}")
         

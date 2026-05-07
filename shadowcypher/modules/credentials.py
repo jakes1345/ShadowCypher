@@ -8,6 +8,7 @@ import tempfile
 import os
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
+from shadowcypher.core.stealth import require_stealth
 
 
 class Credentials(BaseModule):
@@ -38,6 +39,7 @@ class Credentials(BaseModule):
     def hydra_attack(target, service, username="admin", passlist=None,
                      extra_args="", on_output=None, on_complete=None):
         """Launch a Hydra brute-force attack with timing-based Pulse ingestion."""
+        require_stealth(on_output=on_output)
         from shadowcypher.core.runner import runner
         from shadowcypher.core.pulse import pulse
         import time

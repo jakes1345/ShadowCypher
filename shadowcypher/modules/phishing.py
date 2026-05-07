@@ -9,6 +9,7 @@ import string
 import subprocess
 from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
+from shadowcypher.core.stealth import require_stealth
 
 class SocialEngineeringAssessment:
     """Handles social engineering artifact generation and deployment."""
@@ -57,6 +58,7 @@ class SocialEngineeringAssessment:
     @staticmethod
     def start_phishing_server(template, port=8080, on_output=None, use_tunnel=False, tunnel_mode="cloudflare"):
         """Launch a social engineering backend server with optional HTTPS tunneling."""
+        require_stealth(on_output=on_output)
         site_path = os.path.join("shadowcypher/modules/phish_data/sites", template.lower())
         if not os.path.exists(site_path):
             site_path = "shadowcypher/modules/phish_data/fake-recaptcha"

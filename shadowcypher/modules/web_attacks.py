@@ -3,6 +3,7 @@
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.logger import logger
+from shadowcypher.core.stealth import require_stealth
 import shlex
 import os
 
@@ -19,9 +20,10 @@ class WebAttacks:
         on_complete=None,
     ):
         """Directory and file fuzzing with Ffuf."""
+        require_stealth(on_output=on_output)
         from shadowcypher.core.config import config
         ffuf = config.get_tool_path("ffuf")
-        
+
         if not validate_target(url):
             if on_output: on_output(f"[ERROR] Invalid URL: {url}")
             return
@@ -43,9 +45,10 @@ class WebAttacks:
         on_complete=None,
     ):
         """Virtual Host (VHost) fuzzing with Ffuf."""
+        require_stealth(on_output=on_output)
         from shadowcypher.core.config import config
         ffuf = config.get_tool_path("ffuf")
-        
+
         if not validate_target(url):
             if on_output: on_output(f"[ERROR] Invalid URL: {url}")
             return
@@ -70,9 +73,10 @@ class WebAttacks:
         target, template_tags="", severity="", on_output=None, on_complete=None
     ):
         """Nuclei template-based vulnerability scanning."""
+        require_stealth(on_output=on_output)
         from shadowcypher.core.config import config
         nuclei = config.get_tool_path("nuclei")
-        
+
         if not validate_target(target):
             if on_output: on_output(f"[ERROR] Invalid target: {target}")
             return
@@ -100,6 +104,7 @@ class WebAttacks:
     @staticmethod
     def mhddos_strike(target, method="GET", threads=100, duration=60, on_output=None):
         """Execute elite Layer 7 or Layer 4 suppression using the MHDDoS engine."""
+        require_stealth(on_output=on_output)
         from shadowcypher.core.config import config
         project_root = str(config.project_root)
         path = os.path.join(project_root, "tools", "elite", "MHDDoS", "start.py")
@@ -116,6 +121,7 @@ class WebAttacks:
     @staticmethod
     def bypass_403_test(url, path, on_output=None):
         """Execute the advanced Bypass 403 sequence."""
+        require_stealth(on_output=on_output)
         from shadowcypher.core.config import config
         logger.info("web", f"BYPASS_403_SEQUENCE_INITIATED: {url}{path}")
         

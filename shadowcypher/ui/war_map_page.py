@@ -80,13 +80,22 @@ class WarMapPage(Gtk.Box):
         
         self.paned.pack2(side_box, False, False)
 
-        # Pulse Timer (Reduced to 100ms for performance)
         self._pulse_time = 0
-        GLib.timeout_add(100, self._on_pulse_tick)
+        self._pulse_timer_id = None
+        # Only animate when the page is actually visible
+        self.connect("map", lambda _: self._start_pulse())
+        self.connect("unmap", lambda _: self._stop_pulse())
+
+    def _start_pulse(self):
+        if self._pulse_timer_id is None:
+            self._pulse_timer_id = GLib.timeout_add(50, self._on_pulse_tick)
+
+    def _stop_pulse(self):
+        if self._pulse_timer_id is not None:
+            GLib.source_remove(self._pulse_timer_id)
+            self._pulse_timer_id = None
 
     def _on_pulse_tick(self):
-        if not self.get_mapped():
-            return True
         self._pulse_time += 0.05
         self.drawing_area.queue_draw()
         return True

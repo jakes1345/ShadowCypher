@@ -6,6 +6,7 @@ High-fidelity cross-platform discovery and service mapping.
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_target
+from shadowcypher.core.stealth import require_stealth
 import re
 import subprocess
 
@@ -35,6 +36,7 @@ class Recon(BaseModule):
             return "127.0.0.1"
 
     def pulse_target(self, target, stype="Quick Port Scan", on_output=None):
+        require_stealth(on_output=on_output)
         if not validate_target(target): return
         self.log(f"PULSING_TARGET: {target} [OS={platform_engine.SYSTEM}]")
         
