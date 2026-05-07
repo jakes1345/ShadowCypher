@@ -19,7 +19,7 @@ class PayloadSynthesizer:
         self.orch = AIOrchestrator()
         self.payload_dir = Path("payloads")
         self.payload_dir.mkdir(exist_ok=True)
-        self.model = "shadow-ai"
+        self.model = "shadowcypher-ai"
         
     def generate_payload(self, target_desc, category="diagnostic", language="python"):
         """Synthesize a diagnostic script for vulnerability assessment."""

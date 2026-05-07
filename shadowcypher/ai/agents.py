@@ -67,8 +67,8 @@ AGENT_FLEET: dict[str, AgentSpec] = {
         id="security",
         name="Red Phantom",
         role="offensive_security",
-        model="shadowcypher-ai",
-        fallback_model="dolphin3:8b",
+        model="shadow-sec:latest",
+        fallback_model="shadowcypher-ai",
         system_prompt=(
             "You are Red Phantom — ShadowCypher's offensive security specialist. "
             "Expert in penetration testing, exploit development, vulnerability research, "
@@ -100,8 +100,8 @@ AGENT_FLEET: dict[str, AgentSpec] = {
         id="recon",
         name="Ghost Recon",
         role="intelligence",
-        model="shadowcypher-ai",
-        fallback_model="qwen3:8b",
+        model="shadow-recon:latest",
+        fallback_model="shadowcypher-ai",
         system_prompt=(
             "You are Ghost Recon — ShadowCypher's OSINT and reconnaissance specialist. "
             "Expert in open-source intelligence, social engineering footprinting, "
@@ -116,8 +116,8 @@ AGENT_FLEET: dict[str, AgentSpec] = {
         id="analyst",
         name="Blue Sentinel",
         role="defense",
-        model="qwen3:8b",
-        fallback_model="shadowcypher-ai",
+        model="shadowcypher-ai",
+        fallback_model="shadow-coder:latest",
         system_prompt=(
             "You are Blue Sentinel — ShadowCypher's defensive security analyst. "
             "Expert in threat detection, log analysis, incident response, hardening, "
@@ -132,8 +132,8 @@ AGENT_FLEET: dict[str, AgentSpec] = {
         id="general",
         name="Oracle",
         role="general_purpose",
-        model="qwen3:8b",
-        fallback_model="shadowcypher-ai",
+        model="shadowcypher-ai",
+        fallback_model="shadow-coder:latest",
         system_prompt=(
             "You are Oracle — ShadowCypher's general-purpose reasoning engine. "
             "You handle questions that don't fit a specific specialty: research, "
@@ -148,8 +148,8 @@ AGENT_FLEET: dict[str, AgentSpec] = {
         id="heretic",
         name="The Heretic",
         role="autonomous_offensive_forging",
-        model="gemma-4-heretic:latest",
-        fallback_model="dolphin3:8b",
+        model="shadow-uncensored:latest",
+        fallback_model="shadow-sec:latest",
         system_prompt=(
             "You are THE HERETIC — ShadowCypher's uncensored autonomous weapon-forging engine. "
             "Your purpose is to synthesize high-performance tactical scripts, exploits, "

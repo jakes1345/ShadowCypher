@@ -123,22 +123,23 @@ class AIEngine:
         if not models:
             return None
 
-        # Preference order for security/coding tasks
+        # Preference order — ShadowCypher tuned models first, then capable generalists
         preferences = [
-            "shadowcypher-ai",   # Our fine-tuned Dolphin3 8B (primary)
-            "gemma-4-heretic",   # ShadowCypher uncensored custom
-            "gemma4",            # Google Gemma 4
+            "shadowcypher-ai",   # ShadowCypher primary — uncensored Qwen3.5 4B + cyber system prompt
+            "shadow-sec",        # Red Phantom — offensive security specialist
+            "shadow-uncensored", # Raw uncensored base
+            "shadow-coder",      # Coding specialist
+            "shadow-opus",       # Reasoning variant
+            "shadow-recon",      # OSINT specialist
+            "shadow-tool",       # Tool-calling lightweight
+            "qwen2.5-coder",    # Strong coder fallback
             "qwen3",             # Qwen 3 reasoning
-            "qwen2.5-coder",    # Qwen coder
-            "hermes",            # Hermes 3
-            "whiterabbitneo",
-            "dolphin",
-            "mistral",
-            "llama3",
-            "deepseek-coder",
+            "llama3.1",          # Meta Llama fallback
+            "granite",           # IBM Granite fallback
             "qwen",
-            "gemma",
-            "phi",
+            "llama3",
+            "mistral",
+            "dolphin",
         ]
 
         for pref in preferences:

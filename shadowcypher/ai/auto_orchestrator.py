@@ -34,7 +34,7 @@ class AutoOrchestrator:
     def __init__(self, model=None):
         from shadowcypher.ai.providers import provider_registry
         active = provider_registry.active
-        self.model = model or (active.model if active else "gemma4")
+        self.model = model or (active.model if active else "shadowcypher-ai")
         if active and active.id == "ollama" and not self.model.startswith("ollama/"):
             self.model = f"ollama/{self.model}"
         self.log_dir = PROJECT_ROOT / "logs" / "autoagent"
