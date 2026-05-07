@@ -1890,18 +1890,38 @@
             wireAuthState();
             checkSession();
             updateIndicator(document.querySelector('.nav-tab.active'));
-            // Hex dump
+            // Hex dump — paused when app is backgrounded
             const hex=document.getElementById('hex-dump');
-            setInterval(()=>{let t='';for(let i=0;i<400;i++){t+=Math.floor(Math.random()*16).toString(16).toUpperCase()+' ';if(i%20===0)t+='<br>';}hex.innerHTML=t;},200);
-            // Swarm log
-            const log=document.getElementById('swarm-log');
-            const entries=["[GHOST] PING: {ip} → {ms}ms","[RELAY] SIGNAL_LOCK: {id}","[PULSE] VARIANCE: {var}","[SENTINEL] PEER_LINKED: {node}","[GUARD] DEVICE_OK: {dev}"];
-            setInterval(()=>{
-                const e=entries[Math.floor(Math.random()*entries.length)].replace('{ip}','192.168.1.'+Math.floor(Math.random()*255)).replace('{ms}',Math.floor(Math.random()*50)).replace('{id}','NODE_'+Math.floor(Math.random()*1000)).replace('{var}',(Math.random()).toFixed(2)).replace('{node}','SHADOW_'+Math.floor(Math.random()*99)).replace('{dev}','iPhone_'+Math.floor(Math.random()*9));
-                const d=document.createElement('div');d.style.opacity='0';d.style.transition='opacity 0.5s';d.innerHTML=e;log.prepend(d);
-                setTimeout(()=>d.style.opacity='0.8',10);
-                if(log.children.length>5)log.removeChild(log.lastChild);
-            },2500);
+            let _hexTimer=null, _swarmTimer=null;
+            function _startAnimations(){
+                if(!_hexTimer) _hexTimer=setInterval(()=>{let t='';for(let i=0;i<400;i++){t+=Math.floor(Math.random()*16).toString(16).toUpperCase()+' ';if(i%20===0)t+='<br>';}if(hex)hex.innerHTML=t;},800);
+                const log=document.getElementById('swarm-log');
+                const entries=["[GHOST] PING: {ip} → {ms}ms","[RELAY] SIGNAL_LOCK: {id}","[PULSE] VARIANCE: {var}","[SENTINEL] PEER_LINKED: {node}","[GUARD] DEVICE_OK: {dev}"];
+                if(!_swarmTimer) _swarmTimer=setInterval(()=>{
+                    if(!log)return;
+                    const e=entries[Math.floor(Math.random()*entries.length)].replace('{ip}','192.168.1.'+Math.floor(Math.random()*255)).replace('{ms}',Math.floor(Math.random()*50)).replace('{id}','NODE_'+Math.floor(Math.random()*1000)).replace('{var}',(Math.random()).toFixed(2)).replace('{node}','SHADOW_'+Math.floor(Math.random()*99)).replace('{dev}','iPhone_'+Math.floor(Math.random()*9));
+                    const d=document.createElement('div');d.style.opacity='0';d.style.transition='opacity 0.5s';d.innerHTML=e;log.prepend(d);
+                    setTimeout(()=>d.style.opacity='0.8',10);
+                    if(log.children.length>5)log.removeChild(log.lastChild);
+                },2500);
+            }
+            function _stopAnimations(){
+                clearInterval(_hexTimer); _hexTimer=null;
+                clearInterval(_swarmTimer); _swarmTimer=null;
+            }
+            _startAnimations();
+            document.addEventListener('visibilitychange',()=>{
+                if(document.hidden){
+                    _stopAnimations();
+                    if(window._guardianTimer){clearInterval(window._guardianTimer);window._guardianTimer=null;}
+                } else {
+                    _startAnimations();
+                    if(!window._guardianTimer && typeof refreshGuardian==='function'){
+                        refreshGuardian();
+                        window._guardianTimer=setInterval(refreshGuardian,30000);
+                    }
+                }
+            });
         });
     </script>
 </body>
