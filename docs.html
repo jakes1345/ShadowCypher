@@ -134,6 +134,34 @@
         <li><strong>Operator</strong>: 500 / month</li>
     </ul>
 
+    <h2 id="threats">Threat feed (CVE)</h2>
+    <p>Live CVE data from the NIST NVD API. No API key required. Responses are cached at the edge for 1 hour.</p>
+    <table>
+        <thead><tr><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+            <tr><td>GET /v1/threats</td><td>Recent CVEs. Query params: <code>days</code> (1–30, default 7), <code>severity</code> (CRITICAL|HIGH|MEDIUM|LOW), <code>limit</code> (1–100, default 25)</td></tr>
+            <tr><td>GET /v1/threats/stats</td><td>CVE counts by severity for the last 7 days</td></tr>
+        </tbody>
+    </table>
+    <h3>Example response — GET /v1/threats?severity=CRITICAL&limit=5</h3>
+    <pre><code>{
+  "cves": [
+    {
+      "id": "CVE-2025-12345",
+      "description": "...",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "published": "2025-05-01T00:00:00.000Z",
+      "modified": "2025-05-02T12:00:00.000Z",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-12345",
+      "cwe": "CWE-787"
+    }
+  ],
+  "total": 5,
+  "days": 7,
+  "as_of": "2025-05-08T00:00:00.000Z"
+}</code></pre>
+
     <h2 id="webhooks">Outbound webhooks</h2>
     <p>Pro feature. Forward incidents to Slack / Discord / PagerDuty / any HTTPS URL. Each webhook is signed with a per-webhook HMAC-SHA256 secret.</p>
 
@@ -151,6 +179,12 @@
     <pre><code>const sig = req.headers.get('X-ShadowCypher-Signature').slice(7); // strip "sha256="
 const expected = hmacSha256Hex(YOUR_SIGNING_SECRET, await req.text());
 if (!constantTimeEqual(sig, expected)) throw new Error('invalid signature');</code></pre>
+
+    <h3>Integration recipes</h3>
+    <p><strong>Datadog:</strong> Create a webhook to <code>https://http-intake.logs.datadoghq.com/api/v2/logs?dd-api-key=YOUR_KEY</code>. ShadowCypher incidents map to Datadog log entries with <code>service:shadowcypher</code>.</p>
+    <p><strong>Splunk HEC:</strong> Point the webhook at <code>https://YOUR_SPLUNK_HOST:8088/services/collector/event</code> with header <code>Authorization: Splunk YOUR_HEC_TOKEN</code>. Use a middleware relay to reformat the payload if needed.</p>
+    <p><strong>ConnectWise / ServiceNow:</strong> Use the generic HTTPS webhook to hit the platform's REST API. Set <code>min_severity=warning</code> to avoid ticket noise from info-level events.</p>
+    <p><strong>PagerDuty:</strong> Create an Events API v2 integration in PagerDuty, copy the Integration Key, and register <code>https://events.pagerduty.com/v2/enqueue</code> as your webhook URL with <code>min_severity=critical</code>.</p>
 
     <h2 id="teams">Teams (Operator only)</h2>
     <table>
