@@ -369,7 +369,18 @@ class AgentRouter:
         model = self._resolve_model(spec)
 
         if not model:
-            return "ERROR: No Ollama models available. Is Ollama running?"
+            # Ollama offline — fall back to whatever cloud provider is configured
+            from shadowcypher.ai.providers import provider_registry
+            active = provider_registry.active
+            if active and active.id != "ollama" and active.is_configured:
+                if callback:
+                    callback(f"[ROUTING] Ollama offline → {active.id} cloud fallback for {spec.name}")
+                logger.info("agents", f"Ollama offline — routing {query[:60]} via {active.id}")
+                return provider_registry.generate(
+                    query, spec.system_prompt,
+                    max_tokens=spec.max_tokens, temperature=spec.temperature
+                )
+            return "Shadow AI offline: Ollama is not running and no cloud provider is configured."
 
         if callback:
             callback(f"[ROUTING] → {spec.name} ({spec.role}) using {model}")

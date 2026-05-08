@@ -408,18 +408,24 @@ class AIEngine:
         if temperature is None:
             temperature = config.get("ai", "temperature", default=0.7)
 
-        # Local shadowcypher-ai is the preferred brain. Cloud is fallback only.
-        if self._loaded:
-            if self._backend == "ollama":
-                return self._generate_ollama(prompt, system_prompt, max_tokens, temperature)
+        # Local Ollama is always preferred. Try it first regardless of _loaded state.
+        if self._loaded and self._backend == "llamacpp":
             return self._generate_llamacpp(prompt, system_prompt, max_tokens, temperature)
 
-        # Fallback: cloud provider if one is configured and active
+        # Try Ollama (either tracked as loaded, or just running in background)
+        ollama_model = self._model_name or self._select_ollama_model()
+        if ollama_model:
+            self._model_name = ollama_model
+            result = self._generate_ollama(prompt, system_prompt, max_tokens, temperature)
+            if not result.startswith("[Error]"):
+                return result
+
+        # Fallback: cloud provider
         active = provider_registry.active
         if active and active.id != "ollama" and active.is_configured:
             return provider_registry.generate(prompt, system_prompt, max_tokens, temperature)
 
-        return "[AI not loaded] Start Ollama with shadowcypher-ai or configure a cloud provider in AI Settings."
+        return "[AI offline] Ollama is not running and no cloud provider is configured."
 
     def _generate_ollama(self, prompt: str, system_prompt: str,
                          max_tokens: int, temperature: float) -> str:
@@ -446,7 +452,13 @@ class AIEngine:
             response = self._strip_think(result["message"].get("content", ""))
             logger.info("ai", "Ollama generation complete")
             return response
-        return "[Error] No response from Ollama"
+
+        # Ollama returned nothing — try cloud fallback
+        logger.warning("ai", "Ollama returned empty response, trying cloud fallback")
+        active = provider_registry.active
+        if active and active.id != "ollama" and active.is_configured:
+            return provider_registry.generate(prompt, system_prompt, max_tokens, temperature)
+        return "[Error] Ollama returned no response and no cloud fallback is configured."
 
     def _generate_llamacpp(self, prompt: str, system_prompt: str,
                            max_tokens: int, temperature: float) -> str:
@@ -480,21 +492,27 @@ class AIEngine:
         if temperature is None:
             temperature = config.get("ai", "temperature", default=0.7)
 
-        # Cloud provider takes priority
+        # llamacpp has its own stream path
+        if self._loaded and self._backend == "llamacpp":
+            return self._stream_llamacpp(prompt, system_prompt, max_tokens, temperature, on_token)
+
+        # Try Ollama first (streaming)
+        ollama_model = self._model_name or self._select_ollama_model()
+        if ollama_model:
+            self._model_name = ollama_model
+            result = self._stream_ollama(prompt, system_prompt, max_tokens, temperature, on_token)
+            if result:
+                return result
+
+        # Fallback: cloud provider
         active = provider_registry.active
         if active and active.id != "ollama" and active.is_configured:
             return provider_registry.generate_stream(prompt, system_prompt, max_tokens,
                                                      temperature, on_token=on_token)
 
-        if not self._loaded:
-            if on_token:
-                on_token("[AI not loaded] Load a model or configure a cloud provider.\n")
-            return ""
-
-        if self._backend == "ollama":
-            return self._stream_ollama(prompt, system_prompt, max_tokens, temperature, on_token)
-        else:
-            return self._stream_llamacpp(prompt, system_prompt, max_tokens, temperature, on_token)
+        if on_token:
+            on_token("[AI offline] Ollama is not running and no cloud provider is configured.\n")
+        return ""
 
     def _stream_ollama(self, prompt, system_prompt, max_tokens, temperature, on_token):
         messages = []
