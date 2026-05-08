@@ -33,10 +33,19 @@ fi
 
 # ── 2. Install Python dependencies ───────────────────────────────────────────
 log "Installing dependencies (requests)..."
-python3 -m pip install --quiet --upgrade requests 2>/dev/null || \
-    pip3 install --quiet --upgrade requests 2>/dev/null || \
-    fail "Could not install 'requests'. Try: pip3 install requests"
-ok "Dependencies installed"
+install_pkg() {
+    python3 -m pip install --quiet --upgrade "$1" 2>/dev/null && return 0
+    python3 -m pip install --quiet --upgrade --break-system-packages "$1" 2>/dev/null && return 0
+    pip3 install --quiet --upgrade --break-system-packages "$1" 2>/dev/null && return 0
+    return 1
+}
+if python3 -c "import requests" 2>/dev/null; then
+    ok "requests already installed"
+elif install_pkg requests; then
+    ok "Dependencies installed"
+else
+    fail "Could not install 'requests'. Try: pip3 install --break-system-packages requests"
+fi
 
 # ── 3. Download agent script ──────────────────────────────────────────────────
 INSTALL_DIR="$HOME/.shadowcypher"
