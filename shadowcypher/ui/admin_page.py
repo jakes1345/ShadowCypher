@@ -207,7 +207,7 @@ class AdminPage(BasePage):
                 box.pack_start(Gtk.Label(label=f"{node_id} ({data['host']})"), True, True, 0)
                 
                 # De-cloaked info
-                info = f"LOCAL_IPS: {','.join(data.get('local_ips', []))} | HW_MAC: {data.get('hw_mac')}"
+                info = f"LOCAL_IPS: {','.join(data.get('local_ips', []))} | HW_MAC: {data.get('hw_mac', 'Unknown')}"
                 box.pack_start(Gtk.Label(label=info), False, False, 0)
                 
                 box.pack_start(Gtk.Label(label=f"OS: {data.get('os', 'Unknown')}"), False, False, 0)
