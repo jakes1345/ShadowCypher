@@ -24,6 +24,7 @@ Config (~/.shadowcypher/config.json):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -31,7 +32,9 @@ import re
 import socket
 import subprocess
 import sys
+import tempfile
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +49,66 @@ CONFIG_PATH = CONFIG_DIR / "config.json"
 STATE_PATH = CONFIG_DIR / "state.json"
 DEFAULT_API = "https://shadowcypher-api.shadowcypher.workers.dev"
 AGENT_VERSION = "0.3.0"
+UPDATE_CHECK_INTERVAL = 86400  # 24 hours
+
+
+# ─── Auto-update ─────────────────────────────────────────────────────────────
+
+
+def _version_tuple(v: str) -> tuple:
+    try:
+        return tuple(int(x) for x in v.strip().split("."))
+    except ValueError:
+        return (0,)
+
+
+def check_for_update(api_base: str) -> None:
+    """Download and self-replace if a newer agent version is available. Never raises."""
+    try:
+        url = f"{api_base}/v1/agent/version"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+
+        remote_ver = data.get("version", "")
+        download_url = data.get("download_url", "")
+        expected_sha256 = data.get("sha256", "")
+
+        if not remote_ver or not download_url or not expected_sha256:
+            return
+        if _version_tuple(remote_ver) <= _version_tuple(AGENT_VERSION):
+            return
+
+        print(f"[*] update available: {AGENT_VERSION} → {remote_ver}")
+
+        script_path = os.path.abspath(__file__)
+        script_dir = os.path.dirname(script_path)
+
+        fd, tmp_path = tempfile.mkstemp(dir=script_dir, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                with urllib.request.urlopen(download_url, timeout=30) as resp:
+                    f.write(resp.read())
+
+            h = hashlib.sha256()
+            with open(tmp_path, "rb") as f:
+                for chunk in iter(lambda: f.read(65536), b""):
+                    h.update(chunk)
+            if h.hexdigest() != expected_sha256:
+                print("[!] update skipped: SHA256 mismatch", file=sys.stderr)
+                os.unlink(tmp_path)
+                return
+
+            os.replace(tmp_path, script_path)
+            print(f"[+] updated to {remote_ver} — restarting...")
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+
+        except Exception:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            raise
+
+    except Exception as e:
+        print(f"[!] update check failed (continuing): {e}", file=sys.stderr)
 
 
 # ─── Config / state ─────────────────────────────────────────────────────────
@@ -560,6 +623,8 @@ def cmd_run(cfg: dict[str, Any]) -> None:
     api = ApiClient(cfg["api_base"], cfg["api_key"])
     state = load_state()
 
+    check_for_update(cfg["api_base"])
+
     # Sanity-check key against /v1/me before starting the loop
     try:
         me = api.get("/v1/me")
@@ -572,6 +637,7 @@ def cmd_run(cfg: dict[str, Any]) -> None:
     print(f"[*] running · scan every {interval}s · heartbeat every {hb_interval}s")
 
     last_scan = 0.0
+    last_update_check = time.time()  # already checked on startup
     while True:
         try:
             now = time.time()
@@ -580,6 +646,9 @@ def cmd_run(cfg: dict[str, Any]) -> None:
             if now - last_scan >= interval:
                 cycle(cfg, api, state)
                 last_scan = now
+            if now - last_update_check >= UPDATE_CHECK_INTERVAL:
+                check_for_update(cfg["api_base"])
+                last_update_check = now
             time.sleep(hb_interval)
         except KeyboardInterrupt:
             print("\n[*] stopped")
