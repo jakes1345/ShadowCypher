@@ -175,9 +175,11 @@ export async function dispatchIncidentWebhook(env: Env, incident: IncidentForWeb
 }
 
 async function deliverOne(wh: WebhookRow, incident: IncidentForWebhook): Promise<{ ok: boolean; status: number; reason?: string }> {
-  // Detect Slack/Discord and format payload accordingly; otherwise send canonical JSON
-  const isSlack = /hooks\.slack\.com\//.test(wh.url);
-  const isDiscord = /discord(?:app)?\.com\/api\/webhooks\//.test(wh.url);
+  const isSlack      = /hooks\.slack\.com\//.test(wh.url);
+  const isDiscord    = /discord(?:app)?\.com\/api\/webhooks\//.test(wh.url);
+  const isSplunk     = /\/services\/collector/.test(wh.url);
+  const isDatadog    = /datadoghq\.com/.test(wh.url);
+  const isConnectWise = /connectwise/i.test(wh.url);
 
   let body: string;
   let contentType = "application/json";
@@ -201,6 +203,38 @@ async function deliverOne(wh: WebhookRow, incident: IncidentForWebhook): Promise
         footer: { text: "ShadowCypher" },
         timestamp: new Date().toISOString(),
       }],
+    });
+  } else if (isSplunk) {
+    body = JSON.stringify({
+      time: Date.now() / 1000,
+      source: "shadowcypher",
+      sourcetype: "security_alert",
+      index: "main",
+      event: {
+        id: incident.id,
+        severity: incident.severity,
+        category: incident.category,
+        title: incident.title,
+        detail: incident.detail,
+      },
+    });
+  } else if (isDatadog) {
+    const alertType = incident.severity === "critical" ? "error" : incident.severity === "warning" ? "warning" : "info";
+    body = JSON.stringify({
+      title: `[${incident.severity.toUpperCase()}] ${incident.title}`,
+      text: `%%% \n**Category:** ${incident.category}\n**Detail:** ${incident.detail || "—"}\n %%%`,
+      alert_type: alertType,
+      source_type_name: "ShadowCypher",
+      tags: [`severity:${incident.severity}`, `category:${incident.category}`, "source:shadowcypher"],
+    });
+  } else if (isConnectWise) {
+    const priority = incident.severity === "critical" ? "High" : incident.severity === "warning" ? "Medium" : "Low";
+    body = JSON.stringify({
+      summary: `[${incident.severity.toUpperCase()}] ${incident.title}`,
+      initialDescription: `Severity: ${incident.severity.toUpperCase()}\nCategory: ${incident.category}\n\n${incident.detail || ""}`,
+      board: { name: "ShadowCypher" },
+      priority: { name: priority },
+      status: { name: "New" },
     });
   } else {
     body = JSON.stringify({
@@ -296,8 +330,11 @@ async function deliverCveOne(
   wh: WebhookRow,
   payload: CveMatchPayload
 ): Promise<{ ok: boolean; status: number }> {
-  const isSlack = /hooks\.slack\.com\//.test(wh.url);
-  const isDiscord = /discord(?:app)?\.com\/api\/webhooks\//.test(wh.url);
+  const isSlack      = /hooks\.slack\.com\//.test(wh.url);
+  const isDiscord    = /discord(?:app)?\.com\/api\/webhooks\//.test(wh.url);
+  const isSplunk     = /\/services\/collector/.test(wh.url);
+  const isDatadog    = /datadoghq\.com/.test(wh.url);
+  const isConnectWise = /connectwise/i.test(wh.url);
 
   const title = `[${payload.severity}] ${payload.cve_id} affects ${payload.device_name}`;
   const text = `${payload.description}\nDevice: ${payload.device_ip} | Matched on: ${payload.matched_on.join(", ")}\n${payload.cve_url}`;
@@ -318,6 +355,41 @@ async function deliverCveOne(
         footer: { text: "ShadowCypher CVE Alert" },
         timestamp: new Date().toISOString(),
       }],
+    });
+  } else if (isSplunk) {
+    body = JSON.stringify({
+      time: Date.now() / 1000,
+      source: "shadowcypher",
+      sourcetype: "cve_alert",
+      index: "main",
+      event: {
+        cve_id: payload.cve_id,
+        severity: payload.severity,
+        cvss: payload.cvss,
+        description: payload.description,
+        device_ip: payload.device_ip,
+        device_name: payload.device_name,
+        matched_on: payload.matched_on,
+        cve_url: payload.cve_url,
+      },
+    });
+  } else if (isDatadog) {
+    const alertType = payload.severity === "CRITICAL" ? "error" : "warning";
+    body = JSON.stringify({
+      title,
+      text: `%%% \n${text}\n %%%`,
+      alert_type: alertType,
+      source_type_name: "ShadowCypher",
+      tags: [`severity:${payload.severity.toLowerCase()}`, `cve:${payload.cve_id}`, "source:shadowcypher"],
+    });
+  } else if (isConnectWise) {
+    const priority = payload.severity === "CRITICAL" ? "High" : "Medium";
+    body = JSON.stringify({
+      summary: title,
+      initialDescription: text,
+      board: { name: "ShadowCypher" },
+      priority: { name: priority },
+      status: { name: "New" },
     });
   } else {
     const canonical = JSON.stringify({ event: "cve.matched", fired_at: new Date().toISOString(), data: payload });
