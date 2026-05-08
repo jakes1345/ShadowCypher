@@ -59,6 +59,7 @@ import { getMfaStatus } from "./mfa";
 import { startDeviceAuth, pollDeviceAuth, authorizeDeviceAuth } from "./device_auth";
 import { getMyReferral, claimReferral } from "./referrals";
 import { getThreats, getThreatStats } from "./threats";
+import { runCveMatchingCron } from "./cve_matcher";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -463,5 +464,9 @@ export default {
       console.error("[api] unhandled", message);
       return json({ error: "internal", message }, { status: 500 }, cors);
     }
+  },
+
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runCveMatchingCron(env));
   },
 };
