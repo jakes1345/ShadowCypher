@@ -5,8 +5,8 @@ compatibility_flags = ["nodejs_compat"]
 
 workers_dev = true
 
-# Custom domain api.shadowcypher.site — re-enable AFTER manually deleting the old
-# A/CNAME record at Cloudflare → DNS → Records, then redeploy.
+# Custom domain — bind api.shadowcypher.site in Cloudflare Dashboard:
+#   Workers & Pages → shadowcypher-api → Settings → Triggers → Custom Domains → Add
 # routes = [{ pattern = "api.shadowcypher.site", custom_domain = true }]
 
 # Public-safe vars (committed to git). Secrets go via `wrangler secret put`.
@@ -14,3 +14,4 @@ workers_dev = true
 ENVIRONMENT = "production"
 ALLOWED_ORIGINS = "https://shadowcypher.site,https://www.shadowcypher.site,https://dev.shadowcypher.site,http://localhost:8081"
 SITE_URL = "https://shadowcypher.site"
+RESEND_FROM_EMAIL = "ShadowCypher <noreply@shadowcypher.site>"

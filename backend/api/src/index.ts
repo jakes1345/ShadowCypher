@@ -17,6 +17,10 @@
  *   GET  /v1/incidents          — list incidents (?open=1 for unacked only)
  *   POST /v1/incidents/ack      — acknowledge an incident (?incident_id=)
  *
+ * v1/threats:
+ *   GET  /v1/threats        — recent CVEs from NVD (?days=7&severity=CRITICAL&limit=25)
+ *   GET  /v1/threats/stats  — counts by severity (last 7 days)
+ *
  * Auth: Authorization: Bearer sc_live_<48 hex chars>
  * Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (set via `wrangler secret put`)
  */
@@ -54,6 +58,7 @@ import { listAudit, audit, clientHints } from "./audit";
 import { getMfaStatus } from "./mfa";
 import { startDeviceAuth, pollDeviceAuth, authorizeDeviceAuth } from "./device_auth";
 import { getMyReferral, claimReferral } from "./referrals";
+import { getThreats, getThreatStats } from "./threats";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -439,6 +444,8 @@ export default {
         "GET /v1/teams/invites":              listInvites,
         "POST /v1/teams/accept":              acceptInvite,
         "POST /v1/teams/leave":               leaveTeam,
+        "GET /v1/threats":                    getThreats,
+        "GET /v1/threats/stats":              getThreatStats,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];
