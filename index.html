@@ -497,6 +497,20 @@
                 <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Webhooks <span style="font-size:0.6rem; color:var(--text-secondary);">(Pro)</span></h3>
                     <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Forward incident events to Slack, Discord, PagerDuty, or any HTTPS URL. HMAC-SHA256 signed via per-webhook secret.</p>
+                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px;">
+                        <button onclick="fillWebhookTemplate('https://your-splunk:8088/services/collector?token=YOUR_HEC_TOKEN','Splunk SIEM','critical')" style="background:rgba(255,128,0,0.08); border:1px solid rgba(255,128,0,0.25); color:#ff8000; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
+                            <div style="font-weight:600; margin-bottom:4px;">&#9632; Splunk</div>
+                            <div style="color:var(--text-secondary); font-size:0.65rem;">HEC endpoint · critical+</div>
+                        </button>
+                        <button onclick="fillWebhookTemplate('https://http-intake.logs.datadoghq.com/api/v2/logs?dd-api-key=YOUR_DD_API_KEY','Datadog SIEM','warning')" style="background:rgba(99,0,210,0.08); border:1px solid rgba(99,0,210,0.25); color:#7c3aed; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
+                            <div style="font-weight:600; margin-bottom:4px;">&#9679; Datadog</div>
+                            <div style="color:var(--text-secondary); font-size:0.65rem;">Events API · warning+</div>
+                        </button>
+                        <button onclick="fillWebhookTemplate('https://your-company.connectwise.com/v4_6_release/apis/3.0/service/tickets','ConnectWise Manage','critical')" style="background:rgba(0,122,255,0.08); border:1px solid rgba(0,122,255,0.25); color:#007aff; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
+                            <div style="font-weight:600; margin-bottom:4px;">&#9679; ConnectWise</div>
+                            <div style="color:var(--text-secondary); font-size:0.65rem;">Service tickets · critical+</div>
+                        </button>
+                    </div>
                     <div id="webhooks-list" style="margin-bottom:14px;"></div>
                     <details style="background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); padding:14px 18px; border-radius:6px;">
                         <summary style="cursor:pointer; color:var(--accent-primary); font-family:var(--font-mono); font-size:0.75rem;">+ Add webhook</summary>
@@ -1535,6 +1549,18 @@
                     <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:4px;">${escapeHtml(status)}</div>
                 </div>`;
             }).join('');
+        }
+
+        function fillWebhookTemplate(urlPlaceholder, label, severity) {
+            const urlEl = document.getElementById('wh-url');
+            const labelEl = document.getElementById('wh-label');
+            const severityEl = document.getElementById('wh-severity');
+            if (urlEl) urlEl.placeholder = urlPlaceholder;
+            if (labelEl && !labelEl.value) labelEl.value = label;
+            if (severityEl) severityEl.value = severity;
+            const details = urlEl?.closest('details');
+            if (details) details.open = true;
+            if (urlEl) urlEl.focus();
         }
 
         async function createWebhook() {
