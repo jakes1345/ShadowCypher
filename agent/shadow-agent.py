@@ -14,8 +14,39 @@ Usage:
 """
 
 import argparse, os, sys, socket, subprocess, time, json, re, struct
-import threading
+import threading, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+CONFIG_PATH = os.path.expanduser("~/.shadowcypher/config.json")
+API_BASE = "https://shadowcypher-api.shadowcypher.workers.dev"
+
+def load_config():
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH) as f:
+            return json.load(f)
+    return {}
+
+def save_config(cfg):
+    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+    with open(CONFIG_PATH, "w") as f:
+        json.dump(cfg, f, indent=2)
+
+def api(method, path, body=None, key=None):
+    cfg = load_config()
+    api_key = key or cfg.get("api_key")
+    if not api_key:
+        return None, "Not initialized. Run: shadow-agent init"
+    data = json.dumps(body).encode() if body else None
+    req = urllib.request.Request(f"{API_BASE}{path}", data=data, method=method,
+                                  headers={"Authorization": f"Bearer {api_key}",
+                                           "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return json.loads(r.read()), None
+    except urllib.error.HTTPError as e:
+        return None, f"HTTP {e.code}: {e.read().decode()}"
+    except Exception as e:
+        return None, str(e)
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}
@@ -433,6 +464,116 @@ def cmd_harden():
     print(f"\n  {C['G']}{fixes} hardening fixes applied{C['N']}\n")
 
 
+def cmd_init():
+    print(f"\n  {C['C']}[Init]{C['N']} Connect this agent to your ShadowCypher account\n")
+    print(f"  Get your API key at: {C['Y']}https://shadowcypher.site{C['N']} → Account → API Key\n")
+    try:
+        key = input(f"  Paste your API key (sc_live_...): ").strip()
+    except (KeyboardInterrupt, EOFError):
+        print()
+        return
+
+    if not key.startswith("sc_"):
+        print(f"  {C['R']}[-]{C['N']} Invalid key format (should start with sc_live_)")
+        return
+
+    print(f"\n  {C['C']}[*]{C['N']} Verifying key...")
+    data, err = api("GET", "/v1/me", key=key)
+    if err:
+        print(f"  {C['R']}[-]{C['N']} Auth failed: {err}")
+        return
+
+    hostname = socket.gethostname()
+    print(f"  {C['G']}✓{C['N']} Authenticated as {C['Y']}{data.get('email','')}{C['N']} (plan: {data.get('effective_plan','?')})")
+    print(f"\n  {C['C']}[*]{C['N']} Registering agent ({hostname})...")
+
+    reg, err = api("POST", "/v1/agents/register",
+                   body={"hostname": hostname, "platform": sys.platform, "version": "1.0.0"},
+                   key=key)
+    if err:
+        print(f"  {C['Y']}⚠{C['N']} Registration warning: {err}")
+    else:
+        agent_id = reg.get("agent_id") or reg.get("id", "")
+        print(f"  {C['G']}✓{C['N']} Agent registered (id: {agent_id})")
+        save_config({"api_key": key, "agent_id": agent_id, "hostname": hostname})
+        print(f"\n  {C['G']}Setup complete.{C['N']} Run: {C['Y']}shadow-agent run{C['N']}\n")
+        return
+
+    save_config({"api_key": key, "hostname": hostname})
+    print(f"\n  {C['G']}Setup complete.{C['N']} Run: {C['Y']}shadow-agent run{C['N']}\n")
+
+
+def cmd_run():
+    cfg = load_config()
+    if not cfg.get("api_key"):
+        print(f"\n  {C['R']}[-]{C['N']} Not initialized. Run: shadow-agent init\n")
+        return
+
+    hostname = cfg.get("hostname", socket.gethostname())
+    agent_id = cfg.get("agent_id", "")
+    interval = 300  # 5 minutes
+
+    print(f"\n  {C['C']}[Run]{C['N']} Guardian agent started on {C['Y']}{hostname}{C['N']}")
+    print(f"  Scanning every {interval//60} min — press Ctrl+C to stop\n")
+
+    subnet = get_local_subnet()
+    gateway = get_gateway()
+    known = {}
+    cycle = 0
+
+    try:
+        while True:
+            cycle += 1
+            ts = time.strftime("%H:%M:%S")
+
+            # Heartbeat
+            if agent_id:
+                api("POST", f"/v1/agents/heartbeat?agent_id={agent_id}")
+
+            # Scan
+            devices = arp_scan_network(subnet) if subnet else []
+            current = {d["ip"] for d in devices}
+            alerts = []
+
+            for dev in devices:
+                ip, mac = dev["ip"], dev.get("mac", "")
+                if ip not in known:
+                    if cycle > 1:
+                        msg = f"New device: {ip} ({mac})"
+                        alerts.append({"type": "new_device", "ip": ip, "mac": mac})
+                        print(f"  {C['R']}⚠ NEW DEVICE{C['N']} {ip} ({mac})")
+                    known[ip] = mac
+                elif mac and known[ip] and mac != known[ip] and mac != "local":
+                    msg = f"ARP spoof: {ip} MAC changed {known[ip]} → {mac}"
+                    alerts.append({"type": "arp_spoof", "ip": ip,
+                                   "old_mac": known[ip], "new_mac": mac})
+                    print(f"  {C['R']}⚠ ARP SPOOF{C['N']} {ip}: {known[ip]} → {mac}")
+                    known[ip] = mac
+
+            for ip in list(known):
+                if ip not in current:
+                    del known[ip]
+
+            # POST scan results
+            payload = {
+                "hostname": hostname,
+                "device_count": len(devices),
+                "gateway": gateway,
+                "devices": [{"ip": d["ip"], "mac": d.get("mac",""),
+                              "vendor": d.get("vendor","")} for d in devices],
+                "alerts": alerts,
+            }
+            _, err = api("POST", "/v1/scans", body=payload)
+            status = f"{C['R']}upload failed{C['N']}" if err else f"{C['G']}synced{C['N']}"
+
+            sys.stdout.write(f"\r  [{ts}] {len(known)} devices — {status}    ")
+            sys.stdout.flush()
+            time.sleep(interval)
+
+    except KeyboardInterrupt:
+        print(f"\n\n  {C['G']}Agent stopped after {cycle} cycles.{C['N']}\n")
+
+
 def main():
     print(f"\n{C['B']}{'═'*70}{C['N']}")
     print(f" {C['C']}SHADOWCYPHER // GUARDIAN — Personal Device Security{C['N']}")
@@ -440,19 +581,23 @@ def main():
 
     p = argparse.ArgumentParser(description="ShadowCypher Guardian")
     sub = p.add_subparsers(dest="command")
-    sub.add_parser("scan", help="Scan all network devices")
-    sub.add_parser("audit", help="Deep audit this machine")
-    sub.add_parser("router", help="Audit home router")
-    sub.add_parser("monitor", help="Continuous threat monitoring")
-    sub.add_parser("harden", help="Auto-harden this machine")
+    sub.add_parser("init",    help="Connect to your ShadowCypher account")
+    sub.add_parser("run",     help="Start monitoring + sync to dashboard")
+    sub.add_parser("scan",    help="One-shot network device scan")
+    sub.add_parser("audit",   help="Deep audit this machine")
+    sub.add_parser("router",  help="Audit home router")
+    sub.add_parser("monitor", help="Local monitoring (no account needed)")
+    sub.add_parser("harden",  help="Auto-harden this machine")
     a = p.parse_args()
 
     cmds = {
-        "scan": cmd_scan,
-        "audit": cmd_audit,
-        "router": cmd_router,
+        "init":    cmd_init,
+        "run":     cmd_run,
+        "scan":    cmd_scan,
+        "audit":   cmd_audit,
+        "router":  cmd_router,
         "monitor": cmd_monitor,
-        "harden": cmd_harden,
+        "harden":  cmd_harden,
     }
 
     if a.command:
