@@ -37,7 +37,7 @@ interface WebhookRow {
 }
 
 const SEVERITY_RANK: Record<string, number> = { info: 1, warning: 2, critical: 3 };
-const ALLOWED_EVENTS = new Set(["incident.created", "incident.acknowledged", "scan.completed"]);
+const ALLOWED_EVENTS = new Set(["incident.created", "incident.acknowledged", "scan.completed", "cve.matched"]);
 
 const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): Response =>
   new Response(JSON.stringify(body), {
@@ -250,4 +250,105 @@ async function hmacSha256(secret: string, payload: string): Promise<string> {
   );
   const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload)));
   return Array.from(sig, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// ─── CVE webhook dispatch ────────────────────────────────────────────────────
+
+export interface CveMatchPayload {
+  cve_id: string;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
+  cvss: number | null;
+  description: string;
+  cve_url: string;
+  device_id: string;
+  device_name: string;
+  device_ip: string;
+  matched_on: string[];
+}
+
+export async function dispatchCveWebhook(
+  env: Env,
+  userId: string,
+  payload: CveMatchPayload
+): Promise<{ delivered: number }> {
+  const plan = await getProfilePlan(env, userId);
+  if (plan === "community") return { delivered: 0 };
+
+  const rows = await dbSelect<WebhookRow>(env, "webhooks", {
+    select: "*",
+    filters: { user_id: `eq.${userId}`, is_active: `eq.true` },
+    limit: 20,
+  });
+
+  const severityMap: Record<string, number> = { CRITICAL: 3, HIGH: 2, MEDIUM: 1, LOW: 0, NONE: 0 };
+  let delivered = 0;
+  for (const wh of rows) {
+    if (!wh.events.includes("cve.matched")) continue;
+    const minRank = SEVERITY_RANK[wh.min_severity] ?? 2;
+    if ((severityMap[payload.severity] ?? 0) < minRank) continue;
+    const result = await deliverCveOne(wh, payload);
+    if (result.ok) delivered++;
+  }
+  return { delivered };
+}
+
+async function deliverCveOne(
+  wh: WebhookRow,
+  payload: CveMatchPayload
+): Promise<{ ok: boolean; status: number }> {
+  const isSlack = /hooks\.slack\.com\//.test(wh.url);
+  const isDiscord = /discord(?:app)?\.com\/api\/webhooks\//.test(wh.url);
+
+  const title = `[${payload.severity}] ${payload.cve_id} affects ${payload.device_name}`;
+  const text = `${payload.description}\nDevice: ${payload.device_ip} | Matched on: ${payload.matched_on.join(", ")}\n${payload.cve_url}`;
+  const color = payload.severity === "CRITICAL" ? "#ff3b6b" : "#ffb84d";
+
+  let body: string;
+  if (isSlack) {
+    body = JSON.stringify({
+      text: `*${title}*`,
+      attachments: [{ color, text, footer: "ShadowCypher CVE Alert", ts: Math.floor(Date.now() / 1000) }],
+    });
+  } else if (isDiscord) {
+    body = JSON.stringify({
+      embeds: [{
+        title,
+        description: text,
+        color: payload.severity === "CRITICAL" ? 0xff3b6b : 0xffb84d,
+        footer: { text: "ShadowCypher CVE Alert" },
+        timestamp: new Date().toISOString(),
+      }],
+    });
+  } else {
+    const canonical = JSON.stringify({ event: "cve.matched", fired_at: new Date().toISOString(), data: payload });
+    const signature = await hmacSha256(wh.signing_secret, canonical);
+    try {
+      const resp = await fetch(wh.url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "ShadowCypher-Webhook/1.0",
+          "X-ShadowCypher-Signature": `sha256=${signature}`,
+          "X-ShadowCypher-Event": "cve.matched",
+        },
+        body: canonical,
+        signal: AbortSignal.timeout(8000),
+      });
+      return { ok: resp.ok || resp.status === 204, status: resp.status };
+    } catch {
+      return { ok: false, status: 0 };
+    }
+  }
+
+  try {
+    const resp = await fetch(wh.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": "ShadowCypher-Webhook/1.0" },
+      body,
+      signal: AbortSignal.timeout(8000),
+    });
+    return { ok: resp.ok || resp.status === 204, status: resp.status };
+  } catch {
+    return { ok: false, status: 0 };
+  }
 }

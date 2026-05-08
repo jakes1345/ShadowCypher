@@ -124,7 +124,7 @@ export async function listAgents(req: Request, env: Env, user: AuthedUser, cors:
     limit: 50,
   });
   const now = Date.now();
-  const enriched = agents.map((a: Record<string, unknown>) => ({
+  const enriched = (agents as Record<string, unknown>[]).map((a) => ({
     ...a,
     online: a.last_seen_at
       ? now - new Date(a.last_seen_at as string).getTime() < 90_000
