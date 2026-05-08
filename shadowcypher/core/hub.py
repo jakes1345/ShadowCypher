@@ -196,7 +196,7 @@ class ShadowHub:
         try:
             # Check if already running on port 5000
             import socket
-            with socket.socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 if s.connect_ex(('127.0.0.1', 5000)) == 0:
                     logger.info("hub", "TRAINING_RANGE: Already active on port 5000.")
                     return

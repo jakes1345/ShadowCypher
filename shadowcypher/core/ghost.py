@@ -123,7 +123,7 @@ class GhostOrchestrator:
 
         # TLS wrapping. Per-install cert dir, no shell exec, neutral subject.
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        cert_dir = os.environ.get("SHADOWCYPHER_GHOST_CERT_DIR", "/etc/shadowcypher/ghost")
+        cert_dir = os.environ.get("SHADOWCYPHER_GHOST_CERT_DIR", os.path.expanduser("~/.shadowcypher/ghost"))
         cert_file = os.path.join(cert_dir, "cert.pem")
         key_file = os.path.join(cert_dir, "key.pem")
         if not (os.path.exists(cert_file) and os.path.exists(key_file)):
