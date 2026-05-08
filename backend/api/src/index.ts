@@ -60,6 +60,7 @@ import { startDeviceAuth, pollDeviceAuth, authorizeDeviceAuth } from "./device_a
 import { getMyReferral, claimReferral } from "./referrals";
 import { getThreats, getThreatStats } from "./threats";
 import { runCveMatchingCron } from "./cve_matcher";
+import { getAgentVersion } from "./agent_version";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -87,6 +88,9 @@ export interface Env {
   ANTHROPIC_MODEL: string;
   // BYOK encryption (P4F)
   BYOK_ENCRYPTION_SECRET: string;
+  // Agent auto-update
+  AGENT_VERSION: string;
+  AGENT_SHA256: string;
 }
 
 interface SupabaseUser {
@@ -394,6 +398,9 @@ export default {
       }
       if (path === "/v1/health") {
         return json({ ok: true, environment: env.ENVIRONMENT, ts: Date.now() }, {}, cors);
+      }
+      if (path === "/v1/agent/version" && req.method === "GET") {
+        return getAgentVersion(env, cors);
       }
       // Stripe webhook is unauthenticated (signature-verified inside the handler).
       // Stripe sends raw body; we don't apply CORS here.
