@@ -14,9 +14,5 @@
 	{
 		"pkg": "@capacitor/status-bar",
 		"classpath": "com.capacitorjs.plugins.statusbar.StatusBarPlugin"
-	},
-	{
-		"pkg": "site.shadowcypher.app",
-		"classpath": "site.shadowcypher.app.ShadowAssistantPlugin"
 	}
 ]

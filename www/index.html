@@ -208,6 +208,17 @@
                 </div>
             </div>
 
+            <!-- CVE Alerts (matched against your devices) -->
+            <div style="margin-bottom:40px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                    <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);">// CVE Alerts <span style="color:#555;font-size:0.7rem;margin-left:8px;">matched against your devices</span></h3>
+                    <span id="cve-alert-count" style="font-size:0.7rem;font-family:var(--font-mono);color:var(--text-secondary);"></span>
+                </div>
+                <div id="cve-alert-list" style="font-size:0.8rem;">
+                    <span style="color:#666;">No CVE matches yet — the agent checks hourly.</span>
+                </div>
+            </div>
+
             <!-- Threat Feed -->
             <div style="margin-bottom:40px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
@@ -497,7 +508,7 @@
                 <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Webhooks <span style="font-size:0.6rem; color:var(--text-secondary);">(Pro)</span></h3>
                     <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Forward incident events to Slack, Discord, PagerDuty, or any HTTPS URL. HMAC-SHA256 signed via per-webhook secret.</p>
-                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px;">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px; margin-bottom:14px;">
                         <button onclick="fillWebhookTemplate('https://your-splunk:8088/services/collector?token=YOUR_HEC_TOKEN','Splunk SIEM','critical')" style="background:rgba(255,128,0,0.08); border:1px solid rgba(255,128,0,0.25); color:#ff8000; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
                             <div style="font-weight:600; margin-bottom:4px;">&#9632; Splunk</div>
                             <div style="color:var(--text-secondary); font-size:0.65rem;">HEC endpoint · critical+</div>
@@ -509,6 +520,14 @@
                         <button onclick="fillWebhookTemplate('https://your-company.connectwise.com/v4_6_release/apis/3.0/service/tickets','ConnectWise Manage','critical')" style="background:rgba(0,122,255,0.08); border:1px solid rgba(0,122,255,0.25); color:#007aff; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
                             <div style="font-weight:600; margin-bottom:4px;">&#9679; ConnectWise</div>
                             <div style="color:var(--text-secondary); font-size:0.65rem;">Service tickets · critical+</div>
+                        </button>
+                        <button onclick="fillWebhookTemplate('https://events.pagerduty.com/v2/enqueue?routing_key=YOUR_ROUTING_KEY','PagerDuty','critical')" style="background:rgba(0,210,100,0.08); border:1px solid rgba(0,210,100,0.25); color:#00c864; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
+                            <div style="font-weight:600; margin-bottom:4px;">&#9679; PagerDuty</div>
+                            <div style="color:var(--text-secondary); font-size:0.65rem;">Events v2 · critical+</div>
+                        </button>
+                        <button onclick="fillWebhookTemplate('https://api.opsgenie.com/v2/alerts?apiKey=YOUR_API_KEY','OpsGenie','warning')" style="background:rgba(255,90,0,0.08); border:1px solid rgba(255,90,0,0.25); color:#ff5a00; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
+                            <div style="font-weight:600; margin-bottom:4px;">&#9679; OpsGenie</div>
+                            <div style="color:var(--text-secondary); font-size:0.65rem;">Alerts API · warning+</div>
                         </button>
                     </div>
                     <div id="webhooks-list" style="margin-bottom:14px;"></div>
@@ -921,9 +940,7 @@
         // Keep the old name pointing at the new function for the inline onclick handler
         const mockLogout = signOut;
 
-        // Backend API base — overrideable via window.SHADOWCYPHER_API for local dev
-        // TODO: bind api.shadowcypher.site in Cloudflare Workers → Triggers → Custom Domains, then switch to that
-        const API_BASE = window.SHADOWCYPHER_API || 'https://shadowcypher-api.shadowcypher.workers.dev';
+        const API_BASE = window.SHADOWCYPHER_API || 'https://api.shadowcypher.site';
 
         async function callApi(path, opts = {}) {
             const apiKey = document.getElementById('api-key')?.dataset?.realKey;
@@ -1015,6 +1032,11 @@
             loadThreats().catch(() => {});
             if (window._threatTimer) clearInterval(window._threatTimer);
             window._threatTimer = setInterval(() => loadThreats().catch(() => {}), 30 * 60 * 1000);
+
+            // Load CVE alerts matched against this user's devices (refreshes hourly)
+            loadCveAlerts().catch(() => {});
+            if (window._cveAlertTimer) clearInterval(window._cveAlertTimer);
+            window._cveAlertTimer = setInterval(() => loadCveAlerts().catch(() => {}), 60 * 60 * 1000);
 
             // Load notification prefs + teams + AI usage + webhooks + stats + audit + mfa + referrals
             loadNotifPrefs().catch(() => {});
@@ -1119,16 +1141,49 @@
         function renderScans(scans) {
             const list = document.getElementById('scan-list');
             if (!list) return;
-            if (!scans.length) { list.innerHTML = '<span style="color:#666;">No scans yet.</span>'; return; }
+            if (!scans.length) { list.innerHTML = '<span style="color:#666;">No scans yet — install the Guardian agent to begin network history.</span>'; return; }
+
             const typeColor = { network:'var(--accent-primary)', router:'var(--warning)', dns:'var(--success)', firewall:'var(--success)', system:'var(--warning)', port:'#888', arp:'var(--critical)' };
-            list.innerHTML = scans.map(s => {
-                const ts = new Date(s.started_at).toLocaleString();
-                const c = typeColor[s.scan_type] || '#888';
-                return `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;gap:16px;align-items:center;">
-                    <span class="mono" style="color:${c};font-size:0.7rem;text-transform:uppercase;min-width:80px;">${escapeHtml(s.scan_type)}</span>
-                    <span style="color:#666;font-size:0.72rem;">${escapeHtml(ts)}</span>
-                    ${s.device_count != null ? `<span style="color:var(--text-secondary);font-size:0.72rem;">${s.device_count} devices</span>` : ''}
-                    ${s.duration_ms != null ? `<span style="color:#555;font-size:0.7rem;">${s.duration_ms}ms</span>` : ''}
+
+            // Group by calendar day
+            const byDay = {};
+            scans.forEach(s => {
+                const day = new Date(s.started_at).toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+                if (!byDay[day]) byDay[day] = [];
+                byDay[day].push(s);
+            });
+
+            // Compute device count trend across all scans (chronological)
+            const sorted = [...scans].sort((a,b) => new Date(a.started_at) - new Date(b.started_at));
+            const trendMap = {};
+            sorted.forEach((s, i) => {
+                if (s.device_count == null) return;
+                const prev = sorted.slice(0, i).reverse().find(x => x.device_count != null);
+                if (!prev) { trendMap[s.id] = null; return; }
+                trendMap[s.id] = s.device_count - prev.device_count;
+            });
+
+            list.innerHTML = Object.entries(byDay).map(([day, dayscans]) => {
+                const rows = dayscans.map(s => {
+                    const time = new Date(s.started_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+                    const c = typeColor[s.scan_type] || '#888';
+                    const delta = trendMap[s.id];
+                    let trendBadge = '';
+                    if (s.device_count != null) {
+                        if (delta > 0) trendBadge = `<span style="color:#ef4444;font-size:0.65rem;">+${delta} new</span>`;
+                        else if (delta < 0) trendBadge = `<span style="color:#f97316;font-size:0.65rem;">${delta} dropped</span>`;
+                    }
+                    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                        <span style="color:#444;font-size:0.68rem;min-width:42px;">${escapeHtml(time)}</span>
+                        <span style="font-family:var(--font-mono);font-size:0.68rem;color:${c};text-transform:uppercase;min-width:68px;">${escapeHtml(s.scan_type)}</span>
+                        ${s.device_count != null ? `<span style="color:var(--text-secondary);font-size:0.72rem;">${s.device_count} devices</span>` : ''}
+                        ${trendBadge}
+                        ${s.duration_ms != null ? `<span style="color:#444;font-size:0.65rem;margin-left:auto;">${s.duration_ms}ms</span>` : ''}
+                    </div>`;
+                }).join('');
+                return `<div style="margin-bottom:14px;">
+                    <div style="font-size:0.68rem;color:#555;font-family:var(--font-mono);padding:4px 0;margin-bottom:2px;border-bottom:1px solid #1a1a1a;">${escapeHtml(day)} <span style="color:#333;">(${dayscans.length} scan${dayscans.length > 1 ? 's' : ''})</span></div>
+                    ${rows}
                 </div>`;
             }).join('');
         }
@@ -1151,11 +1206,14 @@
             banner.textContent = msg;
         }
 
+        let _deviceCache = [];
+
         function renderDevices(devices) {
             const list = document.getElementById('device-list');
             const count = document.getElementById('device-count');
             const stat = document.getElementById('stat-devices');
             if (!list) return;
+            _deviceCache = devices;
             count.textContent = devices.length ? `(${devices.length})` : '';
             if (stat) stat.textContent = devices.length || '0';
             if (!devices.length) return;
@@ -1163,14 +1221,90 @@
                 const ports = (d.open_ports || []).join(', ');
                 const seen = new Date(d.last_seen_at).toLocaleString();
                 const trustColor = d.trusted ? 'var(--success)' : 'var(--text-secondary)';
-                return `<div style="padding:12px 16px; background:rgba(180,74,255,0.04); border-left:3px solid var(--accent-primary); display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:16px; align-items:center; font-size:0.8rem;">
-                    <div><strong style="color:#fff;">${escapeHtml(d.hostname || d.ip || d.mac)}</strong><br><span class="mono" style="font-size:0.65rem; color:${trustColor};">${escapeHtml(d.mac)}</span></div>
+                const portBadge = ports ? `<span class="mono" style="font-size:0.62rem;color:#888;"> · ports: ${escapeHtml(ports)}</span>` : '';
+                return `<div onclick="showDevice('${escapeHtml(d.id)}')" style="padding:12px 16px;background:rgba(180,74,255,0.04);border-left:3px solid var(--accent-primary);display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:16px;align-items:center;font-size:0.8rem;cursor:pointer;border-radius:0 4px 4px 0;transition:background 0.1s;" onmouseover="this.style.background='rgba(180,74,255,0.09)'" onmouseout="this.style.background='rgba(180,74,255,0.04)'">
+                    <div><strong style="color:#fff;">${escapeHtml(d.hostname || d.ip || d.mac)}</strong><br><span class="mono" style="font-size:0.65rem;color:${trustColor};">${escapeHtml(d.mac)}</span></div>
                     <div><span class="mono" style="color:var(--text-secondary);">${escapeHtml(d.ip || '')}</span></div>
-                    <div><span style="color:var(--accent-primary); font-size:0.7rem;">${escapeHtml(d.device_type || 'unknown')}</span>${ports ? `<br><span class="mono" style="font-size:0.65rem; color:#888;">ports: ${escapeHtml(ports)}</span>` : ''}</div>
-                    <div style="font-size:0.65rem; color:#666;">${escapeHtml(seen)}</div>
+                    <div><span style="color:var(--accent-primary);font-size:0.7rem;">${escapeHtml(d.device_type || 'unknown')}</span>${portBadge}</div>
+                    <div style="font-size:0.65rem;color:#666;">${escapeHtml(seen)}</div>
                 </div>`;
             }).join('');
         }
+
+        function showDevice(id) {
+            const d = _deviceCache.find(x => x.id === id);
+            if (!d) return;
+            const seen = new Date(d.last_seen_at).toLocaleString();
+            const first = d.first_seen_at ? new Date(d.first_seen_at).toLocaleString() : '—';
+            const ports = (d.open_ports || []);
+            const portsHtml = ports.length
+                ? ports.map(p => `<span style="font-family:var(--font-mono);font-size:0.75rem;padding:2px 8px;background:rgba(99,179,237,0.08);border:1px solid rgba(99,179,237,0.2);border-radius:3px;color:var(--accent-primary);">${p}</span>`).join('')
+                : '<span style="color:#555;font-size:0.75rem;">No open ports detected</span>';
+
+            // CVE alerts for this device
+            const cves = window._cveAlertCache ? (window._cveAlertCache[id] || []) : [];
+            const cvesHtml = cves.length
+                ? cves.map(a => `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <span style="font-family:var(--font-mono);font-size:0.75rem;color:#ef4444;">${escapeHtml(a.cve_id)}</span>
+                    <span style="color:#555;font-size:0.65rem;margin-left:auto;">${new Date(a.sent_at).toLocaleDateString()}</span>
+                  </div>`).join('')
+                : '<span style="color:#555;font-size:0.75rem;">No CVE matches</span>';
+
+            // Incidents linked to this device
+            const incs = _incidentCache.filter(i => i.device_id === id);
+            const sevColor = { info: 'var(--success)', warning: 'var(--warning)', critical: 'var(--critical)' };
+            const incsHtml = incs.length
+                ? incs.slice(0, 20).map(inc => {
+                    const c = sevColor[inc.severity] || '#aaa';
+                    return `<div onclick="closeDeviceModal();showIncident('${escapeHtml(inc.id)}')" style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:0.65rem;color:${c};font-weight:700;text-transform:uppercase;">${escapeHtml(inc.severity)}</span>
+                        <span style="font-size:0.78rem;color:var(--text-primary);">${escapeHtml(inc.title)}</span>
+                        <span style="color:#555;font-size:0.65rem;margin-left:auto;">${new Date(inc.created_at).toLocaleDateString()}</span>
+                    </div>`;
+                  }).join('')
+                : '<span style="color:#555;font-size:0.75rem;">No incidents linked to this device</span>';
+
+            const trustBadge = d.trusted
+                ? `<span style="font-size:0.65rem;padding:2px 8px;background:rgba(72,199,142,0.1);border:1px solid rgba(72,199,142,0.3);color:var(--success);border-radius:3px;">TRUSTED</span>`
+                : `<span style="font-size:0.65rem;padding:2px 8px;background:rgba(255,255,255,0.04);border:1px solid #333;color:#555;border-radius:3px;">UNTRUSTED</span>`;
+
+            document.getElementById('device-modal-body').innerHTML = `
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+                    <span style="font-size:0.95rem;font-weight:700;color:#fff;">${escapeHtml(d.hostname || d.ip || d.mac)}</span>
+                    ${trustBadge}
+                    <span style="font-size:0.65rem;font-family:var(--font-mono);color:var(--accent-primary);padding:2px 8px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.25);border-radius:3px;">${escapeHtml(d.device_type || 'unknown')}</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;font-size:0.78rem;">
+                    <div><span style="color:#555;">MAC</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(d.mac)}</span></div>
+                    <div><span style="color:#555;">IP</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(d.ip || '—')}</span></div>
+                    <div><span style="color:#555;">Vendor</span><br><span style="color:var(--text-primary);">${escapeHtml(d.vendor || '—')}</span></div>
+                    <div><span style="color:#555;">Last seen</span><br><span style="color:var(--text-primary);">${escapeHtml(seen)}</span></div>
+                    <div><span style="color:#555;">First seen</span><br><span style="color:var(--text-primary);">${escapeHtml(first)}</span></div>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-secondary);margin-bottom:8px;">// OPEN_PORTS</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;">${portsHtml}</div>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:#ef4444;margin-bottom:8px;">// CVE_MATCHES (${cves.length})</div>
+                    ${cvesHtml}
+                </div>
+                <div>
+                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--warning);margin-bottom:8px;">// LINKED_INCIDENTS (${incs.length})</div>
+                    ${incsHtml}
+                </div>
+            `;
+            document.getElementById('device-modal').style.display = 'flex';
+        }
+
+        function closeDeviceModal() {
+            document.getElementById('device-modal').style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dm = document.getElementById('device-modal');
+            if (dm) dm.addEventListener('click', function(e) { if (e.target === this) closeDeviceModal(); });
+        });
 
         function renderIncidents(incidents) {
             const list = document.getElementById('incident-list');
@@ -1178,6 +1312,7 @@
             const stat = document.getElementById('stat-incidents');
             const scanStat = document.getElementById('stat-last-scan');
             if (!list) return;
+            _incidentCache = incidents;
             const open = incidents.filter(i => !i.acknowledged);
             count.textContent = incidents.length ? `(${open.length} open / ${incidents.length} total)` : '';
             if (stat) stat.textContent = open.length || '0';
@@ -1187,18 +1322,66 @@
                 return;
             }
             const sevColor = { info: 'var(--success)', warning: 'var(--warning)', critical: 'var(--critical)' };
-            list.innerHTML = incidents.slice(0, 25).map(inc => {
+            list.innerHTML = incidents.slice(0, 50).map(inc => {
                 const ts = new Date(inc.created_at).toLocaleString();
                 const c = sevColor[inc.severity] || 'var(--text-secondary)';
                 const ack = inc.acknowledged
-                    ? `<span style="color:#555; font-size:0.65rem;">acked</span>`
-                    : `<a onclick="ackIncident('${inc.id}')" style="color:var(--accent-primary); cursor:pointer; font-size:0.65rem;">ack</a>`;
-                return `<div style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
-                    [<span style="color:#666;">${escapeHtml(ts)}</span>]
-                    <span style="color:${c}; text-transform:uppercase; font-weight:700;">${escapeHtml(inc.severity)}:</span>
-                    ${escapeHtml(inc.title)} · ${ack}
+                    ? `<span style="color:#555;font-size:0.65rem;">acked</span>`
+                    : `<span onclick="event.stopPropagation();ackIncident('${escapeHtml(inc.id)}')" style="color:var(--accent-primary);cursor:pointer;font-size:0.65rem;">ack</span>`;
+                const hasDot = !inc.acknowledged ? `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${c};margin-right:6px;vertical-align:middle;"></span>` : '';
+                const hasDetail = inc.detail || (inc.data && Object.keys(inc.data).length) ? `<span style="color:#444;font-size:0.6rem;margin-left:6px;">▸ details</span>` : '';
+                return `<div onclick="showIncident('${escapeHtml(inc.id)}')" style="padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;border-radius:4px;transition:background 0.1s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+                    ${hasDot}<span style="color:#555;font-size:0.72rem;">${escapeHtml(ts)}</span>
+                    &nbsp;<span style="color:${c};text-transform:uppercase;font-weight:700;font-size:0.75rem;">${escapeHtml(inc.severity)}</span>
+                    &nbsp;<span style="color:var(--text-primary);">${escapeHtml(inc.title)}</span>
+                    <span style="float:right;">${ack}${hasDetail}</span>
                 </div>`;
             }).join('');
+        }
+
+        // ── CVE Alerts (matched against user's devices) ──────────────────
+        async function loadCveAlerts() {
+            const list = document.getElementById('cve-alert-list');
+            const countEl = document.getElementById('cve-alert-count');
+            if (!list) return;
+            try {
+                const data = await callApi('/v1/cve-alerts');
+                const alerts = data.alerts || [];
+                if (countEl) countEl.textContent = alerts.length ? `${alerts.length} total` : '';
+                if (!alerts.length) {
+                    list.innerHTML = '<span style="color:#666;">No CVE matches yet — the agent checks hourly.</span>';
+                    return;
+                }
+                // Group by device (also store globally for device detail modal)
+                const byDevice = {};
+                for (const a of alerts) {
+                    if (!byDevice[a.device_id]) byDevice[a.device_id] = [];
+                    byDevice[a.device_id].push(a);
+                }
+                window._cveAlertCache = byDevice;
+                list.innerHTML = Object.entries(byDevice).map(([deviceId, devAlerts]) => {
+                    const deviceName = devAlerts[0]?.device_name || deviceId.slice(0, 8);
+                    const rows = devAlerts.map(a => {
+                        const ts = new Date(a.sent_at).toLocaleDateString();
+                        return `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:10px;align-items:center;">
+                            <span style="font-family:var(--font-mono);font-size:0.72rem;color:#ef4444;">${escapeHtml(a.cve_id)}</span>
+                            <span style="color:#555;font-size:0.65rem;margin-left:auto;">${escapeHtml(ts)}</span>
+                        </div>`;
+                    }).join('');
+                    const devObj = _deviceCache.find(x => x.id === deviceId);
+                    const devLabel = devObj ? escapeHtml(devObj.hostname || devObj.ip || devObj.mac) : escapeHtml(deviceId.slice(0, 8));
+                    const clickAttr = devObj ? `onclick="showDevice('${escapeHtml(deviceId)}')" style="cursor:pointer;"` : '';
+                    return `<div ${clickAttr} style="margin-bottom:12px;background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.12);border-radius:6px;padding:10px 12px;transition:background 0.1s;" onmouseover="this.style.background='rgba(239,68,68,0.08)'" onmouseout="this.style.background='rgba(239,68,68,0.04)'">
+                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-family:var(--font-mono);">
+                            <span style="color:#ef4444;">⚠</span> ${devLabel}
+                            <span style="color:#555;margin-left:6px;">${devAlerts.length} CVE${devAlerts.length > 1 ? 's' : ''}</span>
+                        </div>
+                        ${rows}
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                list.innerHTML = `<span style="color:#666;">Could not load CVE alerts.</span>`;
+            }
         }
 
         // ── Threat Feed (CVE from NVD) ────────────────────────────────────
@@ -2033,6 +2216,67 @@
                 }
             });
         });
+
+        // ── Incident detail modal ────────────────────────────────────────────
+        let _incidentCache = [];
+
+        function showIncident(id) {
+            const inc = _incidentCache.find(i => i.id === id);
+            if (!inc) return;
+            const sevColor = { info: 'var(--success)', warning: 'var(--warning)', critical: 'var(--critical)' };
+            const c = sevColor[inc.severity] || '#aaa';
+            const ts = new Date(inc.created_at).toLocaleString();
+            const ackedLine = inc.acknowledged
+                ? `<span style="color:var(--success);">✓ Acknowledged ${inc.acknowledged_at ? new Date(inc.acknowledged_at).toLocaleString() : ''}</span>`
+                : `<span style="color:var(--warning);">⚠ Open</span> &nbsp;<button onclick="ackIncident('${escapeHtml(id)}');closeIncidentModal();" style="font-size:0.7rem;padding:3px 10px;background:rgba(99,179,237,0.1);border:1px solid rgba(99,179,237,0.3);color:var(--accent-primary);border-radius:4px;cursor:pointer;">Acknowledge</button>`;
+
+            let dataBlock = '';
+            if (inc.data && Object.keys(inc.data).length) {
+                dataBlock = `<div style="margin-top:14px;">
+                    <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:6px;">// RAW_DATA</div>
+                    <pre style="background:#0a0a0a;border:1px solid #222;padding:10px;border-radius:4px;font-size:0.72rem;overflow-x:auto;color:#94a3b8;white-space:pre-wrap;">${escapeHtml(JSON.stringify(inc.data, null, 2))}</pre>
+                </div>`;
+            }
+
+            document.getElementById('incident-modal-body').innerHTML = `
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                    <span style="font-size:0.65rem;font-family:var(--font-mono);padding:3px 8px;background:${c}22;border:1px solid ${c}55;color:${c};border-radius:3px;text-transform:uppercase;letter-spacing:1px;">${escapeHtml(inc.severity)}</span>
+                    <span style="font-size:0.65rem;font-family:var(--font-mono);color:var(--text-secondary);padding:3px 8px;background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:3px;">${escapeHtml(inc.category)}</span>
+                    <span style="font-size:0.65rem;color:#555;margin-left:auto;">${escapeHtml(ts)}</span>
+                </div>
+                <div style="font-size:1rem;font-weight:600;color:#fff;margin-bottom:10px;">${escapeHtml(inc.title)}</div>
+                ${inc.detail ? `<div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;">${escapeHtml(inc.detail)}</div>` : ''}
+                <div style="font-size:0.75rem;color:var(--text-secondary);">${ackedLine}</div>
+                ${dataBlock}
+            `;
+            document.getElementById('incident-modal').style.display = 'flex';
+        }
+
+        function closeIncidentModal() {
+            document.getElementById('incident-modal').style.display = 'none';
+        }
+
+        document.getElementById('incident-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeIncidentModal();
+        });
     </script>
+
+    <!-- Device detail modal -->
+    <div id="device-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;width:100%;max-width:640px;max-height:85vh;overflow-y:auto;padding:24px;position:relative;">
+            <button onclick="closeDeviceModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+            <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--accent-primary);margin-bottom:16px;">// DEVICE_DETAIL</div>
+            <div id="device-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Incident detail modal -->
+    <div id="incident-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;width:100%;max-width:600px;max-height:80vh;overflow-y:auto;padding:24px;position:relative;">
+            <button onclick="closeIncidentModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+            <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--accent-primary);margin-bottom:16px;">// INCIDENT_DETAIL</div>
+            <div id="incident-modal-body"></div>
+        </div>
+    </div>
 </body>
 </html>
