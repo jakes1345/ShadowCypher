@@ -6,7 +6,7 @@ WWW="$ROOT/www"
 
 mkdir -p "$WWW/r"
 
-for f in index.html styles.css manifest.json sw.js \
+for f in index.html styles.css manifest.json sw.js assistant.js \
           icon-192.png icon-512.png apple-touch-icon.png \
           docs.html device.html privacy.html terms.html \
           status.html roadmap.html integrity.json; do

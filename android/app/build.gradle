@@ -20,9 +20,9 @@ android {
     signingConfigs {
         release {
             storeFile file("../shadowcypher.keystore")
-            storePassword System.getenv("KEYSTORE_PASS") ?: "shadowcypher2024"
+            storePassword System.getenv("KEYSTORE_PASS")
             keyAlias "shadowcypher"
-            keyPassword System.getenv("KEY_PASS") ?: "shadowcypher2024"
+            keyPassword System.getenv("KEY_PASS")
         }
     }
     buildTypes {

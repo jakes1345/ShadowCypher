@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Shadow AI"
+        android:theme="@style/AssistantTheme"
+        android:hardwareAccelerated="true">
+
+        <activity
+            android:name=".AssistantActivity"
+            android:theme="@style/AssistantTheme.Translucent"
+            android:launchMode="singleTask"
+            android:exported="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true">
+
+            <!-- Default assist app — long-press Home / squeeze / hotkey -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <!-- Samsung Bixby / older voice assist -->
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+        </activity>
+    </application>
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+
+</manifest>

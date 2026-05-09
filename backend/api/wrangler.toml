@@ -5,9 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 workers_dev = true
 
-# Custom domain — bind api.shadowcypher.site in Cloudflare Dashboard:
-#   Workers & Pages → shadowcypher-api → Settings → Triggers → Custom Domains → Add
-# routes = [{ pattern = "api.shadowcypher.site", custom_domain = true }]
+routes = [{ pattern = "api.shadowcypher.site", custom_domain = true }]
 
 # Public-safe vars (committed to git). Secrets go via `wrangler secret put`.
 [vars]
