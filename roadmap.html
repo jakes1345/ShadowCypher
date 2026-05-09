@@ -65,21 +65,25 @@
         <div class="item shipped"><span class="tag ship">DONE</span>Download page on site — APK cards with direct GitHub Release links</div>
     </div>
 
-    <h2 style="color: var(--accent-primary);">// NEXT — within 30 days</h2>
+    <h2 style="color: var(--accent-primary);">// NEXT — active development</h2>
     <div class="col">
-        <div class="item next"><span class="tag next">NEXT</span>Guardian agent auto-update mechanism (self-upgrading daemon)</div>
-        <div class="item next"><span class="tag next">NEXT</span>Shadow AI — expand STT/TTS to support wake word detection</div>
-        <div class="item next"><span class="tag next">NEXT</span>Device detail drilldown — full CVE history, port scan timeline, risk score</div>
-        <div class="item next"><span class="tag next">NEXT</span>iOS PWA wrapper (Capacitor, same codebase as Android)</div>
+        <div class="item next"><span class="tag next">NEXT</span>Guardian agent auto-update — daemon checks GitHub releases tag and self-upgrades via pip</div>
+        <div class="item next"><span class="tag next">NEXT</span>Shadow AI wake word — background service listens for "Hey Shadow" without draining battery (uses Android's SpeechRecognizer hotword API)</div>
+        <div class="item next"><span class="tag next">NEXT</span>Device detail drilldown — click any device to see full port history, CVE matches, risk score, and scan timeline</div>
+        <div class="item next"><span class="tag next">NEXT</span>ShadowScript missions library — 10+ pre-built .shadow mission files for common ops (recon, audit, OSINT)</div>
+        <div class="item next"><span class="tag next">NEXT</span>Ghost Mode audit improvements — automated anonymity score on a 0-100 scale with per-layer breakdown</div>
+        <div class="item next"><span class="tag next">NEXT</span>Desktop war-map improvements — click a node to open full device info, flag as trusted/suspicious</div>
     </div>
 
-    <h2 style="color: var(--text-secondary);">// LATER — within 90 days</h2>
+    <h2 style="color: var(--text-secondary);">// LATER — planned</h2>
     <div class="col">
-        <div class="item later"><span class="tag later">LATER</span>SSO / SAML for enterprise tier</div>
-        <div class="item later"><span class="tag later">LATER</span>Internationalization (community translation)</div>
-        <div class="item later"><span class="tag later">LATER</span>ShadowScript IDE — browser-based mission editor with syntax highlighting</div>
-        <div class="item later"><span class="tag later">LATER</span>Threat intelligence correlation — link CVEs to known exploits in the wild</div>
-        <div class="item later"><span class="tag later">LATER</span>Windows native Guardian agent (currently Linux/macOS/WSL2 only)</div>
+        <div class="item later"><span class="tag later">LATER</span>Windows Guardian agent — native .exe version (currently Linux / macOS / WSL2)</div>
+        <div class="item later"><span class="tag later">LATER</span>ShadowScript browser IDE — syntax highlighting, mission runner, .shadow file editor in the web dashboard</div>
+        <div class="item later"><span class="tag later">LATER</span>iOS PWA — install the web dashboard as a home screen app on iPhone (same Supabase backend, no App Store)</div>
+        <div class="item later"><span class="tag later">LATER</span>Offline CVE database — local SQLite snapshot of NVD so CVE lookups work without internet</div>
+        <div class="item later"><span class="tag later">LATER</span>OSINT module expansion — integrate Maltego CE, theHarvester, and subfinder into the COVERT-INTEL page</div>
+        <div class="item later"><span class="tag later">LATER</span>ShadowScript import system — <code style="font-size:0.75rem;color:inherit;">IMPORT recon.nmap</code> to share modules across missions</div>
+        <div class="item later"><span class="tag later">LATER</span>Guardian agent Windows Task Scheduler support — auto-start on login without needing WSL2</div>
     </div>
 
     <p style="margin-top:60px; color: var(--text-secondary); font-size: 0.85rem;">
