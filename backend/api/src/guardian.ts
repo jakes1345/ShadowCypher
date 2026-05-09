@@ -287,6 +287,21 @@ export async function listIncidents(req: Request, env: Env, user: AuthedUser, co
   return json({ incidents }, {}, cors);
 }
 
+export async function listCveAlerts(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
+  const url = new URL(req.url);
+  const deviceId = url.searchParams.get("device_id");
+  const filters: Record<string, string> = { user_id: `eq.${user.id}` };
+  if (deviceId) filters.device_id = `eq.${deviceId}`;
+
+  const alerts = await dbSelect(env, "cve_alerts_sent", {
+    select: "id,device_id,cve_id,sent_at",
+    filters,
+    order: "sent_at.desc",
+    limit: 100,
+  });
+  return json({ alerts }, {}, cors);
+}
+
 export async function ackIncident(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
   const url = new URL(req.url);
   const incidentId = url.searchParams.get("incident_id");

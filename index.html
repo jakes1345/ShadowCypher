@@ -208,6 +208,17 @@
                 </div>
             </div>
 
+            <!-- CVE Alerts (matched against your devices) -->
+            <div style="margin-bottom:40px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                    <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);">// CVE Alerts <span style="color:#555;font-size:0.7rem;margin-left:8px;">matched against your devices</span></h3>
+                    <span id="cve-alert-count" style="font-size:0.7rem;font-family:var(--font-mono);color:var(--text-secondary);"></span>
+                </div>
+                <div id="cve-alert-list" style="font-size:0.8rem;">
+                    <span style="color:#666;">No CVE matches yet — the agent checks hourly.</span>
+                </div>
+            </div>
+
             <!-- Threat Feed -->
             <div style="margin-bottom:40px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
@@ -1024,6 +1035,11 @@
             if (window._threatTimer) clearInterval(window._threatTimer);
             window._threatTimer = setInterval(() => loadThreats().catch(() => {}), 30 * 60 * 1000);
 
+            // Load CVE alerts matched against this user's devices (refreshes hourly)
+            loadCveAlerts().catch(() => {});
+            if (window._cveAlertTimer) clearInterval(window._cveAlertTimer);
+            window._cveAlertTimer = setInterval(() => loadCveAlerts().catch(() => {}), 60 * 60 * 1000);
+
             // Load notification prefs + teams + AI usage + webhooks + stats + audit + mfa + referrals
             loadNotifPrefs().catch(() => {});
             loadTeams().catch(() => {});
@@ -1211,6 +1227,47 @@
                     <span style="float:right;">${ack}${hasDetail}</span>
                 </div>`;
             }).join('');
+        }
+
+        // ── CVE Alerts (matched against user's devices) ──────────────────
+        async function loadCveAlerts() {
+            const list = document.getElementById('cve-alert-list');
+            const countEl = document.getElementById('cve-alert-count');
+            if (!list) return;
+            try {
+                const data = await callApi('/v1/cve-alerts');
+                const alerts = data.alerts || [];
+                if (countEl) countEl.textContent = alerts.length ? `${alerts.length} total` : '';
+                if (!alerts.length) {
+                    list.innerHTML = '<span style="color:#666;">No CVE matches yet — the agent checks hourly.</span>';
+                    return;
+                }
+                // Group by device
+                const byDevice = {};
+                for (const a of alerts) {
+                    if (!byDevice[a.device_id]) byDevice[a.device_id] = [];
+                    byDevice[a.device_id].push(a);
+                }
+                list.innerHTML = Object.entries(byDevice).map(([deviceId, devAlerts]) => {
+                    const deviceName = devAlerts[0]?.device_name || deviceId.slice(0, 8);
+                    const rows = devAlerts.map(a => {
+                        const ts = new Date(a.sent_at).toLocaleDateString();
+                        return `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:10px;align-items:center;">
+                            <span style="font-family:var(--font-mono);font-size:0.72rem;color:#ef4444;">${escapeHtml(a.cve_id)}</span>
+                            <span style="color:#555;font-size:0.65rem;margin-left:auto;">${escapeHtml(ts)}</span>
+                        </div>`;
+                    }).join('');
+                    return `<div style="margin-bottom:12px;background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.12);border-radius:6px;padding:10px 12px;">
+                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-family:var(--font-mono);">
+                            <span style="color:#ef4444;">⚠</span> ${escapeHtml(deviceId.slice(0,8))}
+                            <span style="color:#555;margin-left:6px;">${devAlerts.length} CVE${devAlerts.length > 1 ? 's' : ''}</span>
+                        </div>
+                        ${rows}
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                list.innerHTML = `<span style="color:#666;">Could not load CVE alerts.</span>`;
+            }
         }
 
         // ── Threat Feed (CVE from NVD) ────────────────────────────────────

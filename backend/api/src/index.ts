@@ -35,6 +35,7 @@ import {
   createIncident,
   listIncidents,
   ackIncident,
+  listCveAlerts,
 } from "./guardian";
 import { createCheckout, createPortal, handleWebhook } from "./billing";
 import { getPreferences, updatePreferences, sendTest } from "./notifications";
@@ -425,6 +426,7 @@ export default {
         "POST /v1/incidents":         createIncident,
         "GET /v1/incidents":          listIncidents,
         "POST /v1/incidents/ack":     ackIncident,
+        "GET /v1/cve-alerts":         listCveAlerts,
         "POST /v1/billing/checkout":  createCheckout,
         "POST /v1/billing/portal":    createPortal,
         "GET /v1/notifications/preferences":  getPreferences,
