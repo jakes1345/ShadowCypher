@@ -1143,16 +1143,49 @@
         function renderScans(scans) {
             const list = document.getElementById('scan-list');
             if (!list) return;
-            if (!scans.length) { list.innerHTML = '<span style="color:#666;">No scans yet.</span>'; return; }
+            if (!scans.length) { list.innerHTML = '<span style="color:#666;">No scans yet — install the Guardian agent to begin network history.</span>'; return; }
+
             const typeColor = { network:'var(--accent-primary)', router:'var(--warning)', dns:'var(--success)', firewall:'var(--success)', system:'var(--warning)', port:'#888', arp:'var(--critical)' };
-            list.innerHTML = scans.map(s => {
-                const ts = new Date(s.started_at).toLocaleString();
-                const c = typeColor[s.scan_type] || '#888';
-                return `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;gap:16px;align-items:center;">
-                    <span class="mono" style="color:${c};font-size:0.7rem;text-transform:uppercase;min-width:80px;">${escapeHtml(s.scan_type)}</span>
-                    <span style="color:#666;font-size:0.72rem;">${escapeHtml(ts)}</span>
-                    ${s.device_count != null ? `<span style="color:var(--text-secondary);font-size:0.72rem;">${s.device_count} devices</span>` : ''}
-                    ${s.duration_ms != null ? `<span style="color:#555;font-size:0.7rem;">${s.duration_ms}ms</span>` : ''}
+
+            // Group by calendar day
+            const byDay = {};
+            scans.forEach(s => {
+                const day = new Date(s.started_at).toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+                if (!byDay[day]) byDay[day] = [];
+                byDay[day].push(s);
+            });
+
+            // Compute device count trend across all scans (chronological)
+            const sorted = [...scans].sort((a,b) => new Date(a.started_at) - new Date(b.started_at));
+            const trendMap = {};
+            sorted.forEach((s, i) => {
+                if (s.device_count == null) return;
+                const prev = sorted.slice(0, i).reverse().find(x => x.device_count != null);
+                if (!prev) { trendMap[s.id] = null; return; }
+                trendMap[s.id] = s.device_count - prev.device_count;
+            });
+
+            list.innerHTML = Object.entries(byDay).map(([day, dayscans]) => {
+                const rows = dayscans.map(s => {
+                    const time = new Date(s.started_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+                    const c = typeColor[s.scan_type] || '#888';
+                    const delta = trendMap[s.id];
+                    let trendBadge = '';
+                    if (s.device_count != null) {
+                        if (delta > 0) trendBadge = `<span style="color:#ef4444;font-size:0.65rem;">+${delta} new</span>`;
+                        else if (delta < 0) trendBadge = `<span style="color:#f97316;font-size:0.65rem;">${delta} dropped</span>`;
+                    }
+                    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                        <span style="color:#444;font-size:0.68rem;min-width:42px;">${escapeHtml(time)}</span>
+                        <span style="font-family:var(--font-mono);font-size:0.68rem;color:${c};text-transform:uppercase;min-width:68px;">${escapeHtml(s.scan_type)}</span>
+                        ${s.device_count != null ? `<span style="color:var(--text-secondary);font-size:0.72rem;">${s.device_count} devices</span>` : ''}
+                        ${trendBadge}
+                        ${s.duration_ms != null ? `<span style="color:#444;font-size:0.65rem;margin-left:auto;">${s.duration_ms}ms</span>` : ''}
+                    </div>`;
+                }).join('');
+                return `<div style="margin-bottom:14px;">
+                    <div style="font-size:0.68rem;color:#555;font-family:var(--font-mono);padding:4px 0;margin-bottom:2px;border-bottom:1px solid #1a1a1a;">${escapeHtml(day)} <span style="color:#333;">(${dayscans.length} scan${dayscans.length > 1 ? 's' : ''})</span></div>
+                    ${rows}
                 </div>`;
             }).join('');
         }
