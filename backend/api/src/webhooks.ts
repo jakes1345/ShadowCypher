@@ -138,7 +138,7 @@ export async function testWebhook(req: Request, env: Env, user: AuthedUser, cors
     detail: "If you received this, the webhook is wired correctly.",
     user_id: user.id,
   };
-  const result = await deliverOne(rows[0], synthetic);
+  const result = await deliverOne(env, rows[0], synthetic);
   return json(result, {}, cors);
 }
 
@@ -168,13 +168,13 @@ export async function dispatchIncidentWebhook(env: Env, incident: IncidentForWeb
   for (const wh of rows) {
     if (!wh.events.includes("incident.created")) continue;
     if (incidentRank < (SEVERITY_RANK[wh.min_severity] ?? 2)) continue;
-    const result = await deliverOne(wh, incident);
+    const result = await deliverOne(env, wh, incident);
     if (result.ok) delivered++;
   }
   return { delivered };
 }
 
-async function deliverOne(wh: WebhookRow, incident: IncidentForWebhook): Promise<{ ok: boolean; status: number; reason?: string }> {
+async function deliverOne(env: Env, wh: WebhookRow, incident: IncidentForWebhook): Promise<{ ok: boolean; status: number; reason?: string }> {
   const isSlack       = /hooks\.slack\.com\//.test(wh.url);
   const isDiscord     = /discord(?:app)?\.com\/api\/webhooks\//.test(wh.url);
   const isSplunk      = /\/services\/collector/.test(wh.url);
@@ -293,10 +293,15 @@ async function deliverOne(wh: WebhookRow, incident: IncidentForWebhook): Promise
       body,
       signal: AbortSignal.timeout(8000),
     });
-    const ok = resp.ok || resp.status === 204;
-    // Update audit fields (don't await — fire and forget)
-    dbUpdate(undefined as never, "webhooks", {} as never, {} as never).catch(() => null); // placeholder
-    // Real update — go through env-aware update via inline fetch
+    const ok = resp.ok;
+    dbUpdate(env, "webhooks",
+      { id: `eq.${wh.id}` },
+      {
+        last_called_at: new Date().toISOString(),
+        last_status: resp.status,
+        failure_count: ok ? 0 : (wh.failure_count ?? 0) + 1,
+      }
+    ).catch(() => null);
     return { ok, status: resp.status };
   } catch (e) {
     return { ok: false, status: 0, reason: e instanceof Error ? e.message : "unknown" };

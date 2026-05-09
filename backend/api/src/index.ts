@@ -104,6 +104,25 @@ interface SupabaseUser {
 
 const KEY_PATTERN = /^sc_live_[a-f0-9]{48}$/;
 
+// ─── Rate limiting ──────────────────────────────────────────────────────────
+// Module-scoped sliding window (per isolate). Not distributed — for true
+// distributed rate limiting, configure Cloudflare Rate Limiting rules in the
+// dashboard (Security → WAF → Rate Limiting Rules) on api.shadowcypher.site.
+const _rl = new Map<string, number[]>();
+
+function rateLimit(key: string, maxReqs: number, windowMs: number): boolean {
+  const now = Date.now();
+  const hits = (_rl.get(key) ?? []).filter((t) => now - t < windowMs);
+  if (hits.length >= maxReqs) return false;
+  hits.push(now);
+  _rl.set(key, hits);
+  if (_rl.size > 10_000) {
+    const oldest = [..._rl.entries()].sort((a, b) => (a[1][0] ?? 0) - (b[1][0] ?? 0));
+    for (let i = 0; i < 1000; i++) _rl.delete(oldest[i][0]);
+  }
+  return true;
+}
+
 // ─── CORS ───────────────────────────────────────────────────────────────────
 
 function corsHeaders(origin: string | null, allowed: string): HeadersInit {
@@ -147,24 +166,27 @@ function extractKey(req: Request): string | null {
  * (key hash + user_id, indexed). user_metadata scan is fine up to ~10k users.
  */
 async function findUserByKey(env: Env, key: string): Promise<SupabaseUser | null> {
-  // Page through users (max 1000 per page — sufficient for early stage).
-  // Scaling note: when user count > 10k, introduce a Postgres api_keys table.
-  const url = `${env.SUPABASE_URL}/auth/v1/admin/users?per_page=1000`;
-  const resp = await fetch(url, {
-    headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-    },
-  });
-  if (!resp.ok) {
-    console.error("Supabase admin fetch failed", resp.status, await resp.text());
-    return null;
+  let page = 1;
+  const perPage = 1000;
+  while (true) {
+    const url = `${env.SUPABASE_URL}/auth/v1/admin/users?per_page=${perPage}&page=${page}`;
+    const resp = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    });
+    if (!resp.ok) {
+      console.error("Supabase admin fetch failed", resp.status, await resp.text());
+      return null;
+    }
+    const body = (await resp.json()) as { users: SupabaseUser[] };
+    for (const u of body.users) {
+      if ((u.user_metadata as { api_key?: string })?.api_key === key) return u;
+    }
+    if (body.users.length < perPage) return null;
+    page++;
   }
-  const body = (await resp.json()) as { users: SupabaseUser[] };
-  for (const u of body.users) {
-    if ((u.user_metadata as { api_key?: string })?.api_key === key) return u;
-  }
-  return null;
 }
 
 async function updateUserMetadata(
@@ -408,8 +430,17 @@ export default {
       if (path === "/v1/billing/webhook" && req.method === "POST") return handleWebhook(req, env, cors);
 
       // Device-authorization flow — kickoff + poll are unauthenticated (the device_code IS the secret)
-      if (path === "/v1/auth/device" && req.method === "POST") return startDeviceAuth(req, env, undefined, cors);
-      if (path === "/v1/auth/device/poll" && req.method === "POST") return pollDeviceAuth(req, env, undefined, cors);
+      const ip = req.headers.get("CF-Connecting-IP") ?? req.headers.get("X-Forwarded-For") ?? "unknown";
+      if (path === "/v1/auth/device" && req.method === "POST") {
+        if (!rateLimit(`device:${ip}`, 5, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        return startDeviceAuth(req, env, undefined, cors);
+      }
+      if (path === "/v1/auth/device/poll" && req.method === "POST") {
+        if (!rateLimit(`poll:${ip}`, 30, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        return pollDeviceAuth(req, env, undefined, cors);
+      }
 
       if (path === "/v1/me" && req.method === "GET") return handleMe(req, env, cors);
       if (path === "/v1/keys/rotate" && req.method === "POST") return handleRotate(req, env, cors);
@@ -462,8 +493,20 @@ export default {
       if (handler) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
+        // Per-IP gate before expensive Supabase lookup (120 req/min across all authed routes)
+        if (!rateLimit(`auth:${ip}`, 120, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
         const user = await findUserByKey(env, key);
         if (!user) return json({ error: "key_not_found" }, { status: 401 }, cors);
+        // Tighter per-user limits on expensive/sensitive operations
+        if (routeKey === "POST /v1/keys/rotate" && !rateLimit(`rotate:${user.id}`, 5, 3_600_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/assistant/query" && !rateLimit(`ai:${user.id}`, 20, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/scans" && !rateLimit(`scan:${user.id}`, 30, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/incidents" && !rateLimit(`inc:${user.id}`, 60, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
         return handler(req, env, { id: user.id, email: user.email }, cors);
       }
 

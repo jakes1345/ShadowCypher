@@ -22,6 +22,10 @@ class TacticalDatabase:
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self._lock = threading.Lock()
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        try:
+            os.chmod(self.db_path, 0o600)
+        except OSError:
+            pass
         self.conn.execute("PRAGMA journal_mode=WAL")
         self._build_schema()
 
@@ -161,10 +165,13 @@ class TacticalDatabase:
 
 db = TacticalDatabase()
 
-# Auto-register the requested Lead Operator
-db.register_operator(
-    email="ixchats@gmail.com",
-    handle="IX_COMMANDER",
-    api_key="sc_live_f7a8b9c0d1e2f3g4h5i6j7k8l9m0n1o2",
-    role="LEAD_OPERATOR"
-)
+# Auto-register lead operator from environment — never hardcode credentials
+_op_email = os.getenv("SHADOW_ADMIN_EMAIL")
+_op_key = os.getenv("SHADOW_ADMIN_KEY")
+if _op_email and _op_key:
+    db.register_operator(
+        email=_op_email,
+        handle=os.getenv("SHADOW_ADMIN_HANDLE", "SHADOW_OPERATOR"),
+        api_key=_op_key,
+        role=os.getenv("SHADOW_ADMIN_ROLE", "LEAD_OPERATOR"),
+    )

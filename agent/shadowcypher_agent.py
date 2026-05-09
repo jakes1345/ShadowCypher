@@ -98,6 +98,7 @@ def check_for_update(api_base: str) -> None:
                 os.unlink(tmp_path)
                 return
 
+            os.chmod(tmp_path, os.stat(script_path).st_mode)
             os.replace(tmp_path, script_path)
             print(f"[+] updated to {remote_ver} — restarting...")
             os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -377,7 +378,7 @@ def audit_router(devices: list[dict[str, Any]]) -> dict[str, Any]:
 
 def check_dns_leak() -> dict[str, Any]:
     """Detect if DNS queries resolve through unexpected resolvers."""
-    expected_private = ["1.1.1.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "208.67.222.222", "208.67.220.220"]
+    trusted_resolvers = ["1.1.1.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "208.67.222.222", "208.67.220.220"]
     resolvers: list[str] = []
 
     try:
@@ -394,7 +395,7 @@ def check_dns_leak() -> dict[str, Any]:
     leaking = [r for r in resolvers if not (
         r.startswith("127.") or r.startswith("192.168.") or
         r.startswith("10.") or r.startswith("172.") or
-        r in expected_private
+        r in trusted_resolvers
     )]
     return {"resolvers": resolvers, "unexpected": leaking, "leak_detected": len(leaking) > 0}
 

@@ -138,7 +138,7 @@ export async function inviteMember(req: Request, env: Env, user: AuthedUser, cor
       user_id: existing[0]?.user_id ?? null,
       invited_email: email,
       role: "member",
-      status: existing[0]?.user_id ? "pending" : "pending",
+      status: "pending",
       invited_at: new Date().toISOString(),
     },
     "team_id,user_id,invited_email"

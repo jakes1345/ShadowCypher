@@ -147,6 +147,8 @@ export async function heartbeatAgent(req: Request, env: Env, user: AuthedUser, c
 // ─── Scans + devices ────────────────────────────────────────────────────────
 
 export async function uploadScan(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+  if (contentLength > 1_000_000) return json({ error: "payload_too_large" }, { status: 413 }, cors);
   const body = (await req.json().catch(() => ({}))) as ScanBody;
   if (!body.scan_type) return json({ error: "scan_type_required" }, { status: 400 }, cors);
 
@@ -183,6 +185,7 @@ export async function uploadScan(req: Request, env: Env, user: AuthedUser, cors:
           vendor: d.vendor ?? null,
           device_type: d.device_type ?? null,
           open_ports: d.open_ports ?? [],
+          os_fingerprint: d.os_fingerprint ?? null,
           last_seen_at: new Date().toISOString(),
         },
         "user_id,mac"
@@ -240,10 +243,16 @@ export async function recentScans(req: Request, env: Env, user: AuthedUser, cors
 // ─── Incidents ──────────────────────────────────────────────────────────────
 
 export async function createIncident(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+  if (contentLength > 64_000) return json({ error: "payload_too_large" }, { status: 413 }, cors);
   const body = (await req.json().catch(() => ({}))) as IncidentBody;
   if (!body.severity || !body.category || !body.title) {
     return json({ error: "severity_category_title_required" }, { status: 400 }, cors);
   }
+  if (typeof body.title === "string" && body.title.length > 500)
+    return json({ error: "title_too_long" }, { status: 400 }, cors);
+  if (typeof body.detail === "string" && body.detail.length > 5000)
+    return json({ error: "detail_too_long" }, { status: 400 }, cors);
   const inc = await dbInsert<{ id: string; created_at: string }>(env, "incidents", {
     user_id: user.id,
     agent_id: body.agent_id ?? null,
@@ -294,7 +303,7 @@ export async function listCveAlerts(req: Request, env: Env, user: AuthedUser, co
   if (deviceId) filters.device_id = `eq.${deviceId}`;
 
   const alerts = await dbSelect(env, "cve_alerts_sent", {
-    select: "id,device_id,cve_id,sent_at",
+    select: "id,device_id,cve_id,fired_at",
     filters,
     order: "sent_at.desc",
     limit: 100,

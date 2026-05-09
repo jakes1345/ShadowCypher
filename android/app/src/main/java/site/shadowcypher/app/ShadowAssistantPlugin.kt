@@ -51,6 +51,9 @@ class ShadowAssistantPlugin : Plugin() {
                 })
                 ttsReady = true
                 Log.d("ShadowAssistant", "TTS initialized")
+            } else {
+                Log.e("ShadowAssistant", "TTS init failed with status $status — speak will be unavailable")
+                notifyListeners("ttsUnavailable", JSObject().apply { put("status", status) })
             }
         }
     }
@@ -205,6 +208,12 @@ class ShadowAssistantPlugin : Plugin() {
     @PluginMethod
     fun stopSpeaking(call: PluginCall) {
         tts?.stop()
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun finishActivity(call: PluginCall) {
+        activity.runOnUiThread { activity.finish() }
         call.resolve()
     }
 
