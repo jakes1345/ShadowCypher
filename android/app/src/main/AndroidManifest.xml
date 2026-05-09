@@ -17,22 +17,9 @@
             android:launchMode="singleTask"
             android:exported="true">
 
-            <!-- Standard launcher -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <!-- Device assistant — long-press Home or Settings > Default Apps > Assist -->
-            <intent-filter>
-                <action android:name="android.intent.action.ASSIST" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-
-            <!-- Samsung/older device voice assist -->
-            <intent-filter>
-                <action android:name="android.intent.action.VOICE_ASSIST" />
-                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
         </activity>
