@@ -940,9 +940,7 @@
         // Keep the old name pointing at the new function for the inline onclick handler
         const mockLogout = signOut;
 
-        // Backend API base — overrideable via window.SHADOWCYPHER_API for local dev
-        // TODO: bind api.shadowcypher.site in Cloudflare Workers → Triggers → Custom Domains, then switch to that
-        const API_BASE = window.SHADOWCYPHER_API || 'https://shadowcypher-api.shadowcypher.workers.dev';
+        const API_BASE = window.SHADOWCYPHER_API || 'https://api.shadowcypher.site';
 
         async function callApi(path, opts = {}) {
             const apiKey = document.getElementById('api-key')?.dataset?.realKey;
