@@ -14,7 +14,7 @@ Install:
 
 Config (~/.shadowcypher/config.json):
     {
-      "api_base": "https://shadowcypher-api.shadowcypher.workers.dev",
+      "api_base": "https://api.shadowcypher.site",
       "api_key": "sc_live_<your_key_from_dashboard>",
       "scan_interval_sec": 600,
       "heartbeat_interval_sec": 60
@@ -47,7 +47,7 @@ except ImportError:
 CONFIG_DIR = Path.home() / ".shadowcypher"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 STATE_PATH = CONFIG_DIR / "state.json"
-DEFAULT_API = "https://shadowcypher-api.shadowcypher.workers.dev"
+DEFAULT_API = "https://api.shadowcypher.site"
 AGENT_VERSION = "0.3.0"
 UPDATE_CHECK_INTERVAL = 86400  # 24 hours
 

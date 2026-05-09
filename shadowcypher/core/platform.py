@@ -25,7 +25,8 @@ class ShadowPlatform:
         "native": "shadowcypher/native",
         "data": "data",
         "findings": "findings",
-        "arsenal": "shadowcypher/arsenal/primitives"
+        "arsenal": "shadowcypher/arsenal/primitives",
+        "assets": "assets",
     }
 
     @classmethod

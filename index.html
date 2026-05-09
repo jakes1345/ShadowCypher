@@ -817,13 +817,41 @@
 
         if (IS_NATIVE) {
             document.addEventListener('DOMContentLoaded', () => {
-                // Hide marketing nav tabs the app doesn't need
+                // Hide marketing-only nav tabs
                 ['nav-home', 'nav-arsenal', 'nav-ghost', 'nav-pricing'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.style.display = 'none';
                 });
-                // Navigate straight to account/dashboard
-                navTo('account', document.getElementById('nav-account'));
+                // Land on the Guardian dashboard, not account settings
+                navTo('guardian', document.getElementById('nav-guardian'));
+
+                // Wire Capacitor push notifications if available
+                (async () => {
+                    try {
+                        const { PushNotifications } = window.Capacitor?.Plugins || {};
+                        if (!PushNotifications) return;
+                        const perm = await PushNotifications.requestPermissions();
+                        if (perm.receive === 'granted') {
+                            await PushNotifications.register();
+                        }
+                        PushNotifications.addListener('registration', ({ value }) => {
+                            // Ship device token to backend for targeted pushes
+                            callApi('/v1/notifications/preferences', {
+                                method: 'POST',
+                                body: JSON.stringify({ push_enabled: true, push_token: value }),
+                            }).catch(() => {});
+                        });
+                        PushNotifications.addListener('pushNotificationReceived', n => {
+                            // Foreground notification — show a toast
+                            cliPrint(`🔔 ${n.title}: ${n.body}`, 'var(--accent-primary)');
+                        });
+                        PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
+                            // User tapped a background notification — deep-link to incidents
+                            const data = notification?.data || {};
+                            if (data.incident_id) navTo('guardian', document.getElementById('nav-guardian'));
+                        });
+                    } catch (e) { console.warn('[push]', e); }
+                })();
             });
         }
 
