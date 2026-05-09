@@ -2,17 +2,20 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GLib, Pango
 import os
-import subprocess
 import threading
 
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
+from shadowcypher.ui.base_page import BasePage
 
-class ShadowScriptPage(Gtk.Box):
-    """The Tactical IDE for the ShadowCypher Programming Language (v1.0-SOVEREIGN)."""
-    
+_MISSIONS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "shadowscript", "missions")
+_ENGINE_PATH  = os.path.join(os.path.dirname(__file__), "..", "..", "shadowscript", "core", "engine.py")
+
+class ShadowScriptPage(BasePage):
+    """Tactical IDE for the ShadowCypher scripting language."""
+
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+        super().__init__("SHADOWSCRIPT LAB")
         self.set_margin_start(30)
         self.set_margin_end(30)
         self.set_margin_top(20)
@@ -98,18 +101,23 @@ class ShadowScriptPage(Gtk.Box):
         start, end = buffer.get_bounds()
         code = buffer.get_text(start, end, True)
         
-        tmp_path = "/home/jack/ShadowCypher/shadowscript/missions/live_draft.shadow"
+        os.makedirs(_MISSIONS_DIR, exist_ok=True)
+        tmp_path = os.path.join(_MISSIONS_DIR, "live_draft.shadow")
         with open(tmp_path, "w") as f:
             f.write(code)
-            
-        self.log_to_terminal(f"\033[0;35m[IGNITION] Spawning tactical runner for: live_draft.shadow\033[0m")
-        
+
+        self.log_to_terminal("[IGNITION] Spawning tactical runner for: live_draft.shadow\n")
+
         def run():
             try:
+                import sys as _sys
                 env = os.environ.copy()
-                env["PYTHONPATH"] = "/home/jack/ShadowCypher"
+                env["PYTHONPATH"] = os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "..", "..")
+                )
+                import subprocess
                 proc = subprocess.Popen(
-                    ["python3", "/home/jack/ShadowCypher/shadowscript/core/engine.py", tmp_path],
+                    [_sys.executable, _ENGINE_PATH, tmp_path],
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
                 )
                 for line in proc.stdout:
@@ -140,7 +148,7 @@ class ShadowScriptBible(Gtk.ScrolledWindow):
         box.set_margin_top(40)
         
         # Load the guide.md
-        guide_path = "/home/jack/ShadowCypher/shadowscript/docs/guide.md"
+        guide_path = os.path.join(os.path.dirname(__file__), "..", "..", "shadowscript", "docs", "guide.md")
         content = "Guide not found."
         if os.path.exists(guide_path):
             with open(guide_path, "r") as f:
