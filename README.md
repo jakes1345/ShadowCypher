@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-4.0.0--ghost-00d4ff?style=flat-square" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-4.0-00d4ff?style=flat-square" alt="Version"/>
   <img src="https://img.shields.io/badge/python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/go-1.24+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go"/>
   <img src="https://img.shields.io/badge/AI-Ollama%20(Local)-black?style=flat-square" alt="AI"/>
@@ -122,7 +122,7 @@ The infrastructure that keeps you connected, encrypted, and invisible.
 
 ### 👻 GHOST-PROTOCOL — Operational Anonymity & Anti-Forensics
 
-The F-Society layer. Total operational invisibility for when you absolutely cannot be seen.
+Total operational invisibility for when you absolutely cannot be seen.
 
 | Module | What It Does |
 |---|---|
@@ -225,14 +225,14 @@ Key event channels: `mission_output`, `module_log`, `pulse_anomaly`, `forensic_u
 
 ```bash
 # Clone the repository
-git clone https://github.com/shadow_admin1345/ShadowCypher.git
+git clone https://github.com/jakes1345/ShadowCypher.git
 cd ShadowCypher
 
-# Run the automated environment setup (compiles Go, installs elite tools)
-./scripts/setup_sovereign.sh
+# Install Python dependencies
+pip install -r requirements.txt
 
-# Launch — Ollama starts automatically if not running
-./shadowcypher_launch
+# Launch
+python3 -m shadowcypher.app
 ```
 
 ### Manual Launch
@@ -283,7 +283,7 @@ ShadowCypher/
 ├── tools/                     # Bundled third-party tools
 ├── scripts/                   # Setup and utility scripts
 ├── config.json                # Runtime configuration
-└── shadowcypher_launch        # Production bootloader (auto-compiles Go, starts Ollama)
+└── requirements.txt           # Python dependencies
 ```
 
 ---
@@ -333,7 +333,7 @@ The authors assume no liability for misuse. You are the operator. You own your a
 </p>
 
 <p align="center">
-  <strong>ShadowCypher v4.0.0-ghost</strong> · Built with Go, Python, Cairo, and conviction.
+  <strong>ShadowCypher v4.0</strong> · Built with Go, Python, Cairo, and conviction.
 </p>
 
 <p align="center">
