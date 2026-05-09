@@ -27,8 +27,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Point to the UI directory
-          path: './shadowcypher/ui'
+          path: '.'
           
       - name: Deploy to GitHub Pages
         id: deployment
