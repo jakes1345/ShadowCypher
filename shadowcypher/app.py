@@ -227,6 +227,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f310", "Network Scanner"),
             ("\U0001f50e", "OSINT Probe"),
             ("\U0001f4bc", "Session Manager"),
+            ("\U0001f9e0", "Recon Engine"),
+            ("\U0001f3ae", "Steam OSINT"),
             ("---", "OFFENSIVE-LAB"),
             ("\U0001f575", "Web & Cloud Strikes"),
             ("\U0001f4a3", "Payload Factory"),
@@ -235,6 +237,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f480", "Exploit Engine"),
             ("\U0001f3a3", "Phishing Forge"),
             ("\U0001f3db", "AD Attacks"),
+            ("\U0001f5c2", "AD Pivot"),
             ("\u26a1", "Combat Deck"),
             ("\U0001f4dc", "ShadowScript"),
             ("---", "SOVEREIGN-OPS"),
@@ -249,6 +252,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f6e0", "Hub Settings"),
             ("\U0001f5dd", "God-Panel"),
             ("\u2622", "Wraith Protocol"),
+            ("\U0001f4cb", "Pulse Audit"),
+            ("\U0001f4de", "Support"),
         ]
 
         for icon, name in pages:
@@ -294,6 +299,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Network Scanner": "network_page.NetworkPage",
                 "OSINT Probe": "osint_page.OSINTPage",
                 "Session Manager": "session_page.SessionPage",
+                "Recon Engine": "recon_page.ReconPage",
+                "Steam OSINT": "steam_page.SteamAuditPage",
                 "Web & Cloud Strikes": "web_attacks_page.WebAttacksPage",
                 "Payload Factory": "payload_page.PayloadPage",
                 "Wireless Saturation": "wireless_page.WirelessPage",
@@ -301,6 +308,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Exploit Engine": "exploit_page.ExploitPage",
                 "Phishing Forge": "phishing_page.PhishingPage",
                 "AD Attacks": "ad_attacks_page.ADAttacksPage",
+                "AD Pivot": "ad_page.AdPage",
                 "Combat Deck": "combat_page.CombatDeck",
                 "ShadowScript": "shadowscript_page.ShadowScriptPage",
                 "Sovereign Chat": "chat_page.SovereignChatPage",
@@ -314,6 +322,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Hub Settings": "admin_page.AdminPage",
                 "God-Panel": "god_panel.GodPanel",
                 "Wraith Protocol": "wraith_page.WraithProtocol",
+                "Pulse Audit": "audit_page.PulseAuditPage",
+                "Support": "support_page.SupportPage",
             }
             if name not in mapping:
                 return
