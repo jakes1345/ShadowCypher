@@ -10,8 +10,9 @@ const ShadowAssistant = (() => {
   let overlay = null;
   let state = 'idle'; // idle | listening | thinking | speaking
   let conversationHistory = [];
+  let _idleTimer = null;
 
-  const API_BASE = 'https://shadowcypher-api.jacksnewaccount12.workers.dev';
+  const API_BASE = 'https://api.shadowcypher.site';
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
 
@@ -203,6 +204,9 @@ const ShadowAssistant = (() => {
     setState('idle');
     document.getElementById('sa-transcript').textContent = '';
     document.getElementById('sa-response').textContent = '';
+    // Kill the Activity if completely idle for 30s (user forgot about it)
+    clearTimeout(_idleTimer);
+    _idleTimer = setTimeout(() => { if (state === 'idle') dismiss(); }, 30000);
   }
 
   function dismiss() {
@@ -211,6 +215,9 @@ const ShadowAssistant = (() => {
     if (plugin) plugin.stopSpeaking().catch(() => {});
     state = 'idle';
     conversationHistory = [];
+    // Tell the native Activity to finish() so the process dies and releases battery
+    if (plugin?.finishActivity) plugin.finishActivity().catch(() => {});
+    else if (window.ShadowBridge?.finishActivity) window.ShadowBridge.finishActivity();
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -240,10 +247,13 @@ const ShadowAssistant = (() => {
       if (plugin) {
         await plugin.speak({ text: response, rate: 1.05 });
         setState('idle');
+        // Auto-dismiss 2s after speaking — kills the Activity, releases battery
+        setTimeout(() => dismiss(), 2000);
       }
     } catch (e) {
       document.getElementById('sa-response').textContent = 'Failed to reach ShadowCypher AI.';
       setState('idle');
+      setTimeout(() => dismiss(), 3000);
     }
   }
 
@@ -261,7 +271,7 @@ const ShadowAssistant = (() => {
     // Keep last 6 turns to stay within context limits
     const messages = conversationHistory.slice(-6);
 
-    const resp = await fetch(`${API_BASE}/ai/chat`, {
+    const resp = await fetch(`${API_BASE}/v1/assistant/query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

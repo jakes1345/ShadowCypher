@@ -1,6 +1,9 @@
 # ShadowCypher Tactical Git Exclusion Engine
 # ── Mission Critical: DO NOT COMMIT SENSITIVE DATA ──
 
+# Internal AI planning artifacts — not for public repo
+docs/superpowers/
+
 # Local Tactical Data
 logs/
 *.log
