@@ -44,6 +44,7 @@
             <a onclick="navTo('arsenal',this)" id="nav-arsenal" class="nav-tab">Arsenal</a>
             <a onclick="navTo('ghost',this)" id="nav-ghost" class="nav-tab">Ghost</a>
             <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
+            <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Download</a>
             <a href="/shadow.html" class="nav-tab" style="color:#b44aff;">Shadow AI</a>
             <a onclick="navTo('pricing',this)" id="nav-pricing" class="nav-tab">Pro</a>
             <a onclick="navTo('account',this)" id="nav-account" class="nav-tab">Account</a>
@@ -53,14 +54,16 @@
 
     <!-- HOME -->
     <div id="page-home" class="page active">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;height:calc(100vh - 200px);align-items:center;">
+
+        <!-- Hero -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;min-height:calc(100vh - 200px);align-items:center;padding-bottom:60px;">
             <div class="hero-container" style="text-align:left;">
                 <div class="status-badge"><div class="status-dot"></div>v4.0 · Now in production</div>
                 <h1 class="hero-title" style="font-size:3.5rem;">Enterprise security,<br><span style="color:var(--accent-primary);">sovereign by design.</span></h1>
                 <p class="hero-subtitle">A unified security platform for offensive testing, anonymity, and personal device protection. Local-first AI. Zero telemetry. Built for operators and engineers who need to verify, not trust.</p>
                 <div style="display:flex;gap:20px;flex-wrap:wrap;">
-                    <a onclick="navTo('arsenal',document.getElementById('nav-arsenal'))" class="btn-primary">Engage Arsenal</a>
-                    <a onclick="navTo('guardian',document.getElementById('nav-guardian'))" class="btn-primary" style="background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);">Guardian Shield</a>
+                    <a onclick="navTo('arsenal',document.getElementById('nav-arsenal'))" class="btn-primary">Explore Arsenal</a>
+                    <a onclick="navTo('download',document.getElementById('nav-download'))" class="btn-primary" style="background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);">Download Apps</a>
                 </div>
                 <div class="swarm-feed" style="margin-top:40px;width:100%;">
                     <div class="mono" style="font-size:0.7rem;color:var(--accent-primary);margin-bottom:10px;opacity:0.6;">// LIVE_TELEMETRY</div>
@@ -70,24 +73,452 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:40px;">
                 <div class="stat-card"><div class="stat-num">29</div><div class="stat-label">TACTICAL SCRIPTS</div></div>
                 <div class="stat-card"><div class="stat-num">8</div><div class="stat-label">GHOST LAYERS</div></div>
-                <div class="stat-card"><div class="stat-num">110</div><div class="stat-label">TESTS PASSING</div></div>
+                <div class="stat-card"><div class="stat-num">5</div><div class="stat-label">PLATFORMS</div></div>
                 <div class="stat-card"><div class="stat-num">9</div><div class="stat-label">MCP TOOLS</div></div>
             </div>
         </div>
+
+        <!-- Platform Ecosystem -->
+        <div style="padding:80px 0 60px;border-top:1px solid var(--glass-border);">
+            <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// THE PLATFORM</div>
+            <h2 style="font-size:2rem;font-weight:700;margin-bottom:16px;">Five tools. One sovereign stack.</h2>
+            <p style="color:var(--text-secondary);max-width:680px;margin-bottom:56px;line-height:1.8;">ShadowCypher isn't a single app. It's a multi-platform security environment where every component talks to every other. Run an engagement on desktop, monitor your LAN from your phone, get alerted when something moves.</p>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">
+
+                <!-- Desktop App -->
+                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:28px;position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
+                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">LINUX · PYTHON · GTK3</div>
+                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">Desktop Command Center</h3>
+                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">Full GTK3 desktop app with a real-time Cairo HUD, network war-map, AI inference via Ollama, and 29 offensive/defensive modules. Where missions are planned and executed.</p>
+                    <div class="mono" style="font-size:0.7rem;color:#555;line-height:2;">
+                        <div style="color:var(--text-secondary);">→ NEXUS-COMMAND dashboard</div>
+                        <div style="color:var(--text-secondary);">→ ShadowScript mission DSL</div>
+                        <div style="color:var(--text-secondary);">→ Ghost Protocol (8 layers)</div>
+                        <div style="color:var(--text-secondary);">→ Phishing Forge (35 templates)</div>
+                        <div style="color:var(--text-secondary);">→ C2 Command Center</div>
+                    </div>
+                </div>
+
+                <!-- Android Guardian -->
+                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:28px;position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
+                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">ANDROID · CAPACITOR</div>
+                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">ShadowCypher Guardian</h3>
+                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">The full web dashboard wrapped in a native Android app. Device inventory, CVE matches against your gear, real-time incident alerts, and Guardian agent management — from your pocket.</p>
+                    <div class="mono" style="font-size:0.7rem;line-height:2;">
+                        <div style="color:var(--text-secondary);">→ Network device inventory</div>
+                        <div style="color:var(--text-secondary);">→ CVE matching by device</div>
+                        <div style="color:var(--text-secondary);">→ ARP spoof / rogue AP alerts</div>
+                        <div style="color:var(--text-secondary);">→ Live threat feed</div>
+                        <div style="color:var(--text-secondary);">→ Push notifications</div>
+                    </div>
+                </div>
+
+                <!-- Shadow AI -->
+                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:28px;position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
+                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">ANDROID · ASSIST OVERLAY</div>
+                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">Shadow AI Assistant</h3>
+                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">Replaces Bixby, Siri, and Google Assistant. Set as your default Assist app — long-press Home to invoke the translucent overlay. STT → AI → TTS. Your phone, your AI.</p>
+                    <div class="mono" style="font-size:0.7rem;line-height:2;">
+                        <div style="color:var(--text-secondary);">→ Transparent overlay (no UI chrome)</div>
+                        <div style="color:var(--text-secondary);">→ On-device STT + cloud AI</div>
+                        <div style="color:var(--text-secondary);">→ Works on lock screen</div>
+                        <div style="color:var(--text-secondary);">→ Replaces default assistant</div>
+                        <div style="color:var(--text-secondary);">→ 769KB — no bloat</div>
+                    </div>
+                </div>
+
+                <!-- Guardian Agent -->
+                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:28px;position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
+                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">DAEMON · LINUX / MACOS / WIN</div>
+                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">Guardian Agent</h3>
+                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">A lightweight Python daemon that runs on any machine on your LAN. Scans your network every 10 minutes, fingerprints devices, detects threats, and reports to your dashboard and phone.</p>
+                    <div style="background:#000;border:1px solid #222;border-radius:4px;padding:10px 14px;font-family:var(--font-mono);font-size:0.72rem;color:#0f0;line-height:1.9;">
+                        <div>curl -sSL https://shadowcypher.site/agent/install.sh | bash</div>
+                        <div style="color:#555;">shadow-agent init &amp;&amp; shadow-agent run</div>
+                    </div>
+                </div>
+
+                <!-- Web Dashboard -->
+                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:28px;position:relative;overflow:hidden;grid-column:span 1;">
+                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
+                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">PWA · CLOUDFLARE · SUPABASE</div>
+                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">Web Dashboard</h3>
+                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">This site. A zero-dependency PWA — no framework, no React, no bundle step. Sign in from any browser, see your network state, manage your account, receive alerts. Installable on desktop or mobile.</p>
+                    <div class="mono" style="font-size:0.7rem;line-height:2;">
+                        <div style="color:var(--text-secondary);">→ Supabase auth + real-time</div>
+                        <div style="color:var(--text-secondary);">→ Cloudflare Worker API</div>
+                        <div style="color:var(--text-secondary);">→ PWA installable</div>
+                        <div style="color:var(--text-secondary);">→ 0 npm dependencies</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- How it connects -->
+        <div style="padding:60px 0;border-top:1px solid var(--glass-border);">
+            <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// DATA FLOW</div>
+            <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:40px;">How everything connects.</h2>
+            <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center;row-gap:20px;">
+                <div style="text-align:center;padding:20px 28px;background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);border-radius:8px;min-width:140px;">
+                    <div style="font-size:1.5rem;margin-bottom:6px;">🖥</div>
+                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:4px;">DESKTOP</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);">Run missions<br>& Ghost mode</div>
+                </div>
+                <div style="font-family:var(--font-mono);font-size:1.2rem;color:var(--glass-border);padding:0 8px;">→</div>
+                <div style="text-align:center;padding:20px 28px;background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);border-radius:8px;min-width:140px;">
+                    <div style="font-size:1.5rem;margin-bottom:6px;">🔍</div>
+                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:4px;">AGENT DAEMON</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);">Scan LAN<br>every 10 min</div>
+                </div>
+                <div style="font-family:var(--font-mono);font-size:1.2rem;color:var(--glass-border);padding:0 8px;">→</div>
+                <div style="text-align:center;padding:20px 28px;background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);border-radius:8px;min-width:140px;">
+                    <div style="font-size:1.5rem;margin-bottom:6px;">☁️</div>
+                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:4px;">API / SUPABASE</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);">Store events<br>& match CVEs</div>
+                </div>
+                <div style="font-family:var(--font-mono);font-size:1.2rem;color:var(--glass-border);padding:0 8px;">→</div>
+                <div style="text-align:center;padding:20px 28px;background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);border-radius:8px;min-width:140px;">
+                    <div style="font-size:1.5rem;margin-bottom:6px;">📊</div>
+                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:4px;">DASHBOARD</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);">Web + Android<br>visibility</div>
+                </div>
+                <div style="font-family:var(--font-mono);font-size:1.2rem;color:var(--glass-border);padding:0 8px;">→</div>
+                <div style="text-align:center;padding:20px 28px;background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);border-radius:8px;min-width:140px;">
+                    <div style="font-size:1.5rem;margin-bottom:6px;">📱</div>
+                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:4px;">PUSH ALERT</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);">Notified<br>instantly</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick navigation to all pages -->
+        <div style="padding:60px 0;border-top:1px solid var(--glass-border);">
+            <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// EXPLORE</div>
+            <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:40px;">Everything available to you.</h2>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">
+                <div onclick="navTo('arsenal',document.getElementById('nav-arsenal'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
+                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">01 // ARSENAL</div>
+                    <div style="font-weight:600;margin-bottom:6px;">Tactical Modules</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);">29 offensive + defensive tools. Recon, payloads, OSINT, wireless, credentials, C2.</div>
+                </div>
+                <div onclick="navTo('ghost',document.getElementById('nav-ghost'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
+                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">02 // GHOST</div>
+                    <div style="font-weight:600;margin-bottom:6px;">Ghost Protocol</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);">8-layer anonymity: Tor, iptables kill-switch, MAC randomization, RAM workspace, log suppression.</div>
+                </div>
+                <div onclick="navTo('guardian',document.getElementById('nav-guardian'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
+                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">03 // GUARDIAN</div>
+                    <div style="font-weight:600;margin-bottom:6px;">Network Monitor</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);">Live LAN scanner. Device inventory, CVE matching, ARP spoof detection, threat feed.</div>
+                </div>
+                <div onclick="navTo('download',document.getElementById('nav-download'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
+                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">04 // DOWNLOAD</div>
+                    <div style="font-weight:600;margin-bottom:6px;">Android Apps</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);">Guardian APK + Shadow AI APK. Sideload-ready, direct from GitHub Releases.</div>
+                </div>
+                <div onclick="navTo('pricing',document.getElementById('nav-pricing'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
+                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">05 // PRO</div>
+                    <div style="font-weight:600;margin-bottom:6px;">Pricing</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);">Community free forever. Guardian Pro $9.99/mo. Operator $49/mo. 14-day trial.</div>
+                </div>
+                <div onclick="navTo('account',document.getElementById('nav-account'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
+                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">06 // ACCOUNT</div>
+                    <div style="font-weight:600;margin-bottom:6px;">Sign In</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);">Create an account or sign in to access your Guardian dashboard and agent data.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Built for operators -->
+        <div style="padding:60px 0 80px;border-top:1px solid var(--glass-border);">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;">
+                <div>
+                    <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// DESIGN PRINCIPLES</div>
+                    <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:20px;">Not built for the cloud.<br>Built for the operator.</h2>
+                    <p style="color:var(--text-secondary);line-height:1.8;margin-bottom:20px;">Most security tools phone home. ShadowCypher doesn't. The desktop app runs entirely offline — Ollama for AI inference, local SQLite for state. The agent daemon runs on your hardware. You own your data.</p>
+                    <p style="color:var(--text-secondary);line-height:1.8;">When you do use the cloud (dashboard, push alerts), it's Cloudflare Workers at the edge — your data never touches a central server.</p>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:16px;">
+                    <div style="display:flex;gap:16px;align-items:flex-start;">
+                        <div style="width:32px;height:32px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;font-family:var(--font-mono);color:var(--accent-primary);">01</div>
+                        <div><div style="font-weight:600;margin-bottom:4px;">Zero telemetry</div><div style="font-size:0.82rem;color:var(--text-secondary);">No analytics, no crash reporting, no usage data. The code is open source — verify it yourself.</div></div>
+                    </div>
+                    <div style="display:flex;gap:16px;align-items:flex-start;">
+                        <div style="width:32px;height:32px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;font-family:var(--font-mono);color:var(--accent-primary);">02</div>
+                        <div><div style="font-weight:600;margin-bottom:4px;">Cryptographic identity</div><div style="font-size:0.82rem;color:var(--text-secondary);">RSA-4096 key pairs. AES-256-GCM chat. X25519 forward secrecy. Every sensitive surface is encrypted.</div></div>
+                    </div>
+                    <div style="display:flex;gap:16px;align-items:flex-start;">
+                        <div style="width:32px;height:32px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;font-family:var(--font-mono);color:var(--accent-primary);">03</div>
+                        <div><div style="font-weight:600;margin-bottom:4px;">Local-first AI</div><div style="font-size:0.82rem;color:var(--text-secondary);">AI inference via Ollama runs on your machine. No API keys, no OpenAI, no data leaves your box.</div></div>
+                    </div>
+                    <div style="display:flex;gap:16px;align-items:flex-start;">
+                        <div style="width:32px;height:32px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;font-family:var(--font-mono);color:var(--accent-primary);">04</div>
+                        <div><div style="font-weight:600;margin-bottom:4px;">Open source</div><div style="font-size:0.82rem;color:var(--text-secondary);">Full source on <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);">GitHub</a>. Clone, audit, fork. Community edition is free forever.</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- ARSENAL -->
     <div id="page-arsenal" class="page">
         <div class="content-section">
             <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Tactical Arsenal</h2>
-            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:600px;">30+ purpose-built offensive and defensive modules. Every tool exists because it was needed in the field.</p>
-            <div class="arsenal-grid">
-                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">NEXUS-COMMAND</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Real-time HUD with Cairo gauges. Local AI inference via Ollama. Quantum-Core deep analysis. Network topology war-map. ShadowScript DSL.</p></div>
-                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">COVERT-INTEL</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Nmap signal analysis. Sherlock OSINT across 300+ platforms. Infrastructure recon. Nuclei vulnerability sweep with ExploitDB correlation.</p></div>
-                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">OFFENSIVE-LAB</h3><p style="font-size:0.85rem;color:var(--text-secondary);">AI-powered DeepHat Apex. Multi-platform payload forge. SQL injection, XSS, SSRF. Hydra/Hashcat cracking. Aircrack-ng wireless attacks.</p></div>
-                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">SOVEREIGN-OPS</h3><p style="font-size:0.85rem;color:var(--text-secondary);">AES-256-GCM encrypted chat with X25519 forward secrecy. Go WebSocket relay. Sisyphus integrity sentinel. RSA-4096 admin identity.</p></div>
-                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">SHADOW-CLI</h3><p style="font-size:0.85rem;color:var(--text-secondary);">AI security assistant. Natural language commands: "scan my network", "engage ghost mode", "am I anonymous?" — 9 MCP tools.</p></div>
-                <div class="module-card"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:15px;">SHADOWSCRIPT</h3><p style="font-size:0.85rem;color:var(--text-secondary);">Custom tactical scripting language with hand-written lexer, recursive descent parser, and tree-walking interpreter for multi-tool orchestration.</p></div>
+            <p style="color:var(--text-secondary);margin-bottom:16px;max-width:700px;">29 purpose-built offensive and defensive modules across six mission areas. Every tool was built because it was needed in the field — no fluff, no overlap.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:48px;">
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">RECON</span>
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">EXPLOIT</span>
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">GHOST</span>
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">C2</span>
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">COMMS</span>
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">DSL</span>
+            </div>
+
+            <!-- Module 1: NEXUS-COMMAND -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 01</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">NEXUS-COMMAND</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">The main desktop HUD. Real-time Cairo gauges for CPU, RAM, network I/O. AI inference via local Ollama. Network topology war-map with live host discovery.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · GTK3 · CAIRO · OLLAMA</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Capabilities</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ Live system telemetry dashboard</li>
+                                    <li>→ Quantum-Core AI deep analysis</li>
+                                    <li>→ Network war-map (Nmap + Cairo)</li>
+                                    <li>→ Admin god panel (encrypted)</li>
+                                    <li>→ Lazy-loaded page architecture</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">AI Integration</div>
+                                <div style="background:#000;border:1px solid #222;border-radius:4px;padding:12px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;line-height:2;">
+                                    <div style="color:#555;"># Natural language security ops</div>
+                                    <div>shadow &gt; scan my network</div>
+                                    <div>shadow &gt; am I anonymous?</div>
+                                    <div>shadow &gt; engage ghost mode</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module 2: COVERT-INTEL -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 02</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">COVERT-INTEL</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Reconnaissance and OSINT. Fingerprint targets, discover infrastructure, sweep for vulnerabilities, and correlate findings with ExploitDB.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">NMAP · SHERLOCK · NUCLEI · EXPLOITDB</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Tools</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ Nmap service + OS fingerprinting</li>
+                                    <li>→ Sherlock — 300+ platform OSINT</li>
+                                    <li>→ Nuclei vulnerability sweep</li>
+                                    <li>→ Infrastructure recon (DNS, SSL)</li>
+                                    <li>→ ExploitDB CVE correlation</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Output</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ JSON + Markdown reports</li>
+                                    <li>→ Severity-ranked findings</li>
+                                    <li>→ CVE IDs with CVSS scores</li>
+                                    <li>→ Exportable to ShadowScript</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module 3: OFFENSIVE-LAB -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 03</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">OFFENSIVE-LAB</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Full red-team lab. AI-powered payload gen, web app attacks, wireless auditing, credential cracking, and the Phishing Forge with 35 enterprise templates.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">HYDRA · HASHCAT · AIRCRACK · PHP</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Offensive</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ DeepHat Apex (AI payload gen)</li>
+                                    <li>→ SQL injection, XSS, SSRF, IDOR</li>
+                                    <li>→ Hydra credential brute-force</li>
+                                    <li>→ Hashcat GPU hash cracking</li>
+                                    <li>→ Aircrack-ng wireless attacks</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Phishing Forge</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ 35 enterprise phishing templates</li>
+                                    <li>→ Live PHP server on custom port</li>
+                                    <li>→ Real-time credential capture</li>
+                                    <li>→ Office365, Google, Outlook, AWS</li>
+                                    <li>→ One-click stop/start control</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module 4: SOVEREIGN-OPS -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 04</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">SOVEREIGN-OPS</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Encrypted communications and integrity assurance. Zero-knowledge chat, binary integrity verification, and RSA-4096 cryptographic identity.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">AES-256-GCM · X25519 · RSA-4096 · GO</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Cryptography</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ AES-256-GCM encrypted chat</li>
+                                    <li>→ X25519 forward secrecy</li>
+                                    <li>→ RSA-4096 admin identity keys</li>
+                                    <li>→ Go WebSocket relay node</li>
+                                    <li>→ Zero message persistence</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Integrity</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ Sisyphus integrity sentinel</li>
+                                    <li>→ Binary hash verification</li>
+                                    <li>→ Honeypot trap deployment</li>
+                                    <li>→ Canary token generator</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module 5: SHADOW-CLI -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 05</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">SHADOW-CLI</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Natural language AI terminal. Type what you want to do; Shadow figures out the toolchain and executes it. 9 MCP tools wired to the full arsenal.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · ANTHROPIC API · MCP · OAUTH2</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">9 MCP Tools</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ network_scan (Nmap)</li>
+                                    <li>→ ghost_mode (toggle)</li>
+                                    <li>→ osint_lookup (Sherlock)</li>
+                                    <li>→ anonymity_check</li>
+                                    <li>→ payload_gen + vuln_scan</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Auth</div>
+                                <div style="background:#000;border:1px solid #222;border-radius:4px;padding:12px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;line-height:2;">
+                                    <div>shadow-agent init</div>
+                                    <div style="color:#555;"># OAuth2 device flow</div>
+                                    <div style="color:#555;"># no copy-paste keys</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module 6: SHADOWSCRIPT -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 06</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">SHADOWSCRIPT</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">A purpose-built tactical scripting DSL. Hand-written lexer, recursive descent parser, and tree-walking interpreter. Orchestrate multi-tool missions in a single <code style="font-size:0.75rem;color:var(--accent-primary);">.shadow</code> file.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · CUSTOM LEXER · CUSTOM PARSER</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div>
+                            <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:12px;">Example mission file</div>
+                            <div style="background:#000;border:1px solid #222;border-radius:4px;padding:16px 18px;font-family:var(--font-mono);font-size:0.72rem;color:#cbd5e1;line-height:2;">
+                                <div><span style="color:#b44aff;">TARGET</span> 192.168.1.0/24</div>
+                                <div><span style="color:#b44aff;">SWARM</span> recon.nmap <span style="color:#555;">→ fingerprint all live hosts</span></div>
+                                <div><span style="color:#b44aff;">STRIKE</span> exploit.nuclei <span style="color:#555;">→ sweep for CVEs</span></div>
+                                <div><span style="color:#b44aff;">AI</span> <span style="color:#0f0;">"Summarize critical findings"</span></div>
+                                <div><span style="color:#b44aff;">!echo</span> Mission complete</div>
+                            </div>
+                            <div style="margin-top:16px;font-size:0.78rem;color:var(--text-secondary);line-height:1.8;">Runs with <code style="color:var(--accent-primary);font-size:0.75rem;">python3 engine.py mission.shadow</code>. Modules bridge directly to the arsenal — no glue code needed.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- C2 Command Center -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 07</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">C2 COMMAND CENTER</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Multi-listener C2 controller with session management and payload generation. Start, stop, and monitor listeners across ports and protocols from a single panel.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · METASPLOIT BRIDGE · GTK3</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Listener control</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ TCP / HTTP / HTTPS listeners</li>
+                                    <li>→ Live session table</li>
+                                    <li>→ Per-session interaction</li>
+                                    <li>→ One-click start / stop / kill</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Payloads</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ Windows / Linux / macOS / Android</li>
+                                    <li>→ Meterpreter + raw shell</li>
+                                    <li>→ Staged + stageless</li>
+                                    <li>→ Custom LHOST / LPORT</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Source note -->
+            <div style="padding:24px;border:1px dashed rgba(180,74,255,0.2);border-radius:6px;text-align:center;">
+                <span style="font-size:0.82rem;color:var(--text-secondary);">All modules are open source. </span>
+                <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);font-size:0.82rem;">View full source on GitHub →</a>
             </div>
         </div>
     </div>
@@ -243,6 +674,75 @@
     </div>
 
     <!-- PRICING -->
+    <!-- ── Download page ─────────────────────────────────────────────────── -->
+    <div id="page-download" class="page">
+        <div class="content-section">
+            <h2 class="mono" style="font-size:1.8rem;letter-spacing:4px;margin-bottom:8px;">// DOWNLOADS</h2>
+            <p style="color:var(--text-secondary);margin-bottom:48px;max-width:600px;">Two Android apps. One monitors your network from the shadows. The other replaces your assistant.</p>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:60px;">
+
+                <!-- ShadowCypher Guardian -->
+                <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.25);border-radius:10px;padding:32px;">
+                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:16px;">ANDROID APP</div>
+                    <h3 style="font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:8px;">ShadowCypher</h3>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;margin-bottom:24px;">Network scanner, device inventory, CVE matching, incident alerts, and the full Guardian dashboard. Pair it with the agent daemon for continuous LAN monitoring.</p>
+                    <div style="font-size:0.75rem;color:#555;font-family:var(--font-mono);margin-bottom:20px;">v1.1 · 4.4MB · Android 7.0+</div>
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        <a href="https://github.com/jakes1345/ShadowCypher/releases/download/v1.1/shadowcypher-v1.1.apk"
+                           style="display:block;padding:14px 20px;background:var(--accent-primary);color:#000;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;letter-spacing:2px;text-decoration:none;border-radius:4px;text-align:center;">
+                            ↓ DOWNLOAD APK
+                        </a>
+                        <a href="https://github.com/jakes1345/ShadowCypher/releases/tag/v1.1"
+                           style="display:block;padding:10px 20px;background:transparent;border:1px solid #333;color:#888;font-family:var(--font-mono);font-size:0.7rem;text-decoration:none;border-radius:4px;text-align:center;">
+                            View release notes →
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Shadow AI -->
+                <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.25);border-radius:10px;padding:32px;">
+                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:16px;">ANDROID APP</div>
+                    <h3 style="font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:8px;">Shadow AI</h3>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;margin-bottom:24px;">Replaces Bixby, Google Assistant, and Siri. Set as your default Assist app — long-press Home to invoke the overlay. Queries your ShadowCypher AI.</p>
+                    <div style="font-size:0.75rem;color:#555;font-family:var(--font-mono);margin-bottom:20px;">v1.1 · 769KB · Android 7.0+</div>
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        <a href="https://github.com/jakes1345/ShadowCypher/releases/download/v1.1/shadow-ai-v1.1.apk"
+                           style="display:block;padding:14px 20px;background:var(--accent-primary);color:#000;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;letter-spacing:2px;text-decoration:none;border-radius:4px;text-align:center;">
+                            ↓ DOWNLOAD APK
+                        </a>
+                        <a href="https://github.com/jakes1345/ShadowCypher/releases/tag/v1.1"
+                           style="display:block;padding:10px 20px;background:transparent;border:1px solid #333;color:#888;font-family:var(--font-mono);font-size:0.7rem;text-decoration:none;border-radius:4px;text-align:center;">
+                            View release notes →
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Install instructions -->
+            <div style="background:rgba(255,255,255,0.02);border:1px solid #222;border-radius:8px;padding:28px;max-width:640px;">
+                <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-secondary);letter-spacing:2px;margin-bottom:16px;">// SIDELOAD INSTRUCTIONS</div>
+                <div style="font-size:0.82rem;color:var(--text-secondary);line-height:2;">
+                    <div>1. Enable <strong style="color:#fff;">Install unknown apps</strong> in Android Settings → Apps → Special app access</div>
+                    <div>2. Open the downloaded <code style="color:var(--accent-primary);">.apk</code> file and tap Install</div>
+                    <div>3. For Shadow AI: Settings → Default Apps → Assist app → select <strong style="color:#fff;">Shadow AI</strong></div>
+                    <div>4. For Guardian monitoring: install the <a onclick="navTo('guardian',document.getElementById('nav-guardian'))" style="color:var(--accent-primary);cursor:pointer;">Guardian agent</a> on a machine on your LAN</div>
+                </div>
+            </div>
+
+            <!-- Agent CLI -->
+            <div style="margin-top:40px;max-width:640px;">
+                <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-secondary);letter-spacing:2px;margin-bottom:16px;">// GUARDIAN AGENT (Linux / macOS / Windows)</div>
+                <div style="background:#000;border:1px solid #222;border-radius:6px;padding:20px;font-family:var(--font-mono);font-size:0.8rem;color:#94a3b8;line-height:2.2;">
+                    <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">pip install requests</span></div>
+                    <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">python3 shadowcypher_agent.py init</span> &nbsp;<span style="color:#555;"># paste your API key</span></div>
+                    <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">python3 shadowcypher_agent.py run</span> &nbsp;&nbsp;<span style="color:#555;"># runs in foreground</span></div>
+                </div>
+                <p style="font-size:0.75rem;color:#555;margin-top:10px;">Get your API key from <a onclick="navTo('account',document.getElementById('nav-account'))" style="color:var(--accent-primary);cursor:pointer;">Account → API Key</a>. The agent auto-updates and ships data every 10 minutes.</p>
+            </div>
+        </div>
+    </div>
+
     <div id="page-pricing" class="page">
         <div class="content-section" style="text-align:center;">
             <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Go Pro</h2>
@@ -817,13 +1317,41 @@
 
         if (IS_NATIVE) {
             document.addEventListener('DOMContentLoaded', () => {
-                // Hide marketing nav tabs the app doesn't need
+                // Hide marketing-only nav tabs
                 ['nav-home', 'nav-arsenal', 'nav-ghost', 'nav-pricing'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.style.display = 'none';
                 });
-                // Navigate straight to account/dashboard
-                navTo('account', document.getElementById('nav-account'));
+                // Land on the Guardian dashboard, not account settings
+                navTo('guardian', document.getElementById('nav-guardian'));
+
+                // Wire Capacitor push notifications if available
+                (async () => {
+                    try {
+                        const { PushNotifications } = window.Capacitor?.Plugins || {};
+                        if (!PushNotifications) return;
+                        const perm = await PushNotifications.requestPermissions();
+                        if (perm.receive === 'granted') {
+                            await PushNotifications.register();
+                        }
+                        PushNotifications.addListener('registration', ({ value }) => {
+                            // Ship device token to backend for targeted pushes
+                            callApi('/v1/notifications/preferences', {
+                                method: 'POST',
+                                body: JSON.stringify({ push_enabled: true, push_token: value }),
+                            }).catch(() => {});
+                        });
+                        PushNotifications.addListener('pushNotificationReceived', n => {
+                            // Foreground notification — show a toast
+                            cliPrint(`🔔 ${n.title}: ${n.body}`, 'var(--accent-primary)');
+                        });
+                        PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
+                            // User tapped a background notification — deep-link to incidents
+                            const data = notification?.data || {};
+                            if (data.incident_id) navTo('guardian', document.getElementById('nav-guardian'));
+                        });
+                    } catch (e) { console.warn('[push]', e); }
+                })();
             });
         }
 
