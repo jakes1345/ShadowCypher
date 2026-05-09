@@ -255,7 +255,8 @@ class DashboardPage(Gtk.Box):
         # ── Init + Timers ──
         self._last_net = 0
         self._last_t = time.time()
-        GLib.timeout_add(1500, self._tick)
+        self._tick_id = GLib.timeout_add(2000, self._tick)
+        self.connect("unrealize", lambda _: GLib.source_remove(self._tick_id) if self._tick_id else None)
         GLib.idle_add(self._init_once)
         
         # Async Arsenal Audit (Prevents UI hang on constructor)

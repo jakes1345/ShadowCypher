@@ -3,19 +3,13 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gtk, GLib, Gdk, GdkPixbuf
-import sys, os, time
+import sys, os, time, threading
 
 from shadowcypher.core.config import config
-from shadowcypher.core.hub import hub
 from shadowcypher.ui.themes import get_theme
 from shadowcypher.core.logger import logger
-from shadowcypher.core.security import StealthHoneypot
-from shadowcypher.core.identity import identity
 from shadowcypher.core.bus import bus
 from shadowcypher.core.platform import platform_engine
-
-# --- PHASE SIGMA: Weapon Alignment ---
-hub.register_arsenal()
 
 class ShadowCypherWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
@@ -152,6 +146,10 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         from shadowcypher.core.bus import bus
         bus.subscribe("new_ticket", self._on_new_ticket)
         
+        # Tor probe runs off-thread every 10s; cached result read on main thread
+        self._tor_up = False
+        threading.Thread(target=self._tor_probe_worker, daemon=True).start()
+
         # Telemetry tick — 3s is plenty, no need to hammer every 2s
         GLib.timeout_add(3000, self._pulse_tick)
 
@@ -160,31 +158,23 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
     def _pulse_tick(self) -> bool:
         from shadowcypher.core.platform import platform_engine
         from shadowcypher.core.hub import hub
-        
+
         try:
-            # 1. Performance Vitals (lightweight — reads /proc only)
+            # 1. /proc reads — fast, no I/O blocking
             vitals = platform_engine.get_system_vitals()
             cpu, mem = vitals["cpu"], vitals["mem"]
             self.cpu_label.set_text(f"CPU_LOAD: [{'|'*int(cpu/10)}{'.'*(10-int(cpu/10))}] {cpu:.1f}%")
             self.mem_label.set_text(f"MEM_PRESSURE: [{'|'*int(mem/10)}{'.'*(10-int(mem/10))}] {mem:.1f}%")
-            
-            # 2. Tactical Metrics
+
+            # 2. Tactical metrics — pure dict access, no I/O
             summary = hub.get_tactical_summary()
             swarm_count = summary.get("telemetry", {}).get("swarm_nodes", 0)
             self.net_label.set_text(f"NET_ENTROPY: {summary.get('telemetry', {}).get('load_avg', 0):.2f}bps")
             self.irc_label.set_markup(f"SWARM_NODES: <span color='#22c55e'>{swarm_count} ACTIVE</span>")
-            
-            # 3. Ghost Mode live status (cheap — just checks a file and a socket)
-            import socket as _sock, os as _os
-            ghost_active = _os.path.exists("/tmp/.ghost_mode_state")
-            tor_up = False
-            try:
-                s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
-                s.settimeout(0.3)
-                tor_up = s.connect_ex(("127.0.0.1", 9050)) == 0
-                s.close()
-            except Exception:
-                pass
+
+            # 3. Ghost status from cached probe (updated off-thread)
+            ghost_active = os.path.exists("/tmp/.ghost_mode_state")
+            tor_up = getattr(self, "_tor_up", False)
             if ghost_active and tor_up:
                 self.ghost_label.set_markup("<span color='#22c55e'>GHOST: ACTIVE ✓</span>")
             elif tor_up:
@@ -194,13 +184,29 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
 
             # 4. Footer status
             fid_color = "#22c55e" if ghost_active else "#f87171"
-            status_text = (f"FIDELITY: <span color='{fid_color}'>{'GHOST' if ghost_active else 'EXPOSED'}</span> | "
-                           f"MSN: {summary.get('active_missions')} | "
-                           f"ID: {summary.get('telemetry', {}).get('shadow_id', '???')}")
-            self.status_label.set_markup(status_text)
+            self.status_label.set_markup(
+                f"FIDELITY: <span color='{fid_color}'>{'GHOST' if ghost_active else 'EXPOSED'}</span> | "
+                f"MSN: {summary.get('active_missions')} | "
+                f"ID: {summary.get('telemetry', {}).get('shadow_id', '???')}"
+            )
         except Exception:
             pass
         return True
+
+    def _tor_probe_worker(self) -> bool:
+        """Background thread: probe Tor port every 10s, cache result."""
+        import socket as _sock
+        try:
+            s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
+            s.settimeout(0.5)
+            self._tor_up = s.connect_ex(("127.0.0.1", 9050)) == 0
+            s.close()
+        except Exception:
+            self._tor_up = False
+        GLib.timeout_add_seconds(10, lambda: (
+            threading.Thread(target=self._tor_probe_worker, daemon=True).start(), False
+        )[-1])
+        return False
 
     def _on_new_ticket(self, data: dict):
         handle = data.get("handle", "Unknown")

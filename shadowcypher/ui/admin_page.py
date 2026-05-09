@@ -174,7 +174,8 @@ class AdminPage(BasePage):
         self.workspace.pack_start(frm_cloud, False, False, 0)
 
         # ── Timers ──
-        GLib.timeout_add(1000, self._tick)
+        self._tick_id = GLib.timeout_add(1000, self._tick)
+        self.connect("unrealize", lambda _: GLib.source_remove(self._tick_id) if self._tick_id else None)
 
     def _tick(self):
         """Update live telemetry."""

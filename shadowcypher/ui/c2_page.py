@@ -20,6 +20,7 @@ class C2Page(BasePage):
         self._poll_active = False
         self._build_ui()
         self._start_poll()
+        self.connect("unrealize", lambda _: setattr(self, "_poll_active", False))
 
     # ── Metric pods ──────────────────────────────────────────────────────────
 

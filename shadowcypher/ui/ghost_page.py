@@ -93,7 +93,8 @@ class ShadowNodesPage(BasePage):
         bus.subscribe("ghost_node_linked", lambda _: GLib.idle_add(self._refresh_grid))
         bus.subscribe("ghost_node_output", self._on_ghost_output)
         
-        GLib.timeout_add(5000, self._refresh_grid)
+        self._tick_id = GLib.timeout_add(5000, self._refresh_grid)
+        self.connect("unrealize", lambda _: GLib.source_remove(self._tick_id) if self._tick_id else None)
         self._refresh_grid()
 
     def log(self, msg, level="INFO"):

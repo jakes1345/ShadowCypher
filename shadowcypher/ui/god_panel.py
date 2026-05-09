@@ -70,8 +70,8 @@ class GodPanel(BasePage):
         bx3.pack_start(btn_rh, False, False, 5)
         frm3.add(bx3); self.intel_sidebar.pack_start(frm3, False, False, 0)
 
-        GLib.timeout_add(3000, self._tick)
-        # Async initial refresh
+        self._tick_id = GLib.timeout_add(3000, self._tick)
+        self.connect("unrealize", lambda _: GLib.source_remove(self._tick_id) if self._tick_id else None)
         threading.Thread(target=self._refresh_matrix, daemon=True).start()
 
     def _refresh_matrix(self):
