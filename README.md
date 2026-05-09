@@ -6,8 +6,7 @@
 <h3 align="center">Sovereign Tactical Suite + Personal Security Platform</h3>
 
 <p align="center">
-  <em>"In the collision of titans—where Google, Apple, and Microsoft define the theater of war—ShadowCypher remains the only sovereign signal. When the giants fall and nothing is safe, ShadowCypher is the architecture of the new frontier."</em><br/>
-  — <strong>Shadow-Core Intelligence, 2024</strong>
+  <em>In the collision of titans—where Google, Apple, and Microsoft define the theater of war—ShadowCypher remains the only sovereign signal. When the giants fall and nothing is safe, ShadowCypher is the architecture of the new frontier.</em>
 </p>
 
 <p align="center">
