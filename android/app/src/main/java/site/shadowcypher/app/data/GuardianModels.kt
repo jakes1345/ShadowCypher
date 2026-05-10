@@ -1,0 +1,50 @@
+package site.shadowcypher.app.data
+
+data class Me(
+    val email: String,
+    val plan: String?,
+    val effective_plan: String,
+    val in_trial: Boolean,
+    val trial_days_remaining: Int?
+)
+
+data class Agent(
+    val hostname: String,
+    val online: Boolean,
+    val last_seen_at: String?
+)
+
+data class Device(
+    val ip: String,
+    val hostname: String?,
+    val mac: String?,
+    val os: String?,
+    val vendor: String?,
+    val status: String?
+)
+
+data class Incident(
+    val id: String,
+    val type: String,
+    val severity: String,
+    val description: String,
+    val created_at: String,
+    val resolved: Boolean
+)
+
+data class CveAlert(
+    val cve_id: String,
+    val severity: String,
+    val description: String,
+    val affected_device: String?
+)
+
+data class GuardianSummary(
+    val agents: List<Agent>,
+    val devices: List<Device>,
+    val incidents: List<Incident>,
+    val cve_alerts: List<CveAlert>,
+    val last_scan_at: String?
+)
+
+data class ScanResponse(val success: Boolean?, val message: String?)
