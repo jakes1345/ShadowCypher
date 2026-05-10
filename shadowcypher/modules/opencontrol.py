@@ -14,7 +14,8 @@ from shadowcypher.core.config import config
 try:
     from ai_engine.autoagent.registry import register_tool
 except ImportError:
-    def register_tool(fn): return fn
+    def register_tool(*a, **kw):
+        return a[0] if len(a) == 1 and callable(a[0]) else (lambda fn: fn)
 
 class OpenControlClient:
     """Client for the OpenControl Infrastructure Gateway."""

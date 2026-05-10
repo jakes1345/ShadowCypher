@@ -11,7 +11,8 @@ from shadowcypher.core.runner import runner
 try:
     from ai_engine.autoagent.registry import register_tool
 except ImportError:
-    def register_tool(fn): return fn
+    def register_tool(*a, **kw):
+        return a[0] if len(a) == 1 and callable(a[0]) else (lambda fn: fn)
 
 @register_tool(name="arsenal_slowloris")
 def arsenal_slowloris(target_ip: str, port: str = "80", connections: int = 1000) -> str:
