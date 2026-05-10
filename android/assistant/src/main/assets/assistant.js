@@ -107,8 +107,10 @@ const ShadowAssistant = (() => {
         apiKey = result?.key || null;
       } catch (_) {}
 
-      // Pre-load Guardian context in background
+      // Pre-load Guardian context + KB + classifier in background
       if (apiKey) loadGuardianContext().catch(() => {});
+      loadKB().catch(() => {});
+      if (typeof ShadowClassifier !== 'undefined') ShadowClassifier.load().catch(() => {});
 
       const status = await plugin.checkAssistStatus();
       if (status.wasAssistLaunch) handleAssistInvoke({ source: 'launch' });
@@ -707,18 +709,13 @@ const ShadowAssistant = (() => {
     setState('thinking');
 
     try {
-      // Try direct command first
-      let response = null;
-      for (const cmd of COMMANDS) {
-        if (cmd.pattern.test(transcript)) {
-          response = await dispatchCommand(cmd.action);
-          break;
-        }
-      }
-
-      // Fall through to AI
+      // Cascading router: OS → Classifier → KB → LLM
+      let response = await route(transcript);
       if (response === null) {
         response = await queryAI(transcript);
+      } else {
+        addMemory('user', transcript);
+        addMemory('assistant', response);
       }
 
       if (response) {
@@ -769,19 +766,121 @@ const ShadowAssistant = (() => {
     return null;
   }
 
-  // ── AI query ──────────────────────────────────────────────────────────────
+  // ── Knowledge base search (BM25 over chunks.json) ────────────────────────
 
-  async function queryAI(userText) {
-    // Intercept phone OS actions before burning API quota
+  let _kbChunks = null;
+  let _kbLoaded = false;
+
+  async function loadKB() {
+    if (_kbLoaded) return;
+    _kbLoaded = true;
+    try {
+      const r = await fetch('chunks.json');
+      if (r.ok) {
+        _kbChunks = await r.json();
+        console.log(`[KB] Loaded ${_kbChunks.length} chunks`);
+      }
+    } catch (_) { _kbChunks = null; }
+  }
+
+  function bm25Score(queryTokens, docTokens, avgLen, k1 = 1.5, b = 0.75) {
+    const freq = {};
+    for (const t of docTokens) freq[t] = (freq[t] || 0) + 1;
+    const docLen = docTokens.length;
+    let score = 0;
+    for (const t of queryTokens) {
+      if (!freq[t]) continue;
+      const tf = freq[t];
+      score += (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * docLen / avgLen));
+    }
+    return score;
+  }
+
+  function kbSearch(query, topK = 1) {
+    if (!_kbChunks || !_kbChunks.length) return null;
+    const qTokens = query.toLowerCase().match(/\b[a-z][a-z0-9\-\.]{0,}\b/g) || [];
+    if (!qTokens.length) return null;
+    const avgLen = _kbChunks.reduce((s, c) => s + (c.bm25_tokens?.length || 0), 0) / _kbChunks.length;
+    const scored = _kbChunks.map(chunk => ({
+      chunk,
+      score: bm25Score(qTokens, chunk.bm25_tokens || [], avgLen),
+    })).sort((a, b) => b.score - a.score);
+    const best = scored[0];
+    if (best.score < 0.5) return null; // not relevant enough
+    return best.chunk;
+  }
+
+  // ── Cascading router ──────────────────────────────────────────────────────
+  // Layer 1: OS intents (call/text/alarm/timer/open/maps)
+  // Layer 2: Classifier → structured API commands
+  // Layer 3: KB search (local knowledge)
+  // Layer 4: LLM fallback (remote, costs quota)
+
+  async function route(userText) {
+    const headers = apiKey
+      ? { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` }
+      : { 'Content-Type': 'application/json' };
+
+    // Layer 1: OS intents
     const sys = trySystemIntent(userText);
     if (sys && plugin) {
       try {
         await plugin.launchIntent({ intent: sys.intent, args: Array.from(sys.match).slice(1) });
         return sys.label;
-      } catch (_) { /* native intent not supported; fall through to AI */ }
+      } catch (_) {}
     }
 
-    conversationHistory.push({ role: 'user', content: userText });
+    // Layer 2: Classifier → dispatch to command handler
+    let classifierIntent = null;
+    if (typeof ShadowClassifier !== 'undefined' && ShadowClassifier.isReady()) {
+      const result = ShadowClassifier.classify(userText);
+      if (result.intent && result.intent !== 'unknown' && result.confidence >= 0.45) {
+        classifierIntent = result.intent;
+      }
+    } else {
+      // Regex fallback while classifier is loading
+      for (const cmd of COMMANDS) {
+        if (cmd.pattern.test(userText)) {
+          classifierIntent = cmd.action;
+          break;
+        }
+      }
+    }
+
+    if (classifierIntent) {
+      const resp = await dispatchCommand(classifierIntent);
+      if (resp !== null) return resp;
+    }
+
+    // Layer 3: KB search
+    await loadKB();
+    const chunk = kbSearch(userText);
+    if (chunk) {
+      // Return the relevant chunk text, trimmed for speech
+      const text = chunk.text.replace(/[#*`\[\]]/g, '').replace(/\n+/g, ' ').trim();
+      const snippet = text.slice(0, 350);
+      return snippet + (text.length > 350 ? '…' : '');
+    }
+
+    // Layer 4: LLM
+    return null; // caller falls through to queryAI
+  }
+
+  // ── Conversational memory ────────────────────────────────────────────────
+  // Last 5 turns for context continuity
+
+  const MAX_MEMORY = 5;
+  function addMemory(role, content) {
+    conversationHistory.push({ role, content });
+    if (conversationHistory.length > MAX_MEMORY * 2) {
+      conversationHistory = conversationHistory.slice(-MAX_MEMORY * 2);
+    }
+  }
+
+  // ── AI query (LLM fallback only) ──────────────────────────────────────────
+
+  async function queryAI(userText) {
+    addMemory('user', userText);
 
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
@@ -833,14 +932,9 @@ const ShadowAssistant = (() => {
     setState('thinking');
     await loadGuardianContext();
     try {
-      let response = null;
-      for (const cmd of COMMANDS) {
-        if (cmd.pattern.test(text)) {
-          response = await dispatchCommand(cmd.action);
-          break;
-        }
-      }
+      let response = await route(text);
       if (response === null) response = await queryAI(text);
+      else { addMemory('user', text); addMemory('assistant', response); }
       if (response) {
         document.getElementById('sa-response').textContent = response;
         setState('speaking');
