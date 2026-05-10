@@ -198,16 +198,15 @@ async function sendEmail(env: Env, to: string, incident: IncidentForNotify): Pro
   }
 }
 
-// ─── Web Push (VAPID, no library — uses Web Crypto) ─────────────────────────
+// ─── Web Push (VAPID + RFC 8291 aes128gcm encryption, no library) ──────────
 
 async function sendWebPush(
   env: Env,
   sub: PushSubscriptionJSON,
   incident: IncidentForNotify
 ): Promise<boolean> {
-  // Minimal viable web push: we send a payload via Cloudflare's fetch.
-  // Full VAPID auth requires JWT signing — we do that here.
   if (!env.PUSH_VAPID_PRIVATE_KEY || !env.PUSH_VAPID_PUBLIC_KEY) return false;
+  if (!sub.keys?.p256dh || !sub.keys?.auth) return false;
   try {
     const audience = new URL(sub.endpoint).origin;
     const jwt = await mintVapidJwt(env, audience);
@@ -218,6 +217,7 @@ async function sendWebPush(
       url: `/?nav=account&incident=${incident.id}`,
       tag: `sc-${incident.id}`,
     });
+    const encrypted = await encryptWebPushPayload(sub, payload);
     const resp = await fetch(sub.endpoint, {
       method: "POST",
       headers: {
@@ -227,12 +227,75 @@ async function sendWebPush(
         TTL: "86400",
         Urgency: incident.severity === "critical" ? "high" : "normal",
       },
-      body: payload, // NOTE: production push needs proper aes128gcm encryption of payload with subscriber's keys
+      body: encrypted,
     });
     return resp.ok || resp.status === 201;
   } catch {
     return false;
   }
+}
+
+// RFC 8291 — Message Encryption for Web Push (aes128gcm)
+async function encryptWebPushPayload(sub: PushSubscriptionJSON, payload: string): Promise<Uint8Array> {
+  const receiverPublicKey = b64urlDecode(sub.keys!.p256dh);  // 65-byte uncompressed P-256 point
+  const authSecret = b64urlDecode(sub.keys!.auth);            // 16-byte auth secret
+
+  // Ephemeral sender ECDH key pair
+  const senderKey = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const senderPublicKeyRaw = new Uint8Array(await crypto.subtle.exportKey("raw", senderKey.publicKey));
+
+  // ECDH shared secret (32 bytes)
+  const receiverKey = await crypto.subtle.importKey("raw", receiverPublicKey, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const sharedSecret = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: receiverKey }, senderKey.privateKey, 256));
+
+  // Random 16-byte salt
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+
+  // HKDF-Extract: PRK = HMAC-SHA256(auth_secret, shared_secret)
+  const hmacKey = await crypto.subtle.importKey("raw", authSecret, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const prk = new Uint8Array(await crypto.subtle.sign("HMAC", hmacKey, sharedSecret));
+
+  // HKDF-Expand: IKM = PRK + "WebPush: info\0" || receiver_pub || sender_pub → 32 bytes
+  const authInfo = wpConcat(new TextEncoder().encode("WebPush: info\x00"), receiverPublicKey, senderPublicKeyRaw);
+  const ikm = await wpHkdfExpand(prk, authInfo, 32);
+
+  // Derive CEK (16 bytes) and NONCE (12 bytes) via HKDF(salt, ikm, info)
+  const cek = await wpHkdf(salt, ikm, new TextEncoder().encode("Content-Encoding: aes128gcm\x00"), 16);
+  const nonce = await wpHkdf(salt, ikm, new TextEncoder().encode("Content-Encoding: nonce\x00"), 12);
+
+  // AES-128-GCM encrypt — WebCrypto appends the 16-byte GCM tag to ciphertext
+  const aesKey = await crypto.subtle.importKey("raw", cek, { name: "AES-GCM" }, false, ["encrypt"]);
+  const paddedPlaintext = wpConcat(new TextEncoder().encode(payload), new Uint8Array([0x02]));
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce, tagLength: 128 }, aesKey, paddedPlaintext));
+
+  // RFC 8188 aes128gcm content: salt(16) | rs(4 BE) | idlen(1) | sender_pub(65) | ciphertext
+  const rs = 4096;
+  return wpConcat(
+    salt,
+    new Uint8Array([(rs >> 24) & 0xff, (rs >> 16) & 0xff, (rs >> 8) & 0xff, rs & 0xff]),
+    new Uint8Array([senderPublicKeyRaw.length]),
+    senderPublicKeyRaw,
+    ciphertext
+  );
+}
+
+// HKDF-Expand T(1) = HMAC-SHA256(PRK, info || 0x01) — sufficient for L ≤ 32
+async function wpHkdfExpand(prk: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
+  const k = await crypto.subtle.importKey("raw", prk, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, wpConcat(info, new Uint8Array([1])))).slice(0, length);
+}
+
+// Full HKDF (extract + expand) via WebCrypto built-in
+async function wpHkdf(salt: Uint8Array, ikm: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
+  const k = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info } as HkdfParams, k, length * 8));
+}
+
+function wpConcat(...arrays: Uint8Array[]): Uint8Array {
+  let len = 0; for (const a of arrays) len += a.length;
+  const out = new Uint8Array(len); let off = 0;
+  for (const a of arrays) { out.set(a, off); off += a.length; }
+  return out;
 }
 
 async function mintVapidJwt(env: Env, audience: string): Promise<string> {

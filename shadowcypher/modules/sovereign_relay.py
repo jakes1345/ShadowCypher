@@ -5,6 +5,7 @@ Provides the 'VPN without the VPN' experience via custom obfuscation and DNS sov
 """
 
 import os
+import re
 import subprocess
 import socket
 import requests
@@ -44,10 +45,9 @@ class SovereignRelay(BaseModule):
         
         # Detect primary interface
         try:
-            iface = subprocess.check_output(
-                "ip route get 8.8.8.8 | grep -oP 'dev \\K\\S+'",
-                shell=True,
-            ).decode().strip()
+            route_out = subprocess.check_output(["ip", "route", "get", "8.8.8.8"], text=True, timeout=5)
+            m = re.search(r'\bdev\s+(\S+)', route_out)
+            iface = m.group(1) if m else "eth0"
         except (subprocess.CalledProcessError, OSError):
             iface = "eth0"
 

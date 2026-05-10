@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.shadowcypher.site https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
     <title>SHADOWCYPHER — Sovereign Tactical Suite</title>
     <meta name="description" content="ShadowCypher: sovereign tactical security suite with Ghost Mode invisibility, AI-powered security assistant, and personal device protection. Zero telemetry. Zero compromise.">
     <link rel="icon" type="image/png" href="/icon-192.png">
@@ -1461,6 +1464,7 @@
         }
 
         async function signOut() {
+            _sessionApiKey = null;
             if (supabaseClient) await supabaseClient.auth.signOut();
             // onAuthStateChange will fire SIGNED_OUT and clean up the UI
             cliPrint('Signed out.', 'var(--warning)');
@@ -1469,11 +1473,11 @@
         const mockLogout = signOut;
 
         const API_BASE = window.SHADOWCYPHER_API || 'https://api.shadowcypher.site';
+        let _sessionApiKey = null;
 
         async function callApi(path, opts = {}) {
-            const apiKey = document.getElementById('api-key')?.dataset?.realKey;
             const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-            if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+            if (_sessionApiKey) headers['Authorization'] = `Bearer ${_sessionApiKey}`;
             const resp = await fetch(`${API_BASE}${path}`, { ...opts, headers });
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok) throw new Error(data.error || data.message || `HTTP ${resp.status}`);
@@ -1493,7 +1497,7 @@
             const keyEl = document.getElementById('api-key');
             if (keyEl) {
                 if (apiKey) {
-                    keyEl.dataset.realKey = apiKey;
+                    _sessionApiKey = apiKey;
                     keyEl.innerText = apiKey.slice(0, 12) + '…' + apiKey.slice(-4);
                 } else {
                     keyEl.innerText = 'no key — click "Mint key" →';
@@ -1595,7 +1599,7 @@
                 btn.disabled = true; btn.textContent = '...';
                 const apiKey = await ensureApiKey(user);
                 if (apiKey) {
-                    keyEl.dataset.realKey = apiKey;
+                    _sessionApiKey = apiKey;
                     keyEl.innerText = apiKey.slice(0, 12) + '…' + apiKey.slice(-4);
                     btn.remove();
                     cliPrint('API key minted. Copy it now.', 'var(--success)');
@@ -1607,6 +1611,8 @@
         }
 
         async function refreshGuardian() {
+            const indicator = document.getElementById('guardian-refresh-indicator');
+            if (indicator) indicator.style.opacity = '1';
             try {
                 const [agentsResp, devicesResp, incidentsResp, scansResp] = await Promise.all([
                     callApi('/v1/agents'),
@@ -1630,6 +1636,8 @@
                 } else {
                     showApiBanner(`Backend error: ${err.message}`);
                 }
+            } finally {
+                if (indicator) indicator.style.opacity = '0';
             }
         }
 
@@ -2016,19 +2024,28 @@
                 email_severity: document.getElementById('notif-severity').value,
                 push_enabled: document.getElementById('notif-push').checked,
             };
-            // If push enabled, request browser permission + register subscription
+            // If push enabled, request permission + subscribe via PushManager
             if (body.push_enabled && 'serviceWorker' in navigator && 'PushManager' in window) {
                 try {
-                    const reg = await navigator.serviceWorker.ready;
                     const perm = await Notification.requestPermission();
-                    if (perm === 'granted') {
-                        // Subscription requires VAPID public key from server; if not set, just toggle the flag
-                        // Real subscription wiring happens once VAPID keys are configured in Worker
-                        cliPrint('Push permission granted. (Server-side VAPID keys still need to be configured to actually deliver pushes.)', 'var(--success)');
-                    } else {
+                    if (perm !== 'granted') {
                         body.push_enabled = false;
                         document.getElementById('notif-push').checked = false;
-                        cliPrint('Push permission denied.', 'var(--warning)');
+                        cliPrint('Push permission denied by browser.', 'var(--warning)');
+                    } else {
+                        const keyResp = await fetch(API_BASE + '/v1/notifications/vapid-public-key');
+                        const { public_key: vapidKey } = await keyResp.json();
+                        if (vapidKey) {
+                            const reg = await navigator.serviceWorker.ready;
+                            const sub = await reg.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: vapidKey,
+                            });
+                            body.push_subscription = sub.toJSON();
+                            cliPrint('Push notifications subscribed.', 'var(--success)');
+                        } else {
+                            cliPrint('Push enabled — VAPID keys not yet configured on server.', 'var(--warning)');
+                        }
                     }
                 } catch (e) { console.warn('[push] subscribe failed', e); }
             }
@@ -2456,11 +2473,10 @@
 
         // ─── Data export ──────────────────────────────────────────
         async function exportData() {
-            const apiKey = document.getElementById('api-key')?.dataset?.realKey;
-            if (!apiKey) { cliPrint('No API key.', 'var(--warning)'); return; }
+            if (!_sessionApiKey) { cliPrint('No API key.', 'var(--warning)'); return; }
             try {
                 const resp = await fetch(`${API_BASE}/v1/me/export`, {
-                    headers: { Authorization: `Bearer ${apiKey}` },
+                    headers: { Authorization: `Bearer ${_sessionApiKey}` },
                 });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const blob = await resp.blob();
@@ -2589,7 +2605,7 @@
             try {
                 const result = await callApi('/v1/keys/rotate', { method: 'POST' });
                 const keyEl = document.getElementById('api-key');
-                keyEl.dataset.realKey = result.api_key;
+                _sessionApiKey = result.api_key;
                 keyEl.innerText = result.api_key.slice(0, 12) + '…' + result.api_key.slice(-4);
                 cliPrint('API key rotated. Old key now invalid.', 'var(--success)');
             } catch (err) {

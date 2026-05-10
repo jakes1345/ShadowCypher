@@ -425,6 +425,9 @@ export default {
       if (path === "/v1/agent/version" && req.method === "GET") {
         return getAgentVersion(env, cors);
       }
+      if (path === "/v1/notifications/vapid-public-key" && req.method === "GET") {
+        return json({ public_key: env.PUSH_VAPID_PUBLIC_KEY || null }, {}, cors);
+      }
       // Stripe webhook is unauthenticated (signature-verified inside the handler).
       // Stripe sends raw body; we don't apply CORS here.
       if (path === "/v1/billing/webhook" && req.method === "POST") return handleWebhook(req, env, cors);

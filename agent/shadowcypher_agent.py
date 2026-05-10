@@ -454,7 +454,7 @@ def check_system_hardening() -> dict[str, Any]:
 
     # Core dumps enabled
     try:
-        out = subprocess.check_output(["ulimit", "-c"], text=True, timeout=3, shell=True, stderr=subprocess.DEVNULL).strip()
+        out = subprocess.check_output("ulimit -c", shell=True, text=True, timeout=3, stderr=subprocess.DEVNULL).strip()
         if out != "0":
             issues.append({"check": "core_dumps", "severity": "warning", "detail": f"Core dumps enabled (limit: {out})"})
     except (subprocess.SubprocessError, FileNotFoundError):

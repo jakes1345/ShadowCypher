@@ -122,7 +122,7 @@ class ShadowRuntime:
             self.emit(f"SYS_EXEC: {full_cmd}")
             try:
                 result = subprocess.run(
-                    full_cmd, shell=True, capture_output=True, text=True, timeout=120
+                    shlex.split(full_cmd), shell=False, capture_output=True, text=True, timeout=120
                 )
                 output = result.stdout + result.stderr
                 self.variables["LAST"] = output.strip()

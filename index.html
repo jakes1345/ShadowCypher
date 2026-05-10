@@ -2024,19 +2024,28 @@
                 email_severity: document.getElementById('notif-severity').value,
                 push_enabled: document.getElementById('notif-push').checked,
             };
-            // If push enabled, request browser permission + register subscription
+            // If push enabled, request permission + subscribe via PushManager
             if (body.push_enabled && 'serviceWorker' in navigator && 'PushManager' in window) {
                 try {
-                    const reg = await navigator.serviceWorker.ready;
                     const perm = await Notification.requestPermission();
-                    if (perm === 'granted') {
-                        // Subscription requires VAPID public key from server; if not set, just toggle the flag
-                        // Real subscription wiring happens once VAPID keys are configured in Worker
-                        cliPrint('Push permission granted. (Server-side VAPID keys still need to be configured to actually deliver pushes.)', 'var(--success)');
-                    } else {
+                    if (perm !== 'granted') {
                         body.push_enabled = false;
                         document.getElementById('notif-push').checked = false;
-                        cliPrint('Push permission denied.', 'var(--warning)');
+                        cliPrint('Push permission denied by browser.', 'var(--warning)');
+                    } else {
+                        const keyResp = await fetch(API_BASE + '/v1/notifications/vapid-public-key');
+                        const { public_key: vapidKey } = await keyResp.json();
+                        if (vapidKey) {
+                            const reg = await navigator.serviceWorker.ready;
+                            const sub = await reg.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: vapidKey,
+                            });
+                            body.push_subscription = sub.toJSON();
+                            cliPrint('Push notifications subscribed.', 'var(--success)');
+                        } else {
+                            cliPrint('Push enabled — VAPID keys not yet configured on server.', 'var(--warning)');
+                        }
                     }
                 } catch (e) { console.warn('[push] subscribe failed', e); }
             }
