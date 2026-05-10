@@ -1,6 +1,7 @@
 package site.shadowcypher.app
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -214,6 +215,21 @@ class ShadowAssistantPlugin : Plugin() {
     @PluginMethod
     fun finishActivity(call: PluginCall) {
         activity.runOnUiThread { activity.finish() }
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun getApiKey(call: PluginCall) {
+        val key = context.getSharedPreferences("shadow_prefs", Context.MODE_PRIVATE)
+            .getString("sc_api_key", "") ?: ""
+        call.resolve(JSObject().apply { put("key", key) })
+    }
+
+    @PluginMethod
+    fun setApiKey(call: PluginCall) {
+        val key = call.getString("key", "") ?: ""
+        context.getSharedPreferences("shadow_prefs", Context.MODE_PRIVATE)
+            .edit().putString("sc_api_key", key).apply()
         call.resolve()
     }
 
