@@ -73,11 +73,71 @@
                     <div id="swarm-log" style="height:100px;overflow:hidden;border-left:2px solid var(--accent-primary);padding-left:20px;font-family:var(--font-main);font-size:0.8rem;line-height:2;"></div>
                 </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:40px;">
-                <div class="stat-card"><div class="stat-num">29</div><div class="stat-label">TACTICAL SCRIPTS</div></div>
-                <div class="stat-card"><div class="stat-num">8</div><div class="stat-label">GHOST LAYERS</div></div>
-                <div class="stat-card"><div class="stat-num">5</div><div class="stat-label">PLATFORMS</div></div>
-                <div class="stat-card"><div class="stat-num">9</div><div class="stat-label">MCP TOOLS</div></div>
+            <!-- Hero dashboard mockup -->
+            <div style="padding:0 0 0 20px;">
+                <div style="background:#0a0a0c;border:1px solid rgba(180,74,255,0.25);border-radius:10px;overflow:hidden;box-shadow:0 0 60px rgba(180,74,255,0.08);">
+                    <!-- Terminal titlebar -->
+                    <div style="background:#111;border-bottom:1px solid rgba(180,74,255,0.15);padding:10px 16px;display:flex;align-items:center;gap:8px;">
+                        <div style="width:10px;height:10px;border-radius:50%;background:#ef4444;opacity:0.8;"></div>
+                        <div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;opacity:0.8;"></div>
+                        <div style="width:10px;height:10px;border-radius:50%;background:#22c55e;opacity:0.8;"></div>
+                        <div style="flex:1;text-align:center;font-family:var(--font-mono);font-size:0.6rem;color:#444;letter-spacing:2px;">GUARDIAN // NETWORK MONITOR</div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <div style="width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;"></div>
+                            <span style="font-family:var(--font-mono);font-size:0.55rem;color:#22c55e;">LIVE</span>
+                        </div>
+                    </div>
+                    <!-- Scan header -->
+                    <div style="padding:12px 16px 6px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-family:var(--font-mono);font-size:0.6rem;color:#555;letter-spacing:2px;">// NETWORK SCAN · 192.168.1.0/24</span>
+                        <span style="font-family:var(--font-mono);font-size:0.55rem;color:#333;">last scan: 2m ago</span>
+                    </div>
+                    <!-- Device table -->
+                    <div style="padding:0 16px 12px;font-family:var(--font-mono);font-size:0.65rem;line-height:2.2;">
+                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;color:#333;font-size:0.55rem;letter-spacing:1px;border-bottom:1px solid #1a1a1a;padding-bottom:4px;margin-bottom:4px;">
+                            <span>IP</span><span>DEVICE</span><span>OS</span><span>STATUS</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;color:#cbd5e1;">
+                            <span style="color:#666;">192.168.1.1</span><span>ASUS RT-AX88U <span style="color:#555;font-size:0.6rem;">[Router]</span></span><span style="color:#555;">Linux</span><span style="color:#22c55e;">OK</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;color:#cbd5e1;">
+                            <span style="color:#666;">192.168.1.4</span><span>DESKTOP-SC01 <span style="color:#b44aff;font-size:0.6rem;">[This machine]</span></span><span style="color:#555;">Linux</span><span style="color:#22c55e;">OK</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;color:#cbd5e1;">
+                            <span style="color:#666;">192.168.1.9</span><span>Galaxy S24 Ultra</span><span style="color:#555;">Android</span><span style="color:#22c55e;">OK</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;color:#cbd5e1;">
+                            <span style="color:#666;">192.168.1.17</span><span>MacBook Pro M3</span><span style="color:#555;">macOS</span><span style="color:#22c55e;">OK</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;">
+                            <span style="color:#666;">192.168.1.23</span><span style="color:#f97316;">UNKNOWN DEVICE <span style="color:#ef4444;font-size:0.6rem;">[ARP ANOMALY]</span></span><span style="color:#555;">—</span><span style="color:#ef4444;">⚠ ALERT</span>
+                        </div>
+                    </div>
+                    <!-- Incident strip -->
+                    <div style="background:rgba(239,68,68,0.06);border-top:1px solid rgba(239,68,68,0.15);padding:10px 16px;display:flex;align-items:center;gap:10px;">
+                        <div style="width:6px;height:6px;border-radius:50%;background:#ef4444;animation:pulse 1s infinite;flex-shrink:0;"></div>
+                        <span style="font-family:var(--font-mono);font-size:0.6rem;color:#ef4444;">INCIDENT: ARP spoof detected — 192.168.1.23 claiming gateway MAC</span>
+                    </div>
+                    <!-- Ghost status + stats row -->
+                    <div style="background:#0d0d0f;border-top:1px solid #1a1a1a;padding:10px 16px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;">
+                        <div style="text-align:center;border-right:1px solid #1a1a1a;padding:4px 0;">
+                            <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent-primary);">29</div>
+                            <div style="font-family:var(--font-mono);font-size:0.5rem;color:#555;letter-spacing:1px;margin-top:1px;">MODULES</div>
+                        </div>
+                        <div style="text-align:center;border-right:1px solid #1a1a1a;padding:4px 0;">
+                            <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent-primary);">8</div>
+                            <div style="font-family:var(--font-mono);font-size:0.5rem;color:#555;letter-spacing:1px;margin-top:1px;">GHOST LAYERS</div>
+                        </div>
+                        <div style="text-align:center;border-right:1px solid #1a1a1a;padding:4px 0;">
+                            <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent-primary);">5</div>
+                            <div style="font-family:var(--font-mono);font-size:0.5rem;color:#555;letter-spacing:1px;margin-top:1px;">PLATFORMS</div>
+                        </div>
+                        <div style="text-align:center;padding:4px 0;">
+                            <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent-primary);">9</div>
+                            <div style="font-family:var(--font-mono);font-size:0.5rem;color:#555;letter-spacing:1px;margin-top:1px;">MCP TOOLS</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -166,37 +226,76 @@
         <!-- How it connects -->
         <div style="padding:60px 0;border-top:1px solid var(--glass-border);">
             <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// DATA FLOW</div>
-            <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:40px;">How everything connects.</h2>
-            <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center;row-gap:20px;">
-                <div style="text-align:center;padding:20px 28px;background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);border-radius:8px;min-width:140px;">
-                    <div style="font-size:1.5rem;margin-bottom:6px;">🖥</div>
-                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:4px;">DESKTOP</div>
-                    <div style="font-size:0.75rem;color:var(--text-secondary);">Run missions<br>& Ghost mode</div>
+            <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:12px;">How everything connects.</h2>
+            <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:48px;max-width:560px;line-height:1.8;">Every component talks to every other. Run a mission on desktop, agent scans your LAN, events hit the API, and your phone lights up — all in real time.</p>
+            <div style="display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:center;row-gap:16px;">
+
+                <!-- Desktop -->
+                <div style="flex:1;min-width:150px;max-width:220px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);border-radius:10px;padding:28px 20px 24px;text-align:center;position:relative;">
+                    <div style="width:52px;height:52px;margin:0 auto 16px;background:rgba(180,74,255,0.12);border:1px solid rgba(180,74,255,0.3);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgb(180,74,255)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:8px;">DESKTOP APP</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">Run missions,<br>Ghost mode,<br>AI terminal</div>
+                    <div style="position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:2px;height:8px;background:rgba(180,74,255,0.3);display:none;"></div>
                 </div>
-                <div style="font-family:var(--font-mono);font-size:1.2rem;color:var(--glass-border);padding:0 8px;">→</div>
-                <div style="text-align:center;padding:20px 28px;background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);border-radius:8px;min-width:140px;">
-                    <div style="font-size:1.5rem;margin-bottom:6px;">🔍</div>
-                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:4px;">AGENT DAEMON</div>
-                    <div style="font-size:0.75rem;color:var(--text-secondary);">Scan LAN<br>every 10 min</div>
+
+                <!-- Arrow 1 -->
+                <div style="display:flex;align-items:center;padding:0 6px;color:rgba(180,74,255,0.4);">
+                    <svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M0 8 L28 8 M22 2 L28 8 L22 14" stroke="rgba(180,74,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0,100" to="100,0" dur="2s" repeatCount="indefinite"/></path></svg>
                 </div>
-                <div style="font-family:var(--font-mono);font-size:1.2rem;color:var(--glass-border);padding:0 8px;">→</div>
-                <div style="text-align:center;padding:20px 28px;background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);border-radius:8px;min-width:140px;">
-                    <div style="font-size:1.5rem;margin-bottom:6px;">☁️</div>
-                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:4px;">API / SUPABASE</div>
-                    <div style="font-size:0.75rem;color:var(--text-secondary);">Store events<br>& match CVEs</div>
+
+                <!-- Agent Daemon -->
+                <div style="flex:1;min-width:150px;max-width:220px;background:rgba(34,197,94,0.05);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:28px 20px 24px;text-align:center;">
+                    <div style="width:52px;height:52px;margin:0 auto 16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:rgb(34,197,94);letter-spacing:3px;margin-bottom:8px;">AGENT DAEMON</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">Scans LAN<br>every 10 min,<br>any platform</div>
                 </div>
-                <div style="font-family:var(--font-mono);font-size:1.2rem;color:var(--glass-border);padding:0 8px;">→</div>
-                <div style="text-align:center;padding:20px 28px;background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);border-radius:8px;min-width:140px;">
-                    <div style="font-size:1.5rem;margin-bottom:6px;">📊</div>
-                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:4px;">DASHBOARD</div>
-                    <div style="font-size:0.75rem;color:var(--text-secondary);">Web + Android<br>visibility</div>
+
+                <!-- Arrow 2 -->
+                <div style="display:flex;align-items:center;padding:0 6px;">
+                    <svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M0 8 L28 8 M22 2 L28 8 L22 14" stroke="rgba(34,197,94,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0,100" to="100,0" dur="2s" begin="0.4s" repeatCount="indefinite"/></path></svg>
                 </div>
-                <div style="font-family:var(--font-mono);font-size:1.2rem;color:var(--glass-border);padding:0 8px;">→</div>
-                <div style="text-align:center;padding:20px 28px;background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);border-radius:8px;min-width:140px;">
-                    <div style="font-size:1.5rem;margin-bottom:6px;">📱</div>
-                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:4px;">PUSH ALERT</div>
-                    <div style="font-size:0.75rem;color:var(--text-secondary);">Notified<br>instantly</div>
+
+                <!-- API / Supabase -->
+                <div style="flex:1;min-width:150px;max-width:220px;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:28px 20px 24px;text-align:center;">
+                    <div style="width:52px;height:52px;margin:0 auto 16px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgb(59,130,246)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:rgb(59,130,246);letter-spacing:3px;margin-bottom:8px;">API / SUPABASE</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">Store events,<br>match CVEs,<br>edge delivery</div>
                 </div>
+
+                <!-- Arrow 3 -->
+                <div style="display:flex;align-items:center;padding:0 6px;">
+                    <svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M0 8 L28 8 M22 2 L28 8 L22 14" stroke="rgba(59,130,246,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0,100" to="100,0" dur="2s" begin="0.8s" repeatCount="indefinite"/></path></svg>
+                </div>
+
+                <!-- Dashboard -->
+                <div style="flex:1;min-width:150px;max-width:220px;background:rgba(249,115,22,0.05);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:28px 20px 24px;text-align:center;">
+                    <div style="width:52px;height:52px;margin:0 auto 16px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgb(249,115,22)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/></svg>
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:rgb(249,115,22);letter-spacing:3px;margin-bottom:8px;">DASHBOARD</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">Web + Android<br>visibility,<br>real-time</div>
+                </div>
+
+                <!-- Arrow 4 -->
+                <div style="display:flex;align-items:center;padding:0 6px;">
+                    <svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M0 8 L28 8 M22 2 L28 8 L22 14" stroke="rgba(239,68,68,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0,100" to="100,0" dur="2s" begin="1.2s" repeatCount="indefinite"/></path></svg>
+                </div>
+
+                <!-- Push Alert -->
+                <div style="flex:1;min-width:150px;max-width:220px;background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:28px 20px 24px;text-align:center;">
+                    <div style="width:52px;height:52px;margin:0 auto 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgb(239,68,68)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:rgb(239,68,68);letter-spacing:3px;margin-bottom:8px;">PUSH ALERT</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">Notified<br>instantly on<br>any device</div>
+                </div>
+
             </div>
         </div>
 
@@ -204,37 +303,68 @@
         <div style="padding:60px 0;border-top:1px solid var(--glass-border);">
             <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// EXPLORE</div>
             <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:40px;">Everything available to you.</h2>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">
-                <div onclick="navTo('arsenal',document.getElementById('nav-arsenal'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">01 // ARSENAL</div>
-                    <div style="font-weight:600;margin-bottom:6px;">Tactical Modules</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);">29 offensive + defensive tools. Recon, payloads, OSINT, wireless, credentials, C2.</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+
+                <div onclick="navTo('arsenal',document.getElementById('nav-arsenal'))" class="explore-card" style="padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='var(--accent-primary)';this.style.background='rgba(180,74,255,0.04)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--glass-border)';this.style.background='transparent';this.style.transform='translateY(0)'">
+                    <div style="width:40px;height:40px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.25);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(180,74,255)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    </div>
+                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">01 // ARSENAL</div>
+                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Tactical Modules</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">29 offensive + defensive tools. Recon, payloads, OSINT, wireless, credentials, C2.</div>
+                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(180,74,255,0.5);">Explore →</div>
                 </div>
-                <div onclick="navTo('ghost',document.getElementById('nav-ghost'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">02 // GHOST</div>
-                    <div style="font-weight:600;margin-bottom:6px;">Ghost Protocol</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);">8-layer anonymity: Tor, iptables kill-switch, MAC randomization, RAM workspace, log suppression.</div>
+
+                <div onclick="navTo('ghost',document.getElementById('nav-ghost'))" class="explore-card" style="padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='rgba(148,163,184,0.4)';this.style.background='rgba(148,163,184,0.03)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--glass-border)';this.style.background='transparent';this.style.transform='translateY(0)'">
+                    <div style="width:40px;height:40px;background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(148,163,184)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    </div>
+                    <div class="mono" style="font-size:0.55rem;color:#94a3b8;letter-spacing:2px;margin-bottom:8px;">02 // GHOST</div>
+                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Ghost Protocol</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">8-layer anonymity: Tor, iptables kill-switch, MAC randomization, RAM workspace, log suppression.</div>
+                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(148,163,184,0.5);">Explore →</div>
                 </div>
-                <div onclick="navTo('guardian',document.getElementById('nav-guardian'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">03 // GUARDIAN</div>
-                    <div style="font-weight:600;margin-bottom:6px;">Network Monitor</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);">Live LAN scanner. Device inventory, CVE matching, ARP spoof detection, threat feed.</div>
+
+                <div onclick="navTo('guardian',document.getElementById('nav-guardian'))" class="explore-card" style="padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='rgba(34,197,94,0.4)';this.style.background='rgba(34,197,94,0.03)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--glass-border)';this.style.background='transparent';this.style.transform='translateY(0)'">
+                    <div style="width:40px;height:40px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <div class="mono" style="font-size:0.55rem;color:rgb(34,197,94);letter-spacing:2px;margin-bottom:8px;">03 // GUARDIAN</div>
+                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Network Monitor</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">Live LAN scanner. Device inventory, CVE matching, ARP spoof detection, threat feed.</div>
+                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(34,197,94,0.5);">Explore →</div>
                 </div>
-                <div onclick="navTo('download',document.getElementById('nav-download'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">04 // DOWNLOAD</div>
-                    <div style="font-weight:600;margin-bottom:6px;">Android Apps</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);">Guardian APK + Shadow AI APK. Sideload-ready, direct from GitHub Releases.</div>
+
+                <div onclick="navTo('download',document.getElementById('nav-download'))" class="explore-card" style="padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='rgba(59,130,246,0.4)';this.style.background='rgba(59,130,246,0.03)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--glass-border)';this.style.background='transparent';this.style.transform='translateY(0)'">
+                    <div style="width:40px;height:40px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(59,130,246)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18" stroke-width="2"/></svg>
+                    </div>
+                    <div class="mono" style="font-size:0.55rem;color:rgb(59,130,246);letter-spacing:2px;margin-bottom:8px;">04 // DOWNLOAD</div>
+                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Android Apps</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">Guardian APK + Shadow AI APK. Sideload-ready, direct from GitHub Releases.</div>
+                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(59,130,246,0.5);">Download →</div>
                 </div>
-                <div onclick="navTo('pricing',document.getElementById('nav-pricing'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">05 // PRO</div>
-                    <div style="font-weight:600;margin-bottom:6px;">Pricing</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);">Community free forever. Guardian Pro $9.99/mo. Operator $49/mo. 14-day trial.</div>
+
+                <div onclick="navTo('pricing',document.getElementById('nav-pricing'))" class="explore-card" style="padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='rgba(249,115,22,0.4)';this.style.background='rgba(249,115,22,0.03)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--glass-border)';this.style.background='transparent';this.style.transform='translateY(0)'">
+                    <div style="width:40px;height:40px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(249,115,22)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    </div>
+                    <div class="mono" style="font-size:0.55rem;color:rgb(249,115,22);letter-spacing:2px;margin-bottom:8px;">05 // PRO</div>
+                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Pricing</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">Community free forever. Guardian Pro $9.99/mo. Operator $49/mo. 14-day trial.</div>
+                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(249,115,22,0.5);">View plans →</div>
                 </div>
-                <div onclick="navTo('account',document.getElementById('nav-account'))" style="padding:20px 24px;border:1px solid var(--glass-border);border-radius:6px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--glass-border)'">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">06 // ACCOUNT</div>
-                    <div style="font-weight:600;margin-bottom:6px;">Sign In</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);">Create an account or sign in to access your Guardian dashboard and agent data.</div>
+
+                <div onclick="navTo('account',document.getElementById('nav-account'))" class="explore-card" style="padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='rgba(180,74,255,0.4)';this.style.background='rgba(180,74,255,0.03)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--glass-border)';this.style.background='transparent';this.style.transform='translateY(0)'">
+                    <div style="width:40px;height:40px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(180,74,255)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">06 // ACCOUNT</div>
+                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Sign In</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">Create an account or sign in to access your Guardian dashboard and agent data.</div>
+                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(180,74,255,0.5);">Sign in →</div>
                 </div>
+
             </div>
         </div>
 
@@ -284,6 +414,16 @@
                 <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">DSL</span>
             </div>
 
+            <!-- Category: Command & Control -->
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,var(--accent-primary),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 01</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Command &amp; Control</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(180,74,255,0.15),transparent);"></div>
+            </div>
+
             <!-- Module 1: NEXUS-COMMAND -->
             <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
                 <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
@@ -319,6 +459,16 @@
                 </div>
             </div>
 
+            <!-- Category: Intelligence -->
+            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(34,197,94),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 02</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Reconnaissance &amp; Intelligence</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(34,197,94,0.15),transparent);"></div>
+            </div>
+
             <!-- Module 2: COVERT-INTEL -->
             <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
                 <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
@@ -352,6 +502,16 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Category: Offensive -->
+            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(239,68,68),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 03</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Offensive Operations</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(239,68,68,0.15),transparent);"></div>
             </div>
 
             <!-- Module 3: OFFENSIVE-LAB -->
@@ -390,6 +550,16 @@
                 </div>
             </div>
 
+            <!-- Category: Cryptography -->
+            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(59,130,246),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 04</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Cryptography &amp; Secure Comms</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(59,130,246,0.15),transparent);"></div>
+            </div>
+
             <!-- Module 4: SOVEREIGN-OPS -->
             <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
                 <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
@@ -423,6 +593,16 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Category: AI & Automation -->
+            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(249,115,22),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 05</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">AI Operations &amp; Automation</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(249,115,22,0.15),transparent);"></div>
             </div>
 
             <!-- Module 5: SHADOW-CLI -->
@@ -482,6 +662,16 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Category: C2 Framework -->
+            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(168,85,247),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 06</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">C2 Framework</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(168,85,247,0.15),transparent);"></div>
             </div>
 
             <!-- C2 Command Center -->
@@ -580,6 +770,54 @@
                         <span>Devices: <strong id="stat-devices" style="color:#fff;">—</strong></span>
                         <span>Open incidents: <strong id="stat-incidents" style="color:#fff;">—</strong></span>
                         <span>Last scan: <strong id="stat-last-scan" style="color:#fff;">—</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard preview (blurred teaser for logged-out visitors) -->
+            <div id="guardian-preview-teaser" style="margin-bottom:40px;position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--glass-border);">
+                <!-- Fake dashboard content -->
+                <div style="padding:20px;background:#0a0a0c;filter:blur(4px);pointer-events:none;user-select:none;" aria-hidden="true">
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+                        <div style="background:#111;border:1px solid #222;border-radius:6px;padding:14px;text-align:center;">
+                            <div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:var(--accent-primary);">12</div>
+                            <div style="font-family:var(--font-mono);font-size:0.55rem;color:#555;letter-spacing:1px;margin-top:4px;">DEVICES</div>
+                        </div>
+                        <div style="background:#111;border:1px solid #222;border-radius:6px;padding:14px;text-align:center;">
+                            <div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:#22c55e;">0</div>
+                            <div style="font-family:var(--font-mono);font-size:0.55rem;color:#555;letter-spacing:1px;margin-top:4px;">INCIDENTS</div>
+                        </div>
+                        <div style="background:#111;border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:14px;text-align:center;">
+                            <div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:#ef4444;">3</div>
+                            <div style="font-family:var(--font-mono);font-size:0.55rem;color:#555;letter-spacing:1px;margin-top:4px;">CVE MATCHES</div>
+                        </div>
+                        <div style="background:#111;border:1px solid #222;border-radius:6px;padding:14px;text-align:center;">
+                            <div style="font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:#94a3b8;">2m</div>
+                            <div style="font-family:var(--font-mono);font-size:0.55rem;color:#555;letter-spacing:1px;margin-top:4px;">LAST SCAN</div>
+                        </div>
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:#333;letter-spacing:2px;margin-bottom:10px;">// NETWORK DEVICES</div>
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                        <div style="background:#111;border:1px solid #1a1a1a;border-radius:4px;padding:10px 14px;display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.7rem;">
+                            <span style="color:#555;">192.168.1.1</span><span style="color:#888;">ASUS RT-AX88U · Router</span><span style="color:#22c55e;">OK</span>
+                        </div>
+                        <div style="background:#111;border:1px solid #1a1a1a;border-radius:4px;padding:10px 14px;display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.7rem;">
+                            <span style="color:#555;">192.168.1.4</span><span style="color:#888;">DESKTOP-SC01 · Linux</span><span style="color:#22c55e;">OK</span>
+                        </div>
+                        <div style="background:#111;border:1px solid rgba(239,68,68,0.2);border-radius:4px;padding:10px 14px;display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.7rem;">
+                            <span style="color:#555;">192.168.1.23</span><span style="color:#f97316;">UNKNOWN · ARP anomaly</span><span style="color:#ef4444;">⚠ ALERT</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Overlay CTA -->
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);">
+                    <div style="text-align:center;padding:32px;">
+                        <div style="width:48px;height:48px;margin:0 auto 16px;background:rgba(180,74,255,0.12);border:1px solid rgba(180,74,255,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgb(180,74,255)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </div>
+                        <div style="font-weight:600;margin-bottom:8px;font-size:1rem;">Your live Guardian dashboard</div>
+                        <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:20px;max-width:320px;">Sign in to see your real network — devices, threats, CVE matches, and push alerts in real time.</div>
+                        <button onclick="navTo('account',document.getElementById('nav-account'))" class="btn-primary" style="font-size:0.82rem;padding:10px 24px;">Sign in to unlock</button>
                     </div>
                 </div>
             </div>
@@ -1554,6 +1792,10 @@
                 cliPrint('Checkout canceled.', 'var(--warning)');
                 history.replaceState(null, '', window.location.pathname);
             }
+
+            // Hide the logged-out teaser once authenticated
+            const previewTeaser = document.getElementById('guardian-preview-teaser');
+            if (previewTeaser) previewTeaser.style.display = 'none';
 
             // Pull real Guardian data and start auto-refresh
             await refreshGuardian();
