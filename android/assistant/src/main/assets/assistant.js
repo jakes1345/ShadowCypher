@@ -1,5 +1,5 @@
 /**
- * Shadow AI — ShadowCypher Voice Assistant
+ * Shadow — ShadowCypher Voice Assistant
  * Authenticated, context-aware, action-capable.
  * Replaces Bixby / Siri / Google Assistant.
  */
@@ -12,6 +12,7 @@ const ShadowAssistant = (() => {
   let _idleTimer = null;
   let apiKey = null;
   let guardianCtx = null; // { me, summary }
+  let _lastTranscript = '';
 
   const API_BASE = 'https://api.shadowcypher.site';
 
@@ -45,6 +46,31 @@ const ShadowAssistant = (() => {
     {
       pattern: /\bset (api )?key\b|\benter (api )?key\b|\bapi key\b|\bconfigure\b/i,
       action: 'open_settings',
+    },
+    // ── Structured API commands (no LLM) ──
+    {
+      pattern: /\b(weather|temperature|forecast|raining|sunny|cloudy)\b.{0,40}(?:in|at|for)?\s+([a-zA-Z\s]+)|\b(?:in|at|for)\s+([a-zA-Z\s]{2,30})\b.{0,20}\b(weather|temperature|forecast)\b/i,
+      action: 'weather',
+    },
+    {
+      pattern: /\b(\d[\d,\.]*)\s+([A-Z]{3})\s+(?:to|in|into)\s+([A-Z]{3})\b|\bconvert\s+([A-Z]{3})\s+to\s+([A-Z]{3})\b|\bexchange rate\b/i,
+      action: 'currency',
+    },
+    {
+      pattern: /\b(CVE-\d{4}-\d+)\b|\blook ?up\s+(CVE-\d{4}-\d+)\b/i,
+      action: 'cve_lookup',
+    },
+    {
+      pattern: /\bcheck\s+((?:\d{1,3}\.){3}\d{1,3})\b|\bip\s+(?:rep(?:utation)?|abuse|malicious|safe)\b.*((?:\d{1,3}\.){3}\d{1,3})/i,
+      action: 'ip_lookup',
+    },
+    {
+      pattern: /\b(?:been|check|am i).{0,20}(?:breached|hacked|pwned|leaked|compromised)\b|\bhaveibeenpwned\b/i,
+      action: 'breach_check',
+    },
+    {
+      pattern: /\bdns\s+(?:lookup|check|resolve)\s+([a-zA-Z0-9\.\-]+)\b|\b(?:resolve|lookup)\s+([a-zA-Z0-9\.\-]+)\b/i,
+      action: 'dns_lookup',
     },
   ];
 
@@ -113,7 +139,7 @@ const ShadowAssistant = (() => {
 
   function buildSystemPrompt() {
     const lines = [
-      'You are SHADOW AI, the personal voice assistant built into the ShadowCypher security platform.',
+      'You are SHADOW, the personal voice assistant built into the ShadowCypher security platform.',
       'Reply in 1-3 short sentences for speech. No markdown, no bullet points, no code blocks.',
       'Be direct and concise. Use plain language.',
     ];
@@ -205,6 +231,95 @@ const ShadowAssistant = (() => {
         return null; // handled by settings UI
       }
 
+      case 'weather': {
+        const transcript = _lastTranscript || '';
+        // Extract city: look for "in <City>" or leading city names
+        const cityMatch = transcript.match(/(?:in|at|for)\s+([A-Za-z][A-Za-z\s]{1,25}?)(?:\s*\?|$|\s+weather|\s+temp|\s+forecast)/i)
+          || transcript.match(/^([A-Za-z][A-Za-z\s]{1,20}?)\s+(?:weather|temperature|forecast)/i);
+        const city = cityMatch ? cityMatch[1].trim() : null;
+        if (!city) return 'Which city do you want the weather for?';
+        try {
+          const r = await fetch(`${API_BASE}/v1/shadow/weather?q=${encodeURIComponent(city)}`, { headers });
+          const d = await r.json();
+          if (!r.ok || d.error) return `Could not get weather for ${city}.`;
+          const c = d.current;
+          return `${d.location.name}: ${c.temp_c}°C (${c.temp_f}°F), ${c.condition}. Humidity ${c.humidity_pct}%, wind ${c.wind_kph} km/h.`;
+        } catch (_) { return 'Weather service unavailable.'; }
+      }
+
+      case 'currency': {
+        const transcript = _lastTranscript || '';
+        const m = transcript.match(/(\d[\d,\.]*)\s*([A-Za-z]{3})\s+(?:to|in|into)\s+([A-Za-z]{3})/i)
+          || transcript.match(/convert\s+([A-Za-z]{3})\s+to\s+([A-Za-z]{3})/i);
+        let amount = 1, from = 'USD', to = 'EUR';
+        if (m) {
+          if (m[1] && /\d/.test(m[1])) { amount = parseFloat(m[1].replace(/,/g, '')); from = (m[2] || 'USD').toUpperCase(); to = (m[3] || 'EUR').toUpperCase(); }
+          else { from = (m[1] || 'USD').toUpperCase(); to = (m[2] || 'EUR').toUpperCase(); }
+        }
+        try {
+          const r = await fetch(`${API_BASE}/v1/shadow/currency?from=${from}&to=${to}&amount=${amount}`, { headers });
+          const d = await r.json();
+          if (!r.ok || d.error) return `Could not convert ${from} to ${to}.`;
+          return d.formatted + ` (rate as of ${d.date}).`;
+        } catch (_) { return 'Currency service unavailable.'; }
+      }
+
+      case 'cve_lookup': {
+        const transcript = _lastTranscript || '';
+        const cveId = (transcript.match(/CVE-\d{4}-\d+/i) || [])[0];
+        if (!cveId) return 'Which CVE do you want to look up?';
+        try {
+          const r = await fetch(`${API_BASE}/v1/shadow/cve?q=${cveId}`, { headers });
+          const d = await r.json();
+          if (!r.ok || !d.results?.length) return `${cveId} not found in NVD.`;
+          const v = d.results[0];
+          return `${v.id}: Score ${v.score ?? 'N/A'} (${v.severity ?? 'unknown'}). ${v.description}`;
+        } catch (_) { return 'CVE lookup unavailable.'; }
+      }
+
+      case 'ip_lookup': {
+        const transcript = _lastTranscript || '';
+        const ipMatch = transcript.match(/((?:\d{1,3}\.){3}\d{1,3})/);
+        const ip = ipMatch ? ipMatch[1] : null;
+        if (!ip) return 'Which IP address do you want to check?';
+        try {
+          const r = await fetch(`${API_BASE}/v1/shadow/ip?addr=${ip}`, { headers });
+          const d = await r.json();
+          if (!r.ok || d.error) return `Could not check IP ${ip}.`;
+          if (d.is_private) return `${ip} is a private/internal IP address.`;
+          return `${ip}: Abuse score ${d.abuse_score}/100 (${d.risk_level}). ISP: ${d.isp}. Country: ${d.country}. Total reports: ${d.total_reports}.`;
+        } catch (_) { return 'IP reputation service unavailable.'; }
+      }
+
+      case 'breach_check': {
+        const email = guardianCtx?.me?.email;
+        if (!email) return 'No account email found. Check your API key settings.';
+        try {
+          const r = await fetch(`${API_BASE}/v1/shadow/breach?email=${encodeURIComponent(email)}`, { headers });
+          const d = await r.json();
+          if (!r.ok) return 'Breach check unavailable.';
+          if (!d.breached) return `Good news — ${email} has not appeared in any known data breaches.`;
+          const top = d.breaches.slice(0, 3).map(b => b.title).join(', ');
+          return `${email} was found in ${d.count} breach${d.count !== 1 ? 'es' : ''}. Most notable: ${top}.`;
+        } catch (_) { return 'Breach check service unavailable.'; }
+      }
+
+      case 'dns_lookup': {
+        const transcript = _lastTranscript || '';
+        const domainMatch = transcript.match(/(?:dns|resolve|lookup)\s+([a-zA-Z0-9\.\-]+)/i)
+          || transcript.match(/([a-zA-Z0-9\-]+\.[a-zA-Z]{2,})/);
+        const domain = domainMatch ? domainMatch[1] : null;
+        if (!domain) return 'Which domain do you want to look up?';
+        try {
+          const r = await fetch(`${API_BASE}/v1/shadow/dns?q=${encodeURIComponent(domain)}&type=A`, { headers });
+          const d = await r.json();
+          if (!r.ok || d.error) return `DNS lookup for ${domain} failed.`;
+          if (!d.records.length) return `${domain} has no A records (status: ${d.status}).`;
+          const ips = d.records.map(r => r.value).slice(0, 4).join(', ');
+          return `${domain} resolves to: ${ips}.`;
+        } catch (_) { return 'DNS lookup unavailable.'; }
+      }
+
       default:
         return null;
     }
@@ -227,7 +342,7 @@ const ShadowAssistant = (() => {
           <div class="sa-orb-ring">
             <div class="sa-orb" id="sa-orb"></div>
           </div>
-          <div class="sa-status" id="sa-status">SHADOW AI</div>
+          <div class="sa-status" id="sa-status">SHADOW</div>
           <div class="sa-transcript" id="sa-transcript"></div>
           <div class="sa-response" id="sa-response"></div>
           <div class="sa-controls">
@@ -255,7 +370,7 @@ const ShadowAssistant = (() => {
         <!-- Settings view -->
         <div id="sa-settings" style="display:none">
           <div class="sa-handle"></div>
-          <div class="sa-settings-title">SHADOW AI // SETTINGS</div>
+          <div class="sa-settings-title">SHADOW // SETTINGS</div>
           <div class="sa-field-label">ShadowCypher API Key</div>
           <div class="sa-key-row">
             <input id="sa-key-input" class="sa-key-input" type="password" placeholder="sc_live_..." autocomplete="off" spellcheck="false"/>
@@ -470,7 +585,7 @@ const ShadowAssistant = (() => {
 
     orb.className = 'sa-orb ' + s;
     const labels = {
-      idle: 'SHADOW AI',
+      idle: 'SHADOW',
       listening: '// LISTENING',
       thinking: '// PROCESSING',
       speaking: '// SPEAKING',
@@ -587,6 +702,7 @@ const ShadowAssistant = (() => {
     const transcript = data.transcript?.trim();
     if (!transcript) { setState('idle'); return; }
 
+    _lastTranscript = transcript;
     document.getElementById('sa-transcript').textContent = `"${transcript}"`;
     setState('thinking');
 
@@ -615,7 +731,7 @@ const ShadowAssistant = (() => {
         setTimeout(() => dismiss(), 3000);
       }
     } catch (e) {
-      document.getElementById('sa-response').textContent = 'Could not reach Shadow AI.';
+      document.getElementById('sa-response').textContent = 'Could not reach Shadow.';
       setState('idle');
       setTimeout(() => dismiss(), 3000);
     }
@@ -712,6 +828,7 @@ const ShadowAssistant = (() => {
   }
 
   async function _runChip(text) {
+    _lastTranscript = text;
     document.getElementById('sa-transcript').textContent = `"${text}"`;
     setState('thinking');
     await loadGuardianContext();

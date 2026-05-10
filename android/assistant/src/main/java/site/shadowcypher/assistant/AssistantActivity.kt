@@ -226,7 +226,7 @@ class AssistantActivity : AppCompatActivity() {
                                 putExtra(AlarmClock.EXTRA_HOUR, hourMin.first)
                                 putExtra(AlarmClock.EXTRA_MINUTES, hourMin.second)
                             }
-                            putExtra(AlarmClock.EXTRA_MESSAGE, "Shadow AI alarm")
+                            putExtra(AlarmClock.EXTRA_MESSAGE, "Shadow alarm")
                             putExtra(AlarmClock.EXTRA_SKIP_UI, hourMin != null)
                         }
                         startActivity(i)

@@ -69,6 +69,7 @@ import { getMyReferral, claimReferral } from "./referrals";
 import { getThreats, getThreatStats } from "./threats";
 import { runCveMatchingCron } from "./cve_matcher";
 import { getAgentVersion } from "./agent_version";
+import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup } from "./shadow_apis";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -420,6 +421,14 @@ export default {
                 "POST /v1/teams/accept",
                 "POST /v1/teams/leave",
               ],
+              shadow: [
+                "GET /v1/shadow/weather?q=<city>",
+                "GET /v1/shadow/currency?from=USD&to=EUR&amount=1",
+                "GET /v1/shadow/cve?q=<keyword|CVE-ID>&limit=5",
+                "GET /v1/shadow/ip?addr=<ip>",
+                "GET /v1/shadow/breach?email=<email>",
+                "GET /v1/shadow/dns?q=<domain>&type=A",
+              ],
             },
           },
           {},
@@ -497,6 +506,13 @@ export default {
         "POST /v1/teams/leave":               leaveTeam,
         "GET /v1/threats":                    getThreats,
         "GET /v1/threats/stats":              getThreatStats,
+        // Shadow structured APIs (no LLM)
+        "GET /v1/shadow/weather":             getWeather,
+        "GET /v1/shadow/currency":            getCurrency,
+        "GET /v1/shadow/cve":                 getCve,
+        "GET /v1/shadow/ip":                  getIpReputation,
+        "GET /v1/shadow/breach":              checkBreach,
+        "GET /v1/shadow/dns":                 dnsLookup,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];

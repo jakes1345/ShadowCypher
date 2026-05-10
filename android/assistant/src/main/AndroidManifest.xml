@@ -4,7 +4,7 @@
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="Shadow AI"
+        android:label="Shadow"
         android:theme="@style/AssistantTheme"
         android:hardwareAccelerated="true">
 

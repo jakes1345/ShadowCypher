@@ -380,7 +380,7 @@ class AgentRouter:
                     query, spec.system_prompt,
                     max_tokens=spec.max_tokens, temperature=spec.temperature
                 )
-            return "Shadow AI offline: Ollama is not running and no cloud provider is configured."
+            return "Shadow offline: Ollama is not running and no cloud provider is configured."
 
         if callback:
             callback(f"[ROUTING] → {spec.name} ({spec.role}) using {model}")
