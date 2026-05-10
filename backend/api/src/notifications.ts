@@ -218,18 +218,21 @@ async function sendWebPush(
       tag: `sc-${incident.id}`,
     });
     const encrypted = await encryptWebPushPayload(sub, payload);
-    const resp = await fetch(sub.endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `vapid t=${jwt}, k=${env.PUSH_VAPID_PUBLIC_KEY}`,
-        "Content-Type": "application/octet-stream",
-        "Content-Encoding": "aes128gcm",
-        TTL: "86400",
-        Urgency: incident.severity === "critical" ? "high" : "normal",
-      },
-      body: encrypted,
-    });
-    return resp.ok || resp.status === 201;
+    const pushHeaders = {
+      Authorization: `vapid t=${jwt}, k=${env.PUSH_VAPID_PUBLIC_KEY}`,
+      "Content-Type": "application/octet-stream",
+      "Content-Encoding": "aes128gcm",
+      TTL: "86400",
+      Urgency: incident.severity === "critical" ? "high" : "normal",
+    };
+    // One retry on transient server errors (5xx / 429)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const resp = await fetch(sub.endpoint, { method: "POST", headers: pushHeaders, body: encrypted });
+      if (resp.ok || resp.status === 201) return true;
+      if (resp.status >= 400 && resp.status < 500 && resp.status !== 429) break; // permanent failure
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
+    }
+    return false;
   } catch {
     return false;
   }
@@ -241,12 +244,13 @@ async function encryptWebPushPayload(sub: PushSubscriptionJSON, payload: string)
   const authSecret = b64urlDecode(sub.keys!.auth);            // 16-byte auth secret
 
   // Ephemeral sender ECDH key pair
-  const senderKey = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
-  const senderPublicKeyRaw = new Uint8Array(await crypto.subtle.exportKey("raw", senderKey.publicKey));
+  const senderKey = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]) as CryptoKeyPair;
+  const senderPublicKeyRaw = new Uint8Array(await crypto.subtle.exportKey("raw", senderKey.publicKey) as ArrayBuffer);
 
   // ECDH shared secret (32 bytes)
   const receiverKey = await crypto.subtle.importKey("raw", receiverPublicKey, { name: "ECDH", namedCurve: "P-256" }, false, []);
-  const sharedSecret = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: receiverKey }, senderKey.privateKey, 256));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sharedSecret = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: receiverKey } as any, senderKey.privateKey, 256));
 
   // Random 16-byte salt
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -288,7 +292,8 @@ async function wpHkdfExpand(prk: Uint8Array, info: Uint8Array, length: number): 
 // Full HKDF (extract + expand) via WebCrypto built-in
 async function wpHkdf(salt: Uint8Array, ikm: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
   const k = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
-  return new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info } as HkdfParams, k, length * 8));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info } as any, k, length * 8));
 }
 
 function wpConcat(...arrays: Uint8Array[]): Uint8Array {

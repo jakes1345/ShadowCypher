@@ -2049,6 +2049,15 @@
                     }
                 } catch (e) { console.warn('[push] subscribe failed', e); }
             }
+            // If push disabled, revoke browser subscription so push service stops delivering
+            if (!body.push_enabled && 'serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    const existing = await reg.pushManager.getSubscription();
+                    if (existing) await existing.unsubscribe();
+                    body.push_subscription = null;
+                } catch (e) { console.warn('[push] unsubscribe failed', e); }
+            }
             try {
                 await callApi('/v1/notifications/preferences', { method: 'POST', body: JSON.stringify(body) });
                 cliPrint('Notification preferences saved.', 'var(--success)');

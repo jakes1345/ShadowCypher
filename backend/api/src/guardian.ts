@@ -49,6 +49,7 @@ interface ScanBody {
     vendor?: string;
     device_type?: string;
     open_ports?: number[];
+    os_fingerprint?: string;
   }>;
   result?: Record<string, unknown>;
 }
