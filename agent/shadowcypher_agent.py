@@ -485,7 +485,62 @@ def detect_arp_anomalies(devices: list[dict[str, Any]]) -> list[dict[str, Any]]:
 # ─── Commands ───────────────────────────────────────────────────────────────
 
 
-def ensure_agent(api: ApiClient, state: dict[str, Any]) -> str:
+def poll_missions(api: "ApiClient", agent_id: str) -> None:
+    """Fetch pending ShadowScript missions from the API and execute them locally."""
+    try:
+        resp = api.get(f"/v1/agents/{agent_id}/missions/pending")
+        missions = resp.get("missions", [])
+    except Exception as e:
+        print(f"[!] mission poll error: {e}", file=sys.stderr)
+        return
+
+    for mission in missions:
+        mission_id = mission.get("id", "")
+        script = mission.get("script_content", "").strip()
+        if not script:
+            continue
+
+        print(f"[*] executing mission {mission_id}")
+        output_lines: list[str] = []
+        exit_code = 0
+
+        try:
+            import sys as _sys
+            import io
+
+            # Try to import ShadowInterpreter from the local ShadowCypher install
+            try:
+                from shadowcypher.compiler.interpreter import ShadowInterpreter
+                old_stdout = _sys.stdout
+                _sys.stdout = io.StringIO()
+                try:
+                    interp = ShadowInterpreter()
+                    interp.run(script)
+                    output_lines = _sys.stdout.getvalue().splitlines()
+                finally:
+                    _sys.stdout = old_stdout
+            except ImportError:
+                # ShadowCypher not installed locally — run script as shell commands (basic fallback)
+                import subprocess
+                result = subprocess.run(script, shell=True, capture_output=True, text=True, timeout=120)
+                output_lines = result.stdout.splitlines() + result.stderr.splitlines()
+                exit_code = result.returncode
+
+        except Exception as e:
+            output_lines = [f"MISSION_ERROR: {e}"]
+            exit_code = 1
+
+        try:
+            api.post(f"/v1/missions/{mission_id}/result", {
+                "output": "\n".join(output_lines),
+                "exit_code": exit_code,
+            })
+            print(f"[+] mission {mission_id} completed (exit={exit_code})")
+        except Exception as e:
+            print(f"[!] failed to post mission result {mission_id}: {e}", file=sys.stderr)
+
+
+def ensure_agent(api: "ApiClient", state: dict[str, Any]) -> str:
     if state.get("agent_id"):
         return state["agent_id"]
     body = {
@@ -644,6 +699,7 @@ def cmd_run(cfg: dict[str, Any]) -> None:
             now = time.time()
             agent_id = ensure_agent(api, state)
             api.post(f"/v1/agents/heartbeat?agent_id={agent_id}")
+            poll_missions(api, agent_id)
             if now - last_scan >= interval:
                 cycle(cfg, api, state)
                 last_scan = now

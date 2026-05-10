@@ -70,6 +70,22 @@ class GuardianRepository(private val context: Context) {
         buildApi(getApiKey()).getIncidents()
     }
 
+    suspend fun fetchAgents(): Result<List<Agent>> = runCatching {
+        buildApi(getApiKey()).getAgents()
+    }
+
+    suspend fun createMission(agentId: String, script: String, label: String? = null): Result<CreateMissionResponse> = runCatching {
+        buildApi(getApiKey()).createMission(agentId, CreateMissionRequest(script, label))
+    }
+
+    suspend fun getMission(missionId: String): Result<Mission> = runCatching {
+        buildApi(getApiKey()).getMission(missionId)
+    }
+
+    suspend fun listMissions(agentId: String? = null): Result<MissionListResponse> = runCatching {
+        buildApi(getApiKey()).listMissions(agentId)
+    }
+
     companion object {
         @Volatile
         private var instance: GuardianRepository? = null

@@ -7,9 +7,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import site.shadowcypher.app.data.Agent
 import site.shadowcypher.app.data.GuardianRepository
 import site.shadowcypher.app.data.GuardianSummary
 import site.shadowcypher.app.data.Me
+import site.shadowcypher.app.data.Mission
 
 class GuardianViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -29,6 +31,15 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
 
     private val _scanTriggered = MutableStateFlow(false)
     val scanTriggered: StateFlow<Boolean> = _scanTriggered.asStateFlow()
+
+    private val _agents = MutableStateFlow<List<Agent>>(emptyList())
+    val agents: StateFlow<List<Agent>> = _agents.asStateFlow()
+
+    private val _missions = MutableStateFlow<List<Mission>>(emptyList())
+    val missions: StateFlow<List<Mission>> = _missions.asStateFlow()
+
+    private val _missionStatus = MutableStateFlow<String?>(null)
+    val missionStatus: StateFlow<String?> = _missionStatus.asStateFlow()
 
     private val _apiKey = MutableStateFlow(repo.getApiKey())
     val apiKey: StateFlow<String> = _apiKey.asStateFlow()
@@ -91,5 +102,37 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
 
     fun dismissError() {
         _error.value = null
+    }
+
+    fun loadAgents() {
+        viewModelScope.launch {
+            repo.fetchAgents()
+                .onSuccess { _agents.value = it }
+                .onFailure { _error.value = "Agents: ${it.message}" }
+        }
+    }
+
+    fun loadMissions(agentId: String? = null) {
+        viewModelScope.launch {
+            repo.listMissions(agentId)
+                .onSuccess { _missions.value = it.missions }
+                .onFailure { _error.value = "Missions: ${it.message}" }
+        }
+    }
+
+    fun submitMission(agentId: String, script: String, label: String? = null) {
+        viewModelScope.launch {
+            _missionStatus.value = "Submitting…"
+            repo.createMission(agentId, script, label)
+                .onSuccess {
+                    _missionStatus.value = "Mission ${it.mission_id} queued"
+                    loadMissions(agentId)
+                }
+                .onFailure { _missionStatus.value = "Failed: ${it.message}" }
+        }
+    }
+
+    fun clearMissionStatus() {
+        _missionStatus.value = null
     }
 }

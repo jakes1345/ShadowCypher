@@ -46,6 +46,13 @@ import {
   setOllama as assistantSetOllama,
 } from "./assistant";
 import {
+  createMission,
+  getPendingMissions,
+  reportMissionResult,
+  getMission,
+  listMissions,
+} from "./missions";
+import {
   createTeam,
   listTeams,
   inviteMember,
@@ -493,7 +500,21 @@ export default {
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];
-      if (handler) {
+
+      // ── Parameterized mission routes ────────────────────────────────────────
+      // POST /v1/agents/:agent_id/missions
+      // GET  /v1/agents/:agent_id/missions/pending
+      // POST /v1/missions/:mission_id/result
+      // GET  /v1/missions/:mission_id
+      // GET  /v1/missions
+      const agentMissionCreate = req.method === "POST" && /^\/v1\/agents\/[^/]+\/missions$/.test(path);
+      const agentMissionPending = req.method === "GET"  && /^\/v1\/agents\/[^/]+\/missions\/pending$/.test(path);
+      const missionResult       = req.method === "POST" && /^\/v1\/missions\/[^/]+\/result$/.test(path);
+      const missionGet          = req.method === "GET"  && /^\/v1\/missions\/[^/]+$/.test(path) && path !== "/v1/missions";
+      const missionList         = req.method === "GET"  && path === "/v1/missions";
+
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList;
+      if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
         // Per-IP gate before expensive Supabase lookup (120 req/min across all authed routes)
@@ -510,7 +531,17 @@ export default {
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         if (routeKey === "POST /v1/incidents" && !rateLimit(`inc:${user.id}`, 60, 60_000))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        return handler(req, env, { id: user.id, email: user.email }, cors);
+        if ((agentMissionCreate || agentMissionPending) && !rateLimit(`msn:${user.id}`, 10, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+
+        if (handler) return handler(req, env, { id: user.id, email: user.email }, cors);
+
+        const parts = path.split("/");
+        if (agentMissionCreate)  return createMission(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        if (agentMissionPending) return getPendingMissions(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        if (missionResult)       return reportMissionResult(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        if (missionGet)          return getMission(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        if (missionList)         return listMissions(req, env, { id: user.id, email: user.email }, cors);
       }
 
       return json({ error: "not_found", path }, { status: 404 }, cors);

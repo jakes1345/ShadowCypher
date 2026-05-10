@@ -20,7 +20,7 @@ except ImportError:
     SettingsConfigDict = dict
 
 class AISettings(BaseSettings):
-    model: str = "shadowcypher-ai"
+    model: str = "claude-haiku-4-5-20251001"
     api_base: str = "http://localhost:11434"
     active_provider: str = "ollama"
     temperature: float = 0.3
@@ -28,8 +28,8 @@ class AISettings(BaseSettings):
     n_ctx: int = 4096
     n_gpu_layers: int = 35
     providers: Dict[str, Any] = {}
-    model_file: str = "shadowcypher-ai-q4km.gguf"
-    model_repo: str = "shadow_admin1345/shadowcypher-ai"
+    model_file: str = "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+    model_repo: str = "bartowski/Llama-3.2-3B-Instruct-GGUF"
 
 class ToolPaths(BaseSettings):
     nmap: str = "nmap"

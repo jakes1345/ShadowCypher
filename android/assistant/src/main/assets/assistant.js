@@ -634,11 +634,38 @@ const ShadowAssistant = (() => {
     setState('idle');
   }
 
+  // ── System command intercept (no LLM needed) ──────────────────────────────
+
+  const SYSTEM_INTENTS = [
+    { pattern: /^(?:call|ring|phone)\s+(.+)/i, intent: 'dial', label: (m) => `Calling ${m[1]}…` },
+    { pattern: /^(?:text|message|sms)\s+(.+?)\s+(?:saying?\s+)?(.+)/i, intent: 'sms', label: (m) => `Sending message to ${m[1]}…` },
+    { pattern: /^(?:set\s+)?(?:an?\s+)?alarm\s+(?:for|at)?\s*(.+)/i, intent: 'alarm', label: (m) => `Setting alarm for ${m[1]}.` },
+    { pattern: /^(?:set\s+)?(?:a\s+)?timer\s+(?:for)?\s*(.+)/i, intent: 'timer', label: (m) => `Timer started for ${m[1]}.` },
+    { pattern: /^(?:open|launch|start)\s+(.+)/i, intent: 'open_app', label: (m) => `Opening ${m[1]}…` },
+    { pattern: /^(?:navigate|directions?|take me|go)\s+to\s+(.+)/i, intent: 'maps', label: (m) => `Navigating to ${m[1]}…` },
+  ];
+
+  function trySystemIntent(text) {
+    for (const si of SYSTEM_INTENTS) {
+      const m = text.match(si.pattern);
+      if (m) return { intent: si.intent, match: m, label: si.label(m) };
+    }
+    return null;
+  }
+
   // ── AI query ──────────────────────────────────────────────────────────────
 
   async function queryAI(userText) {
+    // Intercept phone OS actions before burning API quota
+    const sys = trySystemIntent(userText);
+    if (sys && plugin) {
+      try {
+        await plugin.launchIntent({ intent: sys.intent, args: Array.from(sys.match).slice(1) });
+        return sys.label;
+      } catch (_) { /* native intent not supported; fall through to AI */ }
+    }
+
     conversationHistory.push({ role: 'user', content: userText });
-    const messages = conversationHistory.slice(-8);
 
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
@@ -646,17 +673,12 @@ const ShadowAssistant = (() => {
     const resp = await fetch(`${API_BASE}/v1/assistant/query`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        messages,
-        model: 'shadowcypher-ai',
-        system: buildSystemPrompt(),
-        max_tokens: 220,
-      }),
+      body: JSON.stringify({ question: userText }),
     });
 
     if (!resp.ok) throw new Error(`API ${resp.status}`);
-    const body = await resp.json();
-    const reply = body.content || body.choices?.[0]?.message?.content || 'No response.';
+    const data = await resp.json();
+    const reply = data.answer || 'No response.';
     conversationHistory.push({ role: 'assistant', content: reply });
     return reply;
   }

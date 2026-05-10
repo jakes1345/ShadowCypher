@@ -7,10 +7,42 @@ any destructive action taken on a target.
 """
 
 import uuid
+import threading
 from typing import List, Dict, Any
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
 from shadowcypher.ai.orchestrator import orchestrator
+
+
+class GhostMission:
+    """Base class for AI-driven multi-phase security missions."""
+
+    def __init__(self, target: str):
+        self.target = target
+        self.mid = str(uuid.uuid4())[:8]
+        self.findings: List[Dict[str, Any]] = []
+
+    def report(self, phase: str, message: str, progress: float = 0.0):
+        payload = {"mid": self.mid, "phase": phase, "message": message, "progress": progress}
+        bus.publish("mission", payload)
+        logger.info("mission", f"[{self.mid}] {phase}: {message}")
+
+    def _run_phase(self, phase: str, prompt: str, progress: float, status_msg: str) -> str:
+        self.report(phase, status_msg, progress)
+        try:
+            result = orchestrator.run(prompt)
+            self.findings.append({"phase": phase, "result": result})
+            return result
+        except Exception as e:
+            err = f"{phase}_ERROR: {e}"
+            self.findings.append({"phase": phase, "result": err})
+            return err
+
+    def _emergency_sever(self):
+        self.report("ABORT", "Mission severed — unrecoverable error.", 1.0)
+
+    def execute(self):
+        raise NotImplementedError
 
 
 class SovereignGhostMission(GhostMission):

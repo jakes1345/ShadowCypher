@@ -206,10 +206,11 @@ export async function setOllama(req: Request, env: Env, user: AuthedUser, cors: 
 }
 
 export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors: HeadersInit): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as { question?: string };
+  const body = (await req.json().catch(() => ({}))) as { question?: string; tier?: string };
   const question = (body.question || "").trim();
   if (!question) return json({ error: "question_required" }, { status: 400 }, cors);
   if (question.length > 800) return json({ error: "question_too_long" }, { status: 400 }, cors);
+  const requestedTier = (body.tier || "fast").toLowerCase(); // "fast" = haiku, "deep" = sonnet
 
   const profile = await getProfile(env, user.id);
   if (!profile) return json({ error: "profile_not_found" }, { status: 404 }, cors);
@@ -262,9 +263,16 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
       if (!env.ANTHROPIC_API_KEY) {
         return json({ error: "platform_ai_not_configured", hint: "Configure your own Anthropic key (BYOK) or Ollama URL in the dashboard." }, { status: 503 }, cors);
       }
-      ({ answer, modelLabel } = await queryAnthropic(env.ANTHROPIC_API_KEY, env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001", userMessage));
+      // Sonnet tier: operator plan only, costs 2 quota units
+      let model = env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
+      let quotaCost = 1;
+      if (requestedTier === "deep" && plan === "operator") {
+        model = "claude-sonnet-4-6-20251001";
+        quotaCost = 2;
+      }
+      ({ answer, modelLabel } = await queryAnthropic(env.ANTHROPIC_API_KEY, model, userMessage));
       // Only platform provider counts against quota
-      await incrementUsage(env, user.id, 1);
+      await incrementUsage(env, user.id, quotaCost);
     }
 
     return json({

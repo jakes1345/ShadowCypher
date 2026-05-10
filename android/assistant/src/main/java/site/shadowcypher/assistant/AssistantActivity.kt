@@ -4,7 +4,9 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.AlarmClock
 import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -16,8 +18,10 @@ import android.webkit.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 class AssistantActivity : AppCompatActivity() {
 
@@ -79,8 +83,9 @@ class AssistantActivity : AppCompatActivity() {
     stopSpeaking:        function() { ShadowBridge.stopSpeaking(); return Promise.resolve(); },
     openAssistSettings:  function() { ShadowBridge.openAssistSettings(); },
     finishActivity:      function() { ShadowBridge.finishActivity(); return Promise.resolve(); },
-    getApiKey:           function() { return Promise.resolve(JSON.parse(ShadowBridge.getApiKey())); },
-    setApiKey:           function(opts) { ShadowBridge.setApiKey(opts.key || ''); return Promise.resolve(); },
+    getApiKey:    function() { return Promise.resolve(JSON.parse(ShadowBridge.getApiKey())); },
+    setApiKey:    function(opts) { ShadowBridge.setApiKey(opts.key || ''); return Promise.resolve(); },
+    launchIntent: function(opts) { return Promise.resolve(JSON.parse(ShadowBridge.launchIntent(JSON.stringify(opts)))); },
     speak: function(opts) {
       ShadowBridge.speak(opts.text || '', opts.rate || 1.0, opts.pitch || 1.0);
       return new Promise(function(resolve) {
@@ -188,6 +193,116 @@ class AssistantActivity : AppCompatActivity() {
         fun setApiKey(key: String) {
             getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit().putString(KEY_API, key).apply()
+        }
+
+        @JavascriptInterface
+        fun launchIntent(jsonStr: String): String {
+            return try {
+                val obj = JSONObject(jsonStr)
+                val intent_type = obj.optString("intent", "")
+                val args = obj.optJSONArray("args") ?: JSONArray()
+
+                val launched = when (intent_type) {
+                    "dial" -> {
+                        val name = args.optString(0, "")
+                        val i = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$name"))
+                        startActivity(i)
+                        true
+                    }
+                    "sms" -> {
+                        val contact = args.optString(0, "")
+                        val msg = args.optString(1, "")
+                        val i = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$contact")).apply {
+                            putExtra("sms_body", msg)
+                        }
+                        startActivity(i)
+                        true
+                    }
+                    "alarm" -> {
+                        val timeStr = args.optString(0, "")
+                        val hourMin = parseTimeStr(timeStr)
+                        val i = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+                            if (hourMin != null) {
+                                putExtra(AlarmClock.EXTRA_HOUR, hourMin.first)
+                                putExtra(AlarmClock.EXTRA_MINUTES, hourMin.second)
+                            }
+                            putExtra(AlarmClock.EXTRA_MESSAGE, "Shadow AI alarm")
+                            putExtra(AlarmClock.EXTRA_SKIP_UI, hourMin != null)
+                        }
+                        startActivity(i)
+                        true
+                    }
+                    "timer" -> {
+                        val durStr = args.optString(0, "")
+                        val seconds = parseDurationSeconds(durStr)
+                        val i = Intent(AlarmClock.ACTION_SET_TIMER).apply {
+                            if (seconds > 0) {
+                                putExtra(AlarmClock.EXTRA_LENGTH, seconds)
+                                putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                            }
+                        }
+                        startActivity(i)
+                        true
+                    }
+                    "maps" -> {
+                        val dest = args.optString(0, "")
+                        val i = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(dest)}"))
+                        startActivity(i)
+                        true
+                    }
+                    "open_app" -> {
+                        val appName = args.optString(0, "").lowercase()
+                        val pm = packageManager
+                        val knownApps = mapOf(
+                            "chrome" to "com.android.chrome",
+                            "settings" to "com.android.settings",
+                            "camera" to "com.android.camera2",
+                            "photos" to "com.google.android.apps.photos",
+                            "youtube" to "com.google.android.youtube",
+                            "spotify" to "com.spotify.music",
+                        )
+                        val pkg = knownApps.entries.firstOrNull { appName.contains(it.key) }?.value
+                        if (pkg != null) {
+                            pm.getLaunchIntentForPackage(pkg)?.let { startActivity(it); true } ?: false
+                        } else false
+                    }
+                    else -> false
+                }
+                "{\"ok\":$launched}"
+            } catch (e: Exception) {
+                "{\"ok\":false,\"error\":\"${e.message?.replace("\"","'")}\"}"
+            }
+        }
+
+        private fun parseTimeStr(s: String): Pair<Int, Int>? {
+            val m12 = Regex("""(\d{1,2})(?::(\d{2}))?\s*(am|pm)""", RegexOption.IGNORE_CASE).find(s)
+            if (m12 != null) {
+                var h = m12.groupValues[1].toIntOrNull() ?: return null
+                val min = m12.groupValues[2].toIntOrNull() ?: 0
+                val ampm = m12.groupValues[3].lowercase()
+                if (ampm == "pm" && h < 12) h += 12
+                if (ampm == "am" && h == 12) h = 0
+                return Pair(h, min)
+            }
+            val m24 = Regex("""(\d{1,2}):(\d{2})""").find(s)
+            if (m24 != null) {
+                return Pair(m24.groupValues[1].toInt(), m24.groupValues[2].toInt())
+            }
+            return null
+        }
+
+        private fun parseDurationSeconds(s: String): Int {
+            var total = 0
+            Regex("""(\d+)\s*(hour|hr|h|minute|min|m|second|sec|s)s?""", RegexOption.IGNORE_CASE)
+                .findAll(s).forEach { mr ->
+                    val n = mr.groupValues[1].toIntOrNull() ?: 0
+                    total += when (mr.groupValues[2].lowercase().first()) {
+                        'h' -> n * 3600
+                        'm' -> n * 60
+                        else -> n
+                    }
+                }
+            return total
         }
     }
 

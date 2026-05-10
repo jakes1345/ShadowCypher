@@ -69,7 +69,7 @@
                     <a onclick="navTo('download',document.getElementById('nav-download'))" class="btn-primary" style="background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);">Download Apps</a>
                 </div>
                 <div class="swarm-feed" style="margin-top:40px;width:100%;">
-                    <div class="mono" style="font-size:0.7rem;color:var(--accent-primary);margin-bottom:10px;opacity:0.6;">// LIVE_TELEMETRY</div>
+                    <div class="mono" style="font-size:0.7rem;color:var(--accent-primary);margin-bottom:10px;opacity:0.6;">// DEMO: install the agent to see your real network events here</div>
                     <div id="swarm-log" style="height:100px;overflow:hidden;border-left:2px solid var(--accent-primary);padding-left:20px;font-family:var(--font-main);font-size:0.8rem;line-height:2;"></div>
                 </div>
             </div>
@@ -924,37 +924,51 @@
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:60px;">
 
                 <!-- ShadowCypher Guardian -->
-                <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.25);border-radius:10px;padding:32px;">
-                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:16px;">ANDROID APP</div>
-                    <h3 style="font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:8px;">ShadowCypher</h3>
-                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;margin-bottom:24px;">Network scanner, device inventory, CVE matching, incident alerts, and the full Guardian dashboard. Pair it with the agent daemon for continuous LAN monitoring.</p>
-                    <div style="font-size:0.75rem;color:#555;font-family:var(--font-mono);margin-bottom:20px;">v1.1 · 4.4MB · Android 7.0+</div>
+                <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.25);border-radius:10px;padding:32px;position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:0;right:0;background:rgba(180,74,255,0.15);font-family:var(--font-mono);font-size:0.5rem;color:var(--accent-primary);letter-spacing:2px;padding:4px 10px;border-radius:0 10px 0 6px;">NEW v2.1</div>
+                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:16px;">ANDROID · NATIVE COMPOSE</div>
+                    <h3 style="font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:8px;">ShadowCypher Guardian</h3>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;margin-bottom:16px;">Native Jetpack Compose UI. Network scanner, device inventory, CVE matching, incident alerts, background sync. v2.1 adds remote ShadowScript mission execution — send scripts from your phone, run them on your desktop.</p>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
+                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:rgb(34,197,94);border-radius:3px;">Native Compose</span>
+                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.2);color:var(--accent-primary);border-radius:3px;">Remote missions</span>
+                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);color:rgb(59,130,246);border-radius:3px;">Push alerts</span>
+                    </div>
+                    <div style="font-size:0.75rem;color:#555;font-family:var(--font-mono);margin-bottom:20px;">v2.1 · 12MB · Android 7.0+</div>
                     <div style="display:flex;flex-direction:column;gap:10px;">
-                        <a href="https://github.com/jakes1345/ShadowCypher/releases/download/v1.1/shadowcypher-v1.1.apk"
-                           style="display:block;padding:14px 20px;background:var(--accent-primary);color:#000;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;letter-spacing:2px;text-decoration:none;border-radius:4px;text-align:center;">
+                        <a href="/releases/ShadowCypher-Guardian-v2.1.apk"
+                           download
+                           style="display:block;padding:14px 20px;background:var(--accent-primary);color:#000;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;letter-spacing:2px;text-decoration:none;border-radius:6px;text-align:center;">
                             ↓ DOWNLOAD APK
                         </a>
-                        <a href="https://github.com/jakes1345/ShadowCypher/releases/tag/v1.1"
-                           style="display:block;padding:10px 20px;background:transparent;border:1px solid #333;color:#888;font-family:var(--font-mono);font-size:0.7rem;text-decoration:none;border-radius:4px;text-align:center;">
-                            View release notes →
+                        <a href="https://github.com/jakes1345/ShadowCypher/releases/tag/v2.1"
+                           style="display:block;padding:10px 20px;background:transparent;border:1px solid #333;color:#888;font-family:var(--font-mono);font-size:0.7rem;text-decoration:none;border-radius:6px;text-align:center;">
+                            View on GitHub →
                         </a>
                     </div>
                 </div>
 
                 <!-- Shadow AI -->
-                <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.25);border-radius:10px;padding:32px;">
-                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:16px;">ANDROID APP</div>
+                <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.25);border-radius:10px;padding:32px;position:relative;overflow:hidden;">
+                    <div style="position:absolute;top:0;right:0;background:rgba(180,74,255,0.15);font-family:var(--font-mono);font-size:0.5rem;color:var(--accent-primary);letter-spacing:2px;padding:4px 10px;border-radius:0 10px 0 6px;">UPDATED v1.2</div>
+                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:16px;">ANDROID · VOICE ASSISTANT</div>
                     <h3 style="font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:8px;">Shadow AI</h3>
-                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;margin-bottom:24px;">Replaces Bixby, Google Assistant, and Siri. Set as your default Assist app — long-press Home to invoke the overlay. Queries your ShadowCypher AI.</p>
-                    <div style="font-size:0.75rem;color:#555;font-family:var(--font-mono);margin-bottom:20px;">v1.1 · 769KB · Android 7.0+</div>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;margin-bottom:16px;">Replaces Bixby, Google Assistant, and Siri. Auth'd with your API key, pulls live Guardian context before every response. v1.2 adds phone OS command interception — calls, texts, alarms, timers dispatched natively without hitting the AI.</p>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
+                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:rgb(239,68,68);border-radius:3px;">Guardian-aware</span>
+                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.2);color:var(--accent-primary);border-radius:3px;">OS commands</span>
+                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);color:rgb(249,115,22);border-radius:3px;">779KB</span>
+                    </div>
+                    <div style="font-size:0.75rem;color:#555;font-family:var(--font-mono);margin-bottom:20px;">v1.2 · 779KB · Android 7.0+</div>
                     <div style="display:flex;flex-direction:column;gap:10px;">
-                        <a href="https://github.com/jakes1345/ShadowCypher/releases/download/v1.1/shadow-ai-v1.1.apk"
-                           style="display:block;padding:14px 20px;background:var(--accent-primary);color:#000;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;letter-spacing:2px;text-decoration:none;border-radius:4px;text-align:center;">
+                        <a href="/releases/ShadowCypher-ShadowAI-v1.2.apk"
+                           download
+                           style="display:block;padding:14px 20px;background:var(--accent-primary);color:#000;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;letter-spacing:2px;text-decoration:none;border-radius:6px;text-align:center;">
                             ↓ DOWNLOAD APK
                         </a>
-                        <a href="https://github.com/jakes1345/ShadowCypher/releases/tag/v1.1"
-                           style="display:block;padding:10px 20px;background:transparent;border:1px solid #333;color:#888;font-family:var(--font-mono);font-size:0.7rem;text-decoration:none;border-radius:4px;text-align:center;">
-                            View release notes →
+                        <a href="https://github.com/jakes1345/ShadowCypher/releases/tag/v1.2"
+                           style="display:block;padding:10px 20px;background:transparent;border:1px solid #333;color:#888;font-family:var(--font-mono);font-size:0.7rem;text-decoration:none;border-radius:6px;text-align:center;">
+                            View on GitHub →
                         </a>
                     </div>
                 </div>

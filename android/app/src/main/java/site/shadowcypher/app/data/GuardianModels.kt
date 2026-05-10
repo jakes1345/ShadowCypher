@@ -48,3 +48,18 @@ data class GuardianSummary(
 )
 
 data class ScanResponse(val success: Boolean?, val message: String?)
+
+data class Mission(
+    val id: String,
+    val agent_id: String,
+    val status: String,
+    val created_at: String,
+    val started_at: String?,
+    val completed_at: String?,
+    val result_output: String?,
+    val exit_code: Int?
+)
+
+data class CreateMissionRequest(val script: String, val label: String? = null)
+data class CreateMissionResponse(val mission_id: String, val status: String)
+data class MissionListResponse(val missions: List<Mission>)

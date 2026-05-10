@@ -302,7 +302,7 @@ def cmd_router():
 
     # DNS check
     print(f"\n  {C['C']}DNS Configuration:{C['N']}")
-    out, _ = run(["nslookup", "example.com", gateway])
+    out, _ = run(["nslookup", "cloudflare.com", gateway])
     if "NXDOMAIN" not in out and out:
         print(f"  {C['G']}✓{C['N']} Router resolves DNS")
     else:
