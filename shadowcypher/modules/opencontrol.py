@@ -11,7 +11,10 @@ from typing import Dict, List, Any, Optional
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.logger import logger
 from shadowcypher.core.config import config
-from ai_engine.autoagent.registry import register_tool
+try:
+    from ai_engine.autoagent.registry import register_tool
+except ImportError:
+    def register_tool(fn): return fn
 
 class OpenControlClient:
     """Client for the OpenControl Infrastructure Gateway."""

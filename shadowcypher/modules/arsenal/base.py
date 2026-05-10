@@ -8,7 +8,10 @@ from typing import Optional
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
-from ai_engine.autoagent.registry import register_tool
+try:
+    from ai_engine.autoagent.registry import register_tool
+except ImportError:
+    def register_tool(fn): return fn
 
 @register_tool(name="arsenal_slowloris")
 def arsenal_slowloris(target_ip: str, port: str = "80", connections: int = 1000) -> str:

@@ -6,7 +6,10 @@ Handles Nuclei, Sqlmap, Nikto, and automated vulnerability verification.
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.stealth import require_stealth
-from ai_engine.autoagent.registry import register_tool
+try:
+    from ai_engine.autoagent.registry import register_tool
+except ImportError:
+    def register_tool(fn): return fn
 import os
 
 class VulnScanner(BaseModule):

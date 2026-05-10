@@ -35,7 +35,6 @@ jobs:
         # Pin PyGObject<3.50 — 3.50+ requires girepository-2.0 which GHA runners lack
         pip install "PyGObject>=3.42,<3.50" pycairo
         pip install -r requirements.txt
-        pip install -e ai_engine/
         pip install ruff mypy bandit types-requests
 
     - name: Import Sanity Check

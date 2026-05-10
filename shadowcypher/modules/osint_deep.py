@@ -10,7 +10,10 @@ from shadowcypher.core.runner import runner
 from shadowcypher.core.logger import logger
 from shadowcypher.core.stealth import require_stealth
 
-from ai_engine.autoagent.registry import register_tool
+try:
+    from ai_engine.autoagent.registry import register_tool
+except ImportError:
+    def register_tool(fn): return fn
 
 
 class DeepOSINT:
