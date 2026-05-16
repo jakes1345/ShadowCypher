@@ -29,6 +29,13 @@
             </intent-filter>
 
         </activity>
+
+        <!-- Wake word foreground service -->
+        <service
+            android:name=".WakeWordService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />
