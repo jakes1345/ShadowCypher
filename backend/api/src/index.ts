@@ -36,6 +36,7 @@ import {
   listIncidents,
   ackIncident,
   listCveAlerts,
+  guardianSummary,
 } from "./guardian";
 import { createCheckout, createPortal, handleWebhook } from "./billing";
 import { getPreferences, updatePreferences, sendTest } from "./notifications";
@@ -70,6 +71,7 @@ import { getThreats, getThreatStats } from "./threats";
 import { runCveMatchingCron } from "./cve_matcher";
 import { getAgentVersion } from "./agent_version";
 import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup } from "./shadow_apis";
+import { getOtaManifest, updateOtaManifest } from "./ota";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -100,6 +102,9 @@ export interface Env {
   // Agent auto-update
   AGENT_VERSION: string;
   AGENT_SHA256: string;
+  // OTA manifest
+  SHADOW_OTA: KVNamespace;
+  SHADOW_ADMIN_KEY: string;
 }
 
 interface SupabaseUser {
@@ -428,6 +433,8 @@ export default {
                 "GET /v1/shadow/ip?addr=<ip>",
                 "GET /v1/shadow/breach?email=<email>",
                 "GET /v1/shadow/dns?q=<domain>&type=A",
+                "GET /v1/shadow/ota (public) — OTA version manifest",
+                "POST /v1/shadow/ota (admin key) — publish new release",
               ],
             },
           },
@@ -461,6 +468,10 @@ export default {
         return pollDeviceAuth(req, env, undefined, cors);
       }
 
+      // OTA manifest — GET is public, POST is admin-key gated
+      if (path === "/v1/shadow/ota" && req.method === "GET") return getOtaManifest(env);
+      if (path === "/v1/shadow/ota" && req.method === "POST") return updateOtaManifest(req, env);
+
       if (path === "/v1/me" && req.method === "GET") return handleMe(req, env, cors);
       if (path === "/v1/keys/rotate" && req.method === "POST") return handleRotate(req, env, cors);
       if (path === "/v1/keys/revoke" && req.method === "POST") return handleRevoke(req, env, cors);
@@ -477,6 +488,7 @@ export default {
         "GET /v1/incidents":          listIncidents,
         "POST /v1/incidents/ack":     ackIncident,
         "GET /v1/cve-alerts":         listCveAlerts,
+        "GET /v1/guardian/summary":   guardianSummary,
         "POST /v1/billing/checkout":  createCheckout,
         "POST /v1/billing/portal":    createPortal,
         "GET /v1/notifications/preferences":  getPreferences,

@@ -326,3 +326,46 @@ export async function ackIncident(req: Request, env: Env, user: AuthedUser, cors
   if (!updated.length) return json({ error: "not_found" }, { status: 404 }, cors);
   return json({ ok: true }, {}, cors);
 }
+
+// ─── Guardian summary (used by Shadow voice assistant) ──────────────────────
+
+export async function guardianSummary(_req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
+  const now = Date.now();
+
+  const [rawAgents, devices, incidents, cveAlerts, recentScanRows] = await Promise.all([
+    dbSelect<{ id: string; hostname: string; os: string | null; agent_version: string | null; last_seen_at: string | null }>(
+      env, "agents",
+      { select: "id,hostname,os,agent_version,last_seen_at", filters: { user_id: `eq.${user.id}` }, limit: 50 }
+    ),
+    dbSelect<{ id: string; mac: string; ip: string | null; hostname: string | null; vendor: string | null; device_type: string | null; last_seen_at: string | null }>(
+      env, "devices",
+      { select: "id,mac,ip,hostname,vendor,device_type,last_seen_at", filters: { user_id: `eq.${user.id}` }, order: "last_seen_at.desc", limit: 100 }
+    ),
+    dbSelect<{ id: string; severity: string; category: string; title: string; acknowledged: boolean; created_at: string }>(
+      env, "incidents",
+      { select: "id,severity,category,title,acknowledged,created_at", filters: { user_id: `eq.${user.id}`, acknowledged: "eq.false" }, order: "created_at.desc", limit: 20 }
+    ),
+    dbSelect<{ id: string; cve_id: string; fired_at: string }>(
+      env, "cve_alerts_sent",
+      { select: "id,cve_id,fired_at", filters: { user_id: `eq.${user.id}` }, order: "fired_at.desc", limit: 10 }
+    ),
+    dbSelect<{ started_at: string }>(
+      env, "scans",
+      { select: "started_at", filters: { user_id: `eq.${user.id}` }, order: "started_at.desc", limit: 1 }
+    ),
+  ]);
+
+  const agents = rawAgents.map((a) => ({
+    ...a,
+    online: a.last_seen_at ? now - new Date(a.last_seen_at).getTime() < 90_000 : false,
+  }));
+
+  return json({
+    agents,
+    devices,
+    incidents,
+    cve_alerts: cveAlerts,
+    last_scan_at: recentScanRows[0]?.started_at ?? null,
+    summary_at: new Date().toISOString(),
+  }, {}, cors);
+}

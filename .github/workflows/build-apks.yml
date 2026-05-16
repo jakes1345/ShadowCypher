@@ -1,0 +1,73 @@
+name: Build Android APKs
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - uses: gradle/actions/setup-gradle@v3
+
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > android/shadowcypher.keystore
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew :assistant:assembleRelease --no-daemon -q
+        env:
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          KEY_PASS: ${{ secrets.KEY_PASS }}
+          GRADLE_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=512m"
+
+      - name: Rename APK
+        run: |
+          VERSION=$(grep 'versionName' android/assistant/build.gradle | grep -oP '"[^"]+"' | tr -d '"')
+          SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          SRC=android/assistant/build/outputs/apk/release/assistant-release.apk
+          DEST=android/assistant/build/outputs/apk/release/shadow-${VERSION}-${SHA}.apk
+          mv "$SRC" "$DEST"
+          echo "APK_PATH=$DEST" >> $GITHUB_ENV
+          echo "APK_NAME=shadow-${VERSION}-${SHA}.apk" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_NAME }}
+          path: ${{ env.APK_PATH }}
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.APK_PATH }}
+          generate_release_notes: true
+          name: Shadow ${{ github.ref_name }}
+          body: |
+            ## Shadow ${{ github.ref_name }}
+
+            **Install**
+            1. Settings → Apps → Special app access → Install unknown apps → enable for your browser
+            2. Download the APK below and tap Install
+
+            Requires Android 8.0+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -16,5 +16,10 @@ RESEND_FROM_EMAIL = "ShadowCypher <noreply@shadowcypher.site>"
 AGENT_VERSION = "0.3.0"
 AGENT_SHA256 = "6590fee3f95e24a9a14a968feb598327eeb2daece83654fffe5e7cf974e13d4f"
 
+[[kv_namespaces]]
+binding = "SHADOW_OTA"
+id = "d16349c7f8194a6f9247a20a962f60d1"
+preview_id = "806c715c0dbd4e8aadd072a75e87bbc6"
+
 [triggers]
 crons = ["0 * * * *"]
