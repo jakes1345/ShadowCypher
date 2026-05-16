@@ -32,12 +32,12 @@ import { getEffectivePlan, planRequired, type ProfileForPlan } from "./plans";
 interface AuthedUser { id: string; email: string; }
 
 const QUOTA_BY_PLAN: Record<string, number> = {
-  community: 0,
-  guardian_pro: 50,
-  operator: 500,
+  community: 25,
+  guardian_pro: 500,
+  operator: 5000,
 };
 
-const SYSTEM_PROMPT = `You are the ShadowCypher security assistant — a calm, terse, technically precise advisor that helps the user understand their network, devices, and security posture. You answer based ONLY on the user's data summary provided in the user message. If the data doesn't answer the question, say so. Never invent device names, IPs, or events. Keep responses under 200 words unless the user asks for more depth. Use plain language; avoid hype words like "tactical", "ghost", "sovereign". Format as 2-4 short paragraphs or a brief bulleted list. End with one concrete next step.`;
+const SYSTEM_PROMPT = `You are Shadow, the ShadowCypher voice assistant — a calm, precise security advisor. Reply in 1-3 sentences optimized for speech. No markdown, no bullet points, no headers. If the user's network data is provided, reference it directly. Never invent device names, IPs, or incidents. If a question is outside your data, say so plainly and suggest one next step.`;
 
 interface ProfileFull extends ProfileForPlan {
   user_id: string;

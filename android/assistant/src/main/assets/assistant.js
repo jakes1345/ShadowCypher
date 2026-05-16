@@ -13,8 +13,6 @@ const ShadowAssistant = (() => {
   let apiKey = null;
   let guardianCtx = null; // { me, summary }
   let _lastTranscript = '';
-  let localModelReady = false;
-  let localModelExists = false;
 
   const API_BASE = 'https://api.shadowcypher.site';
 
@@ -121,11 +119,9 @@ const ShadowAssistant = (() => {
       checkOtaUpdates().catch(() => {});
 
       const status = await plugin.checkAssistStatus();
-      localModelReady = status.gemmaReady || false;
-      localModelExists = status.gemmaExists || false;
       if (status.wasAssistLaunch) handleAssistInvoke({ source: 'launch' });
 
-      console.log('[ShadowAssistant] Ready. key:', apiKey ? 'set' : 'missing', '| local LLM:', localModelReady ? 'ready' : (localModelExists ? 'loading' : 'not downloaded'));
+      console.log('[ShadowAssistant] Ready. key:', apiKey ? 'set' : 'missing');
     } catch (e) {
       console.warn('[ShadowAssistant] Init failed:', e);
     }
@@ -414,13 +410,6 @@ const ShadowAssistant = (() => {
           <div class="sa-field-hint">Find your key under Account → API Key on shadowcypher.site</div>
           <button class="sa-btn-primary" onclick="ShadowAssistant._saveApiKey()">Save &amp; Connect</button>
           ${apiKey ? '<button class="sa-btn-danger" onclick="ShadowAssistant._clearApiKey()">Remove Key</button>' : ''}
-
-          <div class="sa-field-label" style="margin-top:20px">Local AI Model (Gemma 3 1B · ~600 MB)</div>
-          <div class="sa-field-hint">Runs entirely on-device. No internet or API key needed for AI responses.</div>
-          <button class="sa-btn-primary" id="sa-download-btn" onclick="ShadowAssistant.downloadLocalModel()" ${localModelExists ? 'disabled' : ''}>
-            ${localModelReady ? 'Model Ready ✓' : localModelExists ? 'Loading model…' : 'Download Local Model'}
-          </button>
-          <div class="sa-key-status" id="sa-download-progress" style="color:#94a3b8">${localModelReady ? 'On-device AI is active' : ''}</div>
 
           <button class="sa-btn-ghost" onclick="ShadowAssistant._closeSettings()">← Back</button>
           <div class="sa-key-status" id="sa-key-status"></div>
@@ -972,31 +961,13 @@ const ShadowAssistant = (() => {
     }
   }
 
-  // ── AI query — local Gemma first, cloud fallback ──────────────────────────
+  // ── AI query — cloud assistant (Claude Haiku) ─────────────────────────────
 
   async function queryAI(userText) {
     addMemory('user', userText);
 
-    // Try on-device Gemma first (no network, no cost)
-    if (localModelReady && plugin) {
-      try {
-        const systemPrompt = buildSystemPrompt();
-        const reply = await plugin.generateLocal(systemPrompt, userText);
-        if (reply && reply.trim().length > 0) {
-          conversationHistory.push({ role: 'assistant', content: reply });
-          return reply;
-        }
-      } catch (e) {
-        console.warn('[Shadow] Local inference failed, falling back to cloud:', e.message);
-      }
-    }
-
-    // Cloud fallback — only if API key is set (requires Guardian Pro+)
     if (!apiKey) {
-      if (!localModelExists) {
-        return 'No API key set and no local model downloaded. Go to settings to configure either one.';
-      }
-      return 'Local model is still loading. Try again in a moment.';
+      return 'Set your ShadowCypher API key in settings to enable AI responses.';
     }
 
     try {
@@ -1006,36 +977,16 @@ const ShadowAssistant = (() => {
         headers,
         body: JSON.stringify({ question: userText }),
       });
-      if (!resp.ok) throw new Error(`API ${resp.status}`);
+      if (!resp.ok) {
+        if (resp.status === 402) return 'Monthly AI query limit reached. Upgrade to Operator for 5000 queries/month.';
+        throw new Error(`API ${resp.status}`);
+      }
       const data = await resp.json();
       const reply = data.answer || 'No response.';
       conversationHistory.push({ role: 'assistant', content: reply });
       return reply;
     } catch (e) {
       throw new Error(`Cloud query failed: ${e.message}`);
-    }
-  }
-
-  // ── Local model download (called from settings UI) ─────────────────────────
-
-  async function downloadLocalModel() {
-    if (!plugin) return;
-    const btn = document.getElementById('sa-download-btn');
-    const progress = document.getElementById('sa-download-progress');
-    if (btn) btn.disabled = true;
-    if (progress) progress.textContent = 'Starting download…';
-
-    try {
-      await plugin.downloadLocalModel((pct) => {
-        if (progress) progress.textContent = `Downloading… ${pct}%`;
-      });
-      localModelReady = true;
-      localModelExists = true;
-      if (progress) progress.textContent = 'Local model ready ✓';
-      if (btn) { btn.textContent = 'Model installed'; btn.disabled = true; }
-    } catch (e) {
-      if (progress) progress.textContent = `Download failed: ${e}`;
-      if (btn) { btn.disabled = false; }
     }
   }
 
@@ -1090,7 +1041,7 @@ const ShadowAssistant = (() => {
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  return { init, show, dismiss, startListening, openSettings, _saveApiKey, _clearApiKey, _closeSettings, _toggleKeyVisibility, _runChip, downloadLocalModel };
+  return { init, show, dismiss, startListening, openSettings, _saveApiKey, _clearApiKey, _closeSettings, _toggleKeyVisibility, _runChip };
 })();
 
 if (document.readyState === 'loading') {

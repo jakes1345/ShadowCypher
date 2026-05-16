@@ -15,8 +15,8 @@ android {
         applicationId "site.shadowcypher.assistant"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.2"
+        versionCode 4
+        versionName "1.3"
     }
 
     signingConfigs {
@@ -42,10 +42,6 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 
-    // Don't strip native libs used by ONNX Runtime
-    packagingOptions {
-        jniLibs { keepDebugSymbols += ["**/*.so"] }
-    }
 }
 
 dependencies {
@@ -61,7 +57,4 @@ dependencies {
 
     // ONNX Runtime — wake word inference
     implementation "com.microsoft.onnxruntime:onnxruntime-android:1.19.2"
-
-    // MediaPipe LLM Inference — on-device Gemma 3 1B
-    implementation "com.google.mediapipe:tasks-genai:0.10.22"
 }

@@ -21,7 +21,6 @@ import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 class AssistantActivity : AppCompatActivity() {
 
@@ -32,7 +31,6 @@ class AssistantActivity : AppCompatActivity() {
     private var wasAssistLaunch = false
     private val voskSTT by lazy { VoskSTT(this) }
     private var voskReady = false
-    private val gemma by lazy { GemmaInference(this) }
 
     companion object {
         private const val MIC_REQ = 1001
@@ -63,19 +61,10 @@ class AssistantActivity : AppCompatActivity() {
 
         initTTS()
         initSTT()
-        // Load Vosk offline model in background — ready as fallback when no network
         voskSTT.loadModel(
             onReady = { voskReady = true; Log.i(TAG, "Vosk ready") },
             onError = { Log.w(TAG, "Vosk unavailable: ${it.message}") },
         )
-
-        // Load Gemma if the model file is already downloaded
-        if (gemma.modelExists) {
-            gemma.load(
-                onReady = { Log.i(TAG, "Gemma ready") },
-                onError = { Log.w(TAG, "Gemma load failed: ${it.message}") },
-            )
-        }
 
         webView.loadUrl("file:///android_asset/index.html")
     }
@@ -86,8 +75,6 @@ class AssistantActivity : AppCompatActivity() {
         val wasAssist = if (wasAssistLaunch) "true" else "false"
         val ttsOk = if (ttsReady) "true" else "false"
         val sttOk = if (SpeechRecognizer.isRecognitionAvailable(this)) "true" else "false"
-        val gemmaReady = if (gemma.isReady) "true" else "false"
-        val gemmaExists = if (gemma.modelExists) "true" else "false"
         val js = """
 (function() {
   var listeners = {};
@@ -121,32 +108,8 @@ class AssistantActivity : AppCompatActivity() {
       return Promise.resolve({
         wasAssistLaunch: $wasAssist,
         ttsReady: $ttsOk,
-        sttAvailable: $sttOk,
-        gemmaReady: $gemmaReady,
-        gemmaExists: $gemmaExists
+        sttAvailable: $sttOk
       });
-    },
-    isLocalReady: function() {
-      return Promise.resolve(ShadowBridge.isGemmaReady() === 'true');
-    },
-    generateLocal: function(systemPrompt, userText) {
-      return new Promise(function(resolve, reject) {
-        try {
-          var result = ShadowBridge.generateLocal(systemPrompt || '', userText || '');
-          resolve(result);
-        } catch(e) { reject(e); }
-      });
-    },
-    downloadLocalModel: function(onProgress) {
-      window._gemmaProgressCb = onProgress || function(){};
-      ShadowBridge.downloadGemma();
-      return new Promise(function(resolve, reject) {
-        window._gemmaDownloadResolve = resolve;
-        window._gemmaDownloadReject = reject;
-      });
-    },
-    getLocalModelStatus: function() {
-      return Promise.resolve(JSON.parse(ShadowBridge.getGemmaStatus()));
     },
     addListener: function(event, cb) {
       listeners[event] = cb;
@@ -157,7 +120,7 @@ class AssistantActivity : AppCompatActivity() {
     isNativePlatform: function() { return true; },
     Plugins: { ShadowAssistant: plugin }
   };
-  console.log('[shim] Capacitor bridge ready. Gemma ready: $gemmaReady, exists: $gemmaExists');
+  console.log('[shim] Capacitor bridge ready');
 })();
         """.trimIndent()
         webView.evaluateJavascript(js, null)
@@ -350,58 +313,6 @@ class AssistantActivity : AppCompatActivity() {
                 }
             return total
         }
-
-        // ── Gemma on-device LLM ───────────────────────────────────────────────
-
-        @JavascriptInterface
-        fun isGemmaReady(): String = if (gemma.isReady) "true" else "false"
-
-        @JavascriptInterface
-        fun generateLocal(systemPrompt: String, userText: String): String {
-            if (!gemma.isReady) return ""
-            return gemma.generate(systemPrompt, userText)
-        }
-
-        @JavascriptInterface
-        fun getGemmaStatus(): String {
-            return "{\"ready\":${gemma.isReady},\"exists\":${gemma.modelExists},\"progress\":${gemma.downloadProgress}}"
-        }
-
-        @JavascriptInterface
-        fun downloadGemma() {
-            gemma.download(
-                onProgress = { pct ->
-                    webView.post {
-                        webView.evaluateJavascript(
-                            "if(window._gemmaProgressCb)window._gemmaProgressCb($pct)", null)
-                    }
-                },
-                onComplete = {
-                    gemma.load(
-                        onReady = {
-                            webView.post {
-                                webView.evaluateJavascript(
-                                    "if(window._gemmaDownloadResolve)window._gemmaDownloadResolve(true)", null)
-                            }
-                        },
-                        onError = { e ->
-                            webView.post {
-                                val msg = e.message?.replace("'", "\\'") ?: "load_failed"
-                                webView.evaluateJavascript(
-                                    "if(window._gemmaDownloadReject)window._gemmaDownloadReject('$msg')", null)
-                            }
-                        }
-                    )
-                },
-                onError = { e ->
-                    webView.post {
-                        val msg = e.message?.replace("'", "\\'") ?: "download_failed"
-                        webView.evaluateJavascript(
-                            "if(window._gemmaDownloadReject)window._gemmaDownloadReject('$msg')", null)
-                    }
-                }
-            )
-        }
     }
 
     // ── STT setup ────────────────────────────────────────────────────────────
@@ -416,7 +327,7 @@ class AssistantActivity : AppCompatActivity() {
                 override fun onBufferReceived(b: ByteArray?) {}
                 override fun onEndOfSpeech() = fireEvent("speechEnded", emptyMap())
                 override fun onError(code: Int) {
-                    // Error 6 = network error, 7 = network timeout — fall back to Vosk
+                    // Error 6/7 = network — fall back to Vosk offline STT
                     if ((code == 6 || code == 7) && voskReady) {
                         Log.i(TAG, "STT network error ($code) — falling back to Vosk")
                         fireEvent("listeningStarted", emptyMap())
@@ -490,7 +401,6 @@ class AssistantActivity : AppCompatActivity() {
         speechRecognizer?.destroy()
         tts?.shutdown()
         voskSTT.release()
-        gemma.release()
         super.onDestroy()
     }
 }
