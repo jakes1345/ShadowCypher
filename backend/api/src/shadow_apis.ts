@@ -176,7 +176,7 @@ export async function getCve(
 
     const headers: Record<string, string> = { "User-Agent": "ShadowCypher/1.0" };
     // Add NVD API key if configured for higher rate limits (50 req/30s)
-    const nvdKey = (env as Record<string, string>)["NVD_API_KEY"];
+    const nvdKey = env.NVD_API_KEY;
     if (nvdKey) headers["apiKey"] = nvdKey;
 
     const resp = await fetch(nvdUrl, { headers });
@@ -241,7 +241,7 @@ export async function getIpReputation(
   if (!ipv4.test(addr) && !ipv6.test(addr))
     return json({ error: "invalid ip address" }, { status: 400 }, cors);
 
-  const abuseKey = (env as Record<string, string>)["ABUSEIPDB_KEY"];
+  const abuseKey = env.ABUSEIPDB_KEY;
   if (!abuseKey) {
     // Fallback: return basic info from public sources
     return json({
@@ -330,7 +330,7 @@ export async function checkBreach(
   if (!email || !email.includes("@"))
     return json({ error: "valid email required" }, { status: 400 }, cors);
 
-  const hibpKey = (env as Record<string, string>)["HIBP_KEY"];
+  const hibpKey = env.HIBP_KEY;
   if (!hibpKey) {
     return json({ error: "HIBP_KEY not configured" }, { status: 503 }, cors);
   }
@@ -438,6 +438,73 @@ export async function dnsLookup(
     }, {}, cors);
   } catch (e) {
     return json({ error: "upstream_error", detail: String(e) }, { status: 502 }, cors);
+  }
+}
+
+// ── Web Search ───────────────────────────────────────────────────────────────
+
+export async function webSearch(
+  req: Request,
+  env: Env,
+  _user: { id: string; email: string },
+  cors: HeadersInit
+): Promise<Response> {
+  const url = new URL(req.url);
+  const q = (url.searchParams.get("q") ?? "").trim();
+  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "5", 10), 10);
+  if (!q) return json({ error: "q is required" }, { status: 400 }, cors);
+
+  const braveKey = env.BRAVE_SEARCH_KEY;
+
+  if (braveKey) {
+    // Brave Search API (free tier: 2000 req/month)
+    try {
+      const resp = await fetch(
+        `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=${limit}&text_decorations=false&result_filter=web`,
+        { headers: { "Accept": "application/json", "X-Subscription-Token": braveKey, "User-Agent": "ShadowCypher/1.0" } }
+      );
+      if (!resp.ok) return json({ error: "search_failed", status: resp.status }, { status: 502 }, cors);
+      const data = await resp.json() as { web?: { results?: { title: string; url: string; description: string }[] } };
+      const results = (data.web?.results ?? []).slice(0, limit).map(r => ({
+        title: r.title,
+        url: r.url,
+        snippet: r.description,
+      }));
+      return json({ query: q, results }, {}, cors);
+    } catch (e) {
+      return json({ error: "search_error", detail: String(e) }, { status: 502 }, cors);
+    }
+  }
+
+  // Fallback: DuckDuckGo instant answer API (no key, limited to instant answers)
+  try {
+    const resp = await fetch(
+      `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1`,
+      { headers: { "User-Agent": "ShadowCypher/1.0" } }
+    );
+    if (!resp.ok) return json({ error: "search_failed" }, { status: 502 }, cors);
+    const data = await resp.json() as {
+      AbstractText?: string;
+      AbstractURL?: string;
+      AbstractSource?: string;
+      RelatedTopics?: { Text?: string; FirstURL?: string }[];
+    };
+
+    const results: { title: string; url: string; snippet: string }[] = [];
+    if (data.AbstractText) {
+      results.push({ title: data.AbstractSource ?? q, url: data.AbstractURL ?? "", snippet: data.AbstractText });
+    }
+    for (const t of (data.RelatedTopics ?? []).slice(0, limit - results.length)) {
+      if (t.Text && t.FirstURL) results.push({ title: t.Text.split(" - ")[0], url: t.FirstURL, snippet: t.Text });
+    }
+
+    return json({
+      query: q,
+      results,
+      note: results.length === 0 ? "No instant answer found. Set BRAVE_SEARCH_KEY for full web search." : undefined,
+    }, {}, cors);
+  } catch (e) {
+    return json({ error: "search_error", detail: String(e) }, { status: 502 }, cors);
   }
 }
 

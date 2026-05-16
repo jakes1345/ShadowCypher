@@ -74,6 +74,10 @@ const ShadowAssistant = (() => {
       pattern: /\bdns\s+(?:lookup|check|resolve)\s+([a-zA-Z0-9\.\-]+)\b|\b(?:resolve|lookup)\s+([a-zA-Z0-9\.\-]+)\b/i,
       action: 'dns_lookup',
     },
+    {
+      pattern: /\b(?:search|google|look up|find|research).{0,10}(?:online|web|internet|for)\b|\bwhat(?:'s| is) (?:the latest|happening|going on)\b|\blatest news\b|\bwho (?:is|was|are)\b|\bwhen (?:is|was|did)\b/i,
+      action: 'web_search',
+    },
   ];
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
@@ -328,9 +332,32 @@ const ShadowAssistant = (() => {
         } catch (_) { return 'DNS lookup unavailable.'; }
       }
 
+      case 'web_search':
+        return await _doWebSearch(_lastTranscript || '');
+
       default:
         return null;
     }
+  }
+
+  async function _doWebSearch(query) {
+    if (!apiKey) return 'Set your API key in settings to enable web search.';
+    const headers = { Authorization: `Bearer ${apiKey}` };
+    // Strip search trigger words to get the actual query
+    const cleaned = query
+      .replace(/\b(?:search(?:\s+the\s+web|\s+online|\s+for)?|google|look\s+up|find\s+(?:out|info(?:rmation)?\s+about)?|research)\s*/gi, '')
+      .trim() || query;
+    try {
+      const r = await fetch(`${API_BASE}/v1/shadow/search?q=${encodeURIComponent(cleaned)}&limit=4`, { headers });
+      const d = await r.json();
+      if (!r.ok || !d.results?.length) {
+        return `No results found for "${cleaned}".`;
+      }
+      // Feed results as context into AI for a natural spoken summary
+      const ctx = d.results.map((res, i) => `[${i+1}] ${res.title}: ${res.snippet}`).join('\n');
+      const prompt = `Based on these search results, give a 1-3 sentence spoken summary answering: "${cleaned}"\n\n${ctx}`;
+      return await queryAI(prompt);
+    } catch (_) { return 'Web search unavailable.'; }
   }
 
   // ── Overlay UI ────────────────────────────────────────────────────────────
@@ -920,8 +947,18 @@ const ShadowAssistant = (() => {
       return snippet + (text.length > 350 ? '…' : '');
     }
 
+    // Layer 3.5: Web search — auto-triggered for current-events / factual queries not in KB
+    if (apiKey && _looksLikeWebQuery(userText)) {
+      const webResp = await _doWebSearch(userText).catch(() => null);
+      if (webResp && webResp !== 'Web search unavailable.') return webResp;
+    }
+
     // Layer 4: LLM
     return null; // caller falls through to queryAI
+  }
+
+  function _looksLikeWebQuery(text) {
+    return /\b(?:latest|current|today|recent|news|2024|2025|2026|who is|what is|when (?:is|was|did)|how do I|price of|stock|score)\b/i.test(text);
   }
 
   // ── Conversational memory ────────────────────────────────────────────────

@@ -70,7 +70,7 @@ import { getMyReferral, claimReferral } from "./referrals";
 import { getThreats, getThreatStats } from "./threats";
 import { runCveMatchingCron } from "./cve_matcher";
 import { getAgentVersion } from "./agent_version";
-import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup } from "./shadow_apis";
+import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup, webSearch } from "./shadow_apis";
 import { getOtaManifest, updateOtaManifest } from "./ota";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
@@ -105,6 +105,11 @@ export interface Env {
   // OTA manifest
   SHADOW_OTA: KVNamespace;
   SHADOW_ADMIN_KEY: string;
+  // Optional: structured API keys (set via wrangler secret put)
+  NVD_API_KEY?: string;
+  ABUSEIPDB_KEY?: string;
+  HIBP_KEY?: string;
+  BRAVE_SEARCH_KEY?: string;
 }
 
 interface SupabaseUser {
@@ -477,7 +482,7 @@ export default {
       if (path === "/v1/keys/revoke" && req.method === "POST") return handleRevoke(req, env, cors);
 
       // Authed routes — resolve user once, dispatch
-      const authedRoutes: Record<string, (req: Request, env: Env, user: { id: string; email: string }, cors: HeadersInit) => Promise<Response>> = {
+      const authedRoutes: Partial<Record<string, (req: Request, env: Env, user: { id: string; email: string }, cors: HeadersInit) => Promise<Response>>> = {
         "GET /v1/agents":             listAgents,
         "POST /v1/agents/register":   registerAgent,
         "POST /v1/agents/heartbeat":  heartbeatAgent,
@@ -525,6 +530,7 @@ export default {
         "GET /v1/shadow/ip":                  getIpReputation,
         "GET /v1/shadow/breach":              checkBreach,
         "GET /v1/shadow/dns":                 dnsLookup,
+        "GET /v1/shadow/search":              webSearch,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];
