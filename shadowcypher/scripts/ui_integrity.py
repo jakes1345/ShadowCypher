@@ -75,7 +75,6 @@ core_modules = [
     ("Runner", "shadowcypher.core.runner", "runner"),
     ("Platform", "shadowcypher.core.platform", "platform_engine"),
     ("Sanitize", "shadowcypher.core.sanitize", None),
-    ("SovereignChat", "shadowcypher.core.sovereign_chat", "sovereign_chat_server"),
     ("SovereignClient", "shadowcypher.core.sovereign", "SovereignClient"),
     ("Audit", "shadowcypher.core.audit", "auditor"),
 ]
@@ -108,7 +107,6 @@ check("Interpreter", "shadowcypher.compiler.interpreter", "ShadowInterpreter")
 print("\n\033[1;33m[*] UI Pages\033[0m")
 ui_pages = [
     ("Dashboard", "shadowcypher.ui.dashboard", "DashboardPage"),
-    ("ChatPage", "shadowcypher.ui.chat_page", "SovereignChatPage"),
     ("SupportPage", "shadowcypher.ui.support_page", "SupportPage"),
     ("GhostDeck", "shadowcypher.ui.ghost_page", "GhostDeck"),
     ("VaultPage", "shadowcypher.ui.vault_page", "ShadowVaultPage"),

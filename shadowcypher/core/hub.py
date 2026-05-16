@@ -274,16 +274,7 @@ class ShadowHub:
         bus.publish("telemetry_update", {"key": key, "value": value})
 
     def _engage_distributed_nodes(self) -> None:
-        """Initializes auxiliary bridges (IRC, Peer Handshakes)."""
-        from shadowcypher.core.config import config as _cfg
-        if _cfg.get("irc", "auto_connect", default=False):
-            try:
-                from shadowcypher.core.irc_bot import sentinel
-                sentinel.start()
-            except ImportError:
-                logger.warning("hub", "SENTINEL_BRIDGE: Module not present in the strike-set.")
-            except Exception as e:
-                logger.error("hub", f"SENTINEL_FAILURE: Distributed handoff failed: {e}")
+        pass
 
     def _wire_bus(self) -> None:
         # Connect to tactical event channels

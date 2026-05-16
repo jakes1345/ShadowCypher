@@ -15,8 +15,6 @@ from typing import Dict, Any, Optional, List
 from aiohttp import web
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
-from shadowcypher.core.sovereign_chat import sovereign_chat_server
-
 class NexusRelay:
     """
     The Nexus Relay provides:
@@ -24,13 +22,12 @@ class NexusRelay:
     2. CORS-enabled REST API for protocol handshakes.
     3. UDP/TCP Relay orchestration for P2P bypass.
     4. Sovereign Node Discovery & Registration.
-    5. Sovereign Chat WebSocket bridge.
     """
 
     def __init__(self, host: str = "127.0.0.1", port: int = 9988):
         self.host = os.environ.get("SHADOWCYPHER_NEXUS_HOST", host)
         self.port = int(os.environ.get("SHADOWCYPHER_NEXUS_PORT", port))
-        secret = os.environ.get("SHADOWCYPHER_HUB_SECRET") or config.get("irc", "hub_secret", default=None)
+        secret = os.environ.get("SHADOWCYPHER_HUB_SECRET") or config.get("nexus", "hub_secret", default=None)
         if not secret or secret == "REPLACE_WITH_SECURE_HUB_SECRET":
             raise RuntimeError(
                 "HUB_SECRET_UNSET: Nexus refuses to start without a real hub secret. "
@@ -66,7 +63,6 @@ class NexusRelay:
         self.app.router.add_get("/api/nexus/tunnel", self.handle_tunnel)
         self.app.router.add_get("/api/nexus/nodes", self.handle_list_nodes)
         self.app.router.add_get("/api/nexus/swarm", self.handle_swarm_sync) 
-        self.app.router.add_get("/api/nexus/chat", self.handle_chat_ws) 
         self.app.router.add_post("/api/nexus/register", self.handle_register_node)
         self.app.router.add_options("/{tail:.*}", self.handle_options)
         self.app.middlewares.append(self.cors_middleware)
@@ -115,12 +111,8 @@ class NexusRelay:
             "node": "NEXUS-ALPHA",
             "load": 0.0,
             "uptime": int(time.time()),
-            "protocols": ["UDP", "TCP", "TURN", "STUN", "WS-CHAT"]
+            "protocols": ["UDP", "TCP", "TURN", "STUN"]
         })
-
-    async def handle_chat_ws(self, request):
-        """Bridge to the Sovereign Chat engine."""
-        return await sovereign_chat_server._ws_handler(request)
 
     async def handle_ice_request(self, request):
         user_nick = request.query.get("nick", "anonymous")

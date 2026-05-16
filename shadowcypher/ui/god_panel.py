@@ -90,13 +90,6 @@ class GodPanel(BasePage):
             results.append(["Go Relay", "ONLINE", "<0.5s", "8888"])
         except Exception:
             results.append(["Go Relay", "OFFLINE", "—", "8888"])
-        # Sovereign Chat
-        try:
-            from shadowcypher.core.sovereign_chat import sovereign_chat_server as scs
-            s = "ONLINE" if scs.is_active else "STANDBY"
-            results.append(["Sovereign Chat", s, "—", "9090"])
-        except Exception:
-            results.append(["Sovereign Chat", "ERROR", "—", "—"])
         # Sisyphus
         try:
             from shadowcypher.ai.sisyphus import sisyphus

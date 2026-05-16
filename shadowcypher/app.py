@@ -317,7 +317,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "AD Pivot": "ad_page.AdPage",
                 "Combat Deck": "combat_page.CombatDeck",
                 "ShadowScript": "shadowscript_page.ShadowScriptPage",
-                "Sovereign Chat": "chat_page.SovereignChatPage",
                 "Shadow Nodes": "ghost_page.ShadowNodesPage",
                 "Ghost Mode": "ghost_mode_page.GhostModePage",
                 "Forensic Audit": "forensics_page.ForensicsPage",

@@ -65,7 +65,6 @@ class Sisyphus:
             "shadowcypher/core/hub.py",
             "shadowcypher/core/bus.py",
             "shadowcypher/ai/orchestrator.py",
-            "shadowcypher/core/irc_bot.py",
             "shadowcypher/core/forensics.py"
         ]
 
@@ -286,7 +285,6 @@ class Sisyphus:
             "shadowcypher/core/hub.py",
             "shadowcypher/core/bus.py",
             "shadowcypher/ai/orchestrator.py",
-            "shadowcypher/core/irc_bot.py",
             "shadowcypher/core/forensics.py"
         ]
         for rel_path in core_files:
