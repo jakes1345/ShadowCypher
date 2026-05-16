@@ -13,6 +13,8 @@ const ShadowAssistant = (() => {
   let apiKey = null;
   let guardianCtx = null; // { me, summary }
   let _lastTranscript = '';
+  let localModelReady = false;
+  let localModelExists = false;
 
   const API_BASE = 'https://api.shadowcypher.site';
 
@@ -111,11 +113,15 @@ const ShadowAssistant = (() => {
       if (apiKey) loadGuardianContext().catch(() => {});
       loadKB().catch(() => {});
       if (typeof ShadowClassifier !== 'undefined') ShadowClassifier.load().catch(() => {});
+      // Check OTA for updated KB/classifier assets (non-blocking)
+      checkOtaUpdates().catch(() => {});
 
       const status = await plugin.checkAssistStatus();
+      localModelReady = status.gemmaReady || false;
+      localModelExists = status.gemmaExists || false;
       if (status.wasAssistLaunch) handleAssistInvoke({ source: 'launch' });
 
-      console.log('[ShadowAssistant] Ready. key:', apiKey ? 'set' : 'missing');
+      console.log('[ShadowAssistant] Ready. key:', apiKey ? 'set' : 'missing', '| local LLM:', localModelReady ? 'ready' : (localModelExists ? 'loading' : 'not downloaded'));
     } catch (e) {
       console.warn('[ShadowAssistant] Init failed:', e);
     }
@@ -381,6 +387,14 @@ const ShadowAssistant = (() => {
           <div class="sa-field-hint">Find your key under Account → API Key on shadowcypher.site</div>
           <button class="sa-btn-primary" onclick="ShadowAssistant._saveApiKey()">Save &amp; Connect</button>
           ${apiKey ? '<button class="sa-btn-danger" onclick="ShadowAssistant._clearApiKey()">Remove Key</button>' : ''}
+
+          <div class="sa-field-label" style="margin-top:20px">Local AI Model (Gemma 3 1B · ~600 MB)</div>
+          <div class="sa-field-hint">Runs entirely on-device. No internet or API key needed for AI responses.</div>
+          <button class="sa-btn-primary" id="sa-download-btn" onclick="ShadowAssistant.downloadLocalModel()" ${localModelExists ? 'disabled' : ''}>
+            ${localModelReady ? 'Model Ready ✓' : localModelExists ? 'Loading model…' : 'Download Local Model'}
+          </button>
+          <div class="sa-key-status" id="sa-download-progress" style="color:#94a3b8">${localModelReady ? 'On-device AI is active' : ''}</div>
+
           <button class="sa-btn-ghost" onclick="ShadowAssistant._closeSettings()">← Back</button>
           <div class="sa-key-status" id="sa-key-status"></div>
         </div>
@@ -766,6 +780,50 @@ const ShadowAssistant = (() => {
     return null;
   }
 
+  // ── OTA update check ─────────────────────────────────────────────────────
+
+  const OTA_URL = 'https://api.shadowcypher.site/v1/shadow/ota';
+  const OTA_KEY = 'shadow_ota_seen_version';
+
+  async function checkOtaUpdates() {
+    try {
+      const r = await fetch(OTA_URL, { cache: 'no-store' });
+      if (!r.ok) return;
+      const manifest = await r.json();
+      const seenVersion = localStorage.getItem(OTA_KEY) || '0';
+      if (manifest.version === seenVersion) return;
+
+      console.log(`[OTA] New version ${manifest.version} (was ${seenVersion})`);
+
+      // Fetch and cache updated KB chunks
+      if (manifest.chunks_url) {
+        const cr = await fetch(manifest.chunks_url);
+        if (cr.ok) {
+          const newChunks = await cr.json();
+          // Reload in-memory KB
+          _kbChunks = newChunks;
+          _kbLoaded = true;
+          console.log(`[OTA] KB updated: ${newChunks.length} chunks`);
+        }
+      }
+
+      // Fetch and reload classifier if updated
+      if (manifest.classifier_url && typeof ShadowClassifier !== 'undefined') {
+        const xr = await fetch(manifest.classifier_url);
+        if (xr.ok) {
+          // Reload classifier by re-invoking load with fresh URL
+          console.log('[OTA] Classifier update available — reload to apply');
+          // Can't hot-swap ONNX models; just note it for next cold start
+        }
+      }
+
+      localStorage.setItem(OTA_KEY, manifest.version);
+      console.log(`[OTA] Updated to ${manifest.version}`);
+    } catch (e) {
+      console.debug('[OTA] Check failed (offline?):', e.message);
+    }
+  }
+
   // ── Knowledge base search (BM25 over chunks.json) ────────────────────────
 
   let _kbChunks = null;
@@ -877,25 +935,71 @@ const ShadowAssistant = (() => {
     }
   }
 
-  // ── AI query (LLM fallback only) ──────────────────────────────────────────
+  // ── AI query — local Gemma first, cloud fallback ──────────────────────────
 
   async function queryAI(userText) {
     addMemory('user', userText);
 
-    const headers = { 'Content-Type': 'application/json' };
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    // Try on-device Gemma first (no network, no cost)
+    if (localModelReady && plugin) {
+      try {
+        const systemPrompt = buildSystemPrompt();
+        const reply = await plugin.generateLocal(systemPrompt, userText);
+        if (reply && reply.trim().length > 0) {
+          conversationHistory.push({ role: 'assistant', content: reply });
+          return reply;
+        }
+      } catch (e) {
+        console.warn('[Shadow] Local inference failed, falling back to cloud:', e.message);
+      }
+    }
 
-    const resp = await fetch(`${API_BASE}/v1/assistant/query`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ question: userText }),
-    });
+    // Cloud fallback — only if API key is set (requires Guardian Pro+)
+    if (!apiKey) {
+      if (!localModelExists) {
+        return 'No API key set and no local model downloaded. Go to settings to configure either one.';
+      }
+      return 'Local model is still loading. Try again in a moment.';
+    }
 
-    if (!resp.ok) throw new Error(`API ${resp.status}`);
-    const data = await resp.json();
-    const reply = data.answer || 'No response.';
-    conversationHistory.push({ role: 'assistant', content: reply });
-    return reply;
+    try {
+      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
+      const resp = await fetch(`${API_BASE}/v1/assistant/query`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ question: userText }),
+      });
+      if (!resp.ok) throw new Error(`API ${resp.status}`);
+      const data = await resp.json();
+      const reply = data.answer || 'No response.';
+      conversationHistory.push({ role: 'assistant', content: reply });
+      return reply;
+    } catch (e) {
+      throw new Error(`Cloud query failed: ${e.message}`);
+    }
+  }
+
+  // ── Local model download (called from settings UI) ─────────────────────────
+
+  async function downloadLocalModel() {
+    if (!plugin) return;
+    const btn = document.getElementById('sa-download-btn');
+    const progress = document.getElementById('sa-download-progress');
+    if (btn) btn.disabled = true;
+    if (progress) progress.textContent = 'Starting download…';
+
+    try {
+      await plugin.downloadLocalModel((pct) => {
+        if (progress) progress.textContent = `Downloading… ${pct}%`;
+      });
+      localModelReady = true;
+      localModelExists = true;
+      if (progress) progress.textContent = 'Local model ready ✓';
+      if (btn) { btn.textContent = 'Model installed'; btn.disabled = true; }
+    } catch (e) {
+      if (progress) progress.textContent = `Download failed: ${e}`;
+      if (btn) { btn.disabled = false; }
+    }
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -949,7 +1053,7 @@ const ShadowAssistant = (() => {
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  return { init, show, dismiss, startListening, openSettings, _saveApiKey, _clearApiKey, _closeSettings, _toggleKeyVisibility, _runChip };
+  return { init, show, dismiss, startListening, openSettings, _saveApiKey, _clearApiKey, _closeSettings, _toggleKeyVisibility, _runChip, downloadLocalModel };
 })();
 
 if (document.readyState === 'loading') {

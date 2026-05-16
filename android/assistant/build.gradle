@@ -1,6 +1,12 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
+// Vosk offline STT model repository
+repositories {
+    maven { url 'https://alphacephei.com/maven/' }
+    mavenCentral()
+}
+
 android {
     namespace = "site.shadowcypher.assistant"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -9,8 +15,8 @@ android {
         applicationId "site.shadowcypher.assistant"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "1.1"
+        versionCode 3
+        versionName "1.2"
     }
 
     signingConfigs {
@@ -35,10 +41,27 @@ android {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
+
+    // Don't strip native libs used by ONNX Runtime
+    packagingOptions {
+        jniLibs { keepDebugSymbols += ["**/*.so"] }
+    }
 }
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:2.1.0"
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.webkit:webkit:$androidxWebkitVersion"
+
+    // Coroutines (wake word + Vosk async)
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
+
+    // Vosk offline STT — model downloaded on first use (~40 MB)
+    implementation "com.alphacephei:vosk-android:0.3.47"
+
+    // ONNX Runtime — wake word inference
+    implementation "com.microsoft.onnxruntime:onnxruntime-android:1.19.2"
+
+    // MediaPipe LLM Inference — on-device Gemma 3 1B
+    implementation "com.google.mediapipe:tasks-genai:0.10.22"
 }
