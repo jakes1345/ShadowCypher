@@ -1,0 +1,96 @@
+app-id: org.shadowcypher.ShadowCypher
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.python312
+
+command: shadowcypher
+
+finish-args:
+  # Display
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  # Filesystem — security tools need broad access
+  - --filesystem=host
+  # Network — API calls, scan traffic
+  - --share=network
+  # Notifications
+  - --talk-name=org.freedesktop.Notifications
+  # Host system tools (nmap, aircrack-ng, etc.) via flatpak-spawn
+  - --talk-name=org.freedesktop.Flatpak
+  # Dconf/theme
+  - --filesystem=xdg-run/dconf
+  - --filesystem=~/.config/dconf:ro
+  - --talk-name=ca.desrt.dconf
+  - --env=DCONF_USER_CONFIG_DIR=.config/dconf
+
+build-options:
+  env:
+    PIP_DISABLE_PIP_VERSION_CHECK: '1'
+
+modules:
+  # ── Python 3.12 via SDK extension ─────────────────────────────────────────
+  - name: python3-setup
+    buildsystem: simple
+    build-commands:
+      - install -d /app/lib/python3.12/site-packages
+
+  # ── PyGObject / Cairo (available in GNOME runtime) ────────────────────────
+  # These come from the runtime; no separate build needed.
+
+  # ── pip packages ──────────────────────────────────────────────────────────
+  - name: python-deps
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-deps
+          requests
+          aiohttp
+          websockets
+          cryptography
+          pydantic
+          psutil
+          pyaudio
+          vosk
+          anthropic
+    sources:
+      - type: shell
+        commands:
+          - echo "Installing Python dependencies via pip at build time"
+    # pip fetches from PyPI at build time — generate the sources list with:
+    # flatpak-pip-generator requests aiohttp websockets cryptography pydantic psutil pyaudio vosk anthropic
+    # Then replace the pip3 install command with the generated json sources.
+
+  # ── ShadowCypher application ──────────────────────────────────────────────
+  - name: shadowcypher
+    buildsystem: simple
+    build-commands:
+      # Install application to /app/lib/shadowcypher
+      - install -d /app/lib/shadowcypher
+      - cp -r shadowcypher native scripts requirements.txt config.example.json /app/lib/shadowcypher/
+      - |
+        cat > /app/bin/shadowcypher <<'LAUNCHER'
+        #!/bin/sh
+        export PYTHONPATH=/app/lib/shadowcypher
+        export PATH=/app/bin:/usr/bin:/usr/local/bin:$PATH
+        cd /app/lib/shadowcypher
+        exec python3 -m shadowcypher.app "$@"
+        LAUNCHER
+      - chmod +x /app/bin/shadowcypher
+      # Desktop entry
+      - install -Dm644 native/shadowcypher.desktop /app/share/applications/org.shadowcypher.ShadowCypher.desktop
+      - desktop-file-edit
+          --set-key=Icon --set-value=org.shadowcypher.ShadowCypher
+          --set-key=Exec --set-value=shadowcypher
+          /app/share/applications/org.shadowcypher.ShadowCypher.desktop
+      # Icons
+      - install -Dm644 native/icons/shadowcypher-256.png
+          /app/share/icons/hicolor/256x256/apps/org.shadowcypher.ShadowCypher.png
+      # AppStream metadata
+      - install -Dm644 flatpak/org.shadowcypher.ShadowCypher.appdata.xml
+          /app/share/metainfo/org.shadowcypher.ShadowCypher.appdata.xml
+    sources:
+      - type: git
+        url: https://github.com/jakes1345/ShadowCypher.git
+        branch: main

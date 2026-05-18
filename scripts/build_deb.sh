@@ -42,11 +42,19 @@ log_succ "Build environment validated."
 
 # --- Version Extraction ---
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-if [ ! -f "shadowcypher/__init__.py" ]; then
-    log_err "Could not locate shadowcypher/__init__.py for version extraction."
-fi
-
-VERSION="$(python3 -c "import re,sys; m=re.search(r'__version__\s*=\s*[\"\']([^\"\']+)', open('shadowcypher/__init__.py').read()); print(m.group(1) if m else sys.exit('cannot read __version__'))")"
+# Read from pyproject.toml (authoritative), fall back to __init__.py
+VERSION="$(python3 -c "
+import re, sys
+try:
+    m = re.search(r'^version\s*=\s*[\"\']([\d.]+)', open('pyproject.toml').read(), re.M)
+    if m: print(m.group(1)); sys.exit(0)
+except: pass
+try:
+    m = re.search(r'__version__\s*=\s*[\"\']([\d.]+)', open('shadowcypher/__init__.py').read())
+    if m: print(m.group(1)); sys.exit(0)
+except: pass
+sys.exit('cannot determine version')
+")"
 ARCH="amd64"
 PACKAGE_NAME="shadowcypher"
 BUILD_DIR="build/${PACKAGE_NAME}_${VERSION}_${ARCH}"
@@ -181,8 +189,14 @@ for item in shadowcypher native scripts requirements.txt config.example.json run
     fi
 done
 
-# Clean pycache to ensure pristine state
+# Clean pycache and heavy non-essential data to keep .deb under ~50MB
 find "${BUILD_DIR}/opt/${PACKAGE_NAME}" -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+# phish_data is large and downloaded/updated at runtime
+rm -rf "${BUILD_DIR}/opt/${PACKAGE_NAME}/shadowcypher/modules/phish_data"
+# Platform binaries: keep only current arch, drop others
+for bin in nexus_arm64 nexus_hybrid; do
+    rm -f "${BUILD_DIR}/opt/${PACKAGE_NAME}/shadowcypher/native/nexus/$bin"
+done
 
 if [ -f "shadowcypher/core/admin_public.pem" ]; then
     mkdir -p "${BUILD_DIR}/opt/${PACKAGE_NAME}/shadowcypher/core"

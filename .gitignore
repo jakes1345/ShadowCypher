@@ -28,6 +28,7 @@ pip-delete-this-directory.txt
 
 # Personal Encryption & Credentials
 .env
+.keystore_creds
 auth.json
 *.key
 *.pem

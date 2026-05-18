@@ -350,7 +350,7 @@ private fun SectionLabel(text: String) {
 
 @Composable
 private fun IncidentPreviewRow(incident: Incident) {
-    val severityColor = when (incident.severity.uppercase()) {
+    val severityColor = when (incident.severity.orEmpty().uppercase()) {
         "CRITICAL" -> ColorCritical
         "HIGH" -> ColorHigh
         "MEDIUM" -> ColorMedium
@@ -373,9 +373,9 @@ private fun IncidentPreviewRow(incident: Incident) {
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SeverityBadge(incident.severity)
+                SeverityBadge(incident.severity.orEmpty())
                 Text(
-                    text = incident.type,
+                    text = incident.type.orEmpty(),
                     color = ColorTextPrimary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -385,7 +385,7 @@ private fun IncidentPreviewRow(incident: Incident) {
             }
             Spacer(Modifier.height(2.dp))
             Text(
-                text = incident.description,
+                text = incident.description.orEmpty(),
                 color = ColorTextSecondary,
                 fontSize = 12.sp,
                 maxLines = 2,
@@ -431,7 +431,7 @@ private fun AgentRow(hostname: String, online: Boolean, lastSeen: String?) {
 
 @Composable
 fun SeverityBadge(severity: String) {
-    val (color, bg) = when (severity.uppercase()) {
+    val (color, bg) = when (severity.orEmpty().uppercase()) {
         "CRITICAL" -> ColorCritical to Color(0xFF2D0A0A)
         "HIGH" -> ColorHigh to Color(0xFF2D1500)
         "MEDIUM" -> ColorMedium to Color(0xFF2D2200)
@@ -443,7 +443,7 @@ fun SeverityBadge(severity: String) {
             .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
         Text(
-            text = severity.uppercase(),
+            text = severity.orEmpty().uppercase(),
             color = color,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.shadowcypher.ShadowCypher</id>
+  <name>ShadowCypher</name>
+  <summary>Enterprise offensive security and autonomous intelligence suite</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>
+      ShadowCypher is a GTK3 desktop application for professional security practitioners.
+      It provides a unified platform for network reconnaissance, vulnerability assessment,
+      exploit research, wireless security testing, and digital forensics.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Shadow AI — voice and text assistant powered by Claude, with offline KB fallback</li>
+      <li>Guardian — endpoint monitoring with real-time incident detection</li>
+      <li>Community Chat — global and team chat with Supabase Realtime</li>
+      <li>Recon Engine — OSINT, DNS, IP reputation, breach checking</li>
+      <li>Network Scanner — device discovery, port scanning, service fingerprinting</li>
+      <li>ShadowScript — custom security automation scripting language</li>
+    </ul>
+  </description>
+
+  <url type="homepage">https://shadowcypher.site</url>
+  <url type="bugtracker">https://github.com/jakes1345/ShadowCypher/issues</url>
+
+  <launchable type="desktop-id">org.shadowcypher.ShadowCypher.desktop</launchable>
+
+  <releases>
+    <release version="2.2.0" date="2026-05-15">
+      <description>
+        <p>Added community chat (Discord-style global and team rooms), Shadow AI cloud backend via Claude Haiku, web search integration, and Guardian Android app crash fixes.</p>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-chat">intense</content_attribute>
+  </content_rating>
+
+  <categories>
+    <category>Network</category>
+    <category>Security</category>
+    <category>System</category>
+  </categories>
+
+  <keywords>
+    <keyword>security</keyword>
+    <keyword>pentesting</keyword>
+    <keyword>red-team</keyword>
+    <keyword>network</keyword>
+    <keyword>recon</keyword>
+    <keyword>ai</keyword>
+  </keywords>
+</component>

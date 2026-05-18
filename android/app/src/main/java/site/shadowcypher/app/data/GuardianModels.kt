@@ -1,5 +1,7 @@
 package site.shadowcypher.app.data
 
+import com.google.gson.annotations.SerializedName
+
 data class Me(
     val email: String,
     val plan: String?,
@@ -25,17 +27,17 @@ data class Device(
 
 data class Incident(
     val id: String,
-    val type: String,
-    val severity: String,
-    val description: String,
+    @SerializedName("category") val type: String?,
+    val severity: String?,
+    @SerializedName("title") val description: String?,
     val created_at: String,
-    val resolved: Boolean
+    @SerializedName("acknowledged") val resolved: Boolean
 )
 
 data class CveAlert(
     val cve_id: String,
-    val severity: String,
-    val description: String,
+    val severity: String?,
+    val description: String?,
     val affected_device: String?
 )
 

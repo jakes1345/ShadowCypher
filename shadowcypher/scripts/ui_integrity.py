@@ -115,6 +115,7 @@ ui_pages = [
     ("CombatDeck", "shadowcypher.ui.combat_page", "CombatDeck"),
     ("AdminPage", "shadowcypher.ui.admin_page", "AdminPage"),
     ("Animations", "shadowcypher.ui.animations", None),
+    ("ChatPage", "shadowcypher.ui.chat_page", "ChatPage"),
 ]
 for name, path, cls in ui_pages:
     check(name, path, cls)

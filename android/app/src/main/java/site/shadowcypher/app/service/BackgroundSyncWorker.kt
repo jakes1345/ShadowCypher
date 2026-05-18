@@ -37,7 +37,7 @@ class BackgroundSyncWorker(
         }
 
         summary.cve_alerts.take(3).forEach { cve ->
-            NotificationHelper.postCveNotification(context, cve.cve_id, cve.description)
+            NotificationHelper.postCveNotification(context, cve.cve_id, cve.description.orEmpty())
         }
 
         return Result.success()

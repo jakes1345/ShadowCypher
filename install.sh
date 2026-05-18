@@ -1,10 +1,44 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# SHADOWCYPHER // LOCAL ENVIRONMENT BOOTSTRAP
+# SHADOWCYPHER // INSTALLER
 # ==============================================================================
-# Automated local installation and dependency resolution script.
+# Usage:
+#   ./install.sh              — local dev install (no root, uses venv)
+#   ./install.sh --apt-source — add apt.shadowcypher.site to sources.list.d
+#   ./install.sh --deb        — download and install latest .deb via apt
 
 set -e
+
+# ── apt install modes ─────────────────────────────────────────────────────────
+if [[ "${1:-}" == "--apt-source" || "${1:-}" == "--deb" ]]; then
+    APT_BASE="https://shadowcypher.site/apt"
+    KEYRING="/etc/apt/keyrings/shadowcypher.gpg"
+    SOURCE="/etc/apt/sources.list.d/shadowcypher.list"
+
+    echo "[*] Adding ShadowCypher apt repository..."
+    sudo install -m 0755 -d /etc/apt/keyrings
+
+    # Fetch signing key if available
+    if curl -fsSL "$APT_BASE/shadowcypher-apt.gpg" -o /tmp/shadowcypher.gpg 2>/dev/null; then
+        sudo cp /tmp/shadowcypher.gpg "$KEYRING"
+        SIGNED="[signed-by=$KEYRING arch=amd64]"
+    else
+        SIGNED="[trusted=yes arch=amd64]"
+        echo "[~] Signing key not found — using trusted=yes"
+    fi
+
+    echo "deb $SIGNED $APT_BASE stable main" | sudo tee "$SOURCE" > /dev/null
+    sudo apt-get update -qq
+    echo "[+] Repository added: $SOURCE"
+
+    if [[ "${1:-}" == "--deb" ]]; then
+        sudo apt-get install -y shadowcypher
+        echo "[+] ShadowCypher installed. Run: shadowcypher"
+    else
+        echo "[+] Run: sudo apt install shadowcypher"
+    fi
+    exit 0
+fi
 
 # --- Colors & Logging ---
 CYAN='\033[1;36m'

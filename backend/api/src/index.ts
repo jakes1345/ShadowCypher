@@ -72,6 +72,7 @@ import { runCveMatchingCron } from "./cve_matcher";
 import { getAgentVersion } from "./agent_version";
 import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup, webSearch } from "./shadow_apis";
 import { getOtaManifest, updateOtaManifest } from "./ota";
+import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers } from "./chat";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
@@ -431,6 +432,13 @@ export default {
                 "POST /v1/teams/accept",
                 "POST /v1/teams/leave",
               ],
+              chat: [
+                "GET /v1/chat/rooms",
+                "GET /v1/chat/messages?room=global&limit=50&before=<iso>",
+                "POST /v1/chat/send",
+                "POST /v1/chat/presence",
+                "GET /v1/chat/online?room=global",
+              ],
               shadow: [
                 "GET /v1/shadow/weather?q=<city>",
                 "GET /v1/shadow/currency?from=USD&to=EUR&amount=1",
@@ -531,6 +539,12 @@ export default {
         "GET /v1/shadow/breach":              checkBreach,
         "GET /v1/shadow/dns":                 dnsLookup,
         "GET /v1/shadow/search":              webSearch,
+        // Chat
+        "GET /v1/chat/rooms":                 listRooms,
+        "GET /v1/chat/messages":              getMessages,
+        "POST /v1/chat/send":                 sendMessage,
+        "POST /v1/chat/presence":             updatePresence,
+        "GET /v1/chat/online":                getOnlineUsers,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];

@@ -29,44 +29,67 @@ jobs:
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > android/shadowcypher.keystore
 
-      - name: Build release APK
+      - name: Build release APKs (Shadow assistant + Guardian)
         working-directory: android
-        run: ./gradlew :assistant:assembleRelease --no-daemon -q
+        run: ./gradlew :assistant:assembleRelease :app:assembleRelease --no-daemon -q
         env:
           KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
           KEY_PASS: ${{ secrets.KEY_PASS }}
           GRADLE_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=512m"
 
-      - name: Rename APK
+      - name: Rename APKs
         run: |
-          VERSION=$(grep 'versionName' android/assistant/build.gradle | grep -oP '"[^"]+"' | tr -d '"')
+          SHA_VER=$(grep 'versionName' android/assistant/build.gradle | grep -oP '"[^"]+"' | tr -d '"')
+          GRD_VER=$(grep 'versionName' android/app/build.gradle | grep -oP '"[^"]+"' | tr -d '"')
           SHA=$(echo "${{ github.sha }}" | cut -c1-8)
-          SRC=android/assistant/build/outputs/apk/release/assistant-release.apk
-          DEST=android/assistant/build/outputs/apk/release/shadow-${VERSION}-${SHA}.apk
-          mv "$SRC" "$DEST"
-          echo "APK_PATH=$DEST" >> $GITHUB_ENV
-          echo "APK_NAME=shadow-${VERSION}-${SHA}.apk" >> $GITHUB_ENV
 
-      - name: Upload artifact
+          SHADOW_SRC=android/assistant/build/outputs/apk/release/assistant-release.apk
+          SHADOW_DEST=android/assistant/build/outputs/apk/release/shadow-${SHA_VER}-${SHA}.apk
+          mv "$SHADOW_SRC" "$SHADOW_DEST"
+
+          GUARD_SRC=android/app/build/outputs/apk/release/app-release.apk
+          GUARD_DEST=android/app/build/outputs/apk/release/guardian-${GRD_VER}-${SHA}.apk
+          mv "$GUARD_SRC" "$GUARD_DEST"
+
+          echo "SHADOW_APK=$SHADOW_DEST" >> $GITHUB_ENV
+          echo "SHADOW_NAME=shadow-${SHA_VER}-${SHA}.apk" >> $GITHUB_ENV
+          echo "GUARD_APK=$GUARD_DEST" >> $GITHUB_ENV
+          echo "GUARD_NAME=guardian-${GRD_VER}-${SHA}.apk" >> $GITHUB_ENV
+
+      - name: Upload Shadow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APK_NAME }}
-          path: ${{ env.APK_PATH }}
+          name: ${{ env.SHADOW_NAME }}
+          path: ${{ env.SHADOW_APK }}
+          retention-days: 30
+
+      - name: Upload Guardian artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.GUARD_NAME }}
+          path: ${{ env.GUARD_APK }}
           retention-days: 30
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.APK_PATH }}
+          files: |
+            ${{ env.SHADOW_APK }}
+            ${{ env.GUARD_APK }}
           generate_release_notes: true
-          name: Shadow ${{ github.ref_name }}
+          name: ShadowCypher ${{ github.ref_name }}
           body: |
-            ## Shadow ${{ github.ref_name }}
+            ## ShadowCypher ${{ github.ref_name }}
+
+            | App | Description |
+            |-----|-------------|
+            | **Shadow** | Voice AI assistant with web search and offline KB |
+            | **Guardian** | Endpoint security monitor — Dashboard, Devices, Incidents, Missions |
 
             **Install**
-            1. Settings → Apps → Special app access → Install unknown apps → enable for your browser
-            2. Download the APK below and tap Install
+            1. Settings → Apps → Install unknown apps → enable for your browser
+            2. Download the APK and tap Install
 
             Requires Android 8.0+
         env:

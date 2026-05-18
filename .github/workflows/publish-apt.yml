@@ -1,0 +1,115 @@
+name: Publish apt repository
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pyproject.toml'
+      - 'shadowcypher/**'
+      - 'scripts/build_deb.sh'
+      - '.github/workflows/publish-apt.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: apt-repo
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y dpkg-dev gpg rsync python3
+
+      - name: Build .deb
+        run: |
+          chmod +x scripts/build_deb.sh
+          bash scripts/build_deb.sh
+          echo "DEB_PATH=$(ls releases/shadowcypher_*.deb | head -1)" >> $GITHUB_ENV
+          echo "PKG_VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*\"\(.*\)\"/\1/')" >> $GITHUB_ENV
+
+      - name: Set up GPG signing key
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+        run: |
+          if [ -n "$APT_SIGNING_KEY" ]; then
+            echo "$APT_SIGNING_KEY" | base64 -d | gpg --batch --import
+            echo "SIGN=1" >> $GITHUB_ENV
+          else
+            echo "SIGN=0" >> $GITHUB_ENV
+            echo "::warning::APT_SIGNING_KEY secret not set — repo will be unsigned"
+          fi
+
+      - name: Build apt repository
+        run: |
+          VERSION="$PKG_VERSION"
+          DEB="$DEB_PATH"
+          REPO="apt"
+
+          # Directory layout
+          POOL="$REPO/pool/main/s/shadowcypher"
+          DISTS="$REPO/dists/stable/main/binary-amd64"
+          mkdir -p "$POOL" "$DISTS"
+
+          # Copy .deb into pool
+          cp "$DEB" "$POOL/"
+
+          # Generate Packages index
+          (cd "$REPO" && dpkg-scanpackages pool/main /dev/null > dists/stable/main/binary-amd64/Packages 2>/dev/null)
+          gzip -9 -k "$DISTS/Packages"
+
+          # Generate Release
+          cat > "$REPO/dists/stable/Release" <<EOF
+          Origin: ShadowCypher
+          Label: ShadowCypher
+          Suite: stable
+          Codename: stable
+          Version: $VERSION
+          Architectures: amd64
+          Components: main
+          Description: ShadowCypher official apt repository
+          Date: $(date -Ru)
+          EOF
+
+          # Append checksums
+          (cd "$REPO/dists/stable" && \
+            printf "MD5Sum:\n" >> Release && \
+            for f in main/binary-amd64/Packages main/binary-amd64/Packages.gz; do \
+              printf " %s %s %s\n" "$(md5sum "$f" | awk '{print $1}')" "$(wc -c < "$f")" "$f" >> Release; \
+            done && \
+            printf "SHA256:\n" >> Release && \
+            for f in main/binary-amd64/Packages main/binary-amd64/Packages.gz; do \
+              printf " %s %s %s\n" "$(sha256sum "$f" | awk '{print $1}')" "$(wc -c < "$f")" "$f" >> Release; \
+            done)
+
+          # Sign if key available
+          if [ "$SIGN" = "1" ]; then
+            KEY_ID="$(gpg --list-keys --with-colons 2>/dev/null | grep '^pub' | head -1 | cut -d: -f5)"
+            gpg --batch --yes --armor --detach-sign \
+              --default-key "$KEY_ID" \
+              -o "$REPO/dists/stable/Release.gpg" \
+              "$REPO/dists/stable/Release"
+            gpg --batch --yes --clearsign \
+              --default-key "$KEY_ID" \
+              -o "$REPO/dists/stable/InRelease" \
+              "$REPO/dists/stable/Release"
+            # Export public key for users
+            gpg --armor --export "$KEY_ID" > "$REPO/shadowcypher-apt.gpg"
+          fi
+
+      - name: Commit apt repo to Pages
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apt/
+          if git diff --cached --quiet; then
+            echo "No changes to apt repo."
+          else
+            git commit -m "apt: publish shadowcypher v$PKG_VERSION"
+            git push
+          fi

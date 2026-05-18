@@ -154,7 +154,7 @@ private fun SectionDividerLabel(text: String) {
 @Composable
 private fun IncidentRow(incident: Incident, dimmed: Boolean) {
     val alpha = if (dimmed) 0.45f else 1f
-    val severityColor = when (incident.severity.uppercase()) {
+    val severityColor = when (incident.severity.orEmpty().uppercase()) {
         "CRITICAL" -> ColorCritical
         "HIGH" -> ColorHigh
         "MEDIUM" -> ColorMedium
@@ -203,14 +203,14 @@ private fun IncidentRow(incident: Incident, dimmed: Boolean) {
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = incident.type,
+                    text = incident.type.orEmpty(),
                     color = ColorTextPrimary.copy(alpha = alpha),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = incident.description,
+                    text = incident.description.orEmpty(),
                     color = ColorTextSecondary.copy(alpha = alpha),
                     fontSize = 13.sp,
                     maxLines = 2,

@@ -55,9 +55,9 @@ object NotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_INCIDENTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("${incident.severity} — ${incident.type}")
-            .setContentText(incident.description)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(incident.description))
+            .setContentTitle("${incident.severity.orEmpty()} — ${incident.type.orEmpty()}")
+            .setContentText(incident.description.orEmpty())
+            .setStyle(NotificationCompat.BigTextStyle().bigText(incident.description.orEmpty()))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
