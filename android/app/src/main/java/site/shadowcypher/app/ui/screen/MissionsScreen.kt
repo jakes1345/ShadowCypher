@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import site.shadowcypher.app.data.Agent
@@ -183,7 +184,7 @@ private fun MissionCompose(
                 minLines = 4,
                 maxLines = 10,
                 modifier = Modifier.fillMaxWidth(),
-                fontFamily = FontFamily.Monospace,
+                textStyle = TextStyle(fontFamily = FontFamily.Monospace),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = ColorAccentPurple,
                     focusedLabelColor = ColorAccentPurple,

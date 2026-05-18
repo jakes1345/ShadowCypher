@@ -183,7 +183,7 @@ private fun IncidentRow(incident: Incident, dimmed: Boolean) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SeverityBadge(incident.severity)
+                    SeverityBadge(incident.severity.orEmpty())
                     if (incident.resolved) {
                         Box(
                             modifier = Modifier
