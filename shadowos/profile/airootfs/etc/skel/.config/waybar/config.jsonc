@@ -35,7 +35,7 @@
   "custom/steam": {
     "format": "",
     "tooltip-format": "Steam",
-    "on-click": "steam-runtime"
+    "on-click": "steam"
   },
 
   "custom/discord": {

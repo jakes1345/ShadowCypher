@@ -49,11 +49,30 @@ if [[ "$ONLINE" -eq 1 ]]; then
         flatpak remote-add --if-not-exists flathub \
             https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
 
-        echo "[*] Installing Flathub apps (Bottles, ProtonUp-Qt)..."
+        echo "[*] Installing Flathub apps (Heroic, Bottles, ProtonUp-Qt)..."
         flatpak install -y --noninteractive flathub \
+            com.heroicgameslauncher.hgl \
             com.usebottles.bottles \
             net.davidotek.pupgui2 \
             2>&1 | tail -10 || echo "    flatpak install failed (will retry next boot)"
+    fi
+
+    # ── 2b. AUR-only goodies installed without an AUR helper ────────────────
+    # Bibata cursor (extracted from github release tarball)
+    if [[ ! -d /usr/share/icons/Bibata-Modern-Classic ]]; then
+        echo "[*] Installing Bibata cursor theme..."
+        TMPCUR=$(mktemp -d)
+        if curl -fsSL -o "$TMPCUR/bibata.tar.xz" \
+            "https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-Classic.tar.xz" 2>/dev/null; then
+            tar -xJf "$TMPCUR/bibata.tar.xz" -C /usr/share/icons/ 2>/dev/null && echo "    Bibata installed"
+        fi
+        rm -rf "$TMPCUR"
+    fi
+
+    # Katana (ProjectDiscovery web crawler) via go install
+    if ! command -v katana >/dev/null && command -v go >/dev/null; then
+        echo "[*] Installing katana via go install..."
+        GOBIN=/usr/local/bin go install github.com/projectdiscovery/katana/cmd/katana@latest 2>&1 | tail -3 || true
     fi
 
     # ── 3. BlackArch keyring (if it failed at build time) ──────────────────

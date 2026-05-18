@@ -27,7 +27,6 @@ openresolv
 iwd
 bind
 dnscrypt-proxy
-openresolv
 
 # Security / privacy
 tor
@@ -118,8 +117,9 @@ mesa-utils
 vulkan-radeon
 vulkan-intel
 vulkan-nouveau
-libva-mesa-driver
+# libva-mesa-driver was removed from repos — mesa provides VA-API directly now
 intel-media-driver
+libva-utils
 xf86-video-amdgpu
 xf86-video-nouveau
 xorg-server
@@ -189,7 +189,6 @@ terraform
 ansible
 just                       # task runner — better make
 lazygit
-gh
 direnv
 
 # === Modern offensive arsenal (beyond the Kali tier above) ===
@@ -200,7 +199,7 @@ amass                      # asset discovery
 subfinder                  # subdomain enumeration (ProjectDiscovery)
 httpx                      # HTTP probing (ProjectDiscovery)
 nuclei                     # template-based vuln scanner
-katana                     # JS-aware crawler
+# katana is AUR-only — installed via `go install` in shadowos-firstboot
 naabu                      # fast port scanner (ProjectDiscovery)
 mitmproxy                  # TLS MITM
 exploitdb                  # local searchsploit DB
@@ -210,7 +209,6 @@ netexec                    # AD swiss-army knife (renamed from crackmapexec) —
 evil-winrm                 # post-exploitation WinRM
 sshuttle                   # poor-man's VPN over SSH (pivot)
 # chisel is AUR-only — installed via go install at first-boot if needed
-proxychains-ng
 seclists                   # wordlists
 dnsenum
 whatweb
@@ -219,17 +217,17 @@ zaproxy                    # OWASP ZAP — web app scanner
 
 # === Gaming + multimedia ===
 steam
-steam-native-runtime
+steam-devices              # udev rules for Steam controllers, etc.
 gamemode
 lib32-gamemode
 mangohud
 lib32-mangohud
 goverlay                   # MangoHUD GUI config
 lutris                     # everything-launcher
-heroic-games-launcher      # Epic, GOG, Amazon Prime Gaming (extra repo)
 prismlauncher              # Minecraft (extra repo)
-# bottles and protonup-qt are AUR-only — installed via Flatpak by
-# customize_airootfs.sh: com.usebottles.bottles + net.davidotek.pupgui2
+# Heroic, Bottles, ProtonUp-Qt are AUR-only — installed via Flatpak at
+# first-boot: com.heroicgameslauncher.hgl, com.usebottles.bottles,
+# net.davidotek.pupgui2
 wine-staging
 winetricks
 # dxvk-mingw is AUR — DXVK comes bundled with Proton/Steam anyway
@@ -241,11 +239,12 @@ discord                    # comms (devs + gaming)
 # === Universal launchers / app management ===
 flatpak                    # Flathub access for apps not in Arch repos
 distrobox                  # run Kali/Ubuntu/Debian as containers — critical for sec pros
-podman                     # backing runtime for distrobox (already listed under dev, harmless dup)
+# podman is already listed under dev/runtime stack
 
 # === Theming / desktop polish ===
-# catppuccin-gtk-theme-mocha is AUR-only — installed via Flatpak/script at first-boot
-bibata-cursor-theme
+# catppuccin-gtk-theme-mocha is AUR-only — installed via script at first-boot
+# bibata-cursor-theme is AUR-only — installed via script at first-boot
+xcursor-themes             # adequate cursor theme from extra repo
 qt5ct
 qt6ct
 kvantum
