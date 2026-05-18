@@ -9,6 +9,7 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import kotlinx.coroutines.*
+import kotlin.coroutines.coroutineContext
 import java.io.File
 import java.nio.FloatBuffer
 
@@ -123,7 +124,7 @@ class WakeWordDetector(private val context: Context) {
 
     private suspend fun captureLoop() {
         val shorts = ShortArray(FRAME_SAMPLES)
-        while (isActive) {
+        while (coroutineContext.isActive) {
             val read = audioRecord?.read(shorts, 0, FRAME_SAMPLES) ?: -1
             if (read <= 0) { delay(10); continue }
 
