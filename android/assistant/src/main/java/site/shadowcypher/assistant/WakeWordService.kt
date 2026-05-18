@@ -62,7 +62,7 @@ class WakeWordService : Service() {
             Log.i(TAG, "Wake word fired — launching AssistantActivity")
             val launch = Intent(this, AssistantActivity::class.java).apply {
                 action = Intent.ACTION_ASSIST
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 putExtra("source", "wake_word")
             }
             startActivity(launch)
