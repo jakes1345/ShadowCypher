@@ -1,0 +1,34 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: ShadowCypher
+Label: ShadowCypher
+Suite: stable
+Codename: stable
+Version: 2.2.0
+Architectures: amd64
+Components: main
+Description: ShadowCypher official apt repository
+Date: Mon, 18 May 2026 20:45:42 +0000
+MD5Sum:
+ bc79d19c8daa8d04345d0cb28bcf3b73 782 main/binary-amd64/Packages
+ 093a26a1deb1be568765c38c6e9ae878 537 main/binary-amd64/Packages.gz
+SHA256:
+ 6e840769f45df5ea7f00f7396d71c2232164fb7e1ac1647309e906adae7a860e 782 main/binary-amd64/Packages
+ 94e168744e737f1dcf5f5fd3e93edf163d801e7a6d3344078d3230301c42d86c 537 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmoLencACgkQ2fHRjxMT
+8IMVZA//fbLg/ttD2kQSYDd+kx4Td/pbKsNy443N4a4yP0iCXWT7IPDE/J8Temlj
+wYoI0kglv5PA9+e78yELCfCmCMsNJCICrkmy0YgzgAcZCM5d2dGaekh5KFNthhUF
+nqCSkEU4/cOKKzjE1LWvPEIMvBedFZ6E0EtEPFXi5I/UbNqv19xyEKocaN1xo7rB
+ZO9H0S0j1mJj1nUsknL4Wh8SxgZ3ccSC6AsVTblUfHzDot6HovSz9BIMsdDnlZv4
+VftW6Zj3NUhy7Gu+5nwaookfeqMo4YzqzzaUfg40AxiBZhQgTCyFNjypGosEcbZy
+JeKCYUNqf+ZnTsV7B4gmoBwvTlyjWlMr0Mx51LnpDKwq3MqCpOjCK2yfkPhNx1dY
+Eq/h2bc+HiNPMFnpYG7mq6mYxNJiUYgcVk9Vv5Rt5U3hcTurcTP6dTKFUBeEtymV
+IKcWL+q/rDD3KiR8b6YkOwdFRXmga/v+MFNW32tGJET2LblNQTfoiYgbO7lLg9VO
+mzXLj1dgDnI3EnWoDeJ7WpCKFy/4fTyHswdEk1Xh/gjzpUY2IGI4fxRMVxmGTCoN
+KPXoiN4+J5fzge9ZGNs2Wc0YBotmvRjBbmKHUpsMumP55Jy/1UNpCAsoXEPgPE07
+Af6MTpD+bWi4BbCv//XbEKeO6UXZsNLAryxVicLzHy9RUSMT3tA=
+=1VUO
+-----END PGP SIGNATURE-----
