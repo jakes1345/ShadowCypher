@@ -89,6 +89,16 @@ cat <<EOF > "${BUILD_DIR}/DEBIAN/conffiles"
 /etc/shadowcypher/config.json
 EOF
 
+# Pre-stage the default config so dpkg can ship it as a conffile.
+# postinst won't overwrite if the user has customized it.
+mkdir -p "${BUILD_DIR}/etc/shadowcypher"
+if [ -f "config.example.json" ]; then
+    cp "config.example.json" "${BUILD_DIR}/etc/shadowcypher/config.json"
+    chmod 0640 "${BUILD_DIR}/etc/shadowcypher/config.json"
+else
+    echo '{}' > "${BUILD_DIR}/etc/shadowcypher/config.json"
+fi
+
 # --- Post-Install Script ---
 log_info "Injecting hardened post-install cryptography generation..."
 cat <<'POSTINST_EOF' > "${BUILD_DIR}/DEBIAN/postinst"
