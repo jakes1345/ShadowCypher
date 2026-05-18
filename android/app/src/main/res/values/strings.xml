@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ShadowCypher</string>
+    <string name="title_activity_main">ShadowCypher</string>
+    <string name="package_name">site.shadowcypher.app</string>
+    <string name="custom_url_scheme">site.shadowcypher.app</string>
+</resources>

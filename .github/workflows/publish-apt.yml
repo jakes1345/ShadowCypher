@@ -30,8 +30,14 @@ jobs:
         run: |
           chmod +x scripts/build_deb.sh
           bash scripts/build_deb.sh
-          echo "DEB_PATH=$(ls releases/shadowcypher_*.deb | head -1)" >> $GITHUB_ENV
-          echo "PKG_VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*\"\(.*\)\"/\1/')" >> $GITHUB_ENV
+          DEB="$(ls build/shadowcypher_*.deb 2>/dev/null | head -1)"
+          if [ -z "$DEB" ]; then
+            echo "::error::No .deb produced under build/"
+            ls -la build/ || true
+            exit 1
+          fi
+          echo "DEB_PATH=$DEB" >> $GITHUB_ENV
+          echo "PKG_VERSION=$(grep -E '^version\s*=' pyproject.toml | head -1 | sed -E 's/.*\"([0-9.]+)\".*/\1/')" >> $GITHUB_ENV
 
       - name: Set up GPG signing key
         env:
