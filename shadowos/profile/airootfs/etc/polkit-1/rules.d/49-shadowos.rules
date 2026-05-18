@@ -1,0 +1,17 @@
+// ShadowOS polkit rules
+// Allow wheel-group users to run shadow-mode + shadowos-install without
+// re-prompting for password every time, while keeping the rest of pkexec
+// behavior intact.
+
+polkit.addRule(function(action, subject) {
+    if (subject.isInGroup("wheel")) {
+        // shadow-mode is invoked via pkexec inside the picker; auth_admin_keep
+        // means "ask once, remember for 5 min in this session"
+        if (action.id == "org.shadowcypher.shadow-mode") {
+            return polkit.Result.AUTH_ADMIN_KEEP;
+        }
+        if (action.id == "org.shadowcypher.shadowos-install") {
+            return polkit.Result.AUTH_ADMIN_KEEP;
+        }
+    }
+});

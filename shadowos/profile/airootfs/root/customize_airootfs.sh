@@ -20,6 +20,14 @@ systemctl enable bluetooth.service
 systemctl enable shadowos-mac-randomize.service
 systemctl enable shadowos-firstboot.service
 systemctl enable sshd.service
+# Tier-1 essentials
+systemctl enable udisks2.service 2>/dev/null || true
+systemctl enable power-profiles-daemon.service 2>/dev/null || true
+systemctl enable tlp.service 2>/dev/null || true
+# Tier-2 polish
+systemctl enable gamemoded.service 2>/dev/null || true  # actually a user service; harmless
+# AppArmor profile parsing
+systemctl enable apparmor.service
 systemctl set-default graphical.target
 
 systemctl enable dnscrypt-proxy.service 2>/dev/null || true

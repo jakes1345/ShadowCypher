@@ -250,6 +250,35 @@ qt6ct
 kvantum
 nwg-look                   # GTK config UI for tilers
 
+# === Tier-1 OS essentials (added after audit) ===
+udisks2                    # auto-mount removable drives
+udiskie                    # daemon to actually mount them in wayland
+gvfs                       # virtual filesystems (smb/sftp/trash)
+gvfs-mtp                   # phones over MTP
+gvfs-smb                   # samba shares
+blueman                    # Bluetooth GUI
+power-profiles-daemon      # CPU/battery profile switching
+tlp                        # laptop power management
+xdg-user-dirs              # ~/Documents etc.
+xdg-utils                  # xdg-open / xdg-mime defaults
+zathura                    # minimal PDF viewer (modal, vim-like)
+zathura-pdf-mupdf          # PDF backend
+gufw                       # firewall GUI
+gnome-keyring              # secret storage for browsers/apps
+libsecret                  # API for keyring
+seahorse                   # GUI for the keyring
+# network-manager-applet and udev are already provided earlier / by base
+
+# === Tier-2 polish ===
+httpie                     # CLI HTTP client for API work
+postgresql-libs            # libpq.so for psycopg2 etc.
+sqlite                     # local DB
+mariadb-clients            # MySQL/MariaDB CLI
+redis                      # cache server (devs use it constantly)
+# swww is AUR-only — use hyprpaper (already configured) for static wallpapers
+imagemagick                # image manipulation CLI
+ffmpeg                     # everything video
+
 # === Media + creator tools ===
 obs-studio
 audacity
