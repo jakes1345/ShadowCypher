@@ -43,18 +43,16 @@ log_succ "Build environment validated."
 # --- Version Extraction ---
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 # Read from pyproject.toml (authoritative), fall back to __init__.py
-VERSION="$(python3 -c "
-import re, sys
-try:
-    m = re.search(r'^version\s*=\s*[\"\']([\d.]+)', open('pyproject.toml').read(), re.M)
-    if m: print(m.group(1)); sys.exit(0)
-except: pass
-try:
-    m = re.search(r'__version__\s*=\s*[\"\']([\d.]+)', open('shadowcypher/__init__.py').read())
-    if m: print(m.group(1)); sys.exit(0)
-except: pass
-sys.exit('cannot determine version')
-")"
+VERSION=""
+if [ -f pyproject.toml ]; then
+    VERSION="$(grep -E '^version\s*=' pyproject.toml | head -1 | sed -E 's/^version\s*=\s*["'\'']([0-9.]+).*/\1/')"
+fi
+if [ -z "$VERSION" ] && [ -f shadowcypher/__init__.py ]; then
+    VERSION="$(grep -E '^__version__\s*=' shadowcypher/__init__.py | head -1 | sed -E 's/.*["'\'']([0-9.]+).*/\1/')"
+fi
+if [ -z "$VERSION" ]; then
+    log_err "cannot determine version from pyproject.toml or shadowcypher/__init__.py"
+fi
 ARCH="amd64"
 PACKAGE_NAME="shadowcypher"
 BUILD_DIR="build/${PACKAGE_NAME}_${VERSION}_${ARCH}"
