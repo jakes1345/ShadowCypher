@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHADOWCYPHER // OBSIDIAN_NEXUS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;800&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --primary-glow: rgba(0, 242, 255, 0.4);
+            --danger: #ff3b3b;
+            --danger-glow: rgba(255, 59, 59, 0.4);
+            --success: #22c55e;
+            --bg: #05070a;
+            --glass: rgba(13, 17, 23, 0.85);
+            --border: rgba(255, 255, 255, 0.08);
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-jp: 'Noto Sans JP', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: #e2e8f0;
+            font-family: var(--font-main);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 242, 255, 0.03) 0%, transparent 80%),
+                linear-gradient(rgba(0, 242, 255, 0.01) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 242, 255, 0.01) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px, 30px 30px;
+        }
+
+        .crt {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none; z-index: 1000;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 350px 1fr 350px;
+            grid-template-rows: 80px 1fr 200px;
+            height: 100vh;
+            gap: 15px;
+            padding: 15px;
+        }
+
+        .panel {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+        }
+
+        .header { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
+        .brand-box { display: flex; align-items: center; gap: 20px; }
+        .brand-box h1 { font-size: 24px; font-weight: 800; letter-spacing: 6px; margin: 0; color: var(--primary); text-shadow: 0 0 15px var(--primary-glow); }
+        .brand-box .intl { font-family: var(--font-jp); font-size: 12px; color: var(--text-dim); opacity: 0.6; letter-spacing: 2px; }
+
+        .strike-feed { font-family: var(--font-mono); font-size: 11px; color: var(--danger); height: 100%; overflow-y: hidden; }
+        .strike-msg { margin-bottom: 5px; animation: slideIn 0.2s ease-out; border-left: 2px solid var(--danger); padding-left: 8px; }
+        @keyframes slideIn { from { transform: translateX(-10px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .sidebar { display: flex; flex-direction: column; gap: 15px; }
+        .stat-group { margin-bottom: 20px; }
+        .stat-label { font-size: 10px; text-transform: uppercase; color: #64748b; letter-spacing: 2px; margin-bottom: 8px; }
+        .stat-value { font-size: 24px; font-weight: 700; font-family: var(--font-mono); color: var(--primary); }
+
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    
+        .live-tag {
+            background: var(--danger); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; 
+            font-weight: 800; position: absolute; top: 15px; left: 15px; animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+    <div class="crt"></div>
+    <div class="container">
+        <div class="panel header">
+            <div class="brand-box">
+                <img src="https://raw.githubusercontent.com/jakes1345/ShadowCypher/main/shadowcypher/native/icons/shadowcypher-256.png" height="40">
+                <div>
+                    <h1>SHADOWCYPHER <span style="font-size: 14px; opacity: 0.5;">// ШИФР_ТЕНИ</span></h1>
+                    <div class="intl">影子密码 | 幽灵协议 | 섀도우 사이퍼</div>
+                </div>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 12px; color: var(--primary);">SWARM_BRIDGE: <span id="conn-status" style="color: var(--danger);">DISCONNECTED</span></div>
+        </div>
+
+        <div class="sidebar">
+            <div class="panel">
+                <div class="stat-group"><div class="stat-label">System_Load</div><div class="stat-value" id="cpu-load">0.0%</div></div>
+                <div class="stat-group"><div class="stat-label">Nodes_In_Swarm</div><div class="stat-value" id="peer-count">0</div></div>
+            </div>
+            <div class="panel" style="flex-grow: 1;">
+                <div class="stat-label">Real_Time_Strike_Feed</div>
+                <div id="mission-stack" class="strike-feed"></div>
+            </div>
+        </div>
+
+        <div class="panel" style="overflow: hidden; background: radial-gradient(circle at center, rgba(255, 0, 0, 0.05) 0%, transparent 70%);">
+            <div class="live-tag">LIVE_STRIKE_PROOFOFACT</div>
+            <canvas id="strike-canvas"></canvas>
+            <div style="position: absolute; bottom: 20px; font-family: var(--font-mono); font-size: 12px; color: var(--danger);">TARGET: 127.0.0.1:9999 [SACRIFICIAL_GAUNTLET]</div>
+        </div>
+
+        <div class="sidebar">
+            <div class="panel">
+                <div class="stat-label">Gauntlet_Pressure</div>
+                <div class="stat-value" id="pressure-val" style="color: var(--danger);">0.0%</div>
+                <div style="height: 4px; background: #1a1a1a; margin-top: 10px; border-radius: 2px;">
+                    <div id="pressure-bar" style="height: 100%; background: var(--danger); width: 0%; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            <div class="panel" style="flex-grow: 1;">
+                <div class="stat-label">Neural_Thought_Trace</div>
+                <div id="thought-trace" style="font-family: var(--font-mono); font-size: 10px; color: var(--primary); line-height: 1.5;"></div>
+            </div>
+        </div>
+
+        <div class="panel" style="grid-column: 1 / -1; font-family: var(--font-mono); font-size: 12px; color: var(--primary); overflow: hidden;">
+            <div id="terminal-log">Connecting to native Go-Relay...</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('strike-canvas');
+        const ctx = canvas.getContext('2d');
+        function resize() { canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; }
+        window.addEventListener('resize', resize); resize();
+
+        let strikes = [];
+        function draw() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.strokeStyle = 'rgba(0, 242, 255, 0.05)';
+            for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
+            for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
+            
+            strikes.forEach((s, i) => {
+                ctx.beginPath(); ctx.strokeStyle = `rgba(255, 59, 59, ${s.life})`; ctx.lineWidth = 2;
+                ctx.moveTo(canvas.width/2, canvas.height/2); ctx.lineTo(s.x, s.y); ctx.stroke();
+                s.life -= 0.02; if(s.life <= 0) strikes.splice(i, 1);
+            });
+            requestAnimationFrame(draw);
+        }
+        draw();
+
+        function addStrike() { strikes.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, life: 1}); }
+
+        // --- LIVE BRIDGE ---
+        const ws = new WebSocket('ws://localhost:8888/ws');
+        ws.onopen = () => { 
+            document.getElementById('conn-status').innerText = 'OPERATIONAL';
+            document.getElementById('conn-status').style.color = '#22c55e';
+        };
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if(data.type === 'status') {
+                document.getElementById('peer-count').innerText = data.target.charCodeAt(0);
+            } else if(data.type === 'chat' && data.nick === 'core') {
+                const busData = JSON.parse(data.text);
+                handleBusEvent(busData);
+            }
+        };
+
+        function handleBusEvent(event) {
+            if(event.module) { // module_log
+                const log = document.getElementById('mission-stack');
+                const div = document.createElement('div');
+                div.className = 'strike-msg';
+                div.innerHTML = `[${event.module}] ${event.text}`;
+                log.prepend(div); if(log.childNodes.length > 50) log.removeChild(log.lastChild);
+                addStrike();
+            }
+            if(event.key === 'load_avg') {
+                document.getElementById('cpu-load').innerText = event.value.toFixed(1) + '%';
+            }
+        }
+    </script>
+</body>
+</html>

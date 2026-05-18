@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=ShadowOS
+Description=Animated boot splash for ShadowOS — hex monogram with teal orbit spinner
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/shadowos
+ScriptFile=/usr/share/plymouth/themes/shadowos/shadowos.script

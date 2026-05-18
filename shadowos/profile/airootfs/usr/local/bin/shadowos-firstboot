@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# ShadowOS first-boot one-shot.
+# Runs once on first boot, then stamps /var/lib/shadowos/firstboot.stamp
+# to prevent re-running.
+#
+# Wired up via /etc/systemd/system/shadowos-firstboot.service (oneshot, multi-user.target).
+#
+# What it does:
+#   1. Wait for network (up to 60s)
+#   2. Install Flatpak apps that aren't in Arch repos (Bottles, ProtonUp-Qt)
+#   3. Refresh BlackArch keyring if needed
+#   4. Stamp the marker so we don't run again
+
+set -u
+
+LOG=/var/log/shadowos-firstboot.log
+STAMP=/var/lib/shadowos/firstboot.stamp
+
+mkdir -p /var/lib/shadowos
+exec >>"$LOG" 2>&1
+
+if [[ -f "$STAMP" ]]; then
+    echo "[$(date -Iseconds)] firstboot already ran; skipping."
+    exit 0
+fi
+
+echo "════════════════════════════════════════════════════════════════"
+echo "  ShadowOS first-boot — $(date -Iseconds)"
+echo "════════════════════════════════════════════════════════════════"
+
+# ── 1. Wait for network ─────────────────────────────────────────────────────
+echo "[*] Waiting for network..."
+for i in $(seq 1 30); do
+    if getent hosts archlinux.org >/dev/null 2>&1; then
+        echo "    network up after ${i}s"
+        break
+    fi
+    sleep 2
+done
+
+ONLINE=0
+if getent hosts archlinux.org >/dev/null 2>&1; then
+    ONLINE=1
+fi
+
+if [[ "$ONLINE" -eq 1 ]]; then
+    # ── 2. Flatpak apps (AUR-only equivalents) ──────────────────────────────
+    if command -v flatpak >/dev/null 2>&1; then
+        flatpak remote-add --if-not-exists flathub \
+            https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+
+        echo "[*] Installing Flathub apps (Bottles, ProtonUp-Qt)..."
+        flatpak install -y --noninteractive flathub \
+            com.usebottles.bottles \
+            net.davidotek.pupgui2 \
+            2>&1 | tail -10 || echo "    flatpak install failed (will retry next boot)"
+    fi
+
+    # ── 3. BlackArch keyring (if it failed at build time) ──────────────────
+    if [[ ! -f /etc/pacman.d/blackarch-keyring ]] && command -v pacman >/dev/null 2>&1; then
+        echo "[*] Importing BlackArch keyring..."
+        if curl -fsSL https://blackarch.org/keyring/blackarch-keyring.pkg.tar.zst \
+            -o /tmp/blackarch-keyring.pkg.tar.zst; then
+            pacman -U --noconfirm /tmp/blackarch-keyring.pkg.tar.zst 2>&1 | tail -5
+            rm -f /tmp/blackarch-keyring.pkg.tar.zst
+        fi
+    fi
+
+    # ── 4. Refresh package databases ────────────────────────────────────────
+    pacman -Sy --noconfirm 2>&1 | tail -3 || true
+else
+    echo "[!] No network — skipping online setup. Will re-run next boot."
+    exit 0
+fi
+
+# ── 5. Stamp ────────────────────────────────────────────────────────────────
+date -Iseconds > "$STAMP"
+echo "[✓] First-boot setup complete."

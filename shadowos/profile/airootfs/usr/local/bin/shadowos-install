@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# shadowos-install — friendly wrapper around archinstall with ShadowOS defaults.
+# Until Calamares ships from AUR (v0.4), this is the bare-metal install path.
+set -e
+
+TEAL='\033[38;2;0;224;164m'
+DIM='\033[2m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+clear
+cat <<EOF
+${TEAL}${BOLD}
+   ███████ ██   ██  █████  ██████   ██████  ██     ██
+   ██      ██   ██ ██   ██ ██   ██ ██    ██ ██     ██
+   ███████ ███████ ███████ ██   ██ ██    ██ ██  █  ██
+        ██ ██   ██ ██   ██ ██   ██ ██    ██ ██ ███ ██
+   ███████ ██   ██ ██   ██ ██████   ██████   ███ ███
+${RESET}
+${DIM}   bare-metal installer  ·  v0.3${RESET}
+
+You are about to install ShadowOS to a disk.
+
+  ${BOLD}Before you continue:${RESET}
+    · pick a disk that you are OK ERASING ENTIRELY
+    · have an internet connection (Ethernet or Wi-Fi via nmtui)
+    · pick FULL DISK ENCRYPTION (LUKS) at the disk-layout step
+    · username: anything (we'll seed ShadowCypher config under that home)
+    · root password: required — make it strong
+
+EOF
+
+read -rp "$(echo -e ${BOLD}Continue?${RESET}) [y/N] " ans
+[[ "$ans" =~ ^[Yy]$ ]] || { echo "aborted."; exit 0; }
+
+# Use archinstall with a ShadowOS preset config that pulls in our package set.
+exec sudo archinstall --config /etc/shadowos/install/archinstall.json

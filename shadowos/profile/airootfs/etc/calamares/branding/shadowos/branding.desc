@@ -1,0 +1,30 @@
+---
+componentName: shadowos
+
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+
+strings:
+    productName: ShadowOS
+    shortProductName: ShadowOS
+    version: 0.3
+    shortVersion: 0.3
+    versionedName: ShadowOS 0.3
+    shortVersionedName: ShadowOS 0.3
+    bootloaderEntryName: ShadowOS
+    productUrl: https://shadowcypher.site
+    supportUrl: https://shadowcypher.site
+    releaseNotesUrl: https://shadowcypher.site
+
+images:
+    productLogo: /usr/share/sddm/themes/shadowos/logo.png
+    productIcon: /usr/share/sddm/themes/shadowos/logo.png
+    productWelcome: /usr/share/backgrounds/shadowos/wallpaper.png
+
+style:
+    sidebarBackground: "#0A0E13"
+    sidebarText: "#E6EDF3"
+    sidebarTextSelect: "#00E0A4"
+    sidebarTextHighlight: "#00E0A4"
+
+slideshow: "show.qml"

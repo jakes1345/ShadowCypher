@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# shadow-help-me — expose SSH over a Tor hidden service for remote debugging.
+# Generates a one-time password, prints the .onion address, and auto-disables
+# after the specified duration. Privacy-first: nothing leaves your machine
+# until you explicitly invoke this command.
+set -euo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+    exec sudo -E "$0" "$@"
+fi
+
+DURATION_MIN="${1:-60}"
+if (( DURATION_MIN < 1 || DURATION_MIN > 240 )); then
+    echo "duration must be 1-240 minutes (got $DURATION_MIN)"
+    exit 1
+fi
+
+HS_DIR="/var/lib/tor/shadowos-help-me"
+HS_CONF="/etc/tor/torrc.d/shadowos-help-me.conf"
+SSHD_OVERRIDE="/etc/ssh/sshd_config.d/99-help-me.conf"
+STATE="/var/lib/shadowos/help-me.state"
+mkdir -p /var/lib/shadowos /etc/tor/torrc.d
+
+TEAL='\033[38;2;0;224;164m'
+RED='\033[38;2;255;107;107m'
+DIM='\033[2m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+cleanup_command() {
+    cat <<'EOF'
+#!/usr/bin/env bash
+set -e
+HS_DIR="/var/lib/tor/shadowos-help-me"
+HS_CONF="/etc/tor/torrc.d/shadowos-help-me.conf"
+SSHD_OVERRIDE="/etc/ssh/sshd_config.d/99-help-me.conf"
+STATE="/var/lib/shadowos/help-me.state"
+
+if [[ -f "$STATE" ]]; then
+    ORIG_HASH=$(grep '^orig_hash=' "$STATE" | cut -d= -f2-)
+    [[ -n "$ORIG_HASH" ]] && echo "shadow:$ORIG_HASH" | chpasswd -e 2>/dev/null || true
+fi
+
+rm -f "$HS_CONF" "$SSHD_OVERRIDE" "$STATE"
+rm -rf "$HS_DIR"
+systemctl reload tor 2>/dev/null || true
+systemctl reload sshd 2>/dev/null || true
+logger -t shadow-help-me "remote SSH endpoint disabled"
+EOF
+}
+
+# === Stop any existing instance first ===
+if [[ -f "$STATE" ]]; then
+    echo -e "${DIM}clearing previous help-me session...${RESET}"
+    bash -c "$(cleanup_command)" 2>/dev/null || true
+fi
+
+# === Ensure sshd + tor are up ===
+systemctl is-active --quiet sshd  || systemctl start sshd
+systemctl is-active --quiet tor   || systemctl start tor
+
+# === Force password auth temporarily (otherwise pubkey-only) ===
+cat > "$SSHD_OVERRIDE" <<EOF
+# Temporary — managed by shadow-help-me
+PasswordAuthentication yes
+PermitRootLogin no
+EOF
+systemctl reload sshd
+
+# === One-time password for shadow user ===
+OTP=$(tr -dc 'A-Z2-7' </dev/urandom | head -c 12)
+
+# Backup current hash so we can restore it
+ORIG_HASH=$(getent shadow shadow | cut -d: -f2)
+echo "orig_hash=$ORIG_HASH" > "$STATE"
+chmod 600 "$STATE"
+
+echo "shadow:$OTP" | chpasswd
+
+# === Hidden service config ===
+mkdir -p "$HS_DIR"
+chown tor:tor "$HS_DIR"
+chmod 700 "$HS_DIR"
+
+cat > "$HS_CONF" <<EOF
+HiddenServiceDir $HS_DIR
+HiddenServicePort 22 127.0.0.1:22
+HiddenServiceVersion 3
+EOF
+
+# Make sure tor includes the .d directory
+if ! grep -q "^%include /etc/tor/torrc.d" /etc/tor/torrc 2>/dev/null; then
+    echo "%include /etc/tor/torrc.d" >> /etc/tor/torrc
+fi
+
+systemctl reload tor
+
+# === Wait for hostname ===
+echo -ne "${DIM}waiting for .onion...${RESET}"
+for i in {1..30}; do
+    [[ -f "$HS_DIR/hostname" ]] && break
+    sleep 1
+    echo -n "."
+done
+echo
+
+if [[ ! -f "$HS_DIR/hostname" ]]; then
+    echo -e "${RED}tor never generated hostname — check 'systemctl status tor'${RESET}"
+    bash -c "$(cleanup_command)"
+    exit 1
+fi
+
+ONION=$(cat "$HS_DIR/hostname")
+EXPIRES=$(date -d "+$DURATION_MIN min" "+%H:%M %Z")
+
+# === Schedule cleanup ===
+CLEANUP_SCRIPT="/var/lib/shadowos/help-me-cleanup.sh"
+cleanup_command > "$CLEANUP_SCRIPT"
+chmod 700 "$CLEANUP_SCRIPT"
+
+systemd-run --on-active="${DURATION_MIN}min" --unit=shadow-help-me-cleanup \
+    "$CLEANUP_SCRIPT" >/dev/null 2>&1
+
+# === Print share block ===
+clear
+cat <<EOF
+${TEAL}${BOLD}
+   ┌──────────────────────────────────────────────────────────┐
+   │  ShadowOS  ·  remote help endpoint LIVE                  │
+   └──────────────────────────────────────────────────────────┘
+${RESET}
+   ${BOLD}share this with whoever you trust:${RESET}
+
+       ${TEAL}.onion${RESET}     $ONION
+       ${TEAL}user${RESET}       shadow
+       ${TEAL}password${RESET}   $OTP
+       ${TEAL}expires${RESET}    in $DURATION_MIN min  ($EXPIRES)
+
+   ${BOLD}connect from anywhere with tor:${RESET}
+
+       ${DIM}\$${RESET} torsocks ssh shadow@$ONION
+       ${DIM}# or with proxychains:${RESET}
+       ${DIM}\$${RESET} proxychains4 ssh shadow@$ONION
+
+   ${BOLD}revoke right now:${RESET}
+
+       ${DIM}\$${RESET} sudo shadow-help-me-stop
+
+EOF

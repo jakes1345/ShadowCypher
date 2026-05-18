@@ -1,0 +1,293 @@
+# Base system
+base
+base-devel
+linux
+linux-firmware
+linux-hardened
+archiso
+mkinitcpio-archiso
+mkinitcpio
+intel-ucode
+amd-ucode
+
+# Boot
+grub
+efibootmgr
+syslinux
+edk2-shell
+plymouth
+
+# Networking
+networkmanager
+nm-connection-editor
+network-manager-applet
+wireguard-tools
+openvpn
+openresolv
+iwd
+bind
+dnscrypt-proxy
+openresolv
+
+# Security / privacy
+tor
+torbrowser-launcher
+firejail
+apparmor
+ufw
+nftables
+fail2ban
+macchanger
+gnupg
+pass
+keepassxc
+veracrypt
+yubikey-manager
+
+# === Tactical / pentest arsenal (Kali/Parrot tier, repo-safe) ===
+nmap
+masscan
+wireshark-qt
+tcpdump
+john
+hashcat
+hashcat-utils
+sqlmap
+hydra
+aircrack-ng
+bettercap
+nikto
+sslscan
+gobuster
+metasploit
+yara
+binwalk
+foremost
+sleuthkit
+radare2
+proxychains-ng
+
+# === Modern desktop: Hyprland ===
+hyprland
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+qt6-wayland
+qt5-wayland
+qt6-declarative
+qt6-5compat
+qt6-svg
+waybar
+wofi
+hyprpaper
+hyprlock
+hypridle
+hyprcursor
+mako
+foot
+xterm
+thunar
+thunar-archive-plugin
+file-roller
+loupe
+brightnessctl
+playerctl
+grim
+slurp
+swappy
+wl-clipboard
+cliphist
+pavucontrol
+polkit-gnome
+sddm
+ttf-jetbrains-mono-nerd
+ttf-firacode-nerd
+noto-fonts
+noto-fonts-emoji
+papirus-icon-theme
+
+# Audio (pipewire)
+pipewire
+pipewire-pulse
+pipewire-alsa
+pipewire-jack
+wireplumber
+
+# Broad hardware compat — Wi-Fi, GPU, audio firmware
+mesa
+mesa-utils
+vulkan-radeon
+vulkan-intel
+vulkan-nouveau
+libva-mesa-driver
+intel-media-driver
+xf86-video-amdgpu
+xf86-video-nouveau
+xorg-server
+xorg-xinit
+sof-firmware
+alsa-firmware
+alsa-ucm-conf
+alsa-utils
+bluez
+bluez-utils
+
+# Installer (bare-metal install support) — Calamares is AUR-only so we ship
+# archinstall (official Arch TUI installer) + a friendlier wrapper.
+archinstall
+
+# ShadowCypher runtime deps (GTK app)
+gtk3
+python-gobject
+python-cairo
+python-pydantic
+python-requests
+python-websockets
+python-cryptography
+python-pillow
+python-rich
+python-textual
+python-fastapi
+uvicorn
+ollama
+
+# Apps
+firefox
+thunderbird
+signal-desktop
+libreoffice-fresh
+mpv
+imv
+
+# === Dev — full IDE/runtime stack ===
+git
+git-lfs
+github-cli
+neovim
+vim
+code                       # VSCode OSS — open-source binary build in repos
+helix                      # modern modal editor
+python
+python-pip
+python-poetry
+nodejs
+npm
+pnpm
+yarn
+rustup
+go
+jdk-openjdk
+gradle
+maven
+docker
+docker-compose
+docker-buildx
+podman
+buildah
+kubectl
+helm
+terraform
+ansible
+just                       # task runner — better make
+lazygit
+gh
+direnv
+
+# === Modern offensive arsenal (beyond the Kali tier above) ===
+rustscan                   # nmap UI front, 65k ports in seconds
+ffuf                       # fuzzing
+feroxbuster                # content discovery
+amass                      # asset discovery
+subfinder                  # subdomain enumeration (ProjectDiscovery)
+httpx                      # HTTP probing (ProjectDiscovery)
+nuclei                     # template-based vuln scanner
+katana                     # JS-aware crawler
+naabu                      # fast port scanner (ProjectDiscovery)
+mitmproxy                  # TLS MITM
+exploitdb                  # local searchsploit DB
+impacket                   # AD/SMB attack suite
+responder                  # LLMNR/NBT-NS poisoner
+netexec                    # AD swiss-army knife (renamed from crackmapexec) — blackarch
+evil-winrm                 # post-exploitation WinRM
+sshuttle                   # poor-man's VPN over SSH (pivot)
+# chisel is AUR-only — installed via go install at first-boot if needed
+proxychains-ng
+seclists                   # wordlists
+dnsenum
+whatweb
+wfuzz
+zaproxy                    # OWASP ZAP — web app scanner
+
+# === Gaming + multimedia ===
+steam
+steam-native-runtime
+gamemode
+lib32-gamemode
+mangohud
+lib32-mangohud
+goverlay                   # MangoHUD GUI config
+lutris                     # everything-launcher
+heroic-games-launcher      # Epic, GOG, Amazon Prime Gaming (extra repo)
+prismlauncher              # Minecraft (extra repo)
+# bottles and protonup-qt are AUR-only — installed via Flatpak by
+# customize_airootfs.sh: com.usebottles.bottles + net.davidotek.pupgui2
+wine-staging
+winetricks
+# dxvk-mingw is AUR — DXVK comes bundled with Proton/Steam anyway
+vkd3d
+gamescope
+ttf-liberation             # fixes font issues in many games
+discord                    # comms (devs + gaming)
+
+# === Universal launchers / app management ===
+flatpak                    # Flathub access for apps not in Arch repos
+distrobox                  # run Kali/Ubuntu/Debian as containers — critical for sec pros
+podman                     # backing runtime for distrobox (already listed under dev, harmless dup)
+
+# === Theming / desktop polish ===
+# catppuccin-gtk-theme-mocha is AUR-only — installed via Flatpak/script at first-boot
+bibata-cursor-theme
+qt5ct
+qt6ct
+kvantum
+nwg-look                   # GTK config UI for tilers
+
+# === Media + creator tools ===
+obs-studio
+audacity
+gimp
+inkscape
+blender
+krita
+vlc
+
+# Utilities
+htop
+btop
+fastfetch
+fzf
+ripgrep
+fd
+bat
+eza
+zsh
+zsh-completions
+starship
+tmux
+curl
+wget
+openssh
+rsync
+torsocks
+unzip
+zip
+jq
+yq
+which
+sudo
+parted
+gptfdisk
+dosfstools
+btrfs-progs
+ntfs-3g
+exfatprogs
+cryptsetup

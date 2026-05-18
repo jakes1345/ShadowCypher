@@ -1,0 +1,12 @@
+[Unit]
+Description=Randomize MAC address on all interfaces at boot
+Wants=network-pre.target
+Before=network-pre.target NetworkManager.service
+After=systemd-udev-settle.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/shadowos-mac-randomize
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,47 @@
+{
+  "additional-repositories": [],
+  "audio_config": {"audio": "pipewire"},
+  "bootloader": "Grub",
+  "config_version": "2.8.0",
+  "hostname": "shadowos",
+  "kernels": ["linux", "linux-hardened"],
+  "locale_config": {
+    "kb_layout": "us",
+    "sys_enc": "UTF-8",
+    "sys_lang": "en_US.UTF-8"
+  },
+  "network_config": {"type": "nm"},
+  "ntp": true,
+  "packages": [
+    "hyprland", "xdg-desktop-portal-hyprland", "qt6-wayland", "qt6-declarative",
+    "qt6-5compat", "qt6-svg", "waybar", "wofi", "hyprpaper", "hyprlock", "hypridle",
+    "mako", "foot", "xterm", "thunar", "wl-clipboard", "cliphist", "polkit-gnome",
+    "sddm", "pipewire", "pipewire-pulse", "wireplumber", "ttf-jetbrains-mono-nerd",
+    "papirus-icon-theme",
+    "tor", "torbrowser-launcher", "firejail", "apparmor", "ufw", "nftables",
+    "fail2ban", "macchanger", "gnupg", "keepassxc", "veracrypt", "yubikey-manager",
+    "dnscrypt-proxy",
+    "nmap", "masscan", "wireshark-qt", "tcpdump", "john", "hashcat",
+    "sqlmap", "hydra", "aircrack-ng", "bettercap", "nikto", "sslscan",
+    "gobuster", "metasploit", "yara", "binwalk", "foremost", "sleuthkit",
+    "radare2", "proxychains-ng",
+    "firefox", "thunderbird", "signal-desktop", "mpv",
+    "git", "neovim", "python", "nodejs", "go", "rustup",
+    "docker", "docker-compose",
+    "zsh", "starship", "fastfetch", "btop", "ripgrep", "fd", "bat", "eza",
+    "ollama"
+  ],
+  "profile_config": {
+    "gfx_driver": "All open-source",
+    "greeter": "sddm",
+    "profile": {
+      "custom_settings": {},
+      "details": [],
+      "main": "Minimal"
+    }
+  },
+  "services": ["NetworkManager", "ufw", "apparmor", "fail2ban", "sddm",
+               "dnscrypt-proxy", "bluetooth"],
+  "timezone": "UTC",
+  "version": "2.8.0"
+}

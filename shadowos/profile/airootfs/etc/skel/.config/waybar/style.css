@@ -1,0 +1,90 @@
+* {
+  font-family: "JetBrainsMono Nerd Font", "Noto Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 0;
+}
+
+window#waybar {
+  background: rgba(10, 14, 19, 0.78);
+  color: #E6EDF3;
+  border: 1px solid rgba(0, 224, 164, 0.18);
+  border-radius: 14px;
+  transition: background 200ms ease;
+}
+
+tooltip {
+  background: rgba(10, 14, 19, 0.95);
+  border: 1px solid rgba(0, 224, 164, 0.35);
+  border-radius: 8px;
+  color: #E6EDF3;
+}
+
+#custom-logo {
+  background: linear-gradient(135deg, #00E0A4, #00B988);
+  color: #06090D;
+  font-weight: 800;
+  padding: 0 12px;
+  margin: 4px 6px 4px 8px;
+  border-radius: 8px;
+}
+
+#workspaces { margin: 4px 4px; padding: 0 4px; }
+
+#workspaces button {
+  color: #5A6470;
+  padding: 0 8px;
+  margin: 0 2px;
+  background: transparent;
+  border-radius: 6px;
+  transition: all 200ms ease;
+}
+
+#workspaces button:hover { color: #E6EDF3; background: rgba(0, 224, 164, 0.08); }
+
+#workspaces button.active {
+  color: #06090D;
+  background: #00E0A4;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(0, 224, 164, 0.5);
+}
+
+#workspaces button.urgent { color: #FF6B6B; background: rgba(255, 107, 107, 0.15); }
+
+#window {
+  color: #C9D1D9;
+  padding: 0 12px;
+  margin: 4px 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+#clock {
+  color: #E6EDF3;
+  font-weight: 700;
+  padding: 0 16px;
+  margin: 4px 0;
+  background: rgba(0, 224, 164, 0.08);
+  border: 1px solid rgba(0, 224, 164, 0.18);
+  border-radius: 8px;
+  letter-spacing: 1px;
+}
+
+#network, #pulseaudio, #battery, #tray, #custom-power {
+  color: #C9D1D9;
+  padding: 0 10px;
+  margin: 4px 2px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+#battery.warning  { color: #FFAA33; }
+#battery.critical { color: #FF6B6B; background: rgba(255, 107, 107, 0.12); }
+
+#custom-power {
+  background: rgba(255, 107, 107, 0.10);
+  color: #FF8B8B;
+  margin-right: 8px;
+}
+
+#custom-power:hover { background: rgba(255, 107, 107, 0.22); color: #FFE0E0; }

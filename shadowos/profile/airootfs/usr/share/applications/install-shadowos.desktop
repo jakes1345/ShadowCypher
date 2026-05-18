@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Install ShadowOS
+Comment=Install ShadowOS to your hard drive
+GenericName=System Installer
+Exec=foot --title "Install ShadowOS" -e shadowos-install
+Icon=system-software-install
+Terminal=false
+StartupNotify=true
+Type=Application
+Categories=System;
+Keywords=installer;shadowos;

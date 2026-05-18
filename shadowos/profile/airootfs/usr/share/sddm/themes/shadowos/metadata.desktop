@@ -1,0 +1,12 @@
+[SddmGreeterTheme]
+Name=ShadowOS
+Description=ShadowOS modern login
+Author=ShadowCypher
+Type=sddm-theme
+Version=0.1
+Website=https://shadowcypher.site
+License=MIT
+Theme-Id=shadowos
+Theme-API=2.0
+MainScript=Main.qml
+ConfigFile=theme.conf

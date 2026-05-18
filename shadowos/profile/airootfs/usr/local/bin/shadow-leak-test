@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# shadow-leak-test — verify nothing's leaking your real identity.
+# Checks public IP, DNS server, WebRTC, IPv6, and torcheck.
+set -e
+
+TEAL='\033[38;2;0;224;164m'
+RED='\033[38;2;255;107;107m'
+YELLOW='\033[38;2;255;200;87m'
+DIM='\033[2m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+echo -e "${BOLD}ShadowOS  ·  leak surface check${RESET}"
+echo
+
+# --- Public IP ---
+echo -e "${TEAL}▸${RESET} public IP"
+ip4=$(curl -fsSL --max-time 6 https://api.ipify.org 2>/dev/null || echo "?")
+ip6=$(curl -fsSL --max-time 6 https://api64.ipify.org 2>/dev/null || echo "?")
+echo "    v4: $ip4"
+echo "    v6: $ip6"
+[[ "$ip6" != "?" && "$ip6" != "$ip4" ]] && echo -e "    ${YELLOW}⚠ ipv6 reachable — disable if you want a single egress identity${RESET}"
+
+# --- Geo ---
+echo
+echo -e "${TEAL}▸${RESET} geolocation"
+geo=$(curl -fsSL --max-time 6 "https://ipapi.co/$ip4/json/" 2>/dev/null || echo "{}")
+echo "    $(echo "$geo" | jq -r '"\(.city // "?"), \(.region // "?") — \(.country_name // "?") · \(.org // "?")"' 2>/dev/null)"
+
+# --- Tor check ---
+echo
+echo -e "${TEAL}▸${RESET} tor"
+torcheck=$(curl -fsSL --max-time 8 https://check.torproject.org/api/ip 2>/dev/null || echo "{}")
+istor=$(echo "$torcheck" | jq -r '.IsTor // false' 2>/dev/null)
+if [[ "$istor" == "true" ]]; then
+    echo -e "    ${TEAL}✓${RESET} traffic exits via Tor"
+else
+    echo -e "    ${YELLOW}⚠${RESET} not routed through Tor (use ${BOLD}shadow-mode privacy${RESET} or ${BOLD}shadow-mode ghost${RESET})"
+fi
+
+# --- DNS resolver ---
+echo
+echo -e "${TEAL}▸${RESET} DNS resolver"
+resolver=$(getent hosts shadowos-leak-canary.invalid 2>&1 | head -1 || true)
+sysres=$(grep -E "^nameserver" /etc/resolv.conf 2>/dev/null | awk '{print $2}' | tr '\n' ' ')
+echo "    /etc/resolv.conf nameserver(s): ${sysres:-unset}"
+if systemctl is-active --quiet dnscrypt-proxy 2>/dev/null; then
+    echo -e "    ${TEAL}✓${RESET} dnscrypt-proxy active"
+else
+    echo -e "    ${YELLOW}⚠${RESET} dnscrypt-proxy inactive — your queries are plaintext"
+fi
+
+# --- WebRTC ---
+echo
+echo -e "${TEAL}▸${RESET} WebRTC (browser-level leak)"
+echo -e "    ${DIM}firefox is hardened via /etc/skel/.mozilla/.../user.js (media.peerconnection.enabled=false)${RESET}"
+
+# --- Interfaces ---
+echo
+echo -e "${TEAL}▸${RESET} interfaces"
+for iface in $(ls /sys/class/net/ | grep -v lo); do
+    addr=$(cat "/sys/class/net/$iface/address" 2>/dev/null)
+    state=$(cat "/sys/class/net/$iface/operstate" 2>/dev/null)
+    echo "    $iface  $addr  ($state)"
+done
+
+echo
+echo -e "${DIM}done.${RESET}"

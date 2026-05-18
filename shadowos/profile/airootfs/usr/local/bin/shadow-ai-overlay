@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# shadow-ai-overlay — quick local AI prompt via Ollama, surfaced through wofi.
+# Bound to Super+Space in Hyprland.
+set -e
+
+MODEL="${SHADOWOS_AI_MODEL:-llama3.2}"
+
+prompt=$(wofi --dmenu --prompt="shadow-ai →" --width=620 --height=80 --lines=1 || true)
+[[ -z "$prompt" ]] && exit 0
+
+if ! systemctl is-active --quiet ollama; then
+    systemctl start ollama 2>/dev/null || sudo systemctl start ollama 2>/dev/null || true
+    sleep 1
+fi
+
+reply=$(curl -fsSL http://127.0.0.1:11434/api/generate \
+    -H "Content-Type: application/json" \
+    -d "$(jq -nc --arg m "$MODEL" --arg p "$prompt" '{model:$m,prompt:$p,stream:false}')" \
+    2>/dev/null | jq -r '.response // "no response"' || echo "AI engine unavailable")
+
+notify-send -t 30000 "shadow-ai" "$reply" 2>/dev/null || echo "$reply"

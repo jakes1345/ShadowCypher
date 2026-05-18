@@ -1,0 +1,14 @@
+[Unit]
+Description=ShadowOS first-boot setup (Flatpak apps, BlackArch keyring)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/shadowos/firstboot.stamp
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/shadowos-firstboot
+RemainAfterExit=yes
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

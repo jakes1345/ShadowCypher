@@ -1,0 +1,85 @@
+#
+# ShadowOS GRUB theme
+# Dark hex backdrop + teal accent menu
+#
+
+# Global
+title-text:           ""
+desktop-image:        "background.png"
+desktop-color:        "#05080C"
+terminal-font:        "Unifont Regular 16"
+terminal-box:         "terminal_box_*.png"
+terminal-left:        "10%"
+terminal-top:         "10%"
+terminal-width:       "80%"
+terminal-height:      "80%"
+terminal-border:      "0"
+message-font:         "Unifont Regular 16"
+message-color:        "#E6EDF3"
+message-bg-color:     "#05080C"
+
+# Boot menu — the central box
++ boot_menu {
+  left = 18%
+  top = 32%
+  width = 64%
+  height = 50%
+  item_font = "Unifont Regular 18"
+  item_color = "#9CA5B3"
+  selected_item_color = "#00E0A4"
+  selected_item_pixmap_style = "select_*.png"
+  icon_width = 0
+  icon_height = 0
+  item_height = 38
+  item_padding = 8
+  item_spacing = 4
+  menu_pixmap_style = ""
+}
+
+# Header label — sits above the menu
++ label {
+  top = 14%
+  left = 0
+  width = 100%
+  align = "center"
+  font = "Unifont Regular 28"
+  color = "#E6EDF3"
+  text = "SHADOWOS"
+}
+
++ label {
+  top = 19%
+  left = 0
+  width = 100%
+  align = "center"
+  font = "Unifont Regular 14"
+  color = "#6B7785"
+  text = "ENTERPRISE  ·  PREDATOR  ·  SOVEREIGN"
+}
+
+# Progress bar (countdown)
++ progress_bar {
+  id = "__timeout__"
+  left = 18%
+  top = 86%
+  width = 64%
+  height = 14
+  show_text = true
+  font = "Unifont Regular 12"
+  text_color = "#6B7785"
+  fg_color = "#00E0A4"
+  bg_color = "#11161D"
+  border_color = "#1F2A36"
+  text = "@TIMEOUT_NOTIFICATION_LONG@"
+}
+
+# Footer hint
++ label {
+  top = 92%
+  left = 0
+  width = 100%
+  align = "center"
+  font = "Unifont Regular 11"
+  color = "#3D4651"
+  text = "[↑↓] navigate     [Enter] boot     [e] edit     [c] grub shell"
+}

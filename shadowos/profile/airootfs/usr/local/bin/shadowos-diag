@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# shadowos-diag — bundle every relevant log into one tarball.
+# Run from the live ISO, then scp the output to the host for analysis.
+set -e
+
+OUT="/tmp/shadowos-diag-$(date +%s).tar.gz"
+WORK="$(mktemp -d)"
+
+mkdir -p "$WORK/journal" "$WORK/hyprland" "$WORK/shadowos" "$WORK/system"
+
+journalctl -b > "$WORK/journal/current-boot.log" 2>&1 || true
+journalctl -b --user > "$WORK/journal/user-current-boot.log" 2>&1 || true
+journalctl -b -p err > "$WORK/journal/errors-only.log" 2>&1 || true
+
+# Hyprland logs
+cp -a /home/shadow/.cache/hyprland/ "$WORK/hyprland/" 2>/dev/null || true
+hyprctl monitors > "$WORK/hyprland/monitors.txt" 2>&1 || true
+hyprctl clients  > "$WORK/hyprland/clients.txt"  2>&1 || true
+hyprctl version  > "$WORK/hyprland/version.txt"  2>&1 || true
+
+# ShadowOS state
+cp -a /var/lib/shadowos/ "$WORK/shadowos/" 2>/dev/null || true
+ls -la /opt/shadowcypher/ > "$WORK/shadowos/opt-listing.txt" 2>&1 || true
+
+# System snapshot
+systemctl --failed > "$WORK/system/failed-units.txt" 2>&1 || true
+systemctl list-units --state=running > "$WORK/system/running-units.txt" 2>&1 || true
+ip a > "$WORK/system/ip.txt" 2>&1 || true
+lsmod > "$WORK/system/lsmod.txt" 2>&1 || true
+dmesg > "$WORK/system/dmesg.txt" 2>&1 || true
+cat /proc/cmdline > "$WORK/system/cmdline.txt" 2>&1 || true
+
+tar -czf "$OUT" -C "$WORK" .
+rm -rf "$WORK"
+
+echo "diagnostic bundle: $OUT"
+echo "from host:  scp -P 2222 shadow@localhost:$OUT ."

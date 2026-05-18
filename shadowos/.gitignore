@@ -1,0 +1,21 @@
+# ShadowOS build artifacts
+work/
+out/
+build.log
+
+# Python build/runtime artifacts that get rebuilt at first-boot
+profile/airootfs/opt/shadowcypher/agent/.venv/
+profile/airootfs/opt/shadowcypher/ai_engine/meta-venv/
+profile/airootfs/opt/shadowcypher/ai_engine/assets/
+profile/airootfs/opt/shadowcypher/ai_engine/docs/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Generated wallpapers checked in explicitly — but skip these intermediates
+branding/work/
+
+# Local secrets — never commit
+*.key
+*.pem
+authorized_keys.bak

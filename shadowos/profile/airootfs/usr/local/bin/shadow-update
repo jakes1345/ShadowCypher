@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# shadow-update — smart updater that respects shadow-mode.
+set -e
+MODE=$(cat /var/lib/shadowos/current-mode 2>/dev/null || echo normal)
+
+case "$MODE" in
+    privacy|ghost)
+        echo "Current mode: $MODE — refusing to update over clearnet."
+        echo "Either: shadow-mode normal && shadow-update"
+        echo "    Or: shadow-update --over-tor   (routes pacman via torsocks)"
+        if [[ "${1:-}" == "--over-tor" ]]; then
+            sudo torsocks pacman -Syu
+        fi
+        exit 0
+        ;;
+esac
+
+sudo pacman -Syu

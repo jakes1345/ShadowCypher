@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Randomize MAC on every physical interface before NetworkManager starts.
+for iface in $(ls /sys/class/net/ | grep -v lo); do
+    [[ -d "/sys/class/net/$iface/device" ]] || continue
+    ip link set "$iface" down 2>/dev/null || true
+    macchanger -r "$iface" 2>/dev/null || true
+    ip link set "$iface" up 2>/dev/null || true
+done

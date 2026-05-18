@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# shadow-mode — ShadowOS personality switcher.
+# Hot-swap firewall, DNS, autostart, theme accent, default browser.
+# Usage: shadow-mode <pentest|privacy|dev|ghost|normal|toggle-tor|picker|status>
+
+set -euo pipefail
+
+MODE_DIR="/etc/shadowos/modes"
+STATE_FILE="/var/lib/shadowos/current-mode"
+mkdir -p "$(dirname "$STATE_FILE")"
+
+GREEN='\033[38;2;0;224;164m'
+RESET='\033[0m'
+BOLD='\033[1m'
+
+usage() {
+    cat <<EOF
+${BOLD}shadow-mode${RESET} — ShadowOS personality switcher
+
+  ${GREEN}pentest${RESET}    Recon + exploit tools live, firewall opens for scanning, no Tor
+  ${GREEN}privacy${RESET}    All egress via Tor, MAC randomized, DNS encrypted, firejail wraps browsers
+  ${GREEN}dev${RESET}        Dev daemons up, firewall normal, full editor + container stack
+  ${GREEN}ghost${RESET}      Maximum lockdown: Tor + Signal only, every other app blocked, ephemeral
+  ${GREEN}normal${RESET}     Default daily-driver
+  ${GREEN}toggle-tor${RESET} Flip Tor system-wide regardless of current mode
+  ${GREEN}picker${RESET}     Show wofi mode picker
+  ${GREEN}status${RESET}     Show current mode + active rules
+EOF
+}
+
+current() {
+    [[ -f "$STATE_FILE" ]] && cat "$STATE_FILE" || echo "normal"
+}
+
+require_root() {
+    if [[ $EUID -ne 0 ]]; then
+        exec sudo -E "$0" "$@"
+    fi
+}
+
+apply_mode() {
+    local mode="$1"
+    local profile="$MODE_DIR/$mode"
+
+    [[ -d "$profile" ]] || { echo "Unknown mode: $mode"; exit 1; }
+
+    require_root "$@"
+
+    echo -e "${GREEN}▸${RESET} switching to ${BOLD}$mode${RESET}"
+
+    # Run mode's apply.sh — each mode owns its own implementation.
+    [[ -x "$profile/apply.sh" ]] && "$profile/apply.sh"
+
+    echo "$mode" > "$STATE_FILE"
+
+    # Notify desktop
+    if command -v notify-send >/dev/null 2>&1; then
+        sudo -u "${SUDO_USER:-shadow}" \
+            DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "${SUDO_USER:-shadow}")/bus" \
+            notify-send -i security-high "ShadowOS" "mode → $mode" 2>/dev/null || true
+    fi
+
+    # Refresh Waybar accent
+    pkill -SIGUSR2 waybar 2>/dev/null || true
+
+    echo -e "${GREEN}✓${RESET} mode is now $mode"
+}
+
+case "${1:-}" in
+    pentest|privacy|dev|ghost|normal) apply_mode "$1" ;;
+    toggle-tor)
+        require_root "$@"
+        if systemctl is-active --quiet tor; then
+            systemctl stop tor
+            echo "tor stopped"
+        else
+            systemctl start tor
+            echo "tor started"
+        fi
+        ;;
+    picker)
+        choice=$(printf "pentest\nprivacy\ndev\nghost\nnormal" | wofi --dmenu --prompt="mode →")
+        [[ -n "$choice" ]] && pkexec "$0" "$choice"
+        ;;
+    status|"")
+        cur=$(current)
+        echo "current mode: $cur"
+        echo
+        echo "tor:        $(systemctl is-active tor 2>/dev/null || echo inactive)"
+        echo "dnscrypt:   $(systemctl is-active dnscrypt-proxy 2>/dev/null || echo inactive)"
+        echo "ufw:        $(ufw status 2>/dev/null | head -1 || echo unknown)"
+        echo "macchanger: $(cat /sys/class/net/*/address 2>/dev/null | head -3)"
+        ;;
+    -h|--help|help) usage ;;
+    *) usage; exit 1 ;;
+esac

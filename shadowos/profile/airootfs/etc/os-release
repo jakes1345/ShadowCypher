@@ -1,0 +1,11 @@
+NAME="ShadowOS"
+PRETTY_NAME="ShadowOS 0.1"
+ID=shadowos
+ID_LIKE=arch
+BUILD_ID=rolling
+ANSI_COLOR="38;2;0;255;180"
+HOME_URL="https://shadowcypher.site"
+DOCUMENTATION_URL="https://shadowcypher.site/docs.html"
+SUPPORT_URL="https://shadowcypher.site"
+BUG_REPORT_URL="https://github.com/jakes1345/ShadowCypher/issues"
+LOGO=shadowos

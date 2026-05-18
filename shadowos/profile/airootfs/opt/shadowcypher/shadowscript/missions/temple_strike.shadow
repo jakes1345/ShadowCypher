@@ -1,0 +1,10 @@
+# MISSION_02: Temple-Strike Integration
+# Purpose: Demonstrate HolyC Types and UNSAFE Memory Sovereignty.
+
+U64 kernel_ptr = 0xFFFF888800000000
+U8 shell_code = 0x90
+
+UNSAFE()
+STRIKE(kernel_ptr, shell_code)
+
+!sys("echo TEMPLE_STRIKE_MEMORY_ALLOCATION_SUCCESSFUL")

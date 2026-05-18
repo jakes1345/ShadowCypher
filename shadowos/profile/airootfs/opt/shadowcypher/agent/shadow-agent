@@ -1,0 +1,4 @@
+#!/bin/bash
+# Convenience wrapper — runs the agent with the venv Python
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec "$DIR/.venv/bin/python" "$DIR/shadowcypher_agent.py" "$@"
