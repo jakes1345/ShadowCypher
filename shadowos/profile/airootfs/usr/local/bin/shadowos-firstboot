@@ -87,6 +87,16 @@ if [[ "$ONLINE" -eq 1 ]]; then
 
     # ── 4. Refresh package databases ────────────────────────────────────────
     pacman -Sy --noconfirm 2>&1 | tail -3 || true
+
+    # ── 5. Rustup: pick a stable toolchain so `rustc` actually works ────────
+    if command -v rustup >/dev/null && ! rustup show active-toolchain 2>/dev/null | grep -q stable; then
+        echo "[*] Setting rustup default toolchain to stable…"
+        rustup default stable 2>&1 | tail -3 || true
+        # Mirror to the system user `shadow` as well, since rustup is per-user
+        if id shadow >/dev/null 2>&1; then
+            su - shadow -c 'rustup default stable' 2>&1 | tail -3 || true
+        fi
+    fi
 else
     echo "[!] No network — skipping online setup. Will re-run next boot."
     exit 0

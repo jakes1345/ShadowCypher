@@ -90,6 +90,7 @@ chmod +x /usr/local/bin/shadow-update 2>/dev/null || true
 chmod +x /usr/local/bin/shadowos-diag 2>/dev/null || true
 chmod +x /usr/local/bin/shadow-help-me 2>/dev/null || true
 chmod +x /usr/local/bin/shadow-help-me-stop 2>/dev/null || true
+chmod +x /usr/local/bin/shadow-update-count 2>/dev/null || true
 chmod +x /opt/shadowcypher/launch.sh 2>/dev/null || true
 find /etc/shadowos/modes -name "apply.sh" -exec chmod +x {} \; 2>/dev/null || true
 

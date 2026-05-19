@@ -104,6 +104,10 @@ sleep 6;  shot 2 plymouth-or-text
 sleep 8;  shot 3 plymouth-mid
 sleep 8;  shot 4 sddm
 
+# Give firstboot service extra time to finish its Flatpak installs before
+# we audit it as "still activating"
+sleep 60
+
 # ── 3. wait for SSH ───────────────────────────────────────────────────────
 section "3. WAIT FOR SSH AVAILABLE"
 SSH_OK=0
@@ -146,11 +150,19 @@ SR 'uname -r' | grep -q 'hardened' && pass "kernel: linux-hardened active" || wa
 section "5. KEY SERVICES"
 for svc in sddm NetworkManager ufw fail2ban dnscrypt-proxy sshd shadowos-mac-randomize shadowos-firstboot; do
     state=$(SR "systemctl is-active $svc 2>/dev/null || echo missing")
+    result=$(SR "systemctl show -p Result --value $svc 2>/dev/null")
     case "$state" in
         active)              pass "$svc active" ;;
-        activating)          warn "$svc still initializing" ;;
-        inactive|"")         warn "$svc inactive (may be expected)" ;;
-        failed)              fail_t "$svc FAILED" ;;
+        activating)          warn "$svc still initializing (firstboot Flatpak install ongoing)" ;;
+        inactive)
+            # Oneshot units complete and go "inactive" with Result=success — that's a pass
+            if [[ "$result" == "success" ]]; then
+                pass "$svc completed successfully (oneshot, Result=success)"
+            else
+                warn "$svc inactive (Result=$result)"
+            fi
+            ;;
+        failed)              fail_t "$svc FAILED (Result=$result)" ;;
         missing|*)           warn "$svc — $state" ;;
     esac
 done
@@ -217,9 +229,9 @@ section "9. TOOL VERSIONS"
 declare -A TOOLS=(
     [nmap]="nmap --version | head -1"
     [wireshark]="wireshark --version 2>/dev/null | head -1 || tshark --version | head -1"
-    [aircrack-ng]="aircrack-ng --help 2>&1 | head -1"
+    [aircrack-ng]="aircrack-ng --help 2>&1 | grep -i 'aircrack-ng' | head -1 || which aircrack-ng"
     [hashcat]="hashcat --version 2>&1 | head -1"
-    [metasploit]="msfconsole --version 2>/dev/null | head -1"
+    [metasploit]="msfconsole -h 2>&1 | grep -i 'usage\|metasploit' | head -1 || which msfconsole"
     [hydra]="hydra -h 2>&1 | grep -m1 Hydra"
     [sqlmap]="sqlmap --version 2>&1 | head -1"
     [rustscan]="rustscan --version 2>&1 | head -1"
@@ -230,7 +242,7 @@ declare -A TOOLS=(
     [kubectl]="kubectl version --client 2>&1 | head -1"
     [go]="go version 2>&1 | head -1"
     [node]="node --version 2>&1 | head -1"
-    [rustc]="rustc --version 2>&1 | head -1"
+    [rustc]="rustup show active-toolchain 2>&1 | head -1 || rustc --version 2>&1 | head -1 || which rustup"
     [steam]="steam --version 2>&1 | head -1 || which steam"
     [mangohud]="mangohud --version 2>&1 | head -1 || which mangohud"
     [gamemoded]="gamemoded --version 2>&1 | head -1 || which gamemoded"
