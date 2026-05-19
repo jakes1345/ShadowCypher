@@ -88,3 +88,9 @@ tooltip {
 }
 
 #custom-power:hover { background: rgba(255, 107, 107, 0.22); color: #FFE0E0; }
+
+#custom-updates { padding: 0 8px; color: #6B7785; }
+#custom-updates.no-updates { color: #4A5260; }
+#custom-updates.updates { color: #FFAA38; }
+#custom-updates.updates.shadowos { color: #00E0A4; }
+#custom-updates.offline { color: #4A5260; }

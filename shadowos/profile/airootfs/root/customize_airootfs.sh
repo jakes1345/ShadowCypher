@@ -39,6 +39,14 @@ ufw default allow outgoing
 ufw allow 22/tcp comment 'ShadowOS live SSH'
 ufw --force enable
 
+# Re-stamp /etc/lsb-release with ShadowOS identity (upstream packages clobbered it)
+cat > /etc/lsb-release <<'LSB'
+LSB_VERSION=1.4
+DISTRIB_ID=ShadowOS
+DISTRIB_RELEASE=0.1
+DISTRIB_DESCRIPTION="ShadowOS 0.1"
+LSB
+
 # Plymouth theme
 plymouth-set-default-theme -R shadowos 2>/dev/null \
     || plymouth-set-default-theme shadowos 2>/dev/null \

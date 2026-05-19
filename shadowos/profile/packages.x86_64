@@ -164,8 +164,8 @@ git-lfs
 github-cli
 neovim
 vim
-code                       # VSCode OSS — open-source binary build in repos
-helix                      # modern modal editor
+code
+helix
 python
 python-pip
 python-poetry
@@ -187,44 +187,44 @@ kubectl
 helm
 terraform
 ansible
-just                       # task runner — better make
+just
 lazygit
 direnv
 
 # === Modern offensive arsenal (beyond the Kali tier above) ===
-rustscan                   # nmap UI front, 65k ports in seconds
-ffuf                       # fuzzing
-feroxbuster                # content discovery
-amass                      # asset discovery
-subfinder                  # subdomain enumeration (ProjectDiscovery)
-httpx                      # HTTP probing (ProjectDiscovery)
-nuclei                     # template-based vuln scanner
+rustscan
+ffuf
+feroxbuster
+amass
+subfinder
+httpx
+nuclei
 # katana is AUR-only — installed via `go install` in shadowos-firstboot
-naabu                      # fast port scanner (ProjectDiscovery)
-mitmproxy                  # TLS MITM
-exploitdb                  # local searchsploit DB
-impacket                   # AD/SMB attack suite
-responder                  # LLMNR/NBT-NS poisoner
-netexec                    # AD swiss-army knife (renamed from crackmapexec) — blackarch
-evil-winrm                 # post-exploitation WinRM
-sshuttle                   # poor-man's VPN over SSH (pivot)
+naabu
+mitmproxy
+exploitdb
+impacket
+responder
+netexec
+evil-winrm
+sshuttle
 # chisel is AUR-only — installed via go install at first-boot if needed
-seclists                   # wordlists
+seclists
 dnsenum
 whatweb
 wfuzz
-zaproxy                    # OWASP ZAP — web app scanner
+zaproxy
 
 # === Gaming + multimedia ===
 steam
-steam-devices              # udev rules for Steam controllers, etc.
+steam-devices
 gamemode
 lib32-gamemode
 mangohud
 lib32-mangohud
-goverlay                   # MangoHUD GUI config
-lutris                     # everything-launcher
-prismlauncher              # Minecraft (extra repo)
+goverlay
+lutris
+prismlauncher
 # Heroic, Bottles, ProtonUp-Qt are AUR-only — installed via Flatpak at
 # first-boot: com.heroicgameslauncher.hgl, com.usebottles.bottles,
 # net.davidotek.pupgui2
@@ -233,51 +233,51 @@ winetricks
 # dxvk-mingw is AUR — DXVK comes bundled with Proton/Steam anyway
 vkd3d
 gamescope
-ttf-liberation             # fixes font issues in many games
-discord                    # comms (devs + gaming)
+ttf-liberation
+discord
 
 # === Universal launchers / app management ===
-flatpak                    # Flathub access for apps not in Arch repos
-distrobox                  # run Kali/Ubuntu/Debian as containers — critical for sec pros
+flatpak
+distrobox
 # podman is already listed under dev/runtime stack
 
 # === Theming / desktop polish ===
 # catppuccin-gtk-theme-mocha is AUR-only — installed via script at first-boot
 # bibata-cursor-theme is AUR-only — installed via script at first-boot
-xcursor-themes             # adequate cursor theme from extra repo
+xcursor-themes
 qt5ct
 qt6ct
 kvantum
-nwg-look                   # GTK config UI for tilers
+nwg-look
 
 # === Tier-1 OS essentials (added after audit) ===
-udisks2                    # auto-mount removable drives
-udiskie                    # daemon to actually mount them in wayland
-gvfs                       # virtual filesystems (smb/sftp/trash)
-gvfs-mtp                   # phones over MTP
-gvfs-smb                   # samba shares
-blueman                    # Bluetooth GUI
-power-profiles-daemon      # CPU/battery profile switching
-tlp                        # laptop power management
-xdg-user-dirs              # ~/Documents etc.
-xdg-utils                  # xdg-open / xdg-mime defaults
-zathura                    # minimal PDF viewer (modal, vim-like)
-zathura-pdf-mupdf          # PDF backend
-gufw                       # firewall GUI
-gnome-keyring              # secret storage for browsers/apps
-libsecret                  # API for keyring
-seahorse                   # GUI for the keyring
+udisks2
+udiskie
+gvfs
+gvfs-mtp
+gvfs-smb
+blueman
+power-profiles-daemon
+tlp
+xdg-user-dirs
+xdg-utils
+zathura
+zathura-pdf-mupdf
+gufw
+gnome-keyring
+libsecret
+seahorse
 # network-manager-applet and udev are already provided earlier / by base
 
 # === Tier-2 polish ===
-httpie                     # CLI HTTP client for API work
-postgresql-libs            # libpq.so for psycopg2 etc.
-sqlite                     # local DB
-mariadb-clients            # MySQL/MariaDB CLI
-redis                      # cache server (devs use it constantly)
+httpie
+postgresql-libs
+sqlite
+mariadb-clients
+redis
 # swww is AUR-only — use hyprpaper (already configured) for static wallpapers
-imagemagick                # image manipulation CLI
-ffmpeg                     # everything video
+imagemagick
+ffmpeg
 
 # === Media + creator tools ===
 obs-studio

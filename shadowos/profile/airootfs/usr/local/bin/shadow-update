@@ -1,18 +1,167 @@
 #!/usr/bin/env bash
-# shadow-update — smart updater that respects shadow-mode.
-set -e
-MODE=$(cat /var/lib/shadowos/current-mode 2>/dev/null || echo normal)
+# shadow-update — the canonical ShadowOS update command.
+#
+# Wraps pacman -Syu with:
+#   • mode awareness (refuses to update in privacy/ghost without --over-tor)
+#   • pre-update snapshot of installed kernel version (warn on upgrade)
+#   • split output: ShadowOS-only upgrades shown first, then everything else
+#   • post-update tips (mode-aware reminders, kernel-reboot prompt)
+#   • flatpak update tail call (Heroic, Bottles, ProtonUp-Qt get refreshed too)
+#
+# Flags:
+#   --over-tor      Route pacman traffic through torsocks (privacy/ghost mode)
+#   --check         Show what would update, don't actually update
+#   --shadow-only   Only update [shadowos] packages
+#   --no-flatpak    Skip flatpak refresh
+#   --quiet         Reduce output
 
-case "$MODE" in
+set -uo pipefail
+
+# ── Colors ──────────────────────────────────────────────────────────────────
+TEAL='\033[1;36m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+RED='\033[1;31m'
+DIM='\033[2m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+# ── Args ────────────────────────────────────────────────────────────────────
+OVER_TOR=0
+CHECK_ONLY=0
+SHADOW_ONLY=0
+NO_FLATPAK=0
+QUIET=0
+for arg in "$@"; do
+    case "$arg" in
+        --over-tor)    OVER_TOR=1 ;;
+        --check)       CHECK_ONLY=1 ;;
+        --shadow-only) SHADOW_ONLY=1 ;;
+        --no-flatpak)  NO_FLATPAK=1 ;;
+        --quiet|-q)    QUIET=1 ;;
+        --help|-h)
+            grep '^#' "$0" | sed 's/^# *//' | head -20
+            exit 0 ;;
+    esac
+done
+
+mode() { cat /var/lib/shadowos/current-mode 2>/dev/null || echo "normal"; }
+log()  { [[ "$QUIET" -eq 0 ]] && echo -e "${TEAL}[*]${NC} $1"; }
+ok()   { echo -e "${GREEN}[+]${NC} $1"; }
+warn() { echo -e "${YELLOW}[~]${NC} $1"; }
+err()  { echo -e "${RED}[-]${NC} $1" >&2; }
+
+# ── Banner ──────────────────────────────────────────────────────────────────
+if [[ "$QUIET" -eq 0 ]]; then
+    cat <<EOF
+${BOLD}${TEAL}╔═══════════════════════════════════════════╗
+║          SHADOWOS  SYSTEM  UPDATER        ║
+╚═══════════════════════════════════════════╝${NC}
+EOF
+fi
+
+# ── Mode gate ───────────────────────────────────────────────────────────────
+CURRENT_MODE=$(mode)
+case "$CURRENT_MODE" in
     privacy|ghost)
-        echo "Current mode: $MODE — refusing to update over clearnet."
-        echo "Either: shadow-mode normal && shadow-update"
-        echo "    Or: shadow-update --over-tor   (routes pacman via torsocks)"
-        if [[ "${1:-}" == "--over-tor" ]]; then
-            sudo torsocks pacman -Syu
+        if [[ "$OVER_TOR" -eq 0 ]]; then
+            warn "Current mode: ${BOLD}$CURRENT_MODE${NC} — clearnet updates blocked."
+            echo
+            echo "Options:"
+            echo "  ${TEAL}shadow-mode normal && shadow-update${NC}"
+            echo "  ${TEAL}shadow-update --over-tor${NC}   (routes pacman via torsocks)"
+            exit 1
         fi
-        exit 0
+        log "Routing pacman through Tor (mode: $CURRENT_MODE)"
+        PACMAN_CMD="sudo torsocks pacman"
+        ;;
+    *)
+        PACMAN_CMD="sudo pacman"
         ;;
 esac
 
-sudo pacman -Syu
+# ── Pre-update snapshot ─────────────────────────────────────────────────────
+log "Refreshing package databases…"
+$PACMAN_CMD -Sy >/dev/null 2>&1 || { err "DB sync failed"; exit 1; }
+
+KERNEL_OLD=$(pacman -Q linux-hardened 2>/dev/null | awk '{print $2}' || \
+             pacman -Q linux 2>/dev/null | awk '{print $2}' || echo "")
+
+# ── What's upgradable? ──────────────────────────────────────────────────────
+if ! command -v checkupdates >/dev/null; then
+    warn "pacman-contrib not installed — install for split-by-repo update view."
+    UPDATES_RAW=$(pacman -Qu 2>/dev/null)
+else
+    UPDATES_RAW=$(checkupdates 2>/dev/null)
+fi
+UPDATE_COUNT=$(echo "$UPDATES_RAW" | grep -c '.' || echo 0)
+
+if [[ "$UPDATE_COUNT" -eq 0 ]]; then
+    ok "System is up to date."
+    [[ "$CHECK_ONLY" -eq 1 ]] && exit 0
+else
+    # Split: ShadowOS packages first
+    SHADOW_PKGS=$(echo "$UPDATES_RAW" | awk '/^(shadowos-|shadowcypher)/ {print $1" "$2" -> "$4}')
+    OTHER_COUNT=$((UPDATE_COUNT - $(echo "$SHADOW_PKGS" | grep -c '.' || echo 0)))
+
+    if [[ -n "$SHADOW_PKGS" ]]; then
+        echo
+        echo -e "${BOLD}${TEAL}ShadowOS package updates:${NC}"
+        echo "$SHADOW_PKGS" | sed 's/^/  /'
+    fi
+    if [[ "$OTHER_COUNT" -gt 0 && "$SHADOW_ONLY" -eq 0 ]]; then
+        echo
+        echo -e "${BOLD}Upstream updates:${NC} ${DIM}$OTHER_COUNT packages${NC}"
+    fi
+    echo
+fi
+
+if [[ "$CHECK_ONLY" -eq 1 ]]; then
+    log "--check passed; no changes made."
+    exit 0
+fi
+
+# ── Run the upgrade ─────────────────────────────────────────────────────────
+if [[ "$SHADOW_ONLY" -eq 1 ]]; then
+    log "Upgrading only ShadowOS packages…"
+    SHADOW_LIST=$(echo "$UPDATES_RAW" | awk '/^(shadowos-|shadowcypher)/ {print $1}' | tr '\n' ' ')
+    if [[ -z "$SHADOW_LIST" ]]; then
+        ok "No ShadowOS-specific updates available."
+    else
+        $PACMAN_CMD -S --needed $SHADOW_LIST
+    fi
+else
+    log "Running full system upgrade…"
+    $PACMAN_CMD -Syu
+fi
+
+UPGRADE_EXIT=$?
+
+# ── Post-update: kernel reboot reminder ────────────────────────────────────
+KERNEL_NEW=$(pacman -Q linux-hardened 2>/dev/null | awk '{print $2}' || \
+             pacman -Q linux 2>/dev/null | awk '{print $2}' || echo "")
+if [[ -n "$KERNEL_OLD" && -n "$KERNEL_NEW" && "$KERNEL_OLD" != "$KERNEL_NEW" ]]; then
+    echo
+    warn "Kernel upgraded: $KERNEL_OLD → $KERNEL_NEW"
+    warn "Reboot recommended: ${BOLD}sudo reboot${NC}"
+fi
+
+# ── Flatpak refresh ─────────────────────────────────────────────────────────
+if [[ "$NO_FLATPAK" -eq 0 ]] && command -v flatpak >/dev/null; then
+    if flatpak remote-list 2>/dev/null | grep -q flathub; then
+        log "Refreshing Flatpak apps (Heroic, Bottles, …)…"
+        flatpak update -y --noninteractive 2>&1 | tail -5 || true
+    fi
+fi
+
+# ── Done ────────────────────────────────────────────────────────────────────
+echo
+if [[ $UPGRADE_EXIT -eq 0 ]]; then
+    ok "Update complete."
+    if [[ "$CURRENT_MODE" == "pentest" ]]; then
+        echo "    ${DIM}(in pentest mode — remember to ${BOLD}shadow-mode normal${NC}${DIM} when done)${NC}"
+    fi
+else
+    err "Update finished with exit code $UPGRADE_EXIT — review messages above."
+    exit $UPGRADE_EXIT
+fi

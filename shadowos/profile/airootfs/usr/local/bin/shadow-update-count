@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# shadow-update-count — emit JSON for waybar's custom/updates module.
+#
+# Returns:
+#   {"text":"  N","alt":"shadowos","tooltip":"...","class":"updates|no-updates"}
+# Falls back gracefully if checkupdates is unavailable or network is down.
+
+set -uo pipefail
+
+TIMEOUT=${SHADOW_UPDATE_TIMEOUT:-15}
+
+# Bail if no network — don't waste CPU
+if ! timeout 2 getent hosts shadowcypher.site >/dev/null 2>&1 && \
+   ! timeout 2 getent hosts archlinux.org    >/dev/null 2>&1; then
+    echo '{"text":"","alt":"offline","tooltip":"offline","class":"offline"}'
+    exit 0
+fi
+
+# Prefer checkupdates (no root, uses tmp db). Fall back to pacman -Qu.
+if command -v checkupdates >/dev/null; then
+    UPDATES=$(timeout "$TIMEOUT" checkupdates 2>/dev/null || true)
+else
+    # Best-effort without sync — may be stale but won't fail
+    UPDATES=$(pacman -Qu 2>/dev/null || true)
+fi
+
+ALL_COUNT=$(echo "$UPDATES" | grep -c '.' || echo 0)
+SHADOW_COUNT=$(echo "$UPDATES" | grep -Ec '^(shadowos-|shadowcypher)' || echo 0)
+
+# Build tooltip listing first 12 packages
+TOOLTIP=""
+if [[ "$ALL_COUNT" -gt 0 ]]; then
+    PREVIEW=$(echo "$UPDATES" | head -12 | awk '{print $1}' | tr '\n' ' ')
+    TOOLTIP="$ALL_COUNT updates available"
+    if [[ "$SHADOW_COUNT" -gt 0 ]]; then
+        TOOLTIP+="\\n($SHADOW_COUNT from [shadowos])"
+    fi
+    TOOLTIP+="\\n\\n$PREVIEW"
+    [[ "$ALL_COUNT" -gt 12 ]] && TOOLTIP+="\\n…and $((ALL_COUNT - 12)) more"
+fi
+
+# JSON output
+if [[ "$ALL_COUNT" -eq 0 ]]; then
+    cat <<EOF
+{"text":"","alt":"none","tooltip":"system up to date","class":"no-updates"}
+EOF
+else
+    # Show count, prefix with shadowos count if any
+    if [[ "$SHADOW_COUNT" -gt 0 ]]; then
+        DISPLAY="  ${SHADOW_COUNT}+${ALL_COUNT}"
+        CLASS="updates shadowos"
+    else
+        DISPLAY="  ${ALL_COUNT}"
+        CLASS="updates"
+    fi
+    cat <<EOF
+{"text":"$DISPLAY","alt":"updates","tooltip":"$TOOLTIP","class":"$CLASS"}
+EOF
+fi
