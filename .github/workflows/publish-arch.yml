@@ -125,12 +125,22 @@ jobs:
           chown -R builder:builder /tmp/repo
           sudo -u builder GNUPGHOME=/home/builder/.gnupg \
             repo-add --sign --key "$KEY_ID" --new --remove shadowos.db.tar.gz *.pkg.tar.zst
+          # Ensure pacman-expected symlinks exist (repo-add doesn't always
+          # create both shadowos.db and shadowos.files when running uncached)
+          ln -sfv shadowos.db.tar.gz shadowos.db
+          ln -sfv shadowos.files.tar.gz shadowos.files
+          ln -sfv shadowos.db.tar.gz.sig shadowos.db.sig
+          ln -sfv shadowos.files.tar.gz.sig shadowos.files.sig
+          ls -la
 
       - name: Publish to arch/ in repo
         run: |
           OUT="$GITHUB_WORKSPACE/arch/x86_64"
           mkdir -p "$OUT"
-          cp -av /tmp/repo/* "$OUT/"
+          # Use rsync so symlinks become real files (GitHub Pages doesn't
+          # serve symlinks; pacman fetches shadowos.db as a URL so it has
+          # to be a real file)
+          rsync -avL --delete /tmp/repo/ "$OUT/"
           # Also export the public key for the install one-liner
           sudo -u builder gpg --armor --export "3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083" \
             > "$GITHUB_WORKSPACE/arch/shadowos.gpg"
