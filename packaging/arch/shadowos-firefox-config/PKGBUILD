@@ -1,0 +1,19 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowos-firefox-config
+pkgver=1.0
+pkgrel=1
+pkgdesc="ShadowOS Firefox privacy hardening (arkenfox-derived user.js)"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+depends=('firefox')
+options=('!strip')
+
+source=()
+sha256sums=()
+
+package() {
+    local SRC="$srcdir/files"
+    install -Dm644 "$SRC/etc/skel/.mozilla/firefox/shadow.default/user.js" \
+        "$pkgdir/etc/skel/.mozilla/firefox/shadow.default/user.js"
+}

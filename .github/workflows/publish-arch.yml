@@ -1,0 +1,148 @@
+name: Publish arch repository
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packaging/arch/**'
+      - 'shadowcypher/**'
+      - 'shadowos/profile/airootfs/**'
+      - 'shadowos/branding/**'
+      - 'pyproject.toml'
+      - '.github/workflows/publish-arch.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: arch-repo
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-22.04
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+      - name: Install build tools
+        run: |
+          # Refresh + install build deps
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel git rsync gnupg sudo
+
+          # makepkg refuses to run as root — create a build user
+          useradd -m -G wheel -s /bin/bash builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers.d/builder
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Import signing key
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+        run: |
+          if [ -z "$APT_SIGNING_KEY" ]; then
+            echo "::error::APT_SIGNING_KEY not set; cannot sign packages"
+            exit 1
+          fi
+          # The same OpenPGP key used for apt — works for pacman too
+          mkdir -p /home/builder/.gnupg
+          chmod 700 /home/builder/.gnupg
+          echo "$APT_SIGNING_KEY" | base64 -d > /tmp/key.gpg
+          sudo -u builder bash -c 'gpg --batch --import /tmp/key.gpg' 2>&1 | tail -3
+          rm /tmp/key.gpg
+          chown -R builder:builder /home/builder/.gnupg
+
+          # Trust ultimately for makepkg
+          KEY_ID="3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083"
+          sudo -u builder bash -c "echo '${KEY_ID}:6:' | gpg --batch --import-ownertrust"
+
+      - name: Stage package source trees
+        run: |
+          chown -R builder:builder $GITHUB_WORKSPACE
+          # Each PKGBUILD expects $srcdir/files to contain the relevant subset
+          # of repo content. We snapshot at build time.
+          AIR="$GITHUB_WORKSPACE/shadowos/profile/airootfs"
+
+          for pkg in shadowos-base shadowos-branding shadowos-tools \
+                     shadowos-hyprland-config shadowos-firefox-config shadowos-fastfetch; do
+            mkdir -p "$GITHUB_WORKSPACE/packaging/arch/$pkg/files"
+            rsync -a --exclude='__pycache__' "$AIR/" \
+              "$GITHUB_WORKSPACE/packaging/arch/$pkg/files/"
+          done
+
+          # shadowcypher package: ship the actual application
+          mkdir -p "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files"
+          rsync -a --exclude='__pycache__' --exclude='*.pyc' \
+            --exclude='venv' --exclude='.venv' \
+            "$GITHUB_WORKSPACE/shadowcypher/" \
+            "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/shadowcypher/"
+          [ -d "$GITHUB_WORKSPACE/native" ] && \
+            cp -a "$GITHUB_WORKSPACE/native" "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/native"
+          [ -d "$GITHUB_WORKSPACE/shadowscript" ] && \
+            cp -a "$GITHUB_WORKSPACE/shadowscript" "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/shadowscript"
+          [ -f "$GITHUB_WORKSPACE/config.example.json" ] && \
+            cp "$GITHUB_WORKSPACE/config.example.json" "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/"
+
+          # shadowcypher-agent: just the agent dir
+          mkdir -p "$GITHUB_WORKSPACE/packaging/arch/shadowcypher-agent/files"
+          rsync -a --exclude='.venv' --exclude='__pycache__' \
+            "$AIR/opt/shadowcypher/agent" \
+            "$GITHUB_WORKSPACE/packaging/arch/shadowcypher-agent/files/shadowos/profile/airootfs/opt/shadowcypher/" 2>/dev/null || true
+
+          chown -R builder:builder $GITHUB_WORKSPACE
+
+      - name: Build all packages
+        env:
+          PACKAGER: "ShadowCypher <admin@shadowcypher.site>"
+          KEY_ID: "3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083"
+        run: |
+          mkdir -p /tmp/repo
+          cd $GITHUB_WORKSPACE/packaging/arch
+          for d in shadowos-keyring shadowos-mirrorlist shadowos-base shadowos-branding \
+                   shadowos-tools shadowos-hyprland-config shadowos-firefox-config \
+                   shadowos-fastfetch shadowos-meta shadowcypher shadowcypher-agent; do
+            echo "════════════════════════════════════════"
+            echo "  Building $d"
+            echo "════════════════════════════════════════"
+            cd $GITHUB_WORKSPACE/packaging/arch/$d
+            sudo -u builder PACKAGER="$PACKAGER" GNUPGHOME=/home/builder/.gnupg \
+              makepkg --sign --key "$KEY_ID" --noconfirm --nodeps --syncdeps=false 2>&1 | tail -25
+            cp -v *.pkg.tar.zst *.pkg.tar.zst.sig /tmp/repo/ 2>/dev/null || true
+          done
+
+      - name: Build pacman repo database
+        env:
+          KEY_ID: "3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083"
+        run: |
+          cd /tmp/repo
+          ls -la
+          chown -R builder:builder /tmp/repo
+          sudo -u builder GNUPGHOME=/home/builder/.gnupg \
+            repo-add --sign --key "$KEY_ID" --new --remove shadowos.db.tar.gz *.pkg.tar.zst
+
+      - name: Publish to arch/ in repo
+        run: |
+          OUT="$GITHUB_WORKSPACE/arch/x86_64"
+          mkdir -p "$OUT"
+          cp -av /tmp/repo/* "$OUT/"
+          # Also export the public key for the install one-liner
+          sudo -u builder gpg --armor --export "3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083" \
+            > "$GITHUB_WORKSPACE/arch/shadowos.gpg"
+
+      - name: Commit + push
+        run: |
+          cd $GITHUB_WORKSPACE
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add arch/
+          if git diff --cached --quiet; then
+            echo "No changes to arch repo."
+          else
+            git commit -m "arch: rebuild packages ($(date -u +%Y-%m-%d))"
+            git push
+          fi

@@ -123,13 +123,18 @@ if command -v flatpak >/dev/null 2>&1; then
     flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
 fi
 
-# BlackArch repo keyring — required for pacman to trust the [blackarch] repo
-# Reference: https://blackarch.org/strap.sh
+# BlackArch repo keyring
 if [ ! -f /etc/pacman.d/blackarch-keyring ]; then
     curl -fsSL https://blackarch.org/keyring/blackarch-keyring.pkg.tar.zst \
         -o /tmp/blackarch-keyring.pkg.tar.zst 2>/dev/null \
         && pacman -U --noconfirm /tmp/blackarch-keyring.pkg.tar.zst 2>/dev/null \
-        || echo "BlackArch keyring import skipped (no network during airootfs build)"
+        || echo "BlackArch keyring import skipped"
+fi
+
+# Chaotic-AUR keyring — needed for librewolf, mullvad-browser, freetube-bin etc.
+if ! pacman-key --list-keys 3056513887B78AEB 2>/dev/null | grep -q chaotic; then
+    pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com 2>/dev/null || true
+    pacman-key --lsign-key 3056513887B78AEB 2>/dev/null || true
 fi
 
 # Add plymouth hook to mkinitcpio so the splash actually shows

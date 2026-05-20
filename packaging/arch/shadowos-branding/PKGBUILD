@@ -1,0 +1,49 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowos-branding
+pkgver=1.0
+pkgrel=1
+pkgdesc="ShadowOS visual identity — wallpapers, Plymouth, GRUB, SDDM themes"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+depends=('plymouth' 'grub' 'sddm')
+install=shadowos-branding.install
+options=('!strip')
+
+source=()
+sha256sums=()
+
+package() {
+    local SRC="$srcdir/files"
+
+    # Wallpapers (20 desktop + 3 login + default symlinks)
+    install -d "$pkgdir/usr/share/backgrounds/shadowos/login"
+    cp -a "$SRC/usr/share/backgrounds/shadowos/"shadowos-*.png \
+        "$pkgdir/usr/share/backgrounds/shadowos/"
+    cp -a "$SRC/usr/share/backgrounds/shadowos/login/"shadowos-login-*.png \
+        "$pkgdir/usr/share/backgrounds/shadowos/login/"
+    # Re-create the symlinks
+    (cd "$pkgdir/usr/share/backgrounds/shadowos" && \
+        ln -sf shadowos-01-hex-teal-1920x1080.png wallpaper.png)
+    (cd "$pkgdir/usr/share/backgrounds/shadowos/login" && \
+        ln -sf shadowos-login-01-teal-1920x1080.png default.png)
+
+    # Plymouth theme
+    install -d "$pkgdir/usr/share/plymouth/themes/shadowos"
+    cp -a "$SRC/usr/share/plymouth/themes/shadowos/." \
+        "$pkgdir/usr/share/plymouth/themes/shadowos/"
+
+    # GRUB theme
+    install -d "$pkgdir/usr/share/grub/themes/shadowos"
+    cp -a "$SRC/usr/share/grub/themes/shadowos/." \
+        "$pkgdir/usr/share/grub/themes/shadowos/"
+
+    # SDDM theme
+    install -d "$pkgdir/usr/share/sddm/themes/shadowos"
+    cp -a "$SRC/usr/share/sddm/themes/shadowos/." \
+        "$pkgdir/usr/share/sddm/themes/shadowos/"
+
+    # Wayland session entry
+    install -Dm644 "$SRC/usr/share/wayland-sessions/hyprland.desktop" \
+        "$pkgdir/usr/share/wayland-sessions/hyprland.desktop"
+}

@@ -1,0 +1,20 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowos-fastfetch
+pkgver=1.0
+pkgrel=1
+pkgdesc="ShadowOS fastfetch banner — ASCII logo + system snapshot at terminal login"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+depends=('fastfetch')
+backup=('etc/fastfetch/shadowos.jsonc')
+options=('!strip')
+
+source=()
+sha256sums=()
+
+package() {
+    local SRC="$srcdir/files"
+    install -Dm644 "$SRC/etc/fastfetch/shadowos.jsonc" \
+        "$pkgdir/etc/fastfetch/shadowos.jsonc"
+}

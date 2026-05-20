@@ -1,0 +1,36 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowos-hyprland-config
+pkgver=1.0
+pkgrel=1
+pkgdesc="ShadowOS Hyprland + Waybar + Mako + Foot + Wofi default configuration"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+depends=('hyprland' 'waybar' 'mako' 'foot' 'wofi' 'starship' 'zsh')
+backup=(
+    'etc/skel/.config/hypr/hyprland.conf'
+    'etc/skel/.config/hypr/hyprlock.conf'
+    'etc/skel/.config/hypr/hypridle.conf'
+    'etc/skel/.config/hypr/hyprpaper.conf'
+    'etc/skel/.config/waybar/config.jsonc'
+    'etc/skel/.config/waybar/style.css'
+    'etc/skel/.config/mako/config'
+    'etc/skel/.config/foot/foot.ini'
+    'etc/skel/.config/wofi/config'
+    'etc/skel/.config/wofi/style.css'
+    'etc/skel/.config/starship.toml'
+    'etc/skel/.config/MangoHud/MangoHud.conf'
+    'etc/skel/.config/mimeapps.list'
+    'etc/skel/.zshrc'
+)
+options=('!strip')
+
+source=()
+sha256sums=()
+
+package() {
+    local SRC="$srcdir/files"
+    install -d "$pkgdir/etc/skel"
+    # Mirror the full skel tree, preserving symlinks/perms
+    cp -a "$SRC/etc/skel/." "$pkgdir/etc/skel/"
+}

@@ -1,0 +1,24 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ShadowBrowser
+GenericName=Privacy-Hardened Web Browser
+Comment=LibreWolf-based browser with 5-layer ad/track defense
+Exec=shadowbrowser %u
+Icon=shadowbrowser
+Terminal=false
+MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;application/x-xpinstall;application/pdf;application/json;
+StartupNotify=true
+Categories=Network;WebBrowser;
+Keywords=browser;internet;privacy;security;
+StartupWMClass=librewolf
+
+[Desktop Action new-window]
+Name=New Window
+Exec=shadowbrowser --new-window %u
+
+[Desktop Action new-private-window]
+Name=New Private Window
+Exec=shadowbrowser --private-window %u
+
+Actions=new-window;new-private-window;

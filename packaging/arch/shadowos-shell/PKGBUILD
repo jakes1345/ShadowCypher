@@ -1,0 +1,47 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowos-shell
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Unified ShadowOS desktop shell — AGS-based, replaces waybar/wofi/mako/hyprlock with the v9 design rendered live"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+depends=('aylurs-gtk-shell' 'gtk4' 'gtk4-layer-shell' 'libadwaita')
+optdepends=(
+    'hyprland: target compositor'
+    'hyprctl: workspace IPC'
+)
+conflicts=('waybar' 'wofi' 'mako')
+options=('!strip')
+install=shadowos-shell.install
+
+source=()
+sha256sums=()
+
+package() {
+    local SRC="$srcdir/files"
+
+    # AGS config tree
+    install -d "$pkgdir/usr/share/shadowos-shell"
+    cp -a src/*.js style/*.css "$pkgdir/usr/share/shadowos-shell/" 2>/dev/null || true
+    cp -a "$startdir/src"   "$pkgdir/usr/share/shadowos-shell/"
+    cp -a "$startdir/style" "$pkgdir/usr/share/shadowos-shell/"
+
+    # User skel
+    install -d "$pkgdir/etc/skel/.config/shadowos-shell"
+    cp -a "$startdir/src"   "$pkgdir/etc/skel/.config/shadowos-shell/"
+    cp -a "$startdir/style" "$pkgdir/etc/skel/.config/shadowos-shell/"
+
+    # Launcher binary
+    install -Dm755 /dev/stdin "$pkgdir/usr/bin/shadowos-shell" <<'BIN'
+#!/usr/bin/env bash
+# Boot the AGS shell with our config
+exec ags -c /usr/share/shadowos-shell/src/config.js "$@"
+BIN
+
+    # Hyprland exec-once snippet
+    install -Dm644 /dev/stdin "$pkgdir/etc/skel/.config/hypr/conf.d/10-shadowos-shell.conf" <<'CONF'
+# Auto-launch the ShadowOS shell with Hyprland
+exec-once = shadowos-shell
+CONF
+}

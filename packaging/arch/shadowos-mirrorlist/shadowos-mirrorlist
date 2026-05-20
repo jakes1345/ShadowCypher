@@ -1,0 +1,4 @@
+# ShadowOS official mirrors
+# Edit /etc/pacman.conf to switch the active server.
+Server = https://shadowcypher.site/arch/$repo/$arch
+# Future mirrors will be uncommented as they come online.

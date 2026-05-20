@@ -1,0 +1,242 @@
+/* ShadowOS Shell — v9 design language in GTK4 CSS */
+
+/* ── Design tokens (mirror html_mocks/desktop_v9.html) ── */
+@define-color shadowos_purple    #b44aff;
+@define-color shadowos_purple_2  #7e4bff;
+@define-color shadowos_indigo    #6366f1;
+@define-color shadowos_blue      #5b8def;
+@define-color shadowos_pink      #f472b6;
+@define-color shadowos_teal      #2dd4bf;
+@define-color shadowos_warn      #f7a33a;
+@define-color shadowos_crit      #f87171;
+@define-color shadowos_ok        #4ade80;
+
+@define-color bg_deep    #06060c;
+@define-color bg_panel   rgba(20, 16, 32, 0.62);
+@define-color bg_glass   rgba(28, 22, 44, 0.55);
+@define-color border_lo  rgba(255, 255, 255, 0.08);
+@define-color border_hi  rgba(180, 140, 255, 0.35);
+@define-color text       #ECECF5;
+@define-color text_dim   #9A95B0;
+@define-color text_mute  #6A6582;
+
+* {
+    font-family: "Inter", "JetBrains Mono", sans-serif;
+    color: @text;
+}
+
+window { background: transparent; }
+
+/* ── Top bar ── */
+.topbar {
+    background: rgba(10, 8, 20, 0.72);
+    border-bottom: 1px solid @border_lo;
+}
+.topbar-content {
+    padding: 0 16px;
+    min-height: 36px;
+    font-size: 12px;
+}
+
+.logo {
+    background: linear-gradient(135deg, @shadowos_purple, @shadowos_indigo);
+    border-radius: 0;
+    -gtk-icon-shadow: 0 0 18px alpha(@shadowos_purple, 0.55);
+    /* Diamond mask via clip-path-equivalent */
+    border-radius: 50% / 50%;
+}
+
+.activities {
+    background: alpha(@shadowos_purple, 0.18);
+    border: 1px solid alpha(@shadowos_purple, 0.32);
+    border-radius: 6px;
+    padding: 4px 12px;
+    color: @text;
+}
+.activities:hover {
+    background: alpha(@shadowos_purple, 0.30);
+}
+
+.focused-app {
+    color: @text_dim;
+    font-weight: 400;
+}
+
+.workspaces { padding: 0; }
+.ws {
+    min-width: 18px; min-height: 14px;
+    border-radius: 4px;
+    background: transparent;
+    border: 0;
+    color: @text_mute;
+    padding: 0;
+}
+.ws.active {
+    background: linear-gradient(135deg, @shadowos_purple, @shadowos_indigo);
+    color: white;
+    font-weight: 700;
+    padding: 0 8px;
+}
+
+.mode-chip {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: alpha(@shadowos_warn, 0.14);
+    border: 1px solid alpha(@shadowos_warn, 0.36);
+    font-size: 11px; font-weight: 500;
+}
+.mode-dot {
+    min-width: 7px; min-height: 7px;
+    border-radius: 50%;
+    background: @shadowos_warn;
+    margin-right: 6px;
+}
+.mode-pentest .mode-dot { background: @shadowos_warn; }
+.mode-privacy .mode-dot { background: @shadowos_crit; }
+.mode-ghost   .mode-dot { background: #ffffff; }
+.mode-dev     .mode-dot { background: @shadowos_indigo; }
+.mode-normal  .mode-dot { background: @shadowos_ok; }
+
+.telemetry { color: @text_mute; font-family: "JetBrains Mono", monospace; }
+.tel-l { font-size: 9px; color: @text_mute; letter-spacing: 1px; text-transform: uppercase; }
+.tel-v { font-size: 12px; color: @text; font-weight: 600; }
+.tel-v.ok { color: @shadowos_ok; }
+.tel-v.warn { color: @shadowos_warn; }
+.tel-v.crit { color: @shadowos_crit; }
+
+.clock-box { padding-left: 8px; }
+.clock {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px; font-weight: 500;
+    color: @text;
+}
+.date { font-size: 10px; color: @text_dim; }
+
+/* ── Dock ── */
+.dock-window { background: transparent; }
+.dock {
+    padding: 10px 14px;
+    background: rgba(16, 12, 28, 0.62);
+    border: 1px solid @border_lo;
+    border-radius: 22px;
+    box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.7);
+}
+.dock-icon {
+    min-width: 50px; min-height: 50px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 9px;
+}
+.dock-icon:hover {
+    background: alpha(@shadowos_purple, 0.18);
+    border-color: alpha(@shadowos_purple, 0.5);
+}
+.dock-icon.running {
+    border-bottom: 2px solid @shadowos_purple;
+}
+
+/* ── Launcher overlay ── */
+.launcher-window { background: rgba(0, 0, 0, 0.55); }
+.launcher-overlay { padding: 0; }
+.launcher-panel {
+    background: rgba(16, 14, 26, 0.92);
+    border: 1px solid @border_lo;
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 60px 120px -30px rgba(0, 0, 0, 0.9);
+}
+.search-input {
+    background: rgba(8, 6, 14, 0.96);
+    border: 1px solid @border_lo;
+    border-radius: 28px;
+    padding: 16px 22px;
+    font-size: 18px;
+    color: @text;
+    min-width: 800px;
+}
+.search-input:focus {
+    border-color: @shadowos_purple;
+    box-shadow: 0 0 0 2px alpha(@shadowos_purple, 0.20);
+}
+.app-grid-scroll { background: transparent; }
+.app-grid {
+    padding: 12px;
+}
+.app-tile {
+    min-width: 110px; min-height: 110px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+    padding: 16px;
+}
+.app-tile:hover {
+    background: alpha(@shadowos_purple, 0.20);
+    border-color: alpha(@shadowos_purple, 0.45);
+}
+.app-label {
+    font-size: 11px; color: @text_dim;
+    font-family: "JetBrains Mono", monospace;
+}
+
+/* ── Notifications ── */
+.notif-window { background: transparent; }
+.notification {
+    background: rgba(16, 14, 26, 0.94);
+    backdrop-filter: blur(20px);
+    border: 1px solid @border_lo;
+    border-radius: 12px;
+    padding: 14px 18px;
+    min-width: 360px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+.notification .sev-bar {
+    min-width: 3px;
+    border-radius: 2px;
+    background: @shadowos_purple;
+}
+.notification.sev-critical .sev-bar { background: @shadowos_crit; }
+.notification.sev-low      .sev-bar { background: @text_mute; }
+.notif-app    { font-family: "JetBrains Mono", monospace; font-size: 10px; color: @text_mute; }
+.notif-title  { font-size: 13px; font-weight: 600; color: @text; }
+.notif-body   { font-size: 12px; color: @text_dim; }
+
+/* ── Lockscreen ── */
+.lock-window { background: rgba(0, 0, 0, 0.92); }
+.lock-overlay { padding: 40px; }
+.lock-clock {
+    font-family: "Inter", sans-serif;
+    font-size: 200px;
+    font-weight: 200;
+    color: @text;
+    letter-spacing: -8px;
+}
+.lock-date {
+    font-size: 20px;
+    color: @text_dim;
+}
+.lock-user {
+    font-weight: 600;
+    color: @text;
+    font-size: 14px;
+}
+.lock-input {
+    min-width: 320px;
+    padding: 14px 22px;
+    background: rgba(20, 16, 32, 0.85);
+    border: 2px solid alpha(@shadowos_purple, 0.6);
+    border-radius: 28px;
+    font-size: 14px;
+    color: @text;
+}
+.lock-input:focus {
+    border-color: @shadowos_purple;
+    box-shadow: 0 0 0 4px alpha(@shadowos_purple, 0.15);
+}
+.lock-tag {
+    margin-top: 40px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: @text_mute;
+    letter-spacing: 3px;
+}

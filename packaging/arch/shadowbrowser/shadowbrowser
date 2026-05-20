@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# ShadowBrowser launcher — wraps LibreWolf with mode-aware policy enforcement.
+
+# Mode integration: in ghost mode, block clearnet browser entirely
+MODE=$(cat /var/lib/shadowos/current-mode 2>/dev/null || echo normal)
+case "$MODE" in
+    ghost)
+        notify-send -u critical -t 5000 "Ghost mode active" \
+            "ShadowBrowser is blocked. Use Tor Browser only." 2>/dev/null
+        if command -v torbrowser-launcher >/dev/null; then
+            exec torbrowser-launcher "$@"
+        fi
+        echo "Ghost mode — only Tor Browser is permitted." >&2
+        exit 1
+        ;;
+    privacy)
+        # Privacy mode: wrap LibreWolf in firejail seccomp profile
+        if command -v firejail >/dev/null; then
+            exec firejail --profile=librewolf librewolf "$@"
+        fi
+        ;;
+esac
+
+exec librewolf "$@"

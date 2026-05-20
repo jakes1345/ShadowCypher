@@ -1,0 +1,16 @@
+post_install() {
+    echo ">> Setting Plymouth theme to shadowos..."
+    plymouth-set-default-theme -R shadowos 2>/dev/null || \
+        plymouth-set-default-theme shadowos 2>/dev/null || true
+
+    echo ">> Setting GRUB theme (run 'sudo grub-mkconfig -o /boot/grub/grub.cfg' to activate)..."
+    if [ -f /etc/default/grub ]; then
+        sed -i 's|^#\?GRUB_THEME=.*|GRUB_THEME="/usr/share/grub/themes/shadowos/theme.txt"|' /etc/default/grub
+        grep -q '^GRUB_THEME=' /etc/default/grub || \
+            echo 'GRUB_THEME="/usr/share/grub/themes/shadowos/theme.txt"' >> /etc/default/grub
+    fi
+}
+
+post_upgrade() {
+    post_install "$@"
+}

@@ -1,0 +1,16 @@
+post_install() {
+    echo ">> ShadowBrowser installed."
+    echo "   Launch: shadowbrowser  or  Super+B"
+    echo "   Active mode dictates wrapping:"
+    echo "     - normal/dev → librewolf direct"
+    echo "     - privacy    → firejail-wrapped librewolf"
+    echo "     - ghost      → forced redirect to Tor Browser"
+    echo
+    echo "   Pre-installed extensions: uBlock Origin, SponsorBlock,"
+    echo "   DeArrow, Violentmonkey, LibRedirect."
+    echo
+    echo "   Userscripts in /usr/share/shadowbrowser/userscripts/ are"
+    echo "   auto-imported on first launch via Violentmonkey."
+}
+
+post_upgrade() { post_install "$@"; }

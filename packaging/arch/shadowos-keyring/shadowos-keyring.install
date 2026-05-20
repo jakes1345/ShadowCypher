@@ -1,0 +1,12 @@
+post_install() {
+    pacman-key --add /usr/share/pacman/keyrings/shadowos.gpg
+    pacman-key --lsign-key 3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083
+}
+
+post_upgrade() {
+    post_install "$@"
+}
+
+pre_remove() {
+    pacman-key --delete 3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083
+}

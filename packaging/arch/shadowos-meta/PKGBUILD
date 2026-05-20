@@ -1,0 +1,93 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowos-meta
+pkgver=1.0
+pkgrel=1
+pkgdesc="ShadowOS meta-package — installs the complete ShadowOS experience"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+
+# Our own packages
+depends=(
+    'shadowos-keyring'
+    'shadowos-mirrorlist'
+    'shadowos-base'
+    'shadowos-branding'
+    'shadowos-tools'
+    'shadowos-hyprland-config'
+    'shadowos-firefox-config'
+    'shadowos-fastfetch'
+    'shadowcypher'
+    'shadowcypher-agent'
+
+    # Core upstream (Arch core/extra/multilib/blackarch)
+    # — see shadowos/profile/packages.x86_64 for the full list; this meta
+    # picks the unconditional dependencies. ISO build will install meta + a
+    # few extras from packages.x86_64.
+    'linux-hardened'
+    'linux-firmware'
+    'plymouth'
+    'grub'
+    'efibootmgr'
+    'networkmanager'
+    'iwd'
+    'tor'
+    'apparmor'
+    'ufw'
+    'fail2ban'
+    'macchanger'
+
+    # Desktop core
+    'hyprland'
+    'waybar'
+    'wofi'
+    'mako'
+    'foot'
+    'sddm'
+    'thunar'
+    'ttf-jetbrains-mono-nerd'
+
+    # Audio
+    'pipewire'
+    'pipewire-pulse'
+    'wireplumber'
+
+    # Apps
+    'firefox'
+    'fastfetch'
+    'zsh'
+    'starship'
+
+    # Security tooling
+    'nmap'
+    'wireshark-qt'
+    'metasploit'
+
+    # Updates
+    'pacman-contrib'
+)
+
+# Optional: install gaming and dev stacks as separate meta-packages users opt into
+optdepends=(
+    'steam: gaming via Steam'
+    'lutris: gaming via Lutris'
+    'gamemode: per-process performance tuning'
+    'mangohud: in-game performance overlay'
+    'distrobox: run other distros as containers'
+    'code: VSCode editor'
+    'docker: containers'
+    'rustscan: faster nmap'
+    'ffuf: web fuzzer'
+)
+
+package() {
+    # Meta-package — no files, just dependencies.
+    install -Dm644 /dev/stdin "$pkgdir/usr/share/doc/shadowos-meta/README" <<EOF
+ShadowOS meta-package
+====================
+Installing this pulls the complete ShadowOS experience.
+
+Run 'shadow-mode picker' to switch personality.
+Run 'shadow-update' to update your system.
+EOF
+}

@@ -1,0 +1,47 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowos-tools
+pkgver=1.0
+pkgrel=1
+pkgdesc="ShadowOS CLI suite — shadow-mode, shadow-update, shadow-help-me, leak test, diag, installer"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+depends=('bash' 'pacman-contrib' 'nftables' 'ufw' 'tor' 'macchanger' 'systemd')
+optdepends=(
+    'wofi: mode picker GUI'
+    'mako: desktop notifications'
+    'pacman-contrib: checkupdates for shadow-update'
+)
+options=('!strip')
+
+source=()
+sha256sums=()
+
+package() {
+    local SRC="$srcdir/files"
+
+    # CLI scripts
+    install -d "$pkgdir/usr/local/bin"
+    for script in shadow-mode shadow-update shadow-help-me shadow-help-me-stop \
+                  shadow-leak-test shadow-ai-overlay shadowos-diag \
+                  shadowos-firstboot shadowos-install shadowos-mac-randomize; do
+        install -Dm755 "$SRC/usr/local/bin/$script" \
+            "$pkgdir/usr/local/bin/$script"
+    done
+
+    # systemd units
+    install -Dm644 "$SRC/etc/systemd/system/shadowos-mac-randomize.service" \
+        "$pkgdir/usr/lib/systemd/system/shadowos-mac-randomize.service"
+    install -Dm644 "$SRC/etc/systemd/system/shadowos-firstboot.service" \
+        "$pkgdir/usr/lib/systemd/system/shadowos-firstboot.service"
+
+    # Calamares branding (installer)
+    install -d "$pkgdir/etc/calamares/branding/shadowos"
+    cp -a "$SRC/etc/calamares/." "$pkgdir/etc/calamares/" 2>/dev/null || true
+
+    # Desktop launcher for installer
+    if [ -f "$SRC/usr/share/applications/install-shadowos.desktop" ]; then
+        install -Dm644 "$SRC/usr/share/applications/install-shadowos.desktop" \
+            "$pkgdir/usr/share/applications/install-shadowos.desktop"
+    fi
+}

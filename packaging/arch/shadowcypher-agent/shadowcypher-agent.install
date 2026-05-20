@@ -1,0 +1,19 @@
+post_install() {
+    if [ ! -d /opt/shadowcypher/agent/.venv ]; then
+        echo ">> Creating ShadowCypher agent venv..."
+        python3 -m venv --system-site-packages /opt/shadowcypher/agent/.venv 2>&1 | tail -3
+        /opt/shadowcypher/agent/.venv/bin/pip install --quiet \
+            requests pydantic 2>&1 | tail -3 || true
+    fi
+    systemctl daemon-reload
+    echo ">> Run 'sudo systemctl enable --now shadowcypher-agent' to start the agent."
+}
+
+post_upgrade() {
+    systemctl daemon-reload
+    systemctl try-restart shadowcypher-agent 2>/dev/null || true
+}
+
+pre_remove() {
+    systemctl disable --now shadowcypher-agent 2>/dev/null || true
+}

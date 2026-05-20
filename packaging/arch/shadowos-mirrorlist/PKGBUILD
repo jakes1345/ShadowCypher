@@ -1,0 +1,15 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowos-mirrorlist
+pkgver=1.0
+pkgrel=1
+pkgdesc="ShadowOS repository mirrorlist"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+backup=('etc/pacman.d/shadowos-mirrorlist')
+source=('shadowos-mirrorlist')
+sha256sums=('SKIP')
+
+package() {
+    install -Dm644 "$srcdir/shadowos-mirrorlist" "$pkgdir/etc/pacman.d/shadowos-mirrorlist"
+}

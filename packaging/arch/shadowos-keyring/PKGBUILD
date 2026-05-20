@@ -1,0 +1,16 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowos-keyring
+pkgver=1.0
+pkgrel=1
+pkgdesc="ShadowOS PGP keyring — distributes the [shadowos] repo signing key"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+install=shadowos-keyring.install
+source=('shadowos.gpg' 'shadowos-trusted')
+sha256sums=('SKIP' 'SKIP')
+
+package() {
+    install -Dm644 "$srcdir/shadowos.gpg" "$pkgdir/usr/share/pacman/keyrings/shadowos.gpg"
+    install -Dm644 "$srcdir/shadowos-trusted" "$pkgdir/usr/share/pacman/keyrings/shadowos-trusted"
+}

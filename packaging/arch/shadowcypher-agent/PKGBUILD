@@ -1,0 +1,41 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowcypher-agent
+pkgver=0.3.0
+pkgrel=1
+pkgdesc="ShadowCypher Guardian agent — endpoint security collector"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+depends=('python>=3.10' 'python-requests' 'python-pydantic' 'systemd')
+options=('!strip')
+install=shadowcypher-agent.install
+
+source=()
+sha256sums=()
+
+package() {
+    local SRC="$srcdir/files"
+
+    install -d "$pkgdir/opt/shadowcypher/agent"
+    cp -a "$SRC/shadowos/profile/airootfs/opt/shadowcypher/agent/." \
+        "$pkgdir/opt/shadowcypher/agent/"
+
+    # systemd user-service for the agent
+    install -Dm644 /dev/stdin "$pkgdir/usr/lib/systemd/system/shadowcypher-agent.service" <<'EOF'
+[Unit]
+Description=ShadowCypher Guardian Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/shadowcypher/agent/shadow-agent
+Restart=on-failure
+RestartSec=15
+User=shadow
+Group=shadow
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}

@@ -1,0 +1,24 @@
+post_install() {
+    cat <<EOF
+=========================================================
+ShadowOS Shell installed.
+
+  • To use it, replace 'waybar' / 'wofi' / 'mako' in your
+    Hyprland exec-once with: shadowos-shell
+
+  • Customize the dock by editing:
+        ~/.config/shadowos-shell/dock.json
+
+  • Reload by SIGUSR1 to ags:
+        killall -USR1 ags
+
+The shell ships with: top bar (threat-aware), hex dock,
+command-palette launcher (Super), lockscreen, notifications.
+
+Hyprland keybind already wired (Super opens launcher) via
+/etc/skel/.config/hypr/conf.d/10-shadowos-shell.conf
+
+=========================================================
+EOF
+}
+post_upgrade() { post_install "$@"; }

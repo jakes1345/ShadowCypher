@@ -1,0 +1,53 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowbrowser
+pkgver=1.0
+pkgrel=1
+pkgdesc="ShadowBrowser — LibreWolf rebrand with 5-layer ad/track defense pre-configured for ShadowOS"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MPL2 MIT')
+depends=('librewolf')
+optdepends=(
+    'mullvad-browser-bin: anti-fingerprint browser'
+    'torbrowser-launcher: anonymous browsing'
+    'freetube-bin: YouTube without ads'
+)
+install=shadowbrowser.install
+options=('!strip')
+
+source=(
+    'policies.json'
+    'shadowos-userchrome.css'
+    'shadowbrowser.desktop'
+    'shadowbrowser'
+    'userscripts/anti-adblock-bypass.user.js'
+    'userscripts/youtube-strip.user.js'
+    'userscripts/cookie-killer.user.js'
+    'blocklists/shadowos-blocklist.conf'
+)
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+package() {
+    # ── Enterprise policies that LibreWolf reads on startup ────────────────
+    # See: https://github.com/mozilla/policy-templates/blob/master/README.md
+    install -Dm644 "$srcdir/policies.json" \
+        "$pkgdir/usr/lib/librewolf/distribution/policies.json"
+
+    # ── Brand override: ShadowBrowser name everywhere ───────────────────────
+    install -Dm644 "$srcdir/shadowos-userchrome.css" \
+        "$pkgdir/etc/skel/.librewolf/chrome/userChrome.css"
+
+    # ── Launcher entry ──────────────────────────────────────────────────────
+    install -Dm644 "$srcdir/shadowbrowser.desktop" \
+        "$pkgdir/usr/share/applications/shadowbrowser.desktop"
+    install -Dm755 "$srcdir/shadowbrowser" \
+        "$pkgdir/usr/bin/shadowbrowser"
+
+    # ── Userscripts auto-loaded into Violentmonkey ──────────────────────────
+    install -d "$pkgdir/usr/share/shadowbrowser/userscripts"
+    cp -a "$srcdir/userscripts/." "$pkgdir/usr/share/shadowbrowser/userscripts/"
+
+    # ── DNS-level blocklist config for dnscrypt-proxy ───────────────────────
+    install -Dm644 "$srcdir/blocklists/shadowos-blocklist.conf" \
+        "$pkgdir/etc/dnscrypt-proxy/shadowos-blocklist.conf"
+}

@@ -1,0 +1,85 @@
+# Maintainer: ShadowCypher <admin@shadowcypher.site>
+pkgname=shadowcypher
+pkgver=2.2.0
+pkgrel=1
+pkgdesc="ShadowCypher — enterprise offensive security & autonomous intelligence suite"
+arch=('any')
+url="https://shadowcypher.site"
+license=('MIT')
+depends=(
+    'python>=3.10'
+    'python-gobject'
+    'python-cairo'
+    'gtk3'
+    'python-pydantic'
+    'python-requests'
+    'python-websockets'
+    'python-cryptography'
+    'python-pillow'
+    'python-rich'
+)
+optdepends=(
+    'ollama: local LLM backend'
+    'nmap: network scanning module'
+    'aircrack-ng: wireless module'
+    'metasploit: exploit framework integration'
+)
+options=('!strip' '!debug')
+backup=('etc/shadowcypher/config.json')
+
+source=()
+sha256sums=()
+
+package() {
+    local SRC="$srcdir/files"
+
+    # Application source — the Python module tree
+    install -d "$pkgdir/opt/shadowcypher"
+    cp -a "$SRC/shadowcypher" "$pkgdir/opt/shadowcypher/shadowcypher"
+
+    # Native bits (icons, scripts, helper binaries shipped in repo)
+    if [ -d "$SRC/native" ]; then
+        cp -a "$SRC/native" "$pkgdir/opt/shadowcypher/native"
+    fi
+
+    # ShadowScript compiler subdir if separate
+    if [ -d "$SRC/shadowscript" ]; then
+        cp -a "$SRC/shadowscript" "$pkgdir/opt/shadowcypher/shadowscript"
+    fi
+
+    # Launcher
+    install -Dm755 /dev/stdin "$pkgdir/usr/bin/shadowcypher" <<'EOF'
+#!/usr/bin/env bash
+export PYTHONPATH=/opt/shadowcypher
+exec python3 -m shadowcypher.app "$@"
+EOF
+
+    # Desktop entry
+    install -Dm644 /dev/stdin "$pkgdir/usr/share/applications/shadowcypher.desktop" <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ShadowCypher
+GenericName=Security Suite
+Comment=Enterprise offensive security & autonomous intelligence
+Exec=shadowcypher
+Icon=shadowcypher
+Terminal=false
+Categories=Network;Security;System;
+Keywords=security;pentest;red-team;ai;
+StartupNotify=true
+StartupWMClass=org.shadowcypher.ShadowCypher
+EOF
+
+    # Icon
+    if [ -f "$SRC/native/icons/shadowcypher-256.png" ]; then
+        install -Dm644 "$SRC/native/icons/shadowcypher-256.png" \
+            "$pkgdir/usr/share/icons/hicolor/256x256/apps/shadowcypher.png"
+    fi
+
+    # Default config (user-editable, marked backup)
+    if [ -f "$SRC/config.example.json" ]; then
+        install -Dm640 "$SRC/config.example.json" \
+            "$pkgdir/etc/shadowcypher/config.json"
+    fi
+}

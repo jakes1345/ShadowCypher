@@ -1,0 +1,112 @@
+# ShadowOS install profile picker — shown during install
+- name: "Minimal"
+  description: "Core ShadowOS + Hyprland desktop. ~2 GB installed."
+  selected: false
+  packages:
+    - shadowos-meta
+    - linux-hardened
+    - linux-firmware
+    - hyprland
+    - waybar
+    - foot
+    - thunar
+    - shadowbrowser
+    - networkmanager
+    - dnscrypt-proxy
+    - ufw
+    - apparmor
+    - sudo
+    - zsh
+    - git
+    - neovim
+
+- name: "Security pro"
+  description: "Everything in Minimal + the full pentest arsenal (nmap, metasploit, wireshark, rustscan, ffuf, subfinder, nuclei, evil-winrm, etc.). ~5 GB installed."
+  selected: true
+  packages:
+    - shadowos-meta
+    - linux-hardened
+    - linux-firmware
+    - hyprland
+    - waybar
+    - foot
+    - thunar
+    - shadowbrowser
+    - torbrowser-launcher
+    - networkmanager
+    - dnscrypt-proxy
+    - ufw
+    - apparmor
+    - fail2ban
+    - tor
+    - macchanger
+    - nmap
+    - rustscan
+    - masscan
+    - metasploit
+    - hydra
+    - hashcat
+    - aircrack-ng
+    - wireshark-qt
+    - sqlmap
+    - ffuf
+    - subfinder
+    - nuclei
+    - feroxbuster
+    - impacket
+    - netexec
+    - mitmproxy
+    - bettercap
+    - radare2
+    - binwalk
+    - sleuthkit
+    - yara
+    - keepassxc
+    - gnupg
+    - veracrypt
+    - distrobox
+    - podman
+    - docker
+
+- name: "Everything"
+  description: "All of Security pro + gaming (Steam, Lutris, Heroic, MangoHUD, gamemode), dev (VSCode, Docker, Kubernetes, Rust, Go), creator tools (GIMP, Inkscape, Blender). ~10 GB installed."
+  selected: false
+  packages:
+    - shadowos-meta
+    - linux-hardened
+    - linux-firmware
+    - hyprland
+    - shadowbrowser
+    - mullvad-browser-bin
+    - torbrowser-launcher
+    # Gaming
+    - steam
+    - lutris
+    - heroic-games-launcher
+    - prismlauncher
+    - gamemode
+    - lib32-gamemode
+    - mangohud
+    - lib32-mangohud
+    - gamescope
+    - wine-staging
+    # Dev
+    - code
+    - docker
+    - docker-compose
+    - kubectl
+    - helm
+    - terraform
+    - rustup
+    - go
+    - nodejs
+    - npm
+    # Creator
+    - gimp
+    - inkscape
+    - blender
+    - krita
+    - obs-studio
+    - audacity
+    # Office
+    - libreoffice-fresh

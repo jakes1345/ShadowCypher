@@ -151,12 +151,19 @@ uvicorn
 ollama
 
 # Apps
-firefox
-thunderbird
+# Browsers — privacy-first: LibreWolf default, Mullvad for anti-fingerprint,
+# Tor Browser via launcher. Firefox/Mozilla products are NOT shipped because
+# Mozilla telemetry + recent policy changes contradict the distro's brand.
+librewolf
+mullvad-browser-bin
+torbrowser-launcher
+chaotic-keyring
+chaotic-mirrorlist
 signal-desktop
-libreoffice-fresh
 mpv
 imv
+yt-dlp
+freetube-bin
 
 # === Dev — full IDE/runtime stack ===
 git
@@ -279,13 +286,10 @@ redis
 imagemagick
 ffmpeg
 
-# === Media + creator tools ===
-obs-studio
-audacity
-gimp
-inkscape
-blender
-krita
+# === Media — minimal default (creator suite is install-on-demand) ===
+# Big creator tools (gimp/inkscape/blender/krita/obs-studio/audacity) are
+# NOT shipped by default. Users who need them install via `pacman -S`
+# or via the shadowos-creator-tools meta package.
 vlc
 
 # Utilities
