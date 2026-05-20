@@ -39,13 +39,32 @@ ufw default allow outgoing
 ufw allow 22/tcp comment 'ShadowOS live SSH'
 ufw --force enable
 
-# Re-stamp /etc/lsb-release with ShadowOS identity (upstream packages clobbered it)
+# Re-stamp OS identity files (upstream `filesystem` package owns these and
+# clobbers them; we overwrite at the END of customize so our values win)
 cat > /etc/lsb-release <<'LSB'
 LSB_VERSION=1.4
 DISTRIB_ID=ShadowOS
 DISTRIB_RELEASE=0.1
 DISTRIB_DESCRIPTION="ShadowOS 0.1"
 LSB
+
+cat > /etc/os-release <<'OSR'
+NAME="ShadowOS"
+PRETTY_NAME="ShadowOS 0.1"
+ID=shadowos
+ID_LIKE=arch
+BUILD_ID=rolling
+ANSI_COLOR="38;2;180;74;255"
+HOME_URL="https://shadowcypher.site"
+DOCUMENTATION_URL="https://shadowcypher.site/docs.html"
+SUPPORT_URL="https://shadowcypher.site"
+BUG_REPORT_URL="https://github.com/jakes1345/ShadowCypher/issues"
+LOGO=shadowos
+IMAGE_ID=shadowos
+IMAGE_VERSION=0.1.0
+OSR
+
+echo "shadowos" > /etc/hostname
 
 # Plymouth theme
 plymouth-set-default-theme -R shadowos 2>/dev/null \
