@@ -137,8 +137,12 @@ jobs:
 
       - name: Commit + push
         run: |
-          cd $GITHUB_WORKSPACE
-          git config user.name "github-actions[bot]"
+          # Restore root ownership so root can run git on the workspace
+          chown -R root:root "$GITHUB_WORKSPACE"
+          # And mark it safe — Arch's git is strict about cross-user repos
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add arch/
           if git diff --cached --quiet; then
