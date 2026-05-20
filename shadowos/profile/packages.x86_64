@@ -163,7 +163,7 @@ signal-desktop
 mpv
 imv
 yt-dlp
-freetube-bin
+freetube
 
 # === Dev — full IDE/runtime stack ===
 git

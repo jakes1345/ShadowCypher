@@ -49,13 +49,23 @@ jobs:
             echo "::error::APT_SIGNING_KEY not set; cannot sign packages"
             exit 1
           fi
-          # The same OpenPGP key used for apt — works for pacman too
-          mkdir -p /home/builder/.gnupg
-          chmod 700 /home/builder/.gnupg
+          KEY_ID="3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083"
+          # Decode key to a builder-owned file
           echo "$APT_SIGNING_KEY" | base64 -d > /tmp/key.gpg
-          sudo -u builder bash -c 'gpg --batch --import /tmp/key.gpg' 2>&1 | tail -3
+          chown builder:builder /tmp/key.gpg
+          chmod 600 /tmp/key.gpg
+          # All GPG ops as the builder user in builder's own GNUPGHOME
+          sudo -u builder bash <<EOF
+          set -e
+          export GNUPGHOME=/home/builder/.gnupg
+          mkdir -p \$GNUPGHOME
+          chmod 700 \$GNUPGHOME
+          gpg --batch --import /tmp/key.gpg
+          echo "${KEY_ID}:6:" | gpg --batch --import-ownertrust
+          echo "---keys imported---"
+          gpg --list-secret-keys --keyid-format=long | head -10
+EOF
           rm /tmp/key.gpg
-          chown -R builder:builder /home/builder/.gnupg
 
           # Trust ultimately for makepkg
           KEY_ID="3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083"
