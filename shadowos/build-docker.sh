@@ -65,12 +65,23 @@ docker run --rm --privileged --network=host \
     reflector --latest 20 --protocol https --sort rate \
         --save /etc/pacman.d/mirrorlist 2>&1 | tail -3 || true
 
-    # Bootstrap the BlackArch keyring + mirrorlist on the build host so that
-    # mkarchiso can fetch BlackArch packages with valid PGP signatures.
-    echo ">> Importing BlackArch keyring on builder host..."
+    # Bootstrap BlackArch keyring + mirrorlist for [blackarch] repo
+    echo ">> Importing BlackArch keyring..."
     curl -fsSL -o /tmp/strap.sh https://blackarch.org/strap.sh
     chmod +x /tmp/strap.sh
     /tmp/strap.sh 2>&1 | tail -5
+
+    # Bootstrap Chaotic-AUR keyring + mirrorlist for [chaotic-aur] repo
+    # (provides librewolf, mullvad-browser-bin, freetube-bin, heroic, etc.)
+    echo ">> Importing Chaotic-AUR keyring..."
+    pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com 2>&1 | tail -3
+    pacman-key --lsign-key 3056513887B78AEB 2>&1 | tail -3
+    pacman -U --noconfirm \
+        "https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst" \
+        "https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst" \
+        2>&1 | tail -5
+
+    pacman -Sy 2>&1 | tail -5
 
     mkarchiso -v -w /build/work -o /build/out /tmp/profile
   '

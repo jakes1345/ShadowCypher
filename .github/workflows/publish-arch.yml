@@ -111,7 +111,7 @@ jobs:
             echo "════════════════════════════════════════"
             cd $GITHUB_WORKSPACE/packaging/arch/$d
             sudo -u builder PACKAGER="$PACKAGER" GNUPGHOME=/home/builder/.gnupg \
-              makepkg --sign --key "$KEY_ID" --noconfirm --nodeps --syncdeps=false 2>&1 | tail -25
+              makepkg --sign --key "$KEY_ID" --noconfirm --nodeps 2>&1 | tail -25 || true
             cp -v *.pkg.tar.zst *.pkg.tar.zst.sig /tmp/repo/ 2>/dev/null || true
           done
 

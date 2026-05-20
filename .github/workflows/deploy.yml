@@ -20,15 +20,38 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: false
-      
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-        
+
+      - name: Build _site (filter out source code and large binaries)
+        run: |
+          mkdir -p _site
+          # Web assets at repo root
+          rsync -a \
+            --include='*.html' --include='*.css' --include='*.js' \
+            --include='*.json' --include='*.png' --include='*.jpg' \
+            --include='*.jpeg' --include='*.gif' --include='*.svg' \
+            --include='*.ico' --include='*.webp' --include='*.woff*' \
+            --include='*.ttf' --include='*.eot' \
+            --include='blog/' --include='blog/**' \
+            --include='r/' --include='r/**' \
+            --include='_redirects' --include='CNAME' --include='.nojekyll' \
+            --include='manifest.json' --include='sw.js' \
+            --exclude='*' \
+            ./ _site/
+          # Apt + arch repos (needed for one-liner installs)
+          [ -d apt ]  && cp -a apt  _site/apt
+          [ -d arch ] && cp -a arch _site/arch
+          echo "===  _site size  ==="
+          du -sh _site/ 2>&1
+          du -sh _site/* 2>&1 | sort -rh | head -10
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
-          
+          path: '_site/'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
