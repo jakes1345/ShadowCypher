@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-4.0-00d4ff?style=flat-square" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-4.1-00d4ff?style=flat-square" alt="Version"/>
   <img src="https://img.shields.io/badge/python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/go-1.24+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go"/>
   <img src="https://img.shields.io/badge/AI-Ollama%20(Local)-black?style=flat-square" alt="AI"/>
@@ -36,7 +36,7 @@ ShadowCypher is a dual-core system. The orchestration layer runs on **Python 3.1
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    SHADOWCYPHER v4.0.0                          │
+│                    SHADOWCYPHER v4.1.0                          │
 ├────────────────────┬────────────────────┬───────────────────────┤
 │   GTK-3.0 UI       │   AI Engine        │   Native Core (Go)   │
 │   ─────────────    │   ──────────       │   ────────────────   │
@@ -332,7 +332,7 @@ The authors assume no liability for misuse. You are the operator. You own your a
 </p>
 
 <p align="center">
-  <strong>ShadowCypher v4.0</strong> · Built with Go, Python, Cairo, and conviction.
+  <strong>ShadowCypher v4.1</strong> · Built with Go, Python, Cairo, and conviction.
 </p>
 
 <p align="center">
