@@ -159,5 +159,6 @@ jobs:
             echo "No changes to arch repo."
           else
             git commit -m "arch: rebuild packages ($(date -u +%Y-%m-%d))"
+            git pull --rebase origin main 2>/dev/null || true
             git push
           fi

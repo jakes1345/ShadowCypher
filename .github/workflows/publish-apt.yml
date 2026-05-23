@@ -70,7 +70,7 @@ jobs:
 
           # Generate Packages index (dpkg-scanpackages exits 2 on warnings; ignore)
           (cd "$REPO" && dpkg-scanpackages -q pool/main /dev/null > dists/stable/main/binary-amd64/Packages 2>/dev/null || true)
-          gzip -9 -k "$DISTS/Packages"
+          rm -f "$DISTS/Packages.gz" && gzip -9 -k "$DISTS/Packages"
 
           # Generate Release
           cat > "$REPO/dists/stable/Release" <<EOF
@@ -120,5 +120,6 @@ jobs:
             echo "No changes to apt repo."
           else
             git commit -m "apt: publish shadowcypher v$PKG_VERSION"
+            git pull --rebase origin main 2>/dev/null || true
             git push
           fi
