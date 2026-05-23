@@ -73,10 +73,18 @@ class VoskSTT(private val context: Context) {
 
         // Use a CompletableDeferred so the coroutine waits cleanly for StorageService
         val unpacked = kotlinx.coroutines.CompletableDeferred<String>()
-        StorageService.unpack(context, MODEL_URL, "vosk", { setOf(modelDir) }) { modelPath ->
-            Log.i(TAG, "Model unpacked to $modelPath")
-            unpacked.complete(modelPath)
-        }
+        StorageService.unpack(
+            context, MODEL_URL, "vosk",
+            { setOf(modelDir) },                    // filter
+            { error ->                              // onError
+                Log.e(TAG, "Model download error: $error")
+                unpacked.completeExceptionally(IOException(error.toString()))
+            },
+            { modelPath ->                          // onComplete
+                Log.i(TAG, "Model unpacked to $modelPath")
+                unpacked.complete(modelPath)
+            }
+        )
 
         // Wait up to 120s with proper coroutine suspension (not Thread.sleep)
         withContext(Dispatchers.IO) {
