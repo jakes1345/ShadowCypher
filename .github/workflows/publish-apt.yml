@@ -68,8 +68,8 @@ jobs:
           # Copy .deb into pool
           cp "$DEB" "$POOL/"
 
-          # Generate Packages index
-          (cd "$REPO" && dpkg-scanpackages pool/main /dev/null > dists/stable/main/binary-amd64/Packages 2>/dev/null)
+          # Generate Packages index (dpkg-scanpackages exits 2 on warnings; ignore)
+          (cd "$REPO" && dpkg-scanpackages -q pool/main /dev/null > dists/stable/main/binary-amd64/Packages 2>/dev/null || true)
           gzip -9 -k "$DISTS/Packages"
 
           # Generate Release
