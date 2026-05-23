@@ -75,14 +75,13 @@ class VoskSTT(private val context: Context) {
         val unpacked = kotlinx.coroutines.CompletableDeferred<String>()
         StorageService.unpack(
             context, MODEL_URL, "vosk",
-            { setOf(modelDir) },                    // filter
-            { error ->                              // onError
-                Log.e(TAG, "Model download error: $error")
-                unpacked.completeExceptionally(IOException(error.toString()))
+            { model ->
+                Log.i(TAG, "Model loaded: $model")
+                unpacked.complete(modelDir.absolutePath)
             },
-            { modelPath ->                          // onComplete
-                Log.i(TAG, "Model unpacked to $modelPath")
-                unpacked.complete(modelPath)
+            { error ->
+                Log.e(TAG, "Model download error: ${error.message}")
+                unpacked.completeExceptionally(error)
             }
         )
 
