@@ -874,7 +874,9 @@ const ShadowAssistant = (() => {
     if (!_kbChunks || !_kbChunks.length) return null;
     const qTokens = query.toLowerCase().match(/\b[a-z][a-z0-9\-\.]{0,}\b/g) || [];
     if (!qTokens.length) return null;
-    const avgLen = _kbChunks.reduce((s, c) => s + (c.bm25_tokens?.length || 0), 0) / _kbChunks.length;
+    const avgLen = _kbChunks.length > 0
+    ? _kbChunks.reduce((s, c) => s + (c.bm25_tokens?.length || 0), 0) / _kbChunks.length
+    : 1;
     const scored = _kbChunks.map(chunk => ({
       chunk,
       score: bm25Score(qTokens, chunk.bm25_tokens || [], avgLen),
@@ -1050,4 +1052,9 @@ if (document.readyState === 'loading') {
   ShadowAssistant.init();
 }
 
-window.ShadowAssistant = ShadowAssistant;
+Object.defineProperty(window, 'ShadowAssistant', {
+  value: ShadowAssistant,
+  writable: false,
+  configurable: false,
+  enumerable: true
+});

@@ -3,6 +3,7 @@ package site.shadowcypher.app.service
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import site.shadowcypher.app.data.Incident
@@ -47,11 +48,23 @@ object NotificationHelper {
         )
     }
 
+    private fun notifiedPrefs(context: Context): SharedPreferences =
+        context.getSharedPreferences("shadow_notified", Context.MODE_PRIVATE)
+
+    fun clearNotifiedCache(context: Context) {
+        notifiedPrefs(context).edit().clear().apply()
+    }
+
     fun postIncidentNotification(context: Context, incident: Incident) {
         val nm = NotificationManagerCompat.from(context)
-
-        // Check notification permission at runtime (Android 13+)
         if (!nm.areNotificationsEnabled()) return
+
+        val prefs = notifiedPrefs(context)
+        val key = "incident_${incident.id}"
+        if (prefs.getBoolean(key, false)) return
+        prefs.edit().putBoolean(key, true).apply()
+
+        val notifId = (incident.id.hashCode() and 0x7FFFFFFF) % 100_000 + 1
 
         val notification = NotificationCompat.Builder(context, CHANNEL_INCIDENTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
@@ -62,12 +75,19 @@ object NotificationHelper {
             .setAutoCancel(true)
             .build()
 
-        nm.notify(incident.id.hashCode(), notification)
+        nm.notify(notifId, notification)
     }
 
     fun postCveNotification(context: Context, cveId: String, description: String) {
         val nm = NotificationManagerCompat.from(context)
         if (!nm.areNotificationsEnabled()) return
+
+        val prefs = notifiedPrefs(context)
+        val key = "cve_${cveId}"
+        if (prefs.getBoolean(key, false)) return
+        prefs.edit().putBoolean(key, true).apply()
+
+        val notifId = (cveId.hashCode() and 0x7FFFFFFF) % 100_000 + 100_001
 
         val notification = NotificationCompat.Builder(context, CHANNEL_CVE)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -78,6 +98,6 @@ object NotificationHelper {
             .setAutoCancel(true)
             .build()
 
-        nm.notify(cveId.hashCode(), notification)
+        nm.notify(notifId, notification)
     }
 }

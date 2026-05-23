@@ -25,8 +25,12 @@ class BackgroundSyncWorker(
         }
 
         val summaryResult = repo.fetchSummary()
-        summaryResult.onFailure {
-            return Result.retry()
+        summaryResult.onFailure { err ->
+            val isTransient = err !is IllegalStateException &&
+                err.message?.contains("401") != true &&
+                err.message?.contains("403") != true &&
+                err.message?.contains("No API key") != true
+            return if (isTransient) Result.retry() else Result.success()
         }
 
         val summary = summaryResult.getOrNull() ?: return Result.success()

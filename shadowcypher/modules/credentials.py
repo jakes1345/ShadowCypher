@@ -4,11 +4,19 @@ Handles brute-force operations (hydra), hash cracking (hashcat/john),
 hash identification, and macOS Keychain auditing.
 """
 
+import shutil
 import tempfile
 import os
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.stealth import require_stealth
+
+
+def _require_tool(name: str) -> str:
+    path = shutil.which(name)
+    if path is None:
+        raise FileNotFoundError(f"Required tool '{name}' not found in PATH.")
+    return path
 
 
 class Credentials(BaseModule):

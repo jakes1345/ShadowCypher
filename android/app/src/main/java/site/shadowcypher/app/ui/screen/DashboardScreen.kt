@@ -39,9 +39,9 @@ fun DashboardScreen(
     val apiKey by viewModel.apiKey.collectAsState()
     val scanTriggered by viewModel.scanTriggered.collectAsState()
 
-    if (scanTriggered) {
-        LaunchedEffect(scanTriggered) {
-            viewModel.acknowledgeScaTriggered()
+    LaunchedEffect(scanTriggered) {
+        if (scanTriggered) {
+            viewModel.acknowledgeScanTriggered()
         }
     }
 

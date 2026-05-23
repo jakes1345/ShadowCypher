@@ -9,26 +9,32 @@ import importlib
 
 
 class TestKairos:
-    @pytest.fixture(autouse=True)
-    def setup_kairos(self):
-        """Patch db, bus, and pulse before importing Kairos."""
-        self.mock_db = MagicMock()
-        self.mock_bus = MagicMock()
-        self.mock_pulse = MagicMock()
-        self.mock_pulse.ingest = MagicMock()
-        self.mock_pulse.analyze_spectrum.return_value = {"status": "OK"}
+    @pytest.fixture(autouse=True, scope="class")
+    def setup_kairos(self, request):
+        """Patch db, bus, and pulse — imported once per class to avoid C-extension re-load crash."""
+        mock_db = MagicMock()
+        mock_bus = MagicMock()
+        mock_pulse = MagicMock()
+        mock_pulse.ingest = MagicMock()
+        mock_pulse.analyze_spectrum.return_value = {"status": "OK"}
 
-        with patch.dict("sys.modules", {}):
-            import shadowcypher.core.kairos as kairos_mod
-            kairos_mod.db = self.mock_db
-            kairos_mod.bus = self.mock_bus
-            # Patch the lazy pulse import
-            import shadowcypher.core.pulse as pulse_mod
-            pulse_mod.pulse = self.mock_pulse
+        import shadowcypher.core.kairos as kairos_mod
+        import shadowcypher.core.pulse as pulse_mod
 
-            from shadowcypher.core.kairos import Kairos
-            self.kairos = Kairos()
-            yield
+        # Inject mocks at module level (safe — modules already cached in sys.modules)
+        kairos_mod.db = mock_db
+        kairos_mod.bus = mock_bus
+        pulse_mod.pulse = mock_pulse
+
+        from shadowcypher.core.kairos import Kairos
+        kairos_instance = Kairos()
+
+        # Attach to class so all test methods can access via self
+        request.cls.mock_db = mock_db
+        request.cls.mock_bus = mock_bus
+        request.cls.mock_pulse = mock_pulse
+        request.cls.kairos = kairos_instance
+        yield
 
     def test_ip_detection(self):
         self.kairos.analyze("Found host at 192.168.1.100 responding")

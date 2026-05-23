@@ -15,6 +15,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import android.webkit.*
+import androidx.annotation.Keep
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -49,8 +50,16 @@ class AssistantActivity : AppCompatActivity() {
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            settings.allowFileAccess = true
-            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            settings.allowFileAccess = false
+            settings.allowContentAccess = false
+            @Suppress("DEPRECATION")
+            settings.allowFileAccessFromFileURLs = false
+            @Suppress("DEPRECATION")
+            settings.allowUniversalAccessFromFileURLs = false
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                settings.safeBrowsingEnabled = true
+            }
             addJavascriptInterface(ShadowBridge(), "ShadowBridge")
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) = injectShim()
@@ -78,9 +87,10 @@ class AssistantActivity : AppCompatActivity() {
         val js = """
 (function() {
   var listeners = {};
-  window._fireEvent = function(event, dataJson) {
+  window._fireEvent = function(event, data) {
     var cb = listeners[event];
-    if (cb) cb(JSON.parse(dataJson));
+    // data is already a parsed JS object (passed via JSON.parse(atob(...)) at call site)
+    if (cb) cb(data);
   };
   var plugin = {
     startListening:      function() { ShadowBridge.startListening(); return Promise.resolve(); },
@@ -130,6 +140,7 @@ class AssistantActivity : AppCompatActivity() {
 
     inner class ShadowBridge {
 
+        @Keep
         @JavascriptInterface
         fun startListening() {
             if (ContextCompat.checkSelfPermission(this@AssistantActivity, Manifest.permission.RECORD_AUDIO)
@@ -149,21 +160,39 @@ class AssistantActivity : AppCompatActivity() {
             }
         }
 
+        @Keep
         @JavascriptInterface
         fun stopListening() = runOnUiThread { speechRecognizer?.stopListening() }
 
+        @Keep
         @JavascriptInterface
         fun speak(text: String, rate: Float, pitch: Float) {
-            if (!ttsReady) { fireEvent("speakDone", mapOf("utteranceId" to "err")); return }
+            if (!ttsReady) {
+                runOnUiThread {
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        if (ttsReady) {
+                            val id = "sa_${System.currentTimeMillis()}"
+                            tts?.setSpeechRate(rate)
+                            tts?.setPitch(pitch)
+                            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
+                        } else {
+                            fireEvent("speakDone", mapOf("utteranceId" to "err_not_ready"))
+                        }
+                    }, 600)
+                }
+                return
+            }
             val id = "sa_${System.currentTimeMillis()}"
             tts?.setSpeechRate(rate)
             tts?.setPitch(pitch)
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
         }
 
+        @Keep
         @JavascriptInterface
         fun stopSpeaking() = tts?.stop()
 
+        @Keep
         @JavascriptInterface
         fun requestMicPermission() {
             if (ContextCompat.checkSelfPermission(this@AssistantActivity, Manifest.permission.RECORD_AUDIO)
@@ -176,6 +205,7 @@ class AssistantActivity : AppCompatActivity() {
             }
         }
 
+        @Keep
         @JavascriptInterface
         fun openAssistSettings() {
             try {
@@ -185,6 +215,7 @@ class AssistantActivity : AppCompatActivity() {
             }
         }
 
+        @Keep
         @JavascriptInterface
         fun finishActivity() = runOnUiThread {
             tts?.stop()
@@ -192,18 +223,21 @@ class AssistantActivity : AppCompatActivity() {
             finishAndRemoveTask()
         }
 
+        @Keep
         @JavascriptInterface
         fun getApiKey(): String {
             val key = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_API, "") ?: ""
-            return "{\"key\":\"$key\"}"
+            return JSONObject().apply { put("key", key) }.toString()
         }
 
+        @Keep
         @JavascriptInterface
         fun setApiKey(key: String) {
             getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit().putString(KEY_API, key).apply()
         }
 
+        @Keep
         @JavascriptInterface
         fun launchIntent(jsonStr: String): String {
             return try {
@@ -277,9 +311,13 @@ class AssistantActivity : AppCompatActivity() {
                     }
                     else -> false
                 }
-                "{\"ok\":$launched}"
+                JSONObject().apply { put("ok", launched) }.toString()
             } catch (e: Exception) {
-                "{\"ok\":false,\"error\":\"${e.message?.replace("\"","'")}\"}"
+                Log.e(TAG, "launchIntent error", e)
+                JSONObject().apply {
+                    put("ok", false)
+                    put("error", e.message ?: "Unknown error")
+                }.toString()
             }
         }
 
@@ -362,6 +400,10 @@ class AssistantActivity : AppCompatActivity() {
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(id: String?) {}
                     override fun onDone(id: String?) = fireEvent("speakDone", mapOf("utteranceId" to (id ?: "")))
+                    override fun onError(utteranceId: String?, errorCode: Int) {
+                        Log.w(TAG, "TTS error $errorCode for $utteranceId")
+                        fireEvent("speakDone", mapOf("utteranceId" to (utteranceId ?: "err"), "error" to errorCode))
+                    }
                     @Deprecated("") override fun onError(id: String?) {}
                 })
             }
@@ -371,8 +413,17 @@ class AssistantActivity : AppCompatActivity() {
     // ── Event helper ─────────────────────────────────────────────────────────
 
     private fun fireEvent(event: String, data: Map<String, Any>) {
-        val json = JSONObject(data).toString().replace("\\", "\\\\").replace("'", "\\'")
-        webView.post { webView.evaluateJavascript("window._fireEvent('$event','$json')", null) }
+        val json = JSONObject(data).toString()
+        val b64 = android.util.Base64.encodeToString(json.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+        val safeEvent = android.util.Base64.encodeToString(
+            event.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP
+        )
+        webView.post {
+            webView.evaluateJavascript(
+                "window._fireEvent(atob('$safeEvent'), JSON.parse(atob('$b64')))",
+                null
+            )
+        }
     }
 
     // ── Lifecycle ────────────────────────────────────────────────────────────

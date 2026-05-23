@@ -3,12 +3,21 @@ Network Module — Enterprise Intelligence Build.
 Handles packet-level operations, ARP sweeps, service fingerprinting, and OS detection.
 """
 
+import shutil
+import subprocess
+
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import (
     validate_target, validate_ports, validate_interface
 )
-import subprocess
+
+
+def _require_tool(name: str) -> str:
+    path = shutil.which(name)
+    if path is None:
+        raise FileNotFoundError(f"Required tool '{name}' not found in PATH. Install it to use this feature.")
+    return path
 
 
 class Network(BaseModule):
@@ -36,7 +45,7 @@ class Network(BaseModule):
     def arp_scan(interface=None, subnet=None, on_output=None, on_complete=None):
         """ARP sweep to discover live hosts on the local network."""
         from shadowcypher.core.runner import runner
-        args = ["nmap", "-sn", "-PR"]
+        args = [_require_tool("nmap"), "-sn", "-PR"]
         if interface and validate_interface(interface):
             args += ["-e", interface]
         if subnet and validate_target(subnet):

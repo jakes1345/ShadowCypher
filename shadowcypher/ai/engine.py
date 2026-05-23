@@ -15,9 +15,10 @@ from typing import Optional, Callable
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 from shadowcypher.ai.providers import provider_registry
+from shadowcypher.ai.guard import guard, BLOCK, FLAG
 
 
-OLLAMA_BASE = "http://127.0.0.1:11434"
+OLLAMA_BASE = getattr(config.ai, 'api_base', 'http://127.0.0.1:11434')
 
 
 class AIEngine:
@@ -408,9 +409,18 @@ class AIEngine:
         if temperature is None:
             temperature = config.get("ai", "temperature", default=0.7)
 
+        # ── ShadowGuard: scan input before hitting Ollama ──
+        gate = guard.scan_input(prompt, context="generate")
+        if gate.action == BLOCK:
+            return (f"[SHADOWGUARD] BLOCKED — Prompt injection detected "
+                    f"(score={gate.score:.2f}). Request denied.")
+        if gate.action == FLAG:
+            logger.warning("ai", f"SHADOWGUARD_FLAG score={gate.score:.2f} — proceeding with caution")
+
         # Local Ollama is always preferred. Try it first regardless of _loaded state.
         if self._loaded and self._backend == "llamacpp":
-            return self._generate_llamacpp(prompt, system_prompt, max_tokens, temperature)
+            raw = self._generate_llamacpp(prompt, system_prompt, max_tokens, temperature)
+            return guard.scan_output(raw).cleaned
 
         # Try Ollama (either tracked as loaded, or just running in background)
         ollama_model = self._model_name or self._select_ollama_model()
@@ -418,12 +428,13 @@ class AIEngine:
             self._model_name = ollama_model
             result = self._generate_ollama(prompt, system_prompt, max_tokens, temperature)
             if not result.startswith("[Error]"):
-                return result
+                return guard.scan_output(result).cleaned
 
         # Fallback: cloud provider
         active = provider_registry.active
         if active and active.id != "ollama" and active.is_configured:
-            return provider_registry.generate(prompt, system_prompt, max_tokens, temperature)
+            raw = provider_registry.generate(prompt, system_prompt, max_tokens, temperature)
+            return guard.scan_output(raw).cleaned
 
         return "[AI offline] Ollama is not running and no cloud provider is configured."
 
@@ -637,11 +648,17 @@ class AIEngine:
         if on_output:
             on_output("[QUANTUM] Engaging Autonomous MetaChain for deep tactical execution...\n")
 
-        from shadowcypher.ai.auto_orchestrator import auto_orch
-        
+        try:
+            from shadowcypher.ai.auto_orchestrator import auto_orch
+        except ImportError as e:
+            logger.warning("ai", f"auto_orchestrator unavailable: {e}")
+            if on_output:
+                on_output("[QUANTUM] Autonomous mode unavailable — auto_orchestrator not loaded.\n")
+            if on_complete:
+                on_complete("UNAVAILABLE")
+            return
+
         logger.info("ai", "QUANTUM_ORCHESTRATION: Delegating to AutoAgent foundation")
-        
-        # We wrap the on_output to match the callback signature expected by auto_orch
         auto_orch.execute_mission(
             query=prompt,
             callback=on_output,

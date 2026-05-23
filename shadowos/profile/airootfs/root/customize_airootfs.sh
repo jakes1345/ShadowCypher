@@ -20,6 +20,15 @@ systemctl enable bluetooth.service
 systemctl enable shadowos-mac-randomize.service
 systemctl enable shadowos-firstboot.service
 systemctl enable sshd.service
+mkdir -p /etc/ssh/sshd_config.d
+cat > /etc/ssh/sshd_config.d/99-shadowos-hardening.conf <<'SSHCONF'
+PasswordAuthentication no
+PermitRootLogin prohibit-password
+PubkeyAuthentication yes
+X11Forwarding no
+AllowTcpForwarding no
+PrintMotd yes
+SSHCONF
 # Tier-1 essentials
 systemctl enable udisks2.service 2>/dev/null || true
 systemctl enable power-profiles-daemon.service 2>/dev/null || true
@@ -82,10 +91,13 @@ if [ -f /etc/default/grub ]; then
         || echo 'GRUB_THEME="/boot/grub/themes/shadowos/theme.txt"' >> /etc/default/grub
 fi
 
-# Live user
-useradd -m -G wheel,audio,video,storage,network,docker,wheel -s /usr/bin/zsh shadow || true
+# Live user — docker group excluded (grants root-equivalent container access)
+useradd -m -G wheel,audio,video,storage,network -s /usr/bin/zsh shadow || true
 echo "shadow:shadow" | chpasswd
 echo "root:shadow"   | chpasswd
+# Force password expiry — user MUST change passwords on first login
+chage -d 0 shadow 2>/dev/null || true
+chage -d 0 root 2>/dev/null || true
 echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/wheel
 
 # Skel → live user (including .ssh/authorized_keys)
@@ -142,18 +154,29 @@ if command -v flatpak >/dev/null 2>&1; then
     flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
 fi
 
-# BlackArch repo keyring
 if [ ! -f /etc/pacman.d/blackarch-keyring ]; then
-    curl -fsSL https://blackarch.org/keyring/blackarch-keyring.pkg.tar.zst \
-        -o /tmp/blackarch-keyring.pkg.tar.zst 2>/dev/null \
-        && pacman -U --noconfirm /tmp/blackarch-keyring.pkg.tar.zst 2>/dev/null \
-        || echo "BlackArch keyring import skipped"
+    _ba_pkg="/tmp/blackarch-keyring.pkg.tar.zst"
+    if curl -fsSL https://blackarch.org/keyring/blackarch-keyring.pkg.tar.zst -o "$_ba_pkg" 2>/dev/null; then
+        if file "$_ba_pkg" 2>/dev/null | grep -qiE 'zstd|tar'; then
+            pacman -U --noconfirm "$_ba_pkg" 2>/dev/null && echo "BlackArch keyring installed" \
+                || echo "BlackArch keyring install failed"
+        else
+            echo "BlackArch keyring download appears corrupt — skipping"
+            rm -f "$_ba_pkg"
+        fi
+    else
+        echo "BlackArch keyring download failed — skipping"
+    fi
 fi
 
-# Chaotic-AUR keyring — needed for librewolf, mullvad-browser, freetube-bin etc.
 if ! pacman-key --list-keys 3056513887B78AEB 2>/dev/null | grep -q chaotic; then
-    pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com 2>/dev/null || true
-    pacman-key --lsign-key 3056513887B78AEB 2>/dev/null || true
+    if pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com 2>/dev/null; then
+        pacman-key --lsign-key 3056513887B78AEB 2>/dev/null \
+            && echo "Chaotic-AUR key imported." \
+            || echo "WARNING: Chaotic-AUR lsign failed — packages may fail signature check"
+    else
+        echo "WARNING: Chaotic-AUR key import failed — repo unavailable"
+    fi
 fi
 
 # Add plymouth hook to mkinitcpio so the splash actually shows

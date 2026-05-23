@@ -107,48 +107,39 @@ class SovereignClient:
                 break # Clean shutdown
 
     async def send(self, data: dict):
-        """Injects a JSON signal into the WebSocket stream."""
-        if self._websocket and self._websocket.open:
+        if self._websocket and not self._websocket.closed:
             try:
                 await self._websocket.send(json.dumps(data))
             except Exception as e:
                 logger.error("sovereign", f"Signal injection failed: {e}")
 
+    def _run_coroutine(self, coro):
+        if not self._loop:
+            logger.warning("sovereign", "Cannot send — signal plane not connected yet.")
+            return
+        asyncio.run_coroutine_threadsafe(coro, self._loop)
+
     def send_message(self, text: str, channel: str = "#general"):
-        """Public API for sending channel messages."""
-        if self._loop:
-            asyncio.run_coroutine_threadsafe(
-                self.send({"type": "chat", "channel": channel, "text": text, "nick": self.nick}),
-                self._loop
-            )
+        self._run_coroutine(
+            self.send({"type": "chat", "channel": channel, "text": text, "nick": self.nick})
+        )
 
     def send_private(self, target: str, text: str):
-        """Public API for private communication."""
-        if self._loop:
-            asyncio.run_coroutine_threadsafe(
-                self.send({"type": "pm", "target": target, "text": text, "nick": self.nick}),
-                self._loop
-            )
+        self._run_coroutine(
+            self.send({"type": "pm", "target": target, "text": text, "nick": self.nick})
+        )
 
     def register_nick(self, password: str, email: str = "operator@shadowcypher.site"):
-        """Registers the current nick with NickServ on the Sovereign server."""
         self.send_message(f"NS REGISTER {password} {email}", "NickServ")
 
     def register_channel(self, channel: str, desc: str = "ShadowCypher Tactical"):
-        """Registers a channel with ChanServ."""
         self.send_message(f"CS REGISTER {channel} {desc}", "ChanServ")
 
     def identify(self, password: str):
-        """Identifies with NickServ."""
         self.send_message(f"NS IDENTIFY {password}", "NickServ")
 
     def unmask_user(self, nick: str):
-        """Requests a high-fidelity unmasking report for a specific nick."""
-        if self._loop:
-            asyncio.run_coroutine_threadsafe(
-                self.send({"type": "unmask", "target": nick}),
-                self._loop
-            )
+        self._run_coroutine(self.send({"type": "unmask", "target": nick}))
 
     def get_user_prefix(self, nick: str) -> str:
         """Retrieves the tactical status prefix (@, +, etc.) for a specific nick."""

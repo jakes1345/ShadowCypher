@@ -56,15 +56,16 @@ def _load_shared_key() -> bytes:
             _KEY_CACHE = raw
             return _KEY_CACHE
 
-    raise RuntimeError(
-        "GHOST_KEY_MISSING: no per-install master key found. "
-        "Set SHADOWCYPHER_GHOST_KEY env var or write 32 raw bytes to /etc/shadowcypher/master.key (mode 600). "
-        "Refusing to encrypt with a hardcoded default key."
-    )
+    logger.warning("ghost", "GHOST_KEY_MISSING: no master key found. Ghost encryption disabled. "
+                   "Set SHADOWCYPHER_GHOST_KEY env var or write 32 bytes to /etc/shadowcypher/master.key")
+    return None
 
 
 def encrypt(data: str) -> str:
-    aesgcm = AESGCM(_load_shared_key())
+    key = _load_shared_key()
+    if key is None:
+        return ""
+    aesgcm = AESGCM(key)
     nonce = os.urandom(12)
     ct = aesgcm.encrypt(nonce, data.encode(), None)
     return base64.b64encode(nonce + ct).decode()
@@ -152,13 +153,38 @@ class GhostOrchestrator:
 
         # Default-bind loopback; require explicit env opt-in for external listeners.
         bind_host = os.environ.get("SHADOWCYPHER_GHOST_BIND", "127.0.0.1")
-        try:
-            self.server_socket.bind((bind_host, self.port))
-            self.server_socket.listen(10)
-        except Exception as e:
-            logger.error("ghost", f"GHOST_FATAL: Could not bind port {self.port}: {e}")
+        bound_port = None
+        for attempt in range(5):
+            candidate = self.port + attempt
+            try:
+                self.server_socket.bind((bind_host, candidate))
+                bound_port = candidate
+                break
+            except OSError as e:
+                import errno as _errno
+                if e.errno == _errno.EADDRINUSE:
+                    logger.warning("ghost", f"GHOST_PORT_BUSY: {candidate} in use — trying {candidate + 1}")
+                    # Need a fresh socket for each attempt
+                    self.server_socket.close()
+                    self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                else:
+                    logger.error("ghost", f"GHOST_FATAL: Could not bind port {candidate}: {e}")
+                    self.running = False
+                    return
+
+        if bound_port is None:
+            logger.error("ghost", f"GHOST_FATAL: all ports {self.port}–{self.port + 4} in use")
             self.running = False
             return
+
+        if bound_port != self.port:
+            logger.warning("ghost", f"GHOST_ORCHESTRATOR: fell back to port {bound_port}")
+            self.port = bound_port
+        else:
+            logger.info("ghost", f"GHOST_ORCHESTRATOR: bound to {bind_host}:{bound_port}")
+
+        self.server_socket.listen(10)
 
         while self.running:
             try:

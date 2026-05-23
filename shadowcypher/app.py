@@ -138,7 +138,9 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self._switch_to_page("Central Command HUD")
         
         # Ensure sidebar selection reflects the initial page
-        first_row = self.sidebar_list.get_row_at_index(1) # Index 0 is the 'NEXUS-COMMAND' header
+        first_row = self.sidebar_list.get_row_at_index(1)
+        if first_row is None:
+            first_row = self.sidebar_list.get_row_at_index(0)
         if first_row:
             self.sidebar_list.select_row(first_row)
         
@@ -189,8 +191,9 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 f"MSN: {summary.get('active_missions')} | "
                 f"ID: {summary.get('telemetry', {}).get('shadow_id', '???')}"
             )
-        except Exception:
-            pass
+        except Exception as _e:
+            from shadowcypher.core.logger import logger as _log
+            _log.warning("app", f"PULSE_TICK_ERROR: {_e}")
         return True
 
     def _tor_probe_worker(self) -> bool:

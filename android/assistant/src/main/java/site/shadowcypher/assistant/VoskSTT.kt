@@ -59,7 +59,7 @@ class VoskSTT(private val context: Context) {
         }
     }
 
-    private fun getOrDownloadModel(): File {
+    private suspend fun getOrDownloadModel(): File {
         val cacheDir = File(context.filesDir, "vosk")
         val modelDir = File(cacheDir, MODEL_DIR_NAME)
 
@@ -70,15 +70,17 @@ class VoskSTT(private val context: Context) {
 
         cacheDir.mkdirs()
         Log.i(TAG, "Downloading Vosk model…")
+
+        // Use a CompletableDeferred so the coroutine waits cleanly for StorageService
+        val unpacked = kotlinx.coroutines.CompletableDeferred<String>()
         StorageService.unpack(context, MODEL_URL, "vosk", { setOf(modelDir) }) { modelPath ->
-            // StorageService callback — model is ready in modelPath
             Log.i(TAG, "Model unpacked to $modelPath")
+            unpacked.complete(modelPath)
         }
 
-        // Wait for model directory to appear (StorageService is async)
-        val deadline = System.currentTimeMillis() + 120_000
-        while (!modelDir.exists() && System.currentTimeMillis() < deadline) {
-            Thread.sleep(500)
+        // Wait up to 120s with proper coroutine suspension (not Thread.sleep)
+        withContext(Dispatchers.IO) {
+            kotlinx.coroutines.withTimeoutOrNull(120_000L) { unpacked.await() }
         }
 
         if (!modelDir.exists()) throw IOException("Model download timed out")

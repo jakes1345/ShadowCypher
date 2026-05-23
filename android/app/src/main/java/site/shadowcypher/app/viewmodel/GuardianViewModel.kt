@@ -78,9 +78,12 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun acknowledgeScaTriggered() {
+    fun acknowledgeScanTriggered() {
         _scanTriggered.value = false
     }
+
+    @Deprecated("Typo — use acknowledgeScanTriggered()", ReplaceWith("acknowledgeScanTriggered()"))
+    fun acknowledgeScaTriggered() = acknowledgeScanTriggered()
 
     fun setApiKey(key: String) {
         repo.saveApiKey(key)

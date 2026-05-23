@@ -17,6 +17,9 @@ class GuardianRepository(private val context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    @Volatile private var _cachedApiKey: String = ""
+    @Volatile private var _cachedApi: GuardianApi? = null
+
     fun getApiKey(): String = prefs.getString(PREF_API_KEY, "") ?: ""
 
     fun saveApiKey(key: String) {
@@ -25,20 +28,26 @@ class GuardianRepository(private val context: Context) {
 
     fun clearApiKey() {
         prefs.edit().remove(PREF_API_KEY).apply()
+        _cachedApiKey = ""
+        _cachedApi = null
     }
 
     private fun buildApi(apiKey: String): GuardianApi {
+        _cachedApi?.let { if (apiKey == _cachedApiKey) return it }
+
         val authInterceptor = Interceptor { chain ->
             val request = chain.request().newBuilder()
                 .addHeader("Authorization", "Bearer $apiKey")
                 .addHeader("Accept", "application/json")
-                .addHeader("Content-Type", "application/json")
                 .build()
             chain.proceed(request)
         }
 
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
+            level = if (android.os.Build.VERSION.SDK_INT > 0 && isDebugBuild())
+                HttpLoggingInterceptor.Level.BASIC
+            else
+                HttpLoggingInterceptor.Level.NONE
         }
 
         val client = OkHttpClient.Builder()
@@ -46,44 +55,49 @@ class GuardianRepository(private val context: Context) {
             .addInterceptor(logging)
             .build()
 
-        return Retrofit.Builder()
+        val api = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(GuardianApi::class.java)
+
+        _cachedApiKey = apiKey
+        _cachedApi = api
+        return api
     }
 
-    suspend fun fetchMe(): Result<Me> = runCatching {
-        buildApi(getApiKey()).getMe()
+    private fun isDebugBuild(): Boolean = try {
+        context.packageManager.getApplicationInfo(context.packageName, 0)
+            .flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+    } catch (e: Exception) { false }
+
+    private fun requireKey(): String {
+        val key = getApiKey()
+        if (key.isBlank()) throw IllegalStateException("No API key configured. Please add your key in Settings.")
+        return key
     }
 
-    suspend fun fetchSummary(): Result<GuardianSummary> = runCatching {
-        buildApi(getApiKey()).getSummary()
-    }
+    suspend fun fetchMe(): Result<Me> = runCatching { buildApi(requireKey()).getMe() }
 
-    suspend fun triggerScan(): Result<ScanResponse> = runCatching {
-        buildApi(getApiKey()).triggerScan()
-    }
+    suspend fun fetchSummary(): Result<GuardianSummary> = runCatching { buildApi(requireKey()).getSummary() }
 
-    suspend fun fetchIncidents(): Result<List<Incident>> = runCatching {
-        buildApi(getApiKey()).getIncidents()
-    }
+    suspend fun triggerScan(): Result<ScanResponse> = runCatching { buildApi(requireKey()).triggerScan() }
 
-    suspend fun fetchAgents(): Result<List<Agent>> = runCatching {
-        buildApi(getApiKey()).getAgents()
-    }
+    suspend fun fetchIncidents(): Result<List<Incident>> = runCatching { buildApi(requireKey()).getIncidents() }
+
+    suspend fun fetchAgents(): Result<List<Agent>> = runCatching { buildApi(requireKey()).getAgents() }
 
     suspend fun createMission(agentId: String, script: String, label: String? = null): Result<CreateMissionResponse> = runCatching {
-        buildApi(getApiKey()).createMission(agentId, CreateMissionRequest(script, label))
+        buildApi(requireKey()).createMission(agentId, CreateMissionRequest(script, label))
     }
 
     suspend fun getMission(missionId: String): Result<Mission> = runCatching {
-        buildApi(getApiKey()).getMission(missionId)
+        buildApi(requireKey()).getMission(missionId)
     }
 
     suspend fun listMissions(agentId: String? = null): Result<MissionListResponse> = runCatching {
-        buildApi(getApiKey()).listMissions(agentId)
+        buildApi(requireKey()).listMissions(agentId)
     }
 
     companion object {

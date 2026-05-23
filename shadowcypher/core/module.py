@@ -3,7 +3,9 @@ BaseModule — The Ground-Up Foundation for all ShadowCypher tactical modules.
 Centralizes execution, logging, and event-driven intelligence.
 """
 
-from shadowcypher.core.hub import hub
+# NOTE: hub is NOT imported here to avoid a circular import chain:
+#   module.py → hub.py → ai/__init__ → red_team_agent → cve_feed → module.py
+# Instead, hub is lazily imported inside methods that need it.
 from shadowcypher.core.bus import bus
 from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
@@ -37,6 +39,11 @@ class BaseModule:
         """Centralized logging to hub/telemetry."""
         logger.info(self.module_name, text)
         bus.publish("module_log", {"module": self.module_name, "text": text, "level": level})
+
+    def dispatch_to_hub(self, mission: str):
+        """Send a mission to the hub (lazy import avoids circular dep)."""
+        from shadowcypher.core.hub import hub  # deferred
+        return hub.dispatch_mission(mission)
 
     @staticmethod
     def get_tool_path(name: str) -> str:

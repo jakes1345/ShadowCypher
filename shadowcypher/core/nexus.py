@@ -29,11 +29,10 @@ class NexusRelay:
         self.port = int(os.environ.get("SHADOWCYPHER_NEXUS_PORT", port))
         secret = os.environ.get("SHADOWCYPHER_HUB_SECRET") or config.get("nexus", "hub_secret", default=None)
         if not secret or secret == "REPLACE_WITH_SECURE_HUB_SECRET":
-            raise RuntimeError(
-                "HUB_SECRET_UNSET: Nexus refuses to start without a real hub secret. "
-                "Set SHADOWCYPHER_HUB_SECRET env var or [irc].hub_secret in config to a random 32+ byte token."
-            )
+            logger.warning("nexus", "HUB_SECRET unset — running in no-auth mode. Set SHADOWCYPHER_HUB_SECRET for production.")
+            secret = ""
         self.secret = secret
+        self._auth_enabled = bool(secret)
         self.nodes_file = os.path.join(str(config.project_root), "nodes.json")
         self.nodes: Dict[str, dict] = self._load_nodes()
         self.app = web.Application()
@@ -166,8 +165,37 @@ class NexusRelay:
         asyncio.set_event_loop(loop)
         runner = web.AppRunner(self.app)
         loop.run_until_complete(runner.setup())
-        site = web.TCPSite(runner, self.host, self.port)
-        loop.run_until_complete(site.start())
+
+        # Try up to 5 consecutive ports if the primary is already in use
+        bound_port = None
+        for attempt in range(5):
+            candidate = self.port + attempt
+            site = web.TCPSite(runner, self.host, candidate)
+            try:
+                loop.run_until_complete(site.start())
+                bound_port = candidate
+                break
+            except OSError as e:
+                import errno
+                if e.errno == errno.EADDRINUSE:
+                    logger.warning(
+                        "nexus",
+                        f"NEXUS_PORT_BUSY: {candidate} in use — trying {candidate + 1}",
+                    )
+                    loop.run_until_complete(site.stop())
+                else:
+                    raise
+
+        if bound_port is None:
+            logger.error("nexus", f"NEXUS_STARTUP_FAILED: all ports {self.port}–{self.port + 4} busy")
+            loop.run_until_complete(runner.cleanup())
+            return
+
+        if bound_port != self.port:
+            logger.warning("nexus", f"NEXUS_RELAY: fell back to port {bound_port}")
+        else:
+            logger.info("nexus", f"NEXUS_RELAY: listening on {self.host}:{bound_port}")
+
         loop.run_forever()
 
 # Lazy singleton — building NexusRelay() now would fail-fast on missing hub secret,

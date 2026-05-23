@@ -17,6 +17,7 @@ from shadowcypher.ai.orchestrator import AIOrchestrator
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.nexus import nexus
 from shadowcypher.ai.sisyphus import sisyphus
+from shadowcypher.ai.guard import guard
 
 import asyncio
 import json
@@ -189,29 +190,73 @@ class ShadowHub:
         self._start_sisyphus()
         self._start_ghost_orchestrator()
         self._start_training_range()
+        self._start_v2_services()
 
     def _start_training_range(self) -> None:
-        """Launches the Citadel Training Range (vulnerable lab) in the background."""
         import subprocess
+        import socket as _socket
+        self._training_range_proc = None
         try:
-            # Check if already running on port 5000
-            import socket
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as s:
                 if s.connect_ex(('127.0.0.1', 5000)) == 0:
                     logger.info("hub", "TRAINING_RANGE: Already active on port 5000.")
                     return
-
-            script_path = os.path.join(os.getcwd(), "launch_training_range.sh")
+            script_path = os.path.join(str(platform_engine.resolve_path("")), "launch_training_range.sh")
             if os.path.exists(script_path):
-                subprocess.Popen(["bash", script_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                self._training_range_proc = subprocess.Popen(
+                    ["bash", script_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
                 logger.info("hub", "TRAINING_RANGE: Auto-launching Citadel Lab...")
-        except Exception as e:
-            logger.error("hub", f"TRAINING_RANGE_FAIL: Could not auto-launch lab: {e}")
+        except (OSError, ValueError) as e:
+            logger.error("hub", f"TRAINING_RANGE_FAIL: {e}")
 
     def _start_ghost_orchestrator(self) -> None:
         """Launches the Ghost Orchestrator to manage remote Shadow Nodes."""
         from shadowcypher.core.ghost import ghost_orchestrator
         ghost_orchestrator.start()
+
+    def _start_v2_services(self) -> None:
+        """Boot all ShadowCypher v2.0 background services."""
+        # CVE Feed — background NVD poll every 6h
+        try:
+            from shadowcypher.modules.cve_feed import cve_feed
+            cve_feed.start_background_poll(
+                interval_hours=6,
+                on_new_cve=lambda cve: bus.publish("intel_found", {
+                    "type": "CVE", "data": cve
+                })
+            )
+            logger.info("hub", "CVE_FEED: Background NVD poll active (6h interval)")
+        except Exception as e:
+            logger.warning("hub", f"CVE_FEED_START_FAIL: {e}")
+
+        # Knowledge Graph — subscribe to red team completions
+        try:
+            from shadowcypher.core.knowledge_graph import kg
+            bus.subscribe("red_team_complete", lambda summary:
+                bus.publish("module_log", {
+                    "module": "kg", "text": summary, "level": "INFO"
+                })
+            )
+            # Update telemetry with graph stats on any change
+            self._update_telemetry("kg_nodes", kg.stats()["nodes"])
+            logger.info("hub", f"KNOWLEDGE_GRAPH: {kg.stats()['nodes']} nodes loaded")
+        except Exception as e:
+            logger.warning("hub", f"KG_INIT_FAIL: {e}")
+
+        # ShadowGuard — log stats to telemetry every 30 min
+        def _guard_telemetry():
+            import time
+            while True:
+                time.sleep(1800)
+                try:
+                    stats = guard.get_stats()
+                    self._update_telemetry("guard_blocked", stats.get("blocked", 0))
+                    self._update_telemetry("guard_scanned", stats.get("scanned", 0))
+                except Exception:
+                    pass
+        threading.Thread(target=_guard_telemetry, daemon=True, name="GuardTelemetry").start()
+        logger.info("hub", "SHADOWGUARD: Telemetry loop active")
 
     def _start_sisyphus(self) -> None:
         """Launches the Sisyphus integrity sentinel."""
@@ -274,20 +319,20 @@ class ShadowHub:
         bus.publish("telemetry_update", {"key": key, "value": value})
 
     def _engage_distributed_nodes(self) -> None:
-        pass
+        logger.debug("hub", "DISTRIBUTED_NODES: No remote nodes configured at this time.")
 
     def _wire_bus(self) -> None:
         # Connect to tactical event channels
         bus.subscribe("intel_found", self._on_intel_discovered)
         bus.subscribe("sisyphus_report", self._on_health_report)
         bus.subscribe("pulse_anomaly", self._on_pulse_anomaly)
-        
-        # Bridge tactical events to the native Relay, but EXCLUDE internal telemetry to prevent feedback loops
+        bus.subscribe("red_team_complete", self._on_red_team_complete)
+
+        # Bridge tactical events to the native Relay
         bus.subscribe("module_log", self._forward_to_relay)
         bus.subscribe("ghost_update", self._forward_to_relay)
         bus.subscribe("ghost_node_linked", self._on_ghost_linked)
         bus.subscribe("ghost_node_output", self._on_ghost_output)
-        # bus.subscribe("telemetry_update", self._forward_to_relay) # DISABLED: Causes infinite status recursion
 
     def _forward_to_relay(self, data: Dict[str, Any]) -> None:
         """Proxies internal bus events to the native Go-relay signal swarm."""
@@ -322,12 +367,23 @@ class ShadowHub:
         typ = intel.get("type", "UNKNOWN")
         ip = intel.get("ip", "LOCAL")
         logger.info("hub", f"INTEL_FUSION: Correlating {typ} for address {ip}")
-        
+
         if self.autonomous_enabled and typ in ["CVE", "EXPLOITABLE_SERVICE"]:
             self.dispatch_mission(
                 f"Perform deep-spectrum exploit validation for discovery {typ} on target {ip}.",
                 agent_role="red_team"
             )
+
+    def _on_red_team_complete(self, summary: str) -> None:
+        """Handles red team mission completion — update KG telemetry."""
+        try:
+            from shadowcypher.core.knowledge_graph import kg
+            stats = kg.stats()
+            self._update_telemetry("kg_nodes", stats["nodes"])
+            self._update_telemetry("kg_edges", stats["edges"])
+            logger.info("hub", f"RED_TEAM_COMPLETE: {summary}")
+        except Exception:
+            pass
 
     def _on_pulse_anomaly(self, event: Dict[str, Any]) -> None:
         # Handles defensive reactions to spectrum pulse jitter

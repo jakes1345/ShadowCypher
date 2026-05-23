@@ -370,7 +370,7 @@ const ShadowAssistant = (() => {
         <!-- Main assistant view -->
         <div id="sa-main">
           <div class="sa-handle"></div>
-          <div class="sa-orb-ring">
+          <div class="sa-orb-ring" id="sa-orb-ring">
             <div class="sa-orb" id="sa-orb"></div>
           </div>
           <div class="sa-status" id="sa-status">SHADOW</div>
@@ -409,7 +409,7 @@ const ShadowAssistant = (() => {
           </div>
           <div class="sa-field-hint">Find your key under Account → API Key on shadowcypher.site</div>
           <button class="sa-btn-primary" onclick="ShadowAssistant._saveApiKey()">Save &amp; Connect</button>
-          ${apiKey ? '<button class="sa-btn-danger" onclick="ShadowAssistant._clearApiKey()">Remove Key</button>' : ''}
+          <button class="sa-btn-danger" id="sa-remove-key-btn" style="display:none" onclick="ShadowAssistant._clearApiKey()">Remove Key</button>
 
           <button class="sa-btn-ghost" onclick="ShadowAssistant._closeSettings()">← Back</button>
           <div class="sa-key-status" id="sa-key-status"></div>
@@ -601,9 +601,14 @@ const ShadowAssistant = (() => {
     document.body.appendChild(el);
     overlay = el;
 
-    if (apiKey) {
-      document.getElementById('sa-key-input').value = apiKey;
-    }
+    _syncSettingsView();
+  }
+
+  function _syncSettingsView() {
+    const removeBtn = document.getElementById('sa-remove-key-btn');
+    const keyInput = document.getElementById('sa-key-input');
+    if (removeBtn) removeBtn.style.display = apiKey ? '' : 'none';
+    if (keyInput && apiKey) keyInput.value = apiKey;
   }
 
   // ── State machine ─────────────────────────────────────────────────────────
@@ -642,8 +647,26 @@ const ShadowAssistant = (() => {
     _idleTimer = setTimeout(() => { if (state === 'idle') dismiss(); }, 60000);
   }
 
+  function _animatedDismiss() {
+    if (!overlay) return;
+    const panel = overlay.querySelector('.sa-panel');
+    if (panel) {
+      panel.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.28s';
+      panel.style.transform = 'translateY(100%)';
+      panel.style.opacity = '0';
+      setTimeout(() => dismiss(), 300);
+    } else {
+      dismiss();
+    }
+  }
+
   function dismiss() {
-    if (overlay) overlay.classList.remove('active');
+    if (overlay) {
+      overlay.classList.remove('active');
+      // Reset panel animation state for next open
+      const panel = overlay.querySelector('.sa-panel');
+      if (panel) { panel.style.transform = ''; panel.style.opacity = ''; panel.style.transition = ''; }
+    }
     if (plugin) plugin.stopListening().catch(() => {});
     if (plugin) plugin.stopSpeaking().catch(() => {});
     state = 'idle';
@@ -655,7 +678,7 @@ const ShadowAssistant = (() => {
   function showSettings() {
     document.getElementById('sa-main').style.display = 'none';
     document.getElementById('sa-settings').style.display = '';
-    if (apiKey) document.getElementById('sa-key-input').value = apiKey;
+    _syncSettingsView();
   }
 
   // ── Settings handlers ─────────────────────────────────────────────────────
@@ -680,6 +703,7 @@ const ShadowAssistant = (() => {
       else if (window.ShadowBridge?.setApiKey) window.ShadowBridge.setApiKey(apiKey);
       guardianCtx = { me, summary: null };
       loadGuardianContext().catch(() => {});
+      _syncSettingsView();
       document.getElementById('sa-key-status').textContent = `✓ Connected as ${me.email}`;
       document.getElementById('sa-key-status').style.color = '#22c55e';
       setTimeout(() => _closeSettings(), 1500);
@@ -697,6 +721,7 @@ const ShadowAssistant = (() => {
     document.getElementById('sa-key-input').value = '';
     document.getElementById('sa-key-status').textContent = 'API key removed';
     document.getElementById('sa-key-status').style.color = '#94a3b8';
+    _syncSettingsView();
   }
 
   function _closeSettings() {
@@ -752,15 +777,15 @@ const ShadowAssistant = (() => {
         document.getElementById('sa-response').textContent = response;
         setState('speaking');
         if (plugin) {
-          await plugin.speak({ text: response, rate: 1.0 });
+          await plugin.speak({ text: response, rate: 1.05 });
         }
         setState('idle');
-        setTimeout(() => dismiss(), 3000);
+        setTimeout(() => _animatedDismiss(), 2500);
       }
     } catch (e) {
       document.getElementById('sa-response').textContent = 'Could not reach Shadow.';
       setState('idle');
-      setTimeout(() => dismiss(), 3000);
+      setTimeout(() => _animatedDismiss(), 2500);
     }
   }
 
@@ -874,7 +899,9 @@ const ShadowAssistant = (() => {
     if (!_kbChunks || !_kbChunks.length) return null;
     const qTokens = query.toLowerCase().match(/\b[a-z][a-z0-9\-\.]{0,}\b/g) || [];
     if (!qTokens.length) return null;
-    const avgLen = _kbChunks.reduce((s, c) => s + (c.bm25_tokens?.length || 0), 0) / _kbChunks.length;
+    const avgLen = _kbChunks.length > 0
+      ? _kbChunks.reduce((s, c) => s + (c.bm25_tokens?.length || 0), 0) / _kbChunks.length
+      : 1;
     const scored = _kbChunks.map(chunk => ({
       chunk,
       score: bm25Score(qTokens, chunk.bm25_tokens || [], avgLen),
@@ -972,10 +999,17 @@ const ShadowAssistant = (() => {
 
     try {
       const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
+      // Build payload: send full conversation history for multi-turn context
+      // and inject guardian context into system prompt
+      const payload = {
+        question: userText,
+        history: conversationHistory.slice(-8), // last 4 turns (user+assistant pairs)
+        system: buildSystemPrompt(),
+      };
       const resp = await fetch(`${API_BASE}/v1/assistant/query`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ question: userText }),
+        body: JSON.stringify(payload),
       });
       if (!resp.ok) {
         if (resp.status === 402) return 'Monthly AI query limit reached. Upgrade to Operator for 5000 queries/month.';
@@ -983,7 +1017,7 @@ const ShadowAssistant = (() => {
       }
       const data = await resp.json();
       const reply = data.answer || 'No response.';
-      conversationHistory.push({ role: 'assistant', content: reply });
+      addMemory('assistant', reply);
       return reply;
     } catch (e) {
       throw new Error(`Cloud query failed: ${e.message}`);
@@ -1030,8 +1064,9 @@ const ShadowAssistant = (() => {
       if (response) {
         document.getElementById('sa-response').textContent = response;
         setState('speaking');
-        if (plugin) await plugin.speak({ text: response, rate: 1.0 });
+        if (plugin) await plugin.speak({ text: response, rate: 1.05 });
         setState('idle');
+        setTimeout(() => _animatedDismiss(), 2500);
       }
     } catch (_) {
       document.getElementById('sa-response').textContent = 'Command failed.';
@@ -1050,4 +1085,9 @@ if (document.readyState === 'loading') {
   ShadowAssistant.init();
 }
 
-window.ShadowAssistant = ShadowAssistant;
+Object.defineProperty(window, 'ShadowAssistant', {
+  value: ShadowAssistant,
+  writable: false,
+  configurable: false,
+  enumerable: true
+});

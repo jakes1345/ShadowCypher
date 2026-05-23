@@ -205,8 +205,15 @@ export async function setOllama(req: Request, env: Env, user: AuthedUser, cors: 
   return json({ saved: true, url: body.url }, {}, cors);
 }
 
+interface HistoryMessage { role: "user" | "assistant"; content: string; }
+
 export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors: HeadersInit): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as { question?: string; tier?: string };
+  const body = (await req.json().catch(() => ({}))) as {
+    question?: string;
+    tier?: string;
+    history?: HistoryMessage[];   // last N turns from the client
+    system?: string;              // client-built system prompt (guardian context injected)
+  };
   const question = (body.question || "").trim();
   if (!question) return json({ error: "question_required" }, { status: 400 }, cors);
   if (question.length > 800) return json({ error: "question_too_long" }, { status: 400 }, cors);
@@ -243,7 +250,28 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
     dbSelect<IncidentRow>(env, "incidents", { select: "severity,category,title,created_at,acknowledged", filters: { user_id: `eq.${user.id}` }, order: "created_at.desc", limit: 20 }),
     dbSelect<ScanRow>(env, "scans", { select: "scan_type,device_count,started_at", filters: { user_id: `eq.${user.id}` }, order: "started_at.desc", limit: 10 }),
   ]);
-  const userMessage = `My data:\n\n${formatSummary(devices, incidents, scans)}\n\nMy question: ${question}`;
+
+  // Build the final user message (always append current question with data context)
+  const dataCtx = formatSummary(devices, incidents, scans);
+  const userMessage = `My network data:\n\n${dataCtx}\n\nMy question: ${question}`;
+
+  // Build multi-turn messages array (prepend validated history, then current user turn)
+  const rawHistory: HistoryMessage[] = Array.isArray(body.history) ? body.history : [];
+  const validatedHistory: HistoryMessage[] = rawHistory
+    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.length > 0)
+    .slice(-8);  // max 8 messages (4 turns)
+
+  // The messages array sent to the LLM: prior turns + current question
+  const messages: HistoryMessage[] = [
+    ...validatedHistory,
+    { role: "user", content: userMessage },
+  ];
+
+  // Merge client system prompt (has guardian live context) with backend SYSTEM_PROMPT
+  const clientSystem = (typeof body.system === "string" && body.system.length > 0) ? body.system : "";
+  const effectiveSystemPrompt = clientSystem
+    ? `${SYSTEM_PROMPT}\n\n${clientSystem}`
+    : SYSTEM_PROMPT;
 
   // Dispatch to chosen provider
   try {
@@ -251,13 +279,13 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
     let modelLabel: string;
 
     if (profile.ai_provider === "ollama" && profile.ai_ollama_url) {
-      ({ answer, modelLabel } = await queryOllama(profile.ai_ollama_url, userMessage));
+      ({ answer, modelLabel } = await queryOllama(profile.ai_ollama_url, messages, effectiveSystemPrompt));
     } else if (profile.ai_provider === "byok" && profile.ai_byok_key_encrypted) {
       if (!env.BYOK_ENCRYPTION_SECRET) {
         return json({ error: "byok_decryption_unavailable" }, { status: 503 }, cors);
       }
       const userKey = await decrypt(env.BYOK_ENCRYPTION_SECRET, profile.ai_byok_key_encrypted);
-      ({ answer, modelLabel } = await queryAnthropic(userKey, env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001", userMessage));
+      ({ answer, modelLabel } = await queryAnthropic(userKey, env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001", messages, effectiveSystemPrompt));
     } else {
       // Platform provider
       if (!env.ANTHROPIC_API_KEY) {
@@ -270,7 +298,7 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
         model = "claude-sonnet-4-6-20251001";
         quotaCost = 2;
       }
-      ({ answer, modelLabel } = await queryAnthropic(env.ANTHROPIC_API_KEY, model, userMessage));
+      ({ answer, modelLabel } = await queryAnthropic(env.ANTHROPIC_API_KEY, model, messages, effectiveSystemPrompt));
       // Only platform provider counts against quota
       await incrementUsage(env, user.id, quotaCost);
     }
@@ -287,15 +315,20 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
   }
 }
 
-async function queryAnthropic(apiKey: string, model: string, userMessage: string): Promise<{ answer: string; modelLabel: string }> {
+async function queryAnthropic(
+  apiKey: string,
+  model: string,
+  messages: HistoryMessage[],
+  systemPrompt: string,
+): Promise<{ answer: string; modelLabel: string }> {
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
       model,
       max_tokens: 600,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
+      system: systemPrompt,
+      messages,
     }),
   });
   if (!resp.ok) throw new Error(`anthropic_${resp.status}:${await resp.text()}`);
@@ -304,7 +337,11 @@ async function queryAnthropic(apiKey: string, model: string, userMessage: string
   return { answer: text || "(no answer)", modelLabel: data.model || model };
 }
 
-async function queryOllama(baseUrl: string, userMessage: string): Promise<{ answer: string; modelLabel: string }> {
+async function queryOllama(
+  baseUrl: string,
+  messages: HistoryMessage[],
+  systemPrompt: string,
+): Promise<{ answer: string; modelLabel: string }> {
   const url = baseUrl.replace(/\/$/, "") + "/api/chat";
   const resp = await fetch(url, {
     method: "POST",
@@ -313,8 +350,8 @@ async function queryOllama(baseUrl: string, userMessage: string): Promise<{ answ
       model: "llama3.1:8b",
       stream: false,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userMessage },
+        { role: "system", content: systemPrompt },
+        ...messages,
       ],
       options: { num_predict: 600 },
     }),

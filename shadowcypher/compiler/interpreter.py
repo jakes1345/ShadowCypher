@@ -136,21 +136,21 @@ class ShadowRuntime:
                 self.emit(f"SYS_ERROR: {e}")
 
         elif cmd == "!pipe":
-            # Pipe: chain system commands
             if not args:
                 return
-            full_cmd = " ".join(args)
-            self.emit(f"PIPE: {full_cmd}")
+            import shlex as _shlex
+            pipe_args = _shlex.split(" ".join(args))
+            self.emit(f"PIPE: {' '.join(pipe_args)}")
             try:
                 result = subprocess.run(
-                    full_cmd, shell=True, capture_output=True, text=True, timeout=120
+                    pipe_args, shell=False, capture_output=True, text=True, timeout=120
                 )
                 self.last_result = result.stdout.strip()
                 self.variables["PIPE_OUT"] = self.last_result
                 for line in self.last_result.split("\n"):
                     if line:
                         self.emit(line)
-            except Exception as e:
+            except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
                 self.emit(f"PIPE_ERROR: {e}")
 
         elif cmd == "!module":

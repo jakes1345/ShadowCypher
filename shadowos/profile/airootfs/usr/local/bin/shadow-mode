@@ -34,7 +34,12 @@ current() {
 
 require_root() {
     if [[ $EUID -ne 0 ]]; then
-        exec sudo -E "$0" "$@"
+        exec sudo \
+            MODE_DIR="$MODE_DIR" \
+            STATE_FILE="$STATE_FILE" \
+            DISPLAY="${DISPLAY:-}" \
+            DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-}" \
+            "$0" "$@"
     fi
 }
 

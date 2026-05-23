@@ -165,9 +165,12 @@ class IdentityHardener:
                 logger.info("security", f"LOCKDOWN: Forensics vault relocated to {hidden_dir}")
             except Exception: pass
             
-        # 3. Terminate all active tunnels
         from shadowcypher.core.runner import runner
-        runner.cleanup()
+        for task_id in list(runner.active_processes.keys()):
+            try:
+                runner.stop_task(task_id)
+            except Exception:
+                pass
         
         bus.publish("security_lockdown", {"status": "ENCRYPTED"})
 

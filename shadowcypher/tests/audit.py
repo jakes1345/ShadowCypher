@@ -148,7 +148,7 @@ extended = {
                   ['impacket_psexec', 'impacket_secretsdump', 'run_responder', 'golden_ticket_forge']), # NEW
     'ADPivot': ('shadowcypher.modules.ad_pivot', 'ADPivot',
                 ['kerberoast', 'smb_relay_start', 'setup_pivot_tunnel', 'crackmapexec_scan']),
-    'Phishing': ('shadowcypher.modules.phishing', 'Phishing',
+    'Phishing': ('shadowcypher.modules.phishing', 'SocialEngineeringAssessment',
                  ['generate_pdf', 'generate_obfuscated_ps1', 'start_phishing_server',
                   'generate_fake_recaptcha', 'generate_html_smuggling', 'start_zphisher',
                   'generate_professional_bait', 'start_secure_tunnel']), # NEW

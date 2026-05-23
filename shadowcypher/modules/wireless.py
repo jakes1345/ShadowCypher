@@ -3,11 +3,19 @@ Wireless Module — Enterprise Intelligence Build.
 Handles Aircrack-ng suite integration, WPA/WPA2 audits, and deauth attacks.
 """
 
+import shutil
 import subprocess
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_interface
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.stealth import require_stealth
+
+
+def _require_tool(name: str) -> str:
+    path = shutil.which(name)
+    if path is None:
+        raise FileNotFoundError(f"Required tool '{name}' not found in PATH.")
+    return path
 
 
 class Wireless(BaseModule):

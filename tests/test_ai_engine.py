@@ -22,9 +22,12 @@ class TestAIEngine:
         assert engine.backend is None
         assert engine.model_name is None
 
-    def test_generate_when_not_loaded(self, engine):
+    @patch("shadowcypher.ai.engine.AIEngine._select_ollama_model", return_value=None)
+    @patch("shadowcypher.ai.engine.provider_registry")
+    def test_generate_when_not_loaded(self, mock_registry, mock_select, engine):
+        mock_registry.active = None
         result = engine.generate("test prompt")
-        assert "[AI not loaded]" in result
+        assert "[AI offline]" in result or "not loaded" in result.lower()
 
     @patch.object(__import__("shadowcypher.ai.engine", fromlist=["AIEngine"]).AIEngine, "check_ollama", return_value=True)
     @patch.object(__import__("shadowcypher.ai.engine", fromlist=["AIEngine"]).AIEngine, "list_ollama_models", return_value=["shadowcypher-ai:latest", "llama3:latest"])

@@ -1730,10 +1730,19 @@
         async function callApi(path, opts = {}) {
             const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
             if (_sessionApiKey) headers['Authorization'] = `Bearer ${_sessionApiKey}`;
-            const resp = await fetch(`${API_BASE}${path}`, { ...opts, headers });
-            const data = await resp.json().catch(() => ({}));
-            if (!resp.ok) throw new Error(data.error || data.message || `HTTP ${resp.status}`);
-            return data;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            try {
+                const resp = await fetch(`${API_BASE}${path}`, { ...opts, headers, signal: controller.signal });
+                clearTimeout(timeoutId);
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) throw new Error(data.error || data.message || `HTTP ${resp.status}`);
+                return data;
+            } catch (err) {
+                clearTimeout(timeoutId);
+                if (err.name === 'AbortError') throw new Error('Request timed out');
+                throw err;
+            }
         }
 
         async function updateUIForUser(user) {
@@ -1742,7 +1751,8 @@
             const signoutLink = document.getElementById('nav-signout');
             if (signoutLink) signoutLink.style.display = '';
             const name = user.user_metadata?.handle || user.email.split('@')[0];
-            document.querySelector('#account-dashboard h2').innerText = `Welcome, ${name}`;
+            const h2 = document.querySelector('#account-dashboard h2');
+            if (h2) h2.innerText = `Welcome, ${name}`;
 
             // Mint key if missing, then show it
             const apiKey = await ensureApiKey(user);
@@ -2268,17 +2278,23 @@
         async function loadNotifPrefs() {
             try {
                 const { preferences } = await callApi('/v1/notifications/preferences');
-                document.getElementById('notif-email').checked = preferences.email_enabled !== false;
-                document.getElementById('notif-severity').value = preferences.email_severity || 'warning';
-                document.getElementById('notif-push').checked = !!preferences.push_enabled;
+                const emailEl = document.getElementById('notif-email');
+                const sevEl = document.getElementById('notif-severity');
+                const pushEl = document.getElementById('notif-push');
+                if (emailEl) emailEl.checked = preferences.email_enabled !== false;
+                if (sevEl) sevEl.value = preferences.email_severity || 'warning';
+                if (pushEl) pushEl.checked = !!preferences.push_enabled;
             } catch (err) { console.warn('[notif] load failed', err.message); }
         }
 
         async function saveNotifPrefs() {
+            const emailEl = document.getElementById('notif-email');
+            const sevEl = document.getElementById('notif-severity');
+            const pushEl = document.getElementById('notif-push');
             const body = {
-                email_enabled: document.getElementById('notif-email').checked,
-                email_severity: document.getElementById('notif-severity').value,
-                push_enabled: document.getElementById('notif-push').checked,
+                email_enabled: emailEl?.checked ?? false,
+                email_severity: sevEl?.value || 'warning',
+                push_enabled: pushEl?.checked ?? false,
             };
             // If push enabled, request permission + subscribe via PushManager
             if (body.push_enabled && 'serviceWorker' in navigator && 'PushManager' in window) {
@@ -2286,7 +2302,7 @@
                     const perm = await Notification.requestPermission();
                     if (perm !== 'granted') {
                         body.push_enabled = false;
-                        document.getElementById('notif-push').checked = false;
+                        if (document.getElementById('notif-push')) document.getElementById('notif-push').checked = false;
                         cliPrint('Push permission denied by browser.', 'var(--warning)');
                     } else {
                         const keyResp = await fetch(API_BASE + '/v1/notifications/vapid-public-key');
@@ -2729,10 +2745,12 @@
         async function loadStats() {
             try {
                 const s = await callApi('/v1/me/stats');
-                document.getElementById('stat-devices').textContent = s.counts.devices;
-                document.getElementById('stat-scans').textContent = s.counts.scans;
-                document.getElementById('stat-incidents').textContent = s.counts.incidents;
-                document.getElementById('stat-open').textContent = s.counts.open_incidents;
+                if (!s?.counts) return;
+                const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? '—'; };
+                set('stat-devices', s.counts.devices);
+                set('stat-scans', s.counts.scans);
+                set('stat-incidents', s.counts.incidents);
+                set('stat-open', s.counts.open_incidents);
             } catch (err) { console.warn('[stats] load failed', err.message); }
         }
 
