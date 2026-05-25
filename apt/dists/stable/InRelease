@@ -9,26 +9,26 @@ Version: 2.2.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Sat, 23 May 2026 21:26:55 +0000
+Date: Mon, 25 May 2026 02:08:56 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- f99d0a8c64c6e4ab0c97c4f5721ed732 29 main/binary-amd64/Packages.gz
+ 56fffbe873a787f8bc1577562c8a7865 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- c639a27cb9a9841061ccabf475369ff17c3fab28b1dec7cd0e045e0770c6a4a8 29 main/binary-amd64/Packages.gz
+ e50a1238d0274b74d0a44bc6c4b940f031e4c75b5ef1208799cedc26e3f5ad4f 29 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmoSG58ACgkQ2fHRjxMT
-8IPuMw//bE+FB3I0pvThwMTzRk65JLBXXUf+RtL2Gymfvo/nvReVnxf9D2WkhFXi
-NGJJhLKSRbjfokpJ9yKyC8q5GrqhKyOjZOIzc6a4orzCBcyM/dr8KEGAHJDvazCX
-zzfAMzl3Dj0eViQ8MqrMNDjlszf/+jcq2QqYDF6IaCpvh70oVWo0MxFxf+SSAwGv
-+sBL5qxnlqTDQU9WCgP4yfVhhgxlwptL1sVk7xzTp/aOcNblnOz+uyNKcFBR5IHe
-b8O7d0rvBHg9rhMmvRgaatkNhbjBd/ADDEo1PEbmR2dLCaJrBabQchFTHYsIoApW
-HeZN5TQZ2z2hL7d/FXgznf4Z7mRoPS8jHpjoPC5f6SviFB7J7Vm0+zr+YTPZxwyu
-4jCNbgiTnOgV6tIFQTKzsHAoYdhOw6nurCWo7K8RTfSdOy81V18zjwKZuuZU+AEk
-Bu1rhHj0fODUFIBjKnlOrqnJzIuuOZ04VnHu/ZN7GxWMYovd4V0h5JQ4EeVAuUOL
-nk5DuwaYApJstWwAbOxbsdKXAeAZOq72Fc4Kz9X4syNRgOQl9UjT5JZb9e1RNPlP
-5VH/hfv99zVbOiJwITOWFg1XVtN5qVAuqrKWUTbwPw0Ab/HIsduBmS/gaEA3bl7z
-AvOiQoRCTx254xrsSBBhIjLfllLhw1GB2OZ35aPOv7vdkeZOts4=
-=aAu0
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmoTrzgACgkQ2fHRjxMT
+8IPkSQ/+M61ITausnlE6FtkZT5JxH6JweiMP8xdtSS2FdZ1THyGAvcm+8FBu06e8
+/gYKNP3PWWudPTBwvvHEHK0h8cNHREq1JewdmNOTFGXRNFZU7w5L8EreeS/baA5M
+/f5WcGoF6JVkrsEDHSqzPZvSEpjzhFLAVFdgIhzIDPkQQu7EI7LeczJSnbtNy6s8
+T4ux2M0xrNKq/Ap/ZHXaoRzWUuk/oPr1QwLjJioX6Ee/fWu2aWsd2l6zbzh7LK6V
+UUgr6sz+ZUuyONBZQpYfQhJ3u+OnsZXeonne/rVhN/pxtMcaYKWEEzAbjEv7UcN/
+fVQQMx28L6WProFK/LDGq9VkzR+faqE9Cn7YvFw7OHDJnGHAYAw5DI9dcnxqAEa+
+lNRJfZUkNrw68/tDD8qwT/aJIPElBkzVsNusenm8wsBunm+ghe35/G8SgmOnUM64
+/I15QwB1Q31AJzbHFcJwMnzNr8aBAGAQYX91VEhEb6toSzKkrMcgiC57o/objghL
+XcRPdDQMpVe2jI2oRZ58W8TlNJ2oQXr0VCMQkoZCtJswrxVEuCfrbPWeQ6oKNss+
+8mF+1OZOXQBf0H3n6F1nCzTgBho2roPlmu1rNgDHHr4Bjd82GKq9SiEoP8O8y3PI
+51ylrWUIXY8cpzJUQDRPDSDQF1KoYxtRKiuxDXrRMeDwXWgkvGc=
+=2FgX
 -----END PGP SIGNATURE-----
