@@ -371,7 +371,7 @@ class ShadowHub:
         if self.autonomous_enabled and typ in ["CVE", "EXPLOITABLE_SERVICE"]:
             self.dispatch_mission(
                 f"Perform deep-spectrum exploit validation for discovery {typ} on target {ip}.",
-                agent_role="red_team"
+                agent_role="adversary"
             )
 
     def _on_red_team_complete(self, summary: str) -> None:

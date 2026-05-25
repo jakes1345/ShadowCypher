@@ -87,7 +87,7 @@ class SovereignGhostMission(GhostMission):
             analysis = self._run_phase(
                 "ANALYSIS",
                 f"Target: {self.target}\nRecon: {recon_summary}\n"
-                "Search your internal vulnerability database (CVE/Exploit-DB) for the "
+                "Search your internal vulnerability database (CVE/PocEngine-DB) for the "
                 "services identified. Determine if any 403/401 bypass or RCE is possible. "
                 "Provide a ranked list of exploitability.",
                 0.50,
@@ -97,9 +97,9 @@ class SovereignGhostMission(GhostMission):
             # Phase 3: Ingress Validation (Safe Probes)
             if "403" in recon_raw or "Forbidden" in recon_raw:
                 self.report("BYPASS_403", "Triggering automated 403 bypass sequence...", 0.70)
-                from shadowcypher.modules.web_attacks import WebAttacks
+                from shadowcypher.modules.web_security import WebSecurity
                 # We'll run this in parallel but wait for a snippet
-                WebAttacks.bypass_403_test(f"http://{self.target}", "/", on_output=lambda m: self.report("BYPASS_403", m, 0.75))
+                WebSecurity.bypass_403_test(f"http://{self.target}", "/", on_output=lambda m: self.report("BYPASS_403", m, 0.75))
 
             # Phase 4: Final Report
             self._run_phase(

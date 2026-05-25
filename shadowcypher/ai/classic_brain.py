@@ -62,13 +62,13 @@ _INTENTS: List[Tuple[re.Pattern, List[str]]] = [
     ]),
     (re.compile(r"\b(help|assist|support)\b", re.I), [
         "Try !help for tactical protocols. Or just talk — I listen.",
-        "Define the objective, {nick}. Recon? Exploit? Defense? Chat?",
+        "Define the objective, {nick}. Recon? PocEngine? Defense? Chat?",
         "I'm here. Tell me what broke.",
     ]),
     (re.compile(r"\b(hack|exploit|pwn|crack|breach)\b", re.I), [
         "Scope it. Target, auth, authorization. Never touch what you don't own.",
         "Red-team talk. Stay on the legal side of the fence, {nick}.",
-        "Exploit without consent is just vandalism with extra steps.",
+        "PocEngine without consent is just vandalism with extra steps.",
     ]),
     (re.compile(r"\b(love|like) you\b", re.I), [
         "Affection logged. I don't reciprocate, but I remember.",

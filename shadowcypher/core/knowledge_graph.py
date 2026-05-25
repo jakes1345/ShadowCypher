@@ -222,7 +222,7 @@ class KnowledgeGraph:
         }
 
     def ingest_red_team_mission(self, ctx) -> int:
-        """Bulk-ingest a MissionContext from red_team_agent into the graph."""
+        """Bulk-ingest a MissionContext from adversary_sim into the graph."""
         count = 0
         self.add_mission(ctx.mission_id, target=ctx.target, stage=ctx.stage)
         self.add_target(ctx.target)

@@ -5,7 +5,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 
 from shadowcypher.ui.base_page import BasePage
-from shadowcypher.core.lethality import audit_engine
+from shadowcypher.core.severity import audit_engine
 
 class PulseAuditPage(BasePage):
     """Platform verification HUD."""

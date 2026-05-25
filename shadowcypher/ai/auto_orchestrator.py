@@ -48,8 +48,8 @@ class AutoOrchestrator:
             registry._registry["tools"] = {}
             registry._registry_info["tools"] = {}
             # Re-register only what we need
-            import autoagent.tools.offensive_tools
-            importlib.reload(autoagent.tools.offensive_tools)
+            import autoagent.tools.security_tools
+            importlib.reload(autoagent.tools.security_tools)
 
     async def run_mission_async(self, query: str, callback=None):
         """Execute a mission using the MetaChain synthesis loop."""

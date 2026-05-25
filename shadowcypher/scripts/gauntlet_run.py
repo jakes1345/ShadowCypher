@@ -59,8 +59,8 @@ def verify_core_architecture():
 def verify_module_registry():
     from shadowcypher.modules.ghost_hose import ghost_hose
     from shadowcypher.modules.recon import Recon
-    from shadowcypher.modules.layer7 import Layer7
-    from shadowcypher.modules.c2 import C2Framework
+    from shadowcypher.modules.app_layer import Layer7
+    from shadowcypher.modules.agent_relay import AgentRelay
     return True
 
 def verify_ui_bindings():

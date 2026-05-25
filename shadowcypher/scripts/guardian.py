@@ -212,7 +212,7 @@ def cmd_audit():
         suspicious = [f for f in suid_files if any(x in f for x in
                       ["python", "perl", "ruby", "node", "vim", "find", "bash", "nmap", "env"])]
         if suspicious:
-            checks.append(("FAIL", f"Suspicious SUID binaries: {', '.join(suspicious[:5])}", "PrivEsc risk"))
+            checks.append(("FAIL", f"Suspicious SUID binaries: {', '.join(suspicious[:5])}", "PrivAudit risk"))
         else:
             checks.append(("OK", f"{len(suid_files)} SUID binaries (none suspicious)", ""))
 

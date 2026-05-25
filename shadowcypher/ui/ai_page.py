@@ -162,7 +162,7 @@ class AIPage(BasePage):
 
         opts_row.pack_start(Gtk.Label(label="ROLE:"), False, False, 0)
         self.role_combo = Gtk.ComboBoxText()
-        for r in ["shadowai", "commander", "red_team", "blue_team", "devops"]:
+        for r in ["shadowai", "commander", "adversary", "blue_team", "devops"]:
             self.role_combo.append_text(r)
         self.role_combo.set_active(0)
         opts_row.pack_start(self.role_combo, False, False, 0)
@@ -466,8 +466,8 @@ class AIPage(BasePage):
             )
 
     def _handle_autonomous_forge(self, text):
-        """Trigger PayloadFactory from the AI Bridge."""
-        from shadowcypher.modules.payload_factory import PayloadFactory
+        """Trigger CraftFactory from the AI Bridge."""
+        from shadowcypher.modules.craft_factory import CraftFactory
         self.terminal.log("INITIATING_AUTONOMOUS_FORGE: Scanning for optimal evasion...", "AI")
         
         # Determine LHOST/LPORT from text or fallback
@@ -477,7 +477,7 @@ class AIPage(BasePage):
         def _on_output(line):
             GLib.idle_add(self.terminal.log, line.strip(), "FORGE")
         
-        PayloadFactory.generate_evasive_elf(lhost, lport, iterations=5, on_output=_on_output)
+        CraftFactory.generate_evasive_elf(lhost, lport, iterations=5, on_output=_on_output)
 
     def _handle_autonomous_recon(self, text):
         """Trigger Recon module from the AI Bridge."""

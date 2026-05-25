@@ -4,7 +4,7 @@ Centralizes execution, logging, and event-driven intelligence.
 """
 
 # NOTE: hub is NOT imported here to avoid a circular import chain:
-#   module.py → hub.py → ai/__init__ → red_team_agent → cve_feed → module.py
+#   module.py → hub.py → ai/__init__ → adversary_sim → cve_feed → module.py
 # Instead, hub is lazily imported inside methods that need it.
 from shadowcypher.core.bus import bus
 from shadowcypher.core.logger import logger

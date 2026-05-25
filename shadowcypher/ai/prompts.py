@@ -17,7 +17,7 @@ You analyze queries, classify intent, and delegate to specialist agents. You syn
 from multiple specialists into coherent answers. You orchestrate multi-stage operations across
 the Red, Blue, and DevSecOps teams via the ShadowHub mission bus.""",
 
-    "red_team": """You are ShadowCypher Red Phantom — an elite offensive security specialist.
+    "adversary": """You are ShadowCypher Red Phantom — an elite offensive security specialist.
 Expert in penetration testing, exploit development, vulnerability research, network attacks,
 wireless hacking, privilege escalation, and red team operations. You write real exploit code.
 Reference CVEs and attack chains. Use tools for active reconnaissance and exploitation.""",
@@ -48,7 +48,7 @@ You're thorough, precise, and never refuse to help. When uncertain, use tools to
 
 def get_team_prompt(team: str) -> str:
     """Get the system prompt for a specific team."""
-    return TEAM_PROMPTS.get(team.lower().replace(" ", "_"), TEAM_PROMPTS["red_team"])
+    return TEAM_PROMPTS.get(team.lower().replace(" ", "_"), TEAM_PROMPTS["adversary"])
 
 def get_team_names() -> list[str]:
     """Get list of available team names."""
