@@ -167,7 +167,14 @@ class ShadowHub:
             "vulns_critical": 0,
             "load_avg": 0.0,
             "threat_hits": 0,
-            "last_incident": None
+            "last_incident": None,
+            "swarm_nodes": 0,
+            "shadow_id": "UNLINKED",
+            "tor_up": False,
+            "relay_up": False,
+            "kg_nodes": 0,
+            "guard_blocked": 0,
+            "guard_scanned": 0,
         }
         
         self.autonomous_enabled: bool = False
@@ -191,6 +198,22 @@ class ShadowHub:
         self._start_ghost_orchestrator()
         self._start_training_range()
         self._start_v2_services()
+        self._start_health_monitor()
+
+    def _start_health_monitor(self) -> None:
+        """Background health sentinel — polls Tor and relay liveness every 10 s."""
+        import socket as _socket, time as _time
+        def _monitor():
+            while True:
+                try:
+                    with _socket.create_connection(("127.0.0.1", 9050), timeout=0.5):
+                        self._update_telemetry("tor_up", True)
+                except Exception:
+                    self._update_telemetry("tor_up", False)
+                relay_live = hasattr(self, "relay_bridge") and self.relay_bridge.connected
+                self._update_telemetry("relay_up", relay_live)
+                _time.sleep(10)
+        threading.Thread(target=_monitor, daemon=True, name="HubHealthMonitor").start()
 
     def _start_training_range(self) -> None:
         import subprocess

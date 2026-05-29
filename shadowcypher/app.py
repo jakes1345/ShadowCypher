@@ -167,11 +167,13 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             self.cpu_label.set_text(f"CPU_LOAD: [{'|'*int(cpu/10)}{'.'*(10-int(cpu/10))}] {cpu:.1f}%")
             self.mem_label.set_text(f"MEM_PRESSURE: [{'|'*int(mem/10)}{'.'*(10-int(mem/10))}] {mem:.1f}%")
 
-            # 2. Tactical metrics — pure dict access, no I/O
+            # 2. Tactical metrics — flat dict (hub.get_tactical_summary() flattens telemetry)
             summary = hub.get_tactical_summary()
-            swarm_count = summary.get("telemetry", {}).get("swarm_nodes", 0)
-            self.net_label.set_text(f"NET_ENTROPY: {summary.get('telemetry', {}).get('load_avg', 0):.2f}bps")
-            self.irc_label.set_markup(f"SWARM_NODES: <span color='#22c55e'>{swarm_count} ACTIVE</span>")
+            swarm_count = summary.get("swarm_nodes", 0)
+            load_avg = summary.get("load_avg", 0.0)
+            self.net_label.set_text(f"NET_ENTROPY: {load_avg:.2f}")
+            node_color = "#22c55e" if swarm_count > 0 else "#64748b"
+            self.irc_label.set_markup(f"SWARM_NODES: <span color='{node_color}'>{swarm_count} ACTIVE</span>")
 
             # 3. Ghost status from cached probe (updated off-thread)
             ghost_active = os.path.exists("/tmp/.ghost_mode_state")
@@ -185,10 +187,11 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
 
             # 4. Footer status
             fid_color = "#22c55e" if ghost_active else "#f87171"
+            shadow_id = summary.get("shadow_id", "UNLINKED")
             self.status_label.set_markup(
                 f"FIDELITY: <span color='{fid_color'}>{'GHOST' if ghost_active else 'EXPOSED'}</span> | "
-                f"MSN: {summary.get('active_missions')} | "
-                f"ID: {summary.get('telemetry', {}).get('shadow_id', '???')}"
+                f"MSN: {summary.get('active_missions', 0)} | "
+                f"ID: {shadow_id}"
             )
         except Exception as _e:
             from shadowcypher.core.logger import logger as _log
