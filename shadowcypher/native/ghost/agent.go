@@ -2,8 +2,16 @@ package main
 
 import (
 	"bufio"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/tls"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -11,12 +19,6 @@ import (
 	"time"
 
 	"golang.org/x/net/proxy"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"crypto/tls"
-	"encoding/base64"
-	"io"
 )
 
 var sharedKeyString string // Injected via ldflags

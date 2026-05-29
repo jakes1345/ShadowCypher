@@ -27,13 +27,12 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.sidebar_list = Gtk.ListBox()
         self.sidebar_list.get_style_context().add_class("sidebar")
 
-        # DEBUG: Toggle GPU acceleration based on driver support
         settings = Gtk.Settings.get_default()
         if settings:
             settings.set_property("gtk-application-prefer-dark-theme", True)
             settings.set_property("gtk-enable-animations", True)
-        
-        # FIXME: Native OpenGL backend is flaky on some X11 drivers
+
+        # x11 must be listed first; OpenGL fallback order matters on multi-driver systems
         Gdk.set_allowed_backends("x11,wayland,*")
 
         # Load branding assets
@@ -46,7 +45,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.header = Gtk.HeaderBar()
         self.header.set_show_close_button(True)
         self.header.set_title("CITADEL // SHADOWCYPHER")
-        self.header.set_subtitle("\U0001f575\ufe0f APEX_TACTICAL_OFFENSIVE")
+        self.header.set_subtitle("\U0001f575️ APEX_TACTICAL_OFFENSIVE")
         self.set_titlebar(self.header)
 
         theme = get_theme("dark")
@@ -187,7 +186,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             # 4. Footer status
             fid_color = "#22c55e" if ghost_active else "#f87171"
             self.status_label.set_markup(
-                f"FIDELITY: <span color='{fid_color}'>{'GHOST' if ghost_active else 'EXPOSED'}</span> | "
+                f"FIDELITY: <span color='{fid_color'}>{'GHOST' if ghost_active else 'EXPOSED'}</span> | "
                 f"MSN: {summary.get('active_missions')} | "
                 f"ID: {summary.get('telemetry', {}).get('shadow_id', '???')}"
             )
@@ -213,7 +212,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
 
     def _on_new_ticket(self, data: dict):
         handle = data.get("handle", "Unknown")
-        self.header.set_subtitle(f"\u26a0\ufe0f TICKET_ALERT: {handle}")
+        self.header.set_subtitle(f"⚠️ TICKET_ALERT: {handle}")
         logger.info("ui", f"NOTIFIED: New autonomous ticket from {handle}")
 
     def _build_sidebar(self):
@@ -231,7 +230,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f5c4", "Artifact Crypt"),
             ("\U0001f916", "Shadow-Synthesizer"),
             ("---", "TACTICAL-INTEL"),
-            ("\u2728", "Spectral Intelligence"),
+            ("✨", "Spectral Intelligence"),
             ("\U0001f3af", "Vulnerability Sweep"),
             ("\U0001f310", "Network Scanner"),
             ("\U0001f50e", "OSINT Probe"),
@@ -247,7 +246,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f3a3", "Phishing Forge"),
             ("\U0001f3db", "AD Assessment"),
             ("\U0001f5c2", "AD Pivot"),
-            ("\u26a1", "Combat Deck"),
+            ("⚡", "Combat Deck"),
             ("\U0001f4dc", "ShadowScript"),
             ("---", "SOVEREIGN-OPS"),
             ("\U0001f4ac", "Community Chat"),
@@ -260,7 +259,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f511", "Credentials Vault"),
             ("\U0001f6e0", "Hub Settings"),
             ("\U0001f5dd", "God-Panel"),
-            ("\u2622", "Wraith Protocol"),
+            ("☢", "Wraith Protocol"),
             ("\U0001f4cb", "Pulse Audit"),
             ("\U0001f4de", "Support"),
         ]
