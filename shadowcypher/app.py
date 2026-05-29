@@ -189,7 +189,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             fid_color = "#22c55e" if ghost_active else "#f87171"
             shadow_id = summary.get("shadow_id", "UNLINKED")
             self.status_label.set_markup(
-                f"FIDELITY: <span color='{fid_color'}>{'GHOST' if ghost_active else 'EXPOSED'}</span> | "
+                f"FIDELITY: <span color='{fid_color}'>{'GHOST' if ghost_active else 'EXPOSED'}</span> | "
                 f"MSN: {summary.get('active_missions', 0)} | "
                 f"ID: {shadow_id}"
             )
