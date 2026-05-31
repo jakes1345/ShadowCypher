@@ -36,6 +36,8 @@ jobs:
             --include='*.ttf' --include='*.eot' \
             --include='blog/' --include='blog/**' \
             --include='r/' --include='r/**' \
+            --include='agent/' --include='agent/**' \
+            --include='sitemap.xml' \
             --include='_redirects' --include='CNAME' --include='.nojekyll' \
             --include='manifest.json' --include='sw.js' \
             --exclude='*' \
