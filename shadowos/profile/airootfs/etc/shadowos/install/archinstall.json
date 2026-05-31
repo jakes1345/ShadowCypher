@@ -1,8 +1,8 @@
 {
   "additional-repositories": [],
   "audio_config": {"audio": "pipewire"},
-  "bootloader": "Grub",
-  "config_version": "2.8.0",
+  "bootloader_config": {"bootloader": "Grub", "uki": false},
+  "config_version": "2.8.6",
   "hostname": "shadowos",
   "kernels": ["linux", "linux-hardened"],
   "locale_config": {
@@ -29,7 +29,12 @@
     "git", "neovim", "python", "nodejs", "go", "rustup",
     "docker", "docker-compose",
     "zsh", "starship", "fastfetch", "btop", "ripgrep", "fd", "bat", "eza",
-    "ollama"
+    "ollama",
+    "python-aiohttp", "python-psutil", "python-pydantic-settings",
+    "python-gobject", "python-cairo", "python-pydantic",
+    "python-requests", "python-websockets", "python-cryptography",
+    "python-pillow", "python-fastapi", "uvicorn",
+    "gtk3", "steam", "steam-devices"
   ],
   "profile_config": {
     "gfx_driver": "All open-source",
@@ -43,5 +48,5 @@
   "services": ["NetworkManager", "ufw", "apparmor", "fail2ban", "sddm",
                "dnscrypt-proxy", "bluetooth"],
   "timezone": "UTC",
-  "version": "2.8.0"
+  "version": "2.8.6"
 }

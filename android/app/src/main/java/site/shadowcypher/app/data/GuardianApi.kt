@@ -21,7 +21,7 @@ interface GuardianApi {
     suspend fun getIncidents(): List<Incident>
 
     @GET("/v1/agents")
-    suspend fun getAgents(): List<Agent>
+    suspend fun getAgents(): AgentsResponse
 
     @POST("/v1/agents/{agent_id}/missions")
     suspend fun createMission(

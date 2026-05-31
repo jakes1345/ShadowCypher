@@ -11,18 +11,24 @@ data class Me(
 )
 
 data class Agent(
+    val id: String,
     val hostname: String,
     val online: Boolean,
-    val last_seen_at: String?
+    val last_seen_at: String?,
+    val os: String? = null,
+    val agent_version: String? = null
 )
 
+// Wrapper matching backend { agents: [...] } envelope from GET /v1/agents
+data class AgentsResponse(val agents: List<Agent>)
+
 data class Device(
-    val ip: String,
+    val ip: String?,
     val hostname: String?,
     val mac: String?,
-    val os: String?,
+    @SerializedName("device_type") val os: String?,
     val vendor: String?,
-    val status: String?
+    val status: String? = null
 )
 
 data class Incident(

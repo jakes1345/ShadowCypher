@@ -143,7 +143,7 @@ private fun SectionDividerLabel(text: String) {
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.width(8.dp))
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.weight(1f),
             color = ColorBorder,
             thickness = 0.5.dp

@@ -124,6 +124,22 @@ class WarMapPage(Gtk.Box):
     def _on_draw(self, widget, cr):
         width = widget.get_allocated_width()
         height = widget.get_allocated_height()
+
+        if self._scaled_pixbuf is None and width > 0 and height > 0:
+            # No map asset — subtle grid so the panel is not an empty void
+            cr.set_source_rgba(0.04, 0.08, 0.12, 1.0)
+            cr.paint()
+            cr.set_source_rgba(0.0, 0.45, 0.55, 0.15)
+            cr.set_line_width(1)
+            step = 48
+            for x in range(0, width, step):
+                cr.move_to(x, 0)
+                cr.line_to(x, height)
+                cr.stroke()
+            for y in range(0, height, step):
+                cr.move_to(0, y)
+                cr.line_to(width, y)
+                cr.stroke()
         
         # Draw Connection Lines (Signal Paths)
         node_coords = []
@@ -164,22 +180,25 @@ class WarMapPage(Gtk.Box):
             cr.stroke()
 
     def _refresh_nodes(self):
-        """Sync with Nexus discovery or fallback to simulated signals."""
+        """Sync with Nexus discovery — no fabricated nodes."""
         if not self.get_mapped():
             return True
-            
-        real_nodes = nexus.nodes
-        if real_nodes:
-            self.nodes = real_nodes
-            self._simulated = False
-        else:
-            # Simulated nodes for HUD fidelity
-            self._simulated = True
-            self.nodes = {
-                f"SIM-{i}": {"host": f"192.168.1.{100+i}", "name": f"Spectre-{i}"}
-                for i in range(5)
+
+        raw = nexus.nodes or {}
+        self.nodes = {}
+        for nid, data in raw.items():
+            info = data.get("info") if isinstance(data.get("info"), dict) else {}
+            self.nodes[nid] = {
+                "name": info.get("name") or info.get("nick") or nid,
+                "host": data.get("addr") or info.get("host") or "—",
             }
-            
+        self._simulated = False
+
+        if self.nodes:
+            self.status_lbl.set_text(f"SWEEPING SPECTRUM... [{len(self.nodes)} NODES ACTIVE]")
+        else:
+            self.status_lbl.set_text("NO REMOTE NODES — register agents to populate the map")
+
         GLib.idle_add(self._update_ui)
         return True
 
@@ -187,30 +206,38 @@ class WarMapPage(Gtk.Box):
         GLib.idle_add(self._update_ui)
 
     def _update_ui(self):
-        # Update Status
-        self.status_lbl.set_text(f"SWEEPING SPECTRUM... [{len(self.nodes)} NODES ACTIVE]")
-        
         # Update Sidebar
         for child in self.node_list.get_children():
             self.node_list.remove(child)
-            
-        for nid, data in self.nodes.items():
+
+        if not self.nodes:
             row = Gtk.ListBoxRow()
-            hbox = Gtk.Box(spacing=10)
-            hbox.set_margin_start(10)
-            hbox.set_margin_bottom(5)
-            hbox.set_margin_top(5)
-            
-            status_color = "#4ade80"
-            lbl = Gtk.Label()
-            lbl.set_markup(f"<span color='{status_color}'>\u25cf</span> <span weight='bold'>{data.get('name', 'Node')}</span>")
-            hbox.pack_start(lbl, False, False, 0)
-            
-            ip_lbl = Gtk.Label(label=data.get("host", "0.0.0.0"))
-            ip_lbl.get_style_context().add_class("text-muted")
-            hbox.pack_end(ip_lbl, False, False, 10)
-            
-            row.add(hbox)
+            lbl = Gtk.Label(label="No registered nodes yet.\nDeploy an agent or enable Nexus relay.")
+            lbl.set_margin_top(12)
+            lbl.set_margin_bottom(12)
+            lbl.set_margin_start(10)
+            lbl.get_style_context().add_class("dim-label")
+            row.add(lbl)
             self.node_list.add(row)
-        
+        else:
+            for nid, data in self.nodes.items():
+                row = Gtk.ListBoxRow()
+                hbox = Gtk.Box(spacing=10)
+                hbox.set_margin_start(10)
+                hbox.set_margin_bottom(5)
+                hbox.set_margin_top(5)
+
+                status_color = "#4ade80"
+                lbl = Gtk.Label()
+                lbl.set_markup(f"<span color='{status_color}'>\u25cf</span> <span weight='bold'>{data.get('name', 'Node')}</span>")
+                hbox.pack_start(lbl, False, False, 0)
+
+                ip_lbl = Gtk.Label(label=data.get("host", "—"))
+                ip_lbl.get_style_context().add_class("text-muted")
+                hbox.pack_end(ip_lbl, False, False, 10)
+
+                row.add(hbox)
+                self.node_list.add(row)
+
         self.node_list.show_all()
+        self.drawing_area.queue_draw()

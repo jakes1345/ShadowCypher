@@ -31,9 +31,20 @@ class ShadowPlatform:
 
     @classmethod
     def resolve_path(cls, component: str, *parts: str) -> str:
-        """Butter-smooth path resolution for all tactical components."""
+        """Resolve paths for tactical components (dev tree + /opt/shadowcypher install)."""
         base = cls.COMPONENTS.get(component, "")
-        return os.path.join(cls.ROOT, base, *parts)
+        primary = os.path.join(cls.ROOT, base, *parts)
+        if os.path.exists(primary):
+            return primary
+        # Installed layout: /opt/shadowcypher/assets/… (repo-root assets/ copied at build)
+        if component == "assets":
+            for alt in (
+                os.path.join(cls.ROOT, "assets", *parts),
+                os.path.join("/opt/shadowcypher", "assets", *parts),
+            ):
+                if os.path.exists(alt):
+                    return alt
+        return primary
 
     @classmethod
     def get_master_key_path(cls) -> str:

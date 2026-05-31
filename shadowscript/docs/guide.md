@@ -1,86 +1,254 @@
-# ── THE SHADOWSCRIPT BIBLE (v1.1-GAMMA) ──
+# ShadowScript — Language Reference
 
-ShadowScript is an Omni-Paradigm Programming Language designed for **Sovereign Tactical Operations.** It combines the memory safety of Python with the raw power of HolyC and the logic of Lisp.
+ShadowScript is ShadowCypher's native tactical scripting language. Write missions,
+automate security workflows, chain AI queries, and orchestrate Shadow Nodes — all in
+one clean, purpose-built syntax.
 
-## 1. TACTICAL DIRECTIVES
+---
 
-### `TARGET(addr)`
-Locks the Mission Kernel onto a specific coordinate (IP/Domain).
+## Variables
+
 ```shadow
-TARGET("GATEWAY_IP")
+VAR target = "192.168.1.1"
+VAR port   = "80"
+SET name   = "home-lab"   # SET is an alias for VAR
 ```
 
-### `SWARM()`
-Initializes a decentralized P2P peer-discovery loop via the Go Relay. Ensures your node is visible to the Citadel.
+Reference a variable anywhere with `$name`:
 
-### `AI(intent)`
-Triggers a **Neural Link** call to the Shadow-AI brain. Results are returned as an industrial-grade intelligence summary.
 ```shadow
-VAR report = AI("Identify vulnerable services on current target")
-```
-
-### `UNSAFE { ... }`
-Enters **Memory Sovereignty** mode. Allows for raw pointer manipulation and direct kernel syscalls in a HolyC-style block.
-
-### `!syscall(args)`
-Executes a native Linux/Windows/macOS system call via the Apex Platform Engine.
-
-## 2. TYPES & REGISTERS
-- **U64 / U32 / U8**: Fixed-width unsigned integers for memory strikes.
-- **RAX - RIP**: Virtual registers for the internal shadow-stack.
-
-## 3. MISSION EXAMPLES
-
-## 4. GHOST-SIGNAL PROTOCOLS (Tier-5 Invisibility)
-
-### Phantom-MAC (Hardware Masking)
-Always run `scripts/phantom_mac.sh` before connecting. This randomizes your NIC identifier, making your device appear as a new, anonymous piece of hardware to the ISP_INFRASTRUCTURE gateway.
-
-### DNS Blackout (Spectrum Isolation)
-Run `scripts/dns_blackout.sh` to kill Port 53 clear-text leaks. All queries move through ShadowCypher's encrypted tunnel, invisible to ISP-level Deep Packet Inspection.
-
-### Obfuscation & Chaff
-The Shadow-Relay natively injects **Chaff** (random noise packets) and **Jitter** (timing variance) into your stream. This prevents traffic correlation attacks from identifying what you are doing.
-
-## 5. PHYSICAL SPECTRUM SILENCE (Critical)
-
-To be truly untraceable by State-level actors (CIA/NSA):
-1.  **Device Correlation**: Disable all Bluetooth and Wi-Fi on your mobile devices within a 50ft radius of your tactical station. 
-2.  **Faraday Isolation**: Keep mobile devices in a physical Faraday bag during high-stakes missions.
-3.  **SON Disablement**: Ensure 'Self-Organizing Network' is **OFF** in the ISP_INFRASTRUCTURE (GATEWAY_IP) Advanced Settings to prevent the router from "steering" your device onto observable frequencies.
-
-**THE CITADEL HAS NO DOORS. ONLY SHADOWS.**
-
-## 🧬 2. DATA TYPES
-We bypass the standard "integers" and "booleans" for HolyC-style native types:
-- `U8`: 8-bit unsigned (perfect for shellcode/bytes).
-- `U32`: 32-bit unsigned.
-- `U64`: 64-bit unsigned (the standard for memory addresses).
-- `VAR`: Auto-typed tactical variable.
-
-## ⚔️ 3. TACTICAL KEYWORDS
-- `TARGET("...")`: Sets the primary objective for the mission.
-- `STRIKE(payload)`: Executes an offensive module against the target.
-- `SWARM { ... }`: Synchronizes the task across all decentralized nodes.
-- `AI("...")`: Synthesizes logic through the Shadow-AI brain.
-- `UNSAFE { ... }`: Opens the gateway to raw memory manipulation.
-
-## 🏴‍☠️ 4. OMNI-BLOCKS
-ShadowScript understands other languages.
-- **HolyC**: Use `U64` and `unsafe` to talk to the kernel.
-- **Assembly**: Use `REG_RAX`, `REG_RSP` inside unsafe blocks.
-- **Bash**: Use `!sys` for immediate system commands.
-
-## 🚀 5. EXAMPLE MISSION
-```shadow
-# My First Independent Strike
-TARGET("10.0.0.5")
-U64 buffer = 0x7FFF1234
-UNSAFE()
-STRIKE(buffer, "overflow_v1")
-AI("Check if target is still alive")
-!sys("echo Mission Complete")
+!echo("Target is $target on port $port")
 ```
 
 ---
-*Developed for the Shadows. Sovereign in the Light.*
+
+## Target
+
+Lock the mission kernel onto an IP or domain:
+
+```shadow
+TARGET("192.168.1.1")
+TARGET($target)
+```
+
+---
+
+## Network Scan
+
+```shadow
+SCAN(1-1000)          # scan ports 1–1000 on current target
+SCAN(22,80,443,8080)  # specific ports
+```
+
+---
+
+## Modules — STRIKE
+
+Run any ShadowCypher module against the current target:
+
+```shadow
+STRIKE(recon,    quick_scan)
+STRIKE(network,  arp_scan)
+STRIKE(web,      ffuf_dir_fuzz)
+STRIKE(vuln,     nuclei_scan)
+STRIKE(osint,    whois_lookup)
+STRIKE(forensics, hash_file)
+STRIKE(wireless, scan_networks)
+```
+
+Available modules: `recon`, `network`, `wireless`, `exploit`, `poc`, `privesc`,
+`c2`, `payload`, `craft`, `web`, `osint`, `credentials`, `secrets`, `forensics`, `vuln`
+
+---
+
+## AI Integration
+
+Query the local AI brain inline:
+
+```shadow
+AI("What services typically run on port 8080?")
+AI("Summarise vulnerabilities found on $target")
+```
+
+Result is stored in `$AI_RESULT` and printed to the terminal.
+
+---
+
+## System Commands
+
+```shadow
+!sys("whoami")
+!sys("nmap -sV $target")
+!sys("ls /etc")
+```
+
+Output goes to `$LAST`. Exit code is in `$EXIT_CODE`.
+
+```shadow
+!pipe("ip addr show")   # output → $PIPE_OUT
+```
+
+---
+
+## Module Direct Call
+
+Call a module method with explicit arguments:
+
+```shadow
+!module(recon, quick_scan, 10.0.0.1)
+!module(web, ffuf_dir_fuzz, http://10.0.0.1)
+```
+
+---
+
+## Print and Sleep
+
+```shadow
+!echo("Scan complete — result: $LAST")
+!sleep(2)
+```
+
+---
+
+## Control Flow
+
+### IF / ELSE
+
+```shadow
+IF $EXIT_CODE == 0 {
+    !echo("command succeeded")
+}
+
+IF $AI_RESULT != "" {
+    !echo("AI responded: $AI_RESULT")
+} ELSE {
+    !echo("AI offline or no response")
+}
+```
+
+Supported operators: `==`, `!=`, `>`, `<`, `>=`, `<=`
+Truthy check (single var): `IF $LAST { ... }`
+
+### FOR loop
+
+```shadow
+FOR ip IN 192.168.1.1 192.168.1.2 192.168.1.3 {
+    TARGET($ip)
+    SCAN(22,80,443)
+    !echo("Scanned $ip — result: $LAST")
+}
+```
+
+### WHILE loop
+
+```shadow
+VAR counter = "0"
+WHILE $counter < 5 {
+    !echo("Pass $counter")
+    !sys("echo done")
+    VAR counter = "999"   # update to exit (full arithmetic coming)
+}
+```
+
+### BREAK / RETURN
+
+```shadow
+FOR host IN 10.0.0.1 10.0.0.2 {
+    IF $host == "10.0.0.2" {
+        BREAK
+    }
+    STRIKE(recon, quick_scan)
+}
+
+RETURN "mission complete"   # sets $RESULT
+```
+
+---
+
+## Shadow Nodes — SWARM
+
+Broadcast a command to all linked Shadow Node agents:
+
+```shadow
+SWARM()
+SWARM("id")    # run 'id' on all nodes
+```
+
+Nodes must be registered via the Shadow Nodes tab or the native agent binary.
+
+---
+
+## Load Another Script
+
+```shadow
+LOAD("recon_phase.shadow")     # relative path (missions/ dir)
+LOAD("/opt/scripts/foo.shadow") # absolute path
+```
+
+---
+
+## MAP / FILTER
+
+Process lines from `$LAST`:
+
+```shadow
+!sys("cat /etc/hosts")
+MAP {
+    !echo("host: $ITEM")
+}
+
+FILTER { $ITEM != "" }     # keep non-empty lines → $FILTERED
+```
+
+---
+
+## UNSAFE Block
+
+Disables stealth checks for the enclosed block — use for local lab work only:
+
+```shadow
+UNSAFE {
+    !sys("iptables -L")
+    !sys("tcpdump -i any -c 5")
+}
+```
+
+---
+
+## Full Example Mission
+
+```shadow
+# Recon mission — local lab network
+
+VAR network = "192.168.1"
+
+TARGET("$network.1")
+!echo("=== GATEWAY ===")
+SCAN(22,80,443,8080,8443)
+STRIKE(recon, quick_scan)
+AI("What services are likely running on a home router?")
+
+FOR host IN 10 20 30 50 {
+    TARGET("$network.$host")
+    SCAN(22,80,443)
+    IF $EXIT_CODE == 0 {
+        !echo("Active host: $network.$host")
+        STRIKE(vuln, nuclei_scan)
+    }
+}
+
+!echo("=== MISSION COMPLETE ===")
+RETURN "ok"
+```
+
+---
+
+## REPL
+
+Launch the interactive shell:
+
+```
+python3 shadowscript/core/engine.py
+```
+
+Metacommands: `.vars` `.modules` `.help` `.exit`

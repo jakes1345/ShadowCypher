@@ -82,7 +82,7 @@ fun DevicesScreen(viewModel: GuardianViewModel) {
                     EmptyState("No devices discovered yet.\nTrigger a scan from the dashboard.")
                 }
             } else {
-                items(devices, key = { it.ip }) { device ->
+                items(devices, key = { it.mac ?: it.ip ?: it.hashCode().toString() }) { device ->
                     DeviceCard(device)
                 }
             }
@@ -112,7 +112,7 @@ private fun DeviceCard(device: Device) {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = device.ip,
+                        text = device.ip ?: device.mac ?: "—",
                         color = ColorAccentPurple,
                         fontSize = 14.sp,
                         fontFamily = FontFamily.Monospace,
@@ -131,7 +131,7 @@ private fun DeviceCard(device: Device) {
             }
 
             Spacer(Modifier.height(10.dp))
-            Divider(color = ColorBorder, thickness = 0.5.dp)
+            HorizontalDivider(color = ColorBorder, thickness = 0.5.dp)
             Spacer(Modifier.height(10.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {

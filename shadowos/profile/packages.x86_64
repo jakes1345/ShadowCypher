@@ -30,7 +30,6 @@ dnscrypt-proxy
 
 # Security / privacy
 tor
-torbrowser-launcher
 firejail
 apparmor
 ufw
@@ -140,6 +139,7 @@ gtk3
 python-gobject
 python-cairo
 python-pydantic
+python-pydantic-settings
 python-requests
 python-websockets
 python-cryptography
@@ -147,6 +147,8 @@ python-pillow
 python-rich
 python-textual
 python-fastapi
+python-aiohttp
+python-psutil
 uvicorn
 ollama
 

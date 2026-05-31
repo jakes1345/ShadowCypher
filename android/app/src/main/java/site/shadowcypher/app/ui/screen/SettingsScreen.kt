@@ -1,5 +1,6 @@
 package site.shadowcypher.app.ui.screen
 
+import site.shadowcypher.app.BuildConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -184,7 +185,7 @@ fun SettingsScreen(viewModel: GuardianViewModel) {
         SectionCard {
             SectionCardLabel("ABOUT")
             Spacer(Modifier.height(12.dp))
-            DetailRow("Version", "2.0.0")
+            DetailRow("Version", BuildConfig.VERSION_NAME)
             Spacer(Modifier.height(4.dp))
             DetailRow("API", "api.shadowcypher.site")
             Spacer(Modifier.height(4.dp))

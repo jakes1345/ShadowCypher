@@ -40,7 +40,7 @@ fun MissionsScreen(viewModel: GuardianViewModel) {
     LaunchedEffect(agents) {
         if (selectedAgent == null && agents.isNotEmpty()) {
             selectedAgent = agents.first()
-            viewModel.loadMissions(agents.first().hostname)
+            viewModel.loadMissions(agents.first().id)
         }
     }
 
@@ -100,7 +100,7 @@ fun MissionsScreen(viewModel: GuardianViewModel) {
                 label = labelText,
                 onLabelChange = { labelText = it },
                 onSubmit = {
-                    val agentId = selectedAgent?.hostname ?: return@MissionCompose
+                    val agentId = selectedAgent?.id ?: return@MissionCompose
                     viewModel.submitMission(agentId, scriptText, labelText.ifBlank { null })
                     scriptText = ""
                     labelText = ""

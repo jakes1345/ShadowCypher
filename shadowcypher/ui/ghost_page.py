@@ -4,8 +4,9 @@ Directly manages remote agents, signal routing, and tactical delegation.
 """
 
 import gi
+import os
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Pango
+from gi.repository import Gtk, Gdk, GLib, Pango
 import threading
 import time
 
@@ -69,9 +70,53 @@ class ShadowNodesPage(BasePage):
         console_frame.add(console_box)
         self.workspace.pack_start(console_frame, True, True, 0)
 
-        # Control Plane
+        # \u2500\u2500 Connection Settings \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        conn_frame = Gtk.Frame(label="NODE LISTENER")
+        conn_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        conn_box.set_margin_start(10); conn_box.set_margin_end(10)
+        conn_box.set_margin_top(8);   conn_box.set_margin_bottom(8)
+
+        bind_row = Gtk.Box(spacing=8)
+        bind_row.pack_start(Gtk.Label(label="Bind address:"), False, False, 0)
+        self._bind_lbl = Gtk.Label()
+        self._bind_lbl.get_style_context().add_class("dim-label")
+        bind_row.pack_start(self._bind_lbl, False, False, 0)
+        conn_box.pack_start(bind_row, False, False, 0)
+
+        port_row = Gtk.Box(spacing=8)
+        port_row.pack_start(Gtk.Label(label="Port:"), False, False, 0)
+        self._port_lbl = Gtk.Label()
+        self._port_lbl.get_style_context().add_class("dim-label")
+        port_row.pack_start(self._port_lbl, False, False, 0)
+        conn_box.pack_start(port_row, False, False, 0)
+
+        btn_row2 = Gtk.Box(spacing=8)
+        self._ext_btn = Gtk.Button(label="\ud83c\udf10 Enable External Connections")
+        self._ext_btn.connect("clicked", self._on_toggle_bind)
+        btn_row2.pack_start(self._ext_btn, False, False, 0)
+
+        self._copy_cmd_btn = Gtk.Button(label="\ud83d\udccb Copy Agent Command")
+        self._copy_cmd_btn.connect("clicked", self._on_copy_agent_cmd)
+        btn_row2.pack_start(self._copy_cmd_btn, False, False, 0)
+        conn_box.pack_start(btn_row2, False, False, 0)
+
+        agent_note = Gtk.Label()
+        agent_note.set_markup(
+            "<span size='x-small' color='#64748b'>"
+            "External mode binds 0.0.0.0 \u2014 remote agents can connect over LAN/VPN.\n"
+            "Loopback mode is safer for local-only testing."
+            "</span>"
+        )
+        agent_note.set_xalign(0); agent_note.set_line_wrap(True)
+        conn_box.pack_start(agent_note, False, False, 0)
+
+        conn_frame.add(conn_box)
+        self.workspace.pack_start(conn_frame, False, False, 0)
+        self._update_bind_display()
+
+        # \u2500\u2500 Control Plane \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
         ctrl_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        
+
         exec_btn = Gtk.Button(label="\u26a1 Execute")
         exec_btn.get_style_context().add_class("suggested-action")
         exec_btn.connect("clicked", self._on_execute)
@@ -81,12 +126,12 @@ class ShadowNodesPage(BasePage):
         proxy_btn.get_style_context().add_class("suggested-action")
         proxy_btn.connect("clicked", self._on_start_proxy)
         ctrl_box.pack_start(proxy_btn, False, False, 0)
-        
+
         scrub_btn = Gtk.Button(label="\U0001f9f9 Deep Scrub")
         scrub_btn.get_style_context().add_class("destructive-action")
         scrub_btn.connect("clicked", self._on_deep_scrub)
         ctrl_box.pack_start(scrub_btn, False, False, 0)
-        
+
         self.workspace.pack_start(ctrl_box, False, False, 0)
 
         # Subscribe to bus events
@@ -196,3 +241,48 @@ class ShadowNodesPage(BasePage):
         nick = data.get("nick")
         output = data.get("output")
         GLib.idle_add(self.log, f"[{nick}] RECEIVED:\n{output}", "SUCCESS")
+
+    # ── Bind address helpers ──────────────────────────────────────
+
+    def _update_bind_display(self):
+        bind = os.environ.get("SHADOWCYPHER_GHOST_BIND", "127.0.0.1")
+        port = getattr(ghost_orchestrator, "port", 44444)
+        self._bind_lbl.set_text(bind)
+        self._port_lbl.set_text(str(port))
+        if bind == "0.0.0.0":
+            self._ext_btn.set_label("🔒 Loopback Only (Safer)")
+        else:
+            self._ext_btn.set_label("🌐 Enable External Connections")
+
+    def _on_toggle_bind(self, _btn):
+        current = os.environ.get("SHADOWCYPHER_GHOST_BIND", "127.0.0.1")
+        new_bind = "0.0.0.0" if current != "0.0.0.0" else "127.0.0.1"
+        os.environ["SHADOWCYPHER_GHOST_BIND"] = new_bind
+
+        # Restart the orchestrator on the new address
+        try:
+            ghost_orchestrator.running = False
+            if ghost_orchestrator.server_socket:
+                try:
+                    ghost_orchestrator.server_socket.close()
+                except Exception:
+                    pass
+            ghost_orchestrator._instance = None
+            import threading as _t
+            ghost_orchestrator.__class__._instance = None
+            ghost_orchestrator.__init__()
+            ghost_orchestrator.start()
+            self.log(f"NODE_LISTENER: restarted on {new_bind}:{getattr(ghost_orchestrator, 'port', 44444)}", "INFO")
+        except Exception as e:
+            self.log(f"RESTART_ERROR: {e}", "ERROR")
+
+        GLib.idle_add(self._update_bind_display)
+
+    def _on_copy_agent_cmd(self, _btn):
+        bind = os.environ.get("SHADOWCYPHER_GHOST_BIND", "127.0.0.1")
+        host = bind if bind != "0.0.0.0" else "YOUR_SERVER_IP"
+        port = getattr(ghost_orchestrator, "port", 44444)
+        cmd = f"./ghost-agent -host {host} -port {port}"
+        clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        clipboard.set_text(cmd, -1)
+        self.log(f"COPIED: {cmd}", "INFO")

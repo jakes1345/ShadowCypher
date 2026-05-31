@@ -1,4 +1,4 @@
-"""Pulse Audit Page — Real-time platform verification."""
+"""ShadowCypher Audit Page — Real-time platform verification."""
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -7,11 +7,11 @@ from gi.repository import Gtk, GLib
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.core.severity import audit_engine
 
-class PulseAuditPage(BasePage):
+class ShadowCypherAuditPage(BasePage):
     """Platform verification HUD."""
 
     def __init__(self):
-        super().__init__("\U0001f3af Pulse Audit (Lethality Verification)")
+        super().__init__("\U0001f3af ShadowCypher Audit (Platform Verification)")
         
         info = Gtk.Label()
         info.set_markup("<span color='#94a3b8'>Execute a deep-spectrum audit of the Obsidian Citadel core and polyglot runtimes.</span>")

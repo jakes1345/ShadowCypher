@@ -59,12 +59,12 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         
         self.nav_box = self._build_sidebar()
         
-        # 3. Main Operational Stack (The Pulse HUD)
+        # 3. Main Operational Stack (ShadowCypher HUD)
         self._page_container = Gtk.Stack()
         self._page_container.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         self._page_container.set_transition_duration(100)
         
-        # 4. Tactical Sidebar (The Pulse)
+        # 4. Telemetry sidebar (live stats)
         self.pulse_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.pulse_box.get_style_context().add_class("citadel-pulse")
         self.pulse_box.set_size_request(260, -1)
@@ -75,7 +75,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         tel_header.set_halign(Gtk.Align.START)
         self.pulse_box.pack_start(tel_header, False, False, 10)
         
-        # Real-time Pulse Components
+        # Real-time telemetry widgets
         self.cpu_label = Gtk.Label(label="CPU_LOAD: [||||||||||] 0%")
         self.mem_label = Gtk.Label(label="MEM_PRESSURE: [||||||||||] 0%")
         
@@ -263,7 +263,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f6e0", "Hub Settings"),
             ("\U0001f5dd", "God-Panel"),
             ("☢", "Wraith Protocol"),
-            ("\U0001f4cb", "Pulse Audit"),
+            ("\U0001f4cb", "ShadowCypher Audit"),
             ("\U0001f4de", "Support"),
         ]
 
@@ -333,7 +333,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Hub Settings": "admin_page.AdminPage",
                 "God-Panel": "god_panel.GodPanel",
                 "Wraith Protocol": "wraith_page.WraithProtocol",
-                "Pulse Audit": "audit_page.PulseAuditPage",
+                "ShadowCypher Audit": "audit_page.ShadowCypherAuditPage",
                 "Support": "support_page.SupportPage",
             }
             if name not in mapping:

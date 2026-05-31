@@ -3,7 +3,7 @@
 // - Handles web-push events (delivers Guardian incident notifications)
 // - Click-through navigates the user to the relevant dashboard page
 
-const CACHE = "shadowcypher-v1";
+const CACHE = "shadowcypher-v2";
 const SHELL = ["/", "/index.html", "/styles.css", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
@@ -55,12 +55,18 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/?nav=account";
+  const rawUrl = event.notification.data?.url || "/?nav=account";
+  const safeUrl = (() => {
+    try {
+      const parsed = new URL(rawUrl, self.location.origin);
+      return parsed.origin === self.location.origin ? parsed.href : "/?nav=account";
+    } catch { return "/?nav=account"; }
+  })();
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
       const focused = list.find((c) => c.url.includes(self.location.origin));
-      if (focused) { focused.focus(); focused.navigate(url); return; }
-      return clients.openWindow(url);
+      if (focused) { focused.focus(); focused.navigate(safeUrl); return; }
+      return clients.openWindow(safeUrl);
     })
   );
 });

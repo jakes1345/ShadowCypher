@@ -79,17 +79,21 @@ jobs:
             'shadowcypher.ai.orchestrator',
             'shadowcypher.modules.recon',
             'shadowcypher.modules.network',
-            'shadowcypher.modules.credentials',
-            'shadowcypher.modules.exploit',
+            'shadowcypher.modules.secret_audit',
+            'shadowcypher.modules.poc_engine',
             'shadowcypher.modules.forensics',
             'shadowcypher.modules.osint',
             'shadowcypher.modules.wireless',
             'shadowcypher.modules.firewall',
-            'shadowcypher.modules.phishing',
-            'shadowcypher.modules.payload_factory',
+            'shadowcypher.modules.awareness_sim',
+            'shadowcypher.modules.craft_factory',
             'shadowcypher.modules.gaming_osint',
             'shadowcypher.modules.ad_pivot',
-            'shadowcypher.modules.deephat'
+            'shadowcypher.modules.deephat',
+            'shadowcypher.modules.web_security',
+            'shadowcypher.modules.vuln_scanner',
+            'shadowcypher.modules.agent_relay',
+            'shadowcypher.modules.privilege_audit'
         ]
         failed = []
         for mod in modules:

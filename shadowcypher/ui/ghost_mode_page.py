@@ -117,6 +117,37 @@ class GhostModePage(BasePage):
         tor_frame.add(tor_box)
         ctrl_col.pack_start(tor_frame, False, False, 0)
 
+        # Identity coverage status
+        id_frame = Gtk.Frame(label="IDENTITY COVERAGE")
+        id_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        id_box.set_margin_top(8); id_box.set_margin_bottom(8)
+        id_box.set_margin_start(10); id_box.set_margin_end(10)
+
+        self._id_rows: dict = {}
+        for key, label in [
+            ("ip",      "IP address"),
+            ("mac",     "MAC address"),
+            ("hostname","Hostname"),
+            ("dns",     "DNS queries"),
+            ("ja3",     "TLS/JA3 fingerprint"),
+            ("browser", "Browser fingerprint"),
+        ]:
+            row = Gtk.Box(spacing=6)
+            dot = Gtk.Label(label="●")
+            dot.get_style_context().add_class("dim-label")
+            lbl = Gtk.Label(label=label, xalign=0)
+            lbl.set_hexpand(True)
+            status = Gtk.Label(label="?", xalign=1)
+            status.get_style_context().add_class("dim-label")
+            row.pack_start(dot, False, False, 0)
+            row.pack_start(lbl, True, True, 0)
+            row.pack_end(status, False, False, 0)
+            id_box.pack_start(row, False, False, 0)
+            self._id_rows[key] = (dot, status)
+
+        id_frame.add(id_box)
+        ctrl_col.pack_start(id_frame, False, False, 0)
+
         # Quick hardening
         harden_frame = Gtk.Frame(label="QUICK HARDENING")
         harden_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
@@ -259,7 +290,56 @@ class GhostModePage(BasePage):
         except Exception:
             self.pod_mac.update("UNKNOWN", "amber")
 
+        # Identity coverage panel
+        self._update_coverage(ghost, tor)
+
         return True  # keep timer alive
+
+    def _update_coverage(self, ghost: bool, tor: bool):
+        import shutil
+        GREEN, AMBER, RED = "#22c55e", "#f59e0b", "#f43f5e"
+
+        def _set(key, covered: bool, text: str):
+            dot, status = self._id_rows[key]
+            color = GREEN if covered else RED
+            dot.set_markup(f"<span color='{color}'>●</span>")
+            status.set_markup(f"<span size='x-small' color='{color}'>{text}</span>")
+
+        # IP: covered by Tor
+        _set("ip",      tor,   "via Tor" if tor else "EXPOSED")
+        # MAC: check locally-administered bit
+        try:
+            import subprocess, re
+            out = subprocess.check_output(["ip", "-o", "link", "show"], text=True, timeout=2)
+            mac_rand = False
+            for line in out.splitlines():
+                m = re.search(r"(\w+): .+link/ether\s+([0-9a-f:]{17})", line)
+                if m and m.group(1) not in ("lo",):
+                    mac_rand = bool(int(m.group(2).split(":")[0], 16) & 0x02)
+                    break
+            _set("mac", mac_rand, "randomized" if mac_rand else "real MAC")
+        except Exception:
+            _set("mac", False, "unknown")
+        # Hostname: ghost mode sets it to localhost
+        try:
+            import socket as _s
+            hn = _s.gethostname()
+            _set("hostname", hn == "localhost", hn)
+        except Exception:
+            _set("hostname", False, "unknown")
+        # DNS
+        try:
+            with open("/etc/resolv.conf") as f:
+                dns_content = f.read()
+            via_tor = "Ghost Mode" in dns_content and "127.0.0.1" in dns_content
+            _set("dns", via_tor, "via Tor" if via_tor else "cleartext DNS")
+        except Exception:
+            _set("dns", False, "unknown")
+        # JA3/TLS fingerprint — covered if curl-impersonate is installed
+        ci = shutil.which("curl-impersonate") or shutil.which("curl-impersonate-chrome")
+        _set("ja3", bool(ci), "curl-impersonate" if ci else "NOT INSTALLED — install curl-impersonate")
+        # Browser fingerprint — only Tor Browser fully covers this
+        _set("browser", False, "use Tor Browser for full isolation")
 
     # ── Console helper ────────────────────────────────────────
 
