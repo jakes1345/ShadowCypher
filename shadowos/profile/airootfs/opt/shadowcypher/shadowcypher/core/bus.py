@@ -52,16 +52,11 @@ class ShadowBus:
             self._dispatch_standard(callback, data)
 
     def _dispatch_standard(self, callback: Callable, data: Any):
-        """Handles standard and async callback execution."""
         if asyncio.iscoroutinefunction(callback):
             try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(callback(data))
-                else:
-                    asyncio.run(callback(data))
-            except Exception:
-                # Handle cases where loop isn't available
+                loop = asyncio.get_running_loop()
+                asyncio.run_coroutine_threadsafe(callback(data), loop)
+            except RuntimeError:
                 threading.Thread(target=lambda: asyncio.run(callback(data)), daemon=True).start()
         else:
             callback(data)

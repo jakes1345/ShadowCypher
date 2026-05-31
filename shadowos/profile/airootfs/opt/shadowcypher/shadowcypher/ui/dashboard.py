@@ -285,25 +285,45 @@ class DashboardPage(Gtk.Box):
             time.sleep(0.01) # Tiny yield to keep thread pool breathing
 
     def _init_once(self):
-        """One-shot init for AI + stealth."""
-        try:
-            from shadowcypher.ai.providers import provider_registry
-            p = provider_registry.active
-            if p and p.is_configured:
-                self.stat_ai.set_value(f"{p.model}")
-            else:
-                self.stat_ai.set_value("Ollama (local)")
-        except Exception:
-            self.stat_ai.set_value("Offline")
+        """One-shot boot sequence log and initial stat population."""
+        import socket, platform as _plat
 
+        self.terminal.log("══════ SHADOWCYPHER BOOT SEQUENCE ══════", "SYSTEM")
+        self.terminal.log(f"  OS: {_plat.system()} {_plat.release()} | Arch: {_plat.machine()}", "INFO")
+
+        services = [
+            ("Go Relay",    8888),
+            ("Ghost C2",    44444),
+            ("Nexus Relay", 9988),
+            ("Tor SOCKS5",  9050),
+        ]
+        for name, port in services:
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=0.4):
+                    self.terminal.log(f"  ✓ {name:<14} ONLINE  :{port}", "SUCCESS")
+            except Exception:
+                self.terminal.log(f"  ✗ {name:<14} OFFLINE :{port}", "WARNING")
+
+        # Ollama check
+        try:
+            import urllib.request
+            urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=1)
+            self.terminal.log("  ✓ Ollama AI     ONLINE  :11434", "SUCCESS")
+            self.stat_ai.set_value("Ollama (local)")
+        except Exception:
+            self.terminal.log("  ✗ Ollama AI     OFFLINE :11434", "WARNING")
+            self.stat_ai.set_value("OFFLINE")
+
+        # Stealth capabilities
         try:
             from shadowcypher.core.web import stealth_web
             caps = stealth_web.get_capabilities()
             n = sum(1 for v in caps.values() if v)
-            self.stat_stealth.set_value(f"{n}/5 Active")
+            self.stat_stealth.set_value(f"{n}/{len(caps)} Active")
         except Exception:
             self.stat_stealth.set_value("N/A")
 
+        self.terminal.log("════════════════════════════════════════", "SYSTEM")
         return False
 
     def _tick(self):
@@ -335,9 +355,13 @@ class DashboardPage(Gtk.Box):
             for widget, val in stat_map.items():
                 widget.set_value(val)
 
-            # Signal Bridge (Go Relay)
-            relay_lbl = "SECURE" if (hasattr(hub, 'relay_bridge') and hub.relay_bridge.connected) else "OFFLINE"
+            # Signal Bridge (Go Relay) — use flat telemetry key set by health monitor
+            relay_up = summary.get("relay_up", False)
+            tor_up = summary.get("tor_up", False)
+            relay_lbl = "SECURE" if relay_up else "OFFLINE"
             self.stat_relay.set_value(relay_lbl)
+            # Show Tor state in pulse stat
+            self.stat_pulse.set_value("TOR UP" if tor_up else "CLEARNET")
 
         except Exception as e:
             logger.debug("ui", f"DASHBOARD_TICK_FAILURE: {e}")

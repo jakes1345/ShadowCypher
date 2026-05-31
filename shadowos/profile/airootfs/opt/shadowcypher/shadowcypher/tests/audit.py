@@ -5,18 +5,18 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 # ── Module Registry (matches modules/__init__.py + extras) ──
 
-from shadowcypher.modules.exploit import Exploit
+from shadowcypher.modules.poc_engine import PocEngine
 from shadowcypher.modules.vuln_scanner import VulnScanner
 from shadowcypher.modules.network import Network
 from shadowcypher.modules.osint import OSINT
-from shadowcypher.modules.credentials import Credentials
+from shadowcypher.modules.secret_audit import Credentials
 from shadowcypher.modules.forensics import Forensics
 from shadowcypher.modules.wireless import Wireless
 from shadowcypher.modules.firewall import Firewall
 from shadowcypher.modules.recon import Recon
 
 modules = {
-    'Exploit': Exploit,
+    'PocEngine': PocEngine,
     'VulnScanner': VulnScanner,
     'Network': Network,
     'OSINT': OSINT,
@@ -30,7 +30,7 @@ modules = {
 # ── Required Methods (synced to 4.5.8 ULTIMA implementations) ──
 
 required_methods = {
-    'Exploit': [
+    'PocEngine': [
         'search_exploits',
         'launch_msf_exploit',
         'generate_payload',
@@ -144,20 +144,20 @@ for mod_name, methods in required_methods.items():
 print(f"\nExtended Module Verification:")
 
 extended = {
-    'ADAttacks': ('shadowcypher.modules.ad_attacks', 'ADAttacks',
+    'ADAssessment': ('shadowcypher.modules.ad_assessment', 'ADAssessment',
                   ['impacket_psexec', 'impacket_secretsdump', 'run_responder', 'golden_ticket_forge']), # NEW
     'ADPivot': ('shadowcypher.modules.ad_pivot', 'ADPivot',
                 ['kerberoast', 'smb_relay_start', 'setup_pivot_tunnel', 'crackmapexec_scan']),
-    'Phishing': ('shadowcypher.modules.phishing', 'Phishing',
+    'Phishing': ('shadowcypher.modules.awareness_sim', 'SocialEngineeringAssessment',
                  ['generate_pdf', 'generate_obfuscated_ps1', 'start_phishing_server',
                   'generate_fake_recaptcha', 'generate_html_smuggling', 'start_zphisher',
                   'generate_professional_bait', 'start_secure_tunnel']), # NEW
-    'PayloadFactory': ('shadowcypher.modules.payload_factory', 'PayloadFactory',
+    'CraftFactory': ('shadowcypher.modules.craft_factory', 'CraftFactory',
                        ['generate_evasive_elf', 'generate_stealth_powershell',
                         'generate_stealth_c2_python', 'generate_obfuscated_python']),
-    'Exfiltration': ('shadowcypher.modules.exfiltration', 'Exfiltration',
+    'Exfiltration': ('shadowcypher.modules.data_transfer', 'Exfiltration',
                      ['exfiltrate_via_webhook', 'exfiltrate_via_dns', 'encrypt_archive']),
-    'WebAttacks': ('shadowcypher.modules.web_attacks', 'WebAttacks',
+    'WebSecurity': ('shadowcypher.modules.web_security', 'WebSecurity',
                    ['ffuf_dir_fuzz', 'ffuf_vhost_fuzz', 'nuclei_scan', 'nuclei_update']),
     'DeepOSINT': ('shadowcypher.modules.osint_deep', 'DeepOSINT',
                   ['social_footprint', 'email_audit', 'steam_correlate', 'leak_check']),

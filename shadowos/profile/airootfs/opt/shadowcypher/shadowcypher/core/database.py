@@ -124,7 +124,7 @@ class TacticalDatabase:
         )
 
     def log_credential(self, target_ip, service, username, password=None, cred_hash=None, cracked=False):
-        """Thread-safe credential logging. Used by Kairos and cred_sprayer."""
+        """Thread-safe credential logging. Used by Kairos and auth_tester."""
         self._execute(
             "INSERT INTO credentials_sink (target_ip, service, username, password, hash, cracked) VALUES (?, ?, ?, ?, ?, ?)",
             (target_ip, service, username, password, cred_hash, cracked),

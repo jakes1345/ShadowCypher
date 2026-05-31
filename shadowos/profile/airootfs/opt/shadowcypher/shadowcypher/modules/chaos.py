@@ -53,10 +53,10 @@ class ChaosOrchestrator:
     def generate_encoded_stager(self, lhost, lport, on_output=None):
         """Generate a Python stager wrapped in zlib and base64 encoding."""
         import zlib, base64
-        from shadowcypher.modules.payload_factory import PayloadFactory
+        from shadowcypher.modules.craft_factory import CraftFactory
         if on_output: on_output("[PAYLOAD] GENERATING_ENCODED_STAGER...\n")
         
-        path = PayloadFactory.generate_stealth_c2_python(lhost, lport)
+        path = CraftFactory.generate_stealth_c2_python(lhost, lport)
         with open(path, "rb") as f:
             original = f.read()
             

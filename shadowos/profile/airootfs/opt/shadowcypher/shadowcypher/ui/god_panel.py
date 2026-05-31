@@ -40,7 +40,7 @@ class GodPanel(BasePage):
         bx = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         bx.set_margin_start(10); bx.set_margin_end(10); bx.set_margin_top(10); bx.set_margin_bottom(10)
         bx.pack_start(sw, True, True, 0)
-        btn = Gtk.Button(label="\u26a1 Synchronize Subsystems")
+        btn = Gtk.Button(label="⚡ Synchronize Subsystems")
         btn.connect("clicked", lambda _: threading.Thread(target=self._refresh_matrix, daemon=True).start())
         bx.pack_start(btn, False, False, 5)
         frm.add(bx); self.workspace.pack_start(frm, True, True, 0)
@@ -75,37 +75,74 @@ class GodPanel(BasePage):
         threading.Thread(target=self._refresh_matrix, daemon=True).start()
 
     def _refresh_matrix(self):
-        """Asynchronous subsystem matrix refresh."""
+        """Asynchronous full-spectrum subsystem matrix refresh."""
+        import urllib.request, time as _time
         results = []
-        # Ollama
-        try:
-            import urllib.request
-            urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=1)
-            results.append(["Ollama AI", "ONLINE", "<1s", "11434"])
-        except Exception:
-            results.append(["Ollama AI", "OFFLINE", "—", "11434"])
-        # Go Relay
-        try:
-            with socket.create_connection(("127.0.0.1", 8888), timeout=0.5): pass
-            results.append(["Go Relay", "ONLINE", "<0.5s", "8888"])
-        except Exception:
-            results.append(["Go Relay", "OFFLINE", "—", "8888"])
-        # Sisyphus
+
+        # Port-based service checks: (label, port, http_url_or_None)
+        port_checks = [
+            ("Ollama AI",   11434, "http://127.0.0.1:11434/api/tags"),
+            ("Go Relay",    8888,  None),
+            ("Nexus Relay", 9988,  None),
+            ("Ghost C2",    44444, None),
+            ("Tor SOCKS5",  9050,  None),
+        ]
+        for name, port, url in port_checks:
+            t0 = _time.monotonic()
+            try:
+                if url:
+                    urllib.request.urlopen(url, timeout=1)
+                else:
+                    with socket.create_connection(("127.0.0.1", port), timeout=0.5): pass
+                rtt = f"{((_time.monotonic() - t0) * 1000):.0f}ms"
+                results.append([name, "ONLINE", rtt, str(port)])
+            except Exception:
+                results.append([name, "OFFLINE", "—", str(port)])
+
+        # Sisyphus integrity sentinel
         try:
             from shadowcypher.ai.sisyphus import sisyphus
-            results.append(["Sisyphus", "STABLE" if sisyphus.is_stable else "TAMPERED", "—", "—"])
+            state = "STABLE" if sisyphus.is_stable else "TAMPERED"
+            results.append(["Sisyphus", state, "—", "—"])
         except Exception:
             results.append(["Sisyphus", "ERROR", "—", "—"])
-            
+
+        # CVE Feed
+        try:
+            from shadowcypher.modules.cve_feed import cve_feed
+            active = getattr(cve_feed, "_active", False) or getattr(cve_feed, "running", False)
+            results.append(["CVE Feed", "ACTIVE" if active else "IDLE", "—", "NVD"])
+        except Exception:
+            results.append(["CVE Feed", "UNAVAIL", "—", "—"])
+
+        # Knowledge Graph
+        try:
+            from shadowcypher.core.knowledge_graph import kg
+            stats = kg.stats()
+            results.append(["Knowledge Graph", f"{stats.get('nodes', 0)} nodes", "—", "—"])
+        except Exception:
+            results.append(["Knowledge Graph", "UNAVAIL", "—", "—"])
+
+        # Ghost nodes
+        try:
+            from shadowcypher.core.ghost import ghost_orchestrator
+            node_count = len(ghost_orchestrator.get_active_nodes())
+            results.append(["Shadow Nodes", f"{node_count} linked", "—", "44444"])
+        except Exception:
+            results.append(["Shadow Nodes", "0 linked", "—", "44444"])
+
         def _update_ui():
             self.matrix_store.clear()
+            online = sum(1 for r in results if r[1] in ("ONLINE", "STABLE", "ACTIVE"))
             for r in results:
                 self.matrix_store.append(r)
-                if r[0] == "Ollama AI": self.pod_ai.set_value(r[1])
-                elif r[0] == "Go Relay": self.pod_relay.set_value(r[1])
-                elif r[0] == "Sovereign Chat": self.pod_chat.set_value(r[1])
+                lbl = r[0]
+                if lbl == "Ollama AI":    self.pod_ai.set_value(r[1])
+                elif lbl == "Go Relay":   self.pod_relay.set_value(r[1])
+                elif lbl == "Shadow Nodes": self.pod_swarm.set_value(r[1])
+            self.pod_chat.set_value(f"{online}/{len(results)}")
             return False
-            
+
         GLib.idle_add(_update_ui)
 
     def _tick(self):
@@ -116,7 +153,7 @@ class GodPanel(BasePage):
             self.pod_mem.set_value(f"{psutil.virtual_memory().percent:.0f}%")
             try:
                 from shadowcypher.ai.sisyphus import sisyphus
-                s = "\u2705 STABLE" if sisyphus.is_stable else "\u26a0\ufe0f TAMPERED"
+                s = "✅ STABLE" if sisyphus.is_stable else "⚠️ TAMPERED"
                 self.integrity_label.set_markup(f"<span color='{'#10b981' if sisyphus.is_stable else '#f43f5e'}'>{s}</span>")
             except Exception: pass
         except Exception: pass

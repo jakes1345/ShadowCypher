@@ -27,13 +27,12 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.sidebar_list = Gtk.ListBox()
         self.sidebar_list.get_style_context().add_class("sidebar")
 
-        # DEBUG: Toggle GPU acceleration based on driver support
         settings = Gtk.Settings.get_default()
         if settings:
             settings.set_property("gtk-application-prefer-dark-theme", True)
             settings.set_property("gtk-enable-animations", True)
-        
-        # FIXME: Native OpenGL backend is flaky on some X11 drivers
+
+        # x11 must be listed first; OpenGL fallback order matters on multi-driver systems
         Gdk.set_allowed_backends("x11,wayland,*")
 
         # Load branding assets
@@ -46,7 +45,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.header = Gtk.HeaderBar()
         self.header.set_show_close_button(True)
         self.header.set_title("CITADEL // SHADOWCYPHER")
-        self.header.set_subtitle("\U0001f575\ufe0f APEX_TACTICAL_OFFENSIVE")
+        self.header.set_subtitle("\U0001f575️ APEX_TACTICAL_OFFENSIVE")
         self.set_titlebar(self.header)
 
         theme = get_theme("dark")
@@ -60,12 +59,12 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         
         self.nav_box = self._build_sidebar()
         
-        # 3. Main Operational Stack (The Pulse HUD)
+        # 3. Main Operational Stack (ShadowCypher HUD)
         self._page_container = Gtk.Stack()
         self._page_container.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         self._page_container.set_transition_duration(100)
         
-        # 4. Tactical Sidebar (The Pulse)
+        # 4. Telemetry sidebar (live stats)
         self.pulse_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.pulse_box.get_style_context().add_class("citadel-pulse")
         self.pulse_box.set_size_request(260, -1)
@@ -76,7 +75,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         tel_header.set_halign(Gtk.Align.START)
         self.pulse_box.pack_start(tel_header, False, False, 10)
         
-        # Real-time Pulse Components
+        # Real-time telemetry widgets
         self.cpu_label = Gtk.Label(label="CPU_LOAD: [||||||||||] 0%")
         self.mem_label = Gtk.Label(label="MEM_PRESSURE: [||||||||||] 0%")
         
@@ -138,7 +137,9 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self._switch_to_page("Central Command HUD")
         
         # Ensure sidebar selection reflects the initial page
-        first_row = self.sidebar_list.get_row_at_index(1) # Index 0 is the 'NEXUS-COMMAND' header
+        first_row = self.sidebar_list.get_row_at_index(1)
+        if first_row is None:
+            first_row = self.sidebar_list.get_row_at_index(0)
         if first_row:
             self.sidebar_list.select_row(first_row)
         
@@ -166,11 +167,13 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             self.cpu_label.set_text(f"CPU_LOAD: [{'|'*int(cpu/10)}{'.'*(10-int(cpu/10))}] {cpu:.1f}%")
             self.mem_label.set_text(f"MEM_PRESSURE: [{'|'*int(mem/10)}{'.'*(10-int(mem/10))}] {mem:.1f}%")
 
-            # 2. Tactical metrics — pure dict access, no I/O
+            # 2. Tactical metrics — flat dict (hub.get_tactical_summary() flattens telemetry)
             summary = hub.get_tactical_summary()
-            swarm_count = summary.get("telemetry", {}).get("swarm_nodes", 0)
-            self.net_label.set_text(f"NET_ENTROPY: {summary.get('telemetry', {}).get('load_avg', 0):.2f}bps")
-            self.irc_label.set_markup(f"SWARM_NODES: <span color='#22c55e'>{swarm_count} ACTIVE</span>")
+            swarm_count = summary.get("swarm_nodes", 0)
+            load_avg = summary.get("load_avg", 0.0)
+            self.net_label.set_text(f"NET_ENTROPY: {load_avg:.2f}")
+            node_color = "#22c55e" if swarm_count > 0 else "#64748b"
+            self.irc_label.set_markup(f"SWARM_NODES: <span color='{node_color}'>{swarm_count} ACTIVE</span>")
 
             # 3. Ghost status from cached probe (updated off-thread)
             ghost_active = os.path.exists("/tmp/.ghost_mode_state")
@@ -184,13 +187,15 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
 
             # 4. Footer status
             fid_color = "#22c55e" if ghost_active else "#f87171"
+            shadow_id = summary.get("shadow_id", "UNLINKED")
             self.status_label.set_markup(
                 f"FIDELITY: <span color='{fid_color}'>{'GHOST' if ghost_active else 'EXPOSED'}</span> | "
-                f"MSN: {summary.get('active_missions')} | "
-                f"ID: {summary.get('telemetry', {}).get('shadow_id', '???')}"
+                f"MSN: {summary.get('active_missions', 0)} | "
+                f"ID: {shadow_id}"
             )
-        except Exception:
-            pass
+        except Exception as _e:
+            from shadowcypher.core.logger import logger as _log
+            _log.warning("app", f"PULSE_TICK_ERROR: {_e}")
         return True
 
     def _tor_probe_worker(self) -> bool:
@@ -210,7 +215,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
 
     def _on_new_ticket(self, data: dict):
         handle = data.get("handle", "Unknown")
-        self.header.set_subtitle(f"\u26a0\ufe0f TICKET_ALERT: {handle}")
+        self.header.set_subtitle(f"⚠️ TICKET_ALERT: {handle}")
         logger.info("ui", f"NOTIFIED: New autonomous ticket from {handle}")
 
     def _build_sidebar(self):
@@ -228,7 +233,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f5c4", "Artifact Crypt"),
             ("\U0001f916", "Shadow-Synthesizer"),
             ("---", "TACTICAL-INTEL"),
-            ("\u2728", "Spectral Intelligence"),
+            ("✨", "Spectral Intelligence"),
             ("\U0001f3af", "Vulnerability Sweep"),
             ("\U0001f310", "Network Scanner"),
             ("\U0001f50e", "OSINT Probe"),
@@ -240,11 +245,11 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f4a3", "Payload Factory"),
             ("\U0001f4f6", "Wireless Saturation"),
             ("\U0001f5a5", "C2 Command Center"),
-            ("\U0001f480", "Exploit Engine"),
+            ("\U0001f480", "PocEngine Engine"),
             ("\U0001f3a3", "Phishing Forge"),
-            ("\U0001f3db", "AD Attacks"),
+            ("\U0001f3db", "AD Assessment"),
             ("\U0001f5c2", "AD Pivot"),
-            ("\u26a1", "Combat Deck"),
+            ("⚡", "Combat Deck"),
             ("\U0001f4dc", "ShadowScript"),
             ("---", "SOVEREIGN-OPS"),
             ("\U0001f4ac", "Community Chat"),
@@ -257,8 +262,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f511", "Credentials Vault"),
             ("\U0001f6e0", "Hub Settings"),
             ("\U0001f5dd", "God-Panel"),
-            ("\u2622", "Wraith Protocol"),
-            ("\U0001f4cb", "Pulse Audit"),
+            ("☢", "Wraith Protocol"),
+            ("\U0001f4cb", "ShadowCypher Audit"),
             ("\U0001f4de", "Support"),
         ]
 
@@ -307,15 +312,15 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Session Manager": "session_page.SessionPage",
                 "Recon Engine": "recon_page.ReconPage",
                 "Steam OSINT": "steam_page.SteamAuditPage",
-                "Web & Cloud Strikes": "web_attacks_page.WebAttacksPage",
-                "Payload Factory": "payload_page.PayloadPage",
+                "Web & Cloud Strikes": "web_security_page.WebSecurityPage",
+                "Payload Factory": "craft_page.CraftPage",
                 "Wireless Saturation": "wireless_page.WirelessPage",
-                "C2 Command Center": "c2_page.C2Page",
-                "Exploit Engine": "exploit_page.ExploitPage",
-                "Phishing Forge": "phishing_page.PhishingPage",
-                "AD Attacks": "ad_attacks_page.ADAttacksPage",
+                "C2 Command Center": "relay_page.RelayPage",
+                "PocEngine Engine": "poc_page.PocPage",
+                "Phishing Forge": "awareness_page.AwarenessPage",
+                "AD Assessment": "ad_assessment_page.ADAssessmentPage",
                 "AD Pivot": "ad_page.AdPage",
-                "Combat Deck": "combat_page.CombatDeck",
+                "Combat Deck": "simulation_page.SimulationDeck",
                 "ShadowScript": "shadowscript_page.ShadowScriptPage",
                 "Community Chat": "chat_page.ChatPage",
                 "Shadow Nodes": "ghost_page.ShadowNodesPage",
@@ -324,11 +329,11 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Guardian": "guardian_page.GuardianPage",
                 "Intel Harvest": "dataset_page.DatasetPage",
                 "Firewall Manager": "firewall_page.FirewallPage",
-                "Credentials Vault": "credentials_page.CredentialsPage",
+                "Credentials Vault": "secrets_page.SecretsPage",
                 "Hub Settings": "admin_page.AdminPage",
                 "God-Panel": "god_panel.GodPanel",
                 "Wraith Protocol": "wraith_page.WraithProtocol",
-                "Pulse Audit": "audit_page.PulseAuditPage",
+                "ShadowCypher Audit": "audit_page.ShadowCypherAuditPage",
                 "Support": "support_page.SupportPage",
             }
             if name not in mapping:

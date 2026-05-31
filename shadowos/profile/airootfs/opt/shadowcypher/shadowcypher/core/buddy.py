@@ -67,7 +67,7 @@ class Buddy:
         if self.chaos > 70:
             reactions = {
                 "scan_complete": "Another scan? Feed me something HARDER.",
-                "vuln_found": "OH YEAH. That's the good stuff. Exploit it. NOW.",
+                "vuln_found": "OH YEAH. That's the good stuff. PocEngine it. NOW.",
                 "error": "Everything burns. I love it.",
                 "idle": "Are we just going to sit here or are we going to break something?",
             }

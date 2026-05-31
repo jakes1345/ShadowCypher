@@ -294,5 +294,5 @@ class NetworkPage(BasePage):
         t = self._ax_target.get_text().strip()
         if not t: self.log("Enter a target.", "WARN"); return
         require_stealth(on_output=self.on_output)
-        args = [t, str(int(self._ax_port.get_value())), str(int(self._ax_iters.get_value()))]
-        self.run_script("apex_stresser.py", args)
+        args = [t, "-p", str(int(self._ax_port.get_value())), "-c", str(int(self._ax_iters.get_value()))]
+        self.run_script("load_tester.py", args)

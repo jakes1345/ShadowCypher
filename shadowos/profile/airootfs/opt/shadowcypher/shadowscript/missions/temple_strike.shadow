@@ -1,10 +1,36 @@
-# MISSION_02: Temple-Strike Integration
-# Purpose: Demonstrate HolyC Types and UNSAFE Memory Sovereignty.
+# ShadowScript Mission: Temple Strike
+# Multi-phase recon and vulnerability sweep on a target network.
+# Edit VAR network to match your lab before running.
 
-U64 kernel_ptr = 0xFFFF888800000000
-U8 shell_code = 0x90
+VAR network = "192.168.1"
+VAR gateway = "$network.1"
 
-UNSAFE()
-STRIKE(kernel_ptr, shell_code)
+!echo("=== TEMPLE STRIKE — PHASE 1: GATEWAY ===")
+TARGET($gateway)
+SCAN(22,80,443,8080,8443)
+STRIKE(recon, quick_scan)
 
-!sys("echo TEMPLE_STRIKE_MEMORY_ALLOCATION_SUCCESSFUL")
+IF $LAST != "" {
+    AI("Analyse these open ports on a home gateway and suggest the highest-risk service")
+    !echo("AI assessment: $AI_RESULT")
+}
+
+!echo("=== PHASE 2: HOST SWEEP ===")
+FOR host IN 10 20 50 100 200 {
+    TARGET("$network.$host")
+    SCAN(22,80,443)
+    IF $EXIT_CODE == 0 {
+        !echo("Live host: $network.$host")
+        STRIKE(vuln, nuclei_scan)
+    }
+}
+
+!echo("=== PHASE 3: LOCAL AUDIT ===")
+TARGET("127.0.0.1")
+!sys("ss -tlnp")
+!echo("Listening services: $LAST")
+
+SWARM()
+
+!echo("=== TEMPLE STRIKE COMPLETE ===")
+RETURN "ok"

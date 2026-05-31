@@ -17,7 +17,7 @@ from shadowcypher.core.logger import logger
 from shadowcypher.core.hub import hub
 from shadowcypher.core.pulse import pulse
 from shadowcypher.core.shell import ShadowShell
-from shadowcypher.core.c2_manager import c2_manager
+from shadowcypher.core.relay_manager import relay_manager
 from shadowcypher.ai.providers import provider_registry
 
 def test_signal_engine():
@@ -64,7 +64,7 @@ def test_execution_core():
 def test_c2_hive():
     print("[⚡] PHASE 3: C2 HIVE (Multiplexer)")
     # Start listener
-    c2_manager.start_listener(port=9999)
+    relay_manager.start_listener(port=9999)
     time.sleep(1)
     if any(t.name == "C2-HiveListener-9999" for t in threading.enumerate()):
         print("  [✅] C2 Hive Listener Engaged")
@@ -73,8 +73,8 @@ def test_c2_hive():
         return False
     
     # Check internal registry
-    if hasattr(c2_manager, "sessions"):
-        print(f"  [✅] Session Registry Nominal ({len(c2_manager.sessions)} active)")
+    if hasattr(relay_manager, "sessions"):
+        print(f"  [✅] Session Registry Nominal ({len(relay_manager.sessions)} active)")
     else:
         print("  [❌] Session Registry Missing")
         return False

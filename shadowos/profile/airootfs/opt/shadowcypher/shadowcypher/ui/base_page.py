@@ -79,7 +79,7 @@ class BasePage(Gtk.Box):
         """Thread-safe logging."""
         GLib.idle_add(self.terminal.log, text, tag)
 
-    def run_mission(self, query, role="red_team"):
+    def run_mission(self, query, role="adversary"):
         """Centralized Mission Dispatch."""
         self.header.set_active(True)
         self.log(f"INITIATING_MISSION: {query}", "APEX")

@@ -87,13 +87,13 @@ offensive_modules = [
     ("Recon", "shadowcypher.modules.recon", "Recon"),
     ("Network", "shadowcypher.modules.network", "Network"),
     ("Wireless", "shadowcypher.modules.wireless", "Wireless"),
-    ("Exploit", "shadowcypher.modules.exploit", "Exploit"),
-    ("PrivEsc", "shadowcypher.modules.privesc", "PrivEsc"),
-    ("PayloadFactory", "shadowcypher.modules.payload_factory", "PayloadFactory"),
-    ("WebAttacks", "shadowcypher.modules.web_attacks", "WebAttacks"),
+    ("PocEngine", "shadowcypher.modules.poc_engine", "PocEngine"),
+    ("PrivAudit", "shadowcypher.modules.privilege_audit", "PrivAudit"),
+    ("CraftFactory", "shadowcypher.modules.craft_factory", "CraftFactory"),
+    ("WebSecurity", "shadowcypher.modules.web_security", "WebSecurity"),
     ("GhostHose", "shadowcypher.modules.ghost_hose", "GhostHose"),
     ("ShadowSwarm", "shadowcypher.modules.shadow_swarm", "ShadowSwarm"),
-    ("C2", "shadowcypher.modules.c2", "C2Framework"),
+    ("C2", "shadowcypher.modules.agent_relay", "AgentRelay"),
 ]
 for name, path, cls in offensive_modules:
     check(name, path, cls)

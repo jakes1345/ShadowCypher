@@ -35,9 +35,7 @@ class AIOrchestrator:
         self.registry = registry
         self._active_missions = {}
         
-        # Configure LiteLLM for local Ollama connectivity
-        import litellm
-        litellm.api_base = "http://localhost:11434"
+        self._ollama_base = getattr(config.ai, 'api_base', 'http://127.0.0.1:11434')
 
         # Warm-boot the brain — only if autoagent is actually installed
         self.client = MetaChain() if _AUTOAGENT_AVAILABLE else None
@@ -157,6 +155,10 @@ class AIOrchestrator:
                     on_complete(f"ERROR: {e}")
             finally:
                 if loop is not None:
+                    try:
+                        loop.run_until_complete(loop.shutdown_asyncgens())
+                    except Exception:
+                        pass
                     try:
                         loop.close()
                     except Exception:

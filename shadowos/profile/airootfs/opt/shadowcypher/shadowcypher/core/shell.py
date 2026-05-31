@@ -5,13 +5,22 @@ Google-grade tactical command orchestration with security hardening and performa
 
 import subprocess
 import os
+import re
 import time
 import threading
 import shlex
 from datetime import datetime
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional, Callable, Union
 
 from shadowcypher.core.logger import logger
+
+
+def _build_args(cmd: Union[str, list]) -> list:
+    """Convert a command string or list to a safe argument list (no shell=True)."""
+    if isinstance(cmd, list):
+        return cmd
+    return shlex.split(cmd)
+
 
 class ShadowShell:
     """
@@ -20,12 +29,12 @@ class ShadowShell:
     """
 
     @staticmethod
-    def execute(cmd: str, timeout: int = 300, env_updates: Dict[str, str] = None) -> Dict[str, Any]:
+    def execute(cmd: Union[str, list], timeout: int = 300, env_updates: Dict[str, str] = None) -> Dict[str, Any]:
         """
         Execute a command synchronously with enterprise-grade monitoring.
         
         Args:
-            cmd: The shell command to execute.
+            cmd: The shell command string or argument list to execute.
             timeout: Maximum execution time in seconds.
             env_updates: Optional environment variables to overlay.
             
@@ -33,7 +42,8 @@ class ShadowShell:
             Structured results including status, output, and telemetry.
         """
         start_time = time.time()
-        logger.info("shell", f"INVOKING_COMMAND: {cmd[:128]}...")
+        cmd_str = cmd if isinstance(cmd, str) else " ".join(str(a) for a in cmd)
+        logger.info("shell", f"INVOKING_COMMAND: {cmd_str[:128]}...")
 
         # 1. Environment Synthesis
         env = os.environ.copy()
@@ -41,9 +51,12 @@ class ShadowShell:
             env.update(env_updates)
             
         # 2. Performance Linker Optimization (Enterprise Compilation)
-        if any(tool in cmd for tool in ["cargo", "gcc", "g++", "make"]):
+        if any(tool in cmd_str for tool in ["cargo", "gcc", "g++", "make"]):
             env["RUSTFLAGS"] = "-C linker=mold"
             env["LDFLAGS"] = "-fuse-ld=mold"
+
+        # Build safe argument list — no shell=True
+        args = _build_args(cmd)
 
         try:
             # 3. Pulse-Driven Tactical Throttling
@@ -52,10 +65,10 @@ class ShadowShell:
                 logger.info("shell", "TACTICAL_THROTTLE_ACTIVE: Injecting stealth delay...")
                 time.sleep(1.5) # Adaptive footprint reduction
                 
-            # 4. Execution with Pipe Isolation
+            # 4. Execution without shell expansion (prevents injection)
             result = subprocess.run(
-                cmd,
-                shell=True,
+                args,
+                shell=False,
                 capture_output=True,
                 text=True,
                 env=env,
@@ -80,32 +93,35 @@ class ShadowShell:
             }
             
             if result.returncode == 0:
-                logger.info("shell", f"COMMAND_COMPLETE: {cmd[:64]}... [{duration:.2f}s]")
+                logger.info("shell", f"COMMAND_COMPLETE: {cmd_str[:64]}... [{duration:.2f}s]")
             else:
-                logger.warning("shell", f"COMMAND_FAILED: {cmd[:64]}... (Exit: {result.returncode})")
+                logger.warning("shell", f"COMMAND_FAILED: {cmd_str[:64]}... (Exit: {result.returncode})")
                 
             return telemetry
 
         except subprocess.TimeoutExpired:
-            logger.error("shell", f"COMMAND_TIMEOUT: {cmd[:64]} exceeded {timeout}s")
+            logger.error("shell", f"COMMAND_TIMEOUT: {cmd_str[:64]} exceeded {timeout}s")
             return {"status": "TIMEOUT", "exit_code": -1, "output": "Execution timed out.", "duration": timeout}
-        except Exception as e:
+        except FileNotFoundError as e:
+            logger.error("shell", f"COMMAND_NOT_FOUND: {str(e)}")
+            return {"status": "NOT_FOUND", "exit_code": -1, "output": f"Tool not found: {str(e)}", "duration": 0}
+        except (OSError, ValueError) as e:
             logger.error("shell", f"COMMAND_EXCEPTION: {str(e)}")
             return {"status": "EXCEPTION", "exit_code": -1, "output": str(e), "duration": 0}
 
     @staticmethod
-    def stream_execute(cmd: str, on_output: Callable[[str], None], on_complete: Callable[[int], None] = None):
+    def stream_execute(cmd: Union[str, list], on_output: Callable[[str], None], on_complete: Callable[[int], None] = None):
         """
         Asynchronously execute a command and stream output line-by-line.
         Optimized for high-volume logs from tools like nmap or ffuf.
         """
+        args = _build_args(cmd)
+
         def _target():
             try:
-                # Use shlex.split for safer handling if we were using shell=False, 
-                # but for complex pentest pipes, shell=True is retained with caution.
                 process = subprocess.Popen(
-                    cmd,
-                    shell=True,
+                    args,
+                    shell=False,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
