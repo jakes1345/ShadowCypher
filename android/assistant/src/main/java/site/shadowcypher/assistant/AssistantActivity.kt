@@ -246,6 +246,18 @@ class AssistantActivity : AppCompatActivity() {
                 val args = obj.optJSONArray("args") ?: JSONArray()
 
                 val launched = when (intent_type) {
+                    "wake_word_service" -> {
+                        val action = args.optString(0, "start")
+                        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                        if (action == "start") {
+                            prefs.edit().putBoolean("wake_word_enabled", true).apply()
+                            WakeWordService.start(this@AssistantActivity)
+                        } else {
+                            prefs.edit().putBoolean("wake_word_enabled", false).apply()
+                            WakeWordService.stop(this@AssistantActivity)
+                        }
+                        true
+                    }
                     "dial" -> {
                         val name = args.optString(0, "")
                         val i = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$name"))

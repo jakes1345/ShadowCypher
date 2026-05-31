@@ -390,11 +390,18 @@ const ShadowAssistant = (() => {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
+          <!-- Text input fallback -->
+          <div class="sa-text-row" id="sa-text-row">
+            <input id="sa-text-input" class="sa-text-input" type="text" placeholder="Type a message…" autocomplete="off" spellcheck="false"/>
+            <button class="sa-btn sa-send-btn" id="sa-send-btn" onclick="ShadowAssistant._submitText()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
           <div class="sa-chips" id="sa-chips">
-            <button class="sa-chip" onclick="ShadowAssistant._runChip('Scan my network')">Scan network</button>
+            <button class="sa-chip" onclick="ShadowAssistant._runChip('Scan my network')">Scan</button>
             <button class="sa-chip" onclick="ShadowAssistant._runChip('Any active incidents?')">Incidents</button>
-            <button class="sa-chip" onclick="ShadowAssistant._runChip('What devices are on my network?')">Devices</button>
-            <button class="sa-chip" onclick="ShadowAssistant._runChip('Network status summary')">Summary</button>
+            <button class="sa-chip" onclick="ShadowAssistant._runChip('Set a timer for 5 minutes')">Timer</button>
+            <button class="sa-chip" onclick="ShadowAssistant._runChip('Weather in New York')">Weather</button>
           </div>
         </div>
 
@@ -402,7 +409,19 @@ const ShadowAssistant = (() => {
         <div id="sa-settings" style="display:none">
           <div class="sa-handle"></div>
           <div class="sa-settings-title">SHADOW // SETTINGS</div>
-          <div class="sa-field-label">ShadowCypher API Key</div>
+
+          <!-- Hey Shadow toggle -->
+          <div class="sa-field-label">Hey Shadow (Wake Word)</div>
+          <div class="sa-toggle-row">
+            <span class="sa-toggle-desc">Listen for "Hey Shadow" in background</span>
+            <label class="sa-switch">
+              <input type="checkbox" id="sa-wake-toggle" onchange="ShadowAssistant._toggleWakeWord(this.checked)"/>
+              <span class="sa-slider"></span>
+            </label>
+          </div>
+          <div class="sa-field-hint" id="sa-wake-hint">Requires microphone permission. Uses ~1% battery.</div>
+
+          <div class="sa-field-label" style="margin-top:16px">ShadowCypher API Key</div>
           <div class="sa-key-row">
             <input id="sa-key-input" class="sa-key-input" type="password" placeholder="sc_live_..." autocomplete="off" spellcheck="false"/>
             <button class="sa-btn-small" id="sa-key-toggle" onclick="ShadowAssistant._toggleKeyVisibility()">SHOW</button>
@@ -573,6 +592,44 @@ const ShadowAssistant = (() => {
       .sa-field-hint {
         font-size: 0.65rem; color: #444; margin-bottom: 20px; line-height: 1.5;
       }
+      /* Text input row */
+      .sa-text-row {
+        display: flex; gap: 8px; margin-bottom: 12px; padding: 0 4px;
+      }
+      .sa-text-input {
+        flex: 1; background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 24px;
+        padding: 10px 16px; color: #e2e8f0;
+        font-family: -apple-system, system-ui, sans-serif; font-size: 0.9rem;
+        outline: none;
+      }
+      .sa-text-input:focus { border-color: rgba(180,74,255,0.4); }
+      .sa-send-btn {
+        width: 40px; height: 40px; padding: 10px;
+        background: linear-gradient(135deg, #6c1fff, #b44aff);
+        border-radius: 50%; color: white; flex-shrink: 0;
+        align-self: center;
+      }
+      .sa-send-btn svg { width: 100%; height: 100%; }
+      /* Wake word toggle */
+      .sa-toggle-row {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 6px;
+      }
+      .sa-toggle-desc { font-size: 0.75rem; color: #94a3b8; }
+      .sa-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+      .sa-switch input { opacity: 0; width: 0; height: 0; }
+      .sa-slider {
+        position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+        background: #333; border-radius: 24px; transition: 0.2s;
+      }
+      .sa-slider:before {
+        position: absolute; content: '';
+        height: 18px; width: 18px; left: 3px; bottom: 3px;
+        background: white; border-radius: 50%; transition: 0.2s;
+      }
+      input:checked + .sa-slider { background: #6c1fff; }
+      input:checked + .sa-slider:before { transform: translateX(20px); }
       .sa-btn-primary {
         width: 100%; padding: 12px; border-radius: 8px; border: none;
         background: linear-gradient(135deg, #6c1fff, #b44aff);
@@ -601,6 +658,14 @@ const ShadowAssistant = (() => {
     document.body.appendChild(el);
     overlay = el;
 
+    // Enter key submits text input
+    const textInput = document.getElementById('sa-text-input');
+    if (textInput) {
+      textInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); _submitText(); }
+      });
+    }
+
     _syncSettingsView();
   }
 
@@ -609,6 +674,68 @@ const ShadowAssistant = (() => {
     const keyInput = document.getElementById('sa-key-input');
     if (removeBtn) removeBtn.style.display = apiKey ? '' : 'none';
     if (keyInput && apiKey) keyInput.value = apiKey;
+    // Sync wake word toggle
+    const wakeToggle = document.getElementById('sa-wake-toggle');
+    if (wakeToggle) {
+      const enabled = localStorage.getItem('wake_word_enabled') === 'true';
+      wakeToggle.checked = enabled;
+    }
+  }
+
+  async function _toggleWakeWord(enabled) {
+    localStorage.setItem('wake_word_enabled', enabled ? 'true' : 'false');
+    const hint = document.getElementById('sa-wake-hint');
+    if (enabled) {
+      if (hint) hint.textContent = 'Starting "Hey Shadow" listener…';
+      try {
+        if (plugin?.requestMicPermission) {
+          const perm = await plugin.requestMicPermission();
+          if (!perm.granted) {
+            document.getElementById('sa-wake-toggle').checked = false;
+            localStorage.setItem('wake_word_enabled', 'false');
+            if (hint) hint.textContent = 'Microphone permission required.';
+            return;
+          }
+        }
+        // Tell native to start the service via a launchIntent shim
+        if (plugin?.launchIntent) {
+          await plugin.launchIntent({ intent: 'wake_word_service', args: ['start'] });
+        }
+        if (hint) hint.textContent = 'Active — say "Hey Shadow" anytime.';
+      } catch (e) {
+        if (hint) hint.textContent = 'Could not start wake word service.';
+      }
+    } else {
+      if (plugin?.launchIntent) {
+        await plugin.launchIntent({ intent: 'wake_word_service', args: ['stop'] }).catch(() => {});
+      }
+      if (hint) hint.textContent = 'Disabled. Requires microphone permission. Uses ~1% battery.';
+    }
+  }
+
+  async function _submitText() {
+    const input = document.getElementById('sa-text-input');
+    const text = input?.value?.trim();
+    if (!text || state === 'thinking' || state === 'speaking') return;
+    input.value = '';
+    _lastTranscript = text;
+    document.getElementById('sa-transcript').textContent = `"${text}"`;
+    setState('thinking');
+    try {
+      let response = await route(text);
+      if (response === null) response = await queryAI(text);
+      else { addMemory('user', text); addMemory('assistant', response); }
+      if (response) {
+        document.getElementById('sa-response').textContent = response;
+        setState('speaking');
+        if (plugin) await plugin.speak({ text: response, rate: 1.05 });
+        setState('idle');
+        setTimeout(() => _animatedDismiss(), 3000);
+      }
+    } catch (_) {
+      document.getElementById('sa-response').textContent = 'Command failed.';
+      setState('idle');
+    }
   }
 
   // ── State machine ─────────────────────────────────────────────────────────
@@ -1076,7 +1203,9 @@ const ShadowAssistant = (() => {
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  return { init, show, dismiss, startListening, openSettings, _saveApiKey, _clearApiKey, _closeSettings, _toggleKeyVisibility, _runChip };
+  return { init, show, dismiss, startListening, openSettings,
+           _saveApiKey, _clearApiKey, _closeSettings, _toggleKeyVisibility,
+           _runChip, _submitText, _toggleWakeWord };
 })();
 
 if (document.readyState === 'loading') {
