@@ -8,6 +8,18 @@
         android:theme="@style/AssistantTheme"
         android:hardwareAccelerated="true">
 
+        <!-- Settings/onboarding entry point — visible in launcher -->
+        <activity
+            android:name=".SettingsActivity"
+            android:label="Shadow AI"
+            android:theme="@style/AssistantTheme"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".AssistantActivity"
             android:theme="@style/AssistantTheme.Translucent"

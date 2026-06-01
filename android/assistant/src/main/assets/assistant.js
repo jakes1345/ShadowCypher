@@ -1,14 +1,13 @@
 /**
  * Shadow — ShadowCypher Voice Assistant
- * Authenticated, context-aware, action-capable.
- * Replaces Bixby / Siri / Google Assistant.
+ * Local bot. Pattern matching + Guardian network data. No cloud AI.
+ * Replaces Bixby / Siri / Cortana.
  */
 
 const ShadowAssistant = (() => {
   let plugin = null;
   let overlay = null;
-  let state = 'idle'; // idle | listening | thinking | speaking | setup
-  let conversationHistory = [];
+  let state = 'idle'; // idle | listening | thinking | speaking
   let _idleTimer = null;
   let apiKey = null;
   let guardianCtx = null; // { me, summary }
@@ -72,10 +71,6 @@ const ShadowAssistant = (() => {
       pattern: /\bdns\s+(?:lookup|check|resolve)\s+([a-zA-Z0-9\.\-]+)\b|\b(?:resolve|lookup)\s+([a-zA-Z0-9\.\-]+)\b/i,
       action: 'dns_lookup',
     },
-    {
-      pattern: /\b(?:search|google|look up|find|research).{0,10}(?:online|web|internet|for)\b|\bwhat(?:'s| is) (?:the latest|happening|going on)\b|\blatest news\b|\bwho (?:is|was|are)\b|\bwhen (?:is|was|did)\b/i,
-      action: 'web_search',
-    },
   ];
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
@@ -83,7 +78,10 @@ const ShadowAssistant = (() => {
   async function init() {
     if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
 
+    const boot = window.ShadowBoot;
+
     try {
+      // Wait for native bridge (shim injected by Kotlin after page load)
       for (let i = 0; i < 30; i++) {
         plugin = window.Capacitor?.Plugins?.ShadowAssistant;
         if (plugin) break;
@@ -91,19 +89,33 @@ const ShadowAssistant = (() => {
       }
       if (!plugin) {
         console.warn('[ShadowAssistant] Plugin not available');
+        boot?.error('Native bridge unavailable');
         return;
       }
+
+      boot?.setProgress(25);
 
       plugin.addListener('assistInvoked', handleAssistInvoke);
       plugin.addListener('speechResult', handleSpeechResult);
       plugin.addListener('partialResult', handlePartialResult);
       plugin.addListener('speechError', handleSpeechError);
+      plugin.addListener('voskProgress', (d) => {
+        // Fired by Kotlin when Vosk model is downloading
+        if (d.downloading) boot?.modelDownloading();
+        if (d.progress != null) boot?.setProgress(25 + d.progress * 0.5);
+      });
+      plugin.addListener('voskReady', () => {
+        boot?.addLine('> STT MODEL READY', 'ok');
+        boot?.setProgress(85);
+      });
+      plugin.addListener('voskError', (d) => boot?.error(d.message || 'STT unavailable'));
       plugin.addListener('listeningStarted', () => setState('listening'));
       plugin.addListener('speechEnded', () => {
         if (state === 'listening') setState('thinking');
       });
 
       buildOverlay();
+      boot?.setProgress(50);
 
       // Load stored API key
       try {
@@ -111,19 +123,28 @@ const ShadowAssistant = (() => {
         apiKey = result?.key || null;
       } catch (_) {}
 
-      // Pre-load Guardian context + KB + classifier in background
+      // Pre-load KB + classifier in background
       if (apiKey) loadGuardianContext().catch(() => {});
       loadKB().catch(() => {});
-      if (typeof ShadowClassifier !== 'undefined') ShadowClassifier.load().catch(() => {});
-      // Check OTA for updated KB/classifier assets (non-blocking)
+      if (typeof ShadowClassifier !== 'undefined') {
+        ShadowClassifier.load().then(() => {
+          boot?.addLine('> CLASSIFIER LOADED', 'ok');
+          boot?.setProgress(70);
+        }).catch(() => {});
+      }
       checkOtaUpdates().catch(() => {});
+
+      boot?.setProgress(90);
 
       const status = await plugin.checkAssistStatus();
       if (status.wasAssistLaunch) handleAssistInvoke({ source: 'launch' });
 
+      // Boot complete — dismiss loading screen
+      boot?.ready();
       console.log('[ShadowAssistant] Ready. key:', apiKey ? 'set' : 'missing');
     } catch (e) {
       console.warn('[ShadowAssistant] Init failed:', e);
+      boot?.error(e.message || 'Init failed');
     }
   }
 
@@ -143,39 +164,6 @@ const ShadowAssistant = (() => {
     } catch (_) {
       guardianCtx = null;
     }
-  }
-
-  function buildSystemPrompt() {
-    const lines = [
-      'You are SHADOW, the personal voice assistant built into the ShadowCypher security platform.',
-      'Reply in 1-3 short sentences for speech. No markdown, no bullet points, no code blocks.',
-      'Be direct and concise. Use plain language.',
-    ];
-
-    if (guardianCtx?.me) {
-      const { email, effective_plan, in_trial } = guardianCtx.me;
-      lines.push(`\nUser: ${email}, plan: ${effective_plan}${in_trial ? ' (trial)' : ''}.`);
-    }
-
-    if (guardianCtx?.summary) {
-      const { agents = [], devices = [], incidents = [], cve_alerts = [], last_scan_at } = guardianCtx.summary;
-      const activeIncidents = incidents.filter(i => !i.resolved);
-      const onlineAgents = agents.filter(a => a.online);
-
-      lines.push(`\nNetwork: ${devices.length} devices, ${activeIncidents.length} active incidents, ${cve_alerts.length} CVE alerts.`);
-      lines.push(`Agents: ${onlineAgents.length}/${agents.length} online.`);
-      if (last_scan_at) {
-        const ago = Math.round((Date.now() - new Date(last_scan_at).getTime()) / 60000);
-        lines.push(`Last scan: ${ago < 60 ? ago + ' minutes ago' : Math.round(ago / 60) + ' hours ago'}.`);
-      }
-      if (activeIncidents.length > 0) {
-        lines.push(`Most recent incident: ${activeIncidents[0].description} (${activeIncidents[0].severity}).`);
-      }
-    } else if (!apiKey) {
-      lines.push('\nNote: No API key configured — you can only answer general questions. Security-specific commands are unavailable.');
-    }
-
-    return lines.join(' ');
   }
 
   // ── Command dispatch ───────────────────────────────────────────────────────
@@ -328,32 +316,9 @@ const ShadowAssistant = (() => {
         } catch (_) { return 'DNS lookup unavailable.'; }
       }
 
-      case 'web_search':
-        return await _doWebSearch(_lastTranscript || '');
-
       default:
         return null;
     }
-  }
-
-  async function _doWebSearch(query) {
-    if (!apiKey) return 'Set your API key in settings to enable web search.';
-    const headers = { Authorization: `Bearer ${apiKey}` };
-    // Strip search trigger words to get the actual query
-    const cleaned = query
-      .replace(/\b(?:search(?:\s+the\s+web|\s+online|\s+for)?|google|look\s+up|find\s+(?:out|info(?:rmation)?\s+about)?|research)\s*/gi, '')
-      .trim() || query;
-    try {
-      const r = await fetch(`${API_BASE}/v1/shadow/search?q=${encodeURIComponent(cleaned)}&limit=4`, { headers });
-      const d = await r.json();
-      if (!r.ok || !d.results?.length) {
-        return `No results found for "${cleaned}".`;
-      }
-      // Feed results as context into AI for a natural spoken summary
-      const ctx = d.results.map((res, i) => `[${i+1}] ${res.title}: ${res.snippet}`).join('\n');
-      const prompt = `Based on these search results, give a 1-3 sentence spoken summary answering: "${cleaned}"\n\n${ctx}`;
-      return await queryAI(prompt);
-    } catch (_) { return 'Web search unavailable.'; }
   }
 
   // ── Overlay UI ────────────────────────────────────────────────────────────
@@ -398,10 +363,12 @@ const ShadowAssistant = (() => {
             </button>
           </div>
           <div class="sa-chips" id="sa-chips">
-            <button class="sa-chip" onclick="ShadowAssistant._runChip('Scan my network')">Scan</button>
+            <button class="sa-chip" onclick="ShadowAssistant._runChip('Scan my network')">Scan Network</button>
             <button class="sa-chip" onclick="ShadowAssistant._runChip('Any active incidents?')">Incidents</button>
+            <button class="sa-chip" onclick="ShadowAssistant._runChip('What devices are on my network?')">Devices</button>
+            <button class="sa-chip" onclick="ShadowAssistant._runChip('Network summary')">Summary</button>
             <button class="sa-chip" onclick="ShadowAssistant._runChip('Set a timer for 5 minutes')">Timer</button>
-            <button class="sa-chip" onclick="ShadowAssistant._runChip('Weather in New York')">Weather</button>
+            <button class="sa-chip" onclick="ShadowAssistant._runChip('Any CVE alerts?')">CVEs</button>
           </div>
         </div>
 
@@ -447,18 +414,18 @@ const ShadowAssistant = (() => {
       #shadow-assistant-overlay.active { display: flex; }
       .sa-backdrop {
         position: absolute; inset: 0;
-        background: rgba(0,0,0,0.72); backdrop-filter: blur(6px);
+        background: rgba(0,0,0,0.6);
       }
       .sa-panel {
         position: relative; z-index: 1;
-        background: linear-gradient(180deg, #0d0d1a 0%, #050510 100%);
-        border: 1px solid rgba(180,74,255,0.25);
+        background: #0a0a14;
+        border: 1px solid rgba(180,74,255,0.3);
         border-bottom: none;
-        border-radius: 20px 20px 0 0;
-        padding: 0 24px 48px;
+        border-radius: 24px 24px 0 0;
+        padding: 0 24px 52px;
         width: 100%; max-width: 520px;
-        box-shadow: 0 -8px 60px rgba(180,74,255,0.12);
-        animation: sa-slide-up 0.3s cubic-bezier(0.32,0.72,0,1);
+        box-shadow: 0 -12px 60px rgba(0,0,0,0.8), 0 -4px 0 rgba(180,74,255,0.15);
+        animation: sa-slide-up 0.28s cubic-bezier(0.32,0.72,0,1);
       }
       @keyframes sa-slide-up {
         from { transform: translateY(100%); opacity: 0; }
@@ -722,9 +689,7 @@ const ShadowAssistant = (() => {
     document.getElementById('sa-transcript').textContent = `"${text}"`;
     setState('thinking');
     try {
-      let response = await route(text);
-      if (response === null) response = await queryAI(text);
-      else { addMemory('user', text); addMemory('assistant', response); }
+      const response = await route(text);
       if (response) {
         document.getElementById('sa-response').textContent = response;
         setState('speaking');
@@ -769,7 +734,22 @@ const ShadowAssistant = (() => {
     document.getElementById('sa-settings').style.display = 'none';
     setState('idle');
     document.getElementById('sa-transcript').textContent = '';
-    document.getElementById('sa-response').textContent = apiKey ? '' : '← Tap settings to add your API key';
+
+    // Proactive status on open
+    if (!apiKey) {
+      document.getElementById('sa-response').textContent = 'Tap settings to connect your Guardian network.';
+    } else if (guardianCtx?.summary) {
+      const { devices = [], incidents = [] } = guardianCtx.summary;
+      const active = incidents.filter(i => !i.resolved).length;
+      if (active > 0) {
+        document.getElementById('sa-response').textContent = `${active} active incident${active > 1 ? 's' : ''} on your network. ${devices.length} devices tracked.`;
+      } else {
+        document.getElementById('sa-response').textContent = `Network clear. ${devices.length} device${devices.length !== 1 ? 's' : ''} monitored.`;
+      }
+    } else {
+      document.getElementById('sa-response').textContent = '';
+    }
+
     clearTimeout(_idleTimer);
     _idleTimer = setTimeout(() => { if (state === 'idle') dismiss(); }, 60000);
   }
@@ -797,7 +777,6 @@ const ShadowAssistant = (() => {
     if (plugin) plugin.stopListening().catch(() => {});
     if (plugin) plugin.stopSpeaking().catch(() => {});
     state = 'idle';
-    conversationHistory = [];
     if (plugin?.finishActivity) plugin.finishActivity().catch(() => {});
     else if (window.ShadowBridge?.finishActivity) window.ShadowBridge.finishActivity();
   }
@@ -854,7 +833,6 @@ const ShadowAssistant = (() => {
   function _closeSettings() {
     document.getElementById('sa-main').style.display = '';
     document.getElementById('sa-settings').style.display = 'none';
-    document.getElementById('sa-response').textContent = apiKey ? '' : '← Tap settings to add your API key';
   }
 
   function _toggleKeyVisibility() {
@@ -891,26 +869,16 @@ const ShadowAssistant = (() => {
     setState('thinking');
 
     try {
-      // Cascading router: OS → Classifier → KB → LLM
-      let response = await route(transcript);
-      if (response === null) {
-        response = await queryAI(transcript);
-      } else {
-        addMemory('user', transcript);
-        addMemory('assistant', response);
-      }
-
+      const response = await route(transcript);
       if (response) {
         document.getElementById('sa-response').textContent = response;
         setState('speaking');
-        if (plugin) {
-          await plugin.speak({ text: response, rate: 1.05 });
-        }
+        if (plugin) await plugin.speak({ text: response, rate: 1.05 });
         setState('idle');
         setTimeout(() => _animatedDismiss(), 2500);
       }
     } catch (e) {
-      document.getElementById('sa-response').textContent = 'Could not reach Shadow.';
+      document.getElementById('sa-response').textContent = 'Command failed.';
       setState('idle');
       setTimeout(() => _animatedDismiss(), 2500);
     }
@@ -1038,17 +1006,20 @@ const ShadowAssistant = (() => {
     return best.chunk;
   }
 
-  // ── Cascading router ──────────────────────────────────────────────────────
+  // ── Router ────────────────────────────────────────────────────────────────
   // Layer 1: OS intents (call/text/alarm/timer/open/maps)
-  // Layer 2: Classifier → structured API commands
-  // Layer 3: KB search (local knowledge)
-  // Layer 4: LLM fallback (remote, costs quota)
+  // Layer 2: Classifier → Guardian/security commands
+  // Layer 3: KB search (local knowledge base)
+  // Fallback: "didn't understand" — no cloud AI
+
+  const FALLBACKS = [
+    "I didn't catch that. Try: scan my network, check incidents, or set a timer.",
+    "Not sure what you mean. I can check your network, look up CVEs, or set alarms.",
+    "I can handle Guardian commands, timers, alarms, calls, and messages. Try one of those.",
+  ];
+  let _fallbackIdx = 0;
 
   async function route(userText) {
-    const headers = apiKey
-      ? { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` }
-      : { 'Content-Type': 'application/json' };
-
     // Layer 1: OS intents
     const sys = trySystemIntent(userText);
     if (sys && plugin) {
@@ -1058,7 +1029,7 @@ const ShadowAssistant = (() => {
       } catch (_) {}
     }
 
-    // Layer 2: Classifier → dispatch to command handler
+    // Layer 2: Classifier → command dispatch
     let classifierIntent = null;
     if (typeof ShadowClassifier !== 'undefined' && ShadowClassifier.isReady()) {
       const result = ShadowClassifier.classify(userText);
@@ -1066,12 +1037,8 @@ const ShadowAssistant = (() => {
         classifierIntent = result.intent;
       }
     } else {
-      // Regex fallback while classifier is loading
       for (const cmd of COMMANDS) {
-        if (cmd.pattern.test(userText)) {
-          classifierIntent = cmd.action;
-          break;
-        }
+        if (cmd.pattern.test(userText)) { classifierIntent = cmd.action; break; }
       }
     }
 
@@ -1084,71 +1051,12 @@ const ShadowAssistant = (() => {
     await loadKB();
     const chunk = kbSearch(userText);
     if (chunk) {
-      // Return the relevant chunk text, trimmed for speech
       const text = chunk.text.replace(/[#*`\[\]]/g, '').replace(/\n+/g, ' ').trim();
-      const snippet = text.slice(0, 350);
-      return snippet + (text.length > 350 ? '…' : '');
+      return text.slice(0, 350) + (text.length > 350 ? '…' : '');
     }
 
-    // Layer 3.5: Web search — auto-triggered for current-events / factual queries not in KB
-    if (apiKey && _looksLikeWebQuery(userText)) {
-      const webResp = await _doWebSearch(userText).catch(() => null);
-      if (webResp && webResp !== 'Web search unavailable.') return webResp;
-    }
-
-    // Layer 4: LLM
-    return null; // caller falls through to queryAI
-  }
-
-  function _looksLikeWebQuery(text) {
-    return /\b(?:latest|current|today|recent|news|2024|2025|2026|who is|what is|when (?:is|was|did)|how do I|price of|stock|score)\b/i.test(text);
-  }
-
-  // ── Conversational memory ────────────────────────────────────────────────
-  // Last 5 turns for context continuity
-
-  const MAX_MEMORY = 5;
-  function addMemory(role, content) {
-    conversationHistory.push({ role, content });
-    if (conversationHistory.length > MAX_MEMORY * 2) {
-      conversationHistory = conversationHistory.slice(-MAX_MEMORY * 2);
-    }
-  }
-
-  // ── AI query — cloud assistant (Claude Haiku) ─────────────────────────────
-
-  async function queryAI(userText) {
-    addMemory('user', userText);
-
-    if (!apiKey) {
-      return 'Set your ShadowCypher API key in settings to enable AI responses.';
-    }
-
-    try {
-      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
-      // Build payload: send full conversation history for multi-turn context
-      // and inject guardian context into system prompt
-      const payload = {
-        question: userText,
-        history: conversationHistory.slice(-8), // last 4 turns (user+assistant pairs)
-        system: buildSystemPrompt(),
-      };
-      const resp = await fetch(`${API_BASE}/v1/assistant/query`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-      });
-      if (!resp.ok) {
-        if (resp.status === 402) return 'Monthly AI query limit reached. Upgrade to Operator for 5000 queries/month.';
-        throw new Error(`API ${resp.status}`);
-      }
-      const data = await resp.json();
-      const reply = data.answer || 'No response.';
-      addMemory('assistant', reply);
-      return reply;
-    } catch (e) {
-      throw new Error(`Cloud query failed: ${e.message}`);
-    }
+    // Fallback — no LLM, no cloud
+    return FALLBACKS[_fallbackIdx++ % FALLBACKS.length];
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -1185,9 +1093,7 @@ const ShadowAssistant = (() => {
     setState('thinking');
     await loadGuardianContext();
     try {
-      let response = await route(text);
-      if (response === null) response = await queryAI(text);
-      else { addMemory('user', text); addMemory('assistant', response); }
+      const response = await route(text);
       if (response) {
         document.getElementById('sa-response').textContent = response;
         setState('speaking');
