@@ -508,6 +508,106 @@ export async function webSearch(
   }
 }
 
+// ── Wikipedia Summary (public, no auth) ──────────────────────────────────────
+
+export async function wikiSummary(
+  req: Request,
+  _env: Env,
+  cors: HeadersInit
+): Promise<Response> {
+  const url = new URL(req.url);
+  const q = (url.searchParams.get("q") ?? "").trim();
+  if (!q) return json({ error: "q is required" }, { status: 400 }, cors);
+
+  try {
+    // Wikipedia REST API — search for best matching article then get summary
+    const searchResp = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=1&format=json&origin=*`,
+      { headers: { "User-Agent": "ShadowCypher/1.0 (shadowcypher.site)" } }
+    );
+    if (!searchResp.ok) return json({ error: "wiki_search_failed" }, { status: 502 }, cors);
+    const search = await searchResp.json() as { query?: { search?: { title: string }[] } };
+    const title = search.query?.search?.[0]?.title;
+    if (!title) return json({ found: false, query: q }, {}, cors);
+
+    // Get clean extract
+    const summaryResp = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
+      { headers: { "User-Agent": "ShadowCypher/1.0 (shadowcypher.site)" } }
+    );
+    if (!summaryResp.ok) return json({ found: false, query: q }, {}, cors);
+    const data = await summaryResp.json() as {
+      title: string;
+      extract: string;
+      content_urls?: { desktop?: { page?: string } };
+      thumbnail?: { source: string };
+    };
+
+    return json({
+      found: true,
+      title: data.title,
+      extract: data.extract,
+      url: data.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
+      thumbnail: data.thumbnail?.source ?? null,
+    }, {}, cors);
+  } catch (e) {
+    return json({ error: "upstream_error", detail: String(e) }, { status: 502 }, cors);
+  }
+}
+
+// ── DuckDuckGo Instant Answer (public, no auth) ───────────────────────────────
+
+export async function ddgInstant(
+  req: Request,
+  _env: Env,
+  cors: HeadersInit
+): Promise<Response> {
+  const url = new URL(req.url);
+  const q = (url.searchParams.get("q") ?? "").trim();
+  if (!q) return json({ error: "q is required" }, { status: 400 }, cors);
+
+  try {
+    const resp = await fetch(
+      `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1`,
+      { headers: { "User-Agent": "ShadowCypher/1.0" } }
+    );
+    if (!resp.ok) return json({ error: "ddg_failed" }, { status: 502 }, cors);
+    const data = await resp.json() as {
+      Answer?: string;
+      AnswerType?: string;
+      AbstractText?: string;
+      AbstractSource?: string;
+      AbstractURL?: string;
+      Definition?: string;
+      DefinitionSource?: string;
+      RelatedTopics?: { Text?: string; FirstURL?: string }[];
+    };
+
+    // Priority: direct Answer > Abstract > Definition > related topics
+    const answer = data.Answer?.trim() || null;
+    const abstract = data.AbstractText?.trim() || null;
+    const definition = data.Definition?.trim() || null;
+    const related = (data.RelatedTopics ?? [])
+      .filter(t => t.Text && t.FirstURL)
+      .slice(0, 4)
+      .map(t => ({ text: t.Text!, url: t.FirstURL! }));
+
+    return json({
+      query: q,
+      answer,
+      abstract,
+      abstract_source: data.AbstractSource ?? null,
+      abstract_url: data.AbstractURL ?? null,
+      definition,
+      definition_source: data.DefinitionSource ?? null,
+      related,
+      has_result: !!(answer || abstract || definition || related.length),
+    }, {}, cors);
+  } catch (e) {
+    return json({ error: "upstream_error", detail: String(e) }, { status: 502 }, cors);
+  }
+}
+
 function dnsTypeName(type: number): string {
   const map: Record<number, string> = {
     1: "A", 2: "NS", 5: "CNAME", 6: "SOA", 12: "PTR",

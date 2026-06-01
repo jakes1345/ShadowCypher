@@ -1012,15 +1012,64 @@ const ShadowAssistant = (() => {
   // Layer 3: KB search (local knowledge base)
   // Fallback: "didn't understand" — no cloud AI
 
+  // ── Web knowledge (no LLM) ────────────────────────────────────────────────
+
+  // DDG instant answers — direct factual responses, no API key
+  async function instantAnswer(query) {
+    try {
+      const r = await fetch(`${API_BASE}/v1/shadow/instant?q=${encodeURIComponent(query)}`);
+      if (!r.ok) return null;
+      const d = await r.json();
+      if (!d.has_result) return null;
+      // Prefer direct answer > abstract > definition
+      const text = d.answer || d.abstract || d.definition;
+      if (!text) return null;
+      const source = d.abstract_source || d.definition_source || '';
+      const snippet = text.slice(0, 280) + (text.length > 280 ? '…' : '');
+      return source ? `${snippet} — ${source}` : snippet;
+    } catch (_) { return null; }
+  }
+
+  // Wikipedia summary — great for "who is", "what is", "tell me about"
+  async function wikiLookup(query) {
+    try {
+      const r = await fetch(`${API_BASE}/v1/shadow/wiki?q=${encodeURIComponent(query)}`);
+      if (!r.ok) return null;
+      const d = await r.json();
+      if (!d.found || !d.extract) return null;
+      const text = d.extract.slice(0, 300) + (d.extract.length > 300 ? '…' : '');
+      return `${d.title}: ${text}`;
+    } catch (_) { return null; }
+  }
+
+  // Web search — Brave if key set, DDG results fallback, speak top snippet
+  async function webSearch(query) {
+    if (!apiKey) return null;
+    try {
+      const headers = { Authorization: `Bearer ${apiKey}` };
+      const r = await fetch(`${API_BASE}/v1/shadow/search?q=${encodeURIComponent(query)}&limit=3`, { headers });
+      if (!r.ok) return null;
+      const d = await r.json();
+      const top = d.results?.[0];
+      if (!top?.snippet) return null;
+      return top.snippet.slice(0, 280) + (top.snippet.length > 280 ? '…' : '');
+    } catch (_) { return null; }
+  }
+
+  // Detect queries that should hit knowledge/search sources
+  const FACTUAL_RE = /\b(who|what|when|where|how|why|define|meaning of|tell me about|explain|history of|is .{2,40} a|capital of|population of|distance from|convert|how many|how much|how tall|how far|how old)\b/i;
+  const WIKI_RE = /\b(who is|who was|who are|what is|what was|what are|tell me about|explain|history of|biography|definition of|meaning of)\b/i;
+  const SEARCH_RE = /\b(latest|news|recent|current|today|2024|2025|2026|best|review|how to|tutorial|price of|stock|weather in)\b/i;
+
   const FALLBACKS = [
-    "I didn't catch that. Try: scan my network, check incidents, or set a timer.",
-    "Not sure what you mean. I can check your network, look up CVEs, or set alarms.",
-    "I can handle Guardian commands, timers, alarms, calls, and messages. Try one of those.",
+    "I didn't catch that. Try: scan my network, check incidents, set a timer, or ask me who someone is.",
+    "Not sure. I can check Guardian, look up CVEs, set alarms, answer factual questions, or search the web.",
+    "Try saying: scan network, any incidents, who is Einstein, or set a 5 minute timer.",
   ];
   let _fallbackIdx = 0;
 
   async function route(userText) {
-    // Layer 1: OS intents
+    // Layer 1: OS intents (call, text, alarm, timer, open app, maps)
     const sys = trySystemIntent(userText);
     if (sys && plugin) {
       try {
@@ -1029,7 +1078,7 @@ const ShadowAssistant = (() => {
       } catch (_) {}
     }
 
-    // Layer 2: Classifier → command dispatch
+    // Layer 2: Guardian/security commands via classifier or regex
     let classifierIntent = null;
     if (typeof ShadowClassifier !== 'undefined' && ShadowClassifier.isReady()) {
       const result = ShadowClassifier.classify(userText);
@@ -1041,13 +1090,12 @@ const ShadowAssistant = (() => {
         if (cmd.pattern.test(userText)) { classifierIntent = cmd.action; break; }
       }
     }
-
     if (classifierIntent) {
       const resp = await dispatchCommand(classifierIntent);
       if (resp !== null) return resp;
     }
 
-    // Layer 3: KB search
+    // Layer 3: Local KB search
     await loadKB();
     const chunk = kbSearch(userText);
     if (chunk) {
@@ -1055,7 +1103,25 @@ const ShadowAssistant = (() => {
       return text.slice(0, 350) + (text.length > 350 ? '…' : '');
     }
 
-    // Fallback — no LLM, no cloud
+    // Layer 4: DDG instant answer — best for direct factual questions
+    if (FACTUAL_RE.test(userText)) {
+      const instant = await instantAnswer(userText);
+      if (instant) return instant;
+    }
+
+    // Layer 5: Wikipedia — for "who is / what is / tell me about"
+    if (WIKI_RE.test(userText)) {
+      const wiki = await wikiLookup(userText);
+      if (wiki) return wiki;
+    }
+
+    // Layer 6: Web search — for current events, news, how-to, reviews
+    if (SEARCH_RE.test(userText) || FACTUAL_RE.test(userText)) {
+      const web = await webSearch(userText);
+      if (web) return web;
+    }
+
+    // Last resort fallback
     return FALLBACKS[_fallbackIdx++ % FALLBACKS.length];
   }
 

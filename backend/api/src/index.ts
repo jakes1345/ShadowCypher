@@ -70,7 +70,7 @@ import { getMyReferral, claimReferral } from "./referrals";
 import { getThreats, getThreatStats } from "./threats";
 import { runCveMatchingCron } from "./cve_matcher";
 import { getAgentVersion } from "./agent_version";
-import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup, webSearch } from "./shadow_apis";
+import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup, webSearch, wikiSummary, ddgInstant } from "./shadow_apis";
 import { getOtaManifest, updateOtaManifest } from "./ota";
 import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers } from "./chat";
 import { dbSelect } from "./supabase";
@@ -494,6 +494,10 @@ export default {
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         return pollDeviceAuth(req, env, undefined, cors);
       }
+
+      // Public knowledge endpoints — no API key required
+      if (path === "/v1/shadow/wiki" && req.method === "GET") return wikiSummary(req, env, cors);
+      if (path === "/v1/shadow/instant" && req.method === "GET") return ddgInstant(req, env, cors);
 
       // OTA manifest — GET is public, POST is admin-key gated
       if (path === "/v1/shadow/ota" && req.method === "GET") return getOtaManifest(env);
