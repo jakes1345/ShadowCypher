@@ -7,9 +7,11 @@
     </style>
 
     <style name="AssistantTheme.Translucent" parent="AssistantTheme">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowBackground">#06060f</item>
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:statusBarColor">#06060f</item>
+        <item name="android:navigationBarColor">#06060f</item>
     </style>
 </resources>
