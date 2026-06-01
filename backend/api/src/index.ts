@@ -74,6 +74,7 @@ import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLooku
 import { getOtaManifest, updateOtaManifest } from "./ota";
 import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers } from "./chat";
 import { dbSelect } from "./supabase";
+import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 
 export interface Env {
@@ -106,6 +107,8 @@ export interface Env {
   // OTA manifest
   SHADOW_OTA: KVNamespace;
   SHADOW_ADMIN_KEY: string;
+  // Neon (hot standby alongside Supabase)
+  NEON_DATABASE_URL: string;
   // Optional: structured API keys (set via wrangler secret put)
   NVD_API_KEY?: string;
   ABUSEIPDB_KEY?: string;
@@ -178,34 +181,39 @@ function extractKey(req: Request): string | null {
 }
 
 /**
- * Look up a user by their api_key in user_metadata.
- * Uses Supabase Admin REST API (requires service-role key).
- *
- * NOTE: For production scale, replace this with a dedicated `api_keys` table
- * (key hash + user_id, indexed). user_metadata scan is fine up to ~10k users.
+ * Look up a user by api_key — races Supabase and Neon simultaneously.
+ * Returns whichever responds first with a match. If one is down, the other wins.
  */
 async function findUserByKey(env: Env, key: string): Promise<SupabaseUser | null> {
-  let page = 1;
-  const perPage = 1000;
-  while (true) {
-    const url = `${env.SUPABASE_URL}/auth/v1/admin/users?per_page=${perPage}&page=${page}`;
-    const resp = await fetch(url, {
-      headers: {
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-    });
-    if (!resp.ok) {
-      console.error("Supabase admin fetch failed", resp.status, await resp.text());
-      return null;
+  // Supabase lookup (scans user_metadata)
+  async function fromSupabase(): Promise<SupabaseUser | null> {
+    let page = 1;
+    const perPage = 1000;
+    while (true) {
+      const url = `${env.SUPABASE_URL}/auth/v1/admin/users?per_page=${perPage}&page=${page}`;
+      const resp = await fetch(url, {
+        headers: {
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+      });
+      if (!resp.ok) return null;
+      const body = (await resp.json()) as { users: SupabaseUser[] };
+      for (const u of body.users) {
+        if ((u.user_metadata as { api_key?: string })?.api_key === key) return u;
+      }
+      if (body.users.length < perPage) return null;
+      page++;
     }
-    const body = (await resp.json()) as { users: SupabaseUser[] };
-    for (const u of body.users) {
-      if ((u.user_metadata as { api_key?: string })?.api_key === key) return u;
-    }
-    if (body.users.length < perPage) return null;
-    page++;
   }
+
+  // Race both — first non-null result wins
+  const [supabaseResult, neonResult] = await Promise.all([
+    fromSupabase().catch(() => null),
+    neonFindUserByKey(env, key).catch(() => null),
+  ]);
+
+  return supabaseResult ?? neonResult;
 }
 
 async function updateUserMetadata(
@@ -323,12 +331,15 @@ async function handleRotate(req: Request, env: Env, cors: HeadersInit): Promise<
   if (!user) return json({ error: "key_not_found" }, { status: 401 }, cors);
 
   const newKey = generateApiKey();
-  const ok = await updateUserMetadata(env, user.id, {
-    ...user.user_metadata,
-    api_key: newKey,
-    api_key_created_at: new Date().toISOString(),
-    api_key_previous_revoked_at: new Date().toISOString(),
-  });
+  const [ok] = await Promise.all([
+    updateUserMetadata(env, user.id, {
+      ...user.user_metadata,
+      api_key: newKey,
+      api_key_created_at: new Date().toISOString(),
+      api_key_previous_revoked_at: new Date().toISOString(),
+    }),
+    neonRotateKey(env, user.id, key, newKey).catch(() => null),
+  ]);
   if (!ok) return json({ error: "rotate_failed" }, { status: 500 }, cors);
 
   audit(env, user.id, "key_rotated", clientHints(req));
@@ -342,11 +353,14 @@ async function handleRevoke(req: Request, env: Env, cors: HeadersInit): Promise<
   const user = await findUserByKey(env, key);
   if (!user) return json({ error: "key_not_found" }, { status: 401 }, cors);
 
-  const ok = await updateUserMetadata(env, user.id, {
-    ...user.user_metadata,
-    api_key: null,
-    api_key_revoked_at: new Date().toISOString(),
-  });
+  const [ok] = await Promise.all([
+    updateUserMetadata(env, user.id, {
+      ...user.user_metadata,
+      api_key: null,
+      api_key_revoked_at: new Date().toISOString(),
+    }),
+    neonRevokeKey(env, user.id, key).catch(() => null),
+  ]);
   if (!ok) return json({ error: "revoke_failed" }, { status: 500 }, cors);
 
   audit(env, user.id, "key_revoked", clientHints(req));
