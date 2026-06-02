@@ -44,8 +44,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         # 1. Apex HeaderBar
         self.header = Gtk.HeaderBar()
         self.header.set_show_close_button(True)
-        self.header.set_title("CITADEL // SHADOWCYPHER")
-        self.header.set_subtitle("\U0001f575️ APEX_TACTICAL_OFFENSIVE")
+        self.header.set_title("ShadowCypher")
+        self.header.set_subtitle("Sovereign Security Platform")
         self.set_titlebar(self.header)
 
         theme = get_theme("dark")
@@ -252,6 +252,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("⚡", "Combat Deck"),
             ("\U0001f4dc", "ShadowScript"),
             ("---", "SOVEREIGN-OPS"),
+            ("\U0001f5a5", "Terminal"),
             ("\U0001f4ac", "Community Chat"),
             ("\U0001f47b", "Shadow Nodes"),
             ("\U0001f47a", "Ghost Mode"),
@@ -322,6 +323,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "AD Pivot": "ad_page.AdPage",
                 "Combat Deck": "simulation_page.SimulationDeck",
                 "ShadowScript": "shadowscript_page.ShadowScriptPage",
+                "Terminal": "terminal_widget.TerminalPage",
                 "Community Chat": "chat_page.ChatPage",
                 "Shadow Nodes": "ghost_page.ShadowNodesPage",
                 "Ghost Mode": "ghost_mode_page.GhostModePage",

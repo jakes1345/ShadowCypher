@@ -92,29 +92,42 @@ class BasePage(Gtk.Box):
         self._action_buttons.append(btn)
         return btn
 
-    # Legacy Compatibility Layer (Ensures zero 'Nope' moments for old pages)
-    def build_terminal(self): 
-        # Only pack if not already visible to avoid container double-packing
-        if self.terminal.get_parent(): return Gtk.Box() 
+    def build_terminal(self):
+        if self.terminal.get_parent():
+            return Gtk.Box()
         return self.terminal
-        
+
     def build_stop_button(self):
-        btn = Gtk.Button(label="TERMINATE_MISSION")
+        btn = Gtk.Button(label="⬛ STOP")
         btn.get_style_context().add_class("destructive-action")
+        btn.connect("clicked", self._on_stop)
         return btn
 
-    def run_job(self, result):
-        """Mock/Wrapper for legacy job execution."""
-        self.log(f"EXECUTING_TACTICAL_JOB: {result}", "TASK")
+    def _on_stop(self, _btn=None):
+        task_id = getattr(self, "_current_task_id", None)
+        if task_id:
+            from shadowcypher.core.runner import runner
+            runner.stop_task(task_id)
+            self.log("Task terminated by user.", "ERROR")
+        self.header.set_active(False)
 
-    def clear_output(self, text=""): 
-        # Use GLib to clear/set buffer
-        self.log("WINDOW_CLEAR", "SYSTEM")
-        
-    def on_output(self, text): self.log(text)
+    def run_job(self, task_id):
+        """Store task ID so Stop button can kill it."""
+        self._current_task_id = task_id
+        self.header.set_active(True)
+
+    def clear_output(self, text=""):
+        GLib.idle_add(self.terminal.clear)
+        if text:
+            self.log(text)
+
+    def on_output(self, text):
+        self.log(text.rstrip())
+
     def on_complete(self, rc):
         self.header.set_active(False)
-        self.log(f"MISSION_FINALIZED_CODE: {rc}", "SUCCESS")
+        tag = "success" if rc == 0 else "error"
+        self.log(f"Done. Exit code: {rc}", tag)
 
     def run_script(self, script_name: str, args: list, sudo: bool = False):
         """Run a script from shadowcypher/scripts/ as a subprocess, streaming output to terminal."""
