@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../ZenflowProjects/ai-security-suite/.git"
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true
+	}
+}

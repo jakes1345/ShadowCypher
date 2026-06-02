@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -e
+
+# NOPASSWD sudoers for raw socket tools
+cat > /etc/sudoers.d/shadowcypher << 'SUDOERS'
+# ShadowCypher — allow raw socket tools without password
+%sudo ALL=(ALL) NOPASSWD: /usr/bin/nmap, /usr/bin/masscan, /usr/sbin/arp-scan, /usr/bin/tcpdump, /usr/bin/airmon-ng, /usr/sbin/airmon-ng
+SUDOERS
+chmod 440 /etc/sudoers.d/shadowcypher
+
+# Systemd service
+systemctl daemon-reload
+systemctl enable shadowcypher.service 2>/dev/null || true
+
+# Flatpak remote
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+
+echo "ShadowCypher installed. Launch: shadowcypher"
+echo "Auto-update: shadowcypher --update"

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# ShadowCypher launcher
+if [[ "$1" == "--update" ]]; then
+    exec /usr/share/shadowcypher/updater.sh
+fi
+export PYTHONPATH=/usr/share/shadowcypher
+export SUDO_ASKPASS=/usr/share/shadowcypher/native/shadowcypher-askpass
+cd /usr/share/shadowcypher
+exec python3 -m shadowcypher.app "$@"

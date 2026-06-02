@@ -1,0 +1,599 @@
+/* 
+  ShadowCypher APEX — Obsidian Glass Theme V4.0
+  GTK3 Native CSS — Zero-compromise premium aesthetic.
+  Uses @define-color, @keyframes, transitions, shade(), alpha().
+*/
+
+/* ── COLOR SYSTEM ── */
+@define-color bg_void #060a10;
+@define-color bg_obsidian #0a0f1a;
+@define-color bg_surface #111827;
+@define-color bg_elevated #1e293b;
+@define-color bg_glass alpha(#111827, 0.85);
+
+@define-color border_glow alpha(#00f2ff, 0.6);
+@define-color border_subtle rgba(255, 255, 255, 0.08);
+@define-color border_active #8b5cf6;
+@define-color glow_cyan rgba(0, 242, 255, 0.3);
+
+@define-color accent_cyan #00d4ff;
+@define-color accent_violet #8b5cf6;
+@define-color accent_rose #f43f5e;
+@define-color accent_amber #f59e0b;
+@define-color accent_green #10b981;
+
+@define-color text_primary #f1f5f9;
+@define-color text_secondary #94a3b8;
+@define-color text_muted #475569;
+@define-color terminal_green #00ff41;
+
+/* ── KEYFRAMES ── */
+@keyframes pulse-glow {
+  from { border-color: @border_glow; }
+  to   { border-color: alpha(@accent_cyan, 0.1); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── GLOBAL RESET ── */
+* {
+    color: @text_primary;
+    -gtk-icon-shadow: none;
+    text-shadow: none;
+    outline-color: @accent_cyan;
+}
+
+window, 
+.main-window {
+    background-color: @bg_void;
+}
+
+stack, notebook, grid, box, viewport, scrolledwindow, paned {
+    background-color: transparent;
+}
+
+/* ── HEADER BAR ── */
+headerbar {
+    background: linear-gradient(180deg, @bg_obsidian 0%, @bg_void 100%);
+    border-bottom: 2px solid @border_glow;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    padding: 8px 16px;
+    min-height: 48px;
+}
+
+headerbar .title {
+    color: @accent_cyan;
+    font-weight: 800;
+    letter-spacing: 2px;
+    font-size: 15px;
+}
+
+headerbar .subtitle {
+    color: @text_secondary;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+    background-color: @bg_obsidian;
+    border-right: 1px solid @border_subtle;
+}
+
+list {
+    background-color: transparent;
+}
+
+row {
+    background-color: transparent;
+    padding: 12px 16px;
+    margin: 3px 8px;
+    border-radius: 10px;
+    color: @text_secondary;
+    transition: all 200ms ease-in-out;
+}
+
+row:hover {
+    background-color: alpha(@accent_violet, 0.08);
+    color: @text_primary;
+}
+
+row:selected {
+    background: linear-gradient(90deg, alpha(@accent_violet, 0.2) 0%, transparent 100%);
+    color: @accent_cyan;
+    border-left: 4px solid @accent_cyan;
+    box-shadow: inset 10px 0 20px alpha(@accent_cyan, 0.05);
+}
+
+.sidebar-header {
+    color: @text_muted;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    padding: 8px 4px 4px;
+}
+
+/* ── GLASS CARDS ── */
+.card, .glass-panel, .glass-pod, .glass-card {
+    background: linear-gradient(135deg, alpha(@bg_surface, 0.7) 0%, alpha(@bg_void, 0.9) 100%);
+    border: 1px solid @border_subtle;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    -gtk-outline-radius: 18px;
+}
+
+.card:hover {
+    border-color: @accent_cyan;
+    background-color: alpha(@bg_elevated, 0.95);
+    box-shadow: 0 0 25px @glow_cyan;
+}
+
+/* ── DATA PODS ── */
+.metric-value {
+    font-size: 22px;
+    font-weight: 900;
+    color: @accent_cyan;
+}
+
+.dim-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: @text_muted;
+}
+
+/* ── NOTEBOOK TABS ── */
+notebook {
+    background-color: transparent;
+}
+
+notebook header {
+    background-color: @bg_obsidian;
+    border-bottom: 1px solid @border_subtle;
+}
+
+notebook header tab {
+    background-color: transparent;
+    color: @text_secondary;
+    padding: 10px 20px;
+    border-bottom: 2px solid transparent;
+    transition: all 200ms ease-in-out;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+notebook header tab:hover {
+    color: @text_primary;
+    background-color: alpha(@accent_violet, 0.05);
+}
+
+notebook header tab:checked {
+    color: @accent_cyan;
+    border-bottom-color: @accent_cyan;
+    background-color: alpha(@accent_cyan, 0.05);
+}
+
+notebook stack {
+    background-color: transparent;
+}
+
+/* ── ACTION BAR / FOOTER ── */
+actionbar {
+    background-color: @bg_obsidian;
+    border-top: 1px solid @border_subtle;
+    padding: 6px 20px;
+}
+
+/* ── ENTRIES ── */
+entry {
+    background-color: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: @text_primary;
+    caret-color: @accent_cyan;
+    transition: all 200ms ease-in-out;
+    min-height: 20px;
+}
+
+entry:focus {
+    border-color: @accent_cyan;
+    background-color: @bg_elevated;
+}
+
+entry selection {
+    background-color: alpha(@accent_cyan, 0.3);
+}
+
+/* ── BUTTONS ── */
+button {
+    background-color: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 10px;
+    padding: 8px 18px;
+    color: @text_primary;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    transition: all 200ms ease-in-out;
+    min-height: 20px;
+}
+
+/* --- CITADEL PULSE HUD --- */
+.citadel-pulse {
+    background: rgba(10, 10, 15, 0.95);
+    border-left: 1px solid rgba(0, 255, 157, 0.2);
+    padding: 20px;
+    margin-left: 5px;
+}
+
+.citadel-pulse label {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    color: #00ff9d;
+    text-shadow: 0 0 5px rgba(0, 255, 157, 0.5);
+    letter-spacing: 1px;
+}
+
+.nav-link {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 2px 8px;
+}
+
+.nav-link:hover {
+    background: rgba(0, 255, 157, 0.1);
+    box-shadow: inset 0 0 10px rgba(0, 255, 157, 0.05);
+}
+
+.nav-link.active {
+    background: rgba(0, 255, 157, 0.15);
+    border-left: 3px solid #00ff9d;
+    color: #fff;
+}
+
+button:hover {
+    background-color: @bg_elevated;
+    border-color: @border_glow;
+    color: @accent_cyan;
+}
+
+button:active {
+    background-color: alpha(@accent_cyan, 0.15);
+}
+
+button.suggested-action {
+    background-color: alpha(@accent_cyan, 0.15);
+    border-color: @accent_cyan;
+    color: @accent_cyan;
+}
+
+button.suggested-action:hover {
+    background-color: alpha(@accent_cyan, 0.25);
+}
+
+button.destructive-action, button.danger-btn {
+    background-color: alpha(@accent_rose, 0.12);
+    border-color: alpha(@accent_rose, 0.5);
+    color: @accent_rose;
+}
+
+button.destructive-action:hover, button.danger-btn:hover {
+    background-color: alpha(@accent_rose, 0.2);
+}
+
+/* ── COMBO BOX ── */
+combobox, comboboxtext {
+    background-color: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 8px;
+    color: @text_primary;
+    padding: 4px 8px;
+    min-height: 20px;
+}
+
+combobox button, comboboxtext button {
+    background-color: transparent;
+    border: none;
+    padding: 4px 8px;
+}
+
+/* ── CHECK BUTTONS ── */
+checkbutton {
+    color: @text_secondary;
+}
+
+checkbutton check {
+    background-color: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 4px;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+checkbutton check:checked {
+    background-color: @accent_cyan;
+    border-color: @accent_cyan;
+    color: @bg_void;
+}
+
+/* ── SPIN BUTTON ── */
+spinbutton {
+    background-color: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 8px;
+    color: @text_primary;
+}
+
+spinbutton button {
+    background-color: transparent;
+    border: none;
+    color: @text_secondary;
+    min-width: 24px;
+}
+
+/* ── SCROLLBAR ── */
+scrollbar {
+    background-color: transparent;
+}
+
+scrollbar slider {
+    background-color: alpha(@text_muted, 0.3);
+    border-radius: 10px;
+    min-width: 6px;
+    min-height: 6px;
+}
+
+scrollbar slider:hover {
+    background-color: alpha(@accent_cyan, 0.4);
+}
+
+/* ── SEPARATORS ── */
+separator {
+    background-color: @border_subtle;
+    min-height: 1px;
+    min-width: 1px;
+}
+
+/* ── TERMINAL ── */
+.terminal-view, textview {
+    background-color: @bg_void;
+    border: 1px solid @border_subtle;
+    border-radius: 12px;
+    color: @terminal_green;
+    padding: 16px;
+    font-family: "JetBrains Mono", "Fira Code", "Source Code Pro", monospace;
+    font-size: 12px;
+}
+
+textview text {
+    background-color: transparent;
+    color: @terminal_green;
+}
+
+/* ── SPINNER ── */
+spinner {
+    color: @accent_cyan;
+}
+
+/* ── LABELS ── */
+.app-title {
+    color: @accent_cyan;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 3px;
+}
+
+.cyan-text {
+    color: @accent_cyan;
+    font-size: 18px;
+}
+
+/* ── TOOLTIP ── */
+tooltip {
+    background-color: @bg_elevated;
+    border: 1px solid @border_glow;
+    border-radius: 8px;
+    color: @text_primary;
+    padding: 8px 12px;
+}
+
+/* ── FILE CHOOSER ── */
+filechooser {
+    background-color: @bg_obsidian;
+}
+
+/* ── PULSE ANIMATION CLASS ── */
+.pulse-active {
+    animation: pulse-glow 1.5s ease-in-out infinite alternate;
+}
+
+/* ── FLOW BOX (Arsenal Grid) ── */
+flowboxchild {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    outline: none;
+}
+
+flowboxchild:selected {
+    background-color: transparent;
+    outline: none;
+}
+
+/* ── REVEALER ── */
+revealer {
+    background-color: transparent;
+}
+
+/* ── PROGRESS BAR ── */
+progressbar trough {
+    background-color: @bg_surface;
+    border-radius: 6px;
+    min-height: 6px;
+}
+
+progressbar progress {
+    background-color: @accent_cyan;
+    border-radius: 6px;
+    min-height: 6px;
+}
+
+/* ── MENUS & CONTEXT MENUS (CRITICAL FIX) ── */
+menu, .menu, context-menu {
+    background-color: @bg_elevated;
+    border: 1px solid @border_glow;
+    border-radius: 12px;
+    padding: 6px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+
+menuitem, .menuitem {
+    background-color: transparent;
+    padding: 8px 16px;
+    border-radius: 8px;
+    color: @text_primary;
+}
+
+menuitem:hover, .menuitem:hover {
+    background-color: alpha(@accent_cyan, 0.15);
+    color: @accent_cyan;
+}
+
+menu separator {
+    background-color: @border_subtle;
+    margin: 6px 0;
+}
+
+/* ── POPOVERS ── */
+popover {
+    background-color: @bg_elevated;
+    border: 1px solid @border_glow;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+popover list {
+    background-color: transparent;
+}
+
+/* ── IRC SPECIFIC (HIGH DENSITY) ── */
+list.user-list row.irc-user-row, 
+row.irc-user-row {
+    padding: 0px 4px;
+    margin: 0;
+    border-radius: 0;
+    min-height: 18px;
+    border: none;
+}
+
+.irc-user-nick {
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.irc-sentinel-nick {
+    color: @accent_amber;
+    font-weight: 800;
+    text-shadow: 0 0 3px rgba(251, 191, 36, 0.4);
+}
+
+@keyframes typing-pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1.0; color: @accent_cyan; }
+    100% { opacity: 0.4; }
+}
+
+.typing-avatar {
+    animation: typing-pulse 1s infinite ease-in-out;
+    font-weight: 900;
+}
+
+/* ── TIER BADGES ── */
+.tier-badge {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    color: #8b5cf6;
+    background-color: alpha(#8b5cf6, 0.12);
+    border: 1px solid alpha(#8b5cf6, 0.35);
+    border-radius: 4px;
+    padding: 1px 5px;
+}
+
+/* ── SOVEREIGN POWERS (XAT-STYLE) ── */
+.power-gold {
+    color: #fbbf24;
+    font-weight: 900;
+}
+
+.power-hacker {
+    color: @terminal_green;
+    font-family: monospace;
+}
+
+.power-mod {
+    color: #8b5cf6;
+}
+
+.sovereign-msg {
+    border-left: 3px solid @accent_cyan;
+    padding-left: 10px;
+}
+
+.sovereign-avatar {
+    border-radius: 4px;
+    border: 1px solid @border_subtle;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+/* ── DISCORD-STYLE SIDEBAR ── */
+.channel-sidebar {
+    background: alpha(@bg_darker, 0.8);
+    border-right: 1px solid @border_subtle;
+}
+
+.channel-row {
+    padding: 6px 10px;
+    margin: 2px 5px;
+    border-radius: 4px;
+    color: @text_muted;
+}
+
+.channel-row:hover {
+    background: alpha(@accent_cyan, 0.1);
+    color: @text_primary;
+}
+
+.channel-active {
+    background: alpha(@accent_cyan, 0.2);
+    color: @accent_cyan;
+    font-weight: 800;
+}
+
+/* ── RICH EMBEDS ── */
+.sov-embed {
+    background: alpha(@bg_panel, 0.6);
+    border-left: 4px solid @accent_cyan;
+    border-radius: 4px;
+    padding: 12px;
+    margin: 8px 0;
+}
+
+.xp-badge {
+    font-size: 8px;
+    color: #94a3b8;
+    background: rgba(148, 163, 184, 0.1);
+    padding: 1px 3px;
+    border-radius: 3px;
+}

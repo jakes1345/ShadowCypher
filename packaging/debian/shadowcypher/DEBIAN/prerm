@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -e
+systemctl stop shadowcypher.service 2>/dev/null || true
+systemctl disable shadowcypher.service 2>/dev/null || true

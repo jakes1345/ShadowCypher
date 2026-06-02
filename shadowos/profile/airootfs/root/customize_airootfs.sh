@@ -19,6 +19,8 @@ systemctl enable systemd-timesyncd.service
 systemctl enable bluetooth.service
 systemctl enable shadowos-mac-randomize.service
 systemctl enable shadowos-firstboot.service
+systemctl --global enable shadowos-welcome.service 2>/dev/null || true
+systemctl enable shadowos-live-login-fix.service
 systemctl enable sshd.service
 mkdir -p /etc/ssh/sshd_config.d
 cat > /etc/ssh/sshd_config.d/99-shadowos-hardening.conf <<'SSHCONF'
@@ -95,8 +97,11 @@ fi
 useradd -m -G wheel,audio,video,storage,network -s /usr/bin/zsh shadow || true
 echo "shadow:shadow" | chpasswd
 echo "root:shadow"   | chpasswd
-# Force password expiry — user MUST change passwords on first login
-chage -d 0 shadow 2>/dev/null || true
+# Live demo user: SDDM has no "change expired password" UI — never force expiry here.
+# Installed systems set their own password via shadowos-install / archinstall.
+chage -M 99999 -E -1 -I -1 shadow 2>/dev/null || true
+chage -d "$(date +%F)" shadow 2>/dev/null || true
+# Root may still be changed at first TTY login on installed media.
 chage -d 0 root 2>/dev/null || true
 echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/wheel
 
@@ -122,12 +127,25 @@ chmod +x /usr/local/bin/shadowos-diag 2>/dev/null || true
 chmod +x /usr/local/bin/shadow-help-me 2>/dev/null || true
 chmod +x /usr/local/bin/shadow-help-me-stop 2>/dev/null || true
 chmod +x /usr/local/bin/shadow-update-count 2>/dev/null || true
+chmod +x /usr/local/bin/shadow-mode-bar 2>/dev/null || true
+chmod +x /usr/local/bin/shadowos-theme-apply 2>/dev/null || true
+chmod +x /usr/local/bin/shadow-play 2>/dev/null || true
+chmod +x /usr/local/bin/shadow-settings 2>/dev/null || true
+chmod +x /usr/local/bin/shadowos-live-login-fix.sh 2>/dev/null || true
+chmod +x /usr/local/bin/shadowos-session-start 2>/dev/null || true
 chmod +x /opt/shadowcypher/launch.sh 2>/dev/null || true
-find /etc/shadowos/modes -name "apply.sh" -exec chmod +x {} \; 2>/dev/null || true
+find /etc/shadowos/modes -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+
+# Ensure image boots with open networking (not stale nft lockdown)
+/etc/shadowos/modes/normal/apply.sh 2>/dev/null || true
 
 # Initial mode = normal
 mkdir -p /var/lib/shadowos
 echo "normal" > /var/lib/shadowos/current-mode
+
+# Live ISO marker (SDDM demo banner reads lastUser=shadow; this is for scripts)
+mkdir -p /etc/shadowos
+date -Iseconds > /etc/shadowos/live-iso
 
 # Strip Arch branding
 sed -i 's/Arch Linux/ShadowOS/g' /etc/issue || true

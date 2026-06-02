@@ -1,0 +1,13 @@
+[Unit]
+Description=ShadowOS First-Boot Welcome Wizard
+After=graphical-session.target
+ConditionPathExists=!/var/lib/shadowos/welcome.stamp
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/shadowos-welcome
+Environment=DISPLAY=:0
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,47 @@
+app-id: site.shadowcypher.ShadowCypher
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+command: shadowcypher
+
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=all
+  - --filesystem=home
+  - --filesystem=/etc/shadowcypher:create
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.secrets
+  - --system-talk-name=org.freedesktop.NetworkManager
+
+modules:
+  - name: python3-psutil
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app psutil
+    sources:
+      - type: pypi
+        name: psutil
+
+  - name: python3-websockets
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app websockets
+    sources:
+      - type: pypi
+        name: websockets
+
+  - name: shadowcypher
+    buildsystem: simple
+    build-commands:
+      - cp -r shadowcypher /app/lib/python3/site-packages/shadowcypher
+      - cp -r native /app/share/shadowcypher/native
+      - install -Dm755 packaging/flatpak/shadowcypher-wrapper.sh /app/bin/shadowcypher
+      - install -Dm644 native/shadowcypher.desktop /app/share/applications/site.shadowcypher.ShadowCypher.desktop
+      - install -Dm644 native/icons/shadowcypher-256.png /app/share/icons/hicolor/256x256/apps/site.shadowcypher.ShadowCypher.png
+    sources:
+      - type: dir
+        path: ../..

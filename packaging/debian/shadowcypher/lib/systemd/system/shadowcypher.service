@@ -1,0 +1,17 @@
+[Unit]
+Description=ShadowCypher Sovereign Security Platform
+After=graphical-session.target network.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/shadowcypher
+Restart=on-failure
+RestartSec=5
+Environment=DISPLAY=:0
+Environment=SUDO_ASKPASS=/usr/share/shadowcypher/native/shadowcypher-askpass
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical-session.target

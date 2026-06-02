@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=ShadowCypher
+Comment=Sovereign Security Platform
+Exec=shadowcypher
+Icon=shadowcypher
+Terminal=false
+Type=Application
+Categories=Network;Security;System;
+Keywords=security;network;hacking;pentest;osint;forensics;
+StartupNotify=true
+StartupWMClass=ShadowCypher

