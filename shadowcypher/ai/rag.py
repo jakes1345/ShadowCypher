@@ -179,12 +179,13 @@ def build_knowledge_base(force: bool = False):
     # ── 3. GTFOBins ──────────────────────────────────────────────────────────
     try:
         import urllib.request
-        gtfo_url = "https://raw.githubusercontent.com/GTFOBins/GTFOBins.github.io/master/_data/gtfobins.json"
-        gtfo_file = _SOURCES_DIR / "gtfobins.json"
+        gtfo_url = "https://raw.githubusercontent.com/GTFOBins/GTFOBins.github.io/master/_data/gtfobins.yaml"
+        gtfo_file = _SOURCES_DIR / "gtfobins.yaml"
         if not gtfo_file.exists():
             urllib.request.urlretrieve(gtfo_url, gtfo_file)
+        import yaml
         with open(gtfo_file) as f:
-            gtfo = json.load(f)
+            gtfo = yaml.safe_load(f)
         gtfo_total = 0
         for binary, data in gtfo.items():
             parts = [f"GTFOBins: {binary}"]

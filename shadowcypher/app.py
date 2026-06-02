@@ -403,11 +403,21 @@ class ShadowCypherApp(Gtk.Application):
             show_welcome(parent=None)
         self._window = ShadowCypherWindow(self)
 
-        # Background update check — shows infobar if update available
+        # Background update check
         from shadowcypher.core.updater import run_background_check
         def _on_update(info):
             GLib.idle_add(self._window._show_update_banner, info)
         run_background_check(on_update_available=_on_update)
+
+        # RAG knowledge base — build in background if not already done
+        from shadowcypher.ai.rag import build_in_background
+        build_in_background()
+
+        # Default to shadow-gemma4 if available
+        from shadowcypher.ai.providers import provider_registry
+        models = provider_registry.active.list_models() if provider_registry.active else []
+        if "shadow-gemma4:latest" in models:
+            provider_registry.switch("ollama", model="shadow-gemma4:latest")
 
 def main():
     try:
