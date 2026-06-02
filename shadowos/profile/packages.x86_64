@@ -329,17 +329,17 @@ cryptsetup
 # === Gaming — additions ===
 xpadneo-dkms
 corectrl
-goverlay
-mangohud
-lib32-mangohud
-gamescope
+# (dedup) goverlay
+# (dedup) mangohud
+# (dedup) lib32-mangohud
+# (dedup) gamescope
 vulkan-tools
 lib32-vulkan-icd-loader
-vkd3d
+# (dedup) vkd3d
 lib32-vkd3d
 dxvk-mingw
-gamemode
-lib32-gamemode
+# (dedup) gamemode
+# (dedup) lib32-gamemode
 auto-cpufreq
 cpupower
 
@@ -353,8 +353,8 @@ grub-btrfs
 
 # === Security hardening additions ===
 usbguard
-apparmor
-firejail
+# (dedup) apparmor
+# (dedup) firejail
 bubblewrap
 audit
 mat2
@@ -367,4 +367,6 @@ cups-filters
 system-config-printer
 
 # === Privacy / comms ===
-signal-desktop
+# (dedup) signal-desktop
+
+# === Security daemons (referenced in customize_airootfs.sh) ===

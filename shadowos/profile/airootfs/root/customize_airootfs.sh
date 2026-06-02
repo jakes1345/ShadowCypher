@@ -206,7 +206,8 @@ mkinitcpio -P || true
 
 # === Gaming services ===
 systemctl enable gamemoded.service 2>/dev/null || true
-systemctl enable auto-cpufreq.service 2>/dev/null || true
+# auto-cpufreq is AUR; use cpupower instead
+    systemctl enable cpupower.service 2>/dev/null || true
 
 # === Security hardening services ===
 systemctl enable usbguard.service 2>/dev/null || true
