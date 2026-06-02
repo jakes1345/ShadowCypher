@@ -12,10 +12,25 @@
 <body style="background:var(--bg-base);color:#ddd;font-family:var(--font-main);max-width:800px;margin:0 auto;padding:60px 24px;line-height:1.7;">
     <a href="/" style="color:var(--accent-primary);font-family:var(--font-mono);font-size:0.8rem;text-decoration:none;letter-spacing:2px;">← SHADOWCYPHER</a>
     <h1 style="font-size:2.5rem;margin:30px 0 10px;color:#fff;">Privacy Policy</h1>
-    <p style="color:var(--text-secondary);font-family:var(--font-mono);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">Last updated: April 27, 2026</p>
+    <p style="color:var(--text-secondary);font-family:var(--font-mono);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">Last updated: June 1, 2026</p>
 
     <h2 style="color:var(--accent-primary);margin-top:50px;font-size:1.4rem;">Summary</h2>
     <p>ShadowCypher is a security platform you use to monitor <em>your own</em> networks and devices. We treat your data the same way we'd want our data treated: collect only what's necessary, store it as little as we can, never sell it, never share it with third parties for marketing, and let you delete it whenever you want.</p>
+
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Mobile apps (Guardian &amp; Shadow AI)</h2>
+    <p>This section applies specifically to the <strong>Guardian</strong> and <strong>Shadow AI</strong> Android apps.</p>
+    <ul>
+        <li><strong>API key:</strong> stored locally on your device only (Android SharedPreferences, encrypted). Never transmitted to us except as a bearer token to authenticate API requests you initiate.</li>
+        <li><strong>Voice / microphone:</strong> Shadow AI processes voice entirely on-device using an offline speech model (Vosk). No audio is ever recorded, transmitted, or stored — not by us, not by any third party. The microphone is only active when you are actively speaking to the assistant.</li>
+        <li><strong>Network data:</strong> Guardian displays your scan results from the Guardian agent. That data flows through the ShadowCypher API (Cloudflare Workers → your account) with the same protections described below.</li>
+        <li><strong>No advertising ID, no device fingerprint, no crash reporting SDK.</strong> Neither app includes any third-party analytics, attribution, or advertising library.</li>
+        <li><strong>Permissions used:</strong>
+            <ul>
+                <li><em>Guardian:</em> INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED, VIBRATE</li>
+                <li><em>Shadow AI:</em> INTERNET, RECORD_AUDIO (offline, on-device only), POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED</li>
+            </ul>
+        </li>
+    </ul>
 
     <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">What we collect</h2>
     <ul>
