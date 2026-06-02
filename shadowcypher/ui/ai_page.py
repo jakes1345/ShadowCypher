@@ -162,9 +162,10 @@ class AIPage(BasePage):
 
         opts_row.pack_start(Gtk.Label(label="ROLE:"), False, False, 0)
         self.role_combo = Gtk.ComboBoxText()
-        for r in ["shadowai", "commander", "adversary", "blue_team", "devops"]:
-            self.role_combo.append_text(r)
-        self.role_combo.set_active(0)
+        from shadowcypher.ai.prompts import get_team_names, get_team_display_name
+        for r in get_team_names():
+            self.role_combo.append(r, get_team_display_name(r))
+        self.role_combo.set_active_id("shadowai")
         opts_row.pack_start(self.role_combo, False, False, 0)
 
         # 6. QUICK MODEL SWITCHER (Enterprise HUD)
@@ -391,7 +392,7 @@ class AIPage(BasePage):
         if not msg and not self.attachments:
             return
 
-        role = self.role_combo.get_active_text() or "commander"
+        role = self.role_combo.get_active_id() or "shadowai"
         intensity = "MAX" if self.intensity_toggle.get_active() else None
 
         # Display user message
