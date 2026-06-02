@@ -79,6 +79,12 @@ apply_mode() {
     # Refresh Waybar accent
     pkill -SIGUSR2 waybar 2>/dev/null || true
 
+    # Switch AI model for this mode
+    if [[ -f /etc/shadowcypher/ai.json ]] && command -v jq >/dev/null 2>&1; then
+        MODEL=$(jq -r ".models["$mode"] // .default_model" /etc/shadowcypher/ai.json 2>/dev/null)
+        [[ -n "$MODEL" ]] && echo "$mode → AI model: $MODEL"
+    fi
+
     echo -e "${GREEN}✓${RESET} mode is now $mode"
 }
 

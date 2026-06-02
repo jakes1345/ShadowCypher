@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# ShadowOS AI Setup — pulls and registers local models via Ollama
+# Called by shadowos-firstboot after network is confirmed up.
+set -u
+
+LOG=/var/log/shadowos-ai-setup.log
+STAMP=/var/lib/shadowos/ai-setup.stamp
+MODELS_DIR=/opt/shadowcypher/shadowai/models
+
+exec >> "$LOG" 2>&1
+
+[[ -f "$STAMP" ]] && exit 0
+
+echo "═══ ShadowOS AI Setup — $(date -Iseconds) ═══"
+
+# Start Ollama daemon if not running
+if ! systemctl is-active --quiet ollama 2>/dev/null; then
+    systemctl start ollama || true
+    sleep 3
+fi
+
+# Wait for Ollama to be ready
+for i in $(seq 1 20); do
+    curl -sf http://localhost:11434/api/tags >/dev/null 2>&1 && break
+    sleep 2
+done
+
+if ! curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
+    echo "[!] Ollama not responding — skipping AI setup"
+    exit 1
+fi
+
+echo "[*] Pulling DeepSeek-R1:8B (security/reasoning model)..."
+ollama pull deepseek-r1:8b && echo "    ✓ deepseek-r1:8b" || echo "    ✗ failed"
+
+echo "[*] Pulling Qwen2.5-Coder:7B (dev/coding model)..."
+ollama pull qwen2.5-coder:7b && echo "    ✓ qwen2.5-coder:7b" || echo "    ✗ failed"
+
+echo "[*] Pulling Mistral:7B (ghost/privacy model)..."
+ollama pull mistral:7b && echo "    ✓ mistral:7b" || echo "    ✗ failed"
+
+# Register custom Shadow modelfiles
+if [[ -d "$MODELS_DIR" ]]; then
+    echo "[*] Creating Shadow personas..."
+    for mf in "$MODELS_DIR"/*.modelfile; do
+        name="shadow-$(basename "$mf" .modelfile | sed 's/shadow-//')"
+        ollama create "$name" -f "$mf" && echo "    ✓ $name" || echo "    ✗ $name failed"
+    done
+fi
+
+# Set default model based on available VRAM
+VRAM_MB=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 || echo 0)
+if (( VRAM_MB >= 12000 )); then
+    DEFAULT_MODEL="shadow-security"
+elif (( VRAM_MB >= 6000 )); then
+    DEFAULT_MODEL="shadow-security"
+else
+    DEFAULT_MODEL="shadow-ghost"   # mistral:7b — smallest, fastest
+fi
+
+mkdir -p /etc/shadowcypher
+cat > /etc/shadowcypher/ai.json << JSON
+{
+  "default_model": "$DEFAULT_MODEL",
+  "models": {
+    "normal":     "shadow-security",
+    "dev":        "shadow-dev",
+    "pentest":    "shadow-security",
+    "privacy":    "shadow-ghost",
+    "ghost":      "shadow-ghost",
+    "gaming":     "shadow-ghost",
+    "undercover": "shadow-ghost"
+  },
+  "ollama_url": "http://localhost:11434",
+  "vram_mb": $VRAM_MB
+}
+JSON
+echo "[✓] AI config written → /etc/shadowcypher/ai.json"
+echo "[✓] Default model: $DEFAULT_MODEL"
+
+date -Iseconds > "$STAMP"
+echo "═══ AI setup complete ═══"
