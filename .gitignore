@@ -147,8 +147,12 @@ backend/api/.wrangler/
 # Capacitor
 node_modules/
 www/
-android/
 ios/
-*.keystore
-android/shadowcypher_release.keystore
+
+# Android — ignore secrets and build output only
 android/local.properties
+android/*.keystore
+android/shadowcypher_release.keystore
+android/.gradle/
+android/app/build/
+android/assistant/build/
