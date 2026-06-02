@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# ShadowCypher sovereign elevation gate
+
+MSG="${1:-Elevated privileges required to continue.}"
+TOOL=$(echo "$MSG" | grep -oP '(?<=running )\S+' || echo "system tool")
+
+zenity \
+  --password \
+  --title="ShadowCypher — Elevation Gate" \
+  --text="<b><span color='#00d4ff' font='JetBrains Mono 11'>⬡  SOVEREIGN ACCESS GATE</span></b>\n\n<span color='#94a3b8'>$MSG</span>\n\n<span color='#475569' font='JetBrains Mono 9'>Root access is required for raw socket operations.\nOnly nmap, tcpdump, and masscan use this gate.\nYour password is never stored by ShadowCypher.</span>" \
+  --ok-label="Authorize" \
+  --cancel-label="Abort" \
+  2>/dev/null

@@ -93,9 +93,12 @@ class Runner:
             # 3. Platform-Aware Elevation
             if not is_shell and isinstance(args, list) and args and args[0] == "sudo":
                 if self.platform.IS_LINUX:
-                    # sudo -n: non-interactive, fails loudly if not in sudoers instead of
-                    # popping a pkexec GUI dialog that breaks terminal output streaming
-                    args = ["sudo", "-n"] + args[1:]
+                    # -A: use SUDO_ASKPASS (our branded dialog) if password needed
+                    # -n first: if already in sudoers NOPASSWD, skip dialog entirely
+                    if os.environ.get("SUDO_ASKPASS"):
+                        args = ["sudo", "-A"] + args[1:]
+                    else:
+                        args = ["sudo", "-n"] + args[1:]
                 elif self.platform.IS_WINDOWS and len(args) > 1:
                     # Windows: wrap the target in a Start-Process RunAs invocation.
                     exe = args[1]

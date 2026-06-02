@@ -518,6 +518,19 @@ row.irc-user-row {
     font-weight: 900;
 }
 
+/* ── TIER BADGES ── */
+.tier-badge {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    color: #8b5cf6;
+    background-color: alpha(#8b5cf6, 0.12);
+    border: 1px solid alpha(#8b5cf6, 0.35);
+    border-radius: 4px;
+    padding: 1px 5px;
+}
+
 /* ── SOVEREIGN POWERS (XAT-STYLE) ── */
 .power-gold {
     color: #fbbf24;
