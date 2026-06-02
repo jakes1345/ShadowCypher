@@ -4,6 +4,13 @@
 # Internal AI planning artifacts — not for public repo
 docs/superpowers/
 
+# Multi-agent coordination (local locks/handoffs — not for git)
+.agents/state.yaml
+.agents/state.lock
+.agents/tasks.yaml
+.agents/hub.pid
+.agents/hub.log
+
 # Local Tactical Data
 logs/
 *.log
@@ -143,3 +150,5 @@ www/
 android/
 ios/
 *.keystore
+android/shadowcypher_release.keystore
+android/local.properties

@@ -1,4 +1,4 @@
-name: Build Android APKs
+name: Build Android APKs + AABs
 
 on:
   push:
@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Release APK
+    name: Build Release
     runs-on: ubuntu-latest
 
     steps:
@@ -27,47 +27,60 @@ jobs:
       - uses: gradle/actions/setup-gradle@v3
 
       - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > android/shadowcypher.keystore
+        run: echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > android/shadowcypher_release.keystore
 
-      - name: Build release APKs (Shadow assistant + Guardian)
+      - name: Build release APKs + AABs
         working-directory: android
-        run: ./gradlew :assistant:assembleRelease :app:assembleRelease --no-daemon -q
+        run: |
+          ./gradlew :assistant:assembleRelease :app:assembleRelease \
+                    :assistant:bundleRelease :app:bundleRelease \
+                    --no-daemon -q
         env:
           KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
           KEY_PASS: ${{ secrets.KEY_PASS }}
           GRADLE_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=512m"
 
-      - name: Rename APKs
+      - name: Rename artifacts
         run: |
-          SHA_VER=$(grep 'versionName' android/assistant/build.gradle | grep -oP '"[^"]+"' | tr -d '"')
+          AI_VER=$(grep 'versionName' android/assistant/build.gradle | grep -oP '"[^"]+"' | tr -d '"')
           GRD_VER=$(grep 'versionName' android/app/build.gradle | grep -oP '"[^"]+"' | tr -d '"')
           SHA=$(echo "${{ github.sha }}" | cut -c1-8)
 
-          SHADOW_SRC=android/assistant/build/outputs/apk/release/assistant-release.apk
-          SHADOW_DEST=android/assistant/build/outputs/apk/release/shadow-${SHA_VER}-${SHA}.apk
-          mv "$SHADOW_SRC" "$SHADOW_DEST"
+          # APKs
+          mv android/assistant/build/outputs/apk/release/assistant-release.apk \
+             android/assistant/build/outputs/apk/release/shadow-ai-${AI_VER}-${SHA}.apk
+          mv android/app/build/outputs/apk/release/app-release.apk \
+             android/app/build/outputs/apk/release/guardian-${GRD_VER}-${SHA}.apk
 
-          GUARD_SRC=android/app/build/outputs/apk/release/app-release.apk
-          GUARD_DEST=android/app/build/outputs/apk/release/guardian-${GRD_VER}-${SHA}.apk
-          mv "$GUARD_SRC" "$GUARD_DEST"
+          # AABs
+          mv android/assistant/build/outputs/bundle/release/assistant-release.aab \
+             android/assistant/build/outputs/bundle/release/shadow-ai-${AI_VER}-${SHA}.aab
+          mv android/app/build/outputs/bundle/release/app-release.aab \
+             android/app/build/outputs/bundle/release/guardian-${GRD_VER}-${SHA}.aab
 
-          echo "SHADOW_APK=$SHADOW_DEST" >> $GITHUB_ENV
-          echo "SHADOW_NAME=shadow-${SHA_VER}-${SHA}.apk" >> $GITHUB_ENV
-          echo "GUARD_APK=$GUARD_DEST" >> $GITHUB_ENV
-          echo "GUARD_NAME=guardian-${GRD_VER}-${SHA}.apk" >> $GITHUB_ENV
+          echo "AI_APK=android/assistant/build/outputs/apk/release/shadow-ai-${AI_VER}-${SHA}.apk" >> $GITHUB_ENV
+          echo "AI_AAB=android/assistant/build/outputs/bundle/release/shadow-ai-${AI_VER}-${SHA}.aab" >> $GITHUB_ENV
+          echo "GRD_APK=android/app/build/outputs/apk/release/guardian-${GRD_VER}-${SHA}.apk" >> $GITHUB_ENV
+          echo "GRD_AAB=android/app/build/outputs/bundle/release/guardian-${GRD_VER}-${SHA}.aab" >> $GITHUB_ENV
+          echo "AI_VER=${AI_VER}" >> $GITHUB_ENV
+          echo "GRD_VER=${GRD_VER}" >> $GITHUB_ENV
 
-      - name: Upload Shadow artifact
+      - name: Upload Shadow AI artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.SHADOW_NAME }}
-          path: ${{ env.SHADOW_APK }}
+          name: shadow-ai-${{ env.AI_VER }}
+          path: |
+            ${{ env.AI_APK }}
+            ${{ env.AI_AAB }}
           retention-days: 30
 
-      - name: Upload Guardian artifact
+      - name: Upload Guardian artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.GUARD_NAME }}
-          path: ${{ env.GUARD_APK }}
+          name: guardian-${{ env.GRD_VER }}
+          path: |
+            ${{ env.GRD_APK }}
+            ${{ env.GRD_AAB }}
           retention-days: 30
 
       - name: Create GitHub Release
@@ -75,22 +88,22 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ${{ env.SHADOW_APK }}
-            ${{ env.GUARD_APK }}
+            ${{ env.AI_APK }}
+            ${{ env.GRD_APK }}
           generate_release_notes: true
           name: ShadowCypher ${{ github.ref_name }}
           body: |
             ## ShadowCypher ${{ github.ref_name }}
 
-            | App | Description |
-            |-----|-------------|
-            | **Shadow** | Voice AI assistant with web search and offline KB |
-            | **Guardian** | Endpoint security monitor — Dashboard, Devices, Incidents, Missions |
+            | App | Version | Description |
+            |-----|---------|-------------|
+            | **Shadow AI** | ${{ env.AI_VER }} | Voice assistant · Guardian-aware · Offline STT |
+            | **Guardian** | ${{ env.GRD_VER }} | Network monitor · Devices · Incidents · CVEs |
 
-            **Install**
+            **Sideload (APK)**
             1. Settings → Apps → Install unknown apps → enable for your browser
-            2. Download the APK and tap Install
+            2. Download the APK and tap Install — Android 7.0+
 
-            Requires Android 8.0+
+            **Play Store** — AABs available in CI artifacts for Google Play submission.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
