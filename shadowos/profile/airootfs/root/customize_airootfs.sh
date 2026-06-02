@@ -203,3 +203,31 @@ if [ -f /etc/mkinitcpio.conf ] && ! grep -E '^HOOKS=.*plymouth' /etc/mkinitcpio.
     sed -i 's/^HOOKS=(\(.*\)udev\(.*\))/HOOKS=(\1udev plymouth\2)/' /etc/mkinitcpio.conf
 fi
 mkinitcpio -P || true
+
+# === Gaming services ===
+systemctl enable gamemoded.service 2>/dev/null || true
+systemctl enable auto-cpufreq.service 2>/dev/null || true
+
+# === Security hardening services ===
+systemctl enable usbguard.service 2>/dev/null || true
+systemctl enable apparmor.service 2>/dev/null || true
+systemctl enable auditd.service 2>/dev/null || true
+
+# === zram swap ===
+systemctl enable systemd-zram-setup@zram0.service 2>/dev/null || true
+
+# === Snapper — only for btrfs installs ===
+# enabled post-install by shadowos-install if btrfs detected
+# systemctl enable snapper-timeline.timer snapper-cleanup.timer 2>/dev/null || true
+
+# === Printing ===
+systemctl enable cups.service 2>/dev/null || true
+
+# === mat2 available globally ===
+# mat2 is CLI — available once installed, no service needed
+
+# Load AppArmor profiles
+if command -v aa-enforce >/dev/null 2>&1; then
+    aa-enforce /etc/apparmor.d/usr.bin.librewolf 2>/dev/null || true
+    aa-enforce /etc/apparmor.d/usr.bin.signal-desktop 2>/dev/null || true
+fi

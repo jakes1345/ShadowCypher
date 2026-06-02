@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shadow-mode — ShadowOS personality switcher.
 # Hot-swap firewall, DNS, autostart, theme accent, default browser.
-# Usage: shadow-mode <pentest|privacy|dev|ghost|normal|toggle-tor|picker|status>
+# Usage: shadow-mode <pentest|privacy|dev|ghost|normal|undercover|toggle-tor|picker|status>
 
 set -euo pipefail
 
@@ -14,6 +14,7 @@ RESET='\033[0m'
 BOLD='\033[1m'
 
 usage() {
+    echo "  ${GREEN}gaming${RESET}     Max performance: CPU boost, GPU clocks, RAM tuned, GameMode active"
     cat <<EOF
 ${BOLD}shadow-mode${RESET} — ShadowOS personality switcher
 
@@ -21,6 +22,7 @@ ${BOLD}shadow-mode${RESET} — ShadowOS personality switcher
   ${GREEN}privacy${RESET}    All egress via Tor, MAC randomized, DNS encrypted, firejail wraps browsers
   ${GREEN}dev${RESET}        Dev daemons up, firewall normal, full editor + container stack
   ${GREEN}ghost${RESET}      Maximum lockdown: Tor + Signal only, every other app blocked, ephemeral
+  ${GREEN}undercover${RESET} Windows-style theme + flat bar for low-profile environments
   ${GREEN}normal${RESET}     Default daily-driver
   ${GREEN}toggle-tor${RESET} Flip Tor system-wide regardless of current mode
   ${GREEN}picker${RESET}     Show wofi mode picker
@@ -58,6 +60,15 @@ apply_mode() {
 
     echo "$mode" > "$STATE_FILE"
 
+    # Sync Waybar/Hypr theme to mode personality
+    if [[ -n "${SUDO_USER:-}" ]] && [[ "$SUDO_USER" != "root" ]]; then
+        uid=$(id -u "$SUDO_USER")
+        sudo -u "$SUDO_USER" \
+            XDG_RUNTIME_DIR="/run/user/$uid" \
+            DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+            /usr/local/bin/shadowos-theme-apply "$mode" 2>/dev/null || true
+    fi
+
     # Notify desktop
     if command -v notify-send >/dev/null 2>&1; then
         sudo -u "${SUDO_USER:-shadow}" \
@@ -72,7 +83,7 @@ apply_mode() {
 }
 
 case "${1:-}" in
-    pentest|privacy|dev|ghost|normal) apply_mode "$1" ;;
+    pentest|privacy|dev|ghost|normal|undercover|gaming) apply_mode "$1" ;;
     toggle-tor)
         require_root "$@"
         if systemctl is-active --quiet tor; then
@@ -84,13 +95,21 @@ case "${1:-}" in
         fi
         ;;
     picker)
-        choice=$(printf "pentest\nprivacy\ndev\nghost\nnormal" | wofi --dmenu --prompt="mode →")
+        choice=$(printf "normal\ndev\npentest\nprivacy\nghost\nundercover\ngaming" | wofi --dmenu --prompt="mode →")
         [[ -n "$choice" ]] && pkexec "$0" "$choice"
         ;;
     status|"")
         cur=$(current)
         echo "current mode: $cur"
         echo
+        if nft list tables 2>/dev/null | grep -qw shadow; then
+            case "$cur" in
+                normal|dev|pentest|undercover)
+                    echo "warning: ghost/privacy firewall rules still active — run: sudo shadow-mode $cur"
+                    echo
+                    ;;
+            esac
+        fi
         echo "tor:        $(systemctl is-active tor 2>/dev/null || echo inactive)"
         echo "dnscrypt:   $(systemctl is-active dnscrypt-proxy 2>/dev/null || echo inactive)"
         echo "ufw:        $(ufw status 2>/dev/null | head -1 || echo unknown)"

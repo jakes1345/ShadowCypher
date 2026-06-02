@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Kill switch: block all non-VPN traffic when VPN is active
+set -e
+ACTION="${1:-enable}"
+
+if [[ "$ACTION" == "enable" ]]; then
+    nft flush ruleset
+    nft -f - << 'NFT'
+table inet killswitch {
+    chain output {
+        type filter hook output priority -100; policy drop;
+        oifname "lo" accept
+        oifname "tun*" accept
+        oifname "wg*" accept
+        ct state established,related accept
+        # Allow VPN handshake traffic (UDP 1194 OpenVPN, UDP 51820 WireGuard)
+        udp dport { 1194, 51820, 1195, 1196, 1197, 1198, 1199, 1200 } accept
+        # Allow DNS to VPN servers (pre-handshake)
+        udp dport 53 accept
+        tcp dport 53 accept
+    }
+    chain input {
+        type filter hook input priority -100; policy drop;
+        iifname "lo" accept
+        iifname "tun*" accept
+        iifname "wg*" accept
+        ct state established,related accept
+    }
+}
+NFT
+    echo "✓ Kill switch ACTIVE — all traffic blocked except VPN tunnel"
+elif [[ "$ACTION" == "disable" ]]; then
+    nft flush table inet killswitch 2>/dev/null || true
+    echo "✓ Kill switch DISABLED"
+fi

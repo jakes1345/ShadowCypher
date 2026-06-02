@@ -1,0 +1,13 @@
+[Unit]
+Description=ShadowOS VPN Kill Switch
+After=network.target
+PartOf=openvpn@.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/shadowos-vpn-killswitch enable
+ExecStop=/usr/local/bin/shadowos-vpn-killswitch disable
+
+[Install]
+WantedBy=multi-user.target

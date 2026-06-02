@@ -1,0 +1,16 @@
+#include <tunables/global>
+profile signal-desktop /usr/bin/signal-desktop {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/ssl_certs>
+  network inet stream,
+  network inet6 stream,
+  /usr/bin/signal-desktop mr,
+  /usr/lib/signal-desktop/** mr,
+  @{HOME}/.config/Signal/ rw,
+  @{HOME}/.config/Signal/** rwk,
+  @{HOME}/Downloads/ r,
+  @{HOME}/Downloads/** r,
+  deny @{HOME}/.ssh/ r,
+  deny /etc/shadowcypher/ r,
+}

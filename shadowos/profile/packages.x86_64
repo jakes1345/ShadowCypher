@@ -325,3 +325,46 @@ btrfs-progs
 ntfs-3g
 exfatprogs
 cryptsetup
+
+# === Gaming — additions ===
+xpadneo-dkms
+corectrl
+goverlay
+mangohud
+lib32-mangohud
+gamescope
+vulkan-tools
+lib32-vulkan-icd-loader
+vkd3d
+lib32-vkd3d
+dxvk-mingw
+gamemode
+lib32-gamemode
+auto-cpufreq
+cpupower
+
+# === zram / memory ===
+zram-generator
+
+# === Snapshots ===
+snapper
+snap-pac
+grub-btrfs
+
+# === Security hardening additions ===
+usbguard
+apparmor
+firejail
+bubblewrap
+audit
+mat2
+element-desktop
+gammastep
+
+# === Printing ===
+cups
+cups-filters
+system-config-printer
+
+# === Privacy / comms ===
+signal-desktop

@@ -1,0 +1,20 @@
+#include <tunables/global>
+profile librewolf /usr/bin/librewolf {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/user-download>
+  #include <abstractions/ssl_certs>
+  network inet stream,
+  network inet6 stream,
+  /usr/bin/librewolf mr,
+  /usr/lib/librewolf/** mr,
+  @{HOME}/.librewolf/ rw,
+  @{HOME}/.librewolf/** rwk,
+  @{HOME}/Downloads/ rw,
+  @{HOME}/Downloads/** rw,
+  /tmp/ rw,
+  /tmp/** rwk,
+  deny @{HOME}/.ssh/ r,
+  deny @{HOME}/.gnupg/ r,
+  deny /etc/shadowcypher/ r,
+}

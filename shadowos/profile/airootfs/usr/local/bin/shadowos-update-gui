@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# GUI wrapper for system updates — launches in a terminal with progress
+TERM_CMD="foot"
+if command -v foot >/dev/null 2>&1; then
+    exec foot --title "ShadowOS Update" -e bash -c '
+        echo "╔══════════════════════════════════════════╗"
+        echo "║      ShadowOS System Update              ║"
+        echo "╚══════════════════════════════════════════╝"
+        echo ""
+        echo "Refreshing package databases..."
+        sudo pacman -Sy
+        echo ""
+        echo "Available updates:"
+        pacman -Qu 2>/dev/null || echo "  System is up to date."
+        echo ""
+        read -p "Apply all updates? [y/N] " ans
+        if [[ "$ans" =~ ^[Yy]$ ]]; then
+            sudo pacman -Su --noconfirm
+            flatpak update -y 2>/dev/null || true
+            echo ""
+            echo "✓ Update complete."
+        else
+            echo "Cancelled."
+        fi
+        echo ""
+        read -p "Press Enter to close..."
+    '
+fi

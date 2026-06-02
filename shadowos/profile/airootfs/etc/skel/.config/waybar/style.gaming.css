@@ -1,0 +1,11 @@
+* { font-family: "JetBrains Mono", monospace; font-size: 12px; color: #f1f5f9; }
+window#waybar { background: rgba(5,8,12,0.88); border-bottom: 2px solid #f59e0b; }
+#workspaces button { padding: 0 8px; color: #64748b; }
+#workspaces button.active { color: #f59e0b; border-bottom: 2px solid #f59e0b; }
+#clock { color: #f59e0b; font-weight: bold; }
+#cpu { color: #22c55e; }
+#memory { color: #3b82f6; }
+#temperature { color: #f87171; }
+#temperature.critical { color: #ef4444; animation: blink 1s steps(1) infinite; }
+#custom-gamemode { color: #f59e0b; font-weight: 900; letter-spacing: 1px; }
+@keyframes blink { 50% { color: transparent; } }

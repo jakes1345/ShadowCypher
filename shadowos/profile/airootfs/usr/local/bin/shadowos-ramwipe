@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Secure memory wipe on ghost mode shutdown
+sync
+echo 3 > /proc/sys/vm/drop_caches
+# Fill free RAM with zeros to wipe sensitive data
+if command -v shred >/dev/null 2>&1; then
+    TMPF=$(mktemp /tmp/ramwipe.XXXXX)
+    dd if=/dev/zero of="$TMPF" bs=1M 2>/dev/null || true
+    shred -fuz "$TMPF" 2>/dev/null || true
+fi
+# Unmount ephemeral home
+umount -f /home/shadow 2>/dev/null || true
+echo "ShadowOS ghost: memory sanitized"
