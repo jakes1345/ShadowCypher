@@ -53,6 +53,13 @@ apply_mode() {
 
     require_root "$@"
 
+    # Revert previous mode before applying new one
+    PREV_MODE=$(current)
+    if [[ "$PREV_MODE" != "$mode" && -x "$MODE_DIR/$PREV_MODE/revert.sh" ]]; then
+        echo -e "${GREEN}▸${RESET} reverting ${BOLD}$PREV_MODE${RESET}"
+        "$MODE_DIR/$PREV_MODE/revert.sh" || true
+    fi
+
     echo -e "${GREEN}▸${RESET} switching to ${BOLD}$mode${RESET}"
 
     # Run mode's apply.sh — each mode owns its own implementation.

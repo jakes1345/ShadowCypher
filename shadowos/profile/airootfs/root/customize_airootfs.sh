@@ -116,6 +116,12 @@ chown -R shadow:shadow /home/shadow
 chmod 700 /root/.ssh 2>/dev/null || true
 chmod 600 /root/.ssh/authorized_keys 2>/dev/null || true
 
+# Patch Hyprland session to use shadowos-session-start wrapper (VM renderer detection, canonical config deploy)
+if [[ -f /usr/share/wayland-sessions/hyprland.desktop ]]; then
+    sed -i 's|^Exec=.*|Exec=/usr/local/bin/shadowos-session-start|' \
+        /usr/share/wayland-sessions/hyprland.desktop
+fi
+
 # Executable bits
 chmod +x /usr/local/bin/shadow-mode 2>/dev/null || true
 chmod +x /usr/local/bin/shadow-leak-test 2>/dev/null || true

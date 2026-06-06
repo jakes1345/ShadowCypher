@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Hyprland session wrapper — apply GPU fallbacks before compositor starts.
+set -euo pipefail
+
+export XDG_CURRENT_DESKTOP=Hyprland
+export XDG_SESSION_TYPE=wayland
+export MOZ_ENABLE_WAYLAND=1
+export QT_QPA_PLATFORM=wayland
+export WLR_NO_HARDWARE_CURSORS=1
+
+# Detect VM / software-render environment once (shared by WLR_RENDERER + Hyprland tweaks)
+IS_VM=0
+if systemd-detect-virt --quiet 2>/dev/null; then
+    IS_VM=1
+elif lspci 2>/dev/null | grep -qiE 'VMware|VirtualBox|QXL|Microsoft Corporation Basic|Virtio|SVGA'; then
+    IS_VM=1
+fi
+
+if [[ "$IS_VM" -eq 1 ]]; then
+    export WLR_RENDERER=pixman
+    export LIBGL_ALWAYS_SOFTWARE=1
+fi
+
+# Always deploy canonical desktop config (fixes old ISO autostart on every login).
+HYPR_DIR="${XDG_CONFIG_HOME:-${HOME:-/home/shadow}/.config}/hypr"
+WAYBAR_DIR="${XDG_CONFIG_HOME:-${HOME:-/home/shadow}/.config}/waybar"
+CANON=/etc/shadowos/desktop
+if [[ -d "$CANON" ]]; then
+    mkdir -p "$HYPR_DIR" "$WAYBAR_DIR"
+    [[ -f "$CANON/hyprland.conf" ]] && cp -f "$CANON/hyprland.conf" "$HYPR_DIR/hyprland.conf"
+    if [[ -d "$CANON/waybar" ]]; then
+        cp -f "$CANON/waybar/"* "$WAYBAR_DIR/" 2>/dev/null || true
+    fi
+fi
+# Strip legacy ISO autostart lines if an old overlay config survived.
+if [[ -f "$HYPR_DIR/hyprland.conf" ]]; then
+    sed -i \
+        -e '/^exec-once.*shadowcypher-autostart/d' \
+        -e '/^exec-once.*shadowcypher\.app/d' \
+        -e '/^exec-once.*\/opt\/shadowcypher\/launch\.sh/d' \
+        -e '/^exec-once.*shadowos-welcome.*--autostart/d' \
+        "$HYPR_DIR/hyprland.conf"
+fi
+
+# Generate dynamic performance tweaks for Hyprland
+mkdir -p "$HYPR_DIR"
+ADJUST_FILE="$HYPR_DIR/hardware-adjustments.conf"
+
+if [[ "$IS_VM" -eq 1 ]]; then
+    cat > "$ADJUST_FILE" <<'EOF'
+# Auto-generated VM performance profiles (reduces rendering lag)
+decoration {
+    rounding = 0
+    shadow {
+        enabled = false
+    }
+    blur {
+        enabled = false
+    }
+}
+animations {
+    enabled = false
+}
+EOF
+else
+    # Blank out on real hardware to keep premium look
+    echo "# Bare-metal mode: full effects enabled" > "$ADJUST_FILE"
+fi
+
+# Arch ships start-hyprland; direct Hyprland triggers the yellow warning bar.
+if command -v start-hyprland >/dev/null 2>&1; then
+    exec start-hyprland "$@"
+fi
+exec Hyprland "$@"

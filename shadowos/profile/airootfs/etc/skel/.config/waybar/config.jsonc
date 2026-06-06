@@ -1,47 +1,77 @@
 {
   "layer": "top",
   "position": "top",
-  "height": 34,
-  "spacing": 4,
-  "margin-top": 8,
-  "margin-left": 14,
-  "margin-right": 14,
+  "height": 36,
+  "spacing": 0,
+  "margin-top": 10,
+  "margin-left": 16,
+  "margin-right": 16,
 
-  "modules-left":   ["custom/logo", "hyprland/workspaces", "custom/mode", "hyprland/window"],
+  "modules-left": [
+    "custom/logo",
+    "custom/spacer-s",
+    "hyprland/workspaces",
+    "custom/spacer-m",
+    "custom/mode",
+    "hyprland/window"
+  ],
   "modules-center": ["clock"],
-  "modules-right":  ["custom/updates", "custom/shadowcypher", "custom/steam", "custom/discord", "tray", "network", "pulseaudio", "battery", "custom/power"],
+  "modules-right": [
+    "custom/shadowscore",
+    "custom/shadowcypher",
+    "custom/play",
+    "custom/spacer-m",
+    "custom/updates",
+    "tray",
+    "network",
+    "pulseaudio",
+    "battery",
+    "custom/spacer-s",
+    "custom/settings",
+    "custom/help",
+    "custom/bios",
+    "custom/power"
+  ],
 
   "custom/logo": {
-    "format": "  S  ",
-    "tooltip": false,
+    "format": "󰍹",
+    "tooltip-format": "Applications  ·  SUPER+D",
     "on-click": "wofi --show drun"
   },
 
+  "custom/spacer-s": {
+    "format": " "
+  },
+
+  "custom/spacer-m": {
+    "format": "   "
+  },
+
   "custom/mode": {
-    "exec": "shadow-mode status 2>/dev/null | head -1",
-    "interval": 5,
-    "format": "  {}",
-    "tooltip": true,
-    "tooltip-format": "Click to switch ShadowOS personality",
+    "exec": "/usr/local/bin/shadow-mode-bar",
+    "return-type": "json",
+    "interval": 3,
     "on-click": "shadow-mode picker"
   },
 
+  "custom/shadowscore": {
+    "exec": "/usr/local/bin/shadow-score 2>/dev/null",
+    "interval": 15,
+    "return-type": "json",
+    "format": "{}",
+    "on-click": "foot -e bash -lc 'shadow-score --verbose 2>/dev/null || shadow-score; echo; read -n1 -rp \"Press any key…\"'"
+  },
+
   "custom/shadowcypher": {
-    "format": "",
-    "tooltip-format": "Open ShadowCypher",
-    "on-click": "/opt/shadowcypher/launch.sh"
+    "format": "󱐋",
+    "tooltip-format": "ShadowCypher  ·  SUPER+S",
+    "on-click": "env SHADOWCYPHER_MANUAL=1 /usr/local/bin/shadowcypher-autostart --manual"
   },
 
-  "custom/steam": {
-    "format": "",
-    "tooltip-format": "Steam",
-    "on-click": "steam"
-  },
-
-  "custom/discord": {
-    "format": "",
-    "tooltip-format": "Discord",
-    "on-click": "discord"
+  "custom/play": {
+    "format": "󰊗",
+    "tooltip-format": "Gaming hub  ·  SUPER+Shift+G",
+    "on-click": "/usr/local/bin/shadow-play"
   },
 
   "custom/updates": {
@@ -55,57 +85,69 @@
   },
 
   "hyprland/workspaces": {
-    "format": "{icon}",
+    "format": "{id}",
     "on-click": "activate",
-    "format-icons": {
-      "1": "", "2": "", "3": "", "4": "", "5": "",
-      "6": "", "7": "", "8": "", "9": "",
-      "active": "",
-      "default": ""
-    },
-    "persistent-workspaces": { "*": 5 }
+    "persistent_workspaces": { "*": 5 }
   },
 
   "hyprland/window": {
     "format": "{title}",
-    "max-length": 70,
-    "rewrite": { "(.*) — (.*)": "$1" }
+    "max-length": 48,
+    "rewrite": { "(.*) — (.*)": "$1", "(.*) - (.*)": "$1" }
   },
 
   "clock": {
     "interval": 1,
     "format": "{:%H:%M}",
-    "format-alt": "{:%a · %b %d · %H:%M:%S}",
+    "format-alt": "{:%a · %b %d · %H:%M}",
     "tooltip-format": "<tt>{calendar}</tt>"
   },
 
-  "tray": { "spacing": 8 },
+  "tray": { "spacing": 10, "icon-size": 16 },
 
   "network": {
-    "format-wifi": "  {essid}",
-    "format-ethernet": "  wired",
-    "format-disconnected": "  offline",
+    "format-wifi": "󰤨",
+    "format-ethernet": "󰈀",
+    "format-disconnected": "󰤭",
     "tooltip-format": "{ifname} · {ipaddr}",
-    "on-click": "kitty -e nmtui"
+    "on-click": "foot -e nmtui"
   },
 
   "pulseaudio": {
-    "format": "{icon}  {volume}%",
-    "format-muted": "  mute",
-    "format-icons": { "default": ["", "", ""] },
+    "format": "{icon} {volume}%",
+    "format-muted": "󰝟",
+    "format-icons": { "default": ["󰕿", "󰖀", "󰕾"] },
     "on-click": "pavucontrol"
   },
 
   "battery": {
-    "format": "{icon}  {capacity}%",
-    "format-icons": ["", "", "", "", ""],
-    "format-charging": "  {capacity}%",
+    "format": "{icon} {capacity}%",
+    "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+    "format-charging": "󰂄 {capacity}%",
     "states": { "warning": 25, "critical": 10 }
   },
 
+  "custom/settings": {
+    "format": "󰒓",
+    "tooltip-format": "Settings  ·  SUPER+I",
+    "on-click": "/usr/local/bin/shadow-settings"
+  },
+
+  "custom/help": {
+    "format": "󰘥",
+    "tooltip-format": "ShadowOS guide",
+    "on-click": "/usr/local/bin/shadowos-welcome"
+  },
+
+  "custom/bios": {
+    "format": "󰍛",
+    "tooltip-format": "Reboot to BIOS/UEFI  ·  SUPER+Shift+F12",
+    "on-click": "pkexec shadow-bios"
+  },
+
   "custom/power": {
-    "format": " ",
-    "on-click": "wofi --show drun --search power",
-    "tooltip": false
+    "format": "󰐥",
+    "tooltip-format": "Power & session",
+    "on-click": "wofi --show drun --prompt power"
   }
 }

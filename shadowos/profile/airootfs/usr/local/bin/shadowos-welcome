@@ -9,7 +9,7 @@ from gi.repository import Gtk, Gdk, GLib, Pango
 import os, subprocess, sys, socket, json, threading, datetime
 import urllib.request
 
-STAMP = "/var/lib/shadowos/welcome.stamp"
+STAMP = os.path.expanduser("~/.config/shadowos/welcome.stamp")
 
 CSS = b"""
 * { color: #f1f5f9; }
@@ -52,7 +52,7 @@ class Welcome(Gtk.Window):
         self.set_default_size(620, 520)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_resizable(False)
-        self.connect("delete-event", Gtk.main_quit)
+        self.connect("delete-event", self._on_close)
         self._mode = "normal"
 
         prov = Gtk.CssProvider()
@@ -258,12 +258,19 @@ class Welcome(Gtk.Window):
         self._save_cfg({"api_key": key, "api_url": "https://api.shadowcypher.site"})
         GLib.timeout_add(1000, lambda: self._finish() or False)
 
-    def _finish(self):
-        self._goto("done", 1.0)
+    def _on_close(self, *_):
+        self._write_stamp()
+        Gtk.main_quit()
+
+    def _write_stamp(self):
         try:
-            os.makedirs("/var/lib/shadowos", exist_ok=True)
+            os.makedirs(os.path.dirname(STAMP), exist_ok=True)
             with open(STAMP, "w") as f: f.write(datetime.datetime.now().isoformat())
         except Exception: pass
+
+    def _finish(self):
+        self._goto("done", 1.0)
+        self._write_stamp()
 
     def _save_cfg(self, updates):
         os.makedirs("/etc/shadowcypher", exist_ok=True)

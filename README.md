@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-4.1-00d4ff?style=flat-square" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-3.0.0-00d4ff?style=flat-square" alt="Version"/>
   <img src="https://img.shields.io/badge/python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/go-1.24+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go"/>
   <img src="https://img.shields.io/badge/AI-Ollama%20(Local)-black?style=flat-square" alt="AI"/>
@@ -319,6 +319,45 @@ ShadowCypher is a sovereign project. Contributions are welcome from those who un
 
 ---
 
+## ShadowOS
+
+An Arch Linux-based live/installable ISO — the ShadowCypher operating environment. Pentest tools, developer workstation, and gaming, all in one hardened OS with Hyprland, a custom Plymouth boot sequence, and ShadowCypher pre-installed at `/opt/shadowcypher`.
+
+| Layer | What ships |
+|-------|-----------|
+| **Kernel** | linux-hardened + sysctl hardening |
+| **Compositor** | Hyprland (Wayland) + Waybar + Wofi + Hyprlock |
+| **Pentest** | nmap, sqlmap, hydra, metasploit, aircrack-ng, bettercap, rustscan, ffuf, nuclei, impacket, netexec, wireshark, and more |
+| **Dev** | VSCode, neovim, docker, podman, kubectl, rustup, go, nodejs, lazygit, Distrobox |
+| **Gaming** | Steam, Heroic, Lutris, PrismLauncher, MangoHUD, GameScope, wine-staging |
+| **Privacy** | Tor, dnscrypt-proxy, MAC randomization, AppArmor, ufw |
+| **Modes** | `shadow-mode <normal/dev/pentest/privacy/ghost/undercover>` — hot-swap firewall, DNS, autostart |
+| **AI** | ShadowCypher GTK app + Ollama pre-loaded |
+
+**Status: v0.1.0 — ISOs verified, ~7.4 GB**
+
+### Build
+
+```bash
+# Native (Arch host)
+sudo pacman -S archiso
+cd shadowos && sudo ./build.sh
+# → out/shadowos-<date>-x86_64.iso
+
+# Docker (any host)
+cd shadowos && ./build-docker.sh
+```
+
+### Test in QEMU
+
+```bash
+qemu-system-x86_64 -enable-kvm -m 4G -cdrom out/shadowos-*.iso -vga virtio
+```
+
+Default live credentials: `shadow` / `shadow` (user + root). Reset by the installer.
+
+---
+
 ## Legal
 
 ShadowCypher is built exclusively for **authorized security testing**, **research**, and **education**. Every offensive module assumes the operator has explicit written authorization to test the target systems. Unauthorized use of these tools against systems you do not own or have permission to test is illegal and unethical.
@@ -332,7 +371,7 @@ The authors assume no liability for misuse. You are the operator. You own your a
 </p>
 
 <p align="center">
-  <strong>ShadowCypher v4.1</strong> · Built with Go, Python, Cairo, and conviction.
+  <strong>ShadowCypher v3.0.0</strong> · Built with Go, Python, Cairo, and conviction.
 </p>
 
 <p align="center">
