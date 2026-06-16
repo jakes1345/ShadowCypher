@@ -148,6 +148,6 @@
   "custom/power": {
     "format": "󰐥",
     "tooltip-format": "Power & session",
-    "on-click": "wofi --show drun --prompt power"
+    "on-click": "bash -c 'choice=$(printf \"󰒲 Suspend\\n󰜉 Reboot\\n⏻ Shutdown\\n󰍃 Logout\" | wofi --dmenu --prompt \"Power\" --lines 4 --width 200) && case \"$choice\" in *Suspend*) systemctl suspend ;; *Reboot*) systemctl reboot ;; *Shutdown*) systemctl poweroff ;; *Logout*) hyprctl dispatch exit ;; esac'"
   }
 }

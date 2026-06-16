@@ -25,3 +25,12 @@ fi
 
 # Starship prompt
 command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"
+alias watch='shadow-stream'
+
+# --- ShadowOS Tactical Aliases ---
+alias wipe='shadow-wipe'
+alias ports='rustscan -a'
+alias recon='subfinder -d $1 | httpx'
+alias lls='ls -lah --color=auto'
+alias search='grep -rnw . -e'
+alias myip='curl -s https://ifconfig.me && echo'

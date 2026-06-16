@@ -1,0 +1,213 @@
+#!/usr/bin/env bash
+# Apply the full ShadowOS desktop + ShadowCypher fix set to a RUNNING system.
+# No ISO rebuild. Use after booting any ShadowOS live/install session.
+#
+# From the live system (patch source on USB or cloned repo):
+#   sudo SHADOWOS_PATCH_SRC=/path/to/ShadowCypher/shadowos/profile/airootfs ./shadowos-apply-fixes.sh
+#
+# From dev host while QEMU/SSH is up (preferred):
+#   ./sync-to-live.sh
+#
+set -euo pipefail
+
+PATCH_SRC="${SHADOWOS_PATCH_SRC:-}"
+REPO_ROOT="${SHADOWOS_REPO:-}"
+LIVE_USER="${SHADOWOS_USER:-shadow}"
+
+TEAL='\033[1;36m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+RED='\033[1;31m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+log()  { echo -e "${TEAL}[*]${NC} $*"; }
+ok()   { echo -e "${GREEN}[+]${NC} $*"; }
+warn() { echo -e "${YELLOW}[~]${NC} $*"; }
+die()  { echo -e "${RED}[-]${NC} $*" >&2; exit 1; }
+
+[[ $EUID -eq 0 ]] || die "Run as root: sudo $0"
+
+# Resolve patch tree (profile/airootfs layout)
+if [[ -z "$PATCH_SRC" && -n "$REPO_ROOT" ]]; then
+    PATCH_SRC="$REPO_ROOT/shadowos/profile/airootfs"
+fi
+if [[ -z "$PATCH_SRC" ]]; then
+    for candidate in \
+        "/tmp/shadowos-patch" \
+        "/run/media/*/ShadowCypher/shadowos/profile/airootfs" \
+        "/run/media/*/Pulse/shadowos/profile/airootfs" \
+        "/home/$LIVE_USER/ShadowCypher/shadowos/profile/airootfs" \
+        "/home/$LIVE_USER/Pulse/shadowos/profile/airootfs"; do
+        # shellcheck disable=SC2086
+        if [[ -d $candidate ]]; then
+            PATCH_SRC=$(echo $candidate | head -1)
+            break
+        fi
+    done
+fi
+[[ -d "${PATCH_SRC:-/nonexistent}" ]] || die "Set SHADOWOS_PATCH_SRC to profile/airootfs (sync-to-live.sh does this automatically)"
+
+SC_SRC="${SHADOWOS_SC_SRC:-}"
+if [[ -z "$SC_SRC" && -n "$REPO_ROOT" ]]; then
+    SC_SRC="$REPO_ROOT"
+fi
+if [[ -z "$SC_SRC" && -d "$(dirname "$PATCH_SRC")/../../.." ]]; then
+    maybe="$(cd "$(dirname "$PATCH_SRC")/../../.." && pwd)"
+    [[ -f "$maybe/shadowcypher/app.py" ]] && SC_SRC="$maybe"
+fi
+
+echo -e "${BOLD}${TEAL}ShadowOS live fix — no rebuild${NC}"
+log "PATCH_SRC=$PATCH_SRC"
+log "SC_SRC=${SC_SRC:-none}"
+
+# ── 1. Pacman runtime deps (desktop blank-screen root cause) ───────────────
+PKGS=(
+    python-psutil python-aiohttp python-pydantic-settings
+    python-numpy python-beautifulsoup4 python-dotenv
+    python-websockets python-pydantic python-requests
+)
+log "Installing Python/runtime packages..."
+pacman -Sy --noconfirm 2>&1 | tail -3 || true
+pacman -S --noconfirm --needed "${PKGS[@]}" 2>&1 | tail -5 || warn "Some packages may have failed (offline?)"
+
+# ── 2. Operator scripts from profile ───────────────────────────────────────
+log "Installing /usr/local/bin operator tools..."
+if [[ -d "$PATCH_SRC/usr/local/bin" ]]; then
+    install -Dm755 "$PATCH_SRC/usr/local/bin/"* /usr/local/bin/ 2>/dev/null || true
+fi
+
+# ── 3. ShadowOS mode system + sysctl ───────────────────────────────────────
+if [[ -d "$PATCH_SRC/etc/shadowos" ]]; then
+    log "Syncing /etc/shadowos modes..."
+    mkdir -p /etc/shadowos
+    cp -a "$PATCH_SRC/etc/shadowos/." /etc/shadowos/
+    find /etc/shadowos/modes -name 'apply.sh' -exec chmod +x {} \; 2>/dev/null || true
+fi
+[[ -f "$PATCH_SRC/etc/sysctl.d/99-shadowos.conf" ]] && \
+    cp -f "$PATCH_SRC/etc/sysctl.d/99-shadowos.conf" /etc/sysctl.d/ && sysctl --system 2>/dev/null | tail -1 || true
+
+mkdir -p /var/lib/shadowos
+[[ -f /var/lib/shadowos/current-mode ]] || echo normal > /var/lib/shadowos/current-mode
+
+# ── 4. Hyprland session wrapper (login → black screen fix) ─────────────────
+if [[ -f /usr/share/wayland-sessions/hyprland.desktop ]]; then
+    log "Patching hyprland.desktop → shadowos-session-start"
+    sed -i 's|^Exec=.*|Exec=/usr/local/bin/shadowos-session-start|' \
+        /usr/share/wayland-sessions/hyprland.desktop
+fi
+
+# ── 5. User desktop config (shadow + root skel) ───────────────────────────
+deploy_user_config() {
+    local user="$1"
+    local home
+    home=$(getent passwd "$user" | cut -d: -f6) || return 0
+    [[ -d "$home" ]] || return 0
+
+    log "Deploying Hyprland/Waybar config for $user"
+    if [[ -d "$PATCH_SRC/etc/skel/.config/hypr" ]]; then
+        mkdir -p "$home/.config/hypr" "$home/.config/waybar"
+        cp -f "$PATCH_SRC/etc/skel/.config/hypr/"* "$home/.config/hypr/" 2>/dev/null || true
+        cp -f "$PATCH_SRC/etc/skel/.config/waybar/"* "$home/.config/waybar/" 2>/dev/null || true
+        # Hyprland 0.55+ rejects idleinhibit (black screen after login)
+        if [[ -f "$home/.config/hypr/hyprland.conf" ]]; then
+            sed -i 's/idleinhibit/idle_inhibit/g' "$home/.config/hypr/hyprland.conf"
+        fi
+    fi
+    chown -R "$user:$(id -gn "$user" 2>/dev/null || echo "$user")" "$home/.config" 2>/dev/null || true
+}
+
+deploy_user_config "$LIVE_USER"
+deploy_user_config root
+
+# ── 6. ShadowCypher tree (app fixes: welcome dialog, deferred hub boot) ────
+if [[ -n "$SC_SRC" && -d "$SC_SRC/shadowcypher" ]]; then
+    log "Syncing ShadowCypher → /opt/shadowcypher (no meta-venv)..."
+    mkdir -p /opt/shadowcypher
+    RSYNC_EX=(
+        --delete
+        --exclude='__pycache__' --exclude='*.pyc'
+        --exclude='.venv' --exclude='venv' --exclude='meta-venv' --exclude='**/meta-venv/**'
+        --exclude='node_modules' --exclude='.git'
+        --exclude='logs' --exclude='outputs' --exclude='findings'
+    )
+    for src in shadowcypher ai_engine shadowai shadow_skills shadowscript agent; do
+        [[ -d "$SC_SRC/$src" ]] || continue
+        rsync -a "${RSYNC_EX[@]}" "$SC_SRC/$src/" "/opt/shadowcypher/$src/"
+    done
+    [[ -f "$SC_SRC/config.example.json" ]] && \
+        cp -f "$SC_SRC/config.example.json" /opt/shadowcypher/config.example.json
+    [[ -f "$PATCH_SRC/opt/shadowcypher/launch.sh" ]] && \
+        install -Dm755 "$PATCH_SRC/opt/shadowcypher/launch.sh" /opt/shadowcypher/launch.sh
+    chmod +x /opt/shadowcypher/launch.sh 2>/dev/null || true
+    mkdir -p /opt/shadowcypher/logs /opt/shadowcypher/outputs /opt/shadowcypher/findings
+    chown -R "$LIVE_USER:$LIVE_USER" /opt/shadowcypher 2>/dev/null || true
+fi
+
+# ── 7. SDDM theme (live demo banner) + live-iso marker ─────────────────────
+if [[ -d "$PATCH_SRC/usr/share/sddm/themes/shadowos" ]]; then
+    log "Syncing SDDM shadowos theme..."
+    mkdir -p /usr/share/sddm/themes/shadowos
+    cp -a "$PATCH_SRC/usr/share/sddm/themes/shadowos/." /usr/share/sddm/themes/shadowos/
+fi
+if [[ -d "$PATCH_SRC/usr/share/backgrounds/shadowos" ]]; then
+    log "Syncing backgrounds..."
+    mkdir -p /usr/share/backgrounds/shadowos
+    cp -a "$PATCH_SRC/usr/share/backgrounds/shadowos/." /usr/share/backgrounds/shadowos/
+fi
+if [[ -f /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz-linux ]] || \
+   grep -q archiso /proc/cmdline 2>/dev/null || \
+   [[ -d /run/archiso ]]; then
+    mkdir -p /etc/shadowos
+    date -Iseconds > /etc/shadowos/live-iso
+    chmod 644 /etc/shadowos/live-iso
+    ok "live-iso marker (/etc/shadowos/live-iso)"
+fi
+
+# ── 8. SDDM login wallpaper symlink ────────────────────────────────────────
+if [[ -d /usr/share/sddm/themes/shadowos/backgrounds/login ]]; then
+    cd /usr/share/sddm/themes/shadowos/backgrounds/login
+    if [[ ! -e default.png ]]; then
+        teals=(shadowos-login-01-teal-1920x1080.png)
+        for f in "${teals[@]}"; do
+            [[ -f "$f" ]] && ln -sf "$f" default.png && ok "SDDM default.png → $f" && break
+        done
+    fi
+fi
+
+# ── 9. Enable sshd for headless/QEMU testing ───────────────────────────────
+systemctl enable --now sshd 2>/dev/null || true
+
+# ── 10. Verify (same checks as boot-iso.sh --smoke) ────────────────────────
+echo
+log "Verification:"
+checks=0
+passes=0
+check() {
+    checks=$((checks + 1))
+    if eval "$2" >/dev/null 2>&1; then
+        ok "$1"
+        passes=$((passes + 1))
+    else
+        warn "$1"
+    fi
+}
+check "shadowcypher-autostart"          'test -x /usr/local/bin/shadowcypher-autostart'
+check "shadowos-session-start"          'test -x /usr/local/bin/shadowos-session-start'
+check "shadow-score script"             'test -x /usr/local/bin/shadow-score'
+check "shadowos-welcome wizard"         'test -x /usr/local/bin/shadowos-welcome'
+check "shadow-play hub"                 'test -x /usr/local/bin/shadow-play'
+check "shadow-settings hub"             'test -x /usr/local/bin/shadow-settings'
+check "hyprland session wrapper"        'grep -q shadowos-session-start /usr/share/wayland-sessions/hyprland.desktop'
+check "python-psutil"                   'python3 -c "import psutil"'
+check "python-aiohttp"                  'python3 -c "import aiohttp"'
+check "python-pydantic_settings"        'python3 -c "import pydantic_settings"'
+check "shadowcypher app import"         'PYTHONPATH=/opt/shadowcypher python3 -c "import shadowcypher.app" 2>/dev/null'
+
+echo
+if [[ "$passes" -eq "$checks" ]]; then
+    echo -e "${GREEN}${BOLD}All $checks checks passed.${NC}"
+    echo "Log out and back in (or: hyprctl dispatch exit) to pick up session + autostart fixes."
+else
+    echo -e "${YELLOW}$passes/$checks passed — reboot or check network for pacman.${NC}"
+fi

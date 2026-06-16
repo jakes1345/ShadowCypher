@@ -1,43 +1,52 @@
 * {
-  font-family: "JetBrainsMono Nerd Font", sans-serif;
+  font-family: "Noto Sans", "JetBrainsMono Nerd Font", sans-serif;
   font-size: 14px;
 }
 
 window {
-  background: rgba(10, 14, 19, 0.92);
-  border: 1px solid rgba(0, 224, 164, 0.35);
-  border-radius: 14px;
-  padding: 12px;
-  color: #E6EDF3;
+  background: rgba(8, 12, 18, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  color: #e6edf3;
 }
 
 #input {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(0, 224, 164, 0.25);
-  color: #E6EDF3;
-  padding: 10px 14px;
+  background: #161b22;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e6edf3;
+  padding: 12px 14px;
   border-radius: 10px;
   margin-bottom: 10px;
+  font-size: 15px;
 }
 
-#input:focus { border-color: #00E0A4; }
+#input:focus {
+  border-color: #00e0a4;
+}
 
-#inner-box, #outer-box { background: transparent; }
+#inner-box, #outer-box {
+  background: transparent;
+}
 
-#scroll { margin-top: 4px; }
+#scroll {
+  margin-top: 4px;
+}
 
 #entry {
   background: transparent;
-  color: #C9D1D9;
-  padding: 8px 10px;
+  color: #c9d1d9;
+  padding: 10px 12px;
   border-radius: 8px;
   margin: 2px 0;
 }
 
 #entry:selected {
-  background: rgba(0, 224, 164, 0.16);
-  color: #E6EDF3;
-  border: 1px solid rgba(0, 224, 164, 0.4);
+  background: rgba(0, 224, 164, 0.12);
+  color: #e6edf3;
+  border: 1px solid rgba(0, 224, 164, 0.25);
 }
 
-#text { padding-left: 8px; }
+#text {
+  padding-left: 6px;
+}

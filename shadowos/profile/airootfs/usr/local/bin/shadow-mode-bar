@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Emit a compact mode pill for Waybar (text + CSS class).
+set -euo pipefail
+
+mode="$(cat /var/lib/shadowos/current-mode 2>/dev/null || echo normal)"
+
+case "$mode" in
+    normal)     icon="󰋜"; label="daily" ;;
+    dev)        icon="󰲋"; label="dev" ;;
+    pentest)    icon="󰞱"; label="pentest" ;;
+    privacy)    icon="󰖪"; label="privacy" ;;
+    ghost)      icon="󰻌"; label="ghost" ;;
+    undercover) icon="󰍲"; label="cover" ;;
+    gaming)     icon="󰊗"; label="gaming" ;;
+    *)          icon="󰒓"; label="$mode" ;;
+esac
+
+printf '{"text":"%s %s","class":"mode-%s","tooltip":"ShadowOS mode: %s\\nClick to switch (SUPER+M)"}\n' \
+    "$icon" "$label" "$mode" "$mode"

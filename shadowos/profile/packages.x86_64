@@ -1,12 +1,21 @@
 # Base system
 base
 base-devel
+# Explicit providers to avoid interactive prompts during build
+iptables
+polkit
+libglvnd
+qt6-multimedia-ffmpeg
+lib32-vulkan-radeon
+tesseract-data-eng
 linux
 linux-firmware
 linux-hardened
 archiso
 mkinitcpio-archiso
 mkinitcpio
+mkinitcpio-nfs-utils
+nbd
 intel-ucode
 amd-ucode
 
@@ -34,6 +43,7 @@ firejail
 apparmor
 ufw
 nftables
+conntrack-tools
 fail2ban
 macchanger
 gnupg
@@ -116,6 +126,7 @@ mesa-utils
 vulkan-radeon
 vulkan-intel
 vulkan-nouveau
+vulkan-swrast
 # libva-mesa-driver was removed from repos — mesa provides VA-API directly now
 intel-media-driver
 libva-utils
@@ -161,11 +172,9 @@ mullvad-browser-bin
 torbrowser-launcher
 chaotic-keyring
 chaotic-mirrorlist
-signal-desktop
 mpv
 imv
 yt-dlp
-freetube
 
 # === Dev — full IDE/runtime stack ===
 git
@@ -212,10 +221,10 @@ nuclei
 naabu
 mitmproxy
 exploitdb
-impacket
-responder
-netexec
-evil-winrm
+# impacket — chaotic-aur version pulls mingw-w64 toolchain (breaks chroot build); install at runtime: pip install impacket
+# responder — AUR; install at runtime: yay -S responder
+# netexec — chaotic-aur; install at runtime: yay -S netexec
+# evil-winrm — AUR; install at runtime: yay -S evil-winrm
 sshuttle
 # chisel is AUR-only — installed via go install at first-boot if needed
 seclists
@@ -243,7 +252,6 @@ winetricks
 vkd3d
 gamescope
 ttf-liberation
-discord
 
 # === Universal launchers / app management ===
 flatpak
@@ -327,7 +335,7 @@ exfatprogs
 cryptsetup
 
 # === Gaming — additions ===
-xpadneo-dkms
+# xpadneo-dkms — AUR only; install via yay post-boot
 corectrl
 # (dedup) goverlay
 # (dedup) mangohud
@@ -337,10 +345,10 @@ vulkan-tools
 lib32-vulkan-icd-loader
 # (dedup) vkd3d
 lib32-vkd3d
-dxvk-mingw
+# dxvk-mingw — AUR only, ships via Steam/Proton
 # (dedup) gamemode
 # (dedup) lib32-gamemode
-auto-cpufreq
+# auto-cpufreq — AUR only; cpupower handles governor switching
 cpupower
 
 # === zram / memory ===
@@ -358,7 +366,6 @@ usbguard
 bubblewrap
 audit
 mat2
-element-desktop
 gammastep
 
 # === Printing ===
@@ -367,6 +374,6 @@ cups-filters
 system-config-printer
 
 # === Privacy / comms ===
-# (dedup) signal-desktop
 
 # === Security daemons (referenced in customize_airootfs.sh) ===
+nheko

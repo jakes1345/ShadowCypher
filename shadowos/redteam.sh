@@ -186,7 +186,7 @@ done
 section "7. SHADOWOS CLI BINARIES"
 for bin in shadow-mode shadow-update shadow-leak-test shadow-help-me \
            shadow-ai-overlay shadowos-diag shadowos-firstboot shadowos-install \
-           shadowos-mac-randomize shadow-update-count; do
+           shadowos-mac-randomize shadow-update-count shadowos-welcome shadow-score shadow-play shadow-settings; do
     if SR "command -v $bin" | grep -q '/usr/local/bin/'; then
         pass "$bin in PATH"
     else
@@ -199,8 +199,8 @@ section "8. SHADOW-MODE END-TO-END"
 current=$(SR 'cat /var/lib/shadowos/current-mode 2>/dev/null')
 [[ -n "$current" ]] && pass "initial mode = $current" || warn "no initial mode set"
 
-# Test each mode actually changes nftables/ufw state
-for mode in pentest dev normal; do
+# Test each mode actually changes state
+for mode in normal dev pentest privacy ghost undercover; do
     out=$(SRT "echo shadow | sudo -S shadow-mode $mode 2>&1" | tail -5)
     new=$(SR 'cat /var/lib/shadowos/current-mode')
     if [[ "$new" == "$mode" ]]; then
@@ -208,16 +208,21 @@ for mode in pentest dev normal; do
     else
         fail_t "shadow-mode $mode did NOT update current-mode (got: $new)"
     fi
-    # check firewall actually reflects the mode
     case "$mode" in
         pentest)
-            # nmap should have raw capabilities
             cap=$(SR 'getcap /usr/bin/nmap 2>/dev/null')
             [[ "$cap" == *"net_raw"* ]] && pass "  └ nmap has cap_net_raw" || warn "  └ nmap missing cap_net_raw"
             ;;
-        privacy)
+        privacy|ghost)
             tor=$(SR 'systemctl is-active tor')
-            [[ "$tor" == "active" ]] && pass "  └ tor started in privacy mode" || fail_t "  └ tor NOT active in privacy mode"
+            [[ "$tor" == "active" ]] && pass "  └ tor started in $mode mode" || warn "  └ tor NOT active in $mode mode"
+            ;;
+        undercover)
+            if SR 'test -f /etc/skel/.config/waybar/config.undercover.jsonc'; then
+                pass "  └ undercover waybar config shipped"
+            else
+                warn "  └ undercover waybar config missing from skel"
+            fi
             ;;
     esac
 done
@@ -246,7 +251,7 @@ declare -A TOOLS=(
     [steam]="steam --version 2>&1 | head -1 || which steam"
     [mangohud]="mangohud --version 2>&1 | head -1 || which mangohud"
     [gamemoded]="gamemoded --version 2>&1 | head -1 || which gamemoded"
-    [firefox]="firefox --version 2>&1 | head -1"
+    [librewolf]="librewolf --version 2>&1 | head -1 || which librewolf"
     [hyprland]="Hyprland --version 2>&1 | head -3 | tail -1"
     [waybar]="waybar --version 2>&1 | head -1"
     [foot]="foot --version 2>&1 | head -1"

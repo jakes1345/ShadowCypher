@@ -1,0 +1,146 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 36,
+  "spacing": 0,
+  "margin-top": 10,
+  "margin-left": 16,
+  "margin-right": 16,
+
+  "modules-left": [
+    "custom/logo",
+    "custom/spacer-s",
+    "hyprland/workspaces",
+    "custom/spacer-m",
+    "custom/mode",
+    "hyprland/window"
+  ],
+  "modules-center": ["clock"],
+  "modules-right": [
+    "custom/shadowscore",
+    "custom/shadowcypher",
+    "custom/play",
+    "custom/spacer-m",
+    "custom/updates",
+    "tray",
+    "network",
+    "pulseaudio",
+    "battery",
+    "custom/spacer-s",
+    "custom/settings",
+    "custom/help",
+    "custom/power"
+  ],
+
+  "custom/logo": {
+    "format": "󰍹",
+    "tooltip-format": "Applications  ·  SUPER+D",
+    "on-click": "wofi --show drun"
+  },
+
+  "custom/spacer-s": {
+    "format": " "
+  },
+
+  "custom/spacer-m": {
+    "format": "   "
+  },
+
+  "custom/mode": {
+    "exec": "/usr/local/bin/shadow-mode-bar",
+    "return-type": "json",
+    "interval": 3,
+    "on-click": "shadow-mode picker"
+  },
+
+  "custom/shadowscore": {
+    "exec": "/usr/local/bin/shadow-score 2>/dev/null",
+    "interval": 15,
+    "return-type": "json",
+    "format": "{}",
+    "on-click": "foot -e bash -lc 'shadow-score --verbose 2>/dev/null || shadow-score; echo; read -n1 -rp \"Press any key…\"'"
+  },
+
+  "custom/shadowcypher": {
+    "format": "󱐋",
+    "tooltip-format": "ShadowCypher  ·  SUPER+S",
+    "on-click": "env SHADOWCYPHER_MANUAL=1 /usr/local/bin/shadowcypher-autostart --manual"
+  },
+
+  "custom/play": {
+    "format": "󰊗",
+    "tooltip-format": "Gaming hub  ·  SUPER+Shift+G",
+    "on-click": "/usr/local/bin/shadow-play"
+  },
+
+  "custom/updates": {
+    "exec": "/usr/local/bin/shadow-update-count",
+    "interval": 900,
+    "return-type": "json",
+    "format": "{}",
+    "on-click": "foot --title 'shadow-update' -e bash -lc 'shadow-update; echo; read -n1 -rp \"Press any key…\"'",
+    "on-click-right": "foot --title 'shadow-update --check' -e bash -lc 'shadow-update --check; echo; read -n1 -rp \"Press any key…\"'",
+    "tooltip": true
+  },
+
+  "hyprland/workspaces": {
+    "format": "{id}",
+    "on-click": "activate",
+    "persistent_workspaces": { "*": 5 }
+  },
+
+  "hyprland/window": {
+    "format": "{title}",
+    "max-length": 48,
+    "rewrite": { "(.*) — (.*)": "$1", "(.*) - (.*)": "$1" }
+  },
+
+  "clock": {
+    "interval": 1,
+    "format": "{:%H:%M}",
+    "format-alt": "{:%a · %b %d · %H:%M}",
+    "tooltip-format": "<tt>{calendar}</tt>"
+  },
+
+  "tray": { "spacing": 10, "icon-size": 16 },
+
+  "network": {
+    "format-wifi": "󰤨",
+    "format-ethernet": "󰈀",
+    "format-disconnected": "󰤭",
+    "tooltip-format": "{ifname} · {ipaddr}",
+    "on-click": "foot -e nmtui"
+  },
+
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "format-muted": "󰝟",
+    "format-icons": { "default": ["󰕿", "󰖀", "󰕾"] },
+    "on-click": "pavucontrol"
+  },
+
+  "battery": {
+    "format": "{icon} {capacity}%",
+    "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+    "format-charging": "󰂄 {capacity}%",
+    "states": { "warning": 25, "critical": 10 }
+  },
+
+  "custom/settings": {
+    "format": "󰒓",
+    "tooltip-format": "Settings  ·  SUPER+I",
+    "on-click": "/usr/local/bin/shadow-settings"
+  },
+
+  "custom/help": {
+    "format": "󰘥",
+    "tooltip-format": "ShadowOS guide",
+    "on-click": "/usr/local/bin/shadowos-welcome"
+  },
+
+  "custom/power": {
+    "format": "󰐥",
+    "tooltip-format": "Power & session",
+    "on-click": "bash -c 'choice=$(printf \"󰒲 Suspend\\n󰜉 Reboot\\n⏻ Shutdown\\n󰍃 Logout\" | wofi --dmenu --prompt \"Power\" --lines 4 --width 200) && case \"$choice\" in *Suspend*) systemctl suspend ;; *Reboot*) systemctl reboot ;; *Shutdown*) systemctl poweroff ;; *Logout*) hyprctl dispatch exit ;; esac'"
+  }
+}

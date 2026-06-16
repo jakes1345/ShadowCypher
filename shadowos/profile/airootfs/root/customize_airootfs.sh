@@ -23,8 +23,10 @@ systemctl --global enable shadowos-welcome.service 2>/dev/null || true
 systemctl enable shadowos-live-login-fix.service
 systemctl enable sshd.service
 mkdir -p /etc/ssh/sshd_config.d
+# Live ISO: allow password auth so SSH debugging works without a key
+# Installed system: shadowos-firstboot hardens this after install
 cat > /etc/ssh/sshd_config.d/99-shadowos-hardening.conf <<'SSHCONF'
-PasswordAuthentication no
+PasswordAuthentication yes
 PermitRootLogin prohibit-password
 PubkeyAuthentication yes
 X11Forwarding no

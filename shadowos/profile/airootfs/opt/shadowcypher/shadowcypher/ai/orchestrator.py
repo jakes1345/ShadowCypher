@@ -116,16 +116,32 @@ class AIOrchestrator:
                 
                 # Execute via MetaChain
                 # Note: pass debug=True to get raw logs for diagnostic parity
+                # RAG augmentation — inject security KB context into system prompt
+                try:
+                    from shadowcypher.ai.rag import augment_prompt
+                    enriched_instructions = augment_prompt(query, spec.system_prompt or "", domain=None)
+                except Exception:
+                    enriched_instructions = spec.system_prompt or ""
+
+                # Rebuild agent with RAG-enriched instructions
+                if enriched_instructions != spec.system_prompt:
+                    aa_agent = Agent(
+                        name=spec.name,
+                        model=aa_agent.model,
+                        instructions=enriched_instructions,
+                        functions=aa_agent.functions,
+                        tool_choice="required",
+                    )
+
                 # Build message context
                 messages = []
                 if history:
                     messages.extend(history)
-                
+
                 user_msg = {"role": "user", "content": query}
                 if images:
-                    # Multimodal support (simplified for LiteLLM/Ollama)
                     user_msg["images"] = images
-                
+
                 messages.append(user_msg)
                 
                 async def _task():

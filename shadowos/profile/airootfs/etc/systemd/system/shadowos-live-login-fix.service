@@ -1,0 +1,13 @@
+[Unit]
+Description=ShadowOS live demo login fix (SDDM cannot handle expired passwords)
+ConditionPathExists=/etc/shadowos/live-iso
+Before=sddm.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/shadowos-live-login-fix.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target

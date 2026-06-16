@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Gaming hub — one picker for Steam, Lutris, Heroic, Bottles, ProtonUp-Qt, Prism.
+set -euo pipefail
+
+WOFI_OPTS=(--dmenu --prompt "play" --width 440 --height 320 --cache-file /dev/null)
+
+pick=$(printf '%s\n' \
+    "Steam" \
+    "Lutris" \
+    "Heroic · Epic / GOG" \
+    "Bottles · Wine prefixes" \
+    "ProtonUp-Qt · Proton GE" \
+    "Prism Launcher · Minecraft" \
+    | wofi "${WOFI_OPTS[@]}")
+
+[[ -n "$pick" ]] || exit 0
+
+notify_missing() {
+    local name="$1"
+    notify-send -i dialog-information "ShadowOS Gaming" \
+        "$name is not installed yet. Connect to the network and wait for first-boot setup, or run: shadow-update" \
+        2>/dev/null || true
+}
+
+run_flatpak() {
+    local app_id="$1" label="$2"
+    if flatpak info "$app_id" &>/dev/null; then
+        exec flatpak run "$app_id"
+    fi
+    notify_missing "$label"
+    exit 1
+}
+
+case "$pick" in
+    Steam)
+        command -v steam >/dev/null && exec steam
+        notify_missing "Steam"
+        ;;
+    Lutris)
+        command -v lutris >/dev/null && exec lutris
+        notify_missing "Lutris"
+        ;;
+    "Heroic · Epic / GOG")
+        run_flatpak com.heroicgameslauncher.hgl "Heroic"
+        ;;
+    "Bottles · Wine prefixes")
+        run_flatpak com.usebottles.bottles "Bottles"
+        ;;
+    "ProtonUp-Qt · Proton GE")
+        run_flatpak net.davidotek.pupgui2 "ProtonUp-Qt"
+        ;;
+    "Prism Launcher · Minecraft")
+        command -v prismlauncher >/dev/null && exec prismlauncher
+        notify_missing "Prism Launcher"
+        ;;
+esac

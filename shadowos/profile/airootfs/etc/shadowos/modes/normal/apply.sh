@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# normal — default daily-driver mode
+# normal — default daily-driver mode (full internet, encrypted DNS optional)
 set -e
-systemctl stop tor 2>/dev/null || true
-systemctl start dnscrypt-proxy 2>/dev/null || true
-ufw default deny incoming
-ufw default allow outgoing
+# shellcheck source=/dev/null
+source /etc/shadowos/modes/_network_open.sh
+shadowos_network_open

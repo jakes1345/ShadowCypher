@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+import json
+import os
+import re
+import subprocess
+
+def run_cmd(args):
+    try:
+        res = subprocess.run(args, capture_output=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return res.stdout.strip(), res.returncode
+    except Exception:
+        return "", -1
+
+def check_ufw():
+    # systemctl is-active is non-blocking and works without root
+    out, code = run_cmd(["systemctl", "is-active", "ufw"])
+    return out == "active"
+
+def check_dns():
+    try:
+        with open("/etc/resolv.conf", "r") as f:
+            content = f.read()
+        # Look for loopback address nameservers e.g. nameserver 127.0.0.1 or 127.0.0.53
+        nameservers = re.findall(r"nameserver\s+(127\.\d+\.\d+\.\d+)", content)
+        return len(nameservers) > 0
+    except Exception:
+        return False
+
+def check_hardened_kernel():
+    out, _ = run_cmd(["uname", "-r"])
+    return "hardened" in out.lower()
+
+def check_mac_random():
+    # Checks if shadowos-mac-randomize service ran successfully or mode is privacy/ghost
+    out, _ = run_cmd(["systemctl", "is-active", "shadowos-mac-randomize"])
+    if out == "active":
+        return True
+    
+    # Fallback check if current mode is privacy or ghost
+    try:
+        with open("/var/lib/shadowos/current-mode", "r") as f:
+            mode = f.read().strip()
+        if mode in ["privacy", "ghost"]:
+            return True
+    except Exception:
+        pass
+    return False
+
+def check_tor():
+    out, _ = run_cmd(["systemctl", "is-active", "tor"])
+    return out == "active"
+
+def get_exposed_ports():
+    # ss -tlnp requires root for process names, but ss -tln shows listening ports to anyone
+    out, _ = run_cmd(["ss", "-tln"])
+    lines = out.splitlines()
+    exposed = []
+    for line in lines[1:]:
+        parts = line.split()
+        if len(parts) >= 4:
+            local_addr = parts[3]
+            # Exclude loopback interfaces (e.g. 127.0.0.1:* or [::1]:* or 127.0.0.53:*)
+            if not (local_addr.startswith("127.") or local_addr.startswith("[::1]") or local_addr.startswith("localhost")):
+                # Split address and port
+                match = re.search(r"^(.*):(\d+)$", local_addr)
+                if match:
+                    addr, port = match.groups()
+                    exposed.append((addr, port))
+    return exposed
+
+def main():
+    score = 0
+    max_score = 100
+    details = []
+
+    # 1. Firewall (25 pts)
+    if check_ufw():
+        score += 25
+        details.append("✓ Firewall active (+25)")
+    else:
+        details.append("✗ Firewall inactive (0/25)")
+
+    # 2. Encrypted DNS (25 pts)
+    if check_dns():
+        score += 25
+        details.append("✓ Secure local resolver (+25)")
+    else:
+        details.append("✗ External DNS direct leak risk (0/25)")
+
+    # 3. MAC Randomization (15 pts)
+    if check_mac_random():
+        score += 15
+        details.append("✓ MAC randomized on boot (+15)")
+    else:
+        details.append("✗ Default MAC hardware address in use (0/15)")
+
+    # 4. Hardened Kernel (15 pts)
+    if check_hardened_kernel():
+        score += 15
+        details.append("✓ Linux hardened kernel active (+15)")
+    else:
+        details.append("✗ Generic stock kernel active (0/15)")
+
+    # 5. Tor Privacy Routing (20 pts)
+    if check_tor():
+        score += 20
+        details.append("✓ Tor proxy routing available (+20)")
+    else:
+        details.append("· Tor routing inactive (0/20)")
+
+    # 6. Exposed Ports penalty
+    exposed_ports = get_exposed_ports()
+    if exposed_ports:
+        penalty = len(exposed_ports) * 10
+        # cap penalty to 30
+        penalty = min(penalty, 30)
+        score -= penalty
+        ports_str = ", ".join([f"{addr}:{port}" for addr, port in exposed_ports])
+        details.append(f"✗ Exposed external ports penalty: -{penalty} ({ports_str})")
+    else:
+        details.append("✓ Zero external ports exposed (+0)")
+
+    # Bound score between 0 and 100
+    score = max(0, min(score, 100))
+
+    if score >= 90:
+        rating = "SECURE"
+        icon = "🛡️"
+        css_class = "secure"
+    elif score >= 60:
+        rating = "GUARDED"
+        icon = "⚠️"
+        css_class = "guarded"
+    else:
+        rating = "EXPOSED"
+        icon = "🚨"
+        css_class = "exposed"
+
+    tooltip_text = f"🛡️ SHADOWOS SECURITY POSTURE AUDIT\n"
+    tooltip_text += f"Rating: {rating} ({score}/100)\n"
+    tooltip_text += "─" * 40 + "\n"
+    tooltip_text += "\n".join(details)
+    tooltip_text += "\n" + "─" * 40 + "\n"
+    tooltip_text += "Audit dynamic update frequency: 10s"
+
+    waybar_output = {
+        "text": f"{icon} {score}%",
+        "alt": str(score),
+        "tooltip": tooltip_text,
+        "class": css_class,
+        "percentage": score
+    }
+
+    print(json.dumps(waybar_output))
+
+if __name__ == "__main__":
+    main()

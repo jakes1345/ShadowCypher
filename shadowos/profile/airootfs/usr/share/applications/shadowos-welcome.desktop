@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=ShadowOS Welcome Guide
+Comment=Learn keybinds, modes, and onboard your profile
+Exec=/usr/local/bin/shadowos-welcome
+Icon=help-about
+Terminal=false
+Type=Application
+Categories=System;Utility;
+Keywords=welcome;help;guide;shortcuts;keybinds;modes;shadow;

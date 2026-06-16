@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Delay ShadowCypher until the Hyprland desktop (wallpaper + waybar) is visible.
+set -euo pipefail
+
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/shadowcypher"
+LOG_FILE="$LOG_DIR/autostart.log"
+mkdir -p "$LOG_DIR"
+
+log() { echo "[$(date -Iseconds)] $*" >>"$LOG_FILE"; }
+
+# Never hijack login — only launch when the operator explicitly asks (SUPER+S / Waybar).
+if [[ "${SHADOWCYPHER_MANUAL:-0}" != "1" && "${1:-}" != "--manual" ]]; then
+    log "Blocked automatic ShadowCypher launch (use SUPER+S or Waybar icon)"
+    exit 0
+fi
+
+if pgrep -f "python3 -m shadowcypher\.app" >/dev/null 2>&1; then
+    log "ShadowCypher already running — skip autostart"
+    exit 0
+fi
+
+# Let hyprpaper/waybar settle before the heavy GTK app boots.
+sleep 4
+
+# Verify runtime deps before launching (fail loudly in log, not silently).
+missing=()
+for mod in gi psutil aiohttp pydantic_settings websockets; do
+    if ! python3 -c "import ${mod}" 2>/dev/null; then
+        missing+=("$mod")
+    fi
+done
+if ((${#missing[@]})); then
+    log "Missing Python modules: ${missing[*]}"
+    notify-send -i dialog-error "ShadowCypher" \
+        "Missing Python deps: ${missing[*]}. Run: sudo pacman -S python-psutil python-aiohttp python-pydantic-settings" \
+        2>/dev/null || true
+    exit 1
+fi
+
+export PYTHONPATH=/opt/shadowcypher
+export GDK_BACKEND=wayland,x11
+export XDG_CURRENT_DESKTOP=Hyprland
+
+log "Launching ShadowCypher"
+exec python3 -m shadowcypher.app >>"$LOG_FILE" 2>&1

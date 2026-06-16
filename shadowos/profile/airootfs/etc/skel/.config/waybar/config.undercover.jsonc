@@ -1,0 +1,62 @@
+{
+  "layer": "top",
+  "position": "bottom",
+  "height": 40,
+  "spacing": 4,
+  "margin-top": 0,
+  "margin-left": 0,
+  "margin-right": 0,
+
+  "modules-left":   ["custom/logo", "hyprland/workspaces"],
+  "modules-center": ["hyprland/window"],
+  "modules-right":  ["tray", "network", "pulseaudio", "battery", "clock"],
+
+  "custom/logo": {
+    "format": " ⊞ ",
+    "tooltip": false,
+    "on-click": "wofi --show drun"
+  },
+
+  "hyprland/workspaces": {
+    "format": "{icon}",
+    "on-click": "activate",
+    "format-icons": {
+      "1": "1", "2": "2", "3": "3", "4": "4", "5": "5",
+      "default": "1"
+    },
+    "persistent_workspaces": { "*": 5 }
+  },
+
+  "hyprland/window": {
+    "format": "{}",
+    "max-length": 50
+  },
+
+  "clock": {
+    "interval": 1,
+    "format": "{:%I:%M %p · %m/%d/%Y}",
+    "tooltip-format": "<tt>{calendar}</tt>"
+  },
+
+  "tray": { "spacing": 8 },
+
+  "network": {
+    "format-wifi": " 󰖩 ",
+    "format-ethernet": " 󰈀 ",
+    "format-disconnected": " 󰖪 ",
+    "tooltip-format": "{essid} · {ipaddr}",
+    "on-click": "foot -e nmtui"
+  },
+
+  "pulseaudio": {
+    "format": " 󰕾 {volume}%",
+    "format-muted": " 󰝟 ",
+    "on-click": "pavucontrol"
+  },
+
+  "battery": {
+    "format": " 󰁹 {capacity}%",
+    "format-charging": " 󰂄 {capacity}%",
+    "states": { "warning": 25, "critical": 10 }
+  }
+}

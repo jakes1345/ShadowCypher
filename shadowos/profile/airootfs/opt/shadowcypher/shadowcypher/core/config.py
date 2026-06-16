@@ -97,7 +97,7 @@ class Config(BaseSettings):
 
     # Core metadata
     app_name: str = "ShadowCypher Apex"
-    version: str = "2.2.0-enterprise"
+    version: str = "3.0.0-enterprise"
     
     # Sub-settings
     ai: AISettings = AISettings()

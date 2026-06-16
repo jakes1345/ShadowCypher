@@ -1,96 +1,117 @@
 #!/usr/bin/env bash
-# Boot the ShadowOS ISO in QEMU headless and capture screenshots at intervals
-# via QMP screendump. Useful for visual smoke-testing without a desktop.
+# Boot ShadowOS ISO in QEMU.
 #
-# Usage: ./boot-iso.sh out/shadowos-*.iso
+#   ./boot-iso.sh --gui              # visible GTK window (recommended)
+#   ./boot-iso.sh --headless         # VNC :5901 + auto screenshots
+#   ./boot-iso.sh --gui out/foo.iso  # explicit ISO path
+#
 set -uo pipefail
 
-ISO="${1:-$(ls -t out/shadowos-*.iso 2>/dev/null | head -1)}"
-if [[ ! -f "$ISO" ]]; then
-    echo "No ISO found. Run build-docker.sh first." >&2
-    exit 1
-fi
+MODE=gui
+ISO=""
+for arg in "$@"; do
+    case "$arg" in
+        --gui|--headless|--smoke) MODE="${arg#--}" ;;
+        -*) echo "Unknown flag: $arg" >&2; exit 1 ;;
+        *) ISO="$arg" ;;
+    esac
+done
 
-SHOTS=/tmp/shadowos-shots
-rm -rf "$SHOTS"
-mkdir -p "$SHOTS"
+ISO="${ISO:-$(ls -t /home/jack/ShadowCypher/shadowos/out/shadowos-*.iso 2>/dev/null | head -1)}"
+[[ -f "$ISO" ]] || { echo "No ISO found. Pass path or build first." >&2; exit 1; }
 
-QMP=/tmp/qemu-qmp.sock
+pkill -f 'qemu-system-x86_64.*shadowos-' 2>/dev/null || true
+sleep 1
+
+QMP=/tmp/qemu-shadowos-qmp.sock
+LOG=/tmp/shadowos-qemu-gui.log
 rm -f "$QMP"
 
-echo ">> Booting $ISO"
-echo ">> Screenshots will land in $SHOTS"
-echo ">> QMP socket: $QMP"
+echo "══════════════════════════════════════════════════════════"
+echo "  ShadowOS QEMU boot"
+echo "  ISO:  $ISO"
+echo "  Mode: $MODE"
+echo "  Log:  $LOG"
+echo "══════════════════════════════════════════════════════════"
 
-# Boot QEMU headless with QMP socket for screendump and VNC for live view if wanted
-qemu-system-x86_64 \
-    -enable-kvm -cpu host -smp 4 -m 4G \
-    -drive file="$ISO",media=cdrom \
-    -boot d \
-    -vga virtio \
-    -display none \
-    -vnc 127.0.0.1:1 \
-    -qmp "unix:$QMP,server=on,wait=off" \
-    -netdev user,id=net0 -device virtio-net-pci,netdev=net0 \
-    -name shadowos-test \
-    > /tmp/qemu.log 2>&1 &
+COMMON=(
+    qemu-system-x86_64
+    -enable-kvm -cpu host -smp 4 -m 4G
+    -drive "file=$ISO,media=cdrom"
+    -boot d
+    -vga virtio
+    -qmp "unix:$QMP,server=on,wait=off"
+    -netdev "user,id=net0,hostfwd=tcp::2222-:22"
+    -device virtio-net-pci,netdev=net0
+    -name "shadowos-$MODE"
+)
+
+case "$MODE" in
+    gui)
+        SHOTS=/tmp/shadowos-gui-capture
+        mkdir -p "$SHOTS"
+        echo ">> Opening GTK window on ${DISPLAY:-:0}"
+        echo ">> Live login: shadow / shadow  (password field only — username is pre-filled)"
+        echo ">> If login fails on May 29 ISO: Ctrl+Alt+F2 → shadow/shadow → set new password to shadow"
+        echo ">> Or boot May 26 ISO, or rebuild after login-fix profile update"
+        echo ">> SSH (after boot, key auth): ssh -p 2222 shadow@127.0.0.1"
+        echo ">> Boot screenshots → $SHOTS/"
+        nohup "${COMMON[@]}" -display gtk >"$LOG" 2>&1 &
+        ;;
+    headless|smoke)
+        SHOTS=/tmp/shadowos-shots
+        rm -rf "$SHOTS"
+        mkdir -p "$SHOTS"
+        echo ">> Headless — VNC 127.0.0.1:5901  screenshots → $SHOTS"
+        nohup "${COMMON[@]}" -display none -vnc 127.0.0.1:1 >"$LOG" 2>&1 &
+        ;;
+    *)
+        echo "Unknown mode: $MODE" >&2
+        exit 1
+        ;;
+esac
 
 QPID=$!
 echo ">> QEMU pid: $QPID"
+disown
 
-# Wait for QMP to come up
-for i in $(seq 1 30); do
+for i in $(seq 1 40); do
     [[ -S "$QMP" ]] && break
-    sleep 0.5
+    sleep 0.25
 done
-if [[ ! -S "$QMP" ]]; then
-    echo "QMP socket never appeared. Check /tmp/qemu.log" >&2
-    kill $QPID 2>/dev/null
-    exit 1
+
+if [[ "$MODE" == headless || "$MODE" == smoke ]]; then
+    SHOTS=/tmp/shadowos-shots
+    rm -rf "$SHOTS"
+    mkdir -p "$SHOTS"
+elif [[ "$MODE" == gui ]]; then
+    SHOTS=/tmp/shadowos-gui-capture
+    rm -f "$SHOTS"/*.png "$SHOTS"/*.ppm 2>/dev/null || true
+    mkdir -p "$SHOTS"
 fi
 
-# Send QMP capabilities handshake
-qmp() {
-    local cmd="$1"
-    {
-        echo '{"execute":"qmp_capabilities"}'
-        echo "$cmd"
-    } | timeout 3 socat - UNIX-CONNECT:"$QMP" 2>/dev/null | tail -5
-}
-
-shot() {
-    local n="$1"
-    local out="$SHOTS/$(printf '%03d' "$n")-${2:-frame}.ppm"
-    qmp "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$out\"}}" > /dev/null
-    if [[ -f "$out" ]]; then
-        # Convert PPM → PNG for viewability
-        if command -v convert >/dev/null; then
-            convert "$out" "${out%.ppm}.png"
-            rm "$out"
-            echo "  shot $n → ${out%.ppm}.png"
-        else
-            echo "  shot $n → $out"
+if [[ -n "${SHOTS:-}" ]]; then
+    qmp_shot() {
+        local n="$1" label="$2"
+        local out="$SHOTS/$(printf '%03d' "$n")-${label}.ppm"
+        { echo '{"execute":"qmp_capabilities"}'
+          echo "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$out\"}}"
+        } | timeout 3 socat - UNIX-CONNECT:"$QMP" 2>/dev/null >/dev/null || true
+        if [[ -f "$out" ]] && command -v convert >/dev/null; then
+            convert "$out" "${out%.ppm}.png" 2>/dev/null && rm -f "$out"
+            echo "  shot $n → ${label}.png"
         fi
-    fi
-}
-
-# Capture timeline:
-#   t=5s    GRUB menu (default 5s timeout)
-#   t=12s   GRUB → kernel + Plymouth handoff
-#   t=20s   Plymouth animation
-#   t=35s   SDDM login
-#   t=60s   First-boot service / desktop wait
-#   t=90s   Desktop (post-login if autologin)
-echo ">> Capturing screenshots..."
-sleep 5;  shot 1 grub
-sleep 7;  shot 2 plymouth-early
-sleep 8;  shot 3 plymouth-mid
-sleep 15; shot 4 sddm
-sleep 25; shot 5 desktop-wait
-sleep 30; shot 6 desktop-final
+    }
+    echo ">> Capturing boot timeline..."
+    sleep 5;  qmp_shot 1 grub
+    sleep 7;  qmp_shot 2 plymouth
+    sleep 8;  qmp_shot 3 plymouth-mid
+    sleep 15; qmp_shot 4 sddm
+    sleep 25; qmp_shot 5 desktop-wait
+    sleep 30; qmp_shot 6 desktop
+    echo ">> Screenshots in $SHOTS/"
+fi
 
 echo
-echo ">> Done. PNG screenshots in $SHOTS/"
-echo ">> VNC view: vncviewer 127.0.0.1:1 (while QEMU runs)"
-echo ">> Kill QEMU: kill $QPID"
-ls -la "$SHOTS/"
+echo ">> QEMU running. Kill: pkill -f 'qemu-system-x86_64.*shadowos-$MODE'"
+echo ">> Tail log: tail -f $LOG"

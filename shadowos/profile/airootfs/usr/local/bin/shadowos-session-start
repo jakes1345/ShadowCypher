@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Hyprland session wrapper — apply GPU fallbacks before compositor starts.
-set -euo pipefail
+# Note: deliberately NOT using set -e — a failed helper must never prevent Hyprland from starting.
+set -uo pipefail
 
 export XDG_CURRENT_DESKTOP=Hyprland
 export XDG_SESSION_TYPE=wayland
@@ -17,8 +18,19 @@ elif lspci 2>/dev/null | grep -qiE 'VMware|VirtualBox|QXL|Microsoft Corporation 
 fi
 
 if [[ "$IS_VM" -eq 1 ]]; then
-    export WLR_RENDERER=pixman
-    export LIBGL_ALWAYS_SOFTWARE=1
+    # Aquamarine (Hyprland's backend) needs Vulkan or hardware GL.
+    # In QEMU/VMs without GPU passthrough, force Mesa's software Vulkan (lavapipe).
+    export WLR_NO_HARDWARE_CURSORS=1
+    LVP=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)
+    if [[ -n "$LVP" ]]; then
+        export VK_ICD_FILENAMES="$LVP"
+        export VK_DRIVER_FILES="$LVP"
+        export MESA_VK_WSI_DEBUG=sw
+    else
+        export LIBGL_ALWAYS_SOFTWARE=1
+    fi
+    RENDER_NODE=$(ls /dev/dri/renderD* 2>/dev/null | head -1)
+    [[ -n "$RENDER_NODE" ]] && export AQ_DRM_DEVICES="$RENDER_NODE"
 fi
 
 # Always deploy canonical desktop config (fixes old ISO autostart on every login).
@@ -63,8 +75,29 @@ animations {
 }
 EOF
 else
-    # Blank out on real hardware to keep premium look
-    echo "# Bare-metal mode: full effects enabled" > "$ADJUST_FILE"
+    # Real hardware: re-enable premium effects (disabled in base config for VM safety)
+    cat > "$ADJUST_FILE" <<'EOF'
+# Auto-generated bare-metal profile — full effects enabled
+decoration {
+    rounding = 10
+    shadow {
+        enabled = true
+        range = 24
+        render_power = 3
+        color = rgba(00000099)
+    }
+    blur {
+        enabled = true
+        size = 8
+        passes = 3
+        ignore_opacity = true
+        vibrancy = 0
+    }
+}
+animations {
+    enabled = true
+}
+EOF
 fi
 
 # Arch ships start-hyprland; direct Hyprland triggers the yellow warning bar.

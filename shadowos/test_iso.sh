@@ -67,6 +67,11 @@ shells=(
 )
 for s in "${shells[@]}"; do
   [[ -f "$s" ]] || continue
+  # Python helpers ship with a .sh-style path in /usr/local/bin
+  if head -1 "$s" 2>/dev/null | grep -q python; then
+    pass "$(basename "$s") (python)"
+    continue
+  fi
   if bash -n "$s" 2>/dev/null; then pass "$(basename "$s")"; else
     fail "syntax error: $s"
     bash -n "$s" 2>&1 | head -3 | sed 's/^/      /'
@@ -334,7 +339,7 @@ if [[ -f "$ca" ]]; then
   for svc in $(grep -oE 'systemctl enable [a-z][a-zA-Z0-9_-]+\.service' "$ca" | awk '{print $3}'); do
     # Built-in package services
     case "$svc" in
-      NetworkManager.service|sddm.service|ufw.service|apparmor.service|fail2ban.service|systemd-timesyncd.service|bluetooth.service|sshd.service|dnscrypt-proxy.service|docker.service|udisks2.service|power-profiles-daemon.service|tlp.service|gamemoded.service)
+      NetworkManager.service|sddm.service|ufw.service|apparmor.service|fail2ban.service|systemd-timesyncd.service|bluetooth.service|sshd.service|dnscrypt-proxy.service|docker.service|udisks2.service|power-profiles-daemon.service|tlp.service|gamemoded.service|cpupower.service|usbguard.service|auditd.service|cups.service)
         pass "service enabled: $svc (provided by a listed package)" ;;
       *)
         if [[ -f "$AIRFS/etc/systemd/system/$svc" ]]; then
@@ -344,6 +349,17 @@ if [[ -f "$ca" ]]; then
         fi ;;
     esac
   done
+  if grep -qE 'chage -d 0 shadow' "$ca"; then
+    fail "customize_airootfs.sh forces shadow password expiry (SDDM login breaks)"
+  else
+    pass "demo user shadow not forced to expire password at image build"
+  fi
+  if [[ -f "$AIRFS/usr/local/bin/shadowos-live-login-fix.sh" ]] && \
+     [[ -f "$AIRFS/etc/systemd/system/shadowos-live-login-fix.service" ]]; then
+    pass "live SDDM login fix shipped (shadowos-live-login-fix.service)"
+  else
+    warn "missing shadowos-live-login-fix (live ISO SDDM may fail if password expires)"
+  fi
 fi
 
 # ── 16. PNG integrity (no truncated images) ────────────────────────────────
@@ -353,6 +369,9 @@ broken=0
 checked=0
 while IFS= read -r p; do
   [[ -z "$p" ]] && continue
+  [[ -L "$p" && ! -e "$p" ]] && { fail "broken symlink: $p"; ((broken++)); continue; }
+  [[ -L "$p" ]] && p=$(readlink -f "$p")
+  [[ -f "$p" ]] || continue
   ((checked++))
   # PNG signature is the first 8 bytes
   sig=$(head -c 8 "$p" 2>/dev/null | xxd -p)
@@ -369,6 +388,9 @@ if python3 -c "from PIL import Image" 2>/dev/null; then
   checked=0
   while IFS= read -r p; do
     [[ -z "$p" ]] && continue
+    [[ -L "$p" && ! -e "$p" ]] && { fail "broken symlink: $p"; ((broken++)); continue; }
+    [[ -L "$p" ]] && p=$(readlink -f "$p")
+    [[ -f "$p" ]] || continue
     ((checked++))
     if ! python3 -c "from PIL import Image; im=Image.open('$p'); im.verify()" 2>/dev/null; then
       fail "PIL cannot decode: $p"
@@ -477,7 +499,7 @@ declare -A categories=(
   [base]="base linux-hardened"
   [boot]="grub efibootmgr"
   [desktop]="hyprland waybar wofi sddm foot"
-  [browser]="firefox"
+  [browser]="librewolf"
   [dev]="git neovim code docker podman"
   [pentest]="nmap metasploit wireshark-qt aircrack-ng"
   [gaming]="steam gamemode mangohud lutris prismlauncher"

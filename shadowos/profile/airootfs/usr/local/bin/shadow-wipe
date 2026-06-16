@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# shadow-wipe: Emergency local cleanup
+echo ">> [!] INITIATING TACTICAL WIPE..."
+rm -rf ~/.cache/*
+rm -rf ~/.local/share/recently-used.xbel
+history -c
+sync
+echo ">> [OK] Local traces cleared."

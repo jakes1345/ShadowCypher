@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Apply desktop theme files for a ShadowOS personality mode.
+# Called from shadow-mode after switching; safe to run as the logged-in user.
+set -euo pipefail
+
+mode="${1:-normal}"
+cfg="${XDG_CONFIG_HOME:-$HOME/.config}/waybar"
+hypr="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+
+mkdir -p "$cfg" "$hypr"
+
+case "$mode" in
+    undercover)
+        cp -f /etc/skel/.config/waybar/config.undercover.jsonc "$cfg/config.jsonc"
+        cp -f /etc/skel/.config/waybar/style.undercover.css "$cfg/style.css"
+        ;;
+    *)
+        cp -f /etc/skel/.config/waybar/config.normal.jsonc "$cfg/config.jsonc"
+        cp -f /etc/skel/.config/waybar/style.normal.css "$cfg/style.css"
+        ;;
+esac
+
+pkill -SIGUSR2 waybar 2>/dev/null || true

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Hyprland (ShadowOS)
+Comment=A dynamic tiling Wayland compositor — ShadowOS edition
+Exec=/usr/local/bin/shadowos-session-start
+Type=Application
+DesktopNames=Hyprland
+Keywords=shadowos;hyprland;wayland;tiling;

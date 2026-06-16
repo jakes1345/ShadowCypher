@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# ShadowOS settings hub — network, audio, display, security, updates in one picker.
+set -euo pipefail
+
+WOFI_OPTS=(--dmenu --prompt "settings" --width 480 --height 420 --cache-file /dev/null)
+
+pick=$(printf '%s\n' \
+    "Wi-Fi & connections" \
+    "Bluetooth" \
+    "Audio" \
+    "Display & monitors" \
+    "Appearance (GTK theme)" \
+    "Personality mode" \
+    "Firewall (UFW)" \
+    "Privacy leak test" \
+    "Security score" \
+    "Check for updates" \
+    "Install updates" \
+    "Power profile" \
+    "System diagnostics" \
+    "Welcome guide" \
+    "Install ShadowOS to disk" \
+    | wofi "${WOFI_OPTS[@]}")
+
+[[ -n "$pick" ]] || exit 0
+
+run_term() {
+    foot --title "$1" -e bash -lc "$2; echo; read -n1 -rp 'Press any key…'"
+}
+
+case "$pick" in
+    "Wi-Fi & connections")
+        exec foot -e nmtui
+        ;;
+    "Bluetooth")
+        if command -v blueman-manager >/dev/null; then
+            exec blueman-manager
+        fi
+        notify-send "Bluetooth" "Install blueman or connect a BT adapter" 2>/dev/null || true
+        ;;
+    "Audio")
+        exec pavucontrol
+        ;;
+    "Display & monitors")
+        run_term "display" "hyprctl monitors; echo; echo 'Tip: edit ~/.config/hypr/hyprland.conf for layout; hyprctl reload after changes'"
+        ;;
+    "Appearance (GTK theme)")
+        command -v nwg-look >/dev/null && exec nwg-look
+        notify-send "Appearance" "nwg-look not found" 2>/dev/null || true
+        ;;
+    "Personality mode")
+        exec shadow-mode picker
+        ;;
+    "Firewall (UFW)")
+        if command -v gufw >/dev/null; then
+            exec pkexec gufw
+        else
+            run_term "ufw" "sudo ufw status verbose"
+        fi
+        ;;
+    "Privacy leak test")
+        run_term "leak-test" "shadow-leak-test"
+        ;;
+    "Security score")
+        run_term "shadow-score" "shadow-score --verbose 2>/dev/null || shadow-score"
+        ;;
+    "Check for updates")
+        run_term "updates" "shadow-update --check"
+        ;;
+    "Install updates")
+        run_term "updates" "shadow-update"
+        ;;
+    "Power profile")
+        profile=$(printf '%s\n' "power-saver" "balanced" "performance" \
+            | wofi --dmenu --prompt "power" --width 320 --height 160 --cache-file /dev/null)
+        [[ -z "$profile" ]] && exit 0
+        if command -v powerprofilesctl >/dev/null; then
+            powerprofilesctl set "$profile"
+            notify-send "Power profile" "Set to $profile" 2>/dev/null || true
+        else
+            notify-send "Power profile" "powerprofilesctl not available" 2>/dev/null || true
+        fi
+        ;;
+    "System diagnostics")
+        bundle=$(shadowos-diag 2>/dev/null | tail -1 | awk '{print $NF}')
+        notify-send "Diagnostics saved" "${bundle:-/tmp/shadowos-diag-*.tar.gz}" 2>/dev/null || true
+        run_term "diag" "shadowos-diag; ls -lh /tmp/shadowos-diag-*.tar.gz 2>/dev/null | tail -3"
+        ;;
+    "Welcome guide")
+        exec /usr/local/bin/shadowos-welcome
+        ;;
+    "Install ShadowOS to disk")
+        exec shadowos-install
+        ;;
+esac

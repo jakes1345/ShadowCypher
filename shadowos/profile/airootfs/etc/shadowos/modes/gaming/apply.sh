@@ -147,6 +147,27 @@ SCORE_FILE=/var/lib/shadowos/gaming-score.txt
   echo "Tuned: $(date)"
 } > "$SCORE_FILE"
 
+# ── Hyprland: disable heavy compositing for max fps ──────────────────────────
+if command -v hyprctl >/dev/null 2>&1; then
+    # Find the desktop user (pkexec clears SUDO_USER; query loginctl instead)
+    DESKTOP_USER="${SUDO_USER:-}"
+    if [[ -z "$DESKTOP_USER" ]]; then
+        DESKTOP_USER=$(loginctl list-sessions --no-legend 2>/dev/null \
+            | awk '{print $3}' | grep -v root | head -1 || echo "shadow")
+    fi
+    HIS=$(find /run/user/$(id -u "$DESKTOP_USER" 2>/dev/null || echo 1000)/hypr \
+        -maxdepth 1 -mindepth 1 -type d 2>/dev/null | head -1 | xargs basename 2>/dev/null || true)
+    if [[ -n "$HIS" ]]; then
+        sudo -u "$DESKTOP_USER" env HYPRLAND_INSTANCE_SIGNATURE="$HIS" \
+            hyprctl keyword decoration:blur:enabled false   2>/dev/null || true
+        sudo -u "$DESKTOP_USER" env HYPRLAND_INSTANCE_SIGNATURE="$HIS" \
+            hyprctl keyword animations:enabled false        2>/dev/null || true
+        sudo -u "$DESKTOP_USER" env HYPRLAND_INSTANCE_SIGNATURE="$HIS" \
+            hyprctl keyword decoration:dim_inactive false   2>/dev/null || true
+        echo "  ✓ Hyprland → blur+animations off (fps priority)"
+    fi
+fi
+
 echo ""
 echo "✓ Gaming Mode fully active. Launch games with: gamemoderun %command%"
 echo "  CoreCtrl available for additional GPU tuning (search app launcher)"

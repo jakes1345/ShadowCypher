@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# shadow-bios — reboot into UEFI/BIOS firmware settings
+set -euo pipefail
+
+TEAL='\033[38;2;0;224;164m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+# Check UEFI support
+if [[ ! -d /sys/firmware/efi ]]; then
+    echo -e "${BOLD}Not running in UEFI mode.${RESET}"
+    echo "This machine booted via legacy BIOS — there's no firmware reboot target."
+    echo "To reach BIOS settings, restart and press your firmware key (Del, F2, F10, etc.)"
+    exit 1
+fi
+
+echo -e "${TEAL}▸${RESET} Rebooting into firmware (UEFI/BIOS) settings..."
+exec systemctl reboot --firmware-setup

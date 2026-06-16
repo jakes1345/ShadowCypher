@@ -5,6 +5,12 @@ gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gtk, GLib, Gdk, GdkPixbuf
 import sys, os, time, threading
 
+# Wire custom askpass so sudo prompts use the ShadowCypher elevation gate
+_askpass = os.path.join(os.path.dirname(__file__), "..", "..", "native", "shadowcypher-askpass")
+_askpass = os.path.abspath(_askpass)
+if os.path.exists(_askpass):
+    os.environ["SUDO_ASKPASS"] = _askpass
+
 from shadowcypher.core.config import config
 from shadowcypher.ui.themes import get_theme
 from shadowcypher.core.logger import logger
@@ -44,8 +50,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         # 1. Apex HeaderBar
         self.header = Gtk.HeaderBar()
         self.header.set_show_close_button(True)
-        self.header.set_title("CITADEL // SHADOWCYPHER")
-        self.header.set_subtitle("\U0001f575️ APEX_TACTICAL_OFFENSIVE")
+        self.header.set_title("ShadowCypher")
+        self.header.set_subtitle("Sovereign Security Platform")
         self.set_titlebar(self.header)
 
         theme = get_theme("dark")
@@ -156,6 +162,27 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
 
         self.show_all()
 
+    def _show_update_banner(self, info: dict):
+        """Show a dismissible infobar when a new version is available."""
+        bar = Gtk.InfoBar()
+        bar.set_message_type(Gtk.MessageType.INFO)
+        bar.set_show_close_button(True)
+        lbl = Gtk.Label()
+        lbl.set_markup(
+            f"<b>ShadowCypher v{info['version']} available</b>  "
+            f"<span color='#94a3b8'>Run <tt>shadowcypher --update</tt> or pull from GitHub.</span>"
+        )
+        bar.get_content_area().pack_start(lbl, False, False, 0)
+        bar.connect("response", lambda b, _: b.destroy())
+        # Insert below headerbar — find the top vbox
+        children = self.get_children()
+        if children:
+            vbox = children[0]
+            if isinstance(vbox, Gtk.Box):
+                vbox.pack_start(bar, False, False, 0)
+                vbox.reorder_child(bar, 0)
+        bar.show_all()
+
     def _pulse_tick(self) -> bool:
         from shadowcypher.core.platform import platform_engine
         from shadowcypher.core.hub import hub
@@ -226,64 +253,71 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         
         # self.sidebar_list is now pre-initialized in __init__
 
+        # (icon, label, badge)  badge=None means no badge
         pages = [
-            ("---", "NEXUS-COMMAND"),
-            ("\U0001f4ca", "Central Command HUD"),
-            ("\U0001f5fa", "Spectre War-Map"),
-            ("\U0001f5c4", "Artifact Crypt"),
-            ("\U0001f916", "Shadow-Synthesizer"),
-            ("---", "TACTICAL-INTEL"),
-            ("✨", "Spectral Intelligence"),
-            ("\U0001f3af", "Vulnerability Sweep"),
-            ("\U0001f310", "Network Scanner"),
-            ("\U0001f50e", "OSINT Probe"),
-            ("\U0001f4bc", "Session Manager"),
-            ("\U0001f9e0", "Recon Engine"),
-            ("\U0001f3ae", "Steam OSINT"),
-            ("---", "OFFENSIVE-LAB"),
-            ("\U0001f575", "Web & Cloud Strikes"),
-            ("\U0001f4a3", "Payload Factory"),
-            ("\U0001f4f6", "Wireless Saturation"),
-            ("\U0001f5a5", "C2 Command Center"),
-            ("\U0001f480", "PocEngine Engine"),
-            ("\U0001f3a3", "Phishing Forge"),
-            ("\U0001f3db", "AD Assessment"),
-            ("\U0001f5c2", "AD Pivot"),
-            ("⚡", "Combat Deck"),
-            ("\U0001f4dc", "ShadowScript"),
-            ("---", "SOVEREIGN-OPS"),
-            ("\U0001f4ac", "Community Chat"),
-            ("\U0001f47b", "Shadow Nodes"),
-            ("\U0001f47a", "Ghost Mode"),
-            ("\U0001f50d", "Forensic Audit"),
-            ("\U0001f6e1", "Guardian"),
-            ("\U0001f9ea", "Intel Harvest"),
-            ("\U0001f525", "Firewall Manager"),
-            ("\U0001f511", "Credentials Vault"),
-            ("\U0001f6e0", "Hub Settings"),
-            ("\U0001f5dd", "God-Panel"),
-            ("☢", "Wraith Protocol"),
-            ("\U0001f4cb", "ShadowCypher Audit"),
-            ("\U0001f4de", "Support"),
+            ("---", "COMMAND CENTER", None),
+            ("\U0001f4ca", "Central Command HUD", None),
+            ("\U0001f5fa", "Spectre War-Map", None),
+            ("\U0001f5c4", "Artifact Crypt", None),
+            ("\U0001f916", "Shadow-Synthesizer", "APEX"),
+            ("---", "INTELLIGENCE", None),
+            ("✨", "Spectral Intelligence", "APEX"),
+            ("\U0001f3af", "Vulnerability Sweep", None),
+            ("\U0001f310", "Network Scanner", None),
+            ("\U0001f50e", "OSINT Probe", None),
+            ("\U0001f4bc", "Session Manager", None),
+            ("\U0001f9e0", "Recon Engine", None),
+            ("\U0001f3ae", "Steam OSINT", None),
+            ("---", "OPERATIONS", None),
+            ("\U0001f575", "Web & Cloud Strikes", None),
+            ("\U0001f4a3", "Payload Factory", "APEX"),
+            ("\U0001f4f6", "Wireless Saturation", None),
+            ("\U0001f5a5", "C2 Command Center", "APEX"),
+            ("\U0001f480", "PocEngine Engine", None),
+            ("\U0001f3a3", "Phishing Forge", None),
+            ("\U0001f3db", "AD Assessment", None),
+            ("\U0001f5c2", "AD Pivot", None),
+            ("⚡", "Combat Deck", None),
+            ("\U0001f4dc", "ShadowScript", None),
+            ("---", "SOVEREIGN", None),
+            ("\U0001f5a5", "Terminal", None),
+            ("\U0001f4ac", "Community Chat", None),
+            ("\U0001f47b", "Shadow Nodes", "APEX"),
+            ("\U0001f47a", "Ghost Mode", "APEX"),
+            ("\U0001f50d", "Forensic Audit", None),
+            ("\U0001f6e1", "Guardian", None),
+            ("\U0001f9ea", "Intel Harvest", None),
+            ("\U0001f525", "Firewall Manager", None),
+            ("\U0001f511", "Credentials Vault", "APEX"),
+            ("\U0001f6e0", "Hub Settings", None),
+            ("\U0001f5dd", "God-Panel", "APEX"),
+            ("☢", "Wraith Protocol", "APEX"),
+            ("\U0001f4cb", "ShadowCypher Audit", None),
+            ("\U0001f4de", "Support", None),
         ]
 
-        for icon, name in pages:
+        for entry in pages:
+            icon, name, badge = entry
             row = Gtk.ListBoxRow()
             if icon == "---":
-                lbl = Gtk.Label(label=f" {name}", xalign=0)
+                lbl = Gtk.Label(label=f"  {name}", xalign=0)
                 lbl.get_style_context().add_class("sidebar-header")
                 row.set_sensitive(False)
                 row.add(lbl)
             else:
-                hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=15)
+                hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
                 hbox.set_margin_start(10)
                 icon_lbl = Gtk.Label(label=icon)
                 icon_lbl.get_style_context().add_class("cyan-text")
                 name_lbl = Gtk.Label(label=name, xalign=0)
                 hbox.pack_start(icon_lbl, False, False, 0)
                 hbox.pack_start(name_lbl, True, True, 0)
+                if badge:
+                    badge_lbl = Gtk.Label(label=badge)
+                    badge_lbl.get_style_context().add_class("tier-badge")
+                    hbox.pack_end(badge_lbl, False, False, 6)
                 row.add(hbox)
-                row.page_id = name 
+                row.page_id = name
             self.sidebar_list.add(row)
 
         self.sidebar_list.set_activate_on_single_click(True)
@@ -322,6 +356,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "AD Pivot": "ad_page.AdPage",
                 "Combat Deck": "simulation_page.SimulationDeck",
                 "ShadowScript": "shadowscript_page.ShadowScriptPage",
+                "Terminal": "terminal_widget.TerminalPage",
                 "Community Chat": "chat_page.ChatPage",
                 "Shadow Nodes": "ghost_page.ShadowNodesPage",
                 "Ghost Mode": "ghost_mode_page.GhostModePage",
@@ -367,6 +402,22 @@ class ShadowCypherApp(Gtk.Application):
         if needs_onboarding():
             show_welcome(parent=None)
         self._window = ShadowCypherWindow(self)
+
+        # Background update check
+        from shadowcypher.core.updater import run_background_check
+        def _on_update(info):
+            GLib.idle_add(self._window._show_update_banner, info)
+        run_background_check(on_update_available=_on_update)
+
+        # RAG knowledge base — build in background if not already done
+        from shadowcypher.ai.rag import build_in_background
+        build_in_background()
+
+        # Default to shadow-gemma4 if available
+        from shadowcypher.ai.providers import provider_registry
+        models = provider_registry.active.list_models() if provider_registry.active else []
+        if "shadow-gemma4:latest" in models:
+            provider_registry.switch("ollama", model="shadow-gemma4:latest")
 
 def main():
     try:

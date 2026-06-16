@@ -1,0 +1,79 @@
+* {
+  font-family: "Segoe UI", "JetBrainsMono Nerd Font", "Noto Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  min-height: 0;
+}
+
+window#waybar {
+  background: rgba(32, 32, 32, 0.88);
+  color: #E6EDF3;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0px;
+}
+
+#custom-logo {
+  color: #0078d7; /* Windows Blue */
+  font-size: 16px;
+  padding: 0 14px;
+  margin: 0;
+}
+
+#custom-logo:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#workspaces {
+  margin: 0;
+  padding: 0;
+}
+
+#workspaces button {
+  color: #858585;
+  padding: 0 12px;
+  margin: 0;
+  background: transparent;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  transition: all 150ms ease;
+}
+
+#workspaces button:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#workspaces button.active {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom: 2px solid #0078d7; /* Active application indicator */
+}
+
+#window {
+  color: #C9D1D9;
+  padding: 0 12px;
+}
+
+#clock {
+  color: #ffffff;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+#clock:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#network, #pulseaudio, #battery, #tray {
+  color: #ffffff;
+  padding: 0 12px;
+  margin: 0;
+}
+
+#network:hover, #pulseaudio:hover, #battery:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#tray {
+  padding: 0 8px;
+}

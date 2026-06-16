@@ -9,6 +9,9 @@ MODELS_DIR=/opt/shadowcypher/shadowai/models
 
 exec >> "$LOG" 2>&1
 
+# Never pull models on the live ISO — GB-scale downloads into RAM = OOM.
+[[ -f /etc/shadowos/live-iso ]] && exit 0
+
 [[ -f "$STAMP" ]] && exit 0
 
 echo "═══ ShadowOS AI Setup — $(date -Iseconds) ═══"

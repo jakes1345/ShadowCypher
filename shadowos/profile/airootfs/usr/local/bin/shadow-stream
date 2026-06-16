@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# shadow-stream: Tactical media streaming via mpv + yt-dlp
+# Low-resource, no-bloat alternative to browser/Electron players.
+
+if [[ -z "$1" ]]; then
+    echo "Usage: shadow-stream <url>"
+    exit 1
+fi
+
+URL="$1"
+
+echo ">> Initializing tactical stream for: $URL"
+# Use hardware acceleration if available, minimal cache, and privacy headers
+exec mpv --hwdec=auto \
+         --ytdl-format="bestvideo[height<=1080]+bestaudio/best[height<=1080]/best" \
+         --cache=yes \
+         --demuxer-max-bytes=100M \
+         --no-terminal \
+         --force-window=immediate \
+         "$URL"

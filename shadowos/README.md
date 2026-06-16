@@ -13,13 +13,13 @@ practical daily driver — pentest, dev, and gaming, all in one.
 | **Terminal / Shell** | Foot · Zsh + Starship |
 | **Boot splash** | Plymouth — custom animated logo + 12-dot orbit spinner |
 | **Boot menu** | GRUB — custom theme with teal accent |
-| **Browser** | Firefox (arkenfox-hardened user.js) |
+| **Browser** | LibreWolf (privacy-hardened), Mullvad Browser, Tor Browser via launcher |
 | **Dev** | VSCode, neovim, helix, lazygit, gh, docker, podman, kubectl, terraform, rustup, go, nodejs |
 | **Pentest** | nmap, sqlmap, hydra, metasploit, aircrack-ng, bettercap, john, hashcat, wireshark, **rustscan, ffuf, feroxbuster, subfinder, httpx, nuclei, naabu, impacket, netexec, sshuttle, mitmproxy** |
 | **Gaming** | Steam + steam-runtime, Heroic, Lutris, PrismLauncher (Minecraft), gamemode, MangoHUD, gamescope, wine-staging |
 | **Cross-distro tools** | Distrobox (run Kali/Ubuntu/Debian as containers), Flatpak/Flathub |
 | **Privacy** | Tor, dnscrypt-proxy, MAC randomizer (per-mode), AppArmor, ufw |
-| **Modes** | `shadow-mode <normal/dev/pentest/privacy/ghost>` — hot-swap firewall, DNS, autostart |
+| **Modes** | `shadow-mode <normal/dev/pentest/privacy/ghost/undercover>` — hot-swap firewall, DNS, autostart |
 | **AI** | ShadowCypher (GTK) pre-installed at /opt/shadowcypher; Ollama for local LLMs |
 | **Installer** | archinstall (live → disk) + Calamares config |
 
@@ -93,6 +93,7 @@ sudo ./flash-usb.sh out/shadowos-*.iso /dev/sdX
 | `pentest` | off | dnscrypt    | scan open  | Active engagement |
 | `privacy` | on  | dnscrypt+Tor| Tor-only   | Travel / hostile networks |
 | `ghost`   | on  | Tor-only    | drop all   | Maximum lockdown |
+| `undercover` | off | dnscrypt | neutral    | Low-profile / Windows-style look |
 
 Switch with `shadow-mode <name>` or `SUPER+M` for the wofi picker.
 
