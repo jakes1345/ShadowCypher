@@ -1,6 +1,6 @@
 # Maintainer: ShadowCypher <admin@shadowcypher.site>
 pkgname=shadowcypher
-pkgver=2.2.0
+pkgver=3.0.0
 pkgrel=1
 pkgdesc="ShadowCypher — enterprise offensive security & autonomous intelligence suite"
 arch=('any')
