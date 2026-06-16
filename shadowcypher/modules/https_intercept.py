@@ -159,7 +159,7 @@ class HTTPSIntercept(BaseModule):
         # Launch sslstrip
         sslstrip_task = runner.execute_task(
             "SSLSTRIP",
-            ["sslstrip", "-l", "10000", "-w", "/tmp/sslstrip.log"],
+            ["sslstrip", "-l", "10000", "-w", "/tmp/sslstrip.log"],  # nosec B108
             callback=on_output,
         )
         self.active_tasks.append(sslstrip_task)

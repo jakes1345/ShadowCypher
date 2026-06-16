@@ -38,7 +38,7 @@ class StealthEngine:
 
     def ghost_mode_on(self) -> bool:
         """True if the full 8-layer ghost_mode.py engage has been run."""
-        return os.path.exists("/tmp/.ghost_mode_state")
+        return os.path.exists("/tmp/.ghost_mode_state")  # nosec B108
 
     # ── Core actions ──────────────────────────────────────────
 

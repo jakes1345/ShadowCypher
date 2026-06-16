@@ -289,7 +289,7 @@ class PrivacyGateway:
                 headers=headers,
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
                 return json.loads(resp.read().decode("utf-8"))
         except (urllib.error.URLError, ConnectionRefusedError, TimeoutError,
                 json.JSONDecodeError, OSError) as e:

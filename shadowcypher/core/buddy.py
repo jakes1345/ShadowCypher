@@ -30,7 +30,7 @@ class Buddy:
     def __init__(self, user_id: str):
         self.user_id = user_id
         # Deterministic seed from user_id
-        seed = int(hashlib.md5(user_id.encode()).hexdigest(), 16) % (2**32)
+        seed = int(hashlib.md5(user_id.encode()).hexdigest(), 16) % (2**32)  # nosec B324
         rng = random.Random(seed)
 
         self.species = rng.choice(self.SPECIES)

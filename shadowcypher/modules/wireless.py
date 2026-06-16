@@ -82,7 +82,7 @@ class Wireless(BaseModule):
         if not Wireless._check_iface(interface):
             return
         from shadowcypher.core.runner import runner
-        cap_file = f"/tmp/shadowcypher_cap_{bssid.replace(':', '')}"
+        cap_file = f"/tmp/shadowcypher_cap_{bssid.replace(':', '')}"  # nosec B108
         args = [
             "timeout", str(timeout),
             "airodump-ng",

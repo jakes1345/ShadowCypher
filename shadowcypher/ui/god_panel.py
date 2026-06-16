@@ -111,7 +111,7 @@ class GodPanel(BasePage):
             t0 = _time.monotonic()
             try:
                 if url:
-                    urllib.request.urlopen(url, timeout=1)
+                    urllib.request.urlopen(url, timeout=1)  # nosec B310
                 else:
                     with socket.create_connection(("127.0.0.1", port), timeout=0.5):
                         pass

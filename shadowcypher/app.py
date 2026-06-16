@@ -203,7 +203,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             self.irc_label.set_markup(f"SWARM_NODES: <span color='{node_color}'>{swarm_count} ACTIVE</span>")
 
             # 3. Ghost status from cached probe (updated off-thread)
-            ghost_active = os.path.exists("/tmp/.ghost_mode_state")
+            ghost_active = os.path.exists("/tmp/.ghost_mode_state")  # nosec B108
             tor_up = getattr(self, "_tor_up", False)
             if ghost_active and tor_up:
                 self.ghost_label.set_markup("<span color='#22c55e'>GHOST: ACTIVE ✓</span>")

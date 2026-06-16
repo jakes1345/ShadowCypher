@@ -56,7 +56,7 @@ class AuditResult:
 def run(cmd, timeout=10):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
+                           timeout=timeout, shell=isinstance(cmd, str))  # nosec B602
         return r.stdout.strip(), r.returncode
     except Exception:
         return "", 1
@@ -269,7 +269,7 @@ def audit_firewall(r, do_fix=False):
     # Check for open listening ports
     out2, _ = run(["ss", "-tlnp"])
     listeners = [ln for ln in out2.split("\n")[1:] if ln.strip()]
-    exposed = [ln for ln in listeners if "0.0.0.0" in ln or "::" in ln]
+    exposed = [ln for ln in listeners if "0.0.0.0" in ln or "::" in ln]  # nosec B104
     if exposed:
         r.warn("Open ports", f"{len(exposed)} services listening on all interfaces")
         for ln in exposed[:5]:

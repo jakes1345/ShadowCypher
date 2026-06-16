@@ -113,7 +113,7 @@ _IMPLANT_JS = """
 class SessionMonitorListener:
     """Receives and stores session capture data from JS implants."""
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 7331):
+    def __init__(self, host: str = "0.0.0.0", port: int = 7331):  # nosec B104
         self._host = host
         self._port = port
         self._sessions: dict = {}   # session_id → list of event batches

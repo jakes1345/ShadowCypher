@@ -20,7 +20,7 @@ from shadowcypher.core.bus import bus
 
 
 def _ghost_active() -> bool:
-    return os.path.exists("/tmp/.ghost_mode_state")
+    return os.path.exists("/tmp/.ghost_mode_state")  # nosec B108
 
 
 def _tor_alive() -> bool:

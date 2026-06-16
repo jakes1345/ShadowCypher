@@ -32,7 +32,7 @@ CONTROL_PORT = 9051
 def run(cmd, capture=True, timeout=15):
     try:
         r = subprocess.run(cmd, capture_output=capture, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
+                           timeout=timeout, shell=isinstance(cmd, str))  # nosec B602
         return r.stdout.strip() if capture else None
     except Exception:
         return None

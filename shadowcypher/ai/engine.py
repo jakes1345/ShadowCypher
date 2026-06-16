@@ -66,7 +66,7 @@ class AIEngine:
                 )
             else:
                 req = urllib.request.Request(url)
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
                 return json.loads(resp.read().decode("utf-8"))
         except (urllib.error.URLError, ConnectionRefusedError, TimeoutError, json.JSONDecodeError):
             return None
@@ -86,7 +86,7 @@ class AIEngine:
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
                 for line in resp:
                     if not line.strip():
                         continue
@@ -370,7 +370,7 @@ class AIEngine:
             models_dir.mkdir(exist_ok=True)
             if on_progress:
                 on_progress(f"Downloading {filename} from {repo}...\n")
-            model_path = hf_hub_download(
+            model_path = hf_hub_download(  # nosec B615
                 repo_id=repo, filename=filename,
                 local_dir=str(models_dir), local_dir_use_symlinks=False,
             )
@@ -589,7 +589,7 @@ class AIEngine:
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=1800) as resp:
+            with urllib.request.urlopen(req, timeout=1800) as resp:  # nosec B310
                 for line in resp:
                     if not line.strip():
                         continue

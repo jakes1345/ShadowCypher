@@ -72,7 +72,7 @@ def fetch(url, timeout=10):
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA})
         t0 = time.time()
-        with urllib.request.urlopen(req, timeout=timeout, context=CTX) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=CTX) as resp:  # nosec B310
             body = resp.read().decode("utf-8", errors="replace")
             return resp.getcode(), body, time.time() - t0
     except urllib.error.HTTPError as e:

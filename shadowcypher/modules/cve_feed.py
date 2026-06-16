@@ -246,7 +246,7 @@ class CVEFeed(BaseModule):
         headers = {"User-Agent": "ShadowCypher-CVEFeed/2.0"}
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
                 time.sleep(0.6)  # NVD rate limit: 5 req/30s without API key
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:

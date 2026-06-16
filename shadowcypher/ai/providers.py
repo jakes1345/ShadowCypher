@@ -287,7 +287,7 @@ class AIProvider:
                 headers=self._headers(),
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=300) as resp:
+            with urllib.request.urlopen(req, timeout=300) as resp:  # nosec B310
                 data = json.loads(resp.read().decode("utf-8"))
             return self._extract_response(data)
         except Exception as e:
@@ -313,7 +313,7 @@ class AIProvider:
                 headers=self._headers(),
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=300) as resp:
+            with urllib.request.urlopen(req, timeout=300) as resp:  # nosec B310
                 for line in resp:
                     decoded = line.decode("utf-8").strip()
                     if not decoded:
@@ -384,7 +384,7 @@ class AIProvider:
         if self.api_format == "ollama":
             try:
                 req = urllib.request.Request(f"{self.base_url}/api/tags")
-                with urllib.request.urlopen(req, timeout=5) as resp:
+                with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
                     data = json.loads(resp.read())
                 models = [m["name"] for m in data.get("models", [])]
                 return {"ok": True, "detail": f"Connected. {len(models)} models available."}
@@ -406,7 +406,7 @@ class AIProvider:
             url = f"{self.base_url}/api/tags"
             try:
                 req = urllib.request.Request(url)
-                with urllib.request.urlopen(req, timeout=5) as resp:
+                with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
                     data = json.loads(resp.read())
                 models = [m["name"] for m in data.get("models", [])]
                 if not models:

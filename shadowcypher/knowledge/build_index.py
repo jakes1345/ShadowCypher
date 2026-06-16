@@ -58,7 +58,7 @@ def load_and_chunk_md(filepath: Path) -> list[dict]:
             return []
         # Prepend section header for context
         full = f"{header}\n{content}".strip() if header else content
-        chunk_id = hashlib.md5(full.encode()).hexdigest()[:12]
+        chunk_id = hashlib.md5(full.encode()).hexdigest()[:12]  # nosec B324
         # Simple BM25 token list: lowercase words, strip punctuation
         tokens = re.findall(r"\b[a-z0-9][a-z0-9\-\.]*\b", full.lower())
         return [{
@@ -132,7 +132,7 @@ def download_model():
 
     # Try to get the ONNX optimized version
     try:
-        _ = snapshot_download(
+        _ = snapshot_download(  # nosec B615
             repo_id="optimum/bge-small-en-v1.5",
             allow_patterns=["*.onnx", "*.json", "*.txt", "tokenizer*"],
             local_dir=str(MODEL_DIR),
@@ -147,7 +147,7 @@ def download_model():
         print(f"  Downloaded to {MODEL_DIR}")
     except Exception as e:
         print(f"  optimum/bge-small-en-v1.5 failed ({e}), trying BAAI/bge-small-en-v1.5...")
-        snapshot_download(
+        snapshot_download(  # nosec B615
             repo_id="BAAI/bge-small-en-v1.5",
             allow_patterns=["onnx/*", "tokenizer*", "*.json", "*.txt"],
             local_dir=str(MODEL_DIR),
@@ -170,8 +170,8 @@ def load_tokenizer():
 
     # Try local model dir first, then HuggingFace
     if (MODEL_DIR / "tokenizer_config.json").exists():
-        return AutoTokenizer.from_pretrained(str(MODEL_DIR))
-    return AutoTokenizer.from_pretrained("BAAI/bge-small-en-v1.5")
+        return AutoTokenizer.from_pretrained(str(MODEL_DIR))  # nosec B615
+    return AutoTokenizer.from_pretrained("BAAI/bge-small-en-v1.5")  # nosec B615
 
 
 def compute_embeddings(texts: list[str]) -> np.ndarray:

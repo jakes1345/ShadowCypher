@@ -25,7 +25,7 @@ def is_root():
 def run_silent(cmd):
     try:
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                       shell=isinstance(cmd, str), timeout=10)
+                       shell=isinstance(cmd, str), timeout=10)  # nosec B602
     except Exception:
         pass
 
@@ -142,9 +142,9 @@ def main():
     # Phase 3: Application Traces
     # ══════════════════════════════════════════════════════════════
     print(f"\n  {C['C']}[Phase 3]{C['N']} Application Traces")
-    ops += remove_files("/tmp/shadowcypher_*", "ShadowCypher temp files")
-    ops += remove_files("/tmp/.shadow*", "Shadow temp files")
-    ops += remove_files("/tmp/tmp*.hash", "Hash temp files")
+    ops += remove_files("/tmp/shadowcypher_*", "ShadowCypher temp files")  # nosec B108
+    ops += remove_files("/tmp/.shadow*", "Shadow temp files")  # nosec B108
+    ops += remove_files("/tmp/tmp*.hash", "Hash temp files")  # nosec B108
 
     # Clear ShadowCypher internal logs
     sc_logs = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "logs")

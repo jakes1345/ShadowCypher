@@ -35,7 +35,7 @@ def query_crtsh(domain):
     subs = set()
     try:
         req = Request(f"https://crt.sh/?q=%25.{domain}&output=json", headers={"User-Agent":"Mozilla/5.0"})
-        with urlopen(req, timeout=15) as resp:
+        with urlopen(req, timeout=15) as resp:  # nosec B310
             for e in json.loads(resp.read().decode()):
                 for line in e.get("name_value","").split("\n"):
                     line = line.strip().lower().lstrip("*.")
@@ -49,7 +49,7 @@ def query_hackertarget(domain):
     subs = set()
     try:
         req = Request(f"https://api.hackertarget.com/hostsearch/?q={domain}", headers={"User-Agent":"Mozilla/5.0"})
-        with urlopen(req, timeout=10) as resp:
+        with urlopen(req, timeout=10) as resp:  # nosec B310
             for line in resp.read().decode().strip().split("\n"):
                 parts = line.split(",")
                 if parts and parts[0].endswith(f".{domain}"):

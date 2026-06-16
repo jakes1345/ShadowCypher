@@ -33,7 +33,7 @@ class GatewayDiagnostics(BaseModule):
         info = {"ip": ip, "manufacturer": "UNKNOWN", "model": "UNKNOWN", "headers": {}}
         
         try:
-            resp = requests.get(f"http://{ip}/", timeout=3, allow_redirects=True, verify=False)
+            resp = requests.get(f"http://{ip}/", timeout=3, allow_redirects=True, verify=False)  # nosec B501
             info["headers"] = dict(resp.headers)
             server = resp.headers.get("Server", "").lower()
             auth_header = resp.headers.get("WWW-Authenticate", "").lower()

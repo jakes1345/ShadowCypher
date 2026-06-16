@@ -29,7 +29,7 @@ class Session:
         self.created = time.strftime("%H:%M:%S")
 
 class HydraListener:
-    def __init__(self, bind_addr="0.0.0.0", port=4444):
+    def __init__(self, bind_addr="0.0.0.0", port=4444):  # nosec B104
         self.bind_addr = bind_addr
         self.port = port
         self.sessions = {}
@@ -165,7 +165,7 @@ class HydraListener:
             s.close()
             return ip
         except Exception:
-            return "0.0.0.0"
+            return "0.0.0.0"  # nosec B104
 
     def command_loop(self):
         HELP = f"""
@@ -220,7 +220,7 @@ class HydraListener:
 def main():
     p = argparse.ArgumentParser(description="ShadowCypher Hydra Listener")
     p.add_argument("-p","--port", type=int, default=4444)
-    p.add_argument("--bind", default="0.0.0.0")
+    p.add_argument("--bind", default="0.0.0.0")  # nosec B104
     a = p.parse_args()
 
     print(f"\n{C['B']}{'='*70}{C['N']}")

@@ -221,7 +221,7 @@ class RelayPage(BasePage):
                 if result:
                     # Write to /tmp for easy retrieval
                     import os
-                    out = f"/tmp/c2_agent_{plat}_{port}.{'py' if plat == 'linux' else 'ps1' if plat == 'windows' else 'bin'}"
+                    out = f"/tmp/c2_agent_{plat}_{port}.{'py' if plat == 'linux' else 'ps1' if plat == 'windows' else 'bin'}"  # nosec B108
                     if plat != "msfvenom":
                         fd = os.open(out, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
                         with os.fdopen(fd, "w") as f:

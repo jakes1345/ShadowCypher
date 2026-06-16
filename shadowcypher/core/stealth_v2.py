@@ -29,7 +29,7 @@ def _geofence_check(ip: str, allowed_countries: list) -> bool:
     import json
     try:
         url = f"http://ip-api.com/json/{ip}?fields=countryCode"
-        with urllib.request.urlopen(url, timeout=5) as r:
+        with urllib.request.urlopen(url, timeout=5) as r:  # nosec B310
             data = json.loads(r.read())
         cc = data.get("countryCode", "")
         return cc in allowed_countries

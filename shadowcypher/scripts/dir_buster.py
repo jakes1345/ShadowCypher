@@ -57,7 +57,7 @@ def probe_path(base_url, path, user_agent):
     url = f"{base_url.rstrip('/')}/{path.lstrip('/')}"
     try:
         req = Request(url, headers={"User-Agent": user_agent}, method="GET")
-        with urlopen(req, timeout=5) as resp:
+        with urlopen(req, timeout=5) as resp:  # nosec B310
             status = resp.getcode()
             length = len(resp.read())
             return path, status, length

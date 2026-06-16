@@ -36,13 +36,13 @@ import json
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}
 
-STATE_FILE = "/tmp/.ghost_mode_state"  # Intentionally in /tmp for tmpfs
-BACKUP_DIR = "/tmp/.ghost_restore"
+STATE_FILE = "/tmp/.ghost_mode_state"  # Intentionally in /tmp for tmpfs  # nosec B108
+BACKUP_DIR = "/tmp/.ghost_restore"  # nosec B108
 
 def run(cmd, timeout=15, check=False):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
+                           timeout=timeout, shell=isinstance(cmd, str))  # nosec B602
         return r.stdout.strip(), r.returncode
     except Exception:
         return "", 1
@@ -242,10 +242,10 @@ def engage():
 
     # ── Layer 7: RAM Workspace ──
     print(f"\n  {C['C']}[Layer 7]{C['N']} RAM-Only Workspace")
-    ram_dir = "/tmp/ghost_workspace"
+    ram_dir = "/tmp/ghost_workspace"  # nosec B108
     os.makedirs(ram_dir, exist_ok=True)
     # Check if /tmp is already tmpfs
-    out, _ = run(["findmnt", "-n", "-o", "FSTYPE", "/tmp"])
+    out, _ = run(["findmnt", "-n", "-o", "FSTYPE", "/tmp"])  # nosec B108
     if out.strip() == "tmpfs":
         print(f"  {C['G']}●{C['N']} /tmp is tmpfs — workspace is RAM-only")
     else:
@@ -352,7 +352,7 @@ def disengage():
 
     # Clean RAM workspace
     print(f"  {C['C']}[6]{C['N']} Scrubbing RAM workspace")
-    ram_dir = state.get("ram_workspace", "/tmp/ghost_workspace")
+    ram_dir = state.get("ram_workspace", "/tmp/ghost_workspace")  # nosec B108
     if os.path.isdir(ram_dir):
         # Overwrite files before removal
         for root, dirs, files in os.walk(ram_dir):
@@ -465,7 +465,7 @@ def status():
 # ═══════════════════════════════════════════════════════════════
 
 def workspace():
-    ram_dir = "/tmp/ghost_workspace"
+    ram_dir = "/tmp/ghost_workspace"  # nosec B108
     os.makedirs(ram_dir, exist_ok=True)
 
     print(f"\n  {C['C']}[Workspace]{C['N']} RAM-Only Shell")

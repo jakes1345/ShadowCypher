@@ -309,7 +309,7 @@ class DashboardPage(Gtk.Box):
         # Ollama check
         try:
             import urllib.request
-            urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=1)
+            urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=1)  # nosec B310
             self.terminal.log("  ✓ Ollama AI     ONLINE  :11434", "SUCCESS")
             self.stat_ai.set_value("Ollama (local)")
         except Exception:

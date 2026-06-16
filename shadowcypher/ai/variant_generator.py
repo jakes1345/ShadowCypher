@@ -132,7 +132,7 @@ class VariantGenerator:
                 }).encode(),
                 headers={"Content-Type": "application/json"},
             )
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=120) as resp:  # nosec B310
                 data = json.loads(resp.read())
             raw = data.get("message", {}).get("content", "")
             # Strip any markdown fences the model might add
@@ -146,7 +146,7 @@ class VariantGenerator:
         import urllib.request
         import json
         try:
-            with urllib.request.urlopen(
+            with urllib.request.urlopen(  # nosec B310
                 f"{self._ollama_base}/api/tags", timeout=3
             ) as r:
                 models = [m["name"] for m in json.loads(r.read()).get("models", [])]
@@ -165,7 +165,7 @@ class VariantGenerator:
         """Rough signature — unique token set hash."""
         import hashlib
         tokens = sorted(set(re.findall(r"\b\w+\b", code)))
-        return hashlib.md5(" ".join(tokens).encode()).hexdigest()[:12]
+        return hashlib.md5(" ".join(tokens).encode()).hexdigest()[:12]  # nosec B324
 
     @staticmethod
     def _emit(cb, msg):

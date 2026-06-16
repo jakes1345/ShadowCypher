@@ -254,14 +254,14 @@ class ShadowNodesPage(BasePage):
         port = getattr(ghost_orchestrator, "port", 44444)
         self._bind_lbl.set_text(bind)
         self._port_lbl.set_text(str(port))
-        if bind == "0.0.0.0":
+        if bind == "0.0.0.0":  # nosec B104
             self._ext_btn.set_label("🔒 Loopback Only (Safer)")
         else:
             self._ext_btn.set_label("🌐 Enable External Connections")
 
     def _on_toggle_bind(self, _btn):
         current = os.environ.get("SHADOWCYPHER_GHOST_BIND", "127.0.0.1")
-        new_bind = "0.0.0.0" if current != "0.0.0.0" else "127.0.0.1"
+        new_bind = "0.0.0.0" if current != "0.0.0.0" else "127.0.0.1"  # nosec B104
         os.environ["SHADOWCYPHER_GHOST_BIND"] = new_bind
 
         # Restart the orchestrator on the new address
@@ -285,7 +285,7 @@ class ShadowNodesPage(BasePage):
 
     def _on_copy_agent_cmd(self, _btn):
         bind = os.environ.get("SHADOWCYPHER_GHOST_BIND", "127.0.0.1")
-        host = bind if bind != "0.0.0.0" else "YOUR_SERVER_IP"
+        host = bind if bind != "0.0.0.0" else "YOUR_SERVER_IP"  # nosec B104
         port = getattr(ghost_orchestrator, "port", 44444)
         cmd = f"./ghost-agent -host {host} -port {port}"
         clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)

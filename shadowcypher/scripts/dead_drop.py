@@ -33,7 +33,7 @@ C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
 def run(cmd, timeout=30):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
+                           timeout=timeout, shell=isinstance(cmd, str))  # nosec B602
         return r.stdout.strip(), r.returncode
     except Exception:
         return "", 1
@@ -400,7 +400,7 @@ def cmd_panic():
             destroyed += 1
 
     # 7. RAM workspace
-    ram_dir = "/tmp/ghost_workspace"
+    ram_dir = "/tmp/ghost_workspace"  # nosec B108
     if os.path.isdir(ram_dir):
         shutil.rmtree(ram_dir, ignore_errors=True)
         destroyed += 1

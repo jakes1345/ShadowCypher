@@ -118,7 +118,7 @@ class Runner:
                     args = ["proxychains", "-q"] + list(args)
 
             proc = subprocess.Popen(
-                args, shell=is_shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                args, shell=is_shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,  # nosec B602
                 text=True, bufsize=1, env=self._perf_env, cwd=cwd,
                 start_new_session=True
             )

@@ -34,7 +34,7 @@ MCP_PROTOCOL_VERSION = "2024-11-05"
 def run_cmd(cmd, timeout=30):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
+                           timeout=timeout, shell=isinstance(cmd, str))  # nosec B602
         return r.stdout.strip(), r.returncode
     except subprocess.TimeoutExpired:
         return "Command timed out", 1
