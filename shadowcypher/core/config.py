@@ -11,14 +11,6 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Ensure pydantic-settings is available
-try:
-    from pydantic_settings import BaseSettings, SettingsConfigDict
-except ImportError:
-    # Fallback to standard Pydantic if settings plugin is missing
-    from pydantic import BaseSettings
-    SettingsConfigDict = dict
-
 class AISettings(BaseSettings):
     model: str = "claude-haiku-4-5-20251001"
     api_base: str = "http://localhost:11434"
