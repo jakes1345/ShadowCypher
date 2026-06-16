@@ -5,30 +5,30 @@ Origin: ShadowCypher
 Label: ShadowCypher
 Suite: stable
 Codename: stable
-Version: 2.2.0
+Version: 3.0.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Tue, 16 Jun 2026 22:55:41 +0000
+Date: Tue, 16 Jun 2026 22:57:32 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- b6fc66150609b20eda79027d77720da5 29 main/binary-amd64/Packages.gz
+ 4d8f14b6582348ec39339826f4d8b31c 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- a8ada5edfd2cd84cc6087b0ae5f4f25bdca9f95f27dbe7ca779095ebf1e54e6c 29 main/binary-amd64/Packages.gz
+ 7653481f42feac858ad220c13175cece3d61b0c307dd68d04e6cb108b05947eb 29 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmox1G0ACgkQ2fHRjxMT
-8IObzA//TbxRajPO6BRYQHlomJDAcFmi/caVLgMgl7CHMSvW60blSnB/OroLb9sY
-WtFt1yhhN4I6Ed3tnijqwWmgWggIvuS4/I5iqbrBHnIrjGxI65yiMh9jacU2D9r8
-hkCq4BAutTudm2BfuW1HXPLR84djnOBCDSRKEMBBcLBCL1wAcHnwJf8iqQuURWaR
-WcIJnO8NopiY1QGopgUxI8pMzvnL5jH7n9uD6eKT0sJN9iZPVpJfGXfhipjCBFVO
-SgHrXWC801bbw6QY2gIGujEQ0NfjursJGoLJDW9Vzy6r37NknN17fuIky39G+DeF
-7Rh2klOL5vLGXt0mCMYuISV3QbNw3XYldZR7PSm5hoNHgtF3MYeepRm2ZlxorYen
-bAvtQaCTLGLGoFvPBtp3SwynSbFmgabAyZ9O48YSYjDM/zQg9p1Noq/lqEOSBpl3
-FHFN9qnPkYZKFGIY7cxuV9LABpkiliCKZmZ33PYwuYXwnwbZ07QjqBlBi+1MaLkf
-actQfDF/8swaJEo3FPbcSzumkIC9HIZ2QfdlzjY7EDSWuJD1ctAtHv2XH9mLp+v1
-0A+ILK19vLMxIyiZTVGDzA0rLizvaAyVJZrzbqtlv8938cN6rtD7eqE/gVqro2cn
-8yd95GpTr4fiJAZZ5fZCw+dzuH3vVC426hZTDPshDktPSVMDq28=
-=cX0L
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmox1NwACgkQ2fHRjxMT
+8IP+HA//YkW+5c1JM+HHTBvQw+rPkakvF4Y5lAxp4Wa1Qrrqt9blE6Ub00s3b1s9
+FKebb399wdIOiV1rYUlorNZV3jSP6kpbJYqelrvS9cb3cYQWFqUDJqNg0NWjuRFa
+9Jgaj1yKe9YQcq80iwr70KHHUYdOSD0zoY6I8E7/EcMY/IchXBjEDl/mYGwRBOrD
+cRSVcdpXd6JM5BLA/16EI8uhbiUy9TzResIYKhlUlDQOeokYXK937xLgZQ+j3283
+n8wCoeV8rZFxVpyjVn2MZPhQn4uRw4Quhingp3p6jp/NesbxToLQJo7oGaWf1qcW
+1ZVYH2+YELGhQBlph6SW9ijom/hdj0SyROl46Muwo4BYzPaG1DEyOD/PHynrpUCz
+kgX3I8Dpx4BcjCJQgQurVBkYueqrgsCxeZe/C3VuOf16uQ/TWg7Q1Y15ymh3EGPG
+OabtuzmFy9wrLOJPtDXXXSFo1ACdGKSH+7lG8u8Jjkt6j4tc9bJID7Iz1VQx+QHZ
+d6RA8LzJk+wZLVq3Jmp9dRAdAOXsopl7MsaMWmyFfuhj9hWEnDaXlO4DM4rRlvRY
+Pitld2duDkI/s1lz2r5M5MDSvkNHVfOxHgAStAg89xKCsfoREeI+fHcRTjkUyjpH
+9f+HjeZJ8xMMbttaGf01RnRYmW4O9lQpChTbXhVl/oPcG2tZ/rw=
+=cWU7
 -----END PGP SIGNATURE-----
