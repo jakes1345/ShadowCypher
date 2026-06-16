@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import socket
 import threading
+from typing import Optional
 from shadowcypher.core.logger import logger
 from shadowcypher.core.stealth import StealthEngine
 
@@ -50,7 +51,7 @@ def enable_domain_fronting(self, cdn_host: str, real_host: str):
     logger.info("stealth", f"Domain fronting: SNI={cdn_host} → Host={real_host}")
 
 
-def requests_session_fronted(self, url: str = None):
+def requests_session_fronted(self, url: Optional[str] = None):
     """
     Return a requests.Session using domain fronting.
     Connects to CDN's IP but sends Host: real_host in the HTTP header.
@@ -79,7 +80,7 @@ def requests_session_fronted(self, url: str = None):
 
 
 def curl_impersonate(self, url: str, browser: str = "chrome120",
-                     extra_args: list = None, on_output=None) -> str:
+                     extra_args: Optional[list] = None, on_output=None) -> str:
     """
     Make a request using curl-impersonate to spoof TLS/JA3 fingerprint.
     Looks exactly like a real browser at the TLS handshake level.
@@ -183,7 +184,7 @@ def _default_interface(self) -> str:
 
 
 def geofence_connection(self, peer_ip: str,
-                        allowed_countries: list = None) -> bool:
+                        allowed_countries: Optional[list] = None) -> bool:
     """
     Refuse connections from outside allowed countries.
     Returns True if connection should be ALLOWED.
@@ -201,14 +202,14 @@ def geofence_connection(self, peer_ip: str,
 import re
 
 # Monkey-patch new methods onto StealthEngine
-StealthEngine.enable_domain_fronting = enable_domain_fronting
-StealthEngine.requests_session_fronted = requests_session_fronted
-StealthEngine.curl_impersonate = curl_impersonate
-StealthEngine.add_timing_jitter = add_timing_jitter
-StealthEngine.remove_timing_jitter = remove_timing_jitter
-StealthEngine._default_interface = _default_interface
-StealthEngine.geofence_connection = geofence_connection
-StealthEngine._fronting_cdn = None
-StealthEngine._fronting_real = None
+StealthEngine.enable_domain_fronting = enable_domain_fronting  # type: ignore[attr-defined]
+StealthEngine.requests_session_fronted = requests_session_fronted  # type: ignore[attr-defined]
+StealthEngine.curl_impersonate = curl_impersonate  # type: ignore[attr-defined]
+StealthEngine.add_timing_jitter = add_timing_jitter  # type: ignore[attr-defined]
+StealthEngine.remove_timing_jitter = remove_timing_jitter  # type: ignore[attr-defined]
+StealthEngine._default_interface = _default_interface  # type: ignore[attr-defined]
+StealthEngine.geofence_connection = geofence_connection  # type: ignore[attr-defined]
+StealthEngine._fronting_cdn = None  # type: ignore[attr-defined]
+StealthEngine._fronting_real = None  # type: ignore[attr-defined]
 
 logger.info("stealth", "StealthEngine v2 loaded: domain fronting + JA3 spoofing + traffic jitter")

@@ -113,9 +113,9 @@ class Runner:
             if self.platform.IS_LINUX and not is_shell and config.get("stealth", "enforce_privacy"):
                 import shutil
                 if shutil.which("proxychains4"):
-                    args = ["proxychains4", "-q"] + args
+                    args = ["proxychains4", "-q"] + list(args)
                 elif shutil.which("proxychains"):
-                    args = ["proxychains", "-q"] + args
+                    args = ["proxychains", "-q"] + list(args)
 
             proc = subprocess.Popen(
                 args, shell=is_shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

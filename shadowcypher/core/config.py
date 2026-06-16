@@ -218,7 +218,7 @@ class Config(BaseSettings):
         if hasattr(self.tools, tool_attr):
             configured_path = getattr(self.tools, tool_attr)
             if os.path.isabs(configured_path) and os.path.exists(configured_path):
-                return configured_path
+                return str(configured_path)
 
         # 2. Deep Dive: Local project tools/ directory
         local_dir = self.project_root / "tools"

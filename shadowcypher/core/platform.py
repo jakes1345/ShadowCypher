@@ -94,7 +94,7 @@ class ShadowPlatform:
 
     @staticmethod
     def get_system_vitals() -> Dict[str, Any]:
-        vitals = {"cpu": 0.0, "mem": 0.0, "p_load": 0.0, "virt": "NONE"}
+        vitals: Dict[str, Any] = {"cpu": 0.0, "mem": 0.0, "p_load": 0.0, "virt": "NONE"}
         vitals["virt"] = ShadowPlatform.detect_virtualization()
         try:
             if ShadowPlatform.IS_LINUX:
