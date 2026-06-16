@@ -38,6 +38,15 @@ Instead, utilize the **Secure Comm-Link** built into ShadowCypher:
 3. Write your vulnerability report.
 4. Click "Transmit".
 5. Click "Copy Last Ticket" (or locate the JSON file in the `tickets/` directory).
-6. Email the encrypted JSON payload or Base64 string to: `[YOUR EMAIL HERE]`
+6. Email the encrypted JSON payload or Base64 string to: `security@shadowcypher.site`
 
-The message is RSA-encrypted. Only the Admin Node can decrypt it. You will receive a response regarding validation and timelines for a patch.
+The message is RSA-encrypted. Only the Admin Node can decrypt it.
+
+## Security Response SLAs
+
+- **Acknowledgement:** within 72 hours.
+- **Initial triage:** within 7 calendar days.
+- **Fix target (Critical/High):** as fast as possible, typically within 14 days when a safe patch path exists.
+- **Fix target (Medium/Low):** scheduled in the next stable maintenance window.
+
+If encrypted channel delivery is unavailable, send a minimal plaintext heads-up to `security@shadowcypher.site` with no exploit details and request secure follow-up instructions.

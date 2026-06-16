@@ -89,6 +89,27 @@ that the project's purpose is legitimate.
   dependencies.
 - Tests live alongside source (`_test.go`, `test_*.py`).
 
+## Working with Cursor (agent bridge)
+
+Cursor and Claude Code share this repo on disk. Before editing, coordinate via:
+
+```bash
+export AGENT_BRIDGE_ID=claude-code
+python3 scripts/agent-bridge.py status
+python3 scripts/agent-bridge.py claim shadowcypher-modules --task "…"
+python3 scripts/agent-bridge.py handoff cursor "…"
+```
+
+Read `AGENTS.md` (multi-agent section) and `.agents/README.md`. Claims expire after 3 hours if stale.
+
+Start the local hub (shared API + auto context injection):
+
+```bash
+./scripts/agent-hubctl.sh start
+```
+
+Hooks in `.claude/settings.json` pull `/v1/context` on every SessionStart.
+
 ## Maintainer
 
 Jacob (`@jakes1345`) — single-author project, single-operator deployment.

@@ -156,3 +156,10 @@ android/shadowcypher_release.keystore
 android/.gradle/
 android/app/build/
 android/assistant/build/
+store_assets/keystore.b64
+store_assets/*.keystore
+store_assets/*.jks
+store_assets/*.p12
+shadowos/keys/
+shadowos/*.qcow2
+shadowos/test-disk.qcow2

@@ -1,6 +1,6 @@
 {
   "name": "shadowcypher",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "<p align=\"center\">   <img src=\"shadowcypher/ui/assets/icon.png\" width=\"120\" alt=\"ShadowCypher Logo\"/> </p>",
   "main": "app.js",
   "directories": {

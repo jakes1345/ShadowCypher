@@ -1,6 +1,6 @@
 {
   "app_name": "ShadowCypher",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "ai": {
     "active_provider": "classic_brain",
     "model": "local",

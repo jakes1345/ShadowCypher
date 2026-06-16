@@ -36,7 +36,7 @@ ShadowCypher is a dual-core system. The orchestration layer runs on **Python 3.1
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    SHADOWCYPHER v4.1.0                          │
+│                    SHADOWCYPHER v3.0.0                          │
 ├────────────────────┬────────────────────┬───────────────────────┤
 │   GTK-3.0 UI       │   AI Engine        │   Native Core (Go)   │
 │   ─────────────    │   ──────────       │   ────────────────   │
