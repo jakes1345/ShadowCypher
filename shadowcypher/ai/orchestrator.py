@@ -79,8 +79,10 @@ class AIOrchestrator:
         """Initiates an autonomous MetaChain mission with optional multimodal and history context."""
         if not _AUTOAGENT_AVAILABLE:
             msg = "[AI] autoagent not installed — high-intensity mode unavailable. Falling back via engine.generate()."
-            if callback: callback(msg)
-            if on_complete: on_complete(msg)
+            if callback:
+                callback(msg)
+            if on_complete:
+                on_complete(msg)
             return
 
         from shadowcypher.ai.agents import AGENT_FLEET
@@ -97,6 +99,7 @@ class AIOrchestrator:
         )
 
         def _run():
+            nonlocal aa_agent
             loop = None
             try:
                 loop = asyncio.new_event_loop()

@@ -39,7 +39,8 @@ class ReconPage(BasePage):
 
     def _on_inspect_clicked(self, btn):
         target = self.target_entry.get_text()
-        if not target: return
+        if not target:
+            return
         
         self.header.set_active(True)
         self.terminal.log(f"INITIATING_CROSS_PLATFORM_PULSE: {target}", "RECON")

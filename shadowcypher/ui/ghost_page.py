@@ -73,8 +73,10 @@ class ShadowNodesPage(BasePage):
         # \u2500\u2500 Connection Settings \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
         conn_frame = Gtk.Frame(label="NODE LISTENER")
         conn_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        conn_box.set_margin_start(10); conn_box.set_margin_end(10)
-        conn_box.set_margin_top(8);   conn_box.set_margin_bottom(8)
+        conn_box.set_margin_start(10)
+        conn_box.set_margin_end(10)
+        conn_box.set_margin_top(8)
+        conn_box.set_margin_bottom(8)
 
         bind_row = Gtk.Box(spacing=8)
         bind_row.pack_start(Gtk.Label(label="Bind address:"), False, False, 0)
@@ -107,7 +109,8 @@ class ShadowNodesPage(BasePage):
             "Loopback mode is safer for local-only testing."
             "</span>"
         )
-        agent_note.set_xalign(0); agent_note.set_line_wrap(True)
+        agent_note.set_xalign(0)
+        agent_note.set_line_wrap(True)
         conn_box.pack_start(agent_note, False, False, 0)
 
         conn_frame.add(conn_box)
@@ -153,7 +156,8 @@ class ShadowNodesPage(BasePage):
         self.console_view.scroll_to_mark(mark, 0.0, True, 0.0, 1.0)
 
     def _refresh_grid(self):
-        if not self.get_mapped(): return True
+        if not self.get_mapped():
+            return True
         nodes = ghost_orchestrator.get_active_nodes()
         self.node_store.clear()
         for n in nodes:
@@ -176,7 +180,8 @@ class ShadowNodesPage(BasePage):
             return
             
         cmd = self.cmd_entry.get_text().strip()
-        if not cmd: return
+        if not cmd:
+            return
         
         fp_short = model[treeiter][1]
         # Find full FP

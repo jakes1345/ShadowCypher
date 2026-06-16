@@ -20,7 +20,8 @@ class OSINT:
         """Fetch SSL certificate information."""
         require_stealth(on_output=on_output)
         if not validate_target(target):
-            if on_output: on_output(f"[ERROR] Invalid target: {target}")
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
             return
         from shadowcypher.core.config import config
         openssl = config.get_tool_path("openssl")
@@ -32,7 +33,8 @@ class OSINT:
         """Fetch HTTP headers."""
         require_stealth(on_output=on_output)
         if not validate_target(target):
-            if on_output: on_output(f"[ERROR] Invalid target: {target}")
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
             return
         from shadowcypher.core.config import config
         curl = config.get_tool_path("curl")
@@ -44,7 +46,8 @@ class OSINT:
         """Detect web technologies — uses whatweb if installed, falls back to httpx."""
         require_stealth(on_output=on_output)
         if not validate_target(target):
-            if on_output: on_output(f"[ERROR] Invalid target: {target}")
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
             return
         import shutil
         url = target if target.startswith("http") else f"https://{target}"
@@ -90,7 +93,8 @@ class OSINT:
         """Attempt a DNS zone transfer."""
         require_stealth(on_output=on_output)
         if not validate_target(target):
-            if on_output: on_output(f"[ERROR] Invalid target: {target}")
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
             return
         from shadowcypher.core.config import config
         dig = config.get_tool_path("dig")

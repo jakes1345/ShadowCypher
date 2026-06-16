@@ -214,9 +214,13 @@ class SecretsPage(BasePage):
 
     def _build_deep_breach_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        box.set_margin_start(12); box.set_margin_end(12); box.set_margin_top(12); box.set_margin_bottom(12)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(12)
+        box.set_margin_bottom(12)
 
-        self.breach_target = Gtk.Entry(); self.breach_target.set_placeholder_text("Target Email (e.g. ceo@target.com)")
+        self.breach_target = Gtk.Entry()
+        self.breach_target.set_placeholder_text("Target Email (e.g. ceo@target.com)")
         box.pack_start(self.breach_target, False, False, 0)
 
         btn = self.make_action_btn("\U0001f50e CORRELATE_BREACH_DATA", self._on_deep_breach, "danger-btn")
@@ -234,13 +238,17 @@ class SecretsPage(BasePage):
     def _build_cred_sprayer_tab(self):
         from shadowcypher.core.stealth import require_stealth
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        box.set_margin_start(12); box.set_margin_end(12)
-        box.set_margin_top(8); box.set_margin_bottom(8)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(8)
+        box.set_margin_bottom(8)
 
         row = Gtk.Box(spacing=6)
         row.pack_start(Gtk.Label(label="Target:"), False, False, 0)
-        self._cs_target = Gtk.Entry(); self._cs_target.set_placeholder_text("IP or http://target/login")
-        self._cs_target.set_hexpand(True); row.pack_start(self._cs_target, True, True, 0)
+        self._cs_target = Gtk.Entry()
+        self._cs_target.set_placeholder_text("IP or http://target/login")
+        self._cs_target.set_hexpand(True)
+        row.pack_start(self._cs_target, True, True, 0)
         row.pack_start(Gtk.Label(label="Service:"), False, False, 0)
         self._cs_service = Gtk.ComboBoxText()
         for s in ["ssh", "ftp", "http-post"]:
@@ -251,19 +259,26 @@ class SecretsPage(BasePage):
 
         row2 = Gtk.Box(spacing=6)
         row2.pack_start(Gtk.Label(label="User:"), False, False, 0)
-        self._cs_user = Gtk.Entry(); self._cs_user.set_placeholder_text("single user (or leave blank)"); self._cs_user.set_width_chars(14)
+        self._cs_user = Gtk.Entry()
+        self._cs_user.set_placeholder_text("single user (or leave blank)")
+        self._cs_user.set_width_chars(14)
         row2.pack_start(self._cs_user, False, False, 0)
         row2.pack_start(Gtk.Label(label="Userlist:"), False, False, 0)
-        self._cs_ulist = Gtk.Entry(); self._cs_ulist.set_placeholder_text("/path/to/users.txt"); self._cs_ulist.set_hexpand(True)
+        self._cs_ulist = Gtk.Entry()
+        self._cs_ulist.set_placeholder_text("/path/to/users.txt")
+        self._cs_ulist.set_hexpand(True)
         row2.pack_start(self._cs_ulist, True, True, 0)
         box.pack_start(row2, False, False, 0)
 
         row3 = Gtk.Box(spacing=6)
         row3.pack_start(Gtk.Label(label="Passlist:"), False, False, 0)
-        self._cs_plist = Gtk.Entry(); self._cs_plist.set_placeholder_text("/path/to/passwords.txt"); self._cs_plist.set_hexpand(True)
+        self._cs_plist = Gtk.Entry()
+        self._cs_plist.set_placeholder_text("/path/to/passwords.txt")
+        self._cs_plist.set_hexpand(True)
         row3.pack_start(self._cs_plist, True, True, 0)
         row3.pack_start(Gtk.Label(label="Threads:"), False, False, 0)
-        self._cs_threads = Gtk.SpinButton.new_with_range(1, 100, 5); self._cs_threads.set_value(10)
+        self._cs_threads = Gtk.SpinButton.new_with_range(1, 100, 5)
+        self._cs_threads.set_value(10)
         row3.pack_start(self._cs_threads, False, False, 0)
         box.pack_start(row3, False, False, 0)
 

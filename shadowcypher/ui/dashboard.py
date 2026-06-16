@@ -42,7 +42,6 @@ class ArcGauge(Gtk.DrawingArea):
 
     def _on_draw(self, widget, cr):
         w = widget.get_allocated_width()
-        h = widget.get_allocated_height()
         cx = w / 2
         cy = self._size / 2 + 5
         radius = (self._size / 2) - 14
@@ -60,8 +59,10 @@ class ArcGauge(Gtk.DrawingArea):
             cr.set_line_width(10)
             r, g, b = self._accent
             # Color escalation
-            if self._value > 85: r, g, b = 0.96, 0.25, 0.37
-            elif self._value > 65: r, g, b = 0.96, 0.62, 0.04
+            if self._value > 85:
+                r, g, b = 0.96, 0.25, 0.37
+            elif self._value > 65:
+                r, g, b = 0.96, 0.62, 0.04
             
             cr.set_source_rgba(r, g, b, 0.9)
             angle = 0.75 * math.pi + (self._value / 100.0) * (1.5 * math.pi)
@@ -286,7 +287,8 @@ class DashboardPage(Gtk.Box):
 
     def _init_once(self):
         """One-shot boot sequence log and initial stat population."""
-        import socket, platform as _plat
+        import socket
+        import platform as _plat
 
         self.terminal.log("══════ SHADOWCYPHER BOOT SEQUENCE ══════", "SYSTEM")
         self.terminal.log(f"  OS: {_plat.system()} {_plat.release()} | Arch: {_plat.machine()}", "INFO")

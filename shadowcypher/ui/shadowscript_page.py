@@ -169,7 +169,7 @@ class ShadowScriptBible(Gtk.ScrolledWindow):
             else:
                 markup_lines.append(line)
         
-        full_markup = f"<span size='medium' color='#94a3b8'>{''.join([l + chr(10) for l in markup_lines])}</span>"
+        full_markup = f"<span size='medium' color='#94a3b8'>{''.join([ln + chr(10) for ln in markup_lines])}</span>"
         label.set_markup(full_markup)
         label.set_line_wrap(True)
         label.set_halign(Gtk.Align.START)

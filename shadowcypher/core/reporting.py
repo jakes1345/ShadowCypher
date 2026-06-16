@@ -93,7 +93,7 @@ class Report:
         counts = self._severity_count()
         lines = [
             "=" * 70,
-            f"  SHADOWCYPHER SECURITY ASSESSMENT REPORT",
+            "  SHADOWCYPHER SECURITY ASSESSMENT REPORT",
             f"  Project: {self.project_name}",
             f"  Target:  {self.target}",
             f"  Scope:   {self.scope}",
@@ -119,7 +119,7 @@ class Report:
             lines.append(f"  Timestamp:   {f.timestamp}")
             lines.append(f"  Description: {f.description}")
             if f.evidence:
-                lines.append(f"  Evidence:")
+                lines.append("  Evidence:")
                 for eline in f.evidence.split("\n"):
                     lines.append(f"    {eline}")
             if f.remediation:

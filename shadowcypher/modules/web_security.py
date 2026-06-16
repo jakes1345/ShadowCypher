@@ -26,7 +26,8 @@ class WebSecurity:
         ffuf = config.get_tool_path("ffuf")
 
         if not validate_target(url):
-            if on_output: on_output(f"[ERROR] Invalid URL: {url}")
+            if on_output:
+                on_output(f"[ERROR] Invalid URL: {url}")
             return
 
         fuzz_url = url.rstrip("/") + "/FUZZ"
@@ -51,7 +52,8 @@ class WebSecurity:
         ffuf = config.get_tool_path("ffuf")
 
         if not validate_target(url):
-            if on_output: on_output(f"[ERROR] Invalid URL: {url}")
+            if on_output:
+                on_output(f"[ERROR] Invalid URL: {url}")
             return
 
         args = [
@@ -79,7 +81,8 @@ class WebSecurity:
         nuclei = config.get_tool_path("nuclei")
 
         if not validate_target(target):
-            if on_output: on_output(f"[ERROR] Invalid target: {target}")
+            if on_output:
+                on_output(f"[ERROR] Invalid target: {target}")
             return
 
         args = [nuclei, "-u", target, "-c", "50", "-no-color"]
@@ -165,7 +168,8 @@ class WebSecurity:
         proxies = os.path.join(project_root, "tools", "elite", "MHDDoS", "files", "proxies", "proxies.txt")
         
         if not os.path.exists(path):
-            if on_output: on_output("[ERROR] MHDDoS_ENGINE_NOT_STAGED. Run elite tool acquisition.")
+            if on_output:
+                on_output("[ERROR] MHDDoS_ENGINE_NOT_STAGED. Run elite tool acquisition.")
             return
 
         # Basic command assembly
@@ -187,10 +191,12 @@ class WebSecurity:
             for res in results:
                 if res['success']:
                     msg = f"[SUCCESS] POTENTIAL_BYPASS: {res['url_tested']} (Status: {res['status_code']})"
-                    if on_output: on_output(msg)
+                    if on_output:
+                        on_output(msg)
                     logger.info("web", msg)
                 else:
-                    if on_output: on_output(f"[-] Tried: {res['url_tested']} (Status: {res['status_code']})")
+                    if on_output:
+                        on_output(f"[-] Tried: {res['url_tested']} (Status: {res['status_code']})")
 
         import threading
         threading.Thread(target=_run, daemon=True).start()
@@ -204,7 +210,8 @@ class Bypass403Tool:
     def __init__(self, base_url: str, headers: dict = None):
         self.base_url = base_url.rstrip('/')
         self.base_headers = headers if headers else {}
-        import requests, random
+        import requests
+        import random
         self.session = requests.Session()
         self.user_agents = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
@@ -221,7 +228,8 @@ class Bypass403Tool:
         path = "/" + path.lstrip("/")
         variations = {path, path.lower(), path.upper()}
         traversal_paths = [path.replace("/", "/./"), path.replace("/", "/; /")]
-        for tp in traversal_paths: variations.add(tp)
+        for tp in traversal_paths:
+            variations.add(tp)
         variations.add(path.replace("/", "%2f"))
         return list(variations)
 
@@ -241,7 +249,8 @@ class Bypass403Tool:
         return payloads
 
     def test_bypass(self, target_path: str, method: str = 'GET', rate_limit: float = 0.1):
-        import time, requests
+        import time
+        import requests
         from urllib.parse import urljoin
         results = []
         path_variations = self._generate_path_variations(target_path)
@@ -257,7 +266,8 @@ class Bypass403Tool:
                         "status_code": r.status_code,
                         "success": 200 <= r.status_code < 400
                     })
-                except Exception: pass
+                except Exception:
+                    pass
                 # Random jitter: ±25% of rate_limit
                 import random
                 jitter = rate_limit * (random.uniform(0.75, 1.25))

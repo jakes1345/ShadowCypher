@@ -11,14 +11,21 @@ Import and use:
     stealth.add_timing_jitter(min_ms=500, max_ms=5000)
     stealth.curl_impersonate("https://target.com", browser="chrome120")
 """
-import os, time, random, shutil, subprocess, socket, threading
+import os
+import time
+import random
+import shutil
+import subprocess
+import socket
+import threading
 from shadowcypher.core.logger import logger
 from shadowcypher.core.stealth import StealthEngine
 
 
 def _geofence_check(ip: str, allowed_countries: list) -> bool:
     """Check if an IP is in an allowed country using ip-api.com (no key needed)."""
-    import urllib.request, json
+    import urllib.request
+    import json
     try:
         url = f"http://ip-api.com/json/{ip}?fields=countryCode"
         with urllib.request.urlopen(url, timeout=5) as r:
@@ -48,7 +55,8 @@ def requests_session_fronted(self, url: str = None):
     Return a requests.Session using domain fronting.
     Connects to CDN's IP but sends Host: real_host in the HTTP header.
     """
-    import requests, ssl
+    import requests
+    import ssl
     cdn = getattr(self, "_fronting_cdn", None)
     real = getattr(self, "_fronting_real", None)
     if not cdn or not real:

@@ -53,7 +53,7 @@ def main():
     from trl import SFTTrainer, SFTConfig
     from datasets import Dataset
 
-    print(f"[finetune] Loading base model: google/gemma-3-1b-it")
+    print("[finetune] Loading base model: google/gemma-3-1b-it")
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name="google/gemma-3-1b-it",
         max_seq_length=MAX_SEQ_LEN,

@@ -44,7 +44,7 @@ def main():
         if "OPEN" in output:
             try:
                 open_ports.append(int(output.split()[1]))
-            except:
+            except Exception:
                 pass
 
     router_pwn.audit_management_ports(gateway_ip, on_output=capture_port)

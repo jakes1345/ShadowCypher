@@ -190,23 +190,28 @@ class Sisyphus:
         results = {"syntax": [], "orphans": []}
         src_dir = os.path.join(str(self.project_root), "shadowcypher")
         
-        if not hasattr(self, "_mtime_cache"): self._mtime_cache = {}
+        if not hasattr(self, "_mtime_cache"):
+            self._mtime_cache = {}
 
         for root, _, files in os.walk(src_dir):
-            if "__pycache__" in root or "tests" in root: continue
+            if "__pycache__" in root or "tests" in root:
+                continue
             for f in files:
-                if not f.endswith(".py"): continue
+                if not f.endswith(".py"):
+                    continue
                 path = os.path.join(root, f)
                 try:
                     mtime = os.path.getmtime(path)
-                    if self._mtime_cache.get(path) == mtime: continue
+                    if self._mtime_cache.get(path) == mtime:
+                        continue
                     
                     self._mtime_cache[path] = mtime
                     with open(path, "r", encoding="utf-8") as fh:
                         compile(fh.read(), path, "exec")
                 except SyntaxError as e:
                     results["syntax"].append(f"{os.path.basename(f)}:L{e.lineno}")
-                except Exception: pass
+                except Exception:
+                    pass
         return results
 
     def _analyze_and_report(self, report: Dict[str, Any]):

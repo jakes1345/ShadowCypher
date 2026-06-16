@@ -1,7 +1,8 @@
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
-import sys, os
+import sys
+import os
 import traceback
 
 # Setup environment
@@ -41,7 +42,7 @@ def audit_ui():
             cls = getattr(mod, cls_name)
             
             # Attemping instantiation (without a full Gtk loop)
-            instance = cls()
+            cls()
             results.append(f"[OK] {name}: Instance Verified.")
         except Exception as e:
             results.append(f"[FAIL] {name}: {str(e)}")

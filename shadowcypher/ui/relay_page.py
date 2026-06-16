@@ -35,8 +35,10 @@ class RelayPage(BasePage):
         # ── Listener controls ────────────────────────────────────────────────
         listener_frame = Gtk.Frame(label="LISTENER CONTROL")
         lbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        lbox.set_margin_top(10); lbox.set_margin_bottom(10)
-        lbox.set_margin_start(10); lbox.set_margin_end(10)
+        lbox.set_margin_top(10)
+        lbox.set_margin_bottom(10)
+        lbox.set_margin_start(10)
+        lbox.set_margin_end(10)
 
         row1 = Gtk.Box(spacing=8)
         row1.pack_start(Gtk.Label(label="Port:"), False, False, 0)
@@ -116,8 +118,10 @@ class RelayPage(BasePage):
         # Interaction panel
         interact_frame = Gtk.Frame(label="SESSION INTERACTION")
         interact_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        interact_box.set_margin_start(8); interact_box.set_margin_end(8)
-        interact_box.set_margin_top(8); interact_box.set_margin_bottom(8)
+        interact_box.set_margin_start(8)
+        interact_box.set_margin_end(8)
+        interact_box.set_margin_top(8)
+        interact_box.set_margin_bottom(8)
 
         # Output view
         out_scroll = Gtk.ScrolledWindow()

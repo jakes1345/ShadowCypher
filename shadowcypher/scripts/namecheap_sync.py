@@ -9,6 +9,7 @@ import requests
 import sys
 import os
 import time
+from typing import Optional
 from shadowcypher.core.logger import logger
 
 DOMAIN = os.environ.get("NAMECHEAP_DOMAIN", "shadowcypher.site")
@@ -27,7 +28,7 @@ def get_public_ip() -> Optional[str]:
             response = requests.get(url, timeout=5)
             if response.status_code == 200:
                 return response.text.strip()
-        except:
+        except Exception:
             continue
     return None
 

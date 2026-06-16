@@ -41,8 +41,10 @@ class ForensicRegistry:
         
         if isinstance(handle_or_data, dict):
             entry = handle_or_data
-            if "timestamp" not in entry: entry["timestamp"] = ts
-            if "risk_level" not in entry: entry["risk_level"] = "HIGH"
+            if "timestamp" not in entry:
+                entry["timestamp"] = ts
+            if "risk_level" not in entry:
+                entry["risk_level"] = "HIGH"
             hostmask = entry.get("hostmask", hostmask)
             handle = entry.get("handle", "UNK")
         else:
@@ -91,8 +93,10 @@ class ForensicRegistry:
         # Complex heuristic calculation for mission risk
         score = 0
         if metadata:
-            if "UNWORTHY" in metadata.get("reason", ""): score += 50
-            if "Bot" in metadata.get("fingerprint", ""): score += 30
+            if "UNWORTHY" in metadata.get("reason", ""):
+                score += 50
+            if "Bot" in metadata.get("fingerprint", ""):
+                score += 30
         return "HIGH" if score > 70 else "MEDIUM"
 
     def get_all_threats(self) -> List[dict]:

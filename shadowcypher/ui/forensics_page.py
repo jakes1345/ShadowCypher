@@ -126,8 +126,10 @@ class ForensicsPage(BasePage):
 
     def _build_trace_eraser_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        box.set_margin_start(10); box.set_margin_end(10)
-        box.set_margin_top(8); box.set_margin_bottom(8)
+        box.set_margin_start(10)
+        box.set_margin_end(10)
+        box.set_margin_top(8)
+        box.set_margin_bottom(8)
 
         row = Gtk.Box(spacing=6)
         self._te_deep = Gtk.CheckButton(label="--deep (incl. swap/kernel logs)")
@@ -143,13 +145,17 @@ class ForensicsPage(BasePage):
 
     def _build_dead_drop_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        box.set_margin_start(10); box.set_margin_end(10)
-        box.set_margin_top(8); box.set_margin_bottom(8)
+        box.set_margin_start(10)
+        box.set_margin_end(10)
+        box.set_margin_top(8)
+        box.set_margin_bottom(8)
 
         row = Gtk.Box(spacing=6)
         row.pack_start(Gtk.Label(label="Target:"), False, False, 0)
-        self._dd_target = Gtk.Entry(); self._dd_target.set_placeholder_text("file/dir or /dev/sdX for USB")
-        self._dd_target.set_hexpand(True); row.pack_start(self._dd_target, True, True, 0)
+        self._dd_target = Gtk.Entry()
+        self._dd_target.set_placeholder_text("file/dir or /dev/sdX for USB")
+        self._dd_target.set_hexpand(True)
+        row.pack_start(self._dd_target, True, True, 0)
         box.pack_start(row, False, False, 0)
 
         btn_row = Gtk.Box(spacing=6)
@@ -167,13 +173,17 @@ class ForensicsPage(BasePage):
 
     def _on_trace_eraser(self, btn):
         args = []
-        if self._te_deep.get_active(): args.append("--deep")
-        if self._te_timestamps.get_active(): args.append("--timestamps")
+        if self._te_deep.get_active():
+            args.append("--deep")
+        if self._te_timestamps.get_active():
+            args.append("--timestamps")
         self.run_script("trace_eraser.py", args, sudo=True)
 
     def _on_dd_shred(self, btn):
         t = self._dd_target.get_text().strip()
-        if not t: self.log("Enter file/dir path.", "WARN"); return
+        if not t:
+            self.log("Enter file/dir path.", "WARN")
+            return
         self.run_script("dead_drop.py", ["shred", t], sudo=True)
 
     def _on_dd_swap(self, btn):
@@ -181,7 +191,9 @@ class ForensicsPage(BasePage):
 
     def _on_dd_usb(self, btn):
         t = self._dd_target.get_text().strip()
-        if not t: self.log("Enter device path (e.g. /dev/sdb).", "WARN"); return
+        if not t:
+            self.log("Enter device path (e.g. /dev/sdb).", "WARN")
+            return
         self.run_script("dead_drop.py", ["usb", t], sudo=True)
 
     def _on_dd_panic(self, btn):

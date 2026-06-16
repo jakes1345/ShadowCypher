@@ -33,12 +33,15 @@ class GuardianPage(BasePage):
 
     def _build_scan_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        box.set_margin_start(12); box.set_margin_end(12)
-        box.set_margin_top(10); box.set_margin_bottom(10)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
 
         lbl = Gtk.Label()
         lbl.set_markup("<span size='small' color='#94a3b8'>Discovers every device on your LAN, fingerprints OS, checks for dangerous open ports and weak configs.</span>")
-        lbl.set_line_wrap(True); lbl.set_xalign(0)
+        lbl.set_line_wrap(True)
+        lbl.set_xalign(0)
         box.pack_start(lbl, False, False, 0)
 
         row = Gtk.Box(spacing=8)
@@ -56,12 +59,15 @@ class GuardianPage(BasePage):
 
     def _build_audit_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        box.set_margin_start(12); box.set_margin_end(12)
-        box.set_margin_top(10); box.set_margin_bottom(10)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
 
         lbl = Gtk.Label()
         lbl.set_markup("<span size='small' color='#94a3b8'>Deep security audit of this machine: open ports, running services, SUID binaries, sudoers, cron jobs, world-writable paths.</span>")
-        lbl.set_line_wrap(True); lbl.set_xalign(0)
+        lbl.set_line_wrap(True)
+        lbl.set_xalign(0)
         box.pack_start(lbl, False, False, 0)
 
         btn_row = Gtk.Box(spacing=8)
@@ -71,12 +77,15 @@ class GuardianPage(BasePage):
 
     def _build_router_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        box.set_margin_start(12); box.set_margin_end(12)
-        box.set_margin_top(10); box.set_margin_bottom(10)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
 
         lbl = Gtk.Label()
         lbl.set_markup("<span size='small' color='#94a3b8'>Audits your home router: default creds check, exposed admin panel, UPnP exposure, WAN-facing services, firmware fingerprint.</span>")
-        lbl.set_line_wrap(True); lbl.set_xalign(0)
+        lbl.set_line_wrap(True)
+        lbl.set_xalign(0)
         box.pack_start(lbl, False, False, 0)
 
         btn_row = Gtk.Box(spacing=8)
@@ -86,12 +95,15 @@ class GuardianPage(BasePage):
 
     def _build_monitor_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        box.set_margin_start(12); box.set_margin_end(12)
-        box.set_margin_top(10); box.set_margin_bottom(10)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
 
         lbl = Gtk.Label()
         lbl.set_markup("<span size='small' color='#94a3b8'>Continuous threat monitoring: new device detection, ARP poisoning, port changes, unexpected traffic. Runs until stopped.</span>")
-        lbl.set_line_wrap(True); lbl.set_xalign(0)
+        lbl.set_line_wrap(True)
+        lbl.set_xalign(0)
         box.pack_start(lbl, False, False, 0)
 
         row = Gtk.Box(spacing=8)
@@ -108,12 +120,15 @@ class GuardianPage(BasePage):
 
     def _build_harden_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        box.set_margin_start(12); box.set_margin_end(12)
-        box.set_margin_top(10); box.set_margin_bottom(10)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
 
         lbl = Gtk.Label()
         lbl.set_markup("<span size='small' color='#94a3b8'>Auto-harden this machine: disable unused services, tighten SSH, configure UFW, remove weak ciphers. Requires root.</span>")
-        lbl.set_line_wrap(True); lbl.set_xalign(0)
+        lbl.set_line_wrap(True)
+        lbl.set_xalign(0)
         box.pack_start(lbl, False, False, 0)
 
         btn_row = Gtk.Box(spacing=8)

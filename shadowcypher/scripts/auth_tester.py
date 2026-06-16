@@ -12,7 +12,13 @@ Examples:
     python3 auth_tester.py -t http://target.com/login -s http-post -u admin -P rockyou.txt --data "user=^USER^&pass=^PASS^" --fail "Invalid"
 """
 
-import argparse, sys, time, socket, ftplib, threading, os
+import argparse
+import sys
+import time
+import socket
+import ftplib
+import threading
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
@@ -51,7 +57,8 @@ def try_ftp(host, port, user, password, timeout=5):
         return False
 
 def try_http_basic(url, user, password, timeout=5):
-    import urllib.request, base64
+    import urllib.request
+    import base64
     try:
         req = urllib.request.Request(url)
         cred = base64.b64encode(f"{user}:{password}".encode()).decode()
@@ -60,12 +67,15 @@ def try_http_basic(url, user, password, timeout=5):
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.getcode() != 401
     except Exception as e:
-        if "401" in str(e): return False
-        if "403" in str(e): return False
+        if "401" in str(e):
+            return False
+        if "403" in str(e):
+            return False
         return False
 
 def try_http_post(url, user, password, data_template, fail_string, timeout=5):
-    import urllib.request, urllib.parse
+    import urllib.request
+    import urllib.parse
     try:
         data = data_template.replace("^USER^", user).replace("^PASS^", password)
         req = urllib.request.Request(url, data=data.encode(), method="POST")
@@ -182,7 +192,8 @@ def main():
 
     if a.output and found:
         with open(a.output, "w") as f:
-            for u, pw in found: f.write(f"{u}:{pw}\n")
+            for u, pw in found:
+                f.write(f"{u}:{pw}\n")
         print(f"  Saved to: {a.output}\n")
 
 if __name__ == "__main__":

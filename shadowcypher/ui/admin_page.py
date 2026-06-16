@@ -186,7 +186,8 @@ class AdminPage(BasePage):
         self.pod_uptime.set_value(summary["uptime"])
         
         # Throttled node refresh
-        if not hasattr(self, "_node_tick_count"): self._node_tick_count = 0
+        if not hasattr(self, "_node_tick_count"):
+            self._node_tick_count = 0
         self._node_tick_count += 1
         if self._node_tick_count >= 5:
             self._on_refresh_nodes(None)

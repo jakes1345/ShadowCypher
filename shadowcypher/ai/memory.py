@@ -46,7 +46,8 @@ class ShadowMemory:
 
     def store(self, content: str, user_id: str = "shadow_operator", metadata: dict = None):
         """Store a tactical fact or mission learning."""
-        if not self.memory: return
+        if not self.memory:
+            return
         try:
             self.memory.add(content, user_id=user_id, metadata=metadata)
             logger.info("ai", f"MEM_INDEX: Recorded fact for operator {user_id}")
@@ -55,7 +56,8 @@ class ShadowMemory:
 
     def recall(self, query: str, user_id: str = "shadow_operator") -> list:
         """Recall relevant tactical historical context."""
-        if not self.memory: return []
+        if not self.memory:
+            return []
         try:
             results = self.memory.search(query, user_id=user_id)
             return results
@@ -65,7 +67,8 @@ class ShadowMemory:
 
     def get_user_profile(self, user_id: str = "shadow_operator"):
         """Fetch the full tactical profile of the operator."""
-        if not self.memory: return {}
+        if not self.memory:
+            return {}
         try:
             return self.memory.get_all(user_id=user_id)
         except Exception as e:

@@ -40,8 +40,10 @@ class TacticalTerminal(Gtk.Box):
             ("success", {"foreground": "#34d399", "weight": 700}),
         ]
         for name, props in tags:
-            tag = Gtk.TextTag.new(name); tag_table.add(tag)
-            for k, v in props.items(): tag.set_property(k, v)
+            tag = Gtk.TextTag.new(name)
+            tag_table.add(tag)
+            for k, v in props.items():
+                tag.set_property(k, v)
 
     def clear(self):
         """Thread-safe clear of the terminal buffer."""
@@ -131,5 +133,7 @@ class TacticalHeader(Gtk.Box):
             self.pack_start(sub, False, False, 0)
 
     def set_active(self, active: bool):
-        if active: self.spinner.start()
-        else: self.spinner.stop()
+        if active:
+            self.spinner.start()
+        else:
+            self.spinner.stop()

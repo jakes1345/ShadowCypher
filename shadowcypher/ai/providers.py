@@ -17,6 +17,11 @@ from typing import Optional, Callable
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 
+# Deferred import to avoid circular: privacy_proxy imports providers
+def _get_gateway():
+    from shadowcypher.ai.privacy_proxy import privacy_gateway
+    return privacy_gateway
+
 
 # ══════════════════════════════════════════════════════════════
 # Provider Definitions
@@ -75,7 +80,34 @@ PROVIDERS = {
         "env_key": "GROQ_API_KEY",
         "default_model": "llama-3.3-70b-versatile",
         "free": True,
-        "description": "Ultra-fast inference. Free tier available.",
+        "description": "Ultra-fast LPU inference. Free tier: 14,400 req/day. No CC required.",
+    },
+    "sambanova": {
+        "name": "SambaNova Cloud",
+        "base_url": "https://api.sambanova.ai/v1",
+        "api_format": "openai",
+        "env_key": "SAMBANOVA_API_KEY",
+        "default_model": "Meta-Llama-3.1-405B-Instruct",
+        "free": True,
+        "description": "Free Llama 3.1 405B — fastest 405B inference available. No CC required.",
+    },
+    "cerebras": {
+        "name": "Cerebras",
+        "base_url": "https://api.cerebras.ai/v1",
+        "api_format": "openai",
+        "env_key": "CEREBRAS_API_KEY",
+        "default_model": "llama-3.3-70b",
+        "free": True,
+        "description": "Free tier. Wafer-scale chip — extreme token speed on Llama 3.3 70B.",
+    },
+    "chutes": {
+        "name": "Chutes.ai",
+        "base_url": "https://llm.chutes.ai/v1",
+        "api_format": "openai",
+        "env_key": "CHUTES_API_KEY",
+        "default_model": "deepseek-ai/DeepSeek-V3-0324",
+        "free": True,
+        "description": "Completely free. DeepSeek V3, Llama 4, Qwen3. No rate limits stated.",
     },
     "mistral": {
         "name": "Mistral AI",
@@ -240,6 +272,14 @@ class AIProvider:
 
         url, payload = self._build_request(messages, max_tokens, temperature, stream=False)
 
+        # Route cloud providers through the privacy gateway
+        if self.api_format != "ollama":
+            gw = _get_gateway()
+            data = gw.generate(self.id, url, payload, self._headers(), timeout=300)
+            if data is None:
+                return f"[Error] {self.name}: request failed (check Tor/network)"
+            return self._extract_response(data)
+
         try:
             req = urllib.request.Request(
                 url,
@@ -247,8 +287,7 @@ class AIProvider:
                 headers=self._headers(),
                 method="POST",
             )
-            timeout = 300 if self.api_format != "ollama" else 300
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=300) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
             return self._extract_response(data)
         except Exception as e:

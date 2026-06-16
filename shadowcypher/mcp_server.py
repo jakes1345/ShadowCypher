@@ -18,7 +18,14 @@ Start:   python3 mcp_server.py
 Config:  Add to ~/.claude/settings.json under mcpServers
 """
 
-import sys, os, json, subprocess, socket, re, time, shutil
+import sys
+import os
+import json
+import subprocess
+import socket
+import re
+import time
+import shutil
 
 # MCP protocol constants
 JSONRPC_VERSION = "2.0"
@@ -263,7 +270,7 @@ def tool_secure_shred(target):
 def tool_traffic_analyze():
     """Analyze current network traffic patterns."""
     out, _ = run_cmd(["ss", "-tnp"])
-    connections = [l for l in out.split("\n")[1:] if l.strip()]
+    connections = [ln for ln in out.split("\n")[1:] if ln.strip()]
 
     port_counts = {}
     for conn in connections:

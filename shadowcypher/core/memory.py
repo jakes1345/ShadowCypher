@@ -59,13 +59,13 @@ class DreamSystem:
         now = datetime.now().isoformat()
 
         lines = [
-            f"# ShadowCypher Engagement Memory",
-            f"",
+            "# ShadowCypher Engagement Memory",
+            "",
             f"**Project:** {project.name}",
             f"**Last Updated:** {now}",
             f"**Targets:** {', '.join(project.targets) if project.targets else 'None defined'}",
             f"**Scope:** {', '.join(project.scope) if project.scope else 'Unrestricted'}",
-            f"",
+            "",
         ]
 
         # Findings by severity

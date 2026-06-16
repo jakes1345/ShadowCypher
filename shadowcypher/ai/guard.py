@@ -2,12 +2,18 @@
 ShadowGuard — AI Input/Output Security Layer (Rampart-AI inspired).
 Runs 100% offline. Blocks prompt injection, jailbreaks, and credential leakage.
 """
-import re, os, time, threading
+import re
+import os
+import time
+import threading
 from dataclasses import dataclass, field
 from typing import Optional, Callable
 from shadowcypher.core.logger import logger
 
-ALLOW = "ALLOW"; BLOCK = "BLOCK"; FLAG = "FLAG"; REDACT = "REDACT"
+ALLOW = "ALLOW"
+BLOCK = "BLOCK"
+FLAG = "FLAG"
+REDACT = "REDACT"
 
 @dataclass
 class GuardResult:
@@ -82,13 +88,16 @@ class ShadowGuard:
         ms = round((time.perf_counter() - t0) * 1000, 2)
         with self._lock:
             self._stats["scanned"] += 1
-            if action == BLOCK: self._stats["blocked"] += 1
-            elif action == FLAG: self._stats["flagged"] += 1
+            if action == BLOCK:
+                self._stats["blocked"] += 1
+            elif action == FLAG:
+                self._stats["flagged"] += 1
         r = GuardResult(action, text, text, threats, top, ms)
         if threats:
             msg = f"[GUARD] {action} score={top:.2f} ctx={context} threats={len(threats)}"
             logger.warning("guard", msg)
-            if self._alert_cb: self._alert_cb(msg, r)
+            if self._alert_cb:
+                self._alert_cb(msg, r)
         return r
 
     def scan_output(self, text: str) -> GuardResult:
@@ -99,25 +108,33 @@ class ShadowGuard:
         cleaned, threats = text, []
         for pat, repl in _COMPILED_CRED:
             new, n = pat.subn(repl, cleaned)
-            if n: cleaned, threats = new, threats + [{"type": "credential", "repl": repl, "n": n}]
+            if n:
+                cleaned, threats = new, threats + [{"type": "credential", "repl": repl, "n": n}]
         action = REDACT if cleaned != text else ALLOW
         ms = round((time.perf_counter() - t0) * 1000, 2)
         if threats:
-            with self._lock: self._stats["redacted"] += 1
+            with self._lock:
+                self._stats["redacted"] += 1
             logger.warning("guard", f"[GUARD] OUTPUT_SANITIZED redactions={len(threats)}")
         return GuardResult(action, text, cleaned, threats, 0.0, ms)
 
-    def enable(self): self._enabled = True; logger.info("guard", "ShadowGuard ENABLED")
-    def disable(self): self._enabled = False; logger.warning("guard", "ShadowGuard DISABLED")
+    def enable(self): self._enabled = True
+    logger.info("guard", "ShadowGuard ENABLED")
+    def disable(self): self._enabled = False
+    logger.warning("guard", "ShadowGuard DISABLED")
     def set_strict(self, v: bool): self._strict = v
     def on_alert(self, cb): self._alert_cb = cb
     def get_stats(self) -> dict:
-        with self._lock: return dict(self._stats)
+        with self._lock:
+            return dict(self._stats)
 
     def _verdict(self, score: float) -> str:
-        if score >= 0.90: return BLOCK
-        if score >= 0.70: return BLOCK if self._strict else FLAG
-        if score >= 0.40: return FLAG
+        if score >= 0.90:
+            return BLOCK
+        if score >= 0.70:
+            return BLOCK if self._strict else FLAG
+        if score >= 0.40:
+            return FLAG
         return ALLOW
 
 

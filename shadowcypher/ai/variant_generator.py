@@ -4,7 +4,8 @@ Uses Ollama to mutate shellcode wrappers/payloads at the semantic level —
 rename variables, restructure logic, add junk code — to evade AV signatures
 without breaking functionality. Works on Python, C, Go, PowerShell.
 """
-import re, time
+import re
+import time
 from shadowcypher.core.logger import logger
 
 
@@ -112,7 +113,8 @@ class VariantGenerator:
     # ── Internals ────────────────────────────────────────────────────────────
 
     def _call_ollama(self, code: str, language: str) -> str:
-        import urllib.request, json
+        import urllib.request
+        import json
         prompt = (f"Language: {language}\n\n"
                   f"Mutate this code to evade AV signature detection:\n\n{code}")
         try:
@@ -141,7 +143,8 @@ class VariantGenerator:
             return ""
 
     def _select_model(self) -> str:
-        import urllib.request, json
+        import urllib.request
+        import json
         try:
             with urllib.request.urlopen(
                 f"{self._ollama_base}/api/tags", timeout=3
@@ -167,8 +170,10 @@ class VariantGenerator:
     @staticmethod
     def _emit(cb, msg):
         if cb:
-            try: cb(msg)
-            except Exception: pass
+            try:
+                cb(msg)
+            except Exception:
+                pass
 
 
 variant_gen = VariantGenerator()

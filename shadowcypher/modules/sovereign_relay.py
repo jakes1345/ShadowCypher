@@ -28,10 +28,12 @@ class SovereignRelay(BaseModule):
         
         try:
             priv = subprocess.check_output(["wg", "genkey"]).decode().strip()
-            with open(priv_file, "w") as f: f.write(priv)
+            with open(priv_file, "w") as f:
+                f.write(priv)
             
             pub = subprocess.check_output(["wg", "pubkey"], input=priv.encode()).decode().strip()
-            with open(pub_file, "w") as f: f.write(pub)
+            with open(pub_file, "w") as f:
+                f.write(pub)
             
             return {"private": priv, "public": pub}
         except Exception as e:
@@ -41,7 +43,8 @@ class SovereignRelay(BaseModule):
     def deploy_server(self, port: int = 51820, dns: str = "1.1.1.1"):
         """Deploy the Sovereign Hub server configuration."""
         keys = self.generate_keys("server")
-        if not keys: return False
+        if not keys:
+            return False
         
         # Detect primary interface
         try:
@@ -92,7 +95,8 @@ PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING 
             server_pub = f.read().strip()
             
         keys = self.generate_keys(name)
-        if not keys: return None
+        if not keys:
+            return None
         
         # Server Config Snippet
         server_snippet = f"""

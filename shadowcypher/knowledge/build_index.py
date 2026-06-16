@@ -132,7 +132,7 @@ def download_model():
 
     # Try to get the ONNX optimized version
     try:
-        path = snapshot_download(
+        _ = snapshot_download(
             repo_id="optimum/bge-small-en-v1.5",
             allow_patterns=["*.onnx", "*.json", "*.txt", "tokenizer*"],
             local_dir=str(MODEL_DIR),
@@ -296,7 +296,7 @@ def main():
     chunks_size = os.path.getsize(CHUNKS_FILE) / 1024
     print(f"   index.npy:   {index_size:.1f} MB")
     print(f"   chunks.json: {chunks_size:.0f} KB")
-    print(f"   metadata.json written\n")
+    print("   metadata.json written\n")
     print(f"=== Done. {len(chunks)} chunks indexed. ===")
 
 

@@ -127,7 +127,7 @@ class HTTPSIntercept(BaseModule):
         """
         if not validate_ip(gateway_ip):
             if on_output:
-                on_output(f"[HTTPS_INTERCEPT] ERROR: invalid gateway_ip\n")
+                on_output("[HTTPS_INTERCEPT] ERROR: invalid gateway_ip\n")
             return None
 
         if on_output:
@@ -180,7 +180,7 @@ class HTTPSIntercept(BaseModule):
         """
         if not validate_port(listen_port):
             if on_output:
-                on_output(f"[HTTPS_INTERCEPT] ERROR: invalid listen_port\n")
+                on_output("[HTTPS_INTERCEPT] ERROR: invalid listen_port\n")
             return None
 
         # Write addon to a temp file
@@ -222,7 +222,7 @@ class HTTPSIntercept(BaseModule):
         """
         if not validate_port(listen_port):
             if on_output:
-                on_output(f"[HTTPS_INTERCEPT] ERROR: invalid listen_port\n")
+                on_output("[HTTPS_INTERCEPT] ERROR: invalid listen_port\n")
             return None
 
         # Escape payload for embedding in Python source

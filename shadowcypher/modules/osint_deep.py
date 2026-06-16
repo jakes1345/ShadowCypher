@@ -99,7 +99,7 @@ class DeepOSINT:
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
                 body = resp.read().decode()
-            found = next((l for l in body.splitlines() if l.split(":")[0] == suffix), None)
+            found = next((ln for ln in body.splitlines() if ln.split(":")[0] == suffix), None)
             if found:
                 count = found.split(":")[1]
                 msg = f"[BREACH] FOUND: {query} appears in {count} known breach(es).\n"

@@ -30,7 +30,10 @@ class VulnScannerPage(BasePage):
 
     def _build_nikto_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
+        box.set_margin_top(15)
+        box.set_margin_bottom(15)
+        box.set_margin_start(15)
+        box.set_margin_end(15)
         row = Gtk.Box(spacing=10)
         self.nikto_target = Gtk.Entry()
         self.nikto_target.set_placeholder_text("Target URL/IP")
@@ -57,7 +60,10 @@ class VulnScannerPage(BasePage):
 
     def _build_sqlmap_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
+        box.set_margin_top(15)
+        box.set_margin_bottom(15)
+        box.set_margin_start(15)
+        box.set_margin_end(15)
         self.sqlmap_url = Gtk.Entry()
         self.sqlmap_url.set_placeholder_text("IP/URL for SQLi Check")
         box.pack_start(self.sqlmap_url, False, False, 0)
@@ -80,7 +86,10 @@ class VulnScannerPage(BasePage):
 
     def _build_nse_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
+        box.set_margin_top(15)
+        box.set_margin_bottom(15)
+        box.set_margin_start(15)
+        box.set_margin_end(15)
         self.nse_target = Gtk.Entry()
         self.nse_target.set_placeholder_text("Target IP")
         box.pack_start(self.nse_target, False, False, 0)
@@ -105,8 +114,12 @@ class VulnScannerPage(BasePage):
 
     def _build_shadow_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
-        self.shadow_target = Gtk.Entry(); self.shadow_target.set_placeholder_text("Target for Heuristic Audit")
+        box.set_margin_top(15)
+        box.set_margin_bottom(15)
+        box.set_margin_start(15)
+        box.set_margin_end(15)
+        self.shadow_target = Gtk.Entry()
+        self.shadow_target.set_placeholder_text("Target for Heuristic Audit")
         box.pack_start(self.shadow_target, False, False, 0)
 
         btn = self.make_action_btn("\U0001f441\ufe0f INITIATE_SHADOW_SCAN", self._on_shadow_audit, "danger-btn")

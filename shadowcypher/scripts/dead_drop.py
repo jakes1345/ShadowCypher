@@ -19,7 +19,13 @@ Usage:
     python3 dead_drop.py panic              — EMERGENCY: destroy all sensitive data
 """
 
-import argparse, os, sys, subprocess, time, random, struct
+import argparse
+import os
+import sys
+import subprocess
+import time
+import random
+import struct
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}
@@ -302,17 +308,17 @@ def cmd_usb(device):
 def cmd_panic():
     """EMERGENCY: Destroy all sensitive data immediately."""
     print(f"\n{C['R']}")
-    print(f"  ██████╗  █████╗ ███╗   ██╗██╗ ██████╗")
-    print(f"  ██╔══██╗██╔══██╗████╗  ██║██║██╔════╝")
-    print(f"  ██████╔╝███████║██╔██╗ ██║██║██║     ")
-    print(f"  ██╔═══╝ ██╔══██║██║╚██╗██║██║██║     ")
-    print(f"  ██║     ██║  ██║██║ ╚████║██║╚██████╗")
+    print("  ██████╗  █████╗ ███╗   ██╗██╗ ██████╗")
+    print("  ██╔══██╗██╔══██╗████╗  ██║██║██╔════╝")
+    print("  ██████╔╝███████║██╔██╗ ██║██║██║     ")
+    print("  ██╔═══╝ ██╔══██║██║╚██╗██║██║██║     ")
+    print("  ██║     ██║  ██║██║ ╚████║██║╚██████╗")
     print(f"  ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝ ╚═════╝{C['N']}")
     print(f"\n  {C['R']}THIS WILL DESTROY:{C['N']}")
-    print(f"  • All ShadowCypher logs, databases, configs")
-    print(f"  • Shell histories, browser data, recent files")
-    print(f"  • Ghost keys, mesh keys, relay tokens")
-    print(f"  • RAM workspace contents")
+    print("  • All ShadowCypher logs, databases, configs")
+    print("  • Shell histories, browser data, recent files")
+    print("  • Ghost keys, mesh keys, relay tokens")
+    print("  • RAM workspace contents")
     print(f"\n  {C['Y']}Type 'BURN IT ALL' to confirm:{C['N']} ", end="")
     confirm = input().strip()
     if confirm != "BURN IT ALL":
@@ -322,7 +328,8 @@ def cmd_panic():
     print(f"\n  {C['R']}EXECUTING PANIC PROTOCOL{C['N']}\n")
     destroyed = 0
 
-    import shutil, glob
+    import shutil
+    import glob
 
     # Project root
     proj = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

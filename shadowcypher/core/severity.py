@@ -28,7 +28,8 @@ class LethalityAudit:
         ]
 
         for name, func in tests:
-            if on_update: on_update(f"[AUDIT] Verifying {name}...")
+            if on_update:
+                on_update(f"[AUDIT] Verifying {name}...")
             self.results[name] = func()
             time.sleep(0.2) # Real-time simulation for UI feedback
 
@@ -46,8 +47,10 @@ class LethalityAudit:
         p3 = shutil.which("python3")
         p2 = shutil.which("python2")
         status = []
-        if p3: status.append("Py3")
-        if p2: status.append("Py2")
+        if p3:
+            status.append("Py3")
+        if p2:
+            status.append("Py2")
         return f"PASS [{'/'.join(status)} Bridge Active]"
 
     def _audit_ai(self) -> str:

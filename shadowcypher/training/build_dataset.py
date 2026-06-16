@@ -80,7 +80,6 @@ def load_fenrir(max_rows: int = 6000) -> list[dict]:
 
     out = []
     for row in ds:
-        system = row.get("system", "") or SYSTEM_PROMPT
         user = (row.get("user") or row.get("instruction") or row.get("input") or "").strip()
         assistant = (row.get("assistant") or row.get("output") or row.get("response") or "").strip()
 

@@ -5,7 +5,10 @@ God-Panel — Real-time Sovereign Orchestration & Full-Spectrum System Control.
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
-import time, psutil, socket, threading
+import time
+import psutil
+import socket
+import threading
 
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.core.config import config
@@ -36,19 +39,28 @@ class GodPanel(BasePage):
         tree.get_style_context().add_class("node-list")
         for i, t in enumerate(["SUBSYSTEM", "STATUS", "LATENCY", "ENDPOINT"]):
             tree.append_column(Gtk.TreeViewColumn(t, Gtk.CellRendererText(), text=i))
-        sw = Gtk.ScrolledWindow(); sw.set_min_content_height(200); sw.add(tree)
+        sw = Gtk.ScrolledWindow()
+        sw.set_min_content_height(200)
+        sw.add(tree)
         bx = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        bx.set_margin_start(10); bx.set_margin_end(10); bx.set_margin_top(10); bx.set_margin_bottom(10)
+        bx.set_margin_start(10)
+        bx.set_margin_end(10)
+        bx.set_margin_top(10)
+        bx.set_margin_bottom(10)
         bx.pack_start(sw, True, True, 0)
         btn = Gtk.Button(label="⚡ Synchronize Subsystems")
         btn.connect("clicked", lambda _: threading.Thread(target=self._refresh_matrix, daemon=True).start())
         bx.pack_start(btn, False, False, 5)
-        frm.add(bx); self.workspace.pack_start(frm, True, True, 0)
+        frm.add(bx)
+        self.workspace.pack_start(frm, True, True, 0)
 
         # AI Model Control
         frm2 = Gtk.Frame(label="AI ENGINE CONTROL")
         row = Gtk.Box(spacing=10)
-        row.set_margin_start(10); row.set_margin_end(10); row.set_margin_top(10); row.set_margin_bottom(10)
+        row.set_margin_start(10)
+        row.set_margin_end(10)
+        row.set_margin_top(10)
+        row.set_margin_bottom(10)
         self.model_entry = Gtk.Entry()
         self.model_entry.set_placeholder_text("e.g. claude-haiku-4-5-20251001 or llama3.1:8b")
         self.model_entry.set_text(config.get("ai", "model", default="claude-haiku-4-5-20251001"))
@@ -57,18 +69,25 @@ class GodPanel(BasePage):
         btn_sw.get_style_context().add_class("suggested-action")
         btn_sw.connect("clicked", self._on_switch_model)
         row.pack_start(btn_sw, False, False, 0)
-        frm2.add(row); self.workspace.pack_start(frm2, False, False, 0)
+        frm2.add(row)
+        self.workspace.pack_start(frm2, False, False, 0)
 
         # Integrity
         frm3 = Gtk.Frame(label="INTEGRITY STATUS")
         bx3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        bx3.set_margin_start(10); bx3.set_margin_end(10); bx3.set_margin_top(10); bx3.set_margin_bottom(10)
-        self.integrity_label = Gtk.Label(); self.integrity_label.set_line_wrap(True); self.integrity_label.set_xalign(0)
+        bx3.set_margin_start(10)
+        bx3.set_margin_end(10)
+        bx3.set_margin_top(10)
+        bx3.set_margin_bottom(10)
+        self.integrity_label = Gtk.Label()
+        self.integrity_label.set_line_wrap(True)
+        self.integrity_label.set_xalign(0)
         bx3.pack_start(self.integrity_label, False, False, 0)
         btn_rh = Gtk.Button(label="Regenerate Baseline")
         btn_rh.connect("clicked", self._on_rehash)
         bx3.pack_start(btn_rh, False, False, 5)
-        frm3.add(bx3); self.intel_sidebar.pack_start(frm3, False, False, 0)
+        frm3.add(bx3)
+        self.intel_sidebar.pack_start(frm3, False, False, 0)
 
         self._tick_id = GLib.timeout_add(3000, self._tick)
         self.connect("unrealize", lambda _: GLib.source_remove(self._tick_id) if self._tick_id else None)
@@ -76,7 +95,8 @@ class GodPanel(BasePage):
 
     def _refresh_matrix(self):
         """Asynchronous full-spectrum subsystem matrix refresh."""
-        import urllib.request, time as _time
+        import urllib.request
+        import time as _time
         results = []
 
         # Port-based service checks: (label, port, http_url_or_None)
@@ -93,7 +113,8 @@ class GodPanel(BasePage):
                 if url:
                     urllib.request.urlopen(url, timeout=1)
                 else:
-                    with socket.create_connection(("127.0.0.1", port), timeout=0.5): pass
+                    with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                        pass
                 rtt = f"{((_time.monotonic() - t0) * 1000):.0f}ms"
                 results.append([name, "ONLINE", rtt, str(port)])
             except Exception:
@@ -137,9 +158,12 @@ class GodPanel(BasePage):
             for r in results:
                 self.matrix_store.append(r)
                 lbl = r[0]
-                if lbl == "Ollama AI":    self.pod_ai.set_value(r[1])
-                elif lbl == "Go Relay":   self.pod_relay.set_value(r[1])
-                elif lbl == "Shadow Nodes": self.pod_swarm.set_value(r[1])
+                if lbl == "Ollama AI":
+                    self.pod_ai.set_value(r[1])
+                elif lbl == "Go Relay":
+                    self.pod_relay.set_value(r[1])
+                elif lbl == "Shadow Nodes":
+                    self.pod_swarm.set_value(r[1])
             self.pod_chat.set_value(f"{online}/{len(results)}")
             return False
 
@@ -155,19 +179,25 @@ class GodPanel(BasePage):
                 from shadowcypher.ai.sisyphus import sisyphus
                 s = "✅ STABLE" if sisyphus.is_stable else "⚠️ TAMPERED"
                 self.integrity_label.set_markup(f"<span color='{'#10b981' if sisyphus.is_stable else '#f43f5e'}'>{s}</span>")
-            except Exception: pass
-        except Exception: pass
+            except Exception:
+                pass
+        except Exception:
+            pass
         return True
 
     def _on_switch_model(self, btn):
         model = self.model_entry.get_text().strip()
-        if not model: return
+        if not model:
+            return
         self.log(f"Switching to: {model}", "APEX")
         def _sw():
             from shadowcypher.ai.engine import ai_engine
             ok = ai_engine.switch_model(model, on_progress=lambda m: GLib.idle_add(self.log, m, "INFO"))
-            if ok: config.set("ai", "model", model); GLib.idle_add(self.log, f"Switched to {model}", "SUCCESS")
-            else: GLib.idle_add(self.log, f"Failed: {model}", "ERROR")
+            if ok:
+                config.set("ai", "model", model)
+                GLib.idle_add(self.log, f"Switched to {model}", "SUCCESS")
+            else:
+                GLib.idle_add(self.log, f"Failed: {model}", "ERROR")
         threading.Thread(target=_sw, daemon=True).start()
 
     def _on_rehash(self, btn):

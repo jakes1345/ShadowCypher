@@ -27,7 +27,8 @@ class Session:
         try:
             pid = int(sid)
         except (ValueError, TypeError):
-            if on_output: on_output(f"[ERROR] Invalid session ID (must be numeric): {sid}")
+            if on_output:
+                on_output(f"[ERROR] Invalid session ID (must be numeric): {sid}")
             return
         runner.execute_task(f"KILL_SESSION_{pid}", ["kill", "-9", str(pid)], callback=on_output)
 
@@ -47,6 +48,7 @@ class Session:
     def upload_to_session(sid, local_file, remote_file, on_output=None, on_complete=None):
         """Upload a file to an active session."""
         if not validate_filepath(local_file):
-            if on_output: on_output(f"[ERROR] Invalid local file path: {local_file}")
+            if on_output:
+                on_output(f"[ERROR] Invalid local file path: {local_file}")
             return
         runner.execute_task(f"UPLOAD_TO_{sid}", ["scp", local_file, remote_file], callback=on_output)

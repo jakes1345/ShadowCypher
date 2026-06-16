@@ -10,7 +10,11 @@ Query example:
     kg.link("192.168.1.1", "CVE-2023-44487", "VULNERABLE_TO", score=9.8)
     attack_path = kg.shortest_path("192.168.1.1", "DOMAIN_ADMIN")
 """
-import sqlite3, json, time, os, threading
+import sqlite3
+import json
+import time
+import os
+import threading
 from typing import Optional
 from shadowcypher.core.logger import logger
 

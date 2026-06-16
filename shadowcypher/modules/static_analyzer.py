@@ -6,7 +6,8 @@ weak crypto, path traversal, command injection.
 
 Works on: Python, JavaScript, Go, C (any language with a tree-sitter grammar).
 """
-import os, re
+import os
+import re
 from typing import Callable
 from shadowcypher.core.logger import logger
 
@@ -117,7 +118,8 @@ class StaticAnalyzer:
             with open(path, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
         except Exception as e:
-            if on_output: on_output(f"[SA] Cannot read {path}: {e}\n")
+            if on_output:
+                on_output(f"[SA] Cannot read {path}: {e}\n")
             return []
 
         lang = self._detect_language(path)
@@ -132,7 +134,8 @@ class StaticAnalyzer:
         for f in findings:
             key = (f.vuln_type, f.line)
             if key not in seen:
-                seen.add(key); unique.append(f)
+                seen.add(key)
+                unique.append(f)
 
         unique.sort(key=lambda x: {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}.get(x.severity, 4))
 

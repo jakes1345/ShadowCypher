@@ -35,7 +35,8 @@ class Kairos:
         self._seen_vulns = set()
 
     def analyze(self, line: str):
-        if not line or not line.strip(): return
+        if not line or not line.strip():
+            return
         line = line.strip()
 
         # 1. Pulse Ingestion (Temporal Metadata)
@@ -96,13 +97,14 @@ class Kairos:
                             from shadowcypher.core.missions import ignite_ghost_operation
                             ignite_ghost_operation(potential_ip)
                             logger.info("kairos", f"AUTO_MISSION_IGNITED: Triggered Ghost Operation for high-risk target {potential_ip}")
-                        except Exception: pass
+                        except Exception:
+                            pass
                 break  # One alert per line
 
         # 5. Detect credentials / hashes (Automated Credential Extraction V3)
         for pattern in self._cred_patterns:
             if pattern.search(line):
-                self._alert("CRED", f"Potential credential detected in output")
+                self._alert("CRED", "Potential credential detected in output")
                 potential_ip = ips[0] if ips else "TARGET"
                 try:
                     # Multi-pattern extraction for professional results
@@ -116,7 +118,8 @@ class Kairos:
                     
                     if password or cred_hash:
                         db.log_credential(potential_ip, "unknown", username, password, cred_hash, False)
-                except Exception: pass
+                except Exception:
+                    pass
                 break
 
     def reset(self):

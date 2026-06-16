@@ -320,8 +320,8 @@ class WebAppDiagnostics(BaseModule):
             elif acao == origin and origin != "null":
                 if acac.lower() == "true":
                     _emit(on_output,
-                          f"[CORS] CRITICAL: Origin reflected + credentials=true — "
-                          f"authenticated CORS attack possible.")
+                          "[CORS] CRITICAL: Origin reflected + credentials=true — "
+                          "authenticated CORS attack possible.")
                 else:
                     _emit(on_output,
                           f"[CORS] WARN: Reflected origin {origin} without credentials.")

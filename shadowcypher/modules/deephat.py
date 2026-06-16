@@ -50,10 +50,6 @@ class PayloadSynthesizer:
         ts = int(time.time())
         
         for i, code in enumerate(code_blocks):
-            # Encode for safe transport/execution if needed
-            original = code.strip().encode()
-            b64_data = base64.b64encode(zlib.compress(original)).decode()
-            
             ext = "py"
             if "import subprocess" in code or "import os" in code or "def " in code:
                 ext = "py"

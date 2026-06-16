@@ -37,7 +37,8 @@ class UltraPlan:
                 try:
                     project.roadmap = json.loads(match.group(0))
                     return project.roadmap
-                except: pass
+                except Exception:
+                    pass
 
         # Fallback to Template loop (Deterministic)
         return UltraPlan._build_default(project)

@@ -21,8 +21,17 @@ Usage:
     sudo python3 ghost_mode.py workspace   — Open RAM-only workspace
 """
 
-import argparse, os, sys, subprocess, socket, time, signal, atexit
-import shutil, tempfile, json
+import argparse
+import os
+import sys
+import subprocess
+import socket
+import time
+import signal
+import atexit
+import shutil
+import tempfile
+import json
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}
@@ -324,7 +333,8 @@ def disengage():
 
     # Restore MAC addresses
     print(f"  {C['C']}[4]{C['N']} Restoring MAC addresses")
-    import glob, re
+    import glob
+    import re
     for mac_file in glob.glob(f"{BACKUP_DIR}/mac_*"):
         iface = os.path.basename(mac_file).replace("mac_", "")
         with open(mac_file) as f:
@@ -466,7 +476,7 @@ def workspace():
     env = os.environ.copy()
     env["HOME"] = ram_dir
     env["HISTFILE"] = "/dev/null"
-    env["PS1"] = f"\\[\\033[1;31m\\][GHOST]\\[\\033[0m\\] \\w\\$ "
+    env["PS1"] = "\\[\\033[1;31m\\][GHOST]\\[\\033[0m\\] \\w\\$ "
     env["ALL_PROXY"] = "socks5h://127.0.0.1:9050"
     env["http_proxy"] = "socks5h://127.0.0.1:9050"
     env["https_proxy"] = "socks5h://127.0.0.1:9050"

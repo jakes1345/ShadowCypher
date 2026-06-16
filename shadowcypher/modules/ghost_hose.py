@@ -201,7 +201,6 @@ class LoadInjector(BaseModule):
 
     def _loop_l7(self, target: str, port: int):
         """HTTP GET/POST generation with session recycling."""
-        protocol = "https" if port == 443 else "http"
         while self._active:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -240,7 +239,7 @@ class LoadInjector(BaseModule):
                     if method == "POST":
                         body = self._rand_str(random.randint(100, 2000))
                         headers += f"Content-Length: {len(body)}\r\n"
-                        headers += f"Content-Type: application/x-www-form-urlencoded\r\n"
+                        headers += "Content-Type: application/x-www-form-urlencoded\r\n"
                         headers += f"\r\n{body}"
                     else:
                         headers += "\r\n"

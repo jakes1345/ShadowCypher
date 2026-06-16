@@ -8,7 +8,14 @@ Usage:
     python3 hydra_listener.py [-p PORT] [--bind ADDR]
 """
 
-import argparse, socket, threading, sys, os, time, select, struct
+import argparse
+import socket
+import threading
+import sys
+import os
+import time
+import select
+import struct
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m","M":"\033[1;35m","N":"\033[0m","B":"\033[1m"}
 
@@ -51,7 +58,7 @@ class HydraListener:
                 session = Session(conn, addr, sid)
                 self.sessions[sid] = session
                 print(f"\n  {C['G']}[+] SESSION {sid} OPENED{C['N']}: {addr[0]}:{addr[1]}")
-                print(f"  shadow> ", end="", flush=True)
+                print("  shadow> ", end="", flush=True)
             except socket.timeout:
                 continue
             except OSError:
@@ -121,8 +128,10 @@ class HydraListener:
 
     def kill_session(self, sid):
         if sid in self.sessions:
-            try: self.sessions[sid].conn.close()
-            except: pass
+            try:
+                self.sessions[sid].conn.close()
+            except Exception:
+                pass
             self.sessions[sid].alive = False
             print(f"  {C['R']}[-]{C['N']} Session {sid} killed")
         else:
@@ -155,7 +164,8 @@ class HydraListener:
             ip = s.getsockname()[0]
             s.close()
             return ip
-        except: return "0.0.0.0"
+        except Exception:
+            return "0.0.0.0"
 
     def command_loop(self):
         HELP = f"""
@@ -171,7 +181,8 @@ class HydraListener:
         while self.running:
             try:
                 cmd = input(f"  {C['C']}shadow>{C['N']} ").strip()
-                if not cmd: continue
+                if not cmd:
+                    continue
 
                 parts = cmd.split()
                 action = parts[0].lower()
@@ -199,8 +210,10 @@ class HydraListener:
 
         # Cleanup
         for s in self.sessions.values():
-            try: s.conn.close()
-            except: pass
+            try:
+                s.conn.close()
+            except Exception:
+                pass
         if self.server_socket:
             self.server_socket.close()
 

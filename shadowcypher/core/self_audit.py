@@ -35,7 +35,8 @@ class SelfAudit:
 
     @staticmethod
     def _audit_file(path, results):
-        if "self_audit.py" in path: return # Avoid self-triggering
+        if "self_audit.py" in path:
+            return # Avoid self-triggering
 
         with open(path, 'r') as f:
             content = f.read()
