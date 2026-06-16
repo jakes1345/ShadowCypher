@@ -133,7 +133,7 @@ class Config(BaseSettings):
         Enterprise-grade nested configuration retrieval.
         Supports: config.get("ai", "providers", "anthropic", "api_key")
         """
-        current = self
+        current: Any = self
         try:
             for key in keys:
                 if isinstance(current, dict):
@@ -180,7 +180,7 @@ class Config(BaseSettings):
         keys = args[:-1]
         value = args[-1]
 
-        current = self
+        current: Any = self
         for key in keys[:-1]:
             if hasattr(current, key):
                 current = getattr(current, key)
