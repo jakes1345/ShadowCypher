@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.AlarmClock
@@ -45,7 +46,7 @@ class AssistantActivity : AppCompatActivity() {
         wasAssistLaunch = intent?.action == Intent.ACTION_ASSIST ||
                           intent?.action == "android.intent.action.VOICE_ASSIST"
 
-        window.setBackgroundDrawableResource(android.R.color.transparent)
+        window.setBackgroundDrawable(ColorDrawable(0xFF06060F.toInt()))
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
@@ -64,15 +65,28 @@ class AssistantActivity : AppCompatActivity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) = injectShim()
             }
-            setBackgroundColor(0x00000000)
+            setBackgroundColor(0xFF06060F.toInt())
         }
         setContentView(webView)
 
         initTTS()
         initSTT()
         voskSTT.loadModel(
-            onReady = { voskReady = true; Log.i(TAG, "Vosk ready") },
-            onError = { Log.w(TAG, "Vosk unavailable: ${it.message}") },
+            onReady = {
+                voskReady = true
+                Log.i(TAG, "Vosk ready")
+                fireEvent("voskReady", emptyMap())
+            },
+            onError = {
+                Log.w(TAG, "Vosk unavailable: ${it.message}")
+                fireEvent("voskError", mapOf("message" to (it.message ?: "STT unavailable")))
+            },
+            onDownloadStart = {
+                fireEvent("voskProgress", mapOf("downloading" to true, "progress" to 0f))
+            },
+            onProgress = { p ->
+                fireEvent("voskProgress", mapOf("downloading" to true, "progress" to p))
+            },
         )
 
         webView.loadUrl("file:///android_asset/index.html")

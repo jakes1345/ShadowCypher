@@ -5,15 +5,252 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Shadow</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%;
+  background: #06060f;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* ── BOOT SCREEN ──────────────────────────────────────────── */
+#shadow-boot {
+  position: fixed; inset: 0; z-index: 99998;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: #06060f;
+  transition: opacity 0.6s ease, visibility 0.6s;
+}
+#shadow-boot.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* Scanline effect */
+#shadow-boot::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(180,74,255,0.015) 2px,
+    rgba(180,74,255,0.015) 4px
+  );
+  pointer-events: none;
+}
+
+/* Radar rings */
+.boot-rings {
+  position: relative;
+  width: 220px; height: 220px;
+  margin-bottom: 48px;
+}
+.boot-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(180,74,255,0.15);
+  animation: ring-pulse 3s ease-in-out infinite;
+}
+.boot-ring:nth-child(1) { inset: 0;         animation-delay: 0s; }
+.boot-ring:nth-child(2) { inset: 20px;      animation-delay: 0.4s; }
+.boot-ring:nth-child(3) { inset: 40px;      animation-delay: 0.8s; }
+.boot-ring:nth-child(4) { inset: 60px;      animation-delay: 1.2s; }
+.boot-ring:nth-child(5) { inset: 80px;      animation-delay: 1.6s; }
+
+/* Sonar sweep */
+.boot-sweep {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(180,74,255,0) 320deg,
+    rgba(180,74,255,0.35) 360deg
+  );
+  animation: sweep 2.4s linear infinite;
+}
+
+/* Center orb */
+.boot-orb {
+  position: absolute;
+  inset: 88px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 36%, #c77dff, #4a00cc);
+  box-shadow: 0 0 28px rgba(180,74,255,0.6), 0 0 60px rgba(180,74,255,0.2);
+  animation: orb-breathe 3s ease-in-out infinite;
+}
+
+@keyframes ring-pulse {
+  0%, 100% { border-color: rgba(180,74,255,0.12); }
+  50%       { border-color: rgba(180,74,255,0.45); }
+}
+@keyframes sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 28px rgba(180,74,255,0.6), 0 0 60px rgba(180,74,255,0.2); }
+  50%       { transform: scale(1.08); box-shadow: 0 0 44px rgba(180,74,255,0.8), 0 0 90px rgba(180,74,255,0.3); }
+}
+
+/* Title */
+.boot-title {
+  font-size: 2.8rem;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  color: #e2e8f0;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  animation: glitch 6s infinite;
+}
+@keyframes glitch {
+  0%, 92%, 100% { text-shadow: none; transform: none; }
+  93%  { text-shadow: -2px 0 #b44aff; transform: translateX(2px); }
+  94%  { text-shadow:  2px 0 #00e0a4; transform: translateX(-2px); }
+  95%  { text-shadow: none; transform: none; }
+  96%  { text-shadow: -3px 0 #b44aff, 3px 0 #00e0a4; transform: skewX(1deg); }
+  97%  { text-shadow: none; transform: none; }
+}
+
+.boot-sub {
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  color: rgba(180,74,255,0.7);
+  margin-bottom: 52px;
+  text-transform: uppercase;
+}
+
+/* Terminal log */
+.boot-log {
+  width: 280px;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  color: rgba(148,163,184,0.6);
+  line-height: 1.8;
+  min-height: 108px;
+}
+.boot-log-line { opacity: 0; animation: line-in 0.15s forwards; }
+.boot-log-line.ok   { color: rgba(0,224,164,0.8); }
+.boot-log-line.warn { color: rgba(245,158,11,0.8); }
+@keyframes line-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Progress bar */
+.boot-progress-wrap {
+  width: 260px;
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  margin-top: 28px;
+  overflow: hidden;
+}
+.boot-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #6c1fff, #b44aff, #00e0a4);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 8px rgba(180,74,255,0.6);
+}
+
+.boot-cursor {
+  display: inline-block;
+  width: 7px; height: 1em;
+  background: rgba(180,74,255,0.8);
+  vertical-align: text-bottom;
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
 </style>
 </head>
 <body>
-<!-- classifier.js loads first — no deps, <1ms inference -->
+
+<!-- Boot screen — visible immediately, hidden once assistant is ready -->
+<div id="shadow-boot">
+  <div class="boot-rings">
+    <div class="boot-ring"></div>
+    <div class="boot-ring"></div>
+    <div class="boot-ring"></div>
+    <div class="boot-ring"></div>
+    <div class="boot-ring"></div>
+    <div class="boot-sweep"></div>
+    <div class="boot-orb"></div>
+  </div>
+
+  <div class="boot-title">SHADOW</div>
+  <div class="boot-sub">SOVEREIGN AI ASSISTANT</div>
+
+  <div class="boot-log" id="boot-log"></div>
+
+  <div class="boot-progress-wrap">
+    <div class="boot-progress-bar" id="boot-bar"></div>
+  </div>
+</div>
+
 <script src="classifier.js"></script>
-<!-- assistant.js builds and mounts the overlay itself -->
 <script src="assistant.js"></script>
+
+<script>
+// ── Boot screen controller ────────────────────────────────────────────────────
+window.ShadowBoot = (() => {
+  const log   = document.getElementById('boot-log');
+  const bar   = document.getElementById('boot-bar');
+  const boot  = document.getElementById('shadow-boot');
+
+  const LINES = [
+    { text: '> INITIALIZING SHADOW CORE...',    cls: '',     delay: 0    },
+    { text: '> LOADING INTENT CLASSIFIER...',   cls: 'ok',   delay: 600  },
+    { text: '> MOUNTING STT ENGINE...',         cls: '',     delay: 1100 },
+    { text: '> CALIBRATING WAKE WORD MODEL...', cls: '',     delay: 1700 },
+    { text: '> CONNECTING NATIVE BRIDGE...',    cls: '',     delay: 2300 },
+  ];
+
+  let lineIdx = 0;
+  function nextLine() {
+    if (lineIdx >= LINES.length) return;
+    const { text, cls, delay } = LINES[lineIdx++];
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'boot-log-line' + (cls ? ' ' + cls : '');
+      el.textContent = text;
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+      nextLine();
+    }, delay);
+  }
+  nextLine();
+
+  // Progress driven externally (by Kotlin via evaluateJavascript)
+  function setProgress(pct) {
+    bar.style.width = Math.min(100, pct) + '%';
+  }
+
+  function addLine(text, cls = '') {
+    const el = document.createElement('div');
+    el.className = 'boot-log-line' + (cls ? ' ' + cls : '');
+    el.textContent = text;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function ready() {
+    setProgress(100);
+    addLine('> SHADOW ONLINE', 'ok');
+    setTimeout(() => { boot.classList.add('hidden'); }, 700);
+  }
+
+  function modelDownloading() {
+    addLine('> DOWNLOADING NEURAL MODEL (~40MB)...', 'warn');
+    addLine('> FIRST RUN ONLY — CACHED AFTER THIS', '');
+  }
+
+  function error(msg) {
+    addLine('> ERROR: ' + msg, 'warn');
+    addLine('> VOICE: GOOGLE STT FALLBACK ACTIVE', '');
+    setTimeout(() => { boot.classList.add('hidden'); }, 1200);
+  }
+
+  return { setProgress, addLine, ready, modelDownloading, error };
+})();
+</script>
 </body>
 </html>

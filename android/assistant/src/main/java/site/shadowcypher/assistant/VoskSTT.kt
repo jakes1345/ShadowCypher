@@ -45,10 +45,15 @@ class VoskSTT(private val context: Context) {
 
     // ── Model bootstrapping ───────────────────────────────────────────────────
 
-    fun loadModel(onReady: () -> Unit, onError: (Throwable) -> Unit) {
+    fun loadModel(
+        onReady: () -> Unit,
+        onError: (Throwable) -> Unit,
+        onDownloadStart: (() -> Unit)? = null,
+        onProgress: ((Float) -> Unit)? = null,
+    ) {
         scope.launch {
             try {
-                val modelDir = getOrDownloadModel()
+                val modelDir = getOrDownloadModel(onDownloadStart, onProgress)
                 model = Model(modelDir.absolutePath)
                 Log.i(TAG, "Model loaded from ${modelDir.absolutePath}")
                 withContext(Dispatchers.Main) { onReady() }
@@ -59,31 +64,51 @@ class VoskSTT(private val context: Context) {
         }
     }
 
-    private suspend fun getOrDownloadModel(): File {
+    private suspend fun getOrDownloadModel(
+        onDownloadStart: (() -> Unit)? = null,
+        onProgress: ((Float) -> Unit)? = null,
+    ): File {
         val cacheDir = File(context.filesDir, "vosk")
         val modelDir = File(cacheDir, MODEL_DIR_NAME)
 
         if (modelDir.exists() && File(modelDir, "am/final.mdl").exists()) {
             Log.d(TAG, "Using cached model at ${modelDir.absolutePath}")
+            // Signal ~instant progress for cached load
+            withContext(Dispatchers.Main) { onProgress?.invoke(1f) }
             return modelDir
         }
 
         cacheDir.mkdirs()
         Log.i(TAG, "Downloading Vosk model…")
+        withContext(Dispatchers.Main) { onDownloadStart?.invoke() }
 
-        // Use a CompletableDeferred so the coroutine waits cleanly for StorageService
+        // Simulate progress ticks while StorageService downloads in background
         val unpacked = kotlinx.coroutines.CompletableDeferred<String>()
+        var progressJob: kotlinx.coroutines.Job? = null
+
         StorageService.unpack(
             context, MODEL_URL, "vosk",
             { model ->
                 Log.i(TAG, "Model loaded: $model")
+                progressJob?.cancel()
                 unpacked.complete(modelDir.absolutePath)
             },
             { error ->
                 Log.e(TAG, "Model download error: ${error.message}")
+                progressJob?.cancel()
                 unpacked.completeExceptionally(error)
             }
         )
+
+        // Tick fake progress (StorageService has no progress callback in v0.3.x)
+        progressJob = scope.launch {
+            var p = 0f
+            while (p < 0.95f && unpacked.isActive) {
+                delay(1500)
+                p = (p + 0.06f).coerceAtMost(0.95f)
+                withContext(Dispatchers.Main) { onProgress?.invoke(p) }
+            }
+        }
 
         // Wait up to 120s with proper coroutine suspension (not Thread.sleep)
         withContext(Dispatchers.IO) {
