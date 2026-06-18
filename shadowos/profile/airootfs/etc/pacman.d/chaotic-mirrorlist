@@ -1,0 +1,4 @@
+# Chaotic-AUR mirrorlist — bundled in profile so pacstrap can find it pre-install
+Server = https://cdn-mirror.chaotic.cx/$repo/$arch
+Server = https://geo-mirror.chaotic.cx/$repo/$arch
+Server = https://mirror.chaotic.cx/$repo/$arch

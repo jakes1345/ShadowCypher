@@ -9,6 +9,11 @@ export MOZ_ENABLE_WAYLAND=1
 export QT_QPA_PLATFORM=wayland
 export WLR_NO_HARDWARE_CURSORS=1
 
+# Switch to VT1 before starting Hyprland so the display follows the Wayland session
+# instead of staying on SDDM's X greeter on VT2. Without this the user sees the
+# login screen looping even though Hyprland is running fine on VT1.
+chvt 1 2>/dev/null || true
+
 # Detect VM / software-render environment once (shared by WLR_RENDERER + Hyprland tweaks)
 IS_VM=0
 if systemd-detect-virt --quiet 2>/dev/null; then
@@ -21,6 +26,8 @@ if [[ "$IS_VM" -eq 1 ]]; then
     # Aquamarine (Hyprland's backend) needs Vulkan or hardware GL.
     # In QEMU/VMs without GPU passthrough, force Mesa's software Vulkan (lavapipe).
     export WLR_NO_HARDWARE_CURSORS=1
+    # virtio-vga / most VM GPUs don't support atomic modesetting — disable it.
+    export AQ_NO_ATOMIC=1
     LVP=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)
     if [[ -n "$LVP" ]]; then
         export VK_ICD_FILENAMES="$LVP"
@@ -29,8 +36,10 @@ if [[ "$IS_VM" -eq 1 ]]; then
     else
         export LIBGL_ALWAYS_SOFTWARE=1
     fi
-    RENDER_NODE=$(ls /dev/dri/renderD* 2>/dev/null | head -1)
-    [[ -n "$RENDER_NODE" ]] && export AQ_DRM_DEVICES="$RENDER_NODE"
+    # AQ_DRM_DEVICES must point to the KMS card node (card0/card1), NOT the render node.
+    # Render nodes (renderD128) lack display output — Aquamarine aborts if given one.
+    CARD_NODE=$(ls /dev/dri/card* 2>/dev/null | head -1)
+    [[ -n "$CARD_NODE" ]] && export AQ_DRM_DEVICES="$CARD_NODE"
 fi
 
 # Always deploy canonical desktop config (fixes old ISO autostart on every login).

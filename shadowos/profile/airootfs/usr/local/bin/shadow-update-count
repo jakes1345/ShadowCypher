@@ -24,8 +24,8 @@ else
     UPDATES=$(pacman -Qu 2>/dev/null || true)
 fi
 
-ALL_COUNT=$(echo "$UPDATES" | grep -c '.' || echo 0)
-SHADOW_COUNT=$(echo "$UPDATES" | grep -Ec '^(shadowos-|shadowcypher)' || echo 0)
+ALL_COUNT=$(echo "$UPDATES" | grep -c '.' 2>/dev/null) || ALL_COUNT=0
+SHADOW_COUNT=$(echo "$UPDATES" | grep -Ec '^(shadowos-|shadowcypher)' 2>/dev/null) || SHADOW_COUNT=0
 
 # Build tooltip listing first 12 packages
 TOOLTIP=""

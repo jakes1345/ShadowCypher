@@ -1031,3 +1031,333 @@ class TestShadowOSTestSuite:
         for svc in ["cpupower.service", "usbguard.service", "auditd.service", "cups.service"]:
             assert f"unit not found: {svc}" not in result.stdout, \
                 f"test_iso.sh still warns about {svc}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PRIVACY GATEWAY
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestPIIScrubbing:
+    """Unit tests for PII redaction rules in PrivacyGateway."""
+
+    def setup_method(self):
+        with patch("shadowcypher.core.config.config"), \
+             patch("shadowcypher.core.logger.logger"):
+            from shadowcypher.ai.privacy_proxy import PrivacyGateway
+            self.gw = PrivacyGateway()
+            self.gw.scrub_enabled = True
+
+    def test_scrub_internal_ip(self):
+        assert "[INTERNAL_IP]" in self.gw.scrub("host is 192.168.1.10")
+
+    def test_scrub_public_ip(self):
+        assert "[IP_ADDRESS]" in self.gw.scrub("connected to 8.8.8.8")
+
+    def test_scrub_email(self):
+        assert "[EMAIL]" in self.gw.scrub("send to user@example.com")
+
+    def test_scrub_home_path(self):
+        assert "[USER]" in self.gw.scrub("file at /home/jacob/secrets.txt")
+
+    def test_scrub_hostname_local(self):
+        assert "[HOSTNAME]" in self.gw.scrub("machine jack-pc.local replied")
+
+    def test_scrub_mac_address(self):
+        assert "[MAC_ADDRESS]" in self.gw.scrub("mac: de:ad:be:ef:00:01")
+
+    def test_scrub_mac_address_dash(self):
+        assert "[MAC_ADDRESS]" in self.gw.scrub("mac: DE-AD-BE-EF-00-01")
+
+    def test_scrub_ssh_fingerprint(self):
+        assert "[KEY_FINGERPRINT]" in self.gw.scrub("SHA256:abc123def456ghi789jklmnop==")
+
+    def test_scrub_disabled(self):
+        self.gw.scrub_enabled = False
+        text = "host 192.168.1.1 user@corp.com"
+        assert self.gw.scrub(text) == text
+
+    def test_scrub_no_false_positive_url(self):
+        # A plain domain should not be falsely redacted as HOSTNAME
+        result = self.gw.scrub("visit https://github.com/jakes1345")
+        assert "github.com" in result
+
+    def test_scrub_json_payload(self):
+        """_scrub_payload must walk nested JSON strings."""
+        payload = {"messages": [{"role": "user", "content": "my ip is 192.168.0.5"}]}
+        scrubbed = self.gw._scrub_payload(payload)
+        assert "192.168.0.5" not in str(scrubbed)
+        assert "[INTERNAL_IP]" in str(scrubbed)
+
+    def test_scrub_nested_list(self):
+        payload = {"contents": [{"parts": [{"text": "email me@example.com"}]}]}
+        scrubbed = self.gw._scrub_payload(payload)
+        assert "me@example.com" not in str(scrubbed)
+
+
+class TestZeroRetentionHeaders:
+    """ZDR header and payload-patch logic."""
+
+    def setup_method(self):
+        with patch("shadowcypher.core.config.config"), \
+             patch("shadowcypher.core.logger.logger"):
+            from shadowcypher.ai.privacy_proxy import PrivacyGateway
+            self.gw = PrivacyGateway()
+            self.gw.zdr_enabled = True
+
+    def test_anthropic_header_added(self):
+        merged = self.gw.privacy_headers("anthropic", {"Authorization": "Bearer x"})
+        assert merged.get("anthropic-policy") == "no-training"
+
+    def test_unknown_provider_no_extra_headers(self):
+        base = {"Authorization": "Bearer x"}
+        merged = self.gw.privacy_headers("groq", base)
+        assert merged == base
+
+    def test_openai_store_false_in_payload(self):
+        patched = self.gw.patch_payload("openai", {"model": "gpt-4o", "messages": []})
+        assert patched.get("store") is False
+
+    def test_together_store_false_in_payload(self):
+        patched = self.gw.patch_payload("together", {"model": "x", "messages": []})
+        assert patched.get("store") is False
+
+    def test_anthropic_no_store_field(self):
+        patched = self.gw.patch_payload("anthropic", {"model": "claude-3", "messages": []})
+        assert "store" not in patched
+
+    def test_zdr_disabled_no_header(self):
+        self.gw.zdr_enabled = False
+        merged = self.gw.privacy_headers("anthropic", {})
+        assert "anthropic-policy" not in merged
+
+    def test_zdr_disabled_no_payload_patch(self):
+        self.gw.zdr_enabled = False
+        original = {"model": "gpt-4o", "messages": []}
+        patched = self.gw.patch_payload("openai", original)
+        assert patched == original
+
+    def test_existing_headers_preserved(self):
+        base = {"Authorization": "Bearer sk-test", "Content-Type": "application/json"}
+        merged = self.gw.privacy_headers("anthropic", base)
+        assert merged["Authorization"] == "Bearer sk-test"
+        assert merged["Content-Type"] == "application/json"
+
+
+class TestPromptCache:
+    """SQLite cache behaviour."""
+
+    def setup_method(self):
+        with patch("shadowcypher.core.config.config"), \
+             patch("shadowcypher.core.logger.logger"):
+            from shadowcypher.ai import privacy_proxy as pp
+            # Redirect DB to a temp file
+            self._tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+            with patch.object(pp, "_cache_path", return_value=Path(self._tmp.name)):
+                self.cache = pp._PromptCache()
+
+    def teardown_method(self):
+        import os
+        try:
+            os.unlink(self._tmp.name)
+        except OSError:
+            pass
+
+    def test_miss_returns_none(self):
+        assert self.cache.get("openai", "gpt-4o", "hello") is None
+
+    def test_store_then_get(self):
+        self.cache.store("openai", "gpt-4o", "hello", '{"text":"world"}')
+        result = self.cache.get("openai", "gpt-4o", "hello")
+        assert result == '{"text":"world"}'
+
+    def test_different_provider_miss(self):
+        self.cache.store("openai", "gpt-4o", "hello", '{"text":"world"}')
+        assert self.cache.get("anthropic", "gpt-4o", "hello") is None
+
+    def test_hit_counter_increments(self):
+        self.cache.store("openai", "gpt-4o", "q", '{"r":"a"}')
+        self.cache.get("openai", "gpt-4o", "q")
+        self.cache.get("openai", "gpt-4o", "q")
+        stats = self.cache.stats()
+        assert stats["hits"] >= 2
+
+    def test_stats_entries_count(self):
+        self.cache.store("a", "m", "q1", "r1")
+        self.cache.store("b", "m", "q2", "r2")
+        assert self.cache.stats()["entries"] == 2
+
+    def test_clear_empties_cache(self):
+        self.cache.store("openai", "gpt-4o", "hello", "world")
+        self.cache.clear()
+        assert self.cache.stats()["entries"] == 0
+        assert self.cache.get("openai", "gpt-4o", "hello") is None
+
+    def test_insert_or_replace(self):
+        self.cache.store("openai", "gpt-4o", "q", "v1")
+        self.cache.store("openai", "gpt-4o", "q", "v2")
+        assert self.cache.stats()["entries"] == 1
+        assert self.cache.get("openai", "gpt-4o", "q") == "v2"
+
+    def test_thread_safety(self):
+        errors = []
+        def writer(i):
+            try:
+                self.cache.store("p", "m", f"q{i}", f"r{i}")
+            except Exception as e:
+                errors.append(e)
+        threads = [threading.Thread(target=writer, args=(i,)) for i in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        assert not errors
+        assert self.cache.stats()["entries"] == 20
+
+
+class TestPrivacyGatewayGenerate:
+    """generate() integration — no real network calls."""
+
+    def setup_method(self):
+        with patch("shadowcypher.core.config.config"), \
+             patch("shadowcypher.core.logger.logger"):
+            from shadowcypher.ai.privacy_proxy import PrivacyGateway
+            self.gw = PrivacyGateway()
+            self.gw.scrub_enabled = True
+            self.gw.cache_enabled = True
+            self.gw.zdr_enabled = True
+            self.gw.tor_enabled = False
+            self.gw._cache.clear()  # prevent cross-test cache bleed
+
+    def test_cache_hit_skips_network(self):
+        payload = {"model": "gpt-4o", "messages": [{"role": "user", "content": "hi"}]}
+        response = {"choices": [{"message": {"content": "hello"}}]}
+        self.gw._cache.store(
+            "openai", "gpt-4o",
+            json.dumps(payload.get("messages")),
+            json.dumps(response)
+        )
+        with patch.object(self.gw, "_send_direct") as mock_send:
+            result = self.gw.generate("openai", "https://api.openai.com/v1/chat/completions",
+                                      payload, {})
+        mock_send.assert_not_called()
+        assert result == response
+
+    def test_direct_send_called_on_miss(self):
+        payload = {"model": "gpt-4o", "messages": [{"role": "user", "content": "hi"}]}
+        response = {"choices": [{"message": {"content": "hello"}}]}
+        with patch.object(self.gw, "_send_direct", return_value=response) as mock_send:
+            result = self.gw.generate("openai", "https://api.openai.com/v1/chat/completions",
+                                      payload, {})
+        mock_send.assert_called_once()
+        assert result == response
+
+    def test_response_stored_in_cache(self):
+        payload = {"model": "claude-3", "messages": [{"role": "user", "content": "test"}]}
+        response = {"content": [{"text": "ok"}]}
+        with patch.object(self.gw, "_send_direct", return_value=response):
+            self.gw.generate("anthropic", "https://api.anthropic.com/v1/messages", payload, {})
+        # Second call should hit cache without network
+        with patch.object(self.gw, "_send_direct") as mock_send2:
+            self.gw.generate("anthropic", "https://api.anthropic.com/v1/messages", payload, {})
+        mock_send2.assert_not_called()
+
+    def test_pii_scrubbed_before_send(self):
+        captured = {}
+        def fake_send(url, payload, headers, timeout):
+            captured["payload"] = payload
+            return {"choices": []}
+        payload = {"model": "gpt-4o",
+                   "messages": [{"role": "user", "content": "my ip is 10.0.0.1"}]}
+        with patch.object(self.gw, "_send_direct", side_effect=fake_send):
+            self.gw.generate("openai", "https://api.openai.com/v1/chat/completions",
+                             payload, {})
+        content = str(captured["payload"])
+        assert "10.0.0.1" not in content
+        assert "[INTERNAL_IP]" in content
+
+    def test_zdr_headers_added_before_send(self):
+        captured = {}
+        def fake_send(url, payload, headers, timeout):
+            captured["headers"] = headers
+            return {"choices": []}
+        payload = {"model": "claude-3", "messages": []}
+        with patch.object(self.gw, "_send_direct", side_effect=fake_send):
+            self.gw.generate("anthropic", "https://api.anthropic.com/v1/messages",
+                             payload, {"Authorization": "Bearer x"})
+        assert captured["headers"].get("anthropic-policy") == "no-training"
+
+    def test_returns_none_on_network_error(self):
+        payload = {"model": "gpt-4o", "messages": []}
+        with patch.object(self.gw, "_send_direct", return_value=None):
+            result = self.gw.generate("openai", "https://api.openai.com/v1/chat/completions",
+                                      payload, {})
+        assert result is None
+
+    def test_tor_send_used_when_tor_enabled(self):
+        self.gw.tor_enabled = True
+        self.gw._tor_available = True  # skip socket check
+        payload = {"model": "gpt-4o", "messages": []}
+        with patch.object(self.gw, "_send_via_tor", return_value={"choices": []}) as mock_tor, \
+             patch.object(self.gw, "_send_direct") as mock_direct:
+            self.gw.generate("openai", "https://api.openai.com/v1/chat/completions",
+                             payload, {})
+        mock_tor.assert_called_once()
+        mock_direct.assert_not_called()
+
+    def test_cache_disabled_always_sends(self):
+        self.gw.cache_enabled = False
+        payload = {"model": "gpt-4o", "messages": [{"role": "user", "content": "q"}]}
+        response = {"choices": []}
+        with patch.object(self.gw, "_send_direct", return_value=response) as mock_send:
+            self.gw.generate("openai", "https://x", payload, {})
+            self.gw.generate("openai", "https://x", payload, {})
+        assert mock_send.call_count == 2
+
+
+class TestTorStatus:
+    """tor_status() behaviour under various conditions."""
+
+    def setup_method(self):
+        with patch("shadowcypher.core.config.config"), \
+             patch("shadowcypher.core.logger.logger"):
+            from shadowcypher.ai.privacy_proxy import PrivacyGateway
+            self.gw = PrivacyGateway()
+
+    def test_tor_unavailable_when_socks_unreachable(self):
+        with patch.object(self.gw, "_tor_socks_reachable", return_value=False), \
+             patch("shutil.which", return_value=None):
+            status = self.gw.tor_status()
+        assert status["available"] is False
+        assert status["ip"] is None
+
+    def test_tor_available_returns_ip(self):
+        with patch.object(self.gw, "_tor_socks_reachable", return_value=True), \
+             patch("shutil.which", return_value="/usr/bin/torsocks"), \
+             patch.object(self.gw, "_get_tor_ip", return_value="185.220.101.1"):
+            status = self.gw.tor_status()
+        assert status["available"] is True
+        assert status["ip"] == "185.220.101.1"
+
+    def test_refresh_clears_cached_availability(self):
+        self.gw._tor_available = True
+        self.gw.refresh_tor_status()
+        assert self.gw._tor_available is None
+
+
+class TestPrivacyGatewaySingleton:
+    """Module-level singleton exists and is the right type."""
+
+    def test_singleton_exists(self):
+        with patch("shadowcypher.core.config.config"), \
+             patch("shadowcypher.core.logger.logger"):
+            from shadowcypher.ai.privacy_proxy import privacy_gateway, PrivacyGateway
+            assert isinstance(privacy_gateway, PrivacyGateway)
+
+    def test_singleton_has_expected_defaults(self):
+        with patch("shadowcypher.core.config.config"), \
+             patch("shadowcypher.core.logger.logger"):
+            from shadowcypher.ai.privacy_proxy import privacy_gateway
+            assert privacy_gateway.scrub_enabled is True
+            assert privacy_gateway.cache_enabled is True
+            assert privacy_gateway.zdr_enabled is True
+            assert privacy_gateway.tor_enabled is False

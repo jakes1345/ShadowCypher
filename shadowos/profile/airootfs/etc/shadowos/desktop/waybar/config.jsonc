@@ -1,40 +1,39 @@
 {
   "layer": "top",
-  "position": "top",
-  "height": 36,
-  "spacing": 0,
-  "margin-top": 10,
-  "margin-left": 16,
-  "margin-right": 16,
+  "position": "bottom",
+  "height": 48,
+  "spacing": 4,
+  "margin-bottom": 8,
+  "margin-left": 12,
+  "margin-right": 12,
 
   "modules-left": [
     "custom/logo",
     "custom/spacer-s",
-    "hyprland/workspaces",
-    "custom/spacer-m",
-    "custom/mode",
-    "hyprland/window"
+    "hyprland/workspaces"
   ],
-  "modules-center": ["clock"],
+  "modules-center": [
+    "wlr/taskbar"
+  ],
   "modules-right": [
-    "custom/shadowscore",
     "custom/shadowcypher",
-    "custom/play",
-    "custom/spacer-m",
+    "custom/spacer-s",
     "custom/updates",
     "tray",
+    "custom/spacer-s",
     "network",
     "pulseaudio",
     "battery",
     "custom/spacer-s",
+    "clock",
+    "custom/spacer-s",
     "custom/settings",
-    "custom/help",
     "custom/power"
   ],
 
   "custom/logo": {
-    "format": "󰍹",
-    "tooltip-format": "Applications  ·  SUPER+D",
+    "format": "󰘢",
+    "tooltip-format": "Launch apps  ·  SUPER+D",
     "on-click": "wofi --show drun"
   },
 
@@ -42,35 +41,10 @@
     "format": " "
   },
 
-  "custom/spacer-m": {
-    "format": "   "
-  },
-
-  "custom/mode": {
-    "exec": "/usr/local/bin/shadow-mode-bar",
-    "return-type": "json",
-    "interval": 3,
-    "on-click": "shadow-mode picker"
-  },
-
-  "custom/shadowscore": {
-    "exec": "/usr/local/bin/shadow-score 2>/dev/null",
-    "interval": 15,
-    "return-type": "json",
-    "format": "{}",
-    "on-click": "foot -e bash -lc 'shadow-score --verbose 2>/dev/null || shadow-score; echo; read -n1 -rp \"Press any key…\"'"
-  },
-
   "custom/shadowcypher": {
     "format": "󱐋",
     "tooltip-format": "ShadowCypher  ·  SUPER+S",
     "on-click": "env SHADOWCYPHER_MANUAL=1 /usr/local/bin/shadowcypher-autostart --manual"
-  },
-
-  "custom/play": {
-    "format": "󰊗",
-    "tooltip-format": "Gaming hub  ·  SUPER+Shift+G",
-    "on-click": "/usr/local/bin/shadow-play"
   },
 
   "custom/updates": {
@@ -86,56 +60,66 @@
   "hyprland/workspaces": {
     "format": "{id}",
     "on-click": "activate",
-    "persistent_workspaces": { "*": 5 }
+    "persistent_workspaces": { "*": 5 },
+    "active-only": false
   },
 
-  "hyprland/window": {
-    "format": "{title}",
-    "max-length": 48,
-    "rewrite": { "(.*) — (.*)": "$1", "(.*) - (.*)": "$1" }
+  "wlr/taskbar": {
+    "format": "{icon}",
+    "icon-size": 22,
+    "icon-theme": "Papirus-Dark",
+    "tooltip-format": "{title}",
+    "on-click": "activate",
+    "on-click-middle": "close",
+    "on-click-right": "minimize",
+    "ignore-list": []
   },
 
   "clock": {
     "interval": 1,
     "format": "{:%H:%M}",
-    "format-alt": "{:%a · %b %d · %H:%M}",
-    "tooltip-format": "<tt>{calendar}</tt>"
+    "format-alt": "{:%a %b %d  %H:%M}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>"
   },
 
-  "tray": { "spacing": 10, "icon-size": 16 },
+  "tray": {
+    "spacing": 8,
+    "icon-size": 18,
+    "show-passive-items": true
+  },
 
   "network": {
-    "format-wifi": "󰤨",
-    "format-ethernet": "󰈀",
-    "format-disconnected": "󰤭",
-    "tooltip-format": "{ifname} · {ipaddr}",
-    "on-click": "foot -e nmtui"
+    "format-wifi": "󰤨  {essid}",
+    "format-ethernet": "󰈀  {ifname}",
+    "format-disconnected": "󰤭  No network",
+    "tooltip-format": "{ifname}  ·  {ipaddr}\n{bandwidthDownBytes}↓  {bandwidthUpBytes}↑",
+    "interval": 5,
+    "on-click": "nm-connection-editor",
+    "on-click-right": "foot -e nmtui"
   },
 
   "pulseaudio": {
-    "format": "{icon} {volume}%",
-    "format-muted": "󰝟",
+    "format": "{icon}  {volume}%",
+    "format-muted": "󰝟  Muted",
     "format-icons": { "default": ["󰕿", "󰖀", "󰕾"] },
-    "on-click": "pavucontrol"
+    "scroll-step": 5,
+    "on-click": "pavucontrol",
+    "tooltip-format": "{desc}  ·  {volume}%"
   },
 
   "battery": {
-    "format": "{icon} {capacity}%",
+    "format": "{icon}  {capacity}%",
     "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
-    "format-charging": "󰂄 {capacity}%",
-    "states": { "warning": 25, "critical": 10 }
+    "format-charging": "󰂄  {capacity}%",
+    "format-plugged": "󰚥  {capacity}%",
+    "states": { "warning": 25, "critical": 10 },
+    "tooltip-format": "{capacity}%  ·  {timeTo}"
   },
 
   "custom/settings": {
     "format": "󰒓",
     "tooltip-format": "Settings  ·  SUPER+I",
     "on-click": "/usr/local/bin/shadow-settings"
-  },
-
-  "custom/help": {
-    "format": "󰘥",
-    "tooltip-format": "ShadowOS guide",
-    "on-click": "/usr/local/bin/shadowos-welcome"
   },
 
   "custom/power": {

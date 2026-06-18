@@ -1,52 +1,69 @@
+/* ShadowOS App Launcher — KDE Plasma-inspired */
+
 * {
-  font-family: "Noto Sans", "JetBrainsMono Nerd Font", sans-serif;
-  font-size: 14px;
+  font-family: "Inter", "Noto Sans", sans-serif;
+  font-size: 13px;
 }
 
 window {
-  background: rgba(8, 12, 18, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 14px;
-  color: #e6edf3;
+  background: rgba(17, 18, 27, 0.96);
+  border: 1px solid rgba(99, 179, 237, 0.20);
+  border-radius: 16px;
+  color: #cdd6f4;
 }
 
 #input {
-  background: #161b22;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #e6edf3;
-  padding: 12px 14px;
+  background: rgba(30, 32, 48, 0.90);
+  border: 1px solid rgba(99, 179, 237, 0.18);
+  color: #cdd6f4;
+  padding: 12px 16px;
   border-radius: 10px;
-  margin-bottom: 10px;
+  margin: 14px 14px 8px 14px;
   font-size: 15px;
+  caret-color: #63b3ed;
 }
 
 #input:focus {
-  border-color: #00e0a4;
+  border-color: rgba(99, 179, 237, 0.55);
+  background: rgba(40, 42, 60, 0.95);
 }
 
-#inner-box, #outer-box {
+#inner-box,
+#outer-box {
   background: transparent;
+  padding: 4px 8px;
 }
 
 #scroll {
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 #entry {
   background: transparent;
-  color: #c9d1d9;
-  padding: 10px 12px;
-  border-radius: 8px;
-  margin: 2px 0;
+  color: #cdd6f4;
+  padding: 10px 8px 8px 8px;
+  border-radius: 10px;
+  margin: 4px;
+  border: 1px solid transparent;
+  transition: all 0.1s ease;
 }
 
 #entry:selected {
-  background: rgba(0, 224, 164, 0.12);
-  color: #e6edf3;
-  border: 1px solid rgba(0, 224, 164, 0.25);
+  background: rgba(99, 179, 237, 0.16);
+  border: 1px solid rgba(99, 179, 237, 0.30);
+  color: #e2e8f0;
+}
+
+#entry image {
+  margin-bottom: 4px;
 }
 
 #text {
-  padding-left: 6px;
+  padding: 2px 4px 0 4px;
+  font-size: 11.5px;
+  color: #a6adc8;
+}
+
+#entry:selected #text {
+  color: #cdd6f4;
 }

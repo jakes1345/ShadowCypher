@@ -72,7 +72,7 @@ tooltip {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  text-transform: lowercase;
+  /* text-transform not supported by GTK CSS renderer */
 }
 
 #custom-mode.mode-normal {
