@@ -186,7 +186,8 @@ class AutonomousAdversaryAgent:
         """Execute all mission stages sequentially."""
 
         # ── Stage 1: Surface Map (nmap) ──────────────────────────────────────
-        if stop.is_set(): return
+        if stop.is_set():
+            return
         ctx.stage = "SURFACE_MAP"
         self._emit(cb, f"\n{'='*60}\n[STAGE 1/5] SURFACE MAP — nmap port scan\n{'='*60}\n")
         nmap_output = self._run_nmap(ctx.target, ports, intensity, stop, cb)
@@ -201,7 +202,8 @@ class AutonomousAdversaryAgent:
             self._emit(cb, f"[SURFACE_MAP] HTTP/S services: {', '.join(ctx.http_services)}\n")
 
         # ── Stage 2: CVE Intelligence ─────────────────────────────────────────
-        if stop.is_set(): return
+        if stop.is_set():
+            return
         ctx.stage = "CVE_INTEL"
         self._emit(cb, f"\n{'='*60}\n[STAGE 2/5] CVE INTEL — correlating services vs NVD\n{'='*60}\n")
         services = [f"{p['service']} {p['version']}" for p in ctx.open_ports
@@ -214,23 +216,27 @@ class AutonomousAdversaryAgent:
             self._emit(cb, "[CVE_INTEL] No versioned services found — skipping NVD correlation\n")
 
         # ── Stage 3: Web Probe ────────────────────────────────────────────────
-        if stop.is_set(): return
+        if stop.is_set():
+            return
         if ctx.http_services:
             ctx.stage = "WEB_PROBE"
             self._emit(cb, f"\n{'='*60}\n[STAGE 3/5] WEB PROBE — fingerprinting HTTP services\n{'='*60}\n")
             for url in ctx.http_services[:5]:  # cap at 5 HTTP services
-                if stop.is_set(): break
+                if stop.is_set():
+                    break
                 probe_out = self._run_web_probe(url, intensity, stop, cb)
                 ctx.raw_logs[f"probe_{url}"] = probe_out
         else:
             self._emit(cb, "[STAGE 3/5] WEB PROBE — no HTTP services, skipping\n")
 
         # ── Stage 4: Vulnerability Scan ───────────────────────────────────────
-        if stop.is_set(): return
+        if stop.is_set():
+            return
         ctx.stage = "VULN_SCAN"
         self._emit(cb, f"\n{'='*60}\n[STAGE 4/5] VULN SCAN — nuclei/nikto\n{'='*60}\n")
         for url in ctx.http_services[:3]:
-            if stop.is_set(): break
+            if stop.is_set():
+                break
             vuln_out = self._run_vuln_scan(url, stop, cb)
             ctx.vuln_findings.extend(self._parse_nuclei_findings(vuln_out))
             ctx.raw_logs[f"vuln_{url}"] = vuln_out
@@ -239,7 +245,8 @@ class AutonomousAdversaryAgent:
             self._emit(cb, "[VULN_SCAN] No HTTP targets — running port-based checks only\n")
 
         # ── Stage 5: AI Synthesis + Report ────────────────────────────────────
-        if stop.is_set(): return
+        if stop.is_set():
+            return
         ctx.stage = "AI_SYNTHESIS"
         self._emit(cb, f"\n{'='*60}\n[STAGE 5/5] AI SYNTHESIS — Red Phantom analyzing findings\n{'='*60}\n")
         report = self._synthesize_report(ctx, cb)
@@ -301,7 +308,7 @@ class AutonomousAdversaryAgent:
             req = urllib.request.Request(url, headers={
                 "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
             })
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
                 headers = dict(r.headers)
                 status = r.status
                 body_preview = r.read(512).decode("utf-8", errors="ignore")
@@ -396,7 +403,7 @@ Be specific. Reference actual CVE IDs and port numbers. No filler text."""
     def _fallback_report(self, ctx: MissionContext) -> str:
         """Generate a structured report without AI if Ollama is offline."""
         lines = [
-            f"# Red Team Mission Report",
+            "# Red Team Mission Report",
             f"**Target:** {ctx.target}",
             f"**Mission ID:** {ctx.mission_id}",
             f"**Date:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",

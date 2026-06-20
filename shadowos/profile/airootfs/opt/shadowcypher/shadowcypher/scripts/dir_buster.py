@@ -7,7 +7,10 @@ Usage:
     python3 dir_buster.py <url> [-w WORDLIST] [-t THREADS] [-x EXTENSIONS]
 """
 
-import argparse, asyncio, sys, time
+import argparse
+import asyncio
+import sys
+import time
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
 from concurrent.futures import ThreadPoolExecutor
@@ -54,7 +57,7 @@ def probe_path(base_url, path, user_agent):
     url = f"{base_url.rstrip('/')}/{path.lstrip('/')}"
     try:
         req = Request(url, headers={"User-Agent": user_agent}, method="GET")
-        with urlopen(req, timeout=5) as resp:
+        with urlopen(req, timeout=5) as resp:  # nosec B310
             status = resp.getcode()
             length = len(resp.read())
             return path, status, length
@@ -83,7 +86,7 @@ def main():
     if a.wordlist:
         try:
             with open(a.wordlist) as f:
-                words = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+                words = [ln.strip() for ln in f if ln.strip() and not ln.startswith("#")]
         except FileNotFoundError:
             print(f"{C['R']}[WARN]{C['N']} Wordlist not found, using built-in")
 

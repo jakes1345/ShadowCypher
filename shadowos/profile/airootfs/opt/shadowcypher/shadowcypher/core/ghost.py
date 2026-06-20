@@ -78,7 +78,8 @@ def decrypt(data: str) -> str:
         if missing_padding:
             data += '=' * (4 - missing_padding)
         raw = base64.b64decode(data)
-        if len(raw) < 13: return ""
+        if len(raw) < 13:
+            return ""
         nonce, ct = raw[:12], raw[12:]
         aesgcm = AESGCM(_load_shared_key())
         decrypted = aesgcm.decrypt(nonce, ct, None).decode()
@@ -112,7 +113,8 @@ class GhostOrchestrator:
         return cls._instance
 
     def start(self, port: int = 44444):
-        if self.running: return
+        if self.running:
+            return
         self.running = True
         self.port = port
         threading.Thread(target=self._server_loop, daemon=True).start()
@@ -203,7 +205,8 @@ class GhostOrchestrator:
         try:
             # 1. Initial Handshake
             data = conn.recv(4096).decode()
-            if not data: return
+            if not data:
+                return
             
             # Attempt to decrypt
             decrypted = decrypt(data.strip())
@@ -232,11 +235,13 @@ class GhostOrchestrator:
             while node.is_active:
                 conn.settimeout(30.0)
                 resp_data = conn.recv(16384).decode()
-                if not resp_data: break
+                if not resp_data:
+                    break
                 
                 # Handle possible multiple JSON objects in one buffer (newline delimited)
                 for line in resp_data.split('\n'):
-                    if not line.strip(): continue
+                    if not line.strip():
+                        continue
                     logger.debug("ghost", f"RAW_RECV: {line[:50]}...")
                     try:
                         # Attempt to decrypt if it looks like base64

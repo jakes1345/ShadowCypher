@@ -126,8 +126,10 @@ class StealthHoneypot:
         except Exception as e:
             logger.debug("security", f"Honeypot connection dropped: {e}")
         finally:
-            try: conn.close()
-            except Exception: pass
+            try:
+                conn.close()
+            except Exception:
+                pass
 
     def stop(self):
         self.active = False
@@ -163,7 +165,8 @@ class IdentityHardener:
             try:
                 os.rename(forensic_dir, hidden_dir)
                 logger.info("security", f"LOCKDOWN: Forensics vault relocated to {hidden_dir}")
-            except Exception: pass
+            except Exception:
+                pass
             
         from shadowcypher.core.runner import runner
         for task_id in list(runner.active_processes.keys()):

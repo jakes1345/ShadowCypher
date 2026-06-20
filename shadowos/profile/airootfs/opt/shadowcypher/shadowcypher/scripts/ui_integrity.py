@@ -108,11 +108,11 @@ print("\n\033[1;33m[*] UI Pages\033[0m")
 ui_pages = [
     ("Dashboard", "shadowcypher.ui.dashboard", "DashboardPage"),
     ("SupportPage", "shadowcypher.ui.support_page", "SupportPage"),
-    ("GhostDeck", "shadowcypher.ui.ghost_page", "GhostDeck"),
+    ("ShadowNodesPage", "shadowcypher.ui.ghost_page", "ShadowNodesPage"),
     ("VaultPage", "shadowcypher.ui.vault_page", "ShadowVaultPage"),
     ("ReconPage", "shadowcypher.ui.recon_page", "ReconPage"),
     ("NetworkPage", "shadowcypher.ui.network_page", "NetworkPage"),
-    ("CombatDeck", "shadowcypher.ui.combat_page", "CombatDeck"),
+    ("SimulationDeck", "shadowcypher.ui.simulation_page", "SimulationDeck"),
     ("AdminPage", "shadowcypher.ui.admin_page", "AdminPage"),
     ("Animations", "shadowcypher.ui.animations", None),
     ("ChatPage", "shadowcypher.ui.chat_page", "ChatPage"),
@@ -155,7 +155,7 @@ print(f"  Total: {total}")
 print("═" * 55)
 
 if results["fail"] == 0:
-    print(f"\n\033[1;32m  ✅ ALL CRITICAL CHECKS PASSED\033[0m\n")
+    print("\n\033[1;32m  ✅ ALL CRITICAL CHECKS PASSED\033[0m\n")
 else:
     print(f"\n\033[1;31m  ❌ {results['fail']} CRITICAL FAILURE(S) DETECTED\033[0m\n")
     sys.exit(1)

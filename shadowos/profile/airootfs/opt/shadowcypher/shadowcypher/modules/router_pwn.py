@@ -33,7 +33,7 @@ class GatewayDiagnostics(BaseModule):
         info = {"ip": ip, "manufacturer": "UNKNOWN", "model": "UNKNOWN", "headers": {}}
         
         try:
-            resp = requests.get(f"http://{ip}/", timeout=3, allow_redirects=True, verify=False)
+            resp = requests.get(f"http://{ip}/", timeout=3, allow_redirects=True, verify=False)  # nosec B501
             info["headers"] = dict(resp.headers)
             server = resp.headers.get("Server", "").lower()
             auth_header = resp.headers.get("WWW-Authenticate", "").lower()
@@ -56,7 +56,8 @@ class GatewayDiagnostics(BaseModule):
     def audit_management_ports(self, ip: str, on_output=None):
         """Scan local gateway for exposed remote management interfaces."""
         common_ports = [80, 443, 22, 23, 7547, 8080, 53, 5353]
-        if on_output: on_output(f"[*] AUDITING_EXPOSURES: {ip}...")
+        if on_output:
+            on_output(f"[*] AUDITING_EXPOSURES: {ip}...")
         
         open_ports = []
         for port in common_ports:
@@ -64,16 +65,19 @@ class GatewayDiagnostics(BaseModule):
                 s.settimeout(0.5)
                 if s.connect_ex((ip, port)) == 0:
                     open_ports.append(port)
-                    if on_output: on_output(f"    [!] EXPOSED_PORT: {port} ({self._port_desc(port)})")
+                    if on_output:
+                        on_output(f"    [!] EXPOSED_PORT: {port} ({self._port_desc(port)})")
         
         if 7547 in open_ports:
-            if on_output: on_output("\033[1;31m[CRITICAL] TR-069 (CWMP) DETECTED. Remote ISP management is active.\033[0m")
+            if on_output:
+                on_output("\033[1;31m[CRITICAL] TR-069 (CWMP) DETECTED. Remote ISP management is active.\033[0m")
         
         return open_ports
 
     def discover_upnp(self, on_output=None):
         """Perform SSDP multicast to identify UPnP-enabled devices on the subnet."""
-        if on_output: on_output("[*] INITIATING_UPNP_DISCOVERY...")
+        if on_output:
+            on_output("[*] INITIATING_UPNP_DISCOVERY...")
         msg = (
             'M-SEARCH * HTTP/1.1\r\n'
             'HOST: 239.255.255.250:1900\r\n'
@@ -92,12 +96,14 @@ class GatewayDiagnostics(BaseModule):
                         data, addr = s.recvfrom(65507)
                         if addr[0] not in devices:
                             devices.append(addr[0])
-                            if on_output: on_output(f"    [!] UPNP_DEVICE: {addr[0]}")
+                            if on_output:
+                                on_output(f"    [!] UPNP_DEVICE: {addr[0]}")
                     except socket.timeout:
                         break
                 return devices
         except Exception as e:
-            if on_output: on_output(f"[-] SSDP_ERROR: {e}")
+            if on_output:
+                on_output(f"[-] SSDP_ERROR: {e}")
             return []
 
     def _port_desc(self, port: int) -> str:

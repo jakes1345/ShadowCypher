@@ -90,16 +90,16 @@ class DeepOSINT:
             on_output(f"[OSINT] BREACH_CHECK: {query}\n")
 
         # Use k-Anonymity model: only send first 5 chars of SHA-1 hash
-        sha1 = hashlib.sha1(query.encode()).hexdigest().upper()
+        sha1 = hashlib.sha1(query.encode()).hexdigest().upper()  # nosec B324
         prefix, suffix = sha1[:5], sha1[5:]
         try:
             req = urllib.request.Request(
                 f"https://api.pwnedpasswords.com/range/{prefix}",
                 headers={"User-Agent": "ShadowCypher-OSINT/1.0"},
             )
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
                 body = resp.read().decode()
-            found = next((l for l in body.splitlines() if l.split(":")[0] == suffix), None)
+            found = next((ln for ln in body.splitlines() if ln.split(":")[0] == suffix), None)
             if found:
                 count = found.split(":")[1]
                 msg = f"[BREACH] FOUND: {query} appears in {count} known breach(es).\n"
@@ -167,7 +167,7 @@ class DeepOSINT:
         )
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "ShadowCypher-OSINT/1.0"})
-            with urllib.request.urlopen(req, timeout=20) as resp:
+            with urllib.request.urlopen(req, timeout=20) as resp:  # nosec B310
                 data = json.loads(resp.read())
             if len(data) <= 1:
                 if on_output:

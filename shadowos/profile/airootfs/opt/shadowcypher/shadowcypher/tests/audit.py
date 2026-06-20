@@ -1,6 +1,7 @@
 """ShadowCypher Module Integration Audit — Validates actual API surface."""
 
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # ── Module Registry (matches modules/__init__.py + extras) ──
@@ -123,7 +124,7 @@ required_methods = {
 total_missing = 0
 total_methods = 0
 
-print(f"[SYSTEM] BEGINNING_PLATFORM_INTEGRITY_AUDIT_v4.5.8...")
+print("[SYSTEM] BEGINNING_PLATFORM_INTEGRITY_AUDIT_v4.5.8...")
 
 for mod_name, methods in required_methods.items():
     mod_cls = modules.get(mod_name)
@@ -141,7 +142,7 @@ for mod_name, methods in required_methods.items():
 
 # ── Extended Modules Check (non-__init__ modules) ──
 
-print(f"\nExtended Module Verification:")
+print("\nExtended Module Verification:")
 
 extended = {
     'ADAssessment': ('shadowcypher.modules.ad_assessment', 'ADAssessment',

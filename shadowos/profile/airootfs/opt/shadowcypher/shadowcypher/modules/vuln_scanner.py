@@ -28,7 +28,8 @@ class VulnScanner(BaseModule):
             tags: Optional tags to filter templates (e.g., 'cve,crit').
         """
         require_stealth(on_output=on_output)
-        if not validate_target(target): return
+        if not validate_target(target):
+            return
 
         self.log(f"INITIATING_NUCLEI_SCAN: {target}")
         nuclei = self.get_tool_path("nuclei")
@@ -46,7 +47,8 @@ class VulnScanner(BaseModule):
             target: The target URL.
         """
         require_stealth(on_output=on_output)
-        if not validate_target(target): return
+        if not validate_target(target):
+            return
 
         self.log(f"INITIATING_SQLMAP_SCAN: {target}")
         sqlmap = self.get_tool_path("sqlmap")
@@ -62,7 +64,8 @@ class VulnScanner(BaseModule):
             target: The target host/URL.
         """
         require_stealth(on_output=on_output)
-        if not validate_target(target): return
+        if not validate_target(target):
+            return
 
         self.log(f"INITIATING_NIKTO_SCAN: {target}")
         nikto = self.get_tool_path("nikto")

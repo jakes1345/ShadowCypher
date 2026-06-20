@@ -1,8 +1,8 @@
 NAME="ShadowOS"
-PRETTY_NAME="ShadowOS 0.3 (2026.06.11)"
+PRETTY_NAME="ShadowOS 0.3 (2026.06.17)"
 ID=shadowos
 ID_LIKE=arch
-BUILD_ID=2026.06.11
+BUILD_ID=2026.06.17
 ANSI_COLOR="38;2;0;255;180"
 HOME_URL="https://shadowcypher.site"
 DOCUMENTATION_URL="https://shadowcypher.site/docs.html"

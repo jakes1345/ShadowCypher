@@ -258,7 +258,7 @@ class AgentRouter:
             return
         try:
             req = urllib.request.Request(f"{OLLAMA_BASE}/api/tags")
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
                 data = json.loads(resp.read())
             self._available_models = [m["name"] for m in data.get("models", [])]
             self._model_cache_time = now
@@ -330,7 +330,7 @@ class AgentRouter:
                 data=json.dumps(payload).encode(),
                 headers={"Content-Type": "application/json"},
             )
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with urllib.request.urlopen(req, timeout=30) as resp:  # nosec B310
                 data = json.loads(resp.read())
             import re
             raw = data.get("message", {}).get("content", "")

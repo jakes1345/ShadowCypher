@@ -18,7 +18,8 @@ class ShadowContext:
         tree = []
         for root, dirs, files in os.walk(self.root):
             level = root.replace(str(self.root), '').count(os.sep)
-            if level >= depth: continue
+            if level >= depth:
+                continue
             
             indent = ' ' * 4 * level
             tree.append(f"{indent}{os.path.basename(root)}/")

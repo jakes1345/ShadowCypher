@@ -83,14 +83,20 @@ class ShadowRuntime:
             left  = self.resolve_var(tokens[0].value)
             op    = tokens[1].value
             right = self.resolve_var(tokens[2].value)
-            if op == "==":  return left == right
-            if op == "!=":  return left != right
+            if op == "==":
+                return left == right
+            if op == "!=":
+                return left != right
             try:
                 lf, rf = float(left), float(right)
-                if op == ">":  return lf > rf
-                if op == ">=": return lf >= rf
-                if op == "<":  return lf < rf
-                if op == "<=": return lf <= rf
+                if op == ">":
+                    return lf > rf
+                if op == ">=":
+                    return lf >= rf
+                if op == "<":
+                    return lf < rf
+                if op == "<=":
+                    return lf <= rf
             except (ValueError, TypeError):
                 pass
         return False

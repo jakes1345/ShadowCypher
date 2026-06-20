@@ -9,7 +9,13 @@ Usage:
     sudo python3 trace_eraser.py [--deep] [--timestamps] [--user USER]
 """
 
-import argparse, os, sys, subprocess, glob, time, re
+import argparse
+import os
+import sys
+import subprocess
+import glob
+import time
+import re
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m","N":"\033[0m","B":"\033[1m"}
 
@@ -19,7 +25,7 @@ def is_root():
 def run_silent(cmd):
     try:
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                       shell=isinstance(cmd, str), timeout=10)
+                       shell=isinstance(cmd, str), timeout=10)  # nosec B602
     except Exception:
         pass
 
@@ -55,7 +61,7 @@ def scrub_file_lines(path, patterns, label):
         with open(path, "r") as f:
             lines = f.readlines()
         original_count = len(lines)
-        filtered = [l for l in lines if not any(p.search(l) for p in patterns)]
+        filtered = [ln for ln in lines if not any(p.search(ln) for p in patterns)]
         removed = original_count - len(filtered)
         if removed > 0:
             with open(path, "w") as f:
@@ -94,11 +100,13 @@ def main():
         ".viminfo", ".wget-hsts", ".sqlite_history",
     ]
     for hf in history_files:
-        if wipe_file(os.path.join(home, hf), hf): ops += 1
+        if wipe_file(os.path.join(home, hf), hf):
+            ops += 1
     # Also clean root if we're running as root
     if is_root() and a.user != "root":
         for hf in history_files:
-            if wipe_file(os.path.join("/root", hf), f"root/{hf}"): ops += 1
+            if wipe_file(os.path.join("/root", hf), f"root/{hf}"):
+                ops += 1
     # Clear in-memory history
     run_silent("history -c")
 
@@ -124,7 +132,8 @@ def main():
     ]
     for lf in log_files:
         removed = scrub_file_lines(lf, patterns, os.path.basename(lf))
-        if removed: ops += 1
+        if removed:
+            ops += 1
 
     # SSH logs
     scrub_file_lines("/var/log/auth.log", patterns, "SSH auth")
@@ -133,9 +142,9 @@ def main():
     # Phase 3: Application Traces
     # ══════════════════════════════════════════════════════════════
     print(f"\n  {C['C']}[Phase 3]{C['N']} Application Traces")
-    ops += remove_files("/tmp/shadowcypher_*", "ShadowCypher temp files")
-    ops += remove_files("/tmp/.shadow*", "Shadow temp files")
-    ops += remove_files("/tmp/tmp*.hash", "Hash temp files")
+    ops += remove_files("/tmp/shadowcypher_*", "ShadowCypher temp files")  # nosec B108
+    ops += remove_files("/tmp/.shadow*", "Shadow temp files")  # nosec B108
+    ops += remove_files("/tmp/tmp*.hash", "Hash temp files")  # nosec B108
 
     # Clear ShadowCypher internal logs
     sc_logs = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "logs")
@@ -149,9 +158,12 @@ def main():
         print(f"\n  {C['C']}[Phase 4]{C['N']} Deep Forensic Scrub")
 
         # wtmp (login records) — truncate
-        if wipe_file("/var/log/wtmp", "wtmp (login records)"): ops += 1
-        if wipe_file("/var/log/btmp", "btmp (failed logins)"): ops += 1
-        if wipe_file("/var/log/lastlog", "lastlog"): ops += 1
+        if wipe_file("/var/log/wtmp", "wtmp (login records)"):
+            ops += 1
+        if wipe_file("/var/log/btmp", "btmp (failed logins)"):
+            ops += 1
+        if wipe_file("/var/log/lastlog", "lastlog"):
+            ops += 1
 
         # Systemd journal vacuum
         print(f"  {C['C']}[*]{C['N']} Vacuuming systemd journal...")
@@ -180,7 +192,8 @@ def main():
 
         # recently-used.xbel
         recent = os.path.join(home, ".local", "share", "recently-used.xbel")
-        if wipe_file(recent, "recently-used.xbel"): ops += 1
+        if wipe_file(recent, "recently-used.xbel"):
+            ops += 1
 
         # Trash
         trash_dir = os.path.join(home, ".local", "share", "Trash")

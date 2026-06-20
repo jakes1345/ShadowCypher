@@ -109,41 +109,48 @@ class SpectralIntelligencePage(BasePage):
     # --- Handlers ---
     def _on_osint_pulse(self, btn):
         target = self.osint_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         self.log(f"INITIATING_SPECTRAL_OSINT_PULSE: {target}", "INTEL")
         hub.dispatch_mission(f"Spectral Intelligence audit on {target}", agent_role="commander")
 
     def _on_osint_ssl(self, btn):
         target = self.osint_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         self.run_job(OSINT.ssl_cert_info(target, 443, self.on_output, self.on_complete))
 
     def _on_osint_headers(self, btn):
         target = self.osint_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         url = target if target.startswith("http") else f"https://{target}"
         self.run_job(OSINT.http_headers(url, self.on_output, self.on_complete))
 
     def _on_osint_tech(self, btn):
         target = self.osint_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         url = target if target.startswith("http") else f"https://{target}"
         self.run_job(OSINT.tech_detect(url, self.on_output, self.on_complete))
 
     def _on_osint_whois(self, btn):
         target = self.osint_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         self.log(OSINT.subnet_info(target), "INTEL")
 
     def _on_osint_social(self, btn):
         target = self.osint_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         from shadowcypher.modules.osint_deep import DeepOSINT
         DeepOSINT().social_footprint(target, on_output=self.on_output)
 
     def _on_osint_wayback(self, btn):
         target = self.osint_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         from shadowcypher.modules.osint_deep import DeepOSINT
         DeepOSINT().wayback_recon(target, on_output=self.on_output)
 
@@ -154,22 +161,26 @@ class SpectralIntelligencePage(BasePage):
 
     def _on_net_tcp(self, btn):
         target = self.net_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         self.run_job(Network.port_scan_tcp_connect(target, "1-1024", self.on_output, self.on_complete))
 
     def _on_net_syn(self, btn):
         target = self.net_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         self.run_job(Network.port_scan_syn(target, "1-1024", self.on_output, self.on_complete))
 
     def _on_net_os(self, btn):
         target = self.net_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         self.run_job(Network.network_os_detection(target, self.on_output, self.on_complete))
 
     def _on_net_service(self, btn):
         target = self.net_target.get_text().strip()
-        if not target: return
+        if not target:
+            return
         self.run_job(Network.service_fingerprint(target, None, self.on_output, self.on_complete))
 
     def _on_net_pcap(self, btn):

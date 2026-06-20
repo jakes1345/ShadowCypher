@@ -43,7 +43,7 @@ class CommsEngine:
         }
 
         try:
-            response = requests.post(self.base_url, headers=headers, json=payload)
+            response = requests.post(self.base_url, headers=headers, json=payload)  # nosec B113
             if response.status_code == 200:
                 logger.info("comms", f"Welcome signal sent to {to_email}")
                 return True

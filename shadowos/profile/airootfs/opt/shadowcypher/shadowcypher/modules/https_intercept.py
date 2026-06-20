@@ -127,7 +127,7 @@ class HTTPSIntercept(BaseModule):
         """
         if not validate_ip(gateway_ip):
             if on_output:
-                on_output(f"[HTTPS_INTERCEPT] ERROR: invalid gateway_ip\n")
+                on_output("[HTTPS_INTERCEPT] ERROR: invalid gateway_ip\n")
             return None
 
         if on_output:
@@ -159,7 +159,7 @@ class HTTPSIntercept(BaseModule):
         # Launch sslstrip
         sslstrip_task = runner.execute_task(
             "SSLSTRIP",
-            ["sslstrip", "-l", "10000", "-w", "/tmp/sslstrip.log"],
+            ["sslstrip", "-l", "10000", "-w", "/tmp/sslstrip.log"],  # nosec B108
             callback=on_output,
         )
         self.active_tasks.append(sslstrip_task)
@@ -180,7 +180,7 @@ class HTTPSIntercept(BaseModule):
         """
         if not validate_port(listen_port):
             if on_output:
-                on_output(f"[HTTPS_INTERCEPT] ERROR: invalid listen_port\n")
+                on_output("[HTTPS_INTERCEPT] ERROR: invalid listen_port\n")
             return None
 
         # Write addon to a temp file
@@ -222,7 +222,7 @@ class HTTPSIntercept(BaseModule):
         """
         if not validate_port(listen_port):
             if on_output:
-                on_output(f"[HTTPS_INTERCEPT] ERROR: invalid listen_port\n")
+                on_output("[HTTPS_INTERCEPT] ERROR: invalid listen_port\n")
             return None
 
         # Escape payload for embedding in Python source

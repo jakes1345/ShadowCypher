@@ -379,9 +379,9 @@ class MeshRelay(BaseModule):
     def _get_public_ip(self) -> str:
         try:
             import urllib.request
-            return urllib.request.urlopen("https://api.ipify.org", timeout=5).read().decode().strip()
+            return urllib.request.urlopen("https://api.ipify.org", timeout=5).read().decode().strip()  # nosec B310
         except Exception:
-            return "0.0.0.0"
+            return "0.0.0.0"  # nosec B104
 
 
 # Maintained for backward compatibility

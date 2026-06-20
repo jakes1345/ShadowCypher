@@ -202,7 +202,8 @@ class ShadowHub:
 
     def _start_health_monitor(self) -> None:
         """Background health sentinel — polls Tor and relay liveness every 10 s."""
-        import socket as _socket, time as _time
+        import socket as _socket
+        import time as _time
         def _monitor():
             while True:
                 try:
@@ -360,7 +361,8 @@ class ShadowHub:
     def _forward_to_relay(self, data: Dict[str, Any]) -> None:
         """Proxies internal bus events to the native Go-relay signal swarm."""
         if hasattr(self, 'relay_bridge') and self.relay_bridge.connected:
-            if not hasattr(self.relay_bridge, 'loop'): return
+            if not hasattr(self.relay_bridge, 'loop'):
+                return
             
             # PREVENT_ECHO: Don't forward messages that already came from the swarm
             mod = data.get("module", "")
@@ -383,7 +385,8 @@ class ShadowHub:
                     self.relay_bridge.send(msg), 
                     self.relay_bridge.loop
                 )
-            except Exception: pass
+            except Exception:
+                pass
 
     async def _on_intel_discovered(self, intel: Dict[str, Any]) -> None:
         # Fuses raw intel into the decision engine
@@ -520,7 +523,8 @@ class ShadowHub:
         """Verifies if the platform's stealth signatures are properly masked."""
         from shadowcypher.core.security import hardener
         # Check Identity + Proxy Status
-        if not hardener.is_secure: return False
+        if not hardener.is_secure:
+            return False
         # Check if we have an active relay link
         if not hasattr(self, 'relay_bridge') or not self.relay_bridge.connected:
             return False

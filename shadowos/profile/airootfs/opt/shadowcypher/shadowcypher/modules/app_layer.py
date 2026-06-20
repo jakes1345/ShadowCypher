@@ -99,7 +99,7 @@ class ApplicationStressTest(BaseModule):
 
         if not validate_target(target_url):
             if on_output:
-                on_output(f"[APP_STRESS] FAULT: Invalid target configuration\n")
+                on_output("[APP_STRESS] FAULT: Invalid target configuration\n")
             return ""
 
         import shutil
@@ -139,7 +139,7 @@ class ApplicationStressTest(BaseModule):
                     try:
                         while not _stop_event.is_set() and time.time() < deadline:
                             try:
-                                result = runner.execute_task(
+                                runner.execute_task(
                                     "APP_CURL_HIT",
                                     ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
                                      "-X", method.upper(), target_url],
@@ -197,7 +197,7 @@ class ApplicationStressTest(BaseModule):
         """
         if not validate_target(target_host):
             if on_output:
-                on_output(f"[APP_STRESS] FAULT: Invalid target configuration\n")
+                on_output("[APP_STRESS] FAULT: Invalid target configuration\n")
             return ""
         if not validate_port(target_port):
             if on_output:
@@ -307,7 +307,7 @@ class ApplicationStressTest(BaseModule):
         """
         if not validate_target(target_url):
             if on_output:
-                on_output(f"[APP_STRESS] FAULT: Invalid target configuration\n")
+                on_output("[APP_STRESS] FAULT: Invalid target configuration\n")
             return ""
 
         import shutil
@@ -377,7 +377,7 @@ class ApplicationStressTest(BaseModule):
                 if on_output:
                     on_output(f"[APP_STRESS] EXECUTION_FAULT: {e}\n")
             if on_output:
-                on_output(f"[APP_STRESS] TEST_COMPLETE\n")
+                on_output("[APP_STRESS] TEST_COMPLETE\n")
 
         threading.Thread(target=_slow_post_worker, daemon=True).start()
         return task_id
@@ -404,10 +404,12 @@ class ApplicationStressTest(BaseModule):
         require_stealth(on_output=on_output)
         if not HAS_H2:
             msg = "[H2_RESET] DEPENDENCY_MISSING: Install h2 library: pip install h2"
-            if on_output: on_output(msg + "\n")
+            if on_output:
+                on_output(msg + "\n")
             return ""
         if not validate_target(target_host):
-            if on_output: on_output("[H2_RESET] FAULT: Invalid target\n")
+            if on_output:
+                on_output("[H2_RESET] FAULT: Invalid target\n")
             return ""
 
         task_id = "H2_RAPID_RESET"
@@ -433,7 +435,8 @@ class ApplicationStressTest(BaseModule):
                     raw.sendall(conn.data_to_send(65535))
 
                     for _ in range(streams_per_conn):
-                        if _stop_event.is_set(): break
+                        if _stop_event.is_set():
+                            break
                         sid = conn.get_next_available_stream_id()
                         conn.send_headers(sid, [
                             (":method", "GET"),
@@ -469,7 +472,8 @@ class ApplicationStressTest(BaseModule):
 
         pool = [threading.Thread(target=_connection_worker, daemon=True)
                 for _ in range(50)]
-        for t in pool: t.start()
+        for t in pool:
+            t.start()
         threading.Thread(target=_reporter, daemon=True).start()
         return task_id
 
@@ -493,10 +497,12 @@ class ApplicationStressTest(BaseModule):
         require_stealth(on_output=on_output)
         if not HAS_H2:
             msg = "[MADE_YOU_RESET] DEPENDENCY_MISSING: pip install h2"
-            if on_output: on_output(msg + "\n")
+            if on_output:
+                on_output(msg + "\n")
             return ""
         if not validate_target(target_host):
-            if on_output: on_output("[MADE_YOU_RESET] FAULT: Invalid target\n")
+            if on_output:
+                on_output("[MADE_YOU_RESET] FAULT: Invalid target\n")
             return ""
 
         task_id = "H2_MADE_YOU_RESET"
@@ -564,7 +570,8 @@ class ApplicationStressTest(BaseModule):
                       f"{connections} workers for {duration}s\n")
 
         pool = [threading.Thread(target=_myr_worker, daemon=True) for _ in range(connections)]
-        for t in pool: t.start()
+        for t in pool:
+            t.start()
         threading.Thread(target=_reporter, daemon=True).start()
         return task_id
 

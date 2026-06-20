@@ -14,7 +14,14 @@ Usage:
     python3 tor_cloak.py harden          — Full IP protection hardening
 """
 
-import argparse, os, sys, subprocess, socket, time, json, shutil
+import argparse
+import os
+import sys
+import subprocess
+import socket
+import time
+import json
+import shutil
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m"}
@@ -25,7 +32,7 @@ CONTROL_PORT = 9051
 def run(cmd, capture=True, timeout=15):
     try:
         r = subprocess.run(cmd, capture_output=capture, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
+                           timeout=timeout, shell=isinstance(cmd, str))  # nosec B602
         return r.stdout.strip() if capture else None
     except Exception:
         return None
@@ -174,8 +181,8 @@ def cmd_start():
             print(f"\n  {C['G']}[✓] ANONYMITY VERIFIED — You are cloaked.{C['N']}")
         print(f"\n  {C['Y']}Usage:{C['N']}")
         print(f"    curl --socks5-hostname 127.0.0.1:{SOCKS_PORT} http://example.com")
-        print(f"    torify wget http://example.onion/file")
-        print(f"    proxychains firefox")
+        print("    torify wget http://example.onion/file")
+        print("    proxychains firefox")
     else:
         print(f"  {C['R']}[-]{C['N']} Failed to start Tor")
     print()
@@ -241,7 +248,7 @@ def cmd_shell():
     env["ALL_PROXY"] = f"socks5h://127.0.0.1:{SOCKS_PORT}"
     env["http_proxy"] = f"socks5h://127.0.0.1:{SOCKS_PORT}"
     env["https_proxy"] = f"socks5h://127.0.0.1:{SOCKS_PORT}"
-    env["PS1"] = f"\\[\\033[1;31m\\][TOR]\\[\\033[0m\\] \\u@\\h:\\w\\$ "
+    env["PS1"] = "\\[\\033[1;31m\\][TOR]\\[\\033[0m\\] \\u@\\h:\\w\\$ "
 
     if shutil.which("torify"):
         subprocess.run(["torify", "bash", "--norc"], env=env)
@@ -283,7 +290,7 @@ def cmd_harden():
             print(f"  {C['G']}●{C['N']} MAC randomization: ACTIVE")
         else:
             print(f"  {C['Y']}●{C['N']} MAC randomization: NOT ACTIVE")
-            print(f"      Run: sudo macchanger -r <interface>")
+            print("      Run: sudo macchanger -r <interface>")
     except Exception:
         print(f"  {C['Y']}●{C['N']} Cannot check (nmcli not available)")
 
@@ -297,7 +304,7 @@ def cmd_harden():
     hostname = socket.gethostname()
     print(f"  {C['Y']}●{C['N']} Hostname: {hostname}")
     if hostname not in ("localhost", "localhost.localdomain"):
-        print(f"      Consider: sudo hostnamectl set-hostname localhost")
+        print("      Consider: sudo hostnamectl set-hostname localhost")
 
     print(f"\n  {C['G']}Hardening assessment complete: {steps} automatic fixes applied{C['N']}\n")
 

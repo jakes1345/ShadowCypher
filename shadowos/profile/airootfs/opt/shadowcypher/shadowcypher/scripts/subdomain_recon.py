@@ -7,7 +7,11 @@ Usage:
     python3 subdomain_recon.py <domain> [-w WORDLIST] [-t THREADS] [--resolve]
 """
 
-import argparse, socket, sys, time, json
+import argparse
+import socket
+import sys
+import time
+import json
 from concurrent.futures import ThreadPoolExecutor
 from urllib.request import urlopen, Request
 
@@ -31,34 +35,41 @@ def query_crtsh(domain):
     subs = set()
     try:
         req = Request(f"https://crt.sh/?q=%25.{domain}&output=json", headers={"User-Agent":"Mozilla/5.0"})
-        with urlopen(req, timeout=15) as resp:
+        with urlopen(req, timeout=15) as resp:  # nosec B310
             for e in json.loads(resp.read().decode()):
                 for line in e.get("name_value","").split("\n"):
                     line = line.strip().lower().lstrip("*.")
-                    if line.endswith(f".{domain}"): subs.add(line)
-    except Exception: pass
+                    if line.endswith(f".{domain}"):
+                        subs.add(line)
+    except Exception:
+        pass
     return subs
 
 def query_hackertarget(domain):
     subs = set()
     try:
         req = Request(f"https://api.hackertarget.com/hostsearch/?q={domain}", headers={"User-Agent":"Mozilla/5.0"})
-        with urlopen(req, timeout=10) as resp:
+        with urlopen(req, timeout=10) as resp:  # nosec B310
             for line in resp.read().decode().strip().split("\n"):
                 parts = line.split(",")
-                if parts and parts[0].endswith(f".{domain}"): subs.add(parts[0].strip().lower())
-    except Exception: pass
+                if parts and parts[0].endswith(f".{domain}"):
+                    subs.add(parts[0].strip().lower())
+    except Exception:
+        pass
     return subs
 
 def dns_resolve(sub):
-    try: return sub, socket.gethostbyname(sub)
-    except socket.gaierror: return sub, None
+    try:
+        return sub, socket.gethostbyname(sub)
+    except socket.gaierror:
+        return sub, None
 
 def dns_bruteforce(domain, wordlist, threads=50):
     found = set()
     with ThreadPoolExecutor(max_workers=threads) as pool:
         for sub, ip in pool.map(dns_resolve, [f"{w}.{domain}" for w in wordlist]):
-            if ip: found.add(sub)
+            if ip:
+                found.add(sub)
     return found
 
 def main():
@@ -82,22 +93,25 @@ def main():
 
     if not a.no_passive:
         print(f"  {C['C']}[1]{C['N']} crt.sh CT logs...")
-        ct = query_crtsh(domain); all_subs.update(ct)
+        ct = query_crtsh(domain)
+        all_subs.update(ct)
         print(f"    {C['G']}→{C['N']} {len(ct)} subdomains")
 
         print(f"  {C['C']}[2]{C['N']} HackerTarget API...")
-        ht = query_hackertarget(domain); all_subs.update(ht)
+        ht = query_hackertarget(domain)
+        all_subs.update(ht)
         print(f"    {C['G']}→{C['N']} {len(ht)} subdomains")
 
     words = BUILTIN_WORDS
     if a.wordlist:
         try:
             with open(a.wordlist) as f:
-                words = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+                words = [ln.strip() for ln in f if ln.strip() and not ln.startswith("#")]
         except FileNotFoundError:
             print(f"  {C['R']}[WARN]{C['N']} Wordlist not found, using built-in")
     print(f"  {C['C']}[3]{C['N']} DNS brute-force ({len(words)} words)...")
-    bf = dns_bruteforce(domain, words, a.threads); all_subs.update(bf)
+    bf = dns_bruteforce(domain, words, a.threads)
+    all_subs.update(bf)
     print(f"    {C['G']}→{C['N']} {len(bf)} subdomains")
 
     elapsed = time.time() - t0
@@ -107,14 +121,18 @@ def main():
     if a.resolve and all_subs:
         with ThreadPoolExecutor(max_workers=a.threads) as pool:
             for sub, ip in sorted(pool.map(dns_resolve, sorted(all_subs))):
-                if ip: print(f"  {C['G']}●{C['N']} {sub:<50} {C['Y']}{ip}{C['N']}")
-                else: print(f"  {C['R']}✗{C['N']} {sub}")
+                if ip:
+                    print(f"  {C['G']}●{C['N']} {sub:<50} {C['Y']}{ip}{C['N']}")
+                else:
+                    print(f"  {C['R']}✗{C['N']} {sub}")
     else:
-        for s in sorted(all_subs): print(f"  {C['G']}●{C['N']} {s}")
+        for s in sorted(all_subs):
+            print(f"  {C['G']}●{C['N']} {s}")
 
     if a.output and all_subs:
         with open(a.output,"w") as f:
-            for s in sorted(all_subs): f.write(s+"\n")
+            for s in sorted(all_subs):
+                f.write(s+"\n")
         print(f"\n  Saved to: {a.output}")
     print()
 

@@ -84,7 +84,8 @@ class AutoOrchestrator:
 
         client = MetaChain(log_path=mc_logger)
         
-        if callback: callback(f"[AUTOLIVE] Initializing MetaChain Session for: {query}")
+        if callback:
+            callback(f"[AUTOLIVE] Initializing MetaChain Session for: {query}")
         
         # 2. Execute Loop
         try:
@@ -116,7 +117,8 @@ class AutoOrchestrator:
                         loop.close()
                     except Exception:
                         pass
-            if on_complete: on_complete(result)
+            if on_complete:
+                on_complete(result)
 
         threading.Thread(target=_wrapper, daemon=True).start()
 

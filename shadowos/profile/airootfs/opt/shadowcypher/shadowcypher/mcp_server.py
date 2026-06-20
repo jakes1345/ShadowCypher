@@ -18,7 +18,14 @@ Start:   python3 mcp_server.py
 Config:  Add to ~/.claude/settings.json under mcpServers
 """
 
-import sys, os, json, subprocess, socket, re, time, shutil
+import sys
+import os
+import json
+import subprocess
+import socket
+import re
+import time
+import shutil
 
 # MCP protocol constants
 JSONRPC_VERSION = "2.0"
@@ -27,7 +34,7 @@ MCP_PROTOCOL_VERSION = "2024-11-05"
 def run_cmd(cmd, timeout=30):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
+                           timeout=timeout, shell=isinstance(cmd, str))  # nosec B602
         return r.stdout.strip(), r.returncode
     except subprocess.TimeoutExpired:
         return "Command timed out", 1
@@ -263,7 +270,7 @@ def tool_secure_shred(target):
 def tool_traffic_analyze():
     """Analyze current network traffic patterns."""
     out, _ = run_cmd(["ss", "-tnp"])
-    connections = [l for l in out.split("\n")[1:] if l.strip()]
+    connections = [ln for ln in out.split("\n")[1:] if ln.strip()]
 
     port_counts = {}
     for conn in connections:

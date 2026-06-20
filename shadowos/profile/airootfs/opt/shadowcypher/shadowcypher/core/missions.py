@@ -84,7 +84,7 @@ class SovereignGhostMission(GhostMission):
             )
 
             # Phase 2: Vulnerability Matching
-            analysis = self._run_phase(
+            self._run_phase(
                 "ANALYSIS",
                 f"Target: {self.target}\nRecon: {recon_summary}\n"
                 "Search your internal vulnerability database (CVE/PocEngine-DB) for the "
@@ -118,7 +118,6 @@ class SovereignGhostMission(GhostMission):
 
 def ignite_ghost_operation(target: str):
     mission = SovereignGhostMission(target)
-    import threading
     threading.Thread(
         target=mission.execute, daemon=True, name=f"GhostMission-{mission.mid}"
     ).start()

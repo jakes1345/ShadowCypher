@@ -50,6 +50,7 @@ required=(
   "$AIRFS/usr/share/grub/themes/shadowos/theme.txt"
   "$AIRFS/usr/share/grub/themes/shadowos/background.png"
   "$AIRFS/usr/share/backgrounds/shadowos/wallpaper.png"
+  "$AIRFS/etc/shadowos/desktop/waybar/config.fallback.jsonc"
 )
 for f in "${required[@]}"; do
   if [[ -f "$f" || -L "$f" ]]; then pass "$(basename "$f")"; else fail "missing: $f"; fi
@@ -63,7 +64,7 @@ shells=(
   "$AIRFS"/usr/local/bin/*
   "$AIRFS"/etc/shadowos/modes/*/apply.sh
   "$HERE/build.sh" "$HERE/build-docker.sh" "$HERE/flash-usb.sh"
-  "$HERE/test_iso.sh"
+  "$HERE/smoke-test.sh" "$HERE/test_iso.sh"
 )
 for s in "${shells[@]}"; do
   [[ -f "$s" ]] || continue

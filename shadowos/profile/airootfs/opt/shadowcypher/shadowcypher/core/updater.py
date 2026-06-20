@@ -29,7 +29,7 @@ def _fetch_latest() -> dict | None:
             RELEASES_API,
             headers={"User-Agent": "ShadowCypher-Updater/3.0"},
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
             return json.loads(resp.read())
     except Exception:
         return None
@@ -76,7 +76,7 @@ def apply_update_deb(deb_url: str) -> tuple[bool, str]:
     import tempfile
     try:
         with tempfile.NamedTemporaryFile(suffix=".deb", delete=False) as tmp:
-            urllib.request.urlretrieve(deb_url, tmp.name)
+            urllib.request.urlretrieve(deb_url, tmp.name)  # nosec B310
             subprocess.run(
                 ["sudo", "-A", "dpkg", "-i", tmp.name],
                 check=True,

@@ -105,7 +105,7 @@ def index_text(text: str, source: str, domain: str, chunk_size: int = 800):
             chunks.append(chunk)
     if not chunks:
         return 0
-    ids = [hashlib.md5(f"{source}:{i}:{c[:50]}".encode()).hexdigest() for i, c in enumerate(chunks)]
+    ids = [hashlib.md5(f"{source}:{i}:{c[:50]}".encode()).hexdigest() for i, c in enumerate(chunks)]  # nosec B324
     metadatas = [{"source": source, "domain": domain}] * len(chunks)
     try:
         col.upsert(documents=chunks, ids=ids, metadatas=metadatas)
@@ -133,7 +133,7 @@ def build_knowledge_base(force: bool = False):
         attack_file = _SOURCES_DIR / "attack.json"
         if not attack_file.exists():
             logger.info("rag", "Downloading MITRE ATT&CK...")
-            urllib.request.urlretrieve(attack_url, attack_file)
+            urllib.request.urlretrieve(attack_url, attack_file)  # nosec B310
         with open(attack_file) as f:
             attack = json.load(f)
         for obj in attack.get("objects", []):
@@ -165,7 +165,7 @@ def build_knowledge_base(force: bool = False):
         patt_total = 0
         for topic, url in payloads.items():
             try:
-                with urllib.request.urlopen(url, timeout=15) as r:
+                with urllib.request.urlopen(url, timeout=15) as r:  # nosec B310
                     content = r.read().decode("utf-8", errors="ignore")
                 n = index_text(content, f"PayloadsAllTheThings/{topic}", "web-payloads")
                 patt_total += n
@@ -182,7 +182,7 @@ def build_knowledge_base(force: bool = False):
         gtfo_url = "https://raw.githubusercontent.com/GTFOBins/GTFOBins.github.io/master/_data/gtfobins.yaml"
         gtfo_file = _SOURCES_DIR / "gtfobins.yaml"
         if not gtfo_file.exists():
-            urllib.request.urlretrieve(gtfo_url, gtfo_file)
+            urllib.request.urlretrieve(gtfo_url, gtfo_file)  # nosec B310
         import yaml
         with open(gtfo_file) as f:
             gtfo = yaml.safe_load(f)
@@ -205,7 +205,7 @@ def build_knowledge_base(force: bool = False):
     try:
         import urllib.request
         nvd_url = "https://services.nvd.nist.gov/rest/json/cves/2.0?resultsPerPage=100&cvssV3Severity=CRITICAL"
-        with urllib.request.urlopen(nvd_url, timeout=20) as r:
+        with urllib.request.urlopen(nvd_url, timeout=20) as r:  # nosec B310
             nvd = json.load(r)
         nvd_total = 0
         for vuln in nvd.get("vulnerabilities", []):

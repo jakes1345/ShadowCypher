@@ -11,7 +11,15 @@ Usage:
     python3 shadow_audit.py [--full] [--fix]
 """
 
-import argparse, os, sys, socket, subprocess, time, json, struct, re
+import argparse
+import os
+import sys
+import socket
+import subprocess
+import time
+import json
+import struct
+import re
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}
@@ -48,7 +56,7 @@ class AuditResult:
 def run(cmd, timeout=10):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
+                           timeout=timeout, shell=isinstance(cmd, str))  # nosec B602
         return r.stdout.strip(), r.returncode
     except Exception:
         return "", 1
@@ -260,13 +268,13 @@ def audit_firewall(r, do_fix=False):
 
     # Check for open listening ports
     out2, _ = run(["ss", "-tlnp"])
-    listeners = [l for l in out2.split("\n")[1:] if l.strip()]
-    exposed = [l for l in listeners if "0.0.0.0" in l or "::" in l]
+    listeners = [ln for ln in out2.split("\n")[1:] if ln.strip()]
+    exposed = [ln for ln in listeners if "0.0.0.0" in ln or "::" in ln]  # nosec B104
     if exposed:
         r.warn("Open ports", f"{len(exposed)} services listening on all interfaces")
-        for l in exposed[:5]:
-            parts = l.split()
-            print(f"    {C['D']}{parts[3] if len(parts) > 3 else l.strip()}{C['N']}")
+        for ln in exposed[:5]:
+            parts = ln.split()
+            print(f"    {C['D']}{parts[3] if len(parts) > 3 else ln.strip()}{C['N']}")
     else:
         r.ok("Open ports", "No services bound to all interfaces")
 

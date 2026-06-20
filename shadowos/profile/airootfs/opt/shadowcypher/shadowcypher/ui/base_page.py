@@ -39,7 +39,8 @@ class BasePage(Gtk.Box):
 
         # 2. Tactical Metric Strip
         self.metric_strip = Gtk.Box(spacing=10)
-        self.metric_strip.set_margin_start(20); self.metric_strip.set_margin_end(20)
+        self.metric_strip.set_margin_start(20)
+        self.metric_strip.set_margin_end(20)
         self.main_pod.pack_start(self.metric_strip, False, False, 0)
 
         # 3. Tactical Environment (H-Box)
@@ -47,8 +48,10 @@ class BasePage(Gtk.Box):
         self.main_pod.pack_start(self.tactical_env, True, True, 0)
 
         self.workspace = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        self.workspace.set_margin_top(20); self.workspace.set_margin_bottom(20)
-        self.workspace.set_margin_start(20); self.workspace.set_margin_end(20)
+        self.workspace.set_margin_top(20)
+        self.workspace.set_margin_bottom(20)
+        self.workspace.set_margin_start(20)
+        self.workspace.set_margin_end(20)
         self.tactical_env.pack_start(self.workspace, True, True, 0)
 
         # 3b. Intelligence Sidebar (Righty) - Fills the 'Barren' space

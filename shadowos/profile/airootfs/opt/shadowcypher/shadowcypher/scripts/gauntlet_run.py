@@ -23,10 +23,10 @@ def run_step(name, func):
     sys.stdout.flush()
     try:
         res = func()
-        print(f"\033[1;32mOK\033[0m")
+        print("\033[1;32mOK\033[0m")
         return True, res
     except Exception as e:
-        print(f"\033[1;31mFAILED\033[0m")
+        print("\033[1;31mFAILED\033[0m")
         logging.error(f"Validation failure in {name}: {e}")
         return False, None
 
@@ -94,13 +94,14 @@ def main():
     passed_count = 0
     for name, func in steps:
         success, _ = run_step(name, func)
-        if success: passed_count += 1
+        if success:
+            passed_count += 1
         time.sleep(0.2)
 
     print("\n==============================================================================")
     score = (passed_count / len(steps)) * 100
     if score == 100:
-        print(f" [SUCCESS] System Health Score: 100.0% | All subsystems operational.")
+        print(" [SUCCESS] System Health Score: 100.0% | All subsystems operational.")
     else:
         print(f" [WARNING] System Health Score: {score:.1f}% | Instability detected.")
         sys.exit(1)

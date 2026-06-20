@@ -20,7 +20,7 @@ from shadowcypher.core.bus import bus
 
 
 def _ghost_active() -> bool:
-    return os.path.exists("/tmp/.ghost_mode_state")
+    return os.path.exists("/tmp/.ghost_mode_state")  # nosec B108
 
 
 def _tor_alive() -> bool:
@@ -120,8 +120,10 @@ class GhostModePage(BasePage):
         # Identity coverage status
         id_frame = Gtk.Frame(label="IDENTITY COVERAGE")
         id_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        id_box.set_margin_top(8); id_box.set_margin_bottom(8)
-        id_box.set_margin_start(10); id_box.set_margin_end(10)
+        id_box.set_margin_top(8)
+        id_box.set_margin_bottom(8)
+        id_box.set_margin_start(10)
+        id_box.set_margin_end(10)
 
         self._id_rows: dict = {}
         for key, label in [
@@ -170,8 +172,10 @@ class GhostModePage(BasePage):
         # Traffic Mirage
         mirage_frame = Gtk.Frame(label="TRAFFIC MIRAGE")
         mirage_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        mirage_box.set_margin_top(10); mirage_box.set_margin_bottom(10)
-        mirage_box.set_margin_start(10); mirage_box.set_margin_end(10)
+        mirage_box.set_margin_top(10)
+        mirage_box.set_margin_bottom(10)
+        mirage_box.set_margin_start(10)
+        mirage_box.set_margin_end(10)
 
         mirage_desc = Gtk.Label()
         mirage_desc.set_markup(
@@ -248,8 +252,6 @@ class GhostModePage(BasePage):
     def _refresh_status(self):
         ghost = _ghost_active()
         tor   = _tor_alive()
-        is_root = os.geteuid() == 0
-
         self.engage_btn.set_sensitive(not ghost)
         self.disengage_btn.set_sensitive(ghost)
 
@@ -277,7 +279,8 @@ class GhostModePage(BasePage):
 
         # MAC check — first non-loopback iface, check locally-administered bit
         try:
-            import subprocess, re
+            import subprocess
+            import re
             out = subprocess.check_output(["ip", "-o", "link", "show"], text=True, timeout=2)
             for line in out.splitlines():
                 m = re.search(r"(\w+): .+link/ether\s+([0-9a-f:]{17})", line)
@@ -297,7 +300,7 @@ class GhostModePage(BasePage):
 
     def _update_coverage(self, ghost: bool, tor: bool):
         import shutil
-        GREEN, AMBER, RED = "#22c55e", "#f59e0b", "#f43f5e"
+        GREEN, _, RED = "#22c55e", "#f59e0b", "#f43f5e"
 
         def _set(key, covered: bool, text: str):
             dot, status = self._id_rows[key]
@@ -309,7 +312,8 @@ class GhostModePage(BasePage):
         _set("ip",      tor,   "via Tor" if tor else "EXPOSED")
         # MAC: check locally-administered bit
         try:
-            import subprocess, re
+            import subprocess
+            import re
             out = subprocess.check_output(["ip", "-o", "link", "show"], text=True, timeout=2)
             mac_rand = False
             for line in out.splitlines():
@@ -354,7 +358,9 @@ class GhostModePage(BasePage):
 
     def _run_script(self, args: list, label: str):
         """Run a ghost_mode.py or tor_cloak.py command in a thread, stream to console."""
-        import subprocess, shutil, sys
+        import subprocess
+        import shutil
+        import sys
 
         script_dir = os.path.join(os.path.dirname(__file__), "..", "scripts")
         script_map = {
@@ -426,7 +432,10 @@ class GhostModePage(BasePage):
 
     def _on_workspace(self, _btn):
         self._log("Opening RAM-only workspace in terminal...")
-        import subprocess, shutil, sys, os as _os
+        import subprocess
+        import shutil
+        import sys
+        import os as _os
         script = _os.path.join(_os.path.dirname(__file__), "..", "scripts", "ghost_mode.py")
         term = shutil.which("xterm") or shutil.which("gnome-terminal") or shutil.which("konsole")
         if term:

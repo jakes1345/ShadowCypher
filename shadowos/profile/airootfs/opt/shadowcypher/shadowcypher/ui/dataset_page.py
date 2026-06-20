@@ -28,14 +28,18 @@ class DatasetPage(BasePage):
         super().__init__("INTEL HARVEST — Training Data Collection")
 
         form = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        form.set_margin_start(12); form.set_margin_end(12)
-        form.set_margin_top(12);   form.set_margin_bottom(12)
+        form.set_margin_start(12)
+        form.set_margin_end(12)
+        form.set_margin_top(12)
+        form.set_margin_bottom(12)
 
         # ── Sources (checkboxes) ────────────────────────────────────────
         src_frame = Gtk.Frame(label="Sources")
         src_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        src_box.set_margin_start(10); src_box.set_margin_end(10)
-        src_box.set_margin_top(6);    src_box.set_margin_bottom(6)
+        src_box.set_margin_start(10)
+        src_box.set_margin_end(10)
+        src_box.set_margin_top(6)
+        src_box.set_margin_bottom(6)
         self._source_checks: dict[str, Gtk.CheckButton] = {}
         for key, label in self.SOURCES:
             cb = Gtk.CheckButton(label=label)

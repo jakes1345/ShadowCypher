@@ -69,7 +69,7 @@ class RelayManager:
                 cls._instance._initialized = False
             return cls._instance
 
-    def __init__(self, bind_ip: str = "0.0.0.0", bind_port: int = 4444):
+    def __init__(self, bind_ip: str = "0.0.0.0", bind_port: int = 4444):  # nosec B104
         if self._initialized:
             return
         

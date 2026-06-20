@@ -64,7 +64,10 @@ class TerminalPage(Gtk.Box):
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.get_style_context().add_class("card")
-        self.set_margin_top(10); self.set_margin_bottom(10); self.set_margin_start(10); self.set_margin_end(10)
+        self.set_margin_top(10)
+        self.set_margin_bottom(10)
+        self.set_margin_start(10)
+        self.set_margin_end(10)
         
         # Tactical Header
         header = Gtk.Box(spacing=10)

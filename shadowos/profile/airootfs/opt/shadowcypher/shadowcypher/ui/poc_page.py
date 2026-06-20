@@ -99,7 +99,10 @@ class PocPage(BasePage):
 
     def _build_payload_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
+        box.set_margin_top(15)
+        box.set_margin_bottom(15)
+        box.set_margin_start(15)
+        box.set_margin_end(15)
         
         row1 = Gtk.Box(spacing=10)
         self.pl_type = Gtk.ComboBoxText()
@@ -143,8 +146,8 @@ class PocPage(BasePage):
             from shadowcypher.modules.awareness_sim import Phishing
             
             agent_path = CraftFactory.generate_obfuscated_python(lhost, lport)
-            res = Phishing.generate_html_smuggling(agent_path, "agent_apex.exe.html") 
-            self.terminal.log(f"STEALTH_SMUGGLE_FORGED: payloads/agent_apex.exe.html", "SUCCESS")
+            Phishing.generate_html_smuggling(agent_path, "agent_apex.exe.html")
+            self.terminal.log("STEALTH_SMUGGLE_FORGED: payloads/agent_apex.exe.html", "SUCCESS")
         elif ptype == "macro":
             from shadowcypher.modules.deephat import deephat
             self.terminal.log("ENGAGING_DEEPHAT: Synthesizing Evasive VBA Macro...", "AI")
@@ -155,7 +158,10 @@ class PocPage(BasePage):
 
     def _build_msf_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        box.set_margin_top(15); box.set_margin_bottom(15); box.set_margin_start(15); box.set_margin_end(15)
+        box.set_margin_top(15)
+        box.set_margin_bottom(15)
+        box.set_margin_start(15)
+        box.set_margin_end(15)
         self.msf_query = Gtk.Entry()
         self.msf_query.set_placeholder_text("Search PocEngine (e.g. EternalBlue)")
         self.msf_query.connect("activate", self._on_msf_search)

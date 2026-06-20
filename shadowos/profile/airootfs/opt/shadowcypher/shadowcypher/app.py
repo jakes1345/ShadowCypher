@@ -3,7 +3,10 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gtk, GLib, Gdk, GdkPixbuf
-import sys, os, time, threading
+import sys
+import os
+import time
+import threading
 
 # Wire custom askpass so sudo prompts use the ShadowCypher elevation gate
 _askpass = os.path.join(os.path.dirname(__file__), "..", "..", "native", "shadowcypher-askpass")
@@ -42,7 +45,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         Gdk.set_allowed_backends("x11,wayland,*")
 
         # Load branding assets
-        from shadowcypher.core.platform import platform_engine
         icon_path = platform_engine.resolve_path("native", "icons", "shadowcypher-256.png")
         if os.path.exists(icon_path):
             self.set_icon_from_file(icon_path)
@@ -150,7 +152,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             self.sidebar_list.select_row(first_row)
         
         # Subscribe to Autonomous Ticket Events
-        from shadowcypher.core.bus import bus
         bus.subscribe("new_ticket", self._on_new_ticket)
         
         # Tor probe runs off-thread every 10s; cached result read on main thread
@@ -184,7 +185,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         bar.show_all()
 
     def _pulse_tick(self) -> bool:
-        from shadowcypher.core.platform import platform_engine
         from shadowcypher.core.hub import hub
 
         try:
@@ -203,7 +203,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             self.irc_label.set_markup(f"SWARM_NODES: <span color='{node_color}'>{swarm_count} ACTIVE</span>")
 
             # 3. Ghost status from cached probe (updated off-thread)
-            ghost_active = os.path.exists("/tmp/.ghost_mode_state")
+            ghost_active = os.path.exists("/tmp/.ghost_mode_state")  # nosec B108
             tor_up = getattr(self, "_tor_up", False)
             if ghost_active and tor_up:
                 self.ghost_label.set_markup("<span color='#22c55e'>GHOST: ACTIVE ✓</span>")
@@ -260,6 +260,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f5fa", "Spectre War-Map", None),
             ("\U0001f5c4", "Artifact Crypt", None),
             ("\U0001f916", "Shadow-Synthesizer", "APEX"),
+            ("\U0001f510", "Guardian AI", None),
             ("---", "INTELLIGENCE", None),
             ("✨", "Spectral Intelligence", "APEX"),
             ("\U0001f3af", "Vulnerability Sweep", None),
@@ -339,6 +340,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "Spectre War-Map": "war_map_page.WarMapPage",
                 "Artifact Crypt": "vault_page.ShadowVaultPage",
                 "Shadow-Synthesizer": "ai_page.AIPage",
+                "Guardian AI": "guardian_ai_page.GuardianAIPage",
                 "Spectral Intelligence": "intel_page.SpectralIntelligencePage",
                 "Vulnerability Sweep": "vuln_page.VulnScannerPage",
                 "Network Scanner": "network_page.NetworkPage",
@@ -423,7 +425,8 @@ def main():
     try:
         if os.getuid() == 0:
             os.nice(-10) 
-    except: pass
+    except Exception:
+        pass
 
     from shadowcypher.core.hub import hub
     from shadowcypher.ai.sisyphus import sisyphus

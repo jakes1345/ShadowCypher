@@ -73,8 +73,10 @@ class ShadowNodesPage(BasePage):
         # \u2500\u2500 Connection Settings \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
         conn_frame = Gtk.Frame(label="NODE LISTENER")
         conn_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        conn_box.set_margin_start(10); conn_box.set_margin_end(10)
-        conn_box.set_margin_top(8);   conn_box.set_margin_bottom(8)
+        conn_box.set_margin_start(10)
+        conn_box.set_margin_end(10)
+        conn_box.set_margin_top(8)
+        conn_box.set_margin_bottom(8)
 
         bind_row = Gtk.Box(spacing=8)
         bind_row.pack_start(Gtk.Label(label="Bind address:"), False, False, 0)
@@ -107,7 +109,8 @@ class ShadowNodesPage(BasePage):
             "Loopback mode is safer for local-only testing."
             "</span>"
         )
-        agent_note.set_xalign(0); agent_note.set_line_wrap(True)
+        agent_note.set_xalign(0)
+        agent_note.set_line_wrap(True)
         conn_box.pack_start(agent_note, False, False, 0)
 
         conn_frame.add(conn_box)
@@ -153,7 +156,8 @@ class ShadowNodesPage(BasePage):
         self.console_view.scroll_to_mark(mark, 0.0, True, 0.0, 1.0)
 
     def _refresh_grid(self):
-        if not self.get_mapped(): return True
+        if not self.get_mapped():
+            return True
         nodes = ghost_orchestrator.get_active_nodes()
         self.node_store.clear()
         for n in nodes:
@@ -176,7 +180,8 @@ class ShadowNodesPage(BasePage):
             return
             
         cmd = self.cmd_entry.get_text().strip()
-        if not cmd: return
+        if not cmd:
+            return
         
         fp_short = model[treeiter][1]
         # Find full FP
@@ -249,14 +254,14 @@ class ShadowNodesPage(BasePage):
         port = getattr(ghost_orchestrator, "port", 44444)
         self._bind_lbl.set_text(bind)
         self._port_lbl.set_text(str(port))
-        if bind == "0.0.0.0":
+        if bind == "0.0.0.0":  # nosec B104
             self._ext_btn.set_label("🔒 Loopback Only (Safer)")
         else:
             self._ext_btn.set_label("🌐 Enable External Connections")
 
     def _on_toggle_bind(self, _btn):
         current = os.environ.get("SHADOWCYPHER_GHOST_BIND", "127.0.0.1")
-        new_bind = "0.0.0.0" if current != "0.0.0.0" else "127.0.0.1"
+        new_bind = "0.0.0.0" if current != "0.0.0.0" else "127.0.0.1"  # nosec B104
         os.environ["SHADOWCYPHER_GHOST_BIND"] = new_bind
 
         # Restart the orchestrator on the new address
@@ -280,7 +285,7 @@ class ShadowNodesPage(BasePage):
 
     def _on_copy_agent_cmd(self, _btn):
         bind = os.environ.get("SHADOWCYPHER_GHOST_BIND", "127.0.0.1")
-        host = bind if bind != "0.0.0.0" else "YOUR_SERVER_IP"
+        host = bind if bind != "0.0.0.0" else "YOUR_SERVER_IP"  # nosec B104
         port = getattr(ghost_orchestrator, "port", 44444)
         cmd = f"./ghost-agent -host {host} -port {port}"
         clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)

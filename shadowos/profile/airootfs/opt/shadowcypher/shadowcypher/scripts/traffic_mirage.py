@@ -18,8 +18,17 @@ Usage:
     python3 traffic_mirage.py shape            — Traffic timing obfuscation
 """
 
-import argparse, os, sys, subprocess, socket, time, random, threading
-import struct, shutil, json
+import argparse
+import os
+import sys
+import subprocess
+import socket
+import time
+import random
+import threading
+import struct
+import shutil
+import json
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}
@@ -27,7 +36,7 @@ C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
 def run(cmd, timeout=15):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
+                           timeout=timeout, shell=isinstance(cmd, str))  # nosec B602
         return r.stdout.strip(), r.returncode
     except Exception:
         return "", 1
@@ -76,8 +85,8 @@ def cmd_analyze():
 
     # 4. Check for VPN
     out, _ = run(["ip", "link", "show"])
-    vpn_ifaces = [l for l in (out or "").split("\n")
-                  if any(v in l for v in ["tun0", "wg0", "ppp0", "tailscale"])]
+    vpn_ifaces = [ln for ln in (out or "").split("\n")
+                  if any(v in ln for v in ["tun0", "wg0", "ppp0", "tailscale"])]
     if vpn_ifaces:
         checks.append(("OK", "VPN tunnel detected", "Additional encryption layer"))
     else:
@@ -92,7 +101,7 @@ def cmd_analyze():
     # 6. Active traffic pattern analysis
     print(f"  {C['C']}Traffic patterns:{C['N']}")
     out, _ = run(["ss", "-tnp"])
-    connections = [l for l in (out or "").split("\n")[1:] if l.strip()]
+    connections = [ln for ln in (out or "").split("\n")[1:] if ln.strip()]
     tcp_count = len(connections)
 
     # Count connections by destination port
@@ -309,9 +318,9 @@ def cmd_dns_tunnel():
 
     if not found:
         print(f"\n  {C['Y']}Install a DNS tunnel tool:{C['N']}")
-        print(f"    sudo apt install iodine        # IP over DNS")
-        print(f"    sudo apt install dns2tcp        # TCP over DNS")
-        print(f"    # dnscat2: https://github.com/iagox86/dnscat2")
+        print("    sudo apt install iodine        # IP over DNS")
+        print("    sudo apt install dns2tcp        # TCP over DNS")
+        print("    # dnscat2: https://github.com/iagox86/dnscat2")
     else:
         if "iodine" in found:
             print(f"\n  {C['C']}iodine Quick Start:{C['N']}")

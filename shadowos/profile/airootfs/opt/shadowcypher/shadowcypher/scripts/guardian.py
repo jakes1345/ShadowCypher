@@ -13,7 +13,15 @@ Usage:
     python3 guardian.py harden              — Auto-harden this machine
 """
 
-import argparse, os, sys, socket, subprocess, time, json, re, struct
+import argparse
+import os
+import sys
+import socket
+import subprocess
+import time
+import json
+import re
+import struct
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -23,7 +31,7 @@ C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
 def run(cmd, timeout=15):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True,
-                           timeout=timeout, shell=isinstance(cmd, str))
+                           timeout=timeout, shell=isinstance(cmd, str))  # nosec B602
         return r.stdout.strip(), r.returncode
     except Exception:
         return "", 1
@@ -199,7 +207,7 @@ def cmd_audit():
 
     # 1. OS updates
     out, rc = run(["apt", "list", "--upgradable"], timeout=30)
-    upgradable = len([l for l in out.split("\n") if "upgradable" in l.lower()])
+    upgradable = len([ln for ln in out.split("\n") if "upgradable" in ln.lower()])
     if upgradable > 0:
         checks.append(("WARN", f"{upgradable} packages need security updates", "Run: sudo apt upgrade"))
     else:
@@ -241,7 +249,7 @@ def cmd_audit():
 
     # 5. Listening services
     out, _ = run(["ss", "-tlnp"])
-    listeners = [l for l in out.split("\n")[1:] if l.strip()]
+    listeners = [ln for ln in out.split("\n")[1:] if ln.strip()]
     checks.append(("INFO", f"{len(listeners)} services listening", ""))
 
     # 6. Failed login attempts
@@ -309,18 +317,18 @@ def cmd_router():
         print(f"  {C['Y']}⚠{C['N']} Router DNS may be misconfigured")
 
     print(f"\n  {C['C']}Recommendations:{C['N']}")
-    print(f"  • Change default admin password")
-    print(f"  • Disable WPS (Wi-Fi Protected Setup)")
-    print(f"  • Enable WPA3 if supported, minimum WPA2-AES")
-    print(f"  • Disable UPnP")
-    print(f"  • Update router firmware")
-    print(f"  • Set custom DNS (1.1.1.1 or 9.9.9.9) or DNS-over-HTTPS\n")
+    print("  • Change default admin password")
+    print("  • Disable WPS (Wi-Fi Protected Setup)")
+    print("  • Enable WPA3 if supported, minimum WPA2-AES")
+    print("  • Disable UPnP")
+    print("  • Update router firmware")
+    print("  • Set custom DNS (1.1.1.1 or 9.9.9.9) or DNS-over-HTTPS\n")
 
 
 def cmd_monitor():
     print(f"\n  {C['C']}[Monitor]{C['N']} Continuous Threat Monitoring\n")
     print(f"  {C['Y']}Watching for:{C['N']} new devices, port changes, ARP spoofing")
-    print(f"  Press Ctrl+C to stop\n")
+    print("  Press Ctrl+C to stop\n")
 
     subnet = get_local_subnet()
     if not subnet:

@@ -40,9 +40,9 @@ qemu-system-x86_64 \
     -smp 4,sockets=1,cores=4,threads=1 \
     -m 4G \
     "${UEFI_ARGS[@]}" \
+    -drive "file=$ISO,format=raw,if=virtio,readonly=on" \
     -drive "file=$DISK,format=qcow2,if=virtio,cache=writeback" \
-    -cdrom "$ISO" \
-    -boot order=d,menu=on \
+    -boot order=c,menu=on \
     -device virtio-vga \
     -device virtio-net-pci,netdev=net0 \
     -netdev "user,id=net0,hostfwd=tcp::2222-:22" \

@@ -9,7 +9,12 @@ Usage:
     sudo python3 arp_phantom.py -t TARGET_IP -g GATEWAY_IP [-i INTERFACE] [--forward]
 """
 
-import argparse, os, sys, time, signal, threading
+import argparse
+import os
+import sys
+import time
+import signal
+import threading
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m","N":"\033[0m","B":"\033[1m"}
 

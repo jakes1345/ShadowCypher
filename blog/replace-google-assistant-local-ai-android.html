@@ -61,7 +61,7 @@
 
     <p>Every time you talk to Google Assistant, Bixby, or Siri, your query is sent to a cloud server, logged, associated with your account, and used to train future models. This isn't conspiracy — it's in the privacy policies. You are the training data.</p>
 
-    <p>There's an alternative. Modern open-source language models — Gemma 4, Llama 3.1, Phi-4 — run entirely on device on a Samsung Galaxy S23 or newer. No internet required. No data leaves your phone. The model runs locally using your phone's NPU/GPU, and inference happens in seconds.</p>
+    <p>There's an alternative. Modern open-source language models (Gemma 4, Llama 3.1, Phi-4) run entirely on device on a Samsung Galaxy S23 or newer. No internet required. No data leaves your phone. The model runs locally using your phone's NPU/GPU, and inference happens in seconds.</p>
 
     <h2>Why This Is Now Practical</h2>
     <p>Until 2024, running a capable LLM on a phone meant crippled 1B parameter models with GPT-2-era coherence. That changed fast. Gemma 4B runs comfortably on 6GB RAM with Snapdragon 8 Gen 1+. The quality gap between a local model and GPT-3.5 is now negligible for most everyday tasks.</p>
@@ -96,7 +96,7 @@ https://github.com/jakes1345/ShadowCypher/releases
 
 # Install the APK, grant permissions, tap "Start Shadow"</pre>
 
-    <p>On first launch, Shadow downloads a quantized Gemma 4B model (~2.2 GB) and starts the inference server locally on port 11434. From there, the chat interface connects to localhost — zero cloud dependency.</p>
+    <p>On first launch, Shadow downloads a quantized Gemma 4B model (~2.2 GB) and starts the inference server locally on port 11434. The chat interface connects to localhost with no cloud dependency.</p>
 
     <div class="callout">
         <strong>Pro tip:</strong> Shadow AI integrates with ShadowCypher Guardian. When your phone detects a suspicious notification or URL, the local model analyzes it immediately and alerts you — no round-trip to a cloud API, no latency, no logs.
@@ -140,7 +140,7 @@ make -j$(nproc)
     <h2>What the Local Model Can and Can't Do</h2>
     <p>A local 4B model excels at: drafting text, answering questions, summarizing content, writing code, explaining concepts, and on-device security analysis (URL analysis, notification triage).</p>
     <p>It struggles with: very recent events (knowledge cutoff), math-heavy problems, tasks requiring persistent memory across sessions (without an external memory store), and anything that genuinely requires internet access.</p>
-    <p>For 80% of what people use voice assistants for, the local model is equal or better — and it never reports back to anyone.</p>
+    <p>For 80% of what people use voice assistants for, the local model is equal or better, and it never reports back to anyone.</p>
 
     <div class="cta">
         <h3>Shadow AI is free to download and fully open source.</h3>

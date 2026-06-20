@@ -224,7 +224,6 @@ class SocialEngineeringAssessment:
     @staticmethod
     def generate_qr_payload(url):
         """Generate a malicious QR Code for social engineering diagnostics."""
-        encoded_url = base64.b64encode(url.encode()).decode()
         qr_api = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={url}"
         
         path = f"payloads/qr_code_{int(random.random()*1000)}.html"

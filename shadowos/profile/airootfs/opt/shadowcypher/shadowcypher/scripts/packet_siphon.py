@@ -9,7 +9,13 @@ Usage:
     sudo python3 packet_siphon.py [-i INTERFACE] [-c COUNT] [-f FILTER] [--hex]
 """
 
-import argparse, socket, struct, sys, time, os, textwrap
+import argparse
+import socket
+import struct
+import sys
+import time
+import os
+import textwrap
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","D":"\033[0;37m","N":"\033[0m","B":"\033[1m"}
@@ -39,12 +45,18 @@ def parse_tcp(data):
     offset = (data[12] >> 4) * 4
     flags = data[13]
     flag_str = ""
-    if flags & 0x02: flag_str += "SYN "
-    if flags & 0x10: flag_str += "ACK "
-    if flags & 0x01: flag_str += "FIN "
-    if flags & 0x04: flag_str += "RST "
-    if flags & 0x08: flag_str += "PSH "
-    if flags & 0x20: flag_str += "URG "
+    if flags & 0x02:
+        flag_str += "SYN "
+    if flags & 0x10:
+        flag_str += "ACK "
+    if flags & 0x01:
+        flag_str += "FIN "
+    if flags & 0x04:
+        flag_str += "RST "
+    if flags & 0x08:
+        flag_str += "PSH "
+    if flags & 0x20:
+        flag_str += "URG "
     return {"src":src_port,"dst":dst_port,"seq":seq,"ack":ack,"flags":flag_str.strip(),
             "offset":offset}, data[offset:]
 
@@ -58,12 +70,15 @@ def parse_icmp(data):
     return {"type":icmp_type,"code":code,"name":type_names.get(icmp_type,"Other")}, data[4:]
 
 def parse_dns(data):
-    if len(data) < 12: return None
+    if len(data) < 12:
+        return None
     qcount = struct.unpack("!H", data[4:6])[0]
     # Parse first question
-    pos = 12; labels = []
+    pos = 12
+    labels = []
     while pos < len(data) and data[pos] != 0:
-        length = data[pos]; pos += 1
+        length = data[pos]
+        pos += 1
         labels.append(data[pos:pos+length].decode("ascii",errors="replace"))
         pos += length
     return {"query":".".join(labels),"questions":qcount}
@@ -101,9 +116,11 @@ def main():
         if a.interface:
             sock.bind((a.interface, 0))
     except PermissionError:
-        print(f"{C['R']}[ERROR]{C['N']} Raw socket denied. Run as root."); sys.exit(1)
+        print(f"{C['R']}[ERROR]{C['N']} Raw socket denied. Run as root.")
+        sys.exit(1)
     except OSError as e:
-        print(f"{C['R']}[ERROR]{C['N']} {e}"); sys.exit(1)
+        print(f"{C['R']}[ERROR]{C['N']} {e}")
+        sys.exit(1)
 
     outfile = open(a.output, "w") if a.output else None
     captured = 0
@@ -113,25 +130,29 @@ def main():
             raw, _ = sock.recvfrom(65535)
             eth_dst, eth_src, eth_proto, eth_payload = parse_ethernet(raw)
 
-            if eth_proto != 0x0800: continue  # IPv4 only
+            if eth_proto != 0x0800:
+                continue  # IPv4 only
 
             ip, ip_payload = parse_ip(eth_payload)
-            proto_name = PROTO_MAP.get(ip["proto"], str(ip["proto"]))
-
             # Apply filters
             if a.filter:
                 filt = a.filter.lower()
-                if filt == "tcp" and ip["proto"] != 6: continue
-                if filt == "udp" and ip["proto"] != 17: continue
-                if filt == "icmp" and ip["proto"] != 1: continue
+                if filt == "tcp" and ip["proto"] != 6:
+                    continue
+                if filt == "udp" and ip["proto"] != 17:
+                    continue
+                if filt == "icmp" and ip["proto"] != 1:
+                    continue
 
             ts = time.strftime("%H:%M:%S")
             line_parts = [f"  {C['D']}{ts}{C['N']}"]
 
             if ip["proto"] == 6:  # TCP
                 tcp, payload = parse_tcp(ip_payload)
-                if a.filter == "dns": continue
-                if a.filter == "http" and tcp["dst"] not in (80,443,8080,8443) and tcp["src"] not in (80,443,8080,8443): continue
+                if a.filter == "dns":
+                    continue
+                if a.filter == "http" and tcp["dst"] not in (80,443,8080,8443) and tcp["src"] not in (80,443,8080,8443):
+                    continue
                 line_parts.append(f"{C['G']}TCP{C['N']} {C['Y']}{ip['src']}:{tcp['src']}{C['N']} → {C['C']}{ip['dst']}:{tcp['dst']}{C['N']}  [{C['M']}{tcp['flags']}{C['N']}]  len={ip['len']}")
 
                 # HTTP detection
@@ -141,7 +162,8 @@ def main():
 
             elif ip["proto"] == 17:  # UDP
                 udp, payload = parse_udp(ip_payload)
-                if a.filter == "http": continue
+                if a.filter == "http":
+                    continue
                 line_parts.append(f"{C['Y']}UDP{C['N']} {ip['src']}:{udp['src']} → {ip['dst']}:{udp['dst']}  len={udp['len']}")
 
                 # DNS detection
@@ -154,7 +176,8 @@ def main():
 
             elif ip["proto"] == 1:  # ICMP
                 icmp, payload = parse_icmp(ip_payload)
-                if a.filter in ("dns","http"): continue
+                if a.filter in ("dns","http"):
+                    continue
                 line_parts.append(f"{C['R']}ICMP{C['N']} {ip['src']} → {ip['dst']}  type={icmp['type']} ({icmp['name']})")
             else:
                 continue
@@ -176,7 +199,8 @@ def main():
         print(f"\n\n  {C['G']}Captured {captured} packets{C['N']}")
     finally:
         sock.close()
-        if outfile: outfile.close()
+        if outfile:
+            outfile.close()
 
 if __name__ == "__main__":
     main()

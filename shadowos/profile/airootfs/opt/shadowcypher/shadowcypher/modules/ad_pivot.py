@@ -72,9 +72,12 @@ class ADPivot:
         from shadowcypher.core.config import config
         cme = config.get_tool_path("crackmapexec")
         args = [cme, protocol, target]
-        if domain: args += ["-d", domain]
-        if user: args += ["-u", user]
-        if password: args += ["-p", password]
+        if domain:
+            args += ["-d", domain]
+        if user:
+            args += ["-u", user]
+        if password:
+            args += ["-p", password]
         
         args += ["--shares", "--users", "--groups"]
         

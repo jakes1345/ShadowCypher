@@ -74,10 +74,12 @@ class SovereignClient:
                                 self._user_modes = {u['nick']: u.get('prefix', '') for u in users if isinstance(u, dict)}
                             elif typ == "join":
                                 nick = data.get("nick")
-                                if nick: self._user_modes[nick] = data.get("prefix", "")
+                                if nick:
+                                    self._user_modes[nick] = data.get("prefix", "")
                             elif typ == "part" or typ == "quit":
                                 nick = data.get("nick")
-                                if nick in self._user_modes: del self._user_modes[nick]
+                                if nick in self._user_modes:
+                                    del self._user_modes[nick]
                             
                             elif typ == "unmask_report":
                                 # Forensic ingest: Unmasked node metadata

@@ -12,7 +12,7 @@ Shadow — Security AI Assistant
 Voice AI assistant with security superpowers. Set as your default assistant.
 
 ## Full Description (4000 chars max)
-Shadow replaces Bixby, Siri, and Google Assistant with something smarter — a voice AI that knows your network.
+Shadow replaces Bixby, Siri, and Google Assistant. It's a voice AI that knows your network.
 
 Set Shadow as your default assistant app and invoke it with your home button, a squeeze, or just say "Hey Shadow" to get instant, spoken answers to anything.
 

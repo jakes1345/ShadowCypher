@@ -124,7 +124,7 @@ class Logger:
         try:
             with open(self.ops_log, "r") as f:
                 lines = f.readlines()
-                return [json.loads(l) for l in lines[-count:]]
+                return [json.loads(line) for line in lines[-count:]]
         except Exception:
             return []
 

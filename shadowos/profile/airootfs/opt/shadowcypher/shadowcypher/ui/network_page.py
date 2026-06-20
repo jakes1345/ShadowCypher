@@ -148,18 +148,25 @@ class NetworkPage(BasePage):
 
     def _build_port_reaper_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        box.set_margin_top(8); box.set_margin_bottom(8)
-        box.set_margin_start(8); box.set_margin_end(8)
+        box.set_margin_top(8)
+        box.set_margin_bottom(8)
+        box.set_margin_start(8)
+        box.set_margin_end(8)
 
         row = Gtk.Box(spacing=6)
         row.pack_start(Gtk.Label(label="Target:"), False, False, 0)
-        self._pr_target = Gtk.Entry(); self._pr_target.set_placeholder_text("IP / hostname")
-        self._pr_target.set_hexpand(True); row.pack_start(self._pr_target, True, True, 0)
+        self._pr_target = Gtk.Entry()
+        self._pr_target.set_placeholder_text("IP / hostname")
+        self._pr_target.set_hexpand(True)
+        row.pack_start(self._pr_target, True, True, 0)
         row.pack_start(Gtk.Label(label="Ports:"), False, False, 0)
-        self._pr_ports = Gtk.Entry(); self._pr_ports.set_placeholder_text("1-1024"); self._pr_ports.set_width_chars(12)
+        self._pr_ports = Gtk.Entry()
+        self._pr_ports.set_placeholder_text("1-1024")
+        self._pr_ports.set_width_chars(12)
         row.pack_start(self._pr_ports, False, False, 0)
         row.pack_start(Gtk.Label(label="Threads:"), False, False, 0)
-        self._pr_threads = Gtk.SpinButton.new_with_range(50, 5000, 50); self._pr_threads.set_value(500)
+        self._pr_threads = Gtk.SpinButton.new_with_range(50, 5000, 50)
+        self._pr_threads.set_value(500)
         row.pack_start(self._pr_threads, False, False, 0)
         box.pack_start(row, False, False, 0)
 
@@ -173,19 +180,26 @@ class NetworkPage(BasePage):
 
     def _build_packet_siphon_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        box.set_margin_top(8); box.set_margin_bottom(8)
-        box.set_margin_start(8); box.set_margin_end(8)
+        box.set_margin_top(8)
+        box.set_margin_bottom(8)
+        box.set_margin_start(8)
+        box.set_margin_end(8)
 
         row = Gtk.Box(spacing=6)
         row.pack_start(Gtk.Label(label="Interface:"), False, False, 0)
-        self._ps_iface = Gtk.Entry(); self._ps_iface.set_placeholder_text("eth0 / auto"); self._ps_iface.set_width_chars(10)
+        self._ps_iface = Gtk.Entry()
+        self._ps_iface.set_placeholder_text("eth0 / auto")
+        self._ps_iface.set_width_chars(10)
         row.pack_start(self._ps_iface, False, False, 0)
         row.pack_start(Gtk.Label(label="Count:"), False, False, 0)
-        self._ps_count = Gtk.SpinButton.new_with_range(10, 10000, 10); self._ps_count.set_value(100)
+        self._ps_count = Gtk.SpinButton.new_with_range(10, 10000, 10)
+        self._ps_count.set_value(100)
         row.pack_start(self._ps_count, False, False, 0)
         row.pack_start(Gtk.Label(label="Filter:"), False, False, 0)
-        self._ps_filter = Gtk.Entry(); self._ps_filter.set_placeholder_text("tcp / udp port 53")
-        self._ps_filter.set_hexpand(True); row.pack_start(self._ps_filter, True, True, 0)
+        self._ps_filter = Gtk.Entry()
+        self._ps_filter.set_placeholder_text("tcp / udp port 53")
+        self._ps_filter.set_hexpand(True)
+        row.pack_start(self._ps_filter, True, True, 0)
         box.pack_start(row, False, False, 0)
 
         btn_row = Gtk.Box(spacing=6)
@@ -196,18 +210,26 @@ class NetworkPage(BasePage):
 
     def _build_arp_phantom_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        box.set_margin_top(8); box.set_margin_bottom(8)
-        box.set_margin_start(8); box.set_margin_end(8)
+        box.set_margin_top(8)
+        box.set_margin_bottom(8)
+        box.set_margin_start(8)
+        box.set_margin_end(8)
 
         row = Gtk.Box(spacing=6)
         row.pack_start(Gtk.Label(label="Target:"), False, False, 0)
-        self._ap_target = Gtk.Entry(); self._ap_target.set_placeholder_text("Victim IP")
-        self._ap_target.set_hexpand(True); row.pack_start(self._ap_target, True, True, 0)
+        self._ap_target = Gtk.Entry()
+        self._ap_target.set_placeholder_text("Victim IP")
+        self._ap_target.set_hexpand(True)
+        row.pack_start(self._ap_target, True, True, 0)
         row.pack_start(Gtk.Label(label="Gateway:"), False, False, 0)
-        self._ap_gw = Gtk.Entry(); self._ap_gw.set_placeholder_text("Router IP"); self._ap_gw.set_width_chars(16)
+        self._ap_gw = Gtk.Entry()
+        self._ap_gw.set_placeholder_text("Router IP")
+        self._ap_gw.set_width_chars(16)
         row.pack_start(self._ap_gw, False, False, 0)
         row.pack_start(Gtk.Label(label="Iface:"), False, False, 0)
-        self._ap_iface = Gtk.Entry(); self._ap_iface.set_placeholder_text("eth0"); self._ap_iface.set_width_chars(8)
+        self._ap_iface = Gtk.Entry()
+        self._ap_iface.set_placeholder_text("eth0")
+        self._ap_iface.set_width_chars(8)
         row.pack_start(self._ap_iface, False, False, 0)
         box.pack_start(row, False, False, 0)
 
@@ -221,18 +243,24 @@ class NetworkPage(BasePage):
 
     def _build_apex_stress_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        box.set_margin_top(8); box.set_margin_bottom(8)
-        box.set_margin_start(8); box.set_margin_end(8)
+        box.set_margin_top(8)
+        box.set_margin_bottom(8)
+        box.set_margin_start(8)
+        box.set_margin_end(8)
 
         row = Gtk.Box(spacing=6)
         row.pack_start(Gtk.Label(label="Target:"), False, False, 0)
-        self._ax_target = Gtk.Entry(); self._ax_target.set_placeholder_text("host or IP")
-        self._ax_target.set_hexpand(True); row.pack_start(self._ax_target, True, True, 0)
+        self._ax_target = Gtk.Entry()
+        self._ax_target.set_placeholder_text("host or IP")
+        self._ax_target.set_hexpand(True)
+        row.pack_start(self._ax_target, True, True, 0)
         row.pack_start(Gtk.Label(label="Port:"), False, False, 0)
-        self._ax_port = Gtk.SpinButton.new_with_range(1, 65535, 1); self._ax_port.set_value(80)
+        self._ax_port = Gtk.SpinButton.new_with_range(1, 65535, 1)
+        self._ax_port.set_value(80)
         row.pack_start(self._ax_port, False, False, 0)
         row.pack_start(Gtk.Label(label="Iterations:"), False, False, 0)
-        self._ax_iters = Gtk.SpinButton.new_with_range(5, 500, 5); self._ax_iters.set_value(20)
+        self._ax_iters = Gtk.SpinButton.new_with_range(5, 500, 5)
+        self._ax_iters.set_value(20)
         row.pack_start(self._ax_iters, False, False, 0)
         box.pack_start(row, False, False, 0)
 
@@ -245,7 +273,9 @@ class NetworkPage(BasePage):
 
     def _on_port_reaper(self, btn):
         t = self._pr_target.get_text().strip()
-        if not t: self.log("Enter a target.", "WARN"); return
+        if not t:
+            self.log("Enter a target.", "WARN")
+            return
         require_stealth(on_output=self.on_output)
         args = [t, "-p", self._pr_ports.get_text().strip() or "1-1024",
                 "-t", str(int(self._pr_threads.get_value()))]
@@ -253,7 +283,9 @@ class NetworkPage(BasePage):
 
     def _on_port_reaper_banners(self, btn):
         t = self._pr_target.get_text().strip()
-        if not t: self.log("Enter a target.", "WARN"); return
+        if not t:
+            self.log("Enter a target.", "WARN")
+            return
         require_stealth(on_output=self.on_output)
         args = [t, "-p", self._pr_ports.get_text().strip() or "1-1024",
                 "-t", str(int(self._pr_threads.get_value())), "--banners"]
@@ -263,36 +295,46 @@ class NetworkPage(BasePage):
         require_stealth(on_output=self.on_output)
         args = []
         iface = self._ps_iface.get_text().strip()
-        if iface: args += ["-i", iface]
+        if iface:
+            args += ["-i", iface]
         args += ["-c", str(int(self._ps_count.get_value()))]
         filt = self._ps_filter.get_text().strip()
-        if filt: args += ["-f", filt]
+        if filt:
+            args += ["-f", filt]
         self.run_script("packet_siphon.py", args, sudo=True)
 
     def _on_packet_siphon_hex(self, btn):
         require_stealth(on_output=self.on_output)
         args = []
         iface = self._ps_iface.get_text().strip()
-        if iface: args += ["-i", iface]
+        if iface:
+            args += ["-i", iface]
         args += ["-c", str(int(self._ps_count.get_value())), "--hex"]
         filt = self._ps_filter.get_text().strip()
-        if filt: args += ["-f", filt]
+        if filt:
+            args += ["-f", filt]
         self.run_script("packet_siphon.py", args, sudo=True)
 
     def _on_arp_phantom(self, btn):
         t = self._ap_target.get_text().strip()
         g = self._ap_gw.get_text().strip()
-        if not t or not g: self.log("Target and gateway required.", "WARN"); return
+        if not t or not g:
+            self.log("Target and gateway required.", "WARN")
+            return
         require_stealth(on_output=self.on_output)
         args = ["-t", t, "-g", g]
         iface = self._ap_iface.get_text().strip()
-        if iface: args += ["-i", iface]
-        if self._ap_forward.get_active(): args.append("--forward")
+        if iface:
+            args += ["-i", iface]
+        if self._ap_forward.get_active():
+            args.append("--forward")
         self.run_script("arp_phantom.py", args, sudo=True)
 
     def _on_apex_stress(self, btn):
         t = self._ax_target.get_text().strip()
-        if not t: self.log("Enter a target.", "WARN"); return
+        if not t:
+            self.log("Enter a target.", "WARN")
+            return
         require_stealth(on_output=self.on_output)
         args = [t, "-p", str(int(self._ax_port.get_value())), "-c", str(int(self._ax_iters.get_value()))]
         self.run_script("load_tester.py", args)

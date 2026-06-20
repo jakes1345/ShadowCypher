@@ -3,7 +3,10 @@ Sovereign Platform Engine — Cross-Platform Abstraction for ShadowCypher.
 Abstracts OS-specific commands (Windows, Linux, macOS) to ensure Apex parity.
 """
 
-import sys, os, subprocess, platform
+import sys
+import os
+import subprocess
+import platform
 from typing import Dict, List, Optional, Any
 
 class ShadowPlatform:
@@ -72,22 +75,26 @@ class ShadowPlatform:
 
     @staticmethod
     def resolve_runtime(file_path: str) -> list[str]:
-        if not os.path.exists(file_path): return []
+        if not os.path.exists(file_path):
+            return []
 
         if file_path.endswith(".shadow"):
             shadow_bin = ShadowPlatform.resolve_path("script", "bin", "shadow")
-            if os.path.exists(shadow_bin): return [shadow_bin]
+            if os.path.exists(shadow_bin):
+                return [shadow_bin]
 
         if file_path.endswith(".py"):
             return ["python3"]
         
-        if file_path.endswith(".sh"): return ["bash"]
-        if os.access(file_path, os.X_OK): return []
+        if file_path.endswith(".sh"):
+            return ["bash"]
+        if os.access(file_path, os.X_OK):
+            return []
         return []
 
     @staticmethod
     def get_system_vitals() -> Dict[str, Any]:
-        vitals = {"cpu": 0.0, "mem": 0.0, "p_load": 0.0, "virt": "NONE"}
+        vitals: Dict[str, Any] = {"cpu": 0.0, "mem": 0.0, "p_load": 0.0, "virt": "NONE"}
         vitals["virt"] = ShadowPlatform.detect_virtualization()
         try:
             if ShadowPlatform.IS_LINUX:
@@ -114,7 +121,8 @@ class ShadowPlatform:
 
     @staticmethod
     def detect_virtualization() -> str:
-        if os.path.exists("/.dockerenv"): return "DOCKER"
+        if os.path.exists("/.dockerenv"):
+            return "DOCKER"
         return "HOST"
 
     @staticmethod

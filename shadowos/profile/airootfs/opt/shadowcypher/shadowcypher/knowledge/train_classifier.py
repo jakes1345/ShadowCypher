@@ -436,7 +436,7 @@ def tokenize(text: str) -> list[str]:
 
 def train(data: list[tuple[str, str]]) -> dict:
   texts = [t for t, _ in data]
-  labels = [l for _, l in data]
+  labels = [lbl for _, lbl in data]
   classes = sorted(set(labels))
   class_idx = {c: i for i, c in enumerate(classes)}
 
@@ -470,7 +470,7 @@ def train(data: list[tuple[str, str]]) -> dict:
     return vec
 
   X = [vectorize(tok) for tok in tokenized]
-  y = [class_idx[l] for l in labels]
+  y = [class_idx[lbl] for lbl in labels]
 
   n_features = len(vocab)
   n_classes = len(classes)
@@ -484,7 +484,7 @@ def train(data: list[tuple[str, str]]) -> dict:
 
   def softmax(logits):
     m = max(logits)
-    exp_logits = [math.exp(l - m) for l in logits]
+    exp_logits = [math.exp(logit - m) for logit in logits]
     s = sum(exp_logits)
     return [e / s for e in exp_logits]
 
@@ -552,7 +552,7 @@ def predict(text: str, model: dict) -> tuple[str, float]:
   logits = [sum(weights[c][j] * vec[j] for j in range(n_features)) + bias[c]
             for c in range(len(classes))]
   m = max(logits)
-  exp_l = [math.exp(l - m) for l in logits]
+  exp_l = [math.exp(logit - m) for logit in logits]
   s = sum(exp_l)
   probs = [e / s for e in exp_l]
 
@@ -579,7 +579,7 @@ def main():
 
   print("=== Shadow Intent Classifier — Training ===\n")
   print(f"Training examples: {len(TRAINING_DATA)}")
-  intents = sorted(set(l for _, l in TRAINING_DATA))
+  intents = sorted(set(lbl for _, lbl in TRAINING_DATA))
   print(f"Intents ({len(intents)}): {', '.join(intents)}\n")
 
   print("Training...")
@@ -620,7 +620,8 @@ def main():
   for text, expected in test_cases:
     pred, conf = predict(text, model)
     ok = pred == expected
-    if ok: test_correct += 1
+    if ok:
+        test_correct += 1
     status = "✓" if ok else f"✗ (got {pred})"
     print(f"  {status} [{conf:.0%}] '{text}' → {pred}")
 

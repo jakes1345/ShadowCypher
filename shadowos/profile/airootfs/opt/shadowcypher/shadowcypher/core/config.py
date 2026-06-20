@@ -11,14 +11,6 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Ensure pydantic-settings is available
-try:
-    from pydantic_settings import BaseSettings, SettingsConfigDict
-except ImportError:
-    # Fallback to standard Pydantic if settings plugin is missing
-    from pydantic import BaseSettings
-    SettingsConfigDict = dict
-
 class AISettings(BaseSettings):
     model: str = "claude-haiku-4-5-20251001"
     api_base: str = "http://localhost:11434"
@@ -141,7 +133,7 @@ class Config(BaseSettings):
         Enterprise-grade nested configuration retrieval.
         Supports: config.get("ai", "providers", "anthropic", "api_key")
         """
-        current = self
+        current: Any = self
         try:
             for key in keys:
                 if isinstance(current, dict):
@@ -188,7 +180,7 @@ class Config(BaseSettings):
         keys = args[:-1]
         value = args[-1]
 
-        current = self
+        current: Any = self
         for key in keys[:-1]:
             if hasattr(current, key):
                 current = getattr(current, key)
@@ -218,7 +210,7 @@ class Config(BaseSettings):
         if hasattr(self.tools, tool_attr):
             configured_path = getattr(self.tools, tool_attr)
             if os.path.isabs(configured_path) and os.path.exists(configured_path):
-                return configured_path
+                return str(configured_path)
 
         # 2. Deep Dive: Local project tools/ directory
         local_dir = self.project_root / "tools"

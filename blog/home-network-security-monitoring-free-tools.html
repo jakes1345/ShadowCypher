@@ -65,7 +65,7 @@
 
     <p>The average home network has 15 to 30 connected devices. Smart TVs, thermostats, cameras, game consoles, phones, laptops, and a router that probably hasn't been patched in two years. And most people have zero visibility into what any of those devices are doing.</p>
 
-    <p>This guide covers the free tools that give you real monitoring — not just a device list, but actual alerts when something suspicious happens.</p>
+    <p>This guide covers the free tools that give you real monitoring, not just a device list, but actual alerts when something suspicious happens.</p>
 
     <div class="callout danger">
         <strong>The problem you probably don't know you have:</strong> Compromised IoT devices are used as botnets for months or years before the owner notices. Your smart bulb or printer could be participating in DDoS attacks right now. You'd never know without monitoring.
@@ -112,7 +112,7 @@ curl -s ifconfig.me
 # 8080/8443 (alternate HTTP admin), 1900 (UPnP)</pre>
 
     <div class="callout">
-        <strong>Port 7547 is particularly dangerous.</strong> TR-069 is the protocol ISPs use to remotely manage your router. If it's exposed to the internet (not just your ISP), attackers can exploit it to take full control of your router — this was the vector for the Mirai botnet's router attack wave.
+        <strong>Port 7547 is particularly dangerous.</strong> TR-069 is the protocol ISPs use to remotely manage your router. If it's exposed to the internet (not just your ISP), attackers can exploit it to take full control of your router. This was the vector for the Mirai botnet's router attack wave.
     </div>
 
     <h2>Step 4: DNS Leak Testing</h2>
@@ -144,7 +144,7 @@ sudo ufw enable
 sudo iptables -L -n --line-numbers</pre>
 
     <h2>Automating All of This: ShadowCypher Guardian</h2>
-    <p>The above steps cover a lot of ground — but they're manual. If you run them once and forget, you're back to flying blind within a week as your network changes.</p>
+    <p>The above steps cover a lot of ground, but they're manual. If you run them once and forget, you're back to flying blind within a week as your network changes.</p>
 
     <p>ShadowCypher Guardian automates the entire loop. It's a Python agent that runs continuously and checks:</p>
     <ul>
@@ -155,7 +155,7 @@ sudo iptables -L -n --line-numbers</pre>
         <li>System hardening (SSH root login, world-writable files, core dumps)</li>
     </ul>
 
-    <p>Every finding creates an incident in your dashboard and a push notification on your phone. You don't need to log in and check — you get alerted when something changes.</p>
+    <p>Every finding creates an incident in your dashboard and a push notification on your phone. You don't need to log in and check. You get alerted when something changes.</p>
 
     <div class="step">
         <div class="step-num">1</div>
@@ -183,7 +183,7 @@ sudo iptables -L -n --line-numbers</pre>
 
     <div class="cta">
         <h3>Your network is probably being watched. Start watching back.</h3>
-        <p>ShadowCypher Guardian free tier — device inventory, incident feed, push alerts. Under 5 minutes to set up.</p>
+        <p>ShadowCypher Guardian free tier: device inventory, incident feed, push alerts. Under 5 minutes to set up.</p>
         <a href="https://shadowcypher.site/#guardian" class="btn">START MONITORING FREE</a>
     </div>
 </main>

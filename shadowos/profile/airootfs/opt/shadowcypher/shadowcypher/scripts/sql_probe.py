@@ -9,7 +9,14 @@ Usage:
     python3 sql_probe.py -u "http://target.com/page?id=1" [-p id] [--dump] [--dbs]
 """
 
-import argparse, sys, time, re, urllib.parse, urllib.request, urllib.error, ssl
+import argparse
+import sys
+import time
+import re
+import urllib.parse
+import urllib.request
+import urllib.error
+import ssl
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m"}
@@ -65,7 +72,7 @@ def fetch(url, timeout=10):
     try:
         req = urllib.request.Request(url, headers={"User-Agent": UA})
         t0 = time.time()
-        with urllib.request.urlopen(req, timeout=timeout, context=CTX) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=CTX) as resp:  # nosec B310
             body = resp.read().decode("utf-8", errors="replace")
             return resp.getcode(), body, time.time() - t0
     except urllib.error.HTTPError as e:

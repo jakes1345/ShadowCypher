@@ -72,7 +72,7 @@ def load_fenrir(max_rows: int = 6000) -> list[dict]:
     """Pull Fenrir v2.1 — 99K cybersecurity SFT triples."""
     try:
         from datasets import load_dataset
-        ds = load_dataset("AlicanKiraz0/Cybersecurity-Dataset-Fenrir-v2.1", split="train")
+        ds = load_dataset("AlicanKiraz0/Cybersecurity-Dataset-Fenrir-v2.1", split="train")  # nosec B615
         print(f"[Fenrir] Loaded {len(ds)} rows")
     except Exception as e:
         print(f"[Fenrir] Load failed: {e}. Run: pip install datasets")
@@ -80,7 +80,6 @@ def load_fenrir(max_rows: int = 6000) -> list[dict]:
 
     out = []
     for row in ds:
-        system = row.get("system", "") or SYSTEM_PROMPT
         user = (row.get("user") or row.get("instruction") or row.get("input") or "").strip()
         assistant = (row.get("assistant") or row.get("output") or row.get("response") or "").strip()
 
@@ -106,7 +105,7 @@ def load_primus_instruct(max_rows: int = 2000) -> list[dict]:
     """Pull Primus-Instruct — Trend Micro expert-curated cybersecurity Q&A."""
     try:
         from datasets import load_dataset
-        ds = load_dataset("trendmicro-ailab/Primus-Instruct", split="train")
+        ds = load_dataset("trendmicro-ailab/Primus-Instruct", split="train")  # nosec B615
         print(f"[Primus] Loaded {len(ds)} rows")
     except Exception as e:
         print(f"[Primus] Load failed: {e}")

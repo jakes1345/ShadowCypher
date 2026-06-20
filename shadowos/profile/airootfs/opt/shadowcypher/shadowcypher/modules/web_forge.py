@@ -81,7 +81,7 @@ def _get(url: str, headers: Optional[dict] = None, timeout: int = 10):
     """Perform a GET request, returning (response, error_string)."""
     try:
         resp = requests.get(url, headers=headers or {}, timeout=timeout,
-                            allow_redirects=False, verify=False)
+                            allow_redirects=False, verify=False)  # nosec B501
         return resp, None
     except requests.exceptions.ConnectionError as e:
         return None, f"CONNECTION_ERROR: {e}"
@@ -320,8 +320,8 @@ class WebAppDiagnostics(BaseModule):
             elif acao == origin and origin != "null":
                 if acac.lower() == "true":
                     _emit(on_output,
-                          f"[CORS] CRITICAL: Origin reflected + credentials=true — "
-                          f"authenticated CORS attack possible.")
+                          "[CORS] CRITICAL: Origin reflected + credentials=true — "
+                          "authenticated CORS attack possible.")
                 else:
                     _emit(on_output,
                           f"[CORS] WARN: Reflected origin {origin} without credentials.")

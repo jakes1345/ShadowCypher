@@ -10,7 +10,11 @@ Query example:
     kg.link("192.168.1.1", "CVE-2023-44487", "VULNERABLE_TO", score=9.8)
     attack_path = kg.shortest_path("192.168.1.1", "DOMAIN_ADMIN")
 """
-import sqlite3, json, time, os, threading
+import sqlite3
+import json
+import time
+import os
+import threading
 from typing import Optional
 from shadowcypher.core.logger import logger
 
@@ -70,7 +74,7 @@ class KnowledgeGraph:
     # ── Node Operations ──────────────────────────────────────────────────────
 
     def add_node(self, node_id: str, node_type: str, label: str = "",
-                 props: dict = None) -> bool:
+                 props: Optional[dict] = None) -> bool:
         """Add or update a node in the graph."""
         node_type = node_type.upper()
         props_json = json.dumps(props or {})
@@ -85,7 +89,7 @@ class KnowledgeGraph:
         return True
 
     # Convenience shortcuts
-    def add_target(self, ip: str, tags: list = None, **props):
+    def add_target(self, ip: str, tags: Optional[list] = None, **props):
         self.add_node(ip, "TARGET", props={"tags": tags or [], **props})
 
     def add_cve(self, cve_id: str, score: float = 0.0, severity: str = "",
@@ -118,9 +122,9 @@ class KnowledgeGraph:
                 INSERT INTO edges(src, dst, rel, weight, props)
                 VALUES(?,?,?,?,?)
             """, (src, dst, rel.upper(), weight, json.dumps(props)))
-            return cur.lastrowid
+            return cur.lastrowid or 0
 
-    def unlink(self, src: str, dst: str, rel: str = None):
+    def unlink(self, src: str, dst: str, rel: Optional[str] = None):
         """Remove edges between src and dst (optionally filtered by rel)."""
         with self._lock, self._conn() as c:
             if rel:
@@ -140,7 +144,7 @@ class KnowledgeGraph:
         d["props"] = json.loads(d["props"])
         return d
 
-    def neighbors(self, node_id: str, rel: str = None,
+    def neighbors(self, node_id: str, rel: Optional[str] = None,
                   direction: str = "out") -> list[dict]:
         """Get neighboring nodes. direction: 'out'|'in'|'both'"""
         with self._conn() as c:
@@ -171,7 +175,7 @@ class KnowledgeGraph:
             ).fetchall()
         return [{**dict(r), "props": json.loads(r["props"])} for r in rows]
 
-    def search(self, keyword: str, node_type: str = None) -> list[dict]:
+    def search(self, keyword: str, node_type: Optional[str] = None) -> list[dict]:
         with self._conn() as c:
             if node_type:
                 rows = c.execute(

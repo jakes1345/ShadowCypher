@@ -78,7 +78,7 @@ class SSHTunnel(BaseModule):
             return None
         if not validate_target(ssh_host) or not validate_target(remote_host):
             if on_output:
-                on_output(f"[SSH_TUNNEL] ERROR: invalid host(s)\n")
+                on_output("[SSH_TUNNEL] ERROR: invalid host(s)\n")
             return None
 
         args = self._build_base_args(ssh_host, ssh_user, key_file)
@@ -107,11 +107,11 @@ class SSHTunnel(BaseModule):
         """
         if not validate_port(remote_port) or not validate_port(local_port):
             if on_output:
-                on_output(f"[SSH_TUNNEL] ERROR: invalid port(s)\n")
+                on_output("[SSH_TUNNEL] ERROR: invalid port(s)\n")
             return None
         if not validate_target(ssh_host):
             if on_output:
-                on_output(f"[SSH_TUNNEL] ERROR: invalid ssh_host\n")
+                on_output("[SSH_TUNNEL] ERROR: invalid ssh_host\n")
             return None
 
         args = self._build_base_args(ssh_host, ssh_user, key_file)
@@ -141,7 +141,7 @@ class SSHTunnel(BaseModule):
             return None
         if not validate_target(ssh_host):
             if on_output:
-                on_output(f"[SSH_TUNNEL] ERROR: invalid ssh_host\n")
+                on_output("[SSH_TUNNEL] ERROR: invalid ssh_host\n")
             return None
 
         args = self._build_base_args(ssh_host, ssh_user, key_file)
@@ -170,11 +170,11 @@ class SSHTunnel(BaseModule):
         """
         if not validate_port(remote_port) or not validate_port(local_port):
             if on_output:
-                on_output(f"[SSH_TUNNEL] ERROR: invalid port(s)\n")
+                on_output("[SSH_TUNNEL] ERROR: invalid port(s)\n")
             return None
         if not validate_target(ssh_host):
             if on_output:
-                on_output(f"[SSH_TUNNEL] ERROR: invalid ssh_host\n")
+                on_output("[SSH_TUNNEL] ERROR: invalid ssh_host\n")
             return None
 
         import shutil

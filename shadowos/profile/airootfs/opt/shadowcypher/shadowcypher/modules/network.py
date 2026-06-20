@@ -115,7 +115,8 @@ class Network(BaseModule):
             match = re.search(r'length (\d+)', line)
             if match:
                 pulse.ingest("network_spectrum", float(match.group(1)))
-            if on_output: on_output(line)
+            if on_output:
+                on_output(line)
 
         return runner.execute_task("SNIFFER", args, callback=pulse_wrapper)
 
@@ -133,7 +134,8 @@ class Network(BaseModule):
             match = re.search(r'length (\d+)', line)
             if match:
                 pulse.ingest("network_spectrum", float(match.group(1)))
-            if on_output: on_output(line)
+            if on_output:
+                on_output(line)
 
         return runner.execute_task("NET_MONITOR", args, callback=pulse_wrapper)
 

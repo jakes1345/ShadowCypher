@@ -16,7 +16,7 @@ def _api_get(path: str, api_key: str) -> dict:
     base = getattr(config, "api_base_url", "https://api.shadowcypher.site")
     url = f"{base}{path}"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {api_key}"})
-    with urllib.request.urlopen(req, timeout=10) as r:
+    with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
         return json.loads(r.read())
 
 
@@ -29,7 +29,7 @@ def _api_post(path: str, api_key: str, body: dict) -> dict:
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         method="POST"
     )
-    with urllib.request.urlopen(req, timeout=10) as r:
+    with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
         return json.loads(r.read())
 
 

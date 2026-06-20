@@ -144,7 +144,7 @@ class WarMapPage(Gtk.Box):
         # Draw Connection Lines (Signal Paths)
         node_coords = []
         for i, (nid, node) in enumerate(self.nodes.items()):
-            seed = int(hashlib.md5(nid.encode()).hexdigest(), 16)
+            seed = int(hashlib.md5(nid.encode()).hexdigest(), 16)  # nosec B324
             x = (seed % 800 + 100) * (width / 1000)
             y = ((seed >> 32) % 500 + 100) * (height / 700)
             node_coords.append((x, y, i))

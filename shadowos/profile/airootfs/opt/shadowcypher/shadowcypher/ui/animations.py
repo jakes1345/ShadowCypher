@@ -37,8 +37,10 @@ class RadarSweep(Gtk.DrawingArea):
         try:
             load = os.getloadavg()[0]
             if load > 5.0: # System is under heavy stress (e.g. gaming)
-                if random.random() < 0.5: return True # Skip 50% of frames
-        except (AttributeError, OSError): pass
+                if random.random() < 0.5:
+                    return True # Skip 50% of frames
+        except (AttributeError, OSError):
+            pass
 
         self.angle += 0.03
         if self.angle > 2 * math.pi:

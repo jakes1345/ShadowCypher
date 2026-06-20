@@ -64,7 +64,7 @@
 
     <h1>How to Detect <span>ARP Spoofing</span> on Your Home Network</h1>
 
-    <p>Your home router hands out IP addresses. Every device on the network trusts those mappings. ARP spoofing abuses that trust — an attacker on your local network sends fake ARP replies, redirecting your traffic through their machine before it reaches the router. You keep browsing. They read everything.</p>
+    <p>Your home router hands out IP addresses. Every device on the network trusts those mappings. ARP spoofing abuses that trust. An attacker on your local network sends fake ARP replies, redirecting your traffic through their machine before it reaches the router. You keep browsing. They read everything.</p>
 
     <p>The scary part: it works silently. There's no error, no slowdown, no warning. Unless you're specifically watching for it, you won't know it's happening.</p>
 
@@ -73,7 +73,7 @@
     <p>The problem: ARP is stateless. Any device on the network can send an unsolicited ARP reply, and most operating systems will update their cache. No authentication, no verification. This was designed for trusted networks in the 1980s and has never been patched at the protocol level.</p>
 
     <h2>Who's Actually at Risk?</h2>
-    <p>If your network is locked down with a strong Wi-Fi password and no guests, your risk is lower — but not zero. ARP spoofing attacks can come from:</p>
+    <p>If your network is locked down with a strong Wi-Fi password and no guests, your risk is lower, but not zero. ARP spoofing attacks can come from:</p>
     <ul>
         <li>A compromised device already on your network (malware pivot)</li>
         <li>A guest device used by someone who's not fully trustworthy</li>
@@ -117,7 +117,7 @@ sudo tshark -i eth0 -f "arp" | grep "is-at"</pre>
     <p>Legitimate networks see ARP replies only when a device first joins or when the cache expires. If you see a flood of ARP replies, or the same IP-to-MAC pairing change multiple times per second, that's the fingerprint of an active spoof.</p>
 
     <h2>Static ARP Entries (Prevention)</h2>
-    <p>For your most critical devices — the router, a NAS, a work machine — you can set static ARP entries. These can't be overwritten by spoofed ARP replies.</p>
+    <p>For your most critical devices (the router, a NAS, a work machine), you can set static ARP entries. These can't be overwritten by spoofed ARP replies.</p>
 
     <pre># Linux: add a permanent ARP entry for your router
 sudo arp -s 192.168.1.1 aa:bb:cc:dd:ee:ff
@@ -130,7 +130,7 @@ arp -s 192.168.1.1 aa:bb:cc:dd:ee:ff</pre>
     </div>
 
     <h2>Router-Level Defenses</h2>
-    <p>Some routers support Dynamic ARP Inspection (DAI), which validates ARP packets against a trusted DHCP binding table. Check your router's admin panel under "Security" or "LAN settings." Most consumer routers don't support it — it's typically a feature of business-grade hardware (Ubiquiti, Cisco, Netgear managed switches).</p>
+    <p>Some routers support Dynamic ARP Inspection (DAI), which validates ARP packets against a trusted DHCP binding table. Check your router's admin panel under "Security" or "LAN settings." Most consumer routers don't support it; it's typically a feature of business-grade hardware (Ubiquiti, Cisco, Netgear managed switches).</p>
 
     <h2>Automated Detection with ShadowCypher Guardian</h2>
     <p>All of the above requires either manual checking or configuring multiple daemons on a Linux machine. ShadowCypher Guardian automates the entire detection loop.</p>
@@ -141,11 +141,11 @@ pip install shadowcypher-agent
 shadow-agent init   # authenticates via device flow
 shadow-agent run    # starts continuous monitoring</pre>
 
-    <p>You'll get a push notification and dashboard alert the moment spoofing is detected — not after you manually run <code>arp -a</code> and notice something weird.</p>
+    <p>You'll get a push notification and dashboard alert the moment spoofing is detected, not after you manually run <code>arp -a</code> and notice something weird.</p>
 
     <div class="cta">
         <h3>Stop checking manually. Start watching automatically.</h3>
-        <p>ShadowCypher Guardian monitors your network 24/7. Free tier available — no credit card required.</p>
+        <p>ShadowCypher Guardian monitors your network 24/7. Free tier, no credit card required.</p>
         <a href="https://shadowcypher.site/#guardian" class="btn">INSTALL GUARDIAN FREE</a>
     </div>
 </main>

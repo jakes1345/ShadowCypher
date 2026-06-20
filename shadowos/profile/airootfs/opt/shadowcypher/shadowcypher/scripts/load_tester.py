@@ -21,7 +21,7 @@ def tcp_latency_test(target, port, iterations=10):
     for i in range(iterations):
         try:
             start_time = time.time()
-            with socket.create_connection((target, port), timeout=2.0) as s:
+            with socket.create_connection((target, port), timeout=2.0):
                 end_time = time.time()
                 rtt = (end_time - start_time) * 1000
                 latencies.append(rtt)
@@ -35,7 +35,6 @@ def tcp_latency_test(target, port, iterations=10):
     print()
     if latencies:
         avg = statistics.mean(latencies)
-        p95 = statistics.quantiles(latencies, n=20)[18] if len(latencies) >= 20 else max(latencies)
         logging.info(f"Benchmark Complete | Avg: {avg:.2f}ms | Max: {max(latencies):.2f}ms")
     else:
         logging.error("Benchmark failed: Target unreachable.")

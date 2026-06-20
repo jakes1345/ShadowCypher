@@ -4,7 +4,9 @@ Bluetooth Low Energy MAC scanner for physical proximity surveillance.
 Tracks nearby devices, their signal strength, manufacturer, and movement.
 Requires: pip install bleak
 """
-import asyncio, time, threading
+import asyncio
+import time
+import threading
 from dataclasses import dataclass, field
 from typing import Optional, Callable
 from shadowcypher.core.logger import logger
@@ -44,10 +46,14 @@ class BLETarget:
     @property
     def distance_estimate(self) -> str:
         """Rough distance estimate from RSSI (very approximate)."""
-        if self.rssi >= -50: return "~1m (very close)"
-        if self.rssi >= -65: return "~5m (close)"
-        if self.rssi >= -75: return "~10m (nearby)"
-        if self.rssi >= -85: return "~20m (distant)"
+        if self.rssi >= -50:
+            return "~1m (very close)"
+        if self.rssi >= -65:
+            return "~5m (close)"
+        if self.rssi >= -75:
+            return "~10m (nearby)"
+        if self.rssi >= -85:
+            return "~20m (distant)"
         return ">30m (far)"
 
     def to_dict(self) -> dict:
@@ -189,7 +195,8 @@ class BLERadar:
                     t.rssi = device.rssi
                     t.last_seen = time.time()
                     t.seen_count += 1
-                    if services: t.services = services
+                    if services:
+                        t.services = services
                 else:
                     t = BLETarget(
                         mac=mac,
@@ -200,12 +207,15 @@ class BLERadar:
                     )
                     self._targets[mac] = t
                     if self._on_new_device:
-                        try: self._on_new_device(t)
-                        except Exception: pass
+                        try:
+                            self._on_new_device(t)
+                        except Exception:
+                            pass
                     if cb:
                         try:
                             cb(f"[BLE] NEW: {t}\n")
-                        except Exception: pass
+                        except Exception:
+                            pass
 
         async with BleakScanner(detection_callback=_detection_cb):
             while self._scanning:
@@ -221,11 +231,15 @@ class BLERadar:
                         for t in lost:
                             del self._targets[t.mac]
                             if self._on_device_lost:
-                                try: self._on_device_lost(t)
-                                except Exception: pass
+                                try:
+                                    self._on_device_lost(t)
+                                except Exception:
+                                    pass
                             if cb:
-                                try: cb(f"[BLE] LOST: {t.mac} ({t.name})\n")
-                                except Exception: pass
+                                try:
+                                    cb(f"[BLE] LOST: {t.mac} ({t.name})\n")
+                                except Exception:
+                                    pass
 
                 if duration and (time.time() - start) >= duration:
                     self._scanning = False

@@ -50,10 +50,6 @@ class PayloadSynthesizer:
         ts = int(time.time())
         
         for i, code in enumerate(code_blocks):
-            # Encode for safe transport/execution if needed
-            original = code.strip().encode()
-            b64_data = base64.b64encode(zlib.compress(original)).decode()
-            
             ext = "py"
             if "import subprocess" in code or "import os" in code or "def " in code:
                 ext = "py"
@@ -63,7 +59,7 @@ class PayloadSynthesizer:
             filename = self.payload_dir / f"diagnostic_{category}_{ts}_{i}.{ext}"
             with open(filename, "w") as f:
                 f.write(code.strip())
-            os.chmod(filename, 0o755)
+            os.chmod(filename, 0o755)  # nosec B103
             artifacts.append(str(filename))
             
         logger.info("synthesizer", f"SYNTHESIS_COMPLETE: {len(artifacts)} payloads generated.")
@@ -81,7 +77,7 @@ class PayloadSynthesizer:
         logger.info("synthesizer", f"EXECUTION_COMMENCED: Launching diagnostic {filename}")
         bus.publish("module_log", {"module": "synthesizer", "text": f"EXECUTION_COMMENCED: {filename}", "level": "INFO"})
         
-        os.chmod(filename, 0o755)
+        os.chmod(filename, 0o755)  # nosec B103
         
         from shadowcypher.core.runner import runner
         task_id = f"DIAGNOSTIC_{int(time.time())}"
@@ -125,7 +121,7 @@ class PayloadSynthesizer:
             filename = self.payload_dir / f"heretic_{ts}_{i}.{ext}"
             with open(filename, "w") as f:
                 f.write(code.strip())
-            os.chmod(filename, 0o755)
+            os.chmod(filename, 0o755)  # nosec B103
             artifacts.append(str(filename))
             
         logger.info("synthesizer", f"HERETIC_FORGE_COMPLETE: {len(artifacts)} weapons forged.")

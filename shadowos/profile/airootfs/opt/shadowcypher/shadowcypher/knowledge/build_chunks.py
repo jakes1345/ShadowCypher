@@ -52,7 +52,7 @@ def chunk_file(path: Path) -> list[dict]:
         if len(content) < MIN_CHARS:
             return
         full = f"{header}\n{content}".strip() if header else content
-        chunk_id = hashlib.md5(full.encode()).hexdigest()[:12]
+        chunk_id = hashlib.md5(full.encode()).hexdigest()[:12]  # nosec B324
         chunks.append({
             "id": chunk_id,
             "file": rel,

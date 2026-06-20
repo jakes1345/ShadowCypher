@@ -65,7 +65,8 @@ class Credentials(BaseModule):
             now = time.time()
             pulse.ingest("auth_latency", now - last_t)
             last_t = now
-            if on_output: on_output(line)
+            if on_output:
+                on_output(line)
 
         return runner.execute_task(f"HYDRA_{target}", args, callback=timing_wrapper)
 
@@ -164,7 +165,8 @@ class Credentials(BaseModule):
     def deep_leak_correlation(self, target_email, on_output=None):
         """2026 Asset Search: Deep-AI correlation of leaked credentials and behavior."""
         from shadowcypher.modules.deephat import deephat
-        if on_output: on_output(f"[CREDS] CORRELATING_BREACH_DATA: {target_email}...\n")
+        if on_output:
+            on_output(f"[CREDS] CORRELATING_BREACH_DATA: {target_email}...\n")
         
         desc = f"Find and correlate all leaked passwords, MFA bypass tokens, and associated aliases for {target_email}. Use 2026 predictive analytics."
         filename = deephat.forge_weapon(desc, category="intel")
