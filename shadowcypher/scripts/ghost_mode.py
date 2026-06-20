@@ -300,7 +300,8 @@ def disengage():
     print(f"  {C['C']}[1]{C['N']} Restoring firewall rules")
     rules_file = f"{BACKUP_DIR}/iptables.rules"
     if os.path.exists(rules_file):
-        run(["iptables-restore"], timeout=5)
+        with open(rules_file) as _rf:
+            run(["iptables-restore"], stdin=_rf, timeout=5)
         # Fallback: just flush
         run(["iptables", "-F"])
         run(["iptables", "-t", "nat", "-F"])

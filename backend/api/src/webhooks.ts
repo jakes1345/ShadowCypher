@@ -354,13 +354,14 @@ export async function dispatchCveWebhook(
     if (!wh.events.includes("cve.matched")) continue;
     const minRank = SEVERITY_RANK[wh.min_severity] ?? 2;
     if ((severityMap[payload.severity] ?? 0) < minRank) continue;
-    const result = await deliverCveOne(wh, payload);
+    const result = await deliverCveOne(env, wh, payload);
     if (result.ok) delivered++;
   }
   return { delivered };
 }
 
 async function deliverCveOne(
+  env: Env,
   wh: WebhookRow,
   payload: CveMatchPayload
 ): Promise<{ ok: boolean; status: number }> {
@@ -472,7 +473,13 @@ async function deliverCveOne(
         body: canonical,
         signal: AbortSignal.timeout(8000),
       });
-      return { ok: resp.ok || resp.status === 204, status: resp.status };
+      const ok = resp.ok || resp.status === 204;
+      dbUpdate(env, "webhooks", { id: `eq.${wh.id}` }, {
+        last_called_at: new Date().toISOString(),
+        last_status: resp.status,
+        failure_count: ok ? 0 : (wh.failure_count ?? 0) + 1,
+      }).catch(() => null);
+      return { ok, status: resp.status };
     } catch {
       return { ok: false, status: 0 };
     }
@@ -485,7 +492,13 @@ async function deliverCveOne(
       body,
       signal: AbortSignal.timeout(8000),
     });
-    return { ok: resp.ok || resp.status === 204, status: resp.status };
+    const ok = resp.ok || resp.status === 204;
+    dbUpdate(env, "webhooks", { id: `eq.${wh.id}` }, {
+      last_called_at: new Date().toISOString(),
+      last_status: resp.status,
+      failure_count: ok ? 0 : (wh.failure_count ?? 0) + 1,
+    }).catch(() => null);
+    return { ok, status: resp.status };
   } catch {
     return { ok: false, status: 0 };
   }

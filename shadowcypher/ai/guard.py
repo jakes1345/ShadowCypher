@@ -118,10 +118,13 @@ class ShadowGuard:
             logger.warning("guard", f"[GUARD] OUTPUT_SANITIZED redactions={len(threats)}")
         return GuardResult(action, text, cleaned, threats, 0.0, ms)
 
-    def enable(self): self._enabled = True
-    logger.info("guard", "ShadowGuard ENABLED")
-    def disable(self): self._enabled = False
-    logger.warning("guard", "ShadowGuard DISABLED")
+    def enable(self):
+        self._enabled = True
+        logger.info("guard", "ShadowGuard ENABLED")
+
+    def disable(self):
+        self._enabled = False
+        logger.warning("guard", "ShadowGuard DISABLED")
     def set_strict(self, v: bool): self._strict = v
     def on_alert(self, cb): self._alert_cb = cb
     def get_stats(self) -> dict:

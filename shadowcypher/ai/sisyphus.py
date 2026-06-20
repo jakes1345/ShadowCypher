@@ -78,6 +78,7 @@ class Sisyphus:
             except Exception as e:
                 logger.warning("sisyphus", f"INTEGRITY_BASELINE: Failed to load static hashes: {e}")
 
+        new_entries_added = False
         for rel_path in core_files:
             abs_path = os.path.join(str(self.project_root), rel_path)
             if os.path.exists(abs_path):
@@ -88,9 +89,10 @@ class Sisyphus:
                     current_hash = self._get_file_hash(abs_path)
                     self._integrity_map[rel_path] = current_hash
                     static_hashes[rel_path] = current_hash
+                    new_entries_added = True
 
-        # Persist the baseline if we captured new files
-        if not os.path.exists(self.integrity_file):
+        # Persist the baseline if the file is new or new entries were added
+        if not os.path.exists(self.integrity_file) or new_entries_added:
             try:
                 with open(self.integrity_file, "w") as f:
                     json.dump(static_hashes, f, indent=4)

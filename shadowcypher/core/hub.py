@@ -388,7 +388,7 @@ class ShadowHub:
             except Exception:
                 pass
 
-    async def _on_intel_discovered(self, intel: Dict[str, Any]) -> None:
+    def _on_intel_discovered(self, intel: Dict[str, Any]) -> None:
         # Fuses raw intel into the decision engine
         typ = intel.get("type", "UNKNOWN")
         ip = intel.get("ip", "LOCAL")

@@ -49,7 +49,7 @@ export async function createTeam(req: Request, env: Env, user: AuthedUser, cors:
   const profile = await getProfile(env, user.id);
   const plan = getEffectivePlan(profile);
   if (plan !== "operator") {
-    return planRequired("operator", plan, "Creating teams requires the Operator plan.", cors);
+    return planRequired(["operator"], plan, "Creating teams requires the Operator plan.", cors);
   }
 
   const team = await dbInsert<{ id: string; name: string; created_at: string }>(env, "teams", {
