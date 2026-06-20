@@ -1,45 +1,20 @@
-# ShadowOS install profile picker — shown during install
-- name: "Minimal"
-  description: "Core ShadowOS + Hyprland desktop. ~2 GB installed."
+# ShadowOS install profile picker.
+# Shown in the Calamares "netinstall" step so the user can add optional
+# packages during installation. The base OS (everything on the live ISO)
+# is already installed via unpackfs — these are additive extras only.
+#
+# All packages must exist in:
+#   Arch [core/extra/multilib] · BlackArch · Chaotic-AUR
+
+- name: "Minimal extras"
+  description: "A few quality-of-life additions not on the minimal ISO path."
   selected: false
-  packages:
-    - shadowos-meta
-    - linux-hardened
-    - linux-firmware
-    - hyprland
-    - waybar
-    - foot
-    - thunar
-    - shadowbrowser
-    - networkmanager
-    - dnscrypt-proxy
-    - ufw
-    - apparmor
-    - sudo
-    - zsh
-    - git
-    - neovim
+  packages: []
 
 - name: "Security pro"
-  description: "Everything in Minimal + the full pentest arsenal (nmap, metasploit, wireshark, rustscan, ffuf, subfinder, nuclei, evil-winrm, etc.). ~5 GB installed."
+  description: "Full pentest arsenal if not already present — nmap, metasploit, wireshark, ffuf, nuclei, impacket, netexec, and more."
   selected: true
   packages:
-    - shadowos-meta
-    - linux-hardened
-    - linux-firmware
-    - hyprland
-    - waybar
-    - foot
-    - thunar
-    - shadowbrowser
-    - torbrowser-launcher
-    - networkmanager
-    - dnscrypt-proxy
-    - ufw
-    - apparmor
-    - fail2ban
-    - tor
-    - macchanger
     - nmap
     - rustscan
     - masscan
@@ -61,28 +36,40 @@
     - binwalk
     - sleuthkit
     - yara
+    - john
+    - nikto
+    - sslscan
+    - gobuster
+    - zaproxy
+    - seclists
+    - exploitdb
+    - dnsenum
+    - wfuzz
+    - whatweb
+    - sshuttle
+    - httpx
+    - naabu
+    - amass
     - keepassxc
     - gnupg
     - veracrypt
+    - tor
+    - torbrowser-launcher
+    - macchanger
+    - proxychains-ng
+    - hysteria
+    - fail2ban
     - distrobox
     - podman
-    - docker
 
-- name: "Everything"
-  description: "All of Security pro + gaming (Steam, Lutris, Heroic, MangoHUD, gamemode), dev (VSCode, Docker, Kubernetes, Rust, Go), creator tools (GIMP, Inkscape, Blender). ~10 GB installed."
+- name: "Gaming"
+  description: "Steam, Lutris, Heroic, MangoHUD, GameMode, Wine, Gamescope."
   selected: false
   packages:
-    - shadowos-meta
-    - linux-hardened
-    - linux-firmware
-    - hyprland
-    - shadowbrowser
-    - mullvad-browser-bin
-    - torbrowser-launcher
-    # Gaming
     - steam
+    - steam-devices
     - lutris
-    - heroic-games-launcher
+    - heroic-games-launcher-bin
     - prismlauncher
     - gamemode
     - lib32-gamemode
@@ -90,23 +77,45 @@
     - lib32-mangohud
     - gamescope
     - wine-staging
-    # Dev
+    - winetricks
+    - vkd3d
+    - lib32-vkd3d
+    - goverlay
+
+- name: "Development"
+  description: "VSCode, Docker, Kubernetes, Rust, Go, Node, Python tooling."
+  selected: false
+  packages:
     - code
     - docker
     - docker-compose
+    - docker-buildx
+    - podman
+    - buildah
     - kubectl
     - helm
     - terraform
+    - ansible
     - rustup
     - go
     - nodejs
     - npm
-    # Creator
+    - pnpm
+    - lazygit
+    - direnv
+    - just
+
+- name: "Creator"
+  description: "GIMP, Inkscape, Blender, Krita, OBS Studio, Audacity, LibreOffice."
+  selected: false
+  packages:
     - gimp
     - inkscape
     - blender
     - krita
     - obs-studio
     - audacity
-    # Office
     - libreoffice-fresh
+    - mpv
+    - vlc
+    - yt-dlp
