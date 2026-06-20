@@ -336,6 +336,85 @@ def cmd_dns_tunnel():
     print()
 
 
+def cmd_hysteria():
+    """Configure and launch a Hysteria2 QUIC tunnel (DPI-resistant alternative to Tor)."""
+    print(f"\n  {C['C']}[Hysteria2]{C['N']} QUIC Stealth Tunnel\n")
+    print(f"  {C['D']}Hysteria2 tunnels traffic over UDP looking like HTTP/3.{C['N']}")
+    print(f"  {C['D']}Much harder to fingerprint than Tor. Faster on lossy networks.{C['N']}\n")
+
+    from shadowcypher.core.hysteria import hysteria_transport
+
+    if not hysteria_transport.available:
+        print(f"  {C['R']}[-]{C['N']} hysteria2 binary not found.")
+        print(f"  {C['Y']}Install:{C['N']}")
+        print(f"    # Arch / ShadowOS:")
+        print(f"    yay -S hysteria")
+        print(f"    # Direct download (all platforms):")
+        print(f"    https://github.com/apernet/hysteria/releases")
+        return
+
+    print(f"  {C['G']}✓{C['N']} hysteria2 binary found")
+
+    # Check for existing profiles
+    profiles = hysteria_transport.list_profiles()
+    if profiles:
+        print(f"\n  Saved profiles: {', '.join(profiles)}")
+        name = input(f"  Load profile (or press Enter to configure new): ").strip()
+        if name and name in profiles:
+            d = hysteria_transport.load_profile(name)
+            if d:
+                print(f"  {C['G']}●{C['N']} Loaded profile '{name}'")
+                _start_hysteria(hysteria_transport)
+                return
+
+    print(f"\n  Configure a new Hysteria2 server:")
+    server = input("  Server (host:port, e.g. vpn.example.com:443): ").strip()
+    if not server:
+        print(f"  {C['R']}Aborted.{C['N']}")
+        return
+
+    auth = input("  Auth password: ").strip()
+    sni  = input(f"  TLS SNI [default: {server.split(':')[0]}]: ").strip() or None
+    obfs = input("  Obfuscation password (optional, recommended): ").strip() or None
+
+    save_name = input("  Save as profile name (blank to skip): ").strip()
+    if save_name:
+        hysteria_transport.save_profile(
+            save_name, server=server, auth=auth, sni=sni, obfs_password=obfs
+        )
+        print(f"  {C['G']}●{C['N']} Profile '{save_name}' saved")
+
+    hysteria_transport.configure(server, auth, sni=sni, obfs_password=obfs)
+    _start_hysteria(hysteria_transport)
+
+
+def _start_hysteria(ht):
+    from shadowcypher.core.hysteria import _SOCKS5_HOST, _SOCKS5_PORT
+    C_local = {"G":"\033[1;32m","Y":"\033[1;33m","R":"\033[1;31m","C":"\033[1;36m","D":"\033[0;37m","N":"\033[0m"}
+    print(f"\n  {C_local['C']}Starting Hysteria2 client...{C_local['N']}")
+
+    def _out(line):
+        print(f"  {C_local['D']}{line.rstrip()}{C_local['N']}")
+
+    ok = ht.start(on_output=_out)
+    if ok:
+        print(f"  {C_local['G']}●{C_local['N']} SOCKS5 proxy ready at {_SOCKS5_HOST}:{_SOCKS5_PORT}")
+        print(f"  {C_local['G']}●{C_local['N']} ShadowCypher stealth layer will use Hysteria2 automatically")
+        print(f"\n  {C_local['D']}Route any tool through it:{C_local['N']}")
+        print(f"    export ALL_PROXY=socks5h://127.0.0.1:{_SOCKS5_PORT}")
+        print(f"    curl --socks5-hostname 127.0.0.1:{_SOCKS5_PORT} https://ifconfig.me")
+        print(f"\n  {C_local['Y']}Ctrl+C to stop{C_local['N']}")
+        try:
+            while ht.running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            pass
+        ht.stop()
+        print(f"\n  {C_local['G']}Hysteria2 stopped.{C_local['N']}\n")
+    else:
+        print(f"  {C_local['R']}✗{C_local['N']} Failed to start — check server config and logs\n")
+
+
 def cmd_shape():
     """Traffic timing obfuscation — randomize packet intervals."""
     print(f"\n  {C['C']}[Shape]{C['N']} Traffic Timing Obfuscation\n")
@@ -391,6 +470,7 @@ def main():
     sub.add_parser("obfs4", help="Configure obfs4 bridges for Tor")
     sub.add_parser("dns-tunnel", help="DNS tunneling setup")
     sub.add_parser("shape", help="Traffic timing obfuscation")
+    sub.add_parser("hysteria", help="Hysteria2 QUIC stealth tunnel (DPI-resistant)")
 
     a = p.parse_args()
     cmds = {
@@ -399,6 +479,7 @@ def main():
         "obfs4": cmd_obfs4,
         "dns-tunnel": cmd_dns_tunnel,
         "shape": cmd_shape,
+        "hysteria": cmd_hysteria,
     }
 
     if a.command:

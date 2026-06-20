@@ -40,11 +40,12 @@ class GhostModePage(BasePage):
 
         # ── Status strip ──
         from shadowcypher.ui.components import DataPod
-        self.pod_ghost  = DataPod("GHOST_MODE",   "INACTIVE", "red")
-        self.pod_tor    = DataPod("TOR_CIRCUIT",  "DOWN",     "red")
-        self.pod_dns    = DataPod("DNS_LEAK",     "UNKNOWN",  "amber")
-        self.pod_mac    = DataPod("MAC_SPOOF",    "OFF",      "amber")
-        for pod in [self.pod_ghost, self.pod_tor, self.pod_dns, self.pod_mac]:
+        self.pod_ghost    = DataPod("GHOST_MODE",   "INACTIVE", "red")
+        self.pod_tor      = DataPod("TOR_CIRCUIT",  "DOWN",     "red")
+        self.pod_hysteria = DataPod("HYSTERIA2",    "OFF",      "amber")
+        self.pod_dns      = DataPod("DNS_LEAK",     "UNKNOWN",  "amber")
+        self.pod_mac      = DataPod("MAC_SPOOF",    "OFF",      "amber")
+        for pod in [self.pod_ghost, self.pod_tor, self.pod_hysteria, self.pod_dns, self.pod_mac]:
             self.metric_strip.pack_start(pod, True, True, 0)
 
         # ── Main layout ──
@@ -192,6 +193,7 @@ class GhostModePage(BasePage):
             ("Traffic Timing Obfuscation", "shape"),
             ("DNS Tunnel", "dns-tunnel"),
             ("Configure obfs4", "obfs4"),
+            ("Hysteria2 QUIC Tunnel", "hysteria"),
         ]:
             btn = Gtk.Button(label=label)
             btn.connect("clicked", lambda b, m=mode: self._on_mirage(m))
@@ -265,6 +267,18 @@ class GhostModePage(BasePage):
 
         # Tor pod
         self.pod_tor.update("UP" if tor else "DOWN", "green" if tor else "red")
+
+        # Hysteria2 pod
+        try:
+            from shadowcypher.core.hysteria import hysteria_transport
+            if hysteria_transport.running:
+                self.pod_hysteria.update("ACTIVE", "green")
+            elif hysteria_transport.available:
+                self.pod_hysteria.update("IDLE", "amber")
+            else:
+                self.pod_hysteria.update("N/A", "red")
+        except Exception:
+            self.pod_hysteria.update("OFF", "amber")
 
         # DNS leak check (quick)
         try:
