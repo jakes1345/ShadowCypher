@@ -36,8 +36,9 @@ import json
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}
 
-STATE_FILE = "/tmp/.ghost_mode_state"  # Intentionally in /tmp for tmpfs  # nosec B108
-BACKUP_DIR = "/tmp/.ghost_restore"  # nosec B108
+STATE_FILE  = "/tmp/.ghost_mode_state"  # Intentionally in /tmp for tmpfs  # nosec B108
+BACKUP_DIR  = "/tmp/.ghost_restore"  # nosec B108
+_SOCKS5_PORT = 1080
 
 def run(cmd, timeout=15, check=False):
     try:
@@ -266,6 +267,24 @@ def engage():
     with open(STATE_FILE, "w") as f:
         json.dump(state, f)
 
+    # ── Hysteria2 auto-start (QUIC stealth transport) ──
+    print(f"\n  {C['C']}[Layer 9]{C['N']} Hysteria2 QUIC Transport (auto)")
+    try:
+        from shadowcypher.core.hysteria import ghost_engage_hook
+        ghost_engage_hook(on_output=lambda l: print(f"  {C['D']}{l.rstrip()}{C['N']}"))
+        from shadowcypher.core.hysteria import hysteria_transport
+        if hysteria_transport.connected:
+            print(f"  {C['G']}●{C['N']} Hysteria2 QUIC tunnel active — SOCKS5:{_SOCKS5_PORT}")
+            state["layers"].append("hysteria2")
+        else:
+            print(f"  {C['Y']}○{C['N']} Hysteria2 not configured — Tor handles routing")
+    except Exception as _he:
+        print(f"  {C['Y']}○{C['N']} Hysteria2 unavailable — Tor handles routing")
+
+    # Re-save state with any hysteria2 layer added
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
+
     print(f"\n{C['B']}{'═'*70}{C['N']}")
     print(f"  {C['G']}GHOST MODE: ACTIVE{C['N']}")
     print(f"  {C['D']}All traffic routed through Tor{C['N']}")
@@ -388,6 +407,13 @@ def disengage():
 
     print(f"\n{C['B']}{'═'*70}{C['N']}")
     print(f"  {C['G']}GHOST MODE: DISENGAGED{C['N']}")
+    # Stop Hysteria2 if it was running
+    try:
+        from shadowcypher.core.hysteria import ghost_disengage_hook
+        ghost_disengage_hook()
+    except Exception:
+        pass
+
     print(f"  {C['D']}Normal operation restored. You are visible again.{C['N']}")
     print(f"{C['B']}{'═'*70}{C['N']}\n")
 
@@ -426,6 +452,21 @@ def status():
     except Exception:
         tor_up = False
     print(f"  Tor:      {C['G'] if tor_up else C['R']}{'ACTIVE' if tor_up else 'INACTIVE'}{C['N']}")
+
+    # Hysteria2
+    try:
+        from shadowcypher.core.hysteria import hysteria_transport
+        h_status = hysteria_transport.status()
+        if h_status["connected"]:
+            print(f"  Hysteria2:{C['G']} ACTIVE{C['N']} via {h_status['server']} → {h_status['proxy_url']}")
+        elif h_status["available"] and h_status["pool_size"] > 0:
+            print(f"  Hysteria2:{C['Y']} CONFIGURED (not running){C['N']}")
+        elif h_status["available"]:
+            print(f"  Hysteria2:{C['Y']} INSTALLED (no servers — run: python3 -m shadowcypher.core.hysteria setup){C['N']}")
+        else:
+            print(f"  Hysteria2:{C['D']} NOT INSTALLED{C['N']}")
+    except Exception:
+        print(f"  Hysteria2:{C['D']} N/A{C['N']}")
 
     # Kill-switch
     out, _ = run(["iptables", "-L", "OUTPUT", "-n"])
