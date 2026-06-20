@@ -306,7 +306,7 @@ export async function listCveAlerts(req: Request, env: Env, user: AuthedUser, co
   const alerts = await dbSelect(env, "cve_alerts_sent", {
     select: "id,device_id,cve_id,fired_at",
     filters,
-    order: "sent_at.desc",
+    order: "fired_at.desc",
     limit: 100,
   });
   return json({ alerts }, {}, cors);
