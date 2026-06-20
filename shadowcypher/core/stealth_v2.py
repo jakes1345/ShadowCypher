@@ -12,6 +12,7 @@ Import and use:
     stealth.curl_impersonate("https://target.com", browser="chrome120")
 """
 import os
+import re
 import time
 import random
 import shutil
@@ -198,8 +199,6 @@ def geofence_connection(self, peer_ip: str,
                        f"GEOFENCE_BLOCK: {peer_ip} not in allowed countries {allowed_countries}")
     return allowed
 
-
-import re
 
 # Monkey-patch new methods onto StealthEngine
 StealthEngine.enable_domain_fronting = enable_domain_fronting  # type: ignore[attr-defined]
