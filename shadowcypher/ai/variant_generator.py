@@ -85,7 +85,7 @@ class VariantGenerator:
             language = {".py": "python", ".c": "c", ".go": "go",
                         ".ps1": "powershell", ".sh": "bash"}.get(ext, "python")
         mutated = self.mutate(code, language=language, passes=passes, on_output=on_output)
-        out_path = output_path or path.replace(".", "_mutated.", 1)
+        out_path = output_path or (os.path.splitext(path)[0] + "_mutated" + os.path.splitext(path)[1])
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(mutated)
         self._emit(on_output, f"[MUTATOR] Written: {out_path}\n")

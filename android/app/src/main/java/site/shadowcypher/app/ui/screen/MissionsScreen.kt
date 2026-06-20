@@ -57,7 +57,7 @@ fun MissionsScreen(viewModel: GuardianViewModel) {
         ) {
             Text("Missions", style = MaterialTheme.typography.headlineSmall, color = ColorTextPrimary)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = { viewModel.loadMissions(selectedAgent?.hostname) }) {
+                IconButton(onClick = { viewModel.loadMissions(selectedAgent?.id) }) {
                     Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = ColorAccentPurple)
                 }
                 IconButton(onClick = { showCompose = !showCompose }) {

@@ -96,7 +96,7 @@ class AutoOrchestrator:
             # Note: This is an architectural simplification for the bridge
             response = await client.run_async(agent, [{"role": "user", "content": query}], debug=True)
             
-            final_answer = response.messages[-1]["content"]
+            final_answer = response.messages[-1]["content"] if response.messages else ""
             return final_answer
         except Exception as e:
             return f"AUTON_CRASH: {str(e)}"

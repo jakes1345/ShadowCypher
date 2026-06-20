@@ -167,6 +167,7 @@ export async function runCveMatchingCron(env: Env): Promise<void> {
 
   const devices = await dbSelect<DeviceRow>(env, "devices", {
     select: "id,user_id,hostname,ip,open_ports,os_fingerprint",
+    limit: 10000,
   });
   if (devices.length === 0) return;
 

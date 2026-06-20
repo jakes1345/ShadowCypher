@@ -154,14 +154,6 @@ export async function getThreatStats(
   _user: { id: string; email: string }
 ): Promise<Response> {
   try {
-    const [critical, high, medium] = await Promise.all([
-      fetchNvd({ pubStartDate: daysAgoIso(7), cvssV3Severity: "CRITICAL", resultsPerPage: "1" }),
-      fetchNvd({ pubStartDate: daysAgoIso(7), cvssV3Severity: "HIGH", resultsPerPage: "1" }),
-      fetchNvd({ pubStartDate: daysAgoIso(7), cvssV3Severity: "MEDIUM", resultsPerPage: "1" }),
-    ]);
-
-    // NVD returns totalResults in the raw response — we only fetch 1 item to get the count
-    // Re-fetch with resultsPerPage=0 trick to get just counts
     const [cCount, hCount, mCount] = await Promise.all([
       fetchCount("CRITICAL"),
       fetchCount("HIGH"),

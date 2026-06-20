@@ -138,7 +138,12 @@ class SpectralIntelligencePage(BasePage):
         target = self.osint_target.get_text().strip()
         if not target:
             return
-        self.log(OSINT.subnet_info(target), "INTEL")
+        import threading
+        from gi.repository import GLib
+        threading.Thread(
+            target=lambda: GLib.idle_add(self.log, OSINT.subnet_info(target), "INTEL"),
+            daemon=True
+        ).start()
 
     def _on_osint_social(self, btn):
         target = self.osint_target.get_text().strip()
