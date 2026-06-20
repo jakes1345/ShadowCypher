@@ -61,35 +61,35 @@
 
     <h1>Sovereign AI: Run Your Own <span>AI Assistant</span> With Zero Cloud Dependency</h1>
 
-    <p>Every mainstream AI assistant — ChatGPT, Google Gemini, Copilot, Claude — runs on someone else's hardware. Your queries are transmitted over the internet, processed on remote servers, and stored according to the provider's privacy policy. In most cases, you have no meaningful control over what happens to your data after it leaves your device.</p>
+    <p>Every mainstream AI assistant (ChatGPT, Google Gemini, Copilot, Claude) runs on someone else's hardware. Your queries are transmitted over the internet, processed on remote servers, and stored according to the provider's privacy policy. In most cases, you have no meaningful control over what happens to your data after it leaves your device.</p>
 
-    <p>Sovereignty means something different. Your AI, on your hardware, under your rules. Completely offline capable. Impossible to censor or throttle. No subscription that can be revoked. No training data leak. This guide explains how to build that — specifically on Android, which most people carry 24/7.</p>
+    <p>Sovereignty means something different from toggling privacy settings. The model runs on your device, stores nothing off-device, and works without an internet connection. No vendor can revoke your access, throttle your usage, or pull the conversation logs for training. This guide explains how to build that on Android, the computer most people already carry everywhere.</p>
 
     <h2>The Four Pillars of AI Sovereignty</h2>
 
     <div class="principle">
-        <div class="icon">🖥️</div>
+        <div class="icon" aria-hidden="true">01</div>
         <div>
             <strong>Local compute</strong>
             <span>The model runs on your device's CPU/GPU/NPU. No API calls. No internet required for inference.</span>
         </div>
     </div>
     <div class="principle">
-        <div class="icon">🔒</div>
+        <div class="icon" aria-hidden="true">02</div>
         <div>
             <strong>Local storage</strong>
             <span>Model weights, conversation history, and memory are stored on your device. Nothing is uploaded.</span>
         </div>
     </div>
     <div class="principle">
-        <div class="icon">🔓</div>
+        <div class="icon" aria-hidden="true">03</div>
         <div>
             <strong>Open weights</strong>
             <span>The model's weights are openly licensed (Llama, Gemma, Mistral, Phi). You can inspect, fine-tune, or replace them.</span>
         </div>
     </div>
     <div class="principle">
-        <div class="icon">⚡</div>
+        <div class="icon" aria-hidden="true">04</div>
         <div>
             <strong>Open runtime</strong>
             <span>The inference engine is open source (llama.cpp, MLC-LLM, Ollama). No black-box SDK required to run it.</span>
@@ -112,7 +112,7 @@
     </ul>
 
     <div class="callout">
-        <strong>Quantization matters:</strong> Q4_K_M is the sweet spot — about 25% quality loss vs FP16, but 4x smaller. Q2_K is smaller still but noticeably degraded. For a 4B model, Q4_K_M is almost always the right choice.
+        <strong>Quantization matters:</strong> Q4_K_M is the sweet spot: about 25% quality loss vs FP16, but 4x smaller. Q2_K is smaller still but noticeably degraded. For a 4B model, Q4_K_M is almost always the right choice.
     </div>
 
     <h2>Shadow AI: The Packaged Option</h2>
@@ -130,7 +130,7 @@ https://github.com/jakes1345/ShadowCypher/releases
 # - 3 GB free storage</pre>
 
     <h2>The Manual Route: Termux + llama.cpp</h2>
-    <p>If you want complete control — specific model, specific quantization, custom system prompts, local API access:</p>
+    <p>If you want complete control (specific model, specific quantization, custom system prompts, local API access):</p>
 
     <pre># 1. Install Termux from F-Droid (not Play Store)
 # 2. In Termux:
@@ -155,7 +155,7 @@ huggingface-cli download google/gemma-4b-GGUF gemma-4b-q4_k_m.gguf \
     <p>The server runs at <code>http://localhost:11434</code> and is API-compatible with Ollama, so any Ollama-compatible app can use it as a backend. Your queries never leave the device.</p>
 
     <h2>Adding Memory and Context Persistence</h2>
-    <p>A sovereign AI should remember things across sessions. LLMs are stateless — they forget everything when the context window ends. You need an external memory layer.</p>
+    <p>A sovereign AI should remember things across sessions. LLMs are stateless; they forget everything when the context window ends. You need an external memory layer.</p>
     <p>Shadow AI handles this via <code>ShadowMemoryCore</code>: a local SQLite database on-device that stores named memories, retrieves relevant ones at prompt time, and injects them into the system context. No cloud sync. No vector database subscription. Pure local SQLite.</p>
     <p>For the Termux route, you can build something similar: store conversation summaries in SQLite, retrieve recent ones and prepend them to the system prompt at each session start.</p>
 
@@ -164,8 +164,8 @@ huggingface-cli download google/gemma-4b-GGUF gemma-4b-q4_k_m.gguf \
     <p>The Guardian cloud dashboard shows incidents, scan results, and device inventory. The AI explains them in plain language when you ask. Still no cloud inference — the explanation runs locally, and the dashboard just stores structured data.</p>
 
     <div class="cta">
-        <h3>Your AI. Your hardware. Your rules.</h3>
-        <p>Shadow AI is free, open source, and runs entirely on your Android phone. No cloud. No subscription. No data harvesting.</p>
+        <h3>Your AI, running on your own hardware.</h3>
+        <p>Shadow AI is free, open source, and runs entirely on your Android phone. Nothing leaves the device.</p>
         <a href="/shadow.html" class="btn">GET SHADOW AI</a>
         <a href="https://github.com/jakes1345/ShadowCypher" class="btn-outline">VIEW SOURCE</a>
     </div>

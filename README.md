@@ -5,9 +5,6 @@
 <h1 align="center">SHADOWCYPHER</h1>
 <h3 align="center">Sovereign Tactical Suite + Personal Security Platform</h3>
 
-<p align="center">
-  <em>In the collision of titans—where Google, Apple, and Microsoft define the theater of war—ShadowCypher remains the only sovereign signal. When the giants fall and nothing is safe, ShadowCypher is the architecture of the new frontier.</em>
-</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-3.0.0-00d4ff?style=flat-square" alt="Version"/>
@@ -22,11 +19,11 @@
 
 ## Genesis
 
-ShadowCypher didn't start in a boardroom. It started in the trenches—late nights chasing packets across hostile networks, watching commercial tools buckle under real-world pressure, and getting tired of platforms that promised sovereignty but phoned home on every keystroke.
+ShadowCypher started as shell scripts and Python wrappers written late at night while debugging real network problems. Commercial tools kept phoning home. Hosted platforms kept expiring API keys. The fix was to build something that didn't.
 
-The project was born from a simple conviction: **an operator's toolkit should answer to no one but the operator.** No telemetry. No cloud dependency. No API key that expires when someone else decides your subscription isn't worth their server costs.
+The goal: an operator's toolkit that answers to no one but the operator. No telemetry, no cloud dependency, no subscription that can be revoked.
 
-What began as a collection of shell scripts and Python wrappers has evolved into a unified tactical operating environment—a native GTK dashboard backed by a compiled Go signal relay, a local AI inference engine, and over 30 purpose-built offensive and defensive modules. Every line of code in this repository exists because it was needed in the field, not because it looked good on a feature list.
+It's now a GTK dashboard backed by a compiled Go signal relay, a local AI inference engine, and over 30 offensive and defensive modules. Every module exists because it was needed, not because it looked good on a feature list.
 
 ---
 
@@ -59,7 +56,7 @@ ShadowCypher is a dual-core system. The orchestration layer runs on **Python 3.1
 |---|---|
 | **GTK-3.0** over Electron | 40MB footprint vs 400MB. Native rendering. No Chromium tax on your GPU during an engagement. |
 | **Go relay** over pure Python | WebSocket handling at 10,000+ concurrent connections. Python's GIL makes this impossible natively. |
-| **Local Ollama** over cloud APIs | Your prompts never leave your machine. Model weights live on your GPU. No rate limits, no logs, no subpoenas. |
+| **Local Ollama** over cloud APIs | Your prompts never leave your machine. Model weights live on your GPU. No rate limits, no shared logs, nothing to subpoena. |
 | **Pydantic config** over YAML | Type validation at load time. Environment variable injection. No more "why is my port a string" debugging at 2 AM. |
 | **AES-256-GCM + X25519** | AEAD encryption with forward-secret key exchange. Every chat session generates ephemeral keys that die when the session ends. |
 
@@ -67,7 +64,7 @@ ShadowCypher is a dual-core system. The orchestration layer runs on **Python 3.1
 
 ## Tactical Divisions
 
-### 🧠 NEXUS-COMMAND — Situational Awareness & AI Operations
+### NEXUS-COMMAND — Situational Awareness & AI Operations
 
 The nerve center. Everything an operator needs to understand the state of their environment and issue directives.
 
@@ -79,7 +76,7 @@ The nerve center. Everything an operator needs to understand the state of their 
 | **Spectre War-Map** | Network topology visualization. Renders discovered nodes on an interactive canvas with connection state, latency indicators, and geographic approximation via GeoIP. Integrated with the Nexus Relay for real-time peer discovery. |
 | **ShadowScript Lab** | Custom tactical scripting language with a hand-written lexer, recursive descent parser, and tree-walking interpreter. Designed for orchestrating complex multi-tool engagements in a domain-specific syntax. Includes a reference grammar bible. |
 
-### 🕵️ COVERT-INTEL — Reconnaissance & Intelligence Gathering
+### COVERT-INTEL — Reconnaissance & Intelligence Gathering
 
 Passive and active intelligence collection across every layer of the stack.
 
@@ -91,7 +88,7 @@ Passive and active intelligence collection across every layer of the stack.
 | **Vulnerability Sweep** | Nuclei-based vulnerability scanning with severity filtering and tag-based targeting. Custom template support. Results are cross-referenced with Exploit-DB via SearchSploit for immediate actionability. |
 | **Gaming Asset Audit** | Steam/gaming platform security analysis. Account exposure checking, session token validation, and platform-specific vulnerability assessment. |
 
-### ⚔️ OFFENSIVE-LAB — Exploitation & Payload Engineering
+### OFFENSIVE-LAB — Exploitation & Payload Engineering
 
 Purpose-built tools for authorized penetration testing and red team operations.
 
@@ -105,21 +102,21 @@ Purpose-built tools for authorized penetration testing and red team operations.
 | **Key Harvester** | Credential attack suite. Hydra for network brute-forcing (SSH, FTP, RDP, SMB, HTTP). John the Ripper and Hashcat for offline hash cracking with GPU acceleration. Wordlist management and custom rule generation. |
 | **Wireless Saturation** | 802.11 attack toolkit. Aircrack-ng integration for WPA/WPA2 cracking, deauthentication attacks, and wireless network enumeration. Monitor mode management. |
 
-### 🛡️ SOVEREIGN-OPS — Communication, Defense & System Integrity
+### SOVEREIGN-OPS — Communication, Defense & System Integrity
 
 The infrastructure that keeps you connected, encrypted, and invisible.
 
 | Module | What It Does |
 |---|---|
-| **Sovereign Chat** | Production-grade WebSocket communication hub replacing legacy IRC. Multi-room support with presence tracking. **AES-256-GCM encryption at rest** with per-room derived keys. **X25519 ECDH ephemeral key exchange** on every session for forward secrecy—if a session key is compromised, past and future sessions remain secure. SQLite message persistence with configurable retention. |
+| **Sovereign Chat** | Production-grade WebSocket communication hub replacing legacy IRC. Multi-room support with presence tracking. **AES-256-GCM encryption at rest** with per-room derived keys. **X25519 ECDH ephemeral key exchange** on every session for forward secrecy. If a session key is compromised, past and future sessions remain secure. SQLite message persistence with configurable retention. |
 | **Go Signal Relay** | Compiled native binary (9.2MB) handling WebSocket connections for swarm coordination. Token-based authentication. Sub-millisecond message relay. Runs as a background process, automatically compiled from source by the launcher if the binary is stale. |
 | **ShadowSentinel (IRC Bot)** | Skybot-style modular IRC bot with 20+ commands. Connects to both external IRC (Libera) and sovereign Ergo servers. Per-user conversation memory via the Classic Brain (ELIZA + Markov chain, zero network, fully offline). SHA-256 Proof-of-Work challenges for user verification. CTCP fingerprint capture and WHOIS correlation for forensic profiling. |
 | **Wraith Protocol** | Emergency lockdown interface. Spectre Flash-Wipe purges all ephemeral mission data, session keys, and forensic artifacts in a single action. Tunnel termination kills all active processes. Log purge removes operational traces. Confirmation dialogs prevent accidental activation. |
 | **God-Panel** | Full-spectrum system control. Live subsystem matrix showing the status of every service (Ollama, Go Relay, Sovereign Chat, Sisyphus, IRC Sentinel) with real-time latency probes. AI model hot-swapping. Integrity baseline regeneration. Process termination. Threat registry viewer. |
-| **Sisyphus Sentinel** | Continuous integrity monitoring. SHA-256 hashes every Python source file in the project on a 60-second cycle. Detects unauthorized modifications, syntax corruption, and dependency tampering. Broadcasts alerts via the event bus when violations are detected. Named after the myth—because guarding code integrity is a task that never ends. |
+| **Sisyphus Sentinel** | Continuous integrity monitoring. SHA-256 hashes every Python source file in the project on a 60-second cycle. Detects unauthorized modifications, syntax corruption, and dependency tampering. Broadcasts alerts via the event bus when violations are detected. |
 | **Citadel Security** | AES-256-GCM vault encryption with PBKDF2 key derivation (200,000 iterations). RSA-OAEP asymmetric ticket encryption for admin-user communication. Hardware fingerprinting for machine-level identity verification. SSH honeypot (port 2222) that mimics OpenSSH 7.4 to bait and log adversaries. |
 
-### 👻 GHOST-PROTOCOL — Operational Anonymity & Anti-Forensics
+### GHOST-PROTOCOL — Operational Anonymity & Anti-Forensics
 
 Total operational invisibility for when you absolutely cannot be seen.
 
@@ -132,7 +129,7 @@ Total operational invisibility for when you absolutely cannot be seen.
 | **Trace Eraser** | Deep forensic log cleaner. Scrubs shell histories (12 types), system logs (auth, syslog, kern, daemon), application traces, systemd journal, wtmp/btmp/lastlog, thumbnail caches, and recently-used files. Timestamp obfuscation mode randomizes file access times. |
 | **Tor Cloak** | Full Tor lifecycle manager. Start/stop/verify Tor, circuit rotation via ControlPort, torified fetch and shell sessions, IP protection hardening (DNS redirect, WebRTC leak info, MAC check). |
 
-### 🛡️ GUARDIAN — Personal Device Security
+### GUARDIAN — Personal Device Security
 
 Protect everything you own. Phones, PCs, tablets, routers, TVs, IoT devices.
 
@@ -188,7 +185,7 @@ Client                          Server (Sovereign Chat)
 
 ## Event-Driven Architecture
 
-ShadowCypher's modules are decoupled through the **ShadowBus**—a thread-safe, async-aware publish/subscribe event backbone. This eliminates circular imports and allows any module to react to events from any other module without direct dependencies.
+ShadowCypher's modules are decoupled through the **ShadowBus**, a thread-safe, async-aware publish/subscribe event backbone. This eliminates circular imports and allows any module to react to events from any other module without direct dependencies.
 
 ```python
 # Any module can broadcast
@@ -313,7 +310,7 @@ ShadowCypher is a sovereign project. Contributions are welcome from those who un
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/your-module`)
-3. Write real implementations—no placeholders, no stubs, no "TODO" comments
+3. Write real implementations (no placeholders, no stubs, no "TODO" comments)
 4. Test against the `ShadowAudit` diagnostic suite (`from shadowcypher.core.audit import auditor; auditor.run_full_diagnostic()`)
 5. Submit a pull request with a clear description of what the code does and why it exists
 
@@ -321,7 +318,7 @@ ShadowCypher is a sovereign project. Contributions are welcome from those who un
 
 ## ShadowOS
 
-An Arch Linux-based live/installable ISO — the ShadowCypher operating environment. Pentest tools, developer workstation, and gaming, all in one hardened OS with Hyprland, a custom Plymouth boot sequence, and ShadowCypher pre-installed at `/opt/shadowcypher`.
+An Arch Linux-based live/installable ISO: the ShadowCypher operating environment. Pentest tools, developer workstation, and gaming, all in one hardened OS with Hyprland, a custom Plymouth boot sequence, and ShadowCypher pre-installed at `/opt/shadowcypher`.
 
 | Layer | What ships |
 |-------|-----------|
@@ -367,11 +364,7 @@ The authors assume no liability for misuse. You are the operator. You own your a
 ---
 
 <p align="center">
-  <em>In the silent crossfire of the global cyber-war—where the titans of code define the conflict and no perimeter is absolute—ShadowCypher is the definitive response. Native performance. Sovereign encryption. Zero compromise.</em>
-</p>
-
-<p align="center">
-  <strong>ShadowCypher v3.0.0</strong> · Built with Go, Python, Cairo, and conviction.
+  <strong>ShadowCypher v3.0.0</strong> · Built with Go, Python, and Cairo.
 </p>
 
 <p align="center">
