@@ -20,7 +20,7 @@
     "papirus-icon-theme",
     "tor", "torbrowser-launcher", "firejail", "apparmor", "ufw", "nftables",
     "fail2ban", "macchanger", "gnupg", "keepassxc", "veracrypt", "yubikey-manager",
-    "dnscrypt-proxy", "hysteria",
+    "dnscrypt-proxy",
     "nmap", "masscan", "wireshark-qt", "tcpdump", "john", "hashcat",
     "sqlmap", "hydra", "aircrack-ng", "bettercap", "nikto", "sslscan",
     "gobuster", "metasploit", "yara", "binwalk", "foremost", "sleuthkit",

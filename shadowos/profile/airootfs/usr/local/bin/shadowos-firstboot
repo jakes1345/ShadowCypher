@@ -94,6 +94,19 @@ PACMAN
         rm -rf "$TMPCUR"
     fi
 
+    # Hysteria2 — QUIC stealth tunnel (not in any Arch repo; install from GitHub releases)
+    if ! command -v hysteria2 >/dev/null && ! command -v hysteria >/dev/null; then
+        echo "[*] Installing hysteria2 (QUIC stealth transport)..."
+        HY_URL="https://github.com/apernet/hysteria/releases/latest/download/hysteria-linux-amd64"
+        if curl -fsSL -o /usr/local/bin/hysteria2 "$HY_URL" 2>/dev/null; then
+            chmod +x /usr/local/bin/hysteria2
+            ln -sf /usr/local/bin/hysteria2 /usr/local/bin/hysteria
+            echo "    hysteria2 installed"
+        else
+            echo "    hysteria2 download failed (skipping)"
+        fi
+    fi
+
     # Katana (ProjectDiscovery web crawler) via go install
     if ! command -v katana >/dev/null && command -v go >/dev/null; then
         echo "[*] Installing katana via go install..."
