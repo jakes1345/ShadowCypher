@@ -183,8 +183,18 @@ class Welcome(Gtk.Window):
             '<b>shadowcypher</b> — launch the security platform\n'
             '<b>shadowcypher.site</b> — manage your account</span>'
         ); tips.set_justify(Gtk.Justification.CENTER); b.pack_start(tips, False, False, 8)
-        btn = Gtk.Button(label="Launch ShadowOS  ⬡"); btn.get_style_context().add_class("go"); btn.set_halign(Gtk.Align.CENTER)
-        btn.connect("clicked", lambda _: Gtk.main_quit()); b.pack_start(btn, False, False, 12)
+        row = Gtk.Box(spacing=12); row.set_halign(Gtk.Align.CENTER)
+        tour_btn = Gtk.Button(label="Take the OS tour  ▶")
+        tour_btn.get_style_context().add_class("go")
+        tour_btn.connect("clicked", lambda _: (
+            subprocess.Popen(["/usr/local/bin/shadowos-tour"], start_new_session=True),
+            Gtk.main_quit()
+        ))
+        row.pack_start(tour_btn, False, False, 0)
+        btn = Gtk.Button(label="Skip — launch desktop"); btn.get_style_context().add_class("back"); btn.set_halign(Gtk.Align.CENTER)
+        btn.connect("clicked", lambda _: Gtk.main_quit())
+        row.pack_start(btn, False, False, 0)
+        b.pack_start(row, False, False, 12)
         return b
 
     # ── Helpers ───────────────────────────────────────────────────────────
