@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """
-ShadowOS Interactive Tour — full OS walkthrough.
-Covers every capability: desktop, modes, ghost, pentest, privacy,
-dev, gaming, ShadowCypher app, system management, emergency protocols.
-
-Launch:  shadowos-tour
-Also:    SUPER+F1 (wired in hyprland.conf)
+ShadowOS Tour — full OS walkthrough for new operators.
+Opens automatically after first install + welcome wizard.
+Re-launch any time: SUPER+F1  or  shadowos-tour
 """
 import gi
 gi.require_version("Gtk", "3.0")
@@ -14,7 +11,6 @@ import os
 import subprocess
 import threading
 
-# ── Attempt Vte for live terminal ─────────────────────────────────────────────
 try:
     gi.require_version("Vte", "2.91")
     from gi.repository import Vte
@@ -22,1162 +18,1318 @@ try:
 except Exception:
     HAS_VTE = False
 
-ACCENT  = "#00d4ff"
-GREEN   = "#00e0a4"
-PURPLE  = "#b44aff"
-AMBER   = "#f59e0b"
-RED     = "#f87171"
+# ── Brand colours ─────────────────────────────────────────────────────────────
+_G = "#00E0A4"   # ShadowOS green  — primary accent
+_B = "#00B4D8"   # blue-cyan       — links, keys
+_P = "#B44AFF"   # purple          — APEX / premium
+_A = "#F59E0B"   # amber           — warnings
+_R = "#F87171"   # red             — danger / emergency
+_W = "#E6EDF3"   # white           — headings
+_S = "#8D96A0"   # secondary text
+_M = "#3D4B5C"   # muted / dimmed
+_BG  = "#050911" # page background
+_SBG = "#080D18" # sidebar background
+_CBG = "#0C1220" # card background
+_BD  = "rgba(0,224,164,0.14)"  # border colour
 
-CSS = b"""
-* { color: #e2e8f0; }
-window { background-color: #060a10; }
+CSS = f"""
+* {{
+    color: {_W};
+    font-family: "Outfit", "Inter", sans-serif;
+}}
+window {{ background-color: {_BG}; }}
 
-/* Sidebar */
-.sidebar { background-color: #0a0f1a; border-right: 1px solid rgba(0,212,255,0.1); }
-.sidebar-row { padding: 10px 16px; border-radius: 6px; margin: 2px 6px; }
-.sidebar-row:selected, .sidebar-row.active {
-    background: rgba(0,212,255,0.12);
-    border-left: 3px solid #00d4ff;
-}
-.sidebar-icon { font-size: 18px; min-width: 28px; }
-.sidebar-name { font-size: 12px; font-weight: 600; color: #94a3b8; }
-.sidebar-row:selected .sidebar-name, .sidebar-row.active .sidebar-name { color: #00d4ff; }
-.sidebar-section-hdr { font-size: 9px; font-weight: 800; letter-spacing: 3px;
-    color: #334155; padding: 14px 16px 4px; }
+/* ── Sidebar ── */
+.sb-list {{
+    background-color: {_SBG};
+    border-right: 1px solid rgba(0,224,164,0.12);
+}}
+.sb-row {{
+    padding: 11px 18px;
+    border-radius: 0;
+    background: transparent;
+}}
+.sb-row:selected,
+.sb-row:active {{
+    background-color: rgba(0,224,164,0.10);
+    border-right: 3px solid {_G};
+    color: {_G};
+}}
+.sb-icon {{
+    font-size: 17px;
+    min-width: 26px;
+}}
+.sb-label {{
+    font-size: 12px;
+    font-weight: 600;
+    color: {_S};
+}}
+.sb-row:selected .sb-label,
+.sb-row:active .sb-label {{
+    color: {_G};
+}}
+.sb-group {{
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: {_M};
+    padding: 16px 18px 4px;
+    background: transparent;
+}}
 
-/* Content */
-.content-scroll { background: transparent; }
-.section-badge { font-size: 8px; font-weight: 800; letter-spacing: 3px;
-    color: #00d4ff; font-family: monospace; }
-.section-title { font-size: 22px; font-weight: 900; color: #f1f5f9; }
-.section-sub { font-size: 13px; color: #64748b; }
-.section-desc { font-size: 13px; color: #94a3b8; line-height: 1.7; }
+/* ── Top bar ── */
+.topbar {{
+    background-color: {_SBG};
+    border-bottom: 1px solid rgba(0,224,164,0.12);
+    padding: 0 20px;
+    min-height: 52px;
+}}
+.topbar-logo {{
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: {_G};
+    font-family: "JetBrains Mono", monospace;
+}}
+.topbar-sub {{
+    font-size: 11px;
+    color: {_M};
+    font-family: "JetBrains Mono", monospace;
+}}
+.step-badge {{
+    font-size: 10px;
+    font-weight: 700;
+    color: {_M};
+    font-family: "JetBrains Mono", monospace;
+}}
 
-/* Keybind / command tables */
-.table-hdr { font-size: 9px; font-weight: 800; letter-spacing: 2px;
-    color: #334155; font-family: monospace; }
-.key-cell { font-family: monospace; font-size: 12px; font-weight: 700;
-    color: #00d4ff; background: rgba(0,212,255,0.08);
-    border: 1px solid rgba(0,212,255,0.2); border-radius: 5px;
-    padding: 3px 8px; }
-.desc-cell { font-size: 12px; color: #94a3b8; }
-.cmd-cell { font-family: monospace; font-size: 12px; color: #00e0a4; }
+/* ── Content ── */
+.content-bg {{
+    background-color: {_BG};
+}}
 
-/* Code blocks */
-.code-block { background: rgba(0,0,0,0.5); border: 1px solid rgba(0,212,255,0.15);
-    border-radius: 8px; padding: 14px 18px; font-family: monospace;
-    font-size: 12px; color: #00e0a4; }
+/* Section header */
+.sec-tag {{
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    color: {_G};
+    font-family: "JetBrains Mono", monospace;
+}}
+.sec-title {{
+    font-size: 26px;
+    font-weight: 900;
+    color: {_W};
+}}
+.sec-sub {{
+    font-size: 13px;
+    color: {_S};
+}}
+
+/* Typography */
+.h3 {{ font-size: 13px; font-weight: 700; color: {_G}; }}
+.body {{ font-size: 13px; color: {_S}; }}
+
+/* Key badges */
+.key {{
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: {_B};
+    background-color: rgba(0,180,216,0.10);
+    border: 1px solid rgba(0,180,216,0.30);
+    border-radius: 5px;
+    padding: 2px 9px;
+    min-width: 10px;
+}}
+.cmd {{
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: {_G};
+}}
+.dim {{ font-size: 12px; color: {_M}; }}
+
+/* Code block */
+.code-wrap {{
+    background-color: {_CBG};
+    border: 1px solid rgba(0,224,164,0.16);
+    border-left: 3px solid {_G};
+    border-radius: 6px;
+    padding: 14px 18px;
+}}
+.code-text {{
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: {_G};
+}}
 
 /* Cards */
-.info-card { background: rgba(17,24,39,0.8); border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 10px; padding: 16px 20px; }
-.warn-card { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
-    border-radius: 10px; padding: 14px 18px; }
-.danger-card { background: rgba(248,113,113,0.06); border: 1px solid rgba(248,113,113,0.25);
-    border-radius: 10px; padding: 14px 18px; }
-.tip-card { background: rgba(0,212,255,0.04); border: 1px solid rgba(0,212,255,0.15);
-    border-radius: 10px; padding: 14px 18px; }
+.card {{
+    background-color: {_CBG};
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 14px 18px;
+}}
+.card-warn {{
+    background-color: rgba(245,158,11,0.05);
+    border: 1px solid rgba(245,158,11,0.22);
+    border-radius: 8px;
+    padding: 14px 18px;
+}}
+.card-danger {{
+    background-color: rgba(248,113,113,0.05);
+    border: 1px solid rgba(248,113,113,0.25);
+    border-radius: 8px;
+    padding: 14px 18px;
+}}
+.card-tip {{
+    background-color: rgba(0,224,164,0.04);
+    border: 1px solid rgba(0,224,164,0.16);
+    border-radius: 8px;
+    padding: 12px 16px;
+}}
 
 /* Mode badges */
-.mode-badge { font-size: 10px; font-weight: 700; border-radius: 4px;
-    padding: 2px 8px; font-family: monospace; }
-.mode-normal     { color: #22c55e; background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3); }
-.mode-dev        { color: #00d4ff; background: rgba(0,212,255,0.1);  border: 1px solid rgba(0,212,255,0.3); }
-.mode-pentest    { color: #f87171; background: rgba(248,113,113,0.1);border: 1px solid rgba(248,113,113,0.3); }
-.mode-privacy    { color: #f59e0b; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); }
-.mode-ghost      { color: #94a3b8; background: rgba(148,163,184,0.1);border: 1px solid rgba(148,163,184,0.3); }
-.mode-undercover { color: #64748b; background: rgba(100,116,139,0.1);border: 1px solid rgba(100,116,139,0.3); }
+.badge {{
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 2px 8px;
+}}
+.b-green   {{ color: #22c55e; background: rgba(34,197,94,0.12);   border: 1px solid rgba(34,197,94,0.30); }}
+.b-cyan    {{ color: {_B};    background: rgba(0,180,216,0.12);   border: 1px solid rgba(0,180,216,0.30); }}
+.b-red     {{ color: {_R};    background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.30); }}
+.b-amber   {{ color: {_A};    background: rgba(245,158,11,0.12);  border: 1px solid rgba(245,158,11,0.30); }}
+.b-ghost   {{ color: {_S};    background: rgba(141,150,160,0.12); border: 1px solid rgba(141,150,160,0.30); }}
+.b-muted   {{ color: {_M};    background: rgba(61,75,92,0.20);    border: 1px solid rgba(61,75,92,0.40); }}
+.b-purple  {{ color: {_P};    background: rgba(180,74,255,0.12);  border: 1px solid rgba(180,74,255,0.30); }}
+
+/* Bottom bar */
+.botbar {{
+    background-color: {_SBG};
+    border-top: 1px solid rgba(0,224,164,0.12);
+    padding: 10px 20px;
+}}
+.btn-nav {{
+    background-color: rgba(0,224,164,0.08);
+    border: 1px solid rgba(0,224,164,0.28);
+    border-radius: 7px;
+    padding: 7px 22px;
+    color: {_G};
+    font-weight: 700;
+    font-size: 12px;
+}}
+.btn-nav:hover {{ background-color: rgba(0,224,164,0.18); }}
+.btn-nav:disabled {{ color: {_M}; border-color: rgba(61,75,92,0.4); background: transparent; }}
+.btn-finish {{
+    background-color: {_G};
+    border: none;
+    border-radius: 7px;
+    padding: 7px 22px;
+    color: #000;
+    font-weight: 900;
+    font-size: 12px;
+}}
+.btn-finish:hover {{ background-color: #00c890; }}
+.btn-demo {{
+    background-color: rgba(0,224,164,0.08);
+    border: 1px solid rgba(0,224,164,0.25);
+    border-radius: 5px;
+    padding: 4px 14px;
+    color: {_G};
+    font-size: 11px;
+    font-weight: 700;
+    font-family: "JetBrains Mono", monospace;
+}}
+.btn-demo:hover {{ background-color: rgba(0,224,164,0.16); }}
+.btn-mode {{
+    background-color: rgba(0,224,164,0.06);
+    border: 1px solid rgba(0,224,164,0.20);
+    border-radius: 5px;
+    padding: 4px 12px;
+    color: {_S};
+    font-size: 10px;
+    font-family: "JetBrains Mono", monospace;
+}}
+.btn-mode:hover {{ color: {_G}; border-color: rgba(0,224,164,0.40); }}
 
 /* Progress */
-progressbar trough { background: rgba(255,255,255,0.04); min-height: 3px; }
-progressbar progress { background: #00d4ff; min-height: 3px; }
-
-/* Buttons */
-button.nav { background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.3);
-    border-radius: 8px; padding: 8px 22px; color: #00d4ff; font-weight: 700;
-    font-size: 13px; }
-button.nav:hover { background: rgba(0,212,255,0.18); }
-button.nav:disabled { color: #334155; border-color: #1e293b; background: transparent; }
-button.finish { background: #00d4ff; border: none; border-radius: 8px;
-    padding: 8px 22px; color: #000; font-weight: 900; font-size: 13px; }
-button.finish:hover { background: #38d4f0; }
-button.try-btn { background: rgba(0,224,164,0.08); border: 1px solid rgba(0,224,164,0.3);
-    border-radius: 6px; padding: 5px 14px; color: #00e0a4;
-    font-size: 11px; font-weight: 700; font-family: monospace; }
-button.try-btn:hover { background: rgba(0,224,164,0.18); }
-button.copy-btn { background: transparent; border: 1px solid rgba(0,212,255,0.2);
-    border-radius: 5px; padding: 3px 10px; color: #475569;
-    font-size: 10px; font-family: monospace; }
-button.copy-btn:hover { color: #00d4ff; border-color: rgba(0,212,255,0.4); }
+progressbar trough {{ background-color: rgba(255,255,255,0.04); min-height: 2px; }}
+progressbar progress {{ background-color: {_G}; min-height: 2px; }}
 
 /* Demo output */
-.demo-out { background: #000; border: 1px solid rgba(0,224,164,0.2); border-radius: 6px;
-    padding: 10px 14px; font-family: monospace; font-size: 11px; color: #00e0a4; }
+.demo-out {{
+    background-color: #000;
+    border: 1px solid rgba(0,224,164,0.18);
+    border-radius: 5px;
+    padding: 10px 14px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: {_G};
+}}
 """
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-# ── Tour content ──────────────────────────────────────────────────────────────
+def lbl(text, css="body", xalign=0.0, wrap=True, selectable=False):
+    l = Gtk.Label(label=text)
+    l.get_style_context().add_class(css)
+    l.set_xalign(xalign)
+    if wrap:
+        l.set_line_wrap(True)
+        l.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+    if selectable:
+        l.set_selectable(True)
+    return l
 
-SECTIONS = [
-    # (id, icon, name, group)
-    ("overview",    "🌑", "Overview",            "START"),
-    ("desktop",     "🖥",  "Desktop & Navigation", "DESKTOP"),
-    ("modes",       "⚡", "Shadow Modes",         "DESKTOP"),
-    ("ghost",       "👻", "Ghost Mode",           "SECURITY"),
-    ("pentest",     "🎯", "Pentest Arsenal",      "SECURITY"),
-    ("shadowcypher","🔐", "ShadowCypher App",     "SECURITY"),
-    ("privacy",     "🔒", "Privacy & Encryption", "SECURITY"),
-    ("terminal",    "💻", "Terminal & Shell",     "TOOLS"),
-    ("dev",         "⚙",  "Development",          "TOOLS"),
-    ("gaming",      "🎮", "Gaming",               "TOOLS"),
-    ("sysops",      "🛠",  "System Management",    "SYSTEM"),
-    ("install",     "💿", "Installing to Disk",   "SYSTEM"),
-    ("emergency",   "🚨", "Emergency Protocols",  "SYSTEM"),
-]
+def mlbl(markup, xalign=0.0, wrap=True):
+    l = Gtk.Label()
+    l.set_markup(markup)
+    l.set_xalign(xalign)
+    if wrap:
+        l.set_line_wrap(True)
+        l.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+    return l
 
-
-def _h(text, size=14, weight="bold", color="#f1f5f9"):
-    lbl = Gtk.Label()
-    lbl.set_markup(f'<span font_size="{size}000" font_weight="{weight}" color="{color}">{text}</span>')
-    lbl.set_xalign(0)
-    lbl.set_line_wrap(True)
-    return lbl
-
-def _p(text, color="#94a3b8", size=12):
-    lbl = Gtk.Label(label=text)
-    lbl.set_line_wrap(True)
-    lbl.set_xalign(0)
-    lbl.override_color(Gtk.StateFlags.NORMAL,
-                       Gdk.RGBA(*[int(color.lstrip("#")[i:i+2],16)/255 for i in (0,2,4)], 1.0))
-    return lbl
-
-def _mono(text, color="#00e0a4"):
-    lbl = Gtk.Label()
-    lbl.set_markup(f'<span font_family="monospace" color="{color}">{GLib.markup_escape_text(text)}</span>')
-    lbl.set_xalign(0)
-    lbl.set_selectable(True)
-    return lbl
-
-def _sep():
+def sep(top=8, bot=8):
     s = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-    s.set_margin_top(10)
-    s.set_margin_bottom(10)
+    s.set_margin_top(top)
+    s.set_margin_bottom(bot)
     return s
 
-def _badge(text, css_class="mode-normal"):
-    lbl = Gtk.Label(label=text)
-    lbl.get_style_context().add_class("mode-badge")
-    lbl.get_style_context().add_class(css_class)
-    return lbl
+def vbox(spacing=0):
+    return Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=spacing)
 
-def _section_hdr(badge, title, subtitle=""):
-    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-    b = Gtk.Label(label=badge)
-    b.get_style_context().add_class("section-badge")
-    b.set_xalign(0)
-    box.pack_start(b, False, False, 0)
-    t = Gtk.Label(label=title)
-    t.get_style_context().add_class("section-title")
-    t.set_xalign(0)
-    t.set_line_wrap(True)
-    box.pack_start(t, False, False, 0)
+def hbox(spacing=0):
+    return Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=spacing)
+
+def spacer(h=12):
+    b = Gtk.Box()
+    b.set_size_request(-1, h)
+    return b
+
+def sec_header(tag, title, subtitle=""):
+    b = vbox(4)
+    b.pack_start(lbl(tag, "sec-tag"), False, False, 0)
+    b.pack_start(lbl(title, "sec-title"), False, False, 0)
     if subtitle:
-        s = Gtk.Label(label=subtitle)
-        s.get_style_context().add_class("section-sub")
-        s.set_xalign(0)
-        s.set_line_wrap(True)
-        box.pack_start(s, False, False, 0)
-    return box
+        b.pack_start(lbl(subtitle, "sec-sub"), False, False, 0)
+    return b
 
-def _keybind_table(rows):
-    """rows: [(key, description), ...]"""
-    grid = Gtk.Grid()
-    grid.set_column_spacing(16)
-    grid.set_row_spacing(8)
-    for i, (key, desc) in enumerate(rows):
-        k = Gtk.Label()
-        k.set_markup(f'<span font_family="monospace" font_weight="bold" color="{ACCENT}">{GLib.markup_escape_text(key)}</span>')
-        k.get_style_context().add_class("key-cell")
-        k.set_xalign(0.5)
-        k.set_hexpand(False)
-        d = Gtk.Label(label=desc)
-        d.get_style_context().add_class("desc-cell")
-        d.set_xalign(0)
-        d.set_hexpand(True)
-        d.set_line_wrap(True)
-        grid.attach(k, 0, i, 1, 1)
-        grid.attach(d, 1, i, 1, 1)
-    return grid
+def h3(text, color=_G):
+    l = Gtk.Label()
+    l.set_markup(f'<span font_weight="700" font_size="13000" color="{color}">{GLib.markup_escape_text(text)}</span>')
+    l.set_xalign(0)
+    return l
 
-def _cmd_table(rows):
-    """rows: [(command, description), ...]"""
-    grid = Gtk.Grid()
-    grid.set_column_spacing(24)
-    grid.set_row_spacing(6)
-    for i, (cmd, desc) in enumerate(rows):
-        c = Gtk.Label()
-        c.set_markup(f'<span font_family="monospace" color="{GREEN}">{GLib.markup_escape_text(cmd)}</span>')
-        c.set_xalign(0)
-        c.set_hexpand(False)
-        c.set_selectable(True)
-        d = Gtk.Label(label=desc)
-        d.set_xalign(0)
-        d.set_hexpand(True)
-        d.set_line_wrap(True)
-        markup_d = f'<span color="#64748b">{GLib.markup_escape_text(desc)}</span>'
-        d.set_markup(markup_d)
-        grid.attach(c, 0, i, 1, 1)
-        grid.attach(d, 1, i, 1, 1)
-    return grid
+def code_block(text, demo_cmd=None):
+    outer = vbox(8)
 
-def _code_block(text, demo_cmd=None):
-    """A styled code display, optionally with a live-run button."""
-    outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-
-    lbl = Gtk.Label()
-    lbl.set_markup(f'<span font_family="monospace" color="{GREEN}">{GLib.markup_escape_text(text)}</span>')
-    lbl.set_xalign(0)
-    lbl.set_selectable(True)
-    lbl.set_line_wrap(False)
-
-    frame = Gtk.Box()
-    frame.get_style_context().add_class("code-block")
-    frame.pack_start(lbl, True, True, 0)
-    outer.pack_start(frame, False, False, 0)
+    inner = Gtk.Box()
+    inner.get_style_context().add_class("code-wrap")
+    t = Gtk.Label()
+    t.set_markup(f'<span font_family="JetBrains Mono, monospace" font_size="12000" color="{_G}">'
+                 f'{GLib.markup_escape_text(text)}</span>')
+    t.set_xalign(0)
+    t.set_selectable(True)
+    t.set_line_wrap(False)
+    inner.pack_start(t, True, True, 0)
+    outer.pack_start(inner, False, False, 0)
 
     if demo_cmd:
-        btn_row = Gtk.Box(spacing=8)
-        run_btn = Gtk.Button(label="▶ Run demo")
-        run_btn.get_style_context().add_class("try-btn")
+        brow = hbox(8)
+        btn  = Gtk.Button(label="▶  Run demo")
+        btn.get_style_context().add_class("btn-demo")
 
-        out_buf = Gtk.TextBuffer()
+        out_buf  = Gtk.TextBuffer()
         out_view = Gtk.TextView(buffer=out_buf)
         out_view.set_editable(False)
-        out_view.set_monospace(True)
         out_view.get_style_context().add_class("demo-out")
-        out_scroll = Gtk.ScrolledWindow()
-        out_scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        out_scroll.set_max_content_height(120)
-        out_scroll.add(out_view)
-        out_scroll.set_no_show_all(True)
+        out_sw = Gtk.ScrolledWindow()
+        out_sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        out_sw.set_max_content_height(110)
+        out_sw.add(out_view)
+        out_sw.set_no_show_all(True)
 
-        def _run(_btn):
-            out_scroll.show()
-            out_buf.set_text("Running…\n")
-            def _worker():
+        def _run(_b):
+            out_sw.show()
+            out_buf.set_text("…")
+            def _w():
                 try:
-                    result = subprocess.run(
-                        demo_cmd, shell=True, capture_output=True, text=True, timeout=10
-                    )
-                    out = (result.stdout + result.stderr).strip() or "(no output)"
+                    r = subprocess.run(demo_cmd, shell=True, capture_output=True,
+                                       text=True, timeout=10)
+                    out = (r.stdout + r.stderr).strip() or "(no output)"
                 except subprocess.TimeoutExpired:
-                    out = "(command timed out)"
+                    out = "(timed out)"
                 except Exception as e:
                     out = f"(error: {e})"
                 GLib.idle_add(out_buf.set_text, out)
-            threading.Thread(target=_worker, daemon=True).start()
+            threading.Thread(target=_w, daemon=True).start()
 
-        run_btn.connect("clicked", _run)
-        btn_row.pack_start(run_btn, False, False, 0)
-        outer.pack_start(btn_row, False, False, 0)
-        outer.pack_start(out_scroll, False, False, 0)
+        btn.connect("clicked", _run)
+        brow.pack_start(btn, False, False, 0)
+        outer.pack_start(brow, False, False, 0)
+        outer.pack_start(out_sw, False, False, 0)
 
     return outer
 
-def _card(content_widget, css_class="info-card"):
-    box = Gtk.Box()
-    box.get_style_context().add_class(css_class)
-    box.add(content_widget)
-    return box
+def key_table(rows):
+    """rows: [(key_label, description)]"""
+    grid = Gtk.Grid()
+    grid.set_column_spacing(14)
+    grid.set_row_spacing(10)
+    for i, (k, d) in enumerate(rows):
+        kb = Gtk.Label()
+        kb.set_markup(f'<span font_family="JetBrains Mono, monospace" font_size="11000" '
+                      f'font_weight="700" color="{_B}">{GLib.markup_escape_text(k)}</span>')
+        kb.get_style_context().add_class("key")
+        kb.set_xalign(0.5)
+        kb.set_hexpand(False)
 
-def _tip(icon, text, css_class="tip-card"):
-    inner = Gtk.Box(spacing=10)
-    ico = Gtk.Label(label=icon)
-    ico.set_valign(Gtk.Align.START)
-    inner.pack_start(ico, False, False, 0)
-    lbl = Gtk.Label(label=text)
-    lbl.set_line_wrap(True)
-    lbl.set_xalign(0)
-    lbl.set_markup(f'<span color="#94a3b8" font_size="12000">{GLib.markup_escape_text(text)}</span>')
-    inner.pack_start(lbl, True, True, 0)
-    box = Gtk.Box()
-    box.get_style_context().add_class(css_class)
-    box.add(inner)
-    return box
+        dl = Gtk.Label(label=d)
+        dl.set_xalign(0)
+        dl.set_hexpand(True)
+        dl.set_line_wrap(True)
+        dl.get_style_context().add_class("body")
 
+        grid.attach(kb, 0, i, 1, 1)
+        grid.attach(dl, 1, i, 1, 1)
+    return grid
 
-# ── Page builders ─────────────────────────────────────────────────────────────
+def cmd_table(rows):
+    """rows: [(command, description)]"""
+    grid = Gtk.Grid()
+    grid.set_column_spacing(24)
+    grid.set_row_spacing(9)
+    for i, (c, d) in enumerate(rows):
+        cl = Gtk.Label()
+        cl.set_markup(f'<span font_family="JetBrains Mono, monospace" font_size="12000" '
+                      f'color="{_G}">{GLib.markup_escape_text(c)}</span>')
+        cl.set_xalign(0)
+        cl.set_selectable(True)
+        cl.set_hexpand(False)
 
-def build_overview():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("START · 01", "Welcome to ShadowOS",
-        "An Arch-based OS that unifies pentest, privacy, dev, and gaming in a single hardened environment."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
+        dl = Gtk.Label(label=d)
+        dl.set_xalign(0)
+        dl.set_hexpand(True)
+        dl.set_line_wrap(True)
+        dl.set_markup(f'<span color="{_M}" font_size="12000">{GLib.markup_escape_text(d)}</span>')
 
-    v.pack_start(_h("What makes ShadowOS different", 13, color=ACCENT), False, False, 0)
+        grid.attach(cl, 0, i, 1, 1)
+        grid.attach(dl, 1, i, 1, 1)
+    return grid
 
-    pillars = Gtk.Grid()
-    pillars.set_column_spacing(12)
-    pillars.set_row_spacing(12)
-    pillars.set_column_homogeneous(True)
-    for col, (icon, title, desc) in enumerate([
-        ("⚡", "Shadow Modes", "One command hot-swaps your entire security posture — firewall, DNS, Tor, autostart."),
-        ("👻", "Ghost Mode", "8-layer anonymity stack: Tor routing, kill-switch, MAC randomization, RAM workspace, log suppression."),
-        ("🎯", "Arsenal", "250+ pentest tools from BlackArch + AUR pre-installed. Nmap to Metasploit to Nuclei."),
-        ("🔐", "ShadowCypher", "GTK dashboard with AI, network war-map, offensive modules, encrypted vault, C2."),
-    ]):
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        card.get_style_context().add_class("info-card")
-        card.pack_start(Gtk.Label(label=icon), False, False, 0)
-        card.pack_start(_h(title, 12, color="#f1f5f9"), False, False, 0)
-        d = Gtk.Label(label=desc)
-        d.set_line_wrap(True)
-        d.set_markup(f'<span color="#64748b" font_size="11000">{GLib.markup_escape_text(desc)}</span>')
-        d.set_xalign(0)
-        card.pack_start(d, False, False, 0)
-        pillars.attach(card, col, 0, 1, 1)
-    v.pack_start(pillars, False, False, 0)
+def card(child, css="card"):
+    b = Gtk.Box()
+    b.get_style_context().add_class(css)
+    b.add(child)
+    return b
 
-    v.pack_start(_h("Quick reference", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("shadow-mode <name>",  "Switch personality (normal/pentest/privacy/dev/ghost/undercover)"),
-        ("shadow-help-me",      "Expose SSH over Tor .onion for remote debug access"),
-        ("shadow-leak-test",    "Verify nothing is leaking your real identity"),
-        ("shadow-update",       "Smart updater (respects current mode)"),
-        ("shadowos-diag",       "Bundle all logs into a diagnostics tarball"),
-        ("shadowos-install",    "Install ShadowOS to disk"),
-        ("shadowcypher-autostart","Launch the ShadowCypher GTK dashboard"),
-    ]), False, False, 0)
-    return v
+def tip(icon, text, css="card-tip"):
+    inner = hbox(10)
+    il = Gtk.Label(label=icon)
+    il.set_valign(Gtk.Align.START)
+    inner.pack_start(il, False, False, 0)
+    tl = Gtk.Label(label=text)
+    tl.set_markup(f'<span color="{_S}" font_size="12000">{GLib.markup_escape_text(text)}</span>')
+    tl.set_xalign(0)
+    tl.set_line_wrap(True)
+    tl.set_hexpand(True)
+    inner.pack_start(tl, True, True, 0)
+    b = Gtk.Box()
+    b.get_style_context().add_class(css)
+    b.add(inner)
+    return b
 
+def badge(text, css="b-green"):
+    l = Gtk.Label(label=text)
+    l.get_style_context().add_class("badge")
+    l.get_style_context().add_class(css)
+    return l
 
-def build_desktop():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("DESKTOP · 02", "Navigation & Keybindings",
-        "Hyprland dynamic tiling compositor. SUPER is your primary modifier."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
-
-    v.pack_start(_h("Essential binds", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_keybind_table([
-        ("SUPER + Enter",       "Open terminal (foot)"),
-        ("SUPER + D",           "App launcher (wofi)"),
-        ("SUPER + Q",           "Close focused window"),
-        ("SUPER + F",           "Toggle fullscreen"),
-        ("SUPER + SHIFT + Space","Toggle floating"),
-        ("SUPER + L",           "Lock screen (hyprlock)"),
-        ("SUPER + SHIFT + E",   "Exit Hyprland"),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Apps", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_keybind_table([
-        ("SUPER + S",           "ShadowCypher dashboard"),
-        ("SUPER + Space",       "Shadow AI overlay"),
-        ("SUPER + B",           "LibreWolf browser"),
-        ("SUPER + E",           "Thunar file manager"),
-        ("SUPER + C",           "VSCode"),
-        ("SUPER + SHIFT + C",   "Neovim (in terminal)"),
-        ("SUPER + N",           "btop system monitor"),
-        ("SUPER + I",           "Shadow Settings"),
-        ("SUPER + G",           "Steam"),
-        ("SUPER + M",           "Mode picker (wofi)"),
-        ("SUPER + T",           "Toggle Tor on/off"),
-        ("SUPER + X",           "Mode picker (terminal)"),
-        ("SUPER + F1",          "This tour"),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Windows & Workspaces", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_keybind_table([
-        ("SUPER + 1-9",         "Switch to workspace 1-9"),
-        ("SUPER + SHIFT + 1-9", "Move window to workspace 1-9"),
-        ("SUPER + H/J/K/L",     "Move focus (vim keys)"),
-        ("SUPER + Arrow keys",  "Move focus"),
-        ("SUPER + SHIFT + H/J/K/L","Move window"),
-        ("SUPER + mouse drag",  "Move window"),
-        ("SUPER + right-drag",  "Resize window"),
-        ("SUPER + ALT + D",     "Dwindle layout"),
-        ("SUPER + ALT + M",     "Master layout"),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Screenshots & Media", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_keybind_table([
-        ("Print",               "Screenshot region → annotate"),
-        ("SUPER + SHIFT + S",   "Screenshot region"),
-        ("SUPER + V",           "Clipboard history (cliphist)"),
-        ("XF86AudioRaiseVolume","Volume up"),
-        ("XF86AudioLowerVolume","Volume down"),
-        ("XF86AudioMute",       "Mute toggle"),
-        ("XF86MonBrightnessUp", "Brightness up"),
-        ("XF86MonBrightnessDown","Brightness down"),
-    ]), False, False, 0)
-
-    v.pack_start(_tip("💡", "SUPER + SHIFT + F12 reboots into BIOS/UEFI firmware — handy for hardware config without hunting for the key."), False, False, 0)
-    return v
+def two_col(left_widgets, right_widgets, left_expand=True, right_expand=True):
+    h = hbox(20)
+    lc = vbox(12)
+    for w in left_widgets:
+        lc.pack_start(w, False, False, 0)
+    rc = vbox(12)
+    for w in right_widgets:
+        rc.pack_start(w, False, False, 0)
+    h.pack_start(lc, left_expand, True, 0)
+    h.pack_start(rc, right_expand, True, 0)
+    return h
 
 
-def build_modes():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("DESKTOP · 03", "Shadow Modes",
-        "Hot-swap your entire security posture with one command. No reboot. Instant."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
+# ── Page content ──────────────────────────────────────────────────────────────
 
-    v.pack_start(_code_block("shadow-mode <mode>       # switch mode\nshadow-mode status       # current mode + active rules\nSUPER + M               # graphical mode picker",
-                              demo_cmd="shadow-mode status 2>/dev/null || echo 'run as user on the live system'"), False, False, 0)
+SECTIONS = [
+    ("overview",     "◈",  "Overview",             "START"),
+    ("desktop",      "⊞",  "Desktop & Keys",        "DESKTOP"),
+    ("modes",        "⟳",  "Shadow Modes",          "DESKTOP"),
+    ("ghost",        "◯",  "Ghost Mode",            "SECURITY"),
+    ("pentest",      "◉",  "Pentest Arsenal",       "SECURITY"),
+    ("shadowcypher", "⬡",  "ShadowCypher App",      "SECURITY"),
+    ("privacy",      "◫",  "Privacy & Encryption",  "SECURITY"),
+    ("terminal",     "▸",  "Terminal & Shell",      "TOOLS"),
+    ("dev",          "◧",  "Development",           "TOOLS"),
+    ("gaming",       "◈",  "Gaming",                "TOOLS"),
+    ("sysops",       "⊙",  "System Management",     "SYSTEM"),
+    ("install",      "◎",  "Installing to Disk",    "SYSTEM"),
+    ("emergency",    "◬",  "Emergency Protocols",   "SYSTEM"),
+]
 
-    modes = [
-        ("normal",     "🌐", "normal",     "Daily driver. dnscrypt-proxy on, ufw deny-incoming, no Tor.", "mode-normal"),
-        ("dev",        "⚡", "dev",        "Dev daemons (Docker, Podman), ports open for localhost. IDE stack.", "mode-dev"),
-        ("pentest",    "🎯", "pentest",    "Scan-friendly firewall. No Tor (tools work directly). Full BlackArch arsenal active.", "mode-pentest"),
-        ("privacy",    "🔒", "privacy",    "All traffic through Tor. MAC randomized. dnscrypt+Tor. For hostile networks.", "mode-privacy"),
-        ("ghost",      "👻", "ghost",      "Maximum lockdown. Tor-only outbound. All ports dropped. Ephemeral session. Logs suppressed.", "mode-ghost"),
-        ("undercover", "💼", "undercover", "Windows-like flat theme. Standard browser icon. Looks like a normal laptop.", "mode-undercover"),
-    ]
 
+def pg_overview():
+    p = vbox(16)
+    p.pack_start(sec_header("START  ·  01 / 13", "Welcome, Operator.",
+        "ShadowOS is a hardened Arch-based OS that unifies pentest, privacy, dev, and gaming."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+
+    # Four pillars
     grid = Gtk.Grid()
     grid.set_column_spacing(12)
     grid.set_row_spacing(12)
     grid.set_column_homogeneous(True)
-    for i, (cmd, icon, name, desc, css) in enumerate(modes):
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        card.get_style_context().add_class("info-card")
-        top = Gtk.Box(spacing=8, orientation=Gtk.Orientation.HORIZONTAL)
-        top.pack_start(Gtk.Label(label=icon), False, False, 0)
-        top.pack_start(_badge(name.upper(), css), False, False, 0)
-        card.pack_start(top, False, False, 0)
-        d = Gtk.Label(label=desc)
-        d.set_line_wrap(True)
-        d.set_markup(f'<span color="#64748b" font_size="11000">{GLib.markup_escape_text(desc)}</span>')
-        d.set_xalign(0)
-        card.pack_start(d, False, False, 0)
-        run = Gtk.Button(label=f"shadow-mode {cmd}")
-        run.get_style_context().add_class("try-btn")
-        _mode = cmd
-        run.connect("clicked", lambda b, m=_mode: subprocess.Popen(
-            ["pkexec", "shadow-mode", m], start_new_session=True))
-        card.pack_start(run, False, False, 0)
-        grid.attach(card, i % 3, i // 3, 1, 1)
-    v.pack_start(grid, False, False, 0)
-
-    v.pack_start(_tip("💡",
-        "Switching modes is instant and non-destructive. Your open apps stay running. "
-        "The Waybar accent color changes to reflect the active mode at a glance."), False, False, 0)
-    return v
-
-
-def build_ghost():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("SECURITY · 04", "Ghost Mode",
-        "9-layer anonymity stack. One command to vanish. One to come back."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
-
-    v.pack_start(_h("The 9 layers", 13, color=ACCENT), False, False, 0)
-    layers = [
-        ("01", "Tor transparent proxy",    "All TCP/UDP routed through Tor. No bypass possible at userspace level."),
-        ("02", "iptables kill-switch",      "Tor dies → traffic drops. Your real IP never leaks, even mid-session."),
-        ("03", "MAC randomization",         "New MAC address per session. Your hardware is invisible on the LAN."),
-        ("04", "Hostname neutralization",   "Hostname becomes 'localhost'. Timezone forced to UTC."),
-        ("05", "DNS over Tor",              "All DNS resolves through Tor's internal resolver. Zero DNS leaks."),
-        ("06", "DNS leak prevention",       "/etc/resolv.conf pointed at 127.0.0.1. No fallback to ISP DNS."),
-        ("07", "RAM-only workspace",        "tmpfs mount for sensitive work. Nothing written to disk in /tmp/ghost-ws/"),
-        ("08", "Log suppression",           "rsyslog/syslog stopped. Audit logs paused. Minimal kernel logging."),
-        ("09", "Hysteria2 QUIC",            "If configured: QUIC stealth tunnel replaces direct Tor. Harder to fingerprint."),
+    pillars = [
+        ("⟳", "Shadow Modes", "Hot-swap your entire posture in one command. Six personalities — firewall, DNS, and Tor all change instantly."),
+        ("◯", "Ghost Mode", "9-layer anonymity: Tor routing, kill-switch, MAC randomization, RAM workspace, log suppression, and Hysteria2 QUIC."),
+        ("◉", "Pentest Arsenal", "250+ tools from BlackArch pre-installed. Nmap, Metasploit, Nuclei, Hydra, Aircrack-ng, and everything else you need."),
+        ("⬡", "ShadowCypher", "GTK dashboard: AI-powered terminal, network war-map, 29 modules, encrypted vault, C2 framework, ghost mode UI."),
     ]
-    for num, title, desc in layers:
-        row = Gtk.Box(spacing=12)
-        num_lbl = Gtk.Label()
-        num_lbl.set_markup(f'<span font_family="monospace" color="{ACCENT}" font_weight="bold">{num}</span>')
-        num_lbl.set_size_request(28, -1)
-        row.pack_start(num_lbl, False, False, 0)
-        txt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        txt.pack_start(_h(title, 12, color="#f1f5f9"), False, False, 0)
-        d = Gtk.Label(label=desc)
-        d.set_markup(f'<span color="#64748b" font_size="11000">{GLib.markup_escape_text(desc)}</span>')
-        d.set_xalign(0)
-        d.set_line_wrap(True)
-        txt.pack_start(d, False, False, 0)
-        row.pack_start(txt, True, True, 0)
-        v.pack_start(row, False, False, 0)
+    for col, (ico, t, d) in enumerate(pillars):
+        c = vbox(8)
+        c.get_style_context().add_class("card")
+        top = hbox(8)
+        top.pack_start(mlbl(f'<span font_size="18000" color="{_G}">{ico}</span>'), False, False, 0)
+        top.pack_start(h3(t), False, False, 0)
+        c.pack_start(top, False, False, 0)
+        c.pack_start(lbl(d, "dim"), False, False, 0)
+        grid.attach(c, col, 0, 1, 1)
+    p.pack_start(grid, False, False, 0)
 
-    v.pack_start(_sep(), False, False, 0)
-    v.pack_start(_h("Commands", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
+    p.pack_start(h3("Quick reference"), False, False, 0)
+    p.pack_start(cmd_table([
+        ("shadow-mode <name>",       "Switch personality · normal / pentest / privacy / dev / ghost / undercover"),
+        ("shadow-mode status",       "Show current mode + live Tor, DNS, MAC, firewall checks"),
+        ("shadow-leak-test",         "Verify nothing is leaking your real identity"),
+        ("shadow-help-me [min]",     "Expose SSH over Tor .onion for secure remote access"),
+        ("shadow-update",            "Smart updater — respects current mode"),
+        ("shadowos-diag",            "Bundle all logs into a diagnostics tarball"),
+        ("shadowos-install",         "Install ShadowOS to disk"),
+        ("shadowcypher-autostart",   "Launch the ShadowCypher security platform"),
+    ]), False, False, 0)
+    return p
+
+
+def pg_desktop():
+    p = vbox(16)
+    p.pack_start(sec_header("DESKTOP  ·  02 / 13", "Desktop & Keybindings",
+        "Hyprland dynamic tiling compositor. SUPER is the Windows/Meta key."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+
+    cols = two_col(
+        [
+            h3("Core"),
+            key_table([
+                ("SUPER + Enter",        "Terminal (foot)"),
+                ("SUPER + D",            "App launcher (wofi)"),
+                ("SUPER + Q",            "Close window"),
+                ("SUPER + F",            "Fullscreen"),
+                ("SUPER + SHIFT + Space","Toggle floating"),
+                ("SUPER + L",            "Lock screen"),
+                ("SUPER + SHIFT + E",    "Exit session"),
+            ]),
+            spacer(8),
+            h3("Apps"),
+            key_table([
+                ("SUPER + S",        "ShadowCypher dashboard"),
+                ("SUPER + Space",    "Shadow AI overlay"),
+                ("SUPER + B",        "LibreWolf browser"),
+                ("SUPER + E",        "File manager (Thunar)"),
+                ("SUPER + C",        "VSCode"),
+                ("SUPER + SHIFT+C",  "Neovim"),
+                ("SUPER + N",        "btop monitor"),
+                ("SUPER + I",        "Shadow Settings"),
+                ("SUPER + G",        "Steam"),
+                ("SUPER + F1",       "This tour"),
+            ]),
+        ],
+        [
+            h3("Modes & Privacy"),
+            key_table([
+                ("SUPER + M",        "Mode picker (graphical)"),
+                ("SUPER + X",        "Mode picker (terminal)"),
+                ("SUPER + T",        "Toggle Tor on / off"),
+            ]),
+            spacer(8),
+            h3("Workspaces"),
+            key_table([
+                ("SUPER + 1-9",         "Switch workspace"),
+                ("SUPER + SHIFT + 1-9", "Move window to workspace"),
+                ("SUPER + H/J/K/L",     "Move focus (vim)"),
+                ("SUPER + Arrow keys",  "Move focus"),
+                ("SUPER+SHIFT H/J/K/L", "Move window"),
+            ]),
+            spacer(8),
+            h3("Screenshots & Media"),
+            key_table([
+                ("Print",                "Capture region → annotate"),
+                ("SUPER + SHIFT + S",    "Screenshot region"),
+                ("SUPER + V",            "Clipboard history"),
+                ("Volume keys",          "Volume up / down / mute"),
+                ("Brightness keys",      "Screen brightness"),
+                ("SUPER+SHIFT+F12",      "Reboot to BIOS/UEFI"),
+                ("SUPER + F10",          "Switch to gaming mode"),
+                ("SUPER+SHIFT+F10",      "Return to normal mode"),
+            ]),
+        ]
+    )
+    p.pack_start(cols, False, False, 0)
+    p.pack_start(tip("💡",
+        "Mouse: SUPER + drag to move a window. SUPER + right-drag to resize. "
+        "SUPER+ALT+D / M to switch between Dwindle and Master tiling layouts."), False, False, 0)
+    return p
+
+
+def pg_modes():
+    p = vbox(16)
+    p.pack_start(sec_header("DESKTOP  ·  03 / 13", "Shadow Modes",
+        "One command. Instant posture change. No reboot."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+    p.pack_start(code_block(
+        "shadow-mode <name>     # switch to a mode\n"
+        "shadow-mode status     # current mode + live rule check\n"
+        "SUPER + M              # graphical picker",
+        demo_cmd="shadow-mode status 2>/dev/null"
+    ), False, False, 0)
+    p.pack_start(spacer(4), False, False, 0)
+
+    modes = [
+        ("normal",     "◎", "Normal",     "b-green",  "Daily driver. dnscrypt-proxy on, ufw deny-incoming, no Tor."),
+        ("dev",        "⚡", "Dev",        "b-cyan",   "Dev daemons up, Docker/Podman accessible, local ports open."),
+        ("pentest",    "◉", "Pentest",    "b-red",    "Scan-friendly firewall. Full BlackArch arsenal. No Tor (tools need direct access)."),
+        ("privacy",    "◫", "Privacy",    "b-amber",  "All traffic through Tor. MAC randomized. dnscrypt+Tor. For hostile networks."),
+        ("ghost",      "◯", "Ghost",      "b-ghost",  "Maximum lockdown. Tor-only outbound. All ports dropped. Logs suppressed."),
+        ("undercover", "◧", "Undercover", "b-muted",  "Windows-like theme and flat taskbar. Low-profile appearance."),
+    ]
+
+    grid = Gtk.Grid()
+    grid.set_column_spacing(10)
+    grid.set_row_spacing(10)
+    grid.set_column_homogeneous(True)
+    for i, (mode, ico, name, bcls, desc) in enumerate(modes):
+        c = vbox(8)
+        c.get_style_context().add_class("card")
+        top = hbox(8)
+        top.pack_start(mlbl(f'<span font_size="16000">{ico}</span>'), False, False, 0)
+        top.pack_start(badge(name.upper(), bcls), False, False, 0)
+        c.pack_start(top, False, False, 0)
+        c.pack_start(lbl(desc, "dim"), False, False, 0)
+        btn = Gtk.Button(label=f"shadow-mode {mode}")
+        btn.get_style_context().add_class("btn-mode")
+        _m = mode
+        btn.connect("clicked", lambda b, m=_m:
+            subprocess.Popen(["pkexec", "shadow-mode", m], start_new_session=True))
+        c.pack_start(btn, False, False, 0)
+        grid.attach(c, i % 3, i // 3, 1, 1)
+    p.pack_start(grid, False, False, 0)
+    p.pack_start(tip("💡",
+        "The Waybar accent colour changes with each mode — a glance tells you where you are. "
+        "Switching is instant and non-destructive. Your open apps keep running."), False, False, 0)
+    return p
+
+
+def pg_ghost():
+    p = vbox(16)
+    p.pack_start(sec_header("SECURITY  ·  04 / 13", "Ghost Mode",
+        "Nine-layer anonymity stack. One command to vanish, one to come back."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+
+    layers_left = [
+        ("01", "Tor transparent proxy",   "All TCP/UDP routed through Tor — no bypass at userspace level."),
+        ("02", "iptables kill-switch",    "If Tor dies, traffic drops. Your real IP never leaks mid-session."),
+        ("03", "MAC randomization",       "New MAC per session. Your hardware is invisible on the LAN."),
+        ("04", "Hostname neutralization", "Hostname becomes 'localhost'. Timezone forced to UTC."),
+        ("05", "DNS over Tor",            "All DNS resolves through Tor's internal resolver. Zero DNS leaks."),
+    ]
+    layers_right = [
+        ("06", "DNS leak prevention",  "/etc/resolv.conf → 127.0.0.1. No fallback to ISP DNS."),
+        ("07", "RAM-only workspace",   "tmpfs mount for sensitive work. Nothing written to disk."),
+        ("08", "Log suppression",      "rsyslog/syslog stopped. Audit paused. Minimal kernel logging."),
+        ("09", "Hysteria2 QUIC",       "If configured: QUIC stealth tunnel replaces Tor exit fingerprint."),
+    ]
+
+    def layer_rows(rows):
+        b = vbox(10)
+        for num, title, desc in rows:
+            row = hbox(12)
+            nl = mlbl(f'<span font_family="JetBrains Mono, monospace" font_weight="bold" '
+                      f'color="{_G}">{num}</span>', xalign=0.5, wrap=False)
+            nl.set_size_request(26, -1)
+            row.pack_start(nl, False, False, 0)
+            txt = vbox(2)
+            txt.pack_start(h3(title, _W), False, False, 0)
+            txt.pack_start(lbl(desc, "dim"), False, False, 0)
+            row.pack_start(txt, True, True, 0)
+            b.pack_start(row, False, False, 0)
+        return b
+
+    p.pack_start(two_col([h3("Layers 1-5"), layer_rows(layers_left)],
+                         [h3("Layers 6-9"), layer_rows(layers_right)]), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+    p.pack_start(h3("Commands"), False, False, 0)
+    p.pack_start(cmd_table([
         ("sudo shadow-mode ghost",   "Engage full ghost mode"),
-        ("sudo shadow-mode normal",  "Disengage — restore all settings"),
-        ("shadow-mode status",       "Show current mode + live checks"),
-        ("shadow-leak-test",         "Verify Tor, DNS, MAC, hostname, TZ, browser"),
-        ("shadow-help-me [min]",     "Open Tor .onion SSH for remote debug (default 60 min)"),
-        ("shadow-help-me-stop",      "Close the .onion tunnel immediately"),
+        ("sudo shadow-mode normal",  "Disengage — restore all settings exactly"),
+        ("shadow-mode status",       "Show mode + live Tor/DNS/MAC/firewall checks"),
+        ("shadow-leak-test",         "Full anonymity audit — tests 6 leak vectors"),
+        ("shadow-help-me [min]",     "Tor .onion SSH for remote debug (default 60 min)"),
+        ("shadow-help-me-stop",      "Close the .onion immediately"),
     ]), False, False, 0)
-
-    v.pack_start(_code_block("shadow-leak-test", demo_cmd="shadow-leak-test 2>/dev/null || echo '(requires live system)'"), False, False, 0)
-
-    v.pack_start(_tip("⚠️",
-        "Engaging ghost mode requires root (pkexec). "
-        "Disengage before suspending — the iptables kill-switch will block all traffic on resume "
-        "until you disengage manually.", "warn-card"), False, False, 0)
-    return v
+    p.pack_start(code_block("shadow-leak-test",
+                             demo_cmd="shadow-leak-test 2>/dev/null | head -30"), False, False, 0)
+    p.pack_start(tip("⚠️",
+        "Disengage before suspending. The iptables kill-switch blocks all traffic on resume "
+        "until you disengage manually.", "card-warn"), False, False, 0)
+    return p
 
 
-def build_pentest():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("SECURITY · 05", "Pentest Arsenal",
+def pg_pentest():
+    p = vbox(16)
+    p.pack_start(sec_header("SECURITY  ·  05 / 13", "Pentest Arsenal",
         "250+ tools from BlackArch, AUR, and direct releases. All pre-installed."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+    p.pack_start(code_block("sudo shadow-mode pentest    # open scan-friendly firewall\nsudo shadow-mode normal     # restore when done"), False, False, 0)
 
-    v.pack_start(_code_block("sudo shadow-mode pentest    # open scan-friendly firewall\nsudo shadow-mode normal     # restore when done"), False, False, 0)
-
-    categories = [
-        ("Reconnaissance", GREEN, [
-            ("nmap", "Port scan, service detection, OS fingerprinting"),
-            ("rustscan", "Fast port scanner (feeds into nmap)"),
-            ("masscan", "Internet-scale port scanning"),
-            ("nuclei", "Template-based vulnerability scanner"),
-            ("subfinder", "Subdomain enumeration"),
-            ("httpx", "HTTP probe and tech detection"),
-            ("naabu", "Port enumeration, fast"),
-            ("amass", "Attack surface mapping"),
-            ("whatweb", "Web tech fingerprinting"),
+    cats = [
+        (_B,  "Reconnaissance", [
+            ("nmap",        "Port scan, service detection, OS fingerprinting"),
+            ("rustscan",    "Fast port scanner — feeds results into nmap"),
+            ("masscan",     "Internet-scale port scanning"),
+            ("nuclei",      "Template-based vulnerability scanner (10k+ templates)"),
+            ("subfinder",   "Subdomain enumeration"),
+            ("httpx",       "HTTP probe — status codes, tech stack, titles"),
+            ("amass",       "Attack surface mapping and OSINT"),
+            ("whatweb",     "Web technology fingerprinting"),
         ]),
-        ("Web & Exploitation", RED, [
-            ("sqlmap", "SQL injection detection + exploitation"),
-            ("ffuf", "Web fuzzer — directories, parameters, subdomains"),
-            ("feroxbuster", "Fast content discovery"),
-            ("gobuster", "Dir/DNS/virtual host brute-force"),
-            ("zaproxy", "OWASP ZAP — full web proxy + scanner"),
-            ("mitmproxy", "Interactive HTTP/S proxy"),
-            ("metasploit", "Full exploit framework (msfconsole)"),
-            ("wfuzz", "Web fuzzer"),
+        (_R,  "Web & Exploitation", [
+            ("sqlmap",      "SQL injection detection + exploitation"),
+            ("ffuf",        "Web fuzzer — directories, parameters, virtual hosts"),
+            ("feroxbuster", "Fast recursive content discovery"),
+            ("zaproxy",     "OWASP ZAP — full web proxy + active scanner"),
+            ("mitmproxy",   "Interactive HTTP/S MITM proxy"),
+            ("metasploit",  "Full exploit framework (msfconsole)"),
+            ("gobuster",    "Directory / DNS / virtual host brute-force"),
         ]),
-        ("Credential & Wireless", AMBER, [
-            ("hydra", "Network brute-force (SSH, FTP, HTTP, RDP…)"),
-            ("john", "John the Ripper password cracker"),
-            ("hashcat", "GPU hash cracking"),
-            ("aircrack-ng", "WPA/WPA2 wireless auditing"),
-            ("bettercap", "Network man-in-the-middle framework"),
-            ("hcxdumptool", "WiFi packet capture for PMKID attacks"),
-            ("sslscan", "SSL/TLS configuration tester"),
+        (_A,  "Credentials & Wireless", [
+            ("hydra",       "Network brute-force — SSH, FTP, HTTP, RDP, SMB…"),
+            ("hashcat",     "GPU-accelerated hash cracking"),
+            ("john",        "John the Ripper — password cracking"),
+            ("aircrack-ng", "WPA/WPA2 wireless auditing suite"),
+            ("bettercap",   "Network MitM framework — ARP, DNS, HTTP"),
+            ("sslscan",     "SSL/TLS configuration auditing"),
         ]),
-        ("Forensics & Reversing", PURPLE, [
-            ("binwalk", "Firmware analysis and extraction"),
-            ("radare2", "Reverse engineering framework"),
-            ("yara", "Malware pattern matching"),
-            ("sleuthkit", "Filesystem forensics toolkit"),
-            ("foremost", "File carving from raw disk images"),
-            ("volatility", "Memory forensics (via pip install)"),
-            ("wireshark", "Packet capture and protocol analysis"),
-            ("tcpdump", "CLI packet capture"),
+        (_P,  "Forensics & Reversing", [
+            ("radare2",     "Reverse engineering framework"),
+            ("binwalk",     "Firmware analysis and extraction"),
+            ("yara",        "Malware pattern matching"),
+            ("sleuthkit",   "Filesystem forensics toolkit"),
+            ("wireshark",   "Packet capture and protocol analysis"),
+            ("tcpdump",     "CLI packet capture"),
         ]),
     ]
+    cols = two_col(
+        [w for colour, name, rows in cats[:2] for w in [h3(name, colour), cmd_table(rows), spacer(4)]],
+        [w for colour, name, rows in cats[2:] for w in [h3(name, colour), cmd_table(rows), spacer(4)]],
+    )
+    p.pack_start(cols, False, False, 0)
+    p.pack_start(tip("💡",
+        "distrobox enter kali — run any Kali tool in a container sharing your home directory. "
+        "No root, no VM overhead, full BlackArch and Kali repos both available."), False, False, 0)
+    p.pack_start(tip("⚠️",
+        "Unauthorized use against systems you don't own is illegal. "
+        "shadow-mode pentest opens your firewall — return to normal mode when done.", "card-warn"), False, False, 0)
+    return p
 
-    for cat_name, color, tools in categories:
-        v.pack_start(_h(cat_name, 13, color=color), False, False, 0)
-        v.pack_start(_cmd_table(tools), False, False, 0)
-        v.pack_start(_sep(), False, False, 0)
 
-    v.pack_start(_tip("💡",
-        "Use 'distrobox enter kali' to run tools inside a Kali Linux container if you "
-        "need something not in BlackArch. Containers share your home directory."), False, False, 0)
-    v.pack_start(_tip("⚠️",
-        "All offensive tools require explicit written authorization to use against targets. "
-        "The law applies regardless of what OS you're running.", "warn-card"), False, False, 0)
-    return v
+def pg_shadowcypher():
+    p = vbox(16)
+    p.pack_start(sec_header("SECURITY  ·  06 / 13", "ShadowCypher App",
+        "The unified control center. AI terminal, war-map, 29 modules, vault, C2."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+    p.pack_start(code_block(
+        "SUPER + S                     # open from desktop\n"
+        "shadowcypher-autostart        # from terminal\n"
+        "shadow-cli -p 'scan my network'   # AI CLI"
+    ), False, False, 0)
 
+    modules_l = [
+        ("Central Command HUD",   "Live Cairo gauges (CPU/RAM/disk), mission feed, AI terminal"),
+        ("Shadow-Synthesizer",    "Chat with local Ollama AI — ask it to run tools in plain language"),
+        ("Network Scanner",       "nmap-powered LAN map with CVE cross-reference"),
+        ("Guardian",              "24/7 agent: ARP spoof detection, device inventory, push alerts to phone"),
+        ("Ghost Mode",            "Full 9-layer anonymity with Hysteria2 QUIC"),
+    ]
+    modules_r = [
+        ("Spectral Intelligence", "OSINT: Sherlock 300+ platforms, WHOIS, DNS, SSL, infra recon"),
+        ("Vulnerability Sweep",   "Nuclei + ExploitDB — exploitability, not just CVE numbers"),
+        ("Credentials Vault",     "AES-256-GCM vault with Argon2id key derivation"),
+        ("Phishing Forge",        "35 enterprise templates + live PHP server + credential capture"),
+        ("Wraith Protocol",       "Emergency: destroys all keys, artifacts, and logs in one action"),
+    ]
+    p.pack_start(h3("Key modules"), False, False, 0)
+    p.pack_start(two_col([cmd_table(modules_l)], [cmd_table(modules_r)]), False, False, 0)
 
-def build_shadowcypher():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("SECURITY · 06", "ShadowCypher App",
-        "The unified GTK4 control center. AI, network war-map, 29 modules, encrypted vault."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
-
-    v.pack_start(_code_block("SUPER + S                    # open from desktop\nshadowcypher-autostart       # from terminal\nshadow-cli -p 'scan my network'  # AI CLI"), False, False, 0)
-
-    v.pack_start(_h("Key modules", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("Central Command HUD",  "Live Cairo gauges (CPU/RAM/disk), mission feed, AI terminal"),
-        ("Shadow-Synthesizer",   "Chat with local Ollama AI — ask it to run tools in plain language"),
-        ("Network Scanner",      "nmap-powered LAN map with CVE correlation"),
-        ("Guardian",             "24/7 agent monitoring — ARP spoof detection, device inventory, push alerts"),
-        ("Ghost Mode",           "Full 9-layer anonymity with Hysteria2 QUIC"),
-        ("Spectral Intelligence","OSINT: Sherlock, WHOIS, DNS, SSL certs, infrastructure recon"),
-        ("Vulnerability Sweep",  "Nuclei scan with ExploitDB cross-reference"),
-        ("Phishing Forge",       "35 enterprise phishing templates + live PHP server"),
-        ("Credentials Vault",    "AES-256-GCM vault with Argon2id key derivation"),
-        ("Wraith Protocol",      "Emergency: destroys all keys, artifacts, logs in one action"),
-    ]), False, False, 0)
-
-    v.pack_start(_h("AI natural-language interface", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_code_block(
+    p.pack_start(h3("AI natural language"), False, False, 0)
+    p.pack_start(code_block(
         "shadow-cli -p 'scan my network'\n"
         "shadow-cli -p 'am I anonymous?'\n"
         "shadow-cli -p 'engage ghost mode'\n"
         "shadow-cli -p 'audit my router'\n"
-        "shadow-cli -p 'check for CVEs on 192.168.1.1'",
-        demo_cmd="which shadow-cli && echo 'shadow-cli installed' || echo 'shadow-cli not in PATH (run from ShadowCypher app)'"
+        "shadow-cli -p 'check CVEs on 192.168.1.1'",
+        demo_cmd="which shadow-cli && echo 'shadow-cli ready' || echo 'run from inside the ShadowCypher app'"
     ), False, False, 0)
-
-    v.pack_start(_tip("💡",
-        "Ollama runs locally — no API keys, no cloud. Pull additional models with "
-        "'ollama pull gemma3' or 'ollama pull deepseek-coder'. "
+    p.pack_start(tip("💡",
+        "Ollama runs locally — no API key, no cloud, no rate limits. "
+        "Pull additional models: ollama pull gemma3 · ollama pull deepseek-coder · ollama pull llama3. "
         "ShadowCypher auto-detects whichever model is running."), False, False, 0)
-    return v
+    return p
 
 
-def build_privacy():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("SECURITY · 07", "Privacy & Encryption",
-        "Layered privacy: always-on DNS encryption, Tor-ready, hardware-backed vaults."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
+def pg_privacy():
+    p = vbox(16)
+    p.pack_start(sec_header("SECURITY  ·  07 / 13", "Privacy & Encryption",
+        "Layered by default: encrypted DNS, hardened browsers, local vaults."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
 
-    v.pack_start(_h("Always active (normal mode)", 13, color=GREEN), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("dnscrypt-proxy",       "Encrypts all DNS queries. Active in all modes."),
-        ("ufw",                  "Deny-all inbound firewall. Active in all modes."),
-        ("AppArmor",             "Mandatory access control for daemons."),
-        ("firejail <app>",       "Sandbox any application in a seccomp jail."),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Browsers", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("librewolf",            "Hardened Firefox — no telemetry, strict privacy defaults. Default browser."),
-        ("torbrowser-launcher",  "Tor Browser — fully Torified, anti-fingerprinting."),
-        ("mullvad-browser",      "Mullvad Browser — anti-fingerprinting without Tor."),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Encryption tools", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("keepassxc",            "Local encrypted password manager (KeePass format)."),
-        ("veracrypt",            "On-the-fly volume encryption. Create hidden volumes."),
-        ("gnupg / gpg",          "OpenPGP signing, encryption, key management."),
-        ("yubikey-manager",      "Configure YubiKey OTP, FIDO2, PIV."),
-        ("age",                  "Modern file encryption (available via pacman)."),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Network privacy", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("sudo shadow-mode privacy",  "Route all traffic through Tor, MAC randomize, lock DNS."),
-        ("sudo shadow-mode ghost",    "Maximum lockdown — see Ghost Mode section."),
-        ("shadowos-vpn-killswitch",   "Standalone iptables kill-switch for WireGuard/OpenVPN."),
-        ("tor",                       "Control Tor directly: torrc at /etc/tor/torrc."),
-        ("proxychains4 <cmd>",        "Force any tool through SOCKS proxy."),
-    ]), False, False, 0)
-
-    v.pack_start(_code_block(
-        "# Check what DNS you're actually using\nresolvectl status | grep 'DNS Server'\n\n"
-        "# Test Tor connectivity\ncurl --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip",
-        demo_cmd="resolvectl status 2>/dev/null | grep -A2 'Link' | head -20"
+    p.pack_start(two_col(
+        [
+            h3("Always on (every mode)", _G),
+            cmd_table([
+                ("dnscrypt-proxy",   "Encrypted DNS queries. Active in all modes."),
+                ("ufw",              "Deny-all inbound firewall. Active in all modes."),
+                ("AppArmor",         "Mandatory access control for system daemons."),
+                ("firejail <app>",   "Sandbox any application in a seccomp jail."),
+            ]),
+            spacer(8),
+            h3("Browsers", _B),
+            cmd_table([
+                ("librewolf",           "Hardened Firefox. No telemetry. Default browser."),
+                ("torbrowser-launcher", "Tor Browser. Fully Torified, anti-fingerprinting."),
+                ("mullvad-browser",     "Anti-fingerprinting without Tor."),
+            ]),
+        ],
+        [
+            h3("Encryption tools", _G),
+            cmd_table([
+                ("keepassxc",       "Encrypted password manager (KeePass format)."),
+                ("veracrypt",       "On-the-fly volume encryption. Hidden volumes."),
+                ("gnupg / gpg",     "OpenPGP signing, encryption, key management."),
+                ("yubikey-manager", "Configure YubiKey OTP, FIDO2, PIV."),
+            ]),
+            spacer(8),
+            h3("Network privacy", _B),
+            cmd_table([
+                ("sudo shadow-mode privacy",    "Tor + MAC randomize + DNS lock"),
+                ("sudo shadow-mode ghost",      "Maximum lockdown — see Ghost Mode"),
+                ("proxychains4 <cmd>",          "Force any tool through SOCKS proxy"),
+                ("shadowos-vpn-killswitch",     "Standalone kill-switch for VPN connections"),
+            ]),
+        ]
     ), False, False, 0)
-    return v
+
+    p.pack_start(code_block(
+        "# Verify your DNS is actually encrypted\nresolvectl status | grep 'DNS Server'\n\n"
+        "# Test Tor connectivity\ncurl --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip",
+        demo_cmd="resolvectl status 2>/dev/null | grep -A3 'Global' | head -8"
+    ), False, False, 0)
+    return p
 
 
-def build_terminal():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("TOOLS · 08", "Terminal & Shell",
+def pg_terminal():
+    p = vbox(16)
+    p.pack_start(sec_header("TOOLS  ·  08 / 13", "Terminal & Shell",
         "foot terminal, zsh with starship prompt, and a curated CLI toolkit."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
 
-    v.pack_start(_h("foot terminal", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("SUPER + Enter",          "New terminal window"),
-        ("CTRL + SHIFT + N",       "New foot window (foot server mode)"),
-        ("CTRL + SHIFT + C/V",     "Copy / paste"),
-        ("CTRL + SHIFT + +/-",     "Font size increase / decrease"),
-        ("CTRL + SHIFT + U",       "Unicode input mode"),
-        ("foot --server",          "Runs as daemon (faster launch). Already running."),
-    ]), False, False, 0)
+    p.pack_start(two_col(
+        [
+            h3("foot terminal"),
+            key_table([
+                ("SUPER + Enter",      "New terminal"),
+                ("CTRL+SHIFT+N",       "New foot window (daemon mode)"),
+                ("CTRL+SHIFT+C/V",     "Copy / Paste"),
+                ("CTRL+SHIFT +/-",     "Font size"),
+                ("CTRL+SHIFT+U",       "Unicode input"),
+            ]),
+            spacer(8),
+            h3("Navigation"),
+            cmd_table([
+                ("z <partial>",     "Jump to recent dir (zoxide)"),
+                ("fzf",             "Fuzzy finder — CTRL+R history, CTRL+T files"),
+                ("CTRL+R",          "Fuzzy shell history search"),
+            ]),
+        ],
+        [
+            h3("Modern CLI tools"),
+            cmd_table([
+                ("eza",      "ls with icons, git status, tree view"),
+                ("bat",      "cat with syntax highlighting"),
+                ("rg",       "ripgrep — fast recursive search"),
+                ("fd",       "Fast find replacement"),
+                ("btop",     "Full system monitor (SUPER+N)"),
+                ("httpie",   "Friendly HTTP client"),
+                ("yq / jq",  "YAML / JSON processors"),
+                ("tmux",     "Terminal multiplexer (prefix: CTRL+B)"),
+                ("starship", "Cross-shell prompt with git, env info"),
+            ]),
+        ]
+    ), False, False, 0)
 
-    v.pack_start(_h("Shell tools pre-installed", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("eza",             "ls replacement — colors, icons, git status, tree view"),
-        ("bat",             "cat replacement — syntax highlighting, line numbers"),
-        ("ripgrep (rg)",    "Fast recursive grep — respects .gitignore"),
-        ("fd",              "Fast find replacement — sensible defaults"),
-        ("fzf",             "Fuzzy finder — CTRL+R for history, CTRL+T for files"),
-        ("btop",            "Full-featured system monitor (SUPER+N)"),
-        ("fastfetch",       "System info display (runs at terminal open)"),
-        ("starship",        "Cross-shell prompt with git status, Python env, etc."),
-        ("tmux",            "Terminal multiplexer — prefix is CTRL+B"),
-        ("zoxide (z)",      "Smart directory jumper — 'z proj' jumps to last /projects/myapp"),
-        ("httpie (http)",   "Friendly HTTP client — 'http GET api.example.com'"),
-        ("yq / jq",         "YAML and JSON processors"),
-    ]), False, False, 0)
-
-    v.pack_start(_code_block(
-        "# List with icons\neza -la --icons\n\n"
-        "# Preview files\nbat /etc/shadowos/install/archinstall.json\n\n"
-        "# Fuzzy-find and open\nrg 'shadow-mode' /usr/local/bin/ | fzf",
+    p.pack_start(code_block(
+        "eza -la --icons\nbat /etc/shadowos/install/archinstall.json\nrg 'shadow-mode' /usr/local/bin/ | fzf",
         demo_cmd="eza -la --icons /usr/local/bin/shadow* 2>/dev/null || ls /usr/local/bin/shadow*"
     ), False, False, 0)
-
-    v.pack_start(_tip("💡",
-        "The zsh config sources /etc/shadowos/zshrc.d/ — drop custom aliases or functions "
-        "there and they survive shadow-update."), False, False, 0)
-    return v
+    return p
 
 
-def build_dev():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("TOOLS · 09", "Development",
-        "Full dev stack: editors, languages, containers, Kubernetes, and Distrobox."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
+def pg_dev():
+    p = vbox(16)
+    p.pack_start(sec_header("TOOLS  ·  09 / 13", "Development",
+        "Full stack: editors, languages, containers, Kubernetes, Distrobox."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
 
-    v.pack_start(_h("Editors", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("code",      "VS Code (SUPER+C)"),
-        ("nvim",      "Neovim (SUPER+SHIFT+C opens in terminal)"),
-        ("helix",     "Helix editor — modal, built-in LSP, tree-sitter"),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Languages & runtimes", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("python / pip / uv",  "Python 3.x, pip, uv for fast venv management"),
-        ("node / npm / pnpm",  "Node.js with npm and pnpm"),
-        ("go",                 "Go toolchain"),
-        ("rustup / cargo",     "Rust with rustup toolchain manager"),
-        ("java / gradle",      "JDK + Gradle"),
-        ("ruby / gem",         "Ruby with bundler"),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Containers & orchestration", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("docker / docker compose",    "Docker Engine + Compose v2"),
-        ("podman / buildah",           "Rootless container build and run"),
-        ("distrobox",                  "Run any Linux distro as a container sharing your home"),
-        ("kubectl / helm / terraform", "Kubernetes and IaC tooling"),
-        ("ansible",                    "Configuration management"),
-    ]), False, False, 0)
-
-    v.pack_start(_code_block(
-        "# Spin up a Kali container sharing your home dir\ndistrobox create --name kali --image kalilinux/kali-rolling\ndistrobox enter kali\n\n"
-        "# Run a web server in docker\ndocker run -p 8080:80 nginx",
-        demo_cmd="docker --version && podman --version && distrobox --version 2>/dev/null"
+    p.pack_start(two_col(
+        [
+            h3("Editors"),
+            cmd_table([
+                ("code",   "VS Code (SUPER+C)"),
+                ("nvim",   "Neovim (SUPER+SHIFT+C)"),
+                ("helix",  "Helix — modal, built-in LSP + tree-sitter"),
+            ]),
+            spacer(8),
+            h3("Languages"),
+            cmd_table([
+                ("python / uv",      "Python 3 + uv fast venv management"),
+                ("node / pnpm",      "Node.js + pnpm"),
+                ("go",               "Go toolchain"),
+                ("rustup / cargo",   "Rust with rustup toolchain manager"),
+                ("java / gradle",    "JDK + Gradle"),
+            ]),
+        ],
+        [
+            h3("Containers"),
+            cmd_table([
+                ("docker",        "Docker Engine + Compose v2"),
+                ("podman",        "Rootless container runtime"),
+                ("distrobox",     "Run any Linux distro sharing your home dir"),
+                ("kubectl",       "Kubernetes CLI"),
+                ("terraform",     "Infrastructure as code"),
+                ("ansible",       "Configuration management"),
+            ]),
+        ]
     ), False, False, 0)
 
-    v.pack_start(_tip("💡",
-        "Use 'shadow-mode dev' to open Docker/Podman socket access and local-network ports. "
+    p.pack_start(code_block(
+        "# Kali container sharing your home\ndistrobox create --name kali --image kalilinux/kali-rolling\ndistrobox enter kali\n\n"
+        "# Start a web server\ndocker run -p 8080:80 nginx",
+        demo_cmd="docker --version; podman --version; distrobox --version 2>/dev/null"
+    ), False, False, 0)
+    p.pack_start(tip("💡",
+        "shadow-mode dev opens Docker/Podman socket access and local-network ports. "
         "Returns to normal mode firewall on 'shadow-mode normal'."), False, False, 0)
-    return v
+    return p
 
 
-def build_gaming():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("TOOLS · 10", "Gaming",
-        "Steam, Lutris, Heroic, MangoHUD, Wine. SUPER+F10 to maximize performance."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
+def pg_gaming():
+    p = vbox(16)
+    p.pack_start(sec_header("TOOLS  ·  10 / 13", "Gaming",
+        "Steam, Lutris, Heroic, MangoHUD, Wine. SUPER+F10 for max performance."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+    p.pack_start(code_block("SUPER + F10              # gaming mode (CPU boost, GPU clocks)\nSUPER + SHIFT + F10      # return to normal"), False, False, 0)
 
-    v.pack_start(_code_block("SUPER + F10              # switch to gaming mode (CPU boost, GPU clocks)\nSUPER + SHIFT + F10      # return to normal mode"), False, False, 0)
-
-    v.pack_start(_h("Launchers", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("steam",                    "Steam (SUPER+G). Proton enabled by default."),
-        ("lutris",                   "Lutris — GOG, Epic, Battle.net via community scripts."),
-        ("heroic",                   "Heroic Games Launcher — Epic + GOG natively (via firstboot)."),
-        ("prismlauncher",            "Prism Launcher — Minecraft with mod support."),
-        ("bottles",                  "Bottles — isolated Wine environments (via firstboot flatpak)."),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Performance layer", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("gamemoderun <game>",       "Activate GameMode for a specific game."),
-        ("mangohud <game>",          "Overlay: FPS, GPU/CPU usage, frame time, temps."),
-        ("gamescope -w 1920 -h 1080","Wayland micro-compositor for games — fixes scaling issues."),
-        ("goverlay",                 "GUI to configure MangoHUD overlay settings."),
-        ("protonup-qt",              "Install custom Proton versions (via firstboot flatpak)."),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Wine & compatibility", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("wine <exe>",               "Run Windows executables directly."),
-        ("winetricks <verb>",        "Install Wine components (vcredist, directx, etc.)."),
-        ("vkd3d-proton",             "DirectX 12 on Vulkan — used by Proton automatically."),
-    ]), False, False, 0)
-
-    v.pack_start(_tip("💡",
-        "Gaming mode (SUPER+F10) runs 'shadow-play' which calls cpupower to set performance governor, "
-        "flips GPU clocks, and enables GameMode globally. Your security posture is unchanged."), False, False, 0)
-    return v
+    p.pack_start(two_col(
+        [
+            h3("Launchers"),
+            cmd_table([
+                ("steam",           "Steam (SUPER+G). Proton enabled by default."),
+                ("lutris",          "Lutris — GOG, Epic, Battle.net via community scripts."),
+                ("heroic",          "Heroic Games Launcher — Epic + GOG native (firstboot install)."),
+                ("prismlauncher",   "Minecraft with mod support."),
+                ("bottles",         "Isolated Wine environments (firstboot Flatpak)."),
+            ]),
+        ],
+        [
+            h3("Performance layer"),
+            cmd_table([
+                ("gamemoderun <game>",  "Activate GameMode for a specific binary."),
+                ("mangohud <game>",     "Overlay: FPS, GPU/CPU, temps, frame time."),
+                ("gamescope",           "Micro-compositor — fixes Wayland scaling issues."),
+                ("goverlay",            "GUI to configure MangoHUD."),
+                ("protonup-qt",         "Install custom Proton versions (firstboot Flatpak)."),
+                ("wine <exe>",          "Run Windows executables directly."),
+                ("winetricks <verb>",   "Install Wine components (vcredist, directx…)."),
+            ]),
+        ]
+    ), False, False, 0)
+    p.pack_start(tip("💡",
+        "Gaming mode calls cpupower to set the performance governor and flips GPU clocks. "
+        "Your security posture is unchanged — it's a performance-only switch."), False, False, 0)
+    return p
 
 
-def build_sysops():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("SYSTEM · 11", "System Management",
-        "Updates, diagnostics, snapshots, and the live vs. installed system."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
+def pg_sysops():
+    p = vbox(16)
+    p.pack_start(sec_header("SYSTEM  ·  11 / 13", "System Management",
+        "Updates, diagnostics, Btrfs snapshots, and keeping the system healthy."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
 
-    v.pack_start(_h("Updates", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("shadow-update",            "Smart updater — reads current mode, pauses if Tor-only."),
-        ("sudo pacman -Syu",         "Direct Arch package update (all repos: core, extra, BlackArch, Chaotic)."),
-        ("flatpak update",           "Update Flatpak apps (Heroic, Bottles, ProtonUp)."),
-        ("sudo shadowos-firstboot",  "Re-run first-boot tasks (install extras from GitHub/AUR)."),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Diagnostics", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("shadowos-diag",            "Bundle journal + hyprland.log + system info into a tarball."),
-        ("shadow-mode status",       "Current mode, live Tor/DNS/MAC/firewall checks."),
-        ("shadow-leak-test",         "Full anonymity audit — verifies 6 leak vectors."),
-        ("journalctl -xe",           "Full system journal (recent errors at bottom)."),
-        ("systemctl --failed",       "Show any failed systemd units."),
-    ]), False, False, 0)
-
-    v.pack_start(_h("Snapshots (Btrfs)", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("sudo snapper -c root create --description 'before update'", "Create system snapshot."),
-        ("sudo snapper -c root list",  "List all snapshots."),
-        ("sudo snapper -c root undochange 5..0 /", "Roll back to snapshot 5."),
-    ]), False, False, 0)
-
-    v.pack_start(_code_block(
-        "# Full system health at a glance\nfastfetch\nshadow-mode status\nsystemctl --failed --no-pager",
-        demo_cmd="systemctl --failed --no-pager 2>/dev/null; echo '---'; df -h / 2>/dev/null"
+    p.pack_start(two_col(
+        [
+            h3("Updates"),
+            cmd_table([
+                ("shadow-update",       "Smart updater — pauses if Tor-only mode active."),
+                ("sudo pacman -Syu",    "Direct Arch update (core + BlackArch + Chaotic-AUR)."),
+                ("flatpak update",      "Update Flatpak apps (Heroic, Bottles, ProtonUp)."),
+            ]),
+            spacer(8),
+            h3("Diagnostics"),
+            cmd_table([
+                ("shadowos-diag",       "Bundle journal + logs into a diagnostics tarball."),
+                ("shadow-mode status",  "Mode + live Tor/DNS/MAC/firewall checks."),
+                ("shadow-leak-test",    "Full anonymity audit — 6 leak vectors tested."),
+                ("journalctl -xe",      "Full system journal."),
+                ("systemctl --failed",  "Show failed systemd units."),
+            ]),
+        ],
+        [
+            h3("Btrfs snapshots"),
+            cmd_table([
+                ("sudo snapper -c root create --description 'pre-update'", "Create snapshot"),
+                ("sudo snapper -c root list",                              "List snapshots"),
+                ("sudo snapper -c root undochange 5..0 /",                "Roll back to #5"),
+            ]),
+            spacer(8),
+            h3("Hardware info"),
+            cmd_table([
+                ("fastfetch",       "Full system info display."),
+                ("inxi -Fz",        "Detailed hardware report."),
+                ("lspci",           "PCI devices (GPU, network card…)."),
+                ("lsblk",           "Block devices and mount points."),
+                ("free -h",         "RAM usage."),
+            ]),
+        ]
     ), False, False, 0)
 
-    v.pack_start(_tip("💡",
-        "The Waybar top-right shows a running update counter. "
-        "Click it (or run shadow-update-count) to see exactly which packages are pending."), False, False, 0)
-    return v
+    p.pack_start(code_block(
+        "fastfetch\nshadow-mode status\nsystemctl --failed --no-pager",
+        demo_cmd="systemctl --failed --no-pager; echo '---'; df -h /"
+    ), False, False, 0)
+    return p
 
 
-def build_install():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("SYSTEM · 12", "Installing to Disk",
-        "Two paths: terminal installer (shadowos-install) or Calamares GUI."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
+def pg_install():
+    p = vbox(16)
+    p.pack_start(sec_header("SYSTEM  ·  12 / 13", "Installing to Disk",
+        "Two paths: shadowos-install (terminal) or Calamares (GUI)."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
 
-    v.pack_start(_h("Option A — Terminal (recommended)", 13, color=GREEN), False, False, 0)
-    v.pack_start(_code_block(
-        "shadowos-install\n\n"
-        "# Interactive prompts:\n"
-        "#  · Target disk (ERASES ENTIRELY)\n"
-        "#  · LUKS2 full-disk encryption (strongly recommended)\n"
-        "#  · Username + passwords\n"
-        "#  · Install profile (Minimal / Security Pro / Everything)\n"
-        "#  · Timezone / locale\n"
-        "#  Pulls archinstall.json defaults — you just confirm."
+    p.pack_start(two_col(
+        [
+            h3("Option A — Terminal (recommended)", _G),
+            code_block(
+                "shadowos-install\n\n"
+                "# Prompts for:\n"
+                "#  · Target disk (will be erased)\n"
+                "#  · LUKS2 encryption (strongly recommended)\n"
+                "#  · Username + passwords\n"
+                "#  · Install profile\n"
+                "#  · Timezone / locale"
+            ),
+        ],
+        [
+            h3("Option B — Calamares (GUI)", _B),
+            code_block("calamares\n\n# Steps:\n# Welcome → Locale → Keyboard\n# → Partition → Users\n# → Package profiles → Install"),
+        ]
     ), False, False, 0)
 
-    v.pack_start(_h("Option B — Calamares GUI", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_code_block(
-        "# Click 'Install ShadowOS' in the dock, or:\ncalamares\n\n"
-        "# Walks through:\n#  Welcome → Locale → Keyboard → Partition\n"
-        "#  → Users → Package profiles → Summary → Install"
-    ), False, False, 0)
-
-    v.pack_start(_h("Install profiles", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("Minimal extras",   "Just the Hyprland desktop. Add what you need via pacman."),
-        ("Security Pro",     "Full pentest arsenal — nmap, Metasploit, nuclei, impacket, netexec…"),
-        ("Gaming",           "Steam, Lutris, Heroic, MangoHUD, GameMode, Wine."),
-        ("Development",      "VSCode, Docker, Kubernetes, Rust, Go, Node."),
-        ("Creator",          "GIMP, Inkscape, Blender, Krita, OBS, LibreOffice."),
+    p.pack_start(h3("Package profiles"), False, False, 0)
+    p.pack_start(cmd_table([
+        ("Minimal extras",  "Hyprland desktop only. Add what you need via pacman."),
+        ("Security Pro",    "Full pentest arsenal — nmap, Metasploit, nuclei, impacket, netexec…"),
+        ("Gaming",          "Steam, Lutris, Heroic, MangoHUD, GameMode, Wine."),
+        ("Development",     "VSCode, Docker, Kubernetes, Rust, Go, Node."),
+        ("Creator",         "GIMP, Inkscape, Blender, Krita, OBS, LibreOffice."),
     ]), False, False, 0)
 
-    v.pack_start(_h("After install", 13, color=ACCENT), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("First boot",           "shadowos-firstboot runs automatically: installs Flatpaks, hysteria2, Bibata cursors."),
-        ("SDDM login",           "Enter your set password. Autologin disabled on installed systems."),
-        ("shadowos-welcome",     "First-login wizard: pick mode, set hostname, configure API key."),
+    p.pack_start(h3("After install"), False, False, 0)
+    p.pack_start(cmd_table([
+        ("First boot",         "shadowos-firstboot runs: installs Flatpaks, hysteria2, cursors."),
+        ("SDDM login",         "Enter your set password — autologin is disabled on installed systems."),
+        ("shadowos-welcome",   "First-login wizard: set mode, hostname, ShadowCypher API key."),
+        ("shadowos-tour",      "This tour — launches automatically after the welcome wizard."),
     ]), False, False, 0)
 
-    v.pack_start(_tip("🔒",
-        "Always enable LUKS2 full-disk encryption at install. "
-        "If your hardware is physically seized, unencrypted data is trivially readable regardless of OS.", "warn-card"), False, False, 0)
-    return v
+    p.pack_start(tip("🔒",
+        "Always enable LUKS2 full-disk encryption. Unencrypted drives are trivially readable "
+        "if physically seized, regardless of OS or passwords.", "card-warn"), False, False, 0)
+    return p
 
 
-def build_emergency():
-    v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-    v.pack_start(_section_hdr("SYSTEM · 13", "Emergency Protocols",
-        "When seconds matter: panic wipe, session termination, evidence destruction."), False, False, 0)
-    v.pack_start(_sep(), False, False, 0)
+def pg_emergency():
+    p = vbox(16)
+    p.pack_start(sec_header("SYSTEM  ·  13 / 13", "Emergency Protocols",
+        "When seconds matter. Graduated response from lock to total wipe."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
 
-    v.pack_start(_tip("⚠️",
-        "All actions in this section are IRREVERSIBLE. "
-        "Read carefully. These tools exist so you can use them deliberately — not accidentally.", "danger-card"), False, False, 0)
+    p.pack_start(tip("⚠️",
+        "Everything in this section is IRREVERSIBLE. These tools exist so you can use "
+        "them deliberately — not accidentally.", "card-danger"), False, False, 0)
 
-    v.pack_start(_h("Graduated response", 13, color=RED), False, False, 0)
     steps = [
-        ("1. Lock screen",         "SUPER + L — immediate session lock. Password required to resume."),
-        ("2. Engage ghost",        "sudo shadow-mode ghost — kill-switch on, Tor routing, logs suppressed."),
-        ("3. Wipe session data",   "shadow-wipe — destroys RAM workspace, session keys, temp files."),
-        ("4. ShadowCypher PANIC",  "Wraith Protocol → Spectre Flash-Wipe: destroys all keys, vault, configs, logs."),
-        ("5. LUKS device",         "If drive is seized: without your passphrase, LUKS data is cryptographically inaccessible."),
+        ("01  Lock",          _S,  "SUPER + L — immediate session lock."),
+        ("02  Ghost Mode",    _A,  "sudo shadow-mode ghost — kill-switch on, Tor routing, logs suppressed."),
+        ("03  Wipe Session",  _A,  "shadow-wipe — destroys RAM workspace, session keys, temp files."),
+        ("04  ShadowCypher",  _R,  "Wraith Protocol → Spectre Flash-Wipe: destroys all keys, vault, configs, logs."),
+        ("05  LUKS",          _R,  "Unencrypted drive seized = data accessible. No passphrase = cryptographic wall."),
     ]
-    for step, desc in steps:
-        row = Gtk.Box(spacing=12)
-        s = Gtk.Label()
-        s.set_markup(f'<span font_family="monospace" color="{RED}" font_weight="bold">{GLib.markup_escape_text(step)}</span>')
-        s.set_xalign(0)
-        s.set_size_request(220, -1)
-        row.pack_start(s, False, False, 0)
-        d = Gtk.Label(label=desc)
-        d.set_markup(f'<span color="#64748b" font_size="12000">{GLib.markup_escape_text(desc)}</span>')
-        d.set_xalign(0)
-        d.set_line_wrap(True)
-        d.set_hexpand(True)
-        row.pack_start(d, True, True, 0)
-        v.pack_start(row, False, False, 0)
+    for step, col, desc in steps:
+        row = hbox(14)
+        sl = mlbl(f'<span font_family="JetBrains Mono, monospace" font_weight="bold" '
+                  f'font_size="11000" color="{col}">{GLib.markup_escape_text(step)}</span>',
+                  xalign=0, wrap=False)
+        sl.set_size_request(160, -1)
+        row.pack_start(sl, False, False, 0)
+        dl = lbl(desc, "dim")
+        dl.set_hexpand(True)
+        row.pack_start(dl, True, True, 0)
+        p.pack_start(row, False, False, 0)
 
-    v.pack_start(_sep(), False, False, 0)
-    v.pack_start(_h("Commands", 13, color=RED), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("shadow-wipe",                "Destroy RAM workspace, session keys, and temp artifacts."),
-        ("shadowos-ramwipe",           "Overwrite free RAM pages with zeros (secure after sensitive work)."),
-        ("mat2 <file>",                "Strip all metadata from documents, images, PDFs."),
-        ("shred -vuz <file>",          "Overwrite and delete a file (7-pass)."),
-        ("sudo shadowos-apply-fixes wipe", "Full forensic cleanup: shell histories, logs, thumbnails, recent files."),
+    p.pack_start(sep(), False, False, 0)
+    p.pack_start(h3("Commands"), False, False, 0)
+    p.pack_start(cmd_table([
+        ("shadow-wipe",               "Destroy RAM workspace, session keys, temp artifacts."),
+        ("shadowos-ramwipe",          "Overwrite free RAM with zeros after sensitive work."),
+        ("mat2 <file>",               "Strip all metadata from documents, images, PDFs."),
+        ("shred -vuz <file>",         "7-pass file destruction."),
+        ("sudo shadowos-apply-fixes wipe", "Full forensic cleanup: histories, logs, thumbnails, recent files."),
+        ("shadow-help-me",            "Open Tor .onion SSH for trusted remote access."),
+        ("shadow-help-me-stop",       "Close the .onion immediately."),
     ]), False, False, 0)
-
-    v.pack_start(_h("Remote emergency access", 13, color=AMBER), False, False, 0)
-    v.pack_start(_cmd_table([
-        ("shadow-help-me",             "Opens SSH via Tor .onion — lets a trusted person access your system remotely."),
-        ("shadow-help-me-stop",        "Immediately closes the .onion tunnel."),
-        ("shadow-help-me 30",          "Time-limited: auto-closes after 30 minutes."),
-    ]), False, False, 0)
-
-    v.pack_start(_code_block(
-        "# If you need to leave fast:\nsuper+L              # lock\n# then if needed:\nsudo shadow-mode ghost\nshadow-wipe"
-    ), False, False, 0)
-    return v
+    p.pack_start(code_block("# Fast exit sequence:\n# SUPER+L  →  sudo shadow-mode ghost  →  shadow-wipe"), False, False, 0)
+    return p
 
 
-PAGE_BUILDERS = {
-    "overview":     build_overview,
-    "desktop":      build_desktop,
-    "modes":        build_modes,
-    "ghost":        build_ghost,
-    "pentest":      build_pentest,
-    "shadowcypher": build_shadowcypher,
-    "privacy":      build_privacy,
-    "terminal":     build_terminal,
-    "dev":          build_dev,
-    "gaming":       build_gaming,
-    "sysops":       build_sysops,
-    "install":      build_install,
-    "emergency":    build_emergency,
+PAGE_FNS = {
+    "overview":     pg_overview,
+    "desktop":      pg_desktop,
+    "modes":        pg_modes,
+    "ghost":        pg_ghost,
+    "pentest":      pg_pentest,
+    "shadowcypher": pg_shadowcypher,
+    "privacy":      pg_privacy,
+    "terminal":     pg_terminal,
+    "dev":          pg_dev,
+    "gaming":       pg_gaming,
+    "sysops":       pg_sysops,
+    "install":      pg_install,
+    "emergency":    pg_emergency,
 }
 
 
-# ── Main window ───────────────────────────────────────────────────────────────
+# ── Window ────────────────────────────────────────────────────────────────────
 
-class ShadowOSTour(Gtk.Window):
+class Tour(Gtk.Window):
     def __init__(self):
         super().__init__(title="ShadowOS Tour")
-        self.set_default_size(1100, 720)
+        self.set_default_size(1140, 740)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.connect("delete-event", Gtk.main_quit)
 
         prov = Gtk.CssProvider()
-        prov.load_from_data(CSS)
+        prov.load_from_data(CSS.encode())
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
-        self._section_ids = [s[0] for s in SECTIONS]
-        self._current     = 0
-        self._pages       = {}   # lazily built
-        self._rows        = {}   # sidebar rows keyed by id
+        self._ids    = [s[0] for s in SECTIONS]
+        self._cur    = 0
+        self._pages  = {}
+        self._rows   = {}
 
-        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        root = vbox(0)
         self.add(root)
 
-        # ── Top bar ──
-        topbar = Gtk.Box(spacing=12)
-        topbar.set_margin_start(16)
-        topbar.set_margin_end(16)
-        topbar.set_margin_top(10)
-        topbar.set_margin_bottom(10)
+        # ── Top bar ──────────────────────────────────────────────────────────
+        tb = hbox(16)
+        tb.get_style_context().add_class("topbar")
+        tb.set_margin_start(20)
+        tb.set_margin_end(20)
+        tb.set_margin_top(12)
+        tb.set_margin_bottom(12)
 
-        logo = Gtk.Label()
-        logo.set_markup(f'<span font_weight="900" font_size="14000" color="{ACCENT}">SHADOWOS</span>'
-                        f'<span color="#334155" font_size="14000">  //  </span>'
-                        f'<span color="#64748b" font_size="12000">FULL OPERATOR TOUR</span>')
-        topbar.pack_start(logo, False, False, 0)
+        logo_box = vbox(1)
+        logo_box.pack_start(lbl("SHADOWOS", "topbar-logo", wrap=False), False, False, 0)
+        logo_box.pack_start(lbl("FULL OPERATOR TOUR", "topbar-sub", wrap=False), False, False, 0)
+        tb.pack_start(logo_box, False, False, 0)
 
         self._progress = Gtk.ProgressBar()
         self._progress.set_hexpand(True)
         self._progress.set_valign(Gtk.Align.CENTER)
-        topbar.pack_start(self._progress, True, True, 0)
+        tb.pack_start(self._progress, True, True, 0)
 
-        self._step_lbl = Gtk.Label()
-        self._step_lbl.get_style_context().add_class("section-badge")
-        topbar.pack_end(self._step_lbl, False, False, 0)
+        self._step_lbl = lbl("", "step-badge", wrap=False)
+        tb.pack_end(self._step_lbl, False, False, 0)
 
-        root.pack_start(topbar, False, False, 0)
+        root.pack_start(tb, False, False, 0)
 
-        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-        root.pack_start(sep, False, False, 0)
-
-        # ── Body: sidebar + content ──
+        # ── Body ─────────────────────────────────────────────────────────────
         body = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
-        body.set_position(220)
+        body.set_position(234)
         root.pack_start(body, True, True, 0)
 
         # Sidebar
-        sidebar_scroll = Gtk.ScrolledWindow()
-        sidebar_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        sidebar_scroll.get_style_context().add_class("sidebar")
-        sidebar_scroll.set_size_request(220, -1)
+        sb_sw = Gtk.ScrolledWindow()
+        sb_sw.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        sb_sw.set_size_request(234, -1)
 
-        sidebar_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        sidebar_vbox.get_style_context().add_class("sidebar")
-        sidebar_vbox.set_margin_top(8)
-        sidebar_vbox.set_margin_bottom(8)
+        sb_list = Gtk.ListBox()
+        sb_list.get_style_context().add_class("sb-list")
+        sb_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        sb_list.connect("row-selected", self._on_row_selected)
 
         prev_group = None
         for sec_id, icon, name, group in SECTIONS:
             if group != prev_group:
-                grp_lbl = Gtk.Label(label=group)
-                grp_lbl.get_style_context().add_class("sidebar-section-hdr")
-                grp_lbl.set_xalign(0)
-                sidebar_vbox.pack_start(grp_lbl, False, False, 0)
+                grp_row = Gtk.ListBoxRow()
+                grp_row.set_sensitive(False)
+                grp_row.set_selectable(False)
+                gl = lbl(group, "sb-group", wrap=False)
+                grp_row.add(gl)
+                sb_list.add(grp_row)
                 prev_group = group
 
-            row = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
-            row.get_style_context().add_class("sidebar-row")
-            row.set_margin_start(0)
-
-            ico = Gtk.Label(label=icon)
-            ico.get_style_context().add_class("sidebar-icon")
-            row.pack_start(ico, False, False, 0)
-
-            nm = Gtk.Label(label=name)
-            nm.get_style_context().add_class("sidebar-name")
-            nm.set_xalign(0)
-            nm.set_hexpand(True)
-            row.pack_start(nm, True, True, 0)
-
-            eb = Gtk.EventBox()
-            eb.add(row)
-            _id = sec_id
-            eb.connect("button-press-event", lambda _eb, _ev, sid=_id: self._goto_id(sid))
-
-            sidebar_vbox.pack_start(eb, False, False, 0)
+            row = Gtk.ListBoxRow()
+            row.get_style_context().add_class("sb-row")
+            h = hbox(10)
+            h.set_margin_start(8)
+            h.set_margin_end(8)
+            h.set_margin_top(4)
+            h.set_margin_bottom(4)
+            il = lbl(icon, "sb-icon", wrap=False)
+            nl = lbl(name, "sb-label", wrap=False)
+            nl.set_hexpand(True)
+            h.pack_start(il, False, False, 0)
+            h.pack_start(nl, True, True, 0)
+            row.add(h)
+            row._sec_id = sec_id
+            sb_list.add(row)
             self._rows[sec_id] = row
 
-        sidebar_scroll.add(sidebar_vbox)
-        body.add1(sidebar_scroll)
+        sb_sw.add(sb_list)
+        self._sb_list = sb_list
+        body.add1(sb_sw)
 
         # Content
-        self._content_scroll = Gtk.ScrolledWindow()
-        self._content_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        body.add2(self._content_scroll)
+        self._content_sw = Gtk.ScrolledWindow()
+        self._content_sw.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self._content_sw.get_style_context().add_class("content-bg")
+        body.add2(self._content_sw)
 
-        # ── Bottom bar ──
-        sep2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-        root.pack_start(sep2, False, False, 0)
+        # ── Bottom bar ───────────────────────────────────────────────────────
+        bb = hbox(10)
+        bb.get_style_context().add_class("botbar")
+        bb.set_margin_start(20)
+        bb.set_margin_end(20)
+        bb.set_margin_top(10)
+        bb.set_margin_bottom(10)
 
-        botbar = Gtk.Box(spacing=10)
-        botbar.set_margin_start(16)
-        botbar.set_margin_end(16)
-        botbar.set_margin_top(10)
-        botbar.set_margin_bottom(10)
+        self._prev_btn = Gtk.Button(label="← Back")
+        self._prev_btn.get_style_context().add_class("btn-nav")
+        self._prev_btn.connect("clicked", lambda _: self._goto(self._cur - 1))
+        bb.pack_start(self._prev_btn, False, False, 0)
 
-        self._prev_btn = Gtk.Button(label="← Previous")
-        self._prev_btn.get_style_context().add_class("nav")
-        self._prev_btn.connect("clicked", self._on_prev)
-        botbar.pack_start(self._prev_btn, False, False, 0)
+        bb.pack_start(Gtk.Box(), True, True, 0)
 
-        botbar.pack_start(Gtk.Box(), True, True, 0)  # spacer
+        self._cur_label = mlbl(f'<span color="{_M}" font_size="11000">—</span>', wrap=False)
+        bb.pack_start(self._cur_label, False, False, 0)
 
-        self._section_title_lbl = Gtk.Label()
-        self._section_title_lbl.set_markup(f'<span color="#334155" font_size="11000">—</span>')
-        botbar.pack_start(self._section_title_lbl, False, False, 0)
-
-        botbar.pack_start(Gtk.Box(), True, True, 0)  # spacer
+        bb.pack_start(Gtk.Box(), True, True, 0)
 
         self._next_btn = Gtk.Button(label="Next →")
-        self._next_btn.get_style_context().add_class("nav")
-        self._next_btn.connect("clicked", self._on_next)
-        botbar.pack_start(self._next_btn, False, False, 0)
+        self._next_btn.get_style_context().add_class("btn-nav")
+        self._next_btn.connect("clicked", lambda _: self._goto(self._cur + 1))
+        bb.pack_start(self._next_btn, False, False, 0)
 
-        self._finish_btn = Gtk.Button(label="✓ Finish tour")
-        self._finish_btn.get_style_context().add_class("finish")
+        self._finish_btn = Gtk.Button(label="✓  Done — go operate")
+        self._finish_btn.get_style_context().add_class("btn-finish")
         self._finish_btn.connect("clicked", lambda _: Gtk.main_quit())
         self._finish_btn.set_no_show_all(True)
-        botbar.pack_start(self._finish_btn, False, False, 0)
+        bb.pack_start(self._finish_btn, False, False, 0)
 
-        root.pack_start(botbar, False, False, 0)
+        root.pack_start(bb, False, False, 0)
 
         self._goto(0)
         self.show_all()
 
-    # ── Navigation ────────────────────────────────────────────────────────────
-
-    def _goto_id(self, sec_id):
-        try:
-            idx = self._section_ids.index(sec_id)
-            self._goto(idx)
-        except ValueError:
-            pass
+    def _on_row_selected(self, lb, row):
+        if row and hasattr(row, "_sec_id"):
+            idx = self._ids.index(row._sec_id)
+            if idx != self._cur:
+                self._cur = idx
+                self._render()
 
     def _goto(self, idx):
-        total = len(self._section_ids)
-        idx   = max(0, min(total - 1, idx))
-        self._current = idx
+        idx = max(0, min(len(self._ids) - 1, idx))
+        self._cur = idx
+        # Select sidebar row
+        row = self._rows.get(self._ids[idx])
+        if row:
+            self._sb_list.select_row(row)
+        self._render()
 
-        # Update sidebar highlight
-        for sid, row in self._rows.items():
-            ctx = row.get_style_context()
-            if sid == self._section_ids[idx]:
-                ctx.add_class("active")
-            else:
-                ctx.remove_class("active")
+    def _render(self):
+        idx    = self._cur
+        total  = len(self._ids)
+        sec_id = self._ids[idx]
+        name   = SECTIONS[idx][2]
 
         # Build page lazily
-        sec_id = self._section_ids[idx]
         if sec_id not in self._pages:
-            builder = PAGE_BUILDERS.get(sec_id)
-            if builder:
-                content = builder()
-                content.set_margin_start(32)
-                content.set_margin_end(32)
-                content.set_margin_top(28)
-                content.set_margin_bottom(32)
-                self._pages[sec_id] = content
-                content.show_all()
+            fn = PAGE_FNS.get(sec_id)
+            if fn:
+                pg = fn()
+                pg.set_margin_start(36)
+                pg.set_margin_end(36)
+                pg.set_margin_top(32)
+                pg.set_margin_bottom(40)
+                pg.show_all()
+                self._pages[sec_id] = pg
 
         # Swap content
-        child = self._content_scroll.get_child()
+        child = self._content_sw.get_child()
         if child:
-            self._content_scroll.remove(child)
+            self._content_sw.remove(child)
         if sec_id in self._pages:
-            self._content_scroll.add(self._pages[sec_id])
+            self._content_sw.add(self._pages[sec_id])
 
-        # Scroll to top
-        adj = self._content_scroll.get_vadjustment()
-        if adj:
-            GLib.idle_add(adj.set_value, 0)
+        GLib.idle_add(self._content_sw.get_vadjustment().set_value, 0)
 
-        # Update UI state
         self._progress.set_fraction((idx + 1) / total)
-        self._step_lbl.set_text(f"{idx + 1} / {total}")
-
-        sec_name = SECTIONS[idx][2]
-        self._section_title_lbl.set_markup(
-            f'<span color="#334155" font_size="11000">{GLib.markup_escape_text(sec_name)}</span>'
-        )
+        self._step_lbl.set_text(f"{idx + 1}  /  {total}")
+        self._cur_label.set_markup(
+            f'<span color="{_M}" font_size="11000">{GLib.markup_escape_text(name)}</span>')
 
         self._prev_btn.set_sensitive(idx > 0)
-
-        is_last = idx == total - 1
-        if is_last:
+        if idx == total - 1:
             self._next_btn.hide()
             self._finish_btn.show()
         else:
             self._next_btn.show()
             self._finish_btn.hide()
 
-    def _on_next(self, _):
-        self._goto(self._current + 1)
-
-    def _on_prev(self, _):
-        self._goto(self._current - 1)
-
-
-def main():
-    win = ShadowOSTour()
-    Gtk.main()
-
 
 if __name__ == "__main__":
-    main()
+    tour = Tour()
+    Gtk.main()
