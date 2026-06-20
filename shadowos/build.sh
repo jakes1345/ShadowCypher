@@ -69,6 +69,15 @@ if [[ -f "$OSR" ]]; then
   sed -i "s/^BUILD_ID=.*/BUILD_ID=${BUILD_DATE}/" "$OSR"
 fi
 
+# Stage GRUB theme into the ISO grub directory for live-boot display
+GRUB_THEME_SRC="$PROFILE/airootfs/usr/share/grub/themes/shadowos"
+GRUB_THEME_DST="$PROFILE/grub/themes/shadowos"
+if [[ -d "$GRUB_THEME_SRC" ]]; then
+  mkdir -p "$GRUB_THEME_DST"
+  cp -r "$GRUB_THEME_SRC/." "$GRUB_THEME_DST/"
+  echo ">> GRUB theme staged → profile/grub/themes/shadowos/"
+fi
+
 echo ">> Building ShadowOS ISO (mkarchiso)"
 mkarchiso -v -w "$WORK" -o "$OUT" "$PROFILE"
 

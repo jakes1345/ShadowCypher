@@ -63,6 +63,17 @@ LAUNCHER
 fi
 chmod +x "$SC_DST/launch.sh"
 
+# Copy GRUB theme into the ISO's grub directory so it loads during live boot.
+# (The airootfs copy lives at usr/share/grub/themes/shadowos/ for the installed
+# system; the ISO GRUB looks in profile/grub/themes/ via ${prefix}/themes/.)
+GRUB_THEME_SRC="$HERE/profile/airootfs/usr/share/grub/themes/shadowos"
+GRUB_THEME_DST="$HERE/profile/grub/themes/shadowos"
+if [[ -d "$GRUB_THEME_SRC" ]]; then
+    mkdir -p "$GRUB_THEME_DST"
+    cp -r "$GRUB_THEME_SRC/." "$GRUB_THEME_DST/"
+    echo ">> GRUB theme staged → profile/grub/themes/shadowos/"
+fi
+
 echo ">> [1/3] Building builder image ($IMAGE) ..."
 docker build -t "$IMAGE" "$HERE"
 
