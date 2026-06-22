@@ -50,7 +50,6 @@ class VulnScannerPage(BasePage):
         target = self.nikto_target.get_text().strip()
         if not target:
             return
-        self.header.set_active(True)
         self.terminal.log(f"INITIATING_NIKTO_SCAN: {target}", "VULN")
         hub.dispatch_mission(f"Nikto vulnerability scan on {target}")
         self._scanner.nikto_scan(

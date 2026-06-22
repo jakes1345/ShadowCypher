@@ -78,11 +78,31 @@ class AIOrchestrator:
                             history: Optional[List[dict]] = None):
         """Initiates an autonomous MetaChain mission with optional multimodal and history context."""
         if not _AUTOAGENT_AVAILABLE:
-            msg = "[AI] autoagent not installed — high-intensity mode unavailable. Falling back via engine.generate()."
-            if callback:
-                callback(msg)
-            if on_complete:
-                on_complete(msg)
+            # MetaChain not installed — fall back to direct provider call via the active model
+            def _direct_generate():
+                from shadowcypher.ai.agents import AGENT_FLEET
+                from shadowcypher.ai.providers import provider_registry
+                spec = AGENT_FLEET.get(agent_role, AGENT_FLEET["commander"])
+                system = spec.system_prompt or "You are a helpful security assistant."
+                if callback:
+                    callback(f"[AI] Routing to {spec.name} via {provider_registry.active.name if provider_registry.active else 'provider'}...\n")
+                try:
+                    result = provider_registry.generate_stream(
+                        query, system_prompt=system,
+                        max_tokens=spec.max_tokens,
+                        temperature=spec.temperature,
+                        on_token=callback,
+                    )
+                    if on_complete:
+                        on_complete(result)
+                except Exception as e:
+                    err = f"[AI] Generation error: {e}"
+                    if callback:
+                        callback(err)
+                    if on_complete:
+                        on_complete(err)
+            threading.Thread(target=_direct_generate, daemon=True,
+                             name=f"DirectAI-{agent_role}").start()
             return
 
         from shadowcypher.ai.agents import AGENT_FLEET

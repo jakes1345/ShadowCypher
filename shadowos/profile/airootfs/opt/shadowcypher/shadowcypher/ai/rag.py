@@ -26,8 +26,9 @@ _ready = False
 
 def _get_collection():
     global _client, _collection, _ready
-    if _collection is not None:
-        return _collection
+    with _lock:
+        if _collection is not None:
+            return _collection
     try:
         import chromadb
         from chromadb.utils import embedding_functions

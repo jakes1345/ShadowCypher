@@ -129,19 +129,34 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         
         vbox_master.pack_start(self.layout_grid, True, True, 0)
 
+        # Tour panel — slides up from between layout and footer
+        from shadowcypher.ui.tour import TourPanel, tour_completed
+        self._tour = TourPanel(
+            navigate_cb=self._switch_to_page,
+            on_finish=None,
+        )
+        vbox_master.pack_start(self._tour, False, False, 0)
+
         # 3. Apex Footer
         self.footer = Gtk.ActionBar()
         self.footer.get_style_context().add_class("footer")
-        
+
         self.status_label = Gtk.Label()
         self.status_label.set_markup("FIDELITY: <span color='#f87171'>SYNC</span> | MSN: 0 | ID: ???")
         self.footer.set_center_widget(self.status_label)
-        
+
+        # "Take Tour" link in footer
+        tour_btn = Gtk.Button(label="Take Tour")
+        tour_btn.set_relief(Gtk.ReliefStyle.NONE)
+        tour_btn.get_style_context().add_class("tour-btn-skip")
+        tour_btn.connect("clicked", lambda _: self._tour.start())
+        self.footer.pack_end(tour_btn)
+
         vbox_master.pack_end(self.footer, False, False, 0)
-        
+
         # 4. Final Initialization
         self._page_registry = {}
-        
+
         self._switch_to_page("Central Command HUD")
         
         # Ensure sidebar selection reflects the initial page
@@ -162,6 +177,22 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         GLib.timeout_add(3000, self._pulse_tick)
 
         self.show_all()
+
+        # Auto-start tour on first launch (after UI is visible and welcome is done)
+        from shadowcypher.ui.tour import tour_completed
+        from shadowcypher.ui.welcome_dialog import needs_onboarding
+        if not tour_completed():
+            # Delay slightly so the window fully renders before tour slides up
+            GLib.timeout_add(800, self._maybe_start_tour)
+
+    def _maybe_start_tour(self) -> bool:
+        from shadowcypher.ui.welcome_dialog import needs_onboarding, show_welcome
+        from shadowcypher.ui.tour import tour_completed
+        if needs_onboarding():
+            show_welcome(self)
+        if not tour_completed():
+            self._tour.start()
+        return False  # one-shot
 
     def _show_update_banner(self, info: dict):
         """Show a dismissible infobar when a new version is available."""

@@ -91,8 +91,12 @@ PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING 
     def add_client(self, name: str, client_ip: str):
         """Add a mobile client (S23, S7, etc.) to the hub."""
         server_pub = ""
-        with open(os.path.join(self.base_dir, "server_public.key"), "r") as f:
-            server_pub = f.read().strip()
+        try:
+            with open(os.path.join(self.base_dir, "server_public.key"), "r") as f:
+                server_pub = f.read().strip()
+        except FileNotFoundError:
+            logger.error("sovereign_relay", "server_public.key not found — run deploy_server() first")
+            return None
             
         keys = self.generate_keys(name)
         if not keys:

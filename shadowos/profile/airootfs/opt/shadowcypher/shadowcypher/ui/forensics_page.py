@@ -55,7 +55,7 @@ class ForensicsPage(BasePage):
         self.workspace.pack_start(btn_box, False, False, 0)
 
     def _on_browse(self, btn):
-        dialog = Gtk.FileChooserDialog(title="Select file", action=Gtk.FileChooserAction.OPEN)
+        dialog = Gtk.FileChooserDialog(title="Select file", transient_for=self.get_toplevel(), action=Gtk.FileChooserAction.OPEN)
         dialog.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OPEN, Gtk.ResponseType.OK)
         if dialog.run() == Gtk.ResponseType.OK:
             self.file_entry.set_text(dialog.get_filename())

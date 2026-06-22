@@ -468,27 +468,37 @@ class ShadowHub:
 
     def dispatch_mission(self, query: str, agent_role: str = "commander") -> str:
         """Initiates a new autonomous mission.
-        
+
         Args:
             query: The mission objective.
             agent_role: The designated strike persona.
-            
+
         Returns:
             The generated unique mission ID.
         """
+        from shadowcypher.ai.agents import agent_router
+
         mission_id = f"MSN-{uuid.uuid4().hex[:8].upper()}"
         mission = Mission(id=mission_id, query=query, role=agent_role)
-        
         self.active_missions[mission_id] = mission
         self.telemetry["missions_total"] += 1
-        
-        self.orchestrator.execute_query_async(
+
+        # Map hub roles to fleet agent IDs
+        _role_map = {
+            "commander": "commander", "adversary": "security",
+            "security": "security", "recon": "recon",
+            "analyst": "analyst", "coder": "coder",
+        }
+        fleet_agent = _role_map.get(agent_role, "commander")
+
+        agent_router.dispatch_async(
             query,
             callback=lambda msg: self._update_mission(mission_id, msg),
             on_complete=lambda res: self._finalize_mission(mission_id, res),
-            agent_role=agent_role
+            force_agent=fleet_agent,
+            use_ai_routing=False,
         )
-        
+
         return mission_id
 
     def _update_mission(self, mid: str, msg: str) -> None:

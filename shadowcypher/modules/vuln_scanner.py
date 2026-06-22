@@ -6,6 +6,7 @@ Handles Nuclei, Sqlmap, Nikto, and automated vulnerability verification.
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.stealth import require_stealth
+from shadowcypher.core.mitre import mitre
 try:
     from ai_engine.autoagent.registry import register_tool
 except ImportError:
@@ -32,11 +33,13 @@ class VulnScanner(BaseModule):
             return
 
         self.log(f"INITIATING_NUCLEI_SCAN: {target}")
+        if on_output:
+            on_output(f"[NUCLEI] ATT&CK: {mitre.format_tags(mitre.tag('nuclei'))}\n")
         nuclei = self.get_tool_path("nuclei")
-        args = [nuclei, "-u", target, "-nc"] # -nc for no-color in terminal
+        args = [nuclei, "-u", target, "-nc"]
         if tags:
             args.extend(["-tags", tags])
-        
+
         return self.execute(f"NUCLEI_{target}", args, callback=on_output)
 
     @register_tool("vuln_sqlmap_scan")
@@ -51,8 +54,9 @@ class VulnScanner(BaseModule):
             return
 
         self.log(f"INITIATING_SQLMAP_SCAN: {target}")
+        if on_output:
+            on_output(f"[SQLMAP] ATT&CK: {mitre.format_tags(mitre.tag('sqlmap'))}\n")
         sqlmap = self.get_tool_path("sqlmap")
-        # Run in batch mode for autonomous flow
         args = [sqlmap, "-u", target, "--batch", "--random-agent", "--level=2"]
         return self.execute(f"SQLMAP_{target}", args, callback=on_output)
 
@@ -68,6 +72,8 @@ class VulnScanner(BaseModule):
             return
 
         self.log(f"INITIATING_NIKTO_SCAN: {target}")
+        if on_output:
+            on_output(f"[NIKTO] ATT&CK: {mitre.format_tags(mitre.tag('nikto'))}\n")
         nikto = self.get_tool_path("nikto")
         args = [nikto, "-h", target]
         return self.execute(f"NIKTO_{target}", args, callback=on_output)

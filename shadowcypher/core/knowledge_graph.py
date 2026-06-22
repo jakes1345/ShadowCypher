@@ -47,9 +47,10 @@ CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(type);
 """
 
 NODE_TYPES = {"TARGET", "SERVICE", "CVE", "EXPLOIT", "MISSION", "CREDENTIAL",
-              "DOMAIN", "USER", "HOST", "NETWORK", "PAYLOAD"}
+              "DOMAIN", "USER", "HOST", "NETWORK", "PAYLOAD", "TECHNIQUE"}
 EDGE_TYPES = {"RUNS", "VULNERABLE_TO", "EXPLOITED_BY", "PART_OF", "OWNS",
-              "LATERAL_TO", "MEMBER_OF", "CONNECTS_TO", "FOUND_ON", "USED_IN"}
+              "LATERAL_TO", "MEMBER_OF", "CONNECTS_TO", "FOUND_ON", "USED_IN",
+              "MAPS_TO"}
 
 
 class KnowledgeGraph:
@@ -232,6 +233,8 @@ class KnowledgeGraph:
 
     def ingest_red_team_mission(self, ctx) -> int:
         """Bulk-ingest a MissionContext from adversary_sim into the graph."""
+        from shadowcypher.core.mitre import mitre as _mitre
+
         count = 0
         self.add_mission(ctx.mission_id, target=ctx.target, stage=ctx.stage)
         self.add_target(ctx.target)
@@ -248,7 +251,33 @@ class KnowledgeGraph:
             self.add_cve(cve.cve_id, score=cve.cvss_score,
                          severity=cve.cvss_severity, desc=cve.description)
             self.link(ctx.target, cve.cve_id, "VULNERABLE_TO", weight=cve.cvss_score)
+            # Tag CVE with ATT&CK techniques
+            for t in _mitre.from_finding(cve.description):
+                self.add_node(t["id"], "TECHNIQUE", label=t["name"],
+                              tactic=t["tactic"], tactic_id=t["tactic_id"],
+                              url=t["url"])
+                self.link(cve.cve_id, t["id"], "MAPS_TO")
             count += 1
+
+        # Tag nuclei/nikto findings
+        for finding in getattr(ctx, "vuln_findings", []):
+            for t in _mitre.from_finding(finding):
+                self.add_node(t["id"], "TECHNIQUE", label=t["name"],
+                              tactic=t["tactic"], tactic_id=t["tactic_id"],
+                              url=t["url"])
+                self.link(ctx.target, t["id"], "MAPS_TO")
+
+        # Tag tools exercised during the mission
+        tools_used = ["nmap_service", "cve_intel", "http_probe", "nuclei", "nikto"]
+        seen_techniques: set[str] = set()
+        for tool_key in tools_used:
+            for t in _mitre.tag(tool_key):
+                if t["id"] not in seen_techniques:
+                    self.add_node(t["id"], "TECHNIQUE", label=t["name"],
+                                  tactic=t["tactic"], tactic_id=t["tactic_id"],
+                                  url=t["url"])
+                    self.link(ctx.mission_id, t["id"], "MAPS_TO")
+                    seen_techniques.add(t["id"])
 
         logger.info("kg", f"Ingested mission {ctx.mission_id}: {count} nodes/edges added")
         return count

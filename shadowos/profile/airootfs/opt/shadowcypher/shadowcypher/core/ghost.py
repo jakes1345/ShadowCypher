@@ -81,7 +81,10 @@ def decrypt(data: str) -> str:
         if len(raw) < 13:
             return ""
         nonce, ct = raw[:12], raw[12:]
-        aesgcm = AESGCM(_load_shared_key())
+        key = _load_shared_key()
+        if key is None:
+            return ""
+        aesgcm = AESGCM(key)
         decrypted = aesgcm.decrypt(nonce, ct, None).decode()
         # Remove padding
         if "|" in decrypted:

@@ -43,14 +43,24 @@ class StealthEngine:
     # ── Core actions ──────────────────────────────────────────
 
     def engage(self) -> bool:
-        """Activate the stealth layer: detect Tor or configured proxy, set env vars."""
+        """Activate the stealth layer: detect Hysteria2, Tor, or configured proxy and set env vars."""
         if not self.proxy_url:
-            if self._check_tor():
-                self.proxy_url = "socks5h://127.0.0.1:9050"
-                logger.info("stealth", "Local Tor detected — routing through SOCKS5:9050")
-            else:
-                logger.warning("stealth", "No proxy configured and Tor not running. Privacy NOT enforced.")
-                return False
+            # Prefer Hysteria2 (QUIC — harder to fingerprint than Tor)
+            try:
+                from shadowcypher.core.hysteria import hysteria_transport
+                if hysteria_transport.running:
+                    self.proxy_url = hysteria_transport.proxy_url
+                    logger.info("stealth", f"Hysteria2 active — routing through {self.proxy_url}")
+            except Exception:
+                pass
+
+            if not self.proxy_url:
+                if self._check_tor():
+                    self.proxy_url = "socks5h://127.0.0.1:9050"
+                    logger.info("stealth", "Local Tor detected — routing through SOCKS5:9050")
+                else:
+                    logger.warning("stealth", "No proxy configured and Tor not running. Privacy NOT enforced.")
+                    return False
 
         os.environ["HTTP_PROXY"]  = self.proxy_url
         os.environ["HTTPS_PROXY"] = self.proxy_url

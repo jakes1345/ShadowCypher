@@ -65,7 +65,7 @@ class JSInject:
         ct = flow.response.headers.get("content-type", "")
         if "text/html" in ct:
             html = flow.response.get_text(strict=False) or ""
-            tag = f"<script>{{JS_PAYLOAD}}</script>"
+            tag = f"<script>{JS_PAYLOAD}</script>"
             html = html.replace("</body>", tag + "</body>")
             if "</body>" not in html:
                 html += tag

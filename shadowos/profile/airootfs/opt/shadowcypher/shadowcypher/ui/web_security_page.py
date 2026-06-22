@@ -161,8 +161,11 @@ class WebSecurityPage(BasePage):
     def _on_mhddos(self, btn):
         target = self.mh_target.get_text().strip()
         method = self.mh_method.get_active_text()
-        threads = int(self.mh_threads.get_text().strip() or "100")
-        duration = int(self.mh_duration.get_text().strip() or "60")
+        try:
+            threads = int(self.mh_threads.get_text().strip() or "100")
+            duration = int(self.mh_duration.get_text().strip() or "60")
+        except ValueError:
+            threads, duration = 100, 60
         
         self.clear_output(f"IGNITING_MHDDoS_STRIKE: {target} [{method}]\n\n")
         self.run_job(
