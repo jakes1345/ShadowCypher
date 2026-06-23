@@ -32,22 +32,28 @@ It's now a GTK dashboard backed by a compiled Go signal relay, a local AI infere
 ShadowCypher is a dual-core system. The orchestration layer runs on **Python 3.12** with a GTK-3.0 interface, handling everything from mission dispatch to AI inference routing. The signal layer runs on **compiled Go**, providing a high-performance WebSocket relay for swarm coordination, peer discovery, and low-latency command propagation.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SHADOWCYPHER v3.0.0                          │
-├────────────────────┬────────────────────┬───────────────────────┤
-│   GTK-3.0 UI       │   AI Engine        │   Native Core (Go)   │
-│   ─────────────    │   ──────────       │   ────────────────   │
-│   Cairo Gauges     │   Ollama (GPU)     │   WebSocket Relay    │
-│   Page Router      │   Quantum-Core     │   Swarm Discovery    │
-│   TacticalTerminal │   MetaChain Agent  │   Token Auth         │
-│   Sidebar Nav      │   Classic Brain    │   Stealth Module     │
-├────────────────────┴────────────────────┴───────────────────────┤
-│                      EVENT BUS (ShadowBus)                      │
-│               Thread-safe pub/sub + async dispatch              │
-├─────────────────────────────────────────────────────────────────┤
-│  Config Engine  │  Runner  │  Forensics  │  Security  │  Logger │
-│  (Pydantic)     │  (Exec)  │  (Registry) │  (AES/RSA) │  (JSONL)│
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                        SHADOWCYPHER v3.0.0                               │
+├──────────────────────┬──────────────────────┬────────────────────────────┤
+│   GTK-3.0 UI         │   AI Engine          │   Native Core (Go)         │
+│   ───────────────    │   ──────────         │   ─────────────────────    │
+│   Cairo Gauges       │   Ollama (GPU)       │   WebSocket Relay          │
+│   Page Router        │   MetaChain Agent    │   Swarm Discovery          │
+│   TacticalTerminal   │   TreeQuest MCTS     │   Token Auth               │
+│   Sidebar Nav        │   Intent→Execute     │   Stealth Module           │
+├──────────────────────┴──────────────────────┴────────────────────────────┤
+│                          EVENT BUS (ShadowBus)                           │
+│                   Thread-safe pub/sub + async dispatch                   │
+├────────────────────────┬─────────────────────┬───────────────────────────┤
+│  Intelligence Layer    │  Analysis Layer      │  Core Engine              │
+│  ──────────────────    │  ──────────────      │  ────────────             │
+│  CISA KEV (1627 CVEs)  │  Security Assessor  │  Config (Pydantic)        │
+│  EPSS Scoring          │  MITRE ATT&CK Tags  │  Knowledge Graph          │
+│  OTX AlienVault        │  Rule-based Triage  │  AES-256-GCM / X25519    │
+│  AbuseIPDB             │  Pattern Matching   │  Logger (JSONL)           │
+│  URLhaus (malware)     │  Remediation Plans  │  Runner / Forensics       │
+│  Tor Exit Blocklist    │                     │                           │
+└────────────────────────┴─────────────────────┴───────────────────────────┘
 ```
 
 ### Why This Stack
@@ -82,11 +88,43 @@ Passive and active intelligence collection across every layer of the stack.
 
 | Module | What It Does |
 |---|---|
-| **Signal Analysis** | Deep network reconnaissance powered by Nmap. Service version detection, OS fingerprinting, script scanning, and traceroute in a unified GTK interface. Results are parsed and fed into the forensic registry for correlation. |
+| **Signal Analysis** | Deep network reconnaissance powered by Nmap. Service version detection, OS fingerprinting, script scanning, and traceroute in a unified GTK interface. Results are parsed and fed into the forensic registry for correlation. MITRE ATT&CK technique IDs automatically tagged on all findings. |
 | **Spectral Intelligence** | OSINT toolkit. Sherlock-based username enumeration across 300+ platforms. WHOIS lookups. DNS record enumeration (A, AAAA, MX, NS, TXT, SOA). Reverse IP resolution. All results are stored in the local forensic database. |
 | **Infrastructure Recon** | Full-stack host discovery. ARP scanning for local network mapping. TCP/UDP port sweeps. Banner grabbing. SSL certificate inspection. Designed to build a complete picture of a target environment before engagement. |
 | **Vulnerability Sweep** | Nuclei-based vulnerability scanning with severity filtering and tag-based targeting. Custom template support. Results are cross-referenced with Exploit-DB via SearchSploit for immediate actionability. |
+| **CVE Intelligence** | Live NVD API v2 integration with 6-hour cache. Correlates discovered service banners against the National Vulnerability Database. Automatically enriched with **EPSS scores** (first.org — probability of exploitation in next 30 days) and **CISA KEV membership** (1,627 known exploited CVEs). KEV hits surface as `[KEV]` with federal due dates. |
+| **Threat Intel** | Multi-source IP/domain/hash reputation. **OTX AlienVault** (pulse count + malicious indicators), **AbuseIPDB** (confidence score 0–100), **URLhaus** (live malware delivery URLs, no auth), **Tor exit list** (torproject.org bulk list, local set lookup). All sources queried in parallel; results merged into a unified verdict. Ingested into the knowledge graph. |
 | **Gaming Asset Audit** | Steam/gaming platform security analysis. Account exposure checking, session token validation, and platform-specific vulnerability assessment. |
+
+### AI INTELLIGENCE PIPELINE — Intent → Execute → Analyze
+
+ShadowCypher's AI layer uses a three-stage pipeline borrowed from production security tooling. Small local models (7B–14B) don't reliably emit tool-call JSON, so rather than trusting the model to invoke tools correctly, the pipeline detects intent from the user's message directly, runs the real tool first, and then feeds the actual output to the AI for analysis.
+
+```
+User Query
+    │
+    ▼
+Intent Detector (14 patterns: nmap / nuclei / nikto / sqlmap / threat-intel / OSINT / ...)
+    │
+    ├── Tool with target detected? ──YES──▶ Execute real tool (nmap, OTX, CVE lookup, ...)
+    │                                              │
+    │                                              ▼
+    │                                    Inject real output into AI prompt
+    │                                              │
+    └── General query? ─────────────────▶ Route to specialist agent
+                                                   │
+                                                   ▼
+                                          AI analyzes actual scan data
+                                          (not hallucinated results)
+```
+
+**TreeQuest Attack Chain Planner** (Sakana AI): When you need to plan a full assessment rather than a single tool run, `tree_planner.plan(target, context)` uses Monte Carlo Tree Search (MCTS) to explore sequences of security actions. The local AI predicts what each action would find at each branch; the tree search finds the highest-value path. Returns an ordered action plan with confidence scores. Dangerous actions (`sql_injection`, `vuln_scan`) require explicit operator confirmation before execution.
+
+**Security Assessor**: After any scan session, `assessor.assess_findings(cves, threat_intel, ports)` produces instant rule-based triage in <1ms — no LLM required. Eight security combination patterns fire advisory text when matched (e.g. `KEV_exploited + high_EPSS + port_open` → "CRITICAL CHAIN — patch immediately"). Output includes threat level, pattern matches, lead CVE/indicator, and prioritized remediation steps.
+
+**MITRE ATT&CK Coverage**: 65 ATT&CK technique IDs mapped across all scan/exploit tool outputs. Every finding is automatically tagged with relevant technique IDs and tactics. Mission reports include a full coverage matrix grouped by tactic.
+
+---
 
 ### OFFENSIVE-LAB — Exploitation & Payload Engineering
 
@@ -262,17 +300,29 @@ ShadowCypher/
 │   ├── app.py                 # GTK application entry point
 │   ├── core/                  # Hub, Config, Bus, Runner, Identity, Security
 │   │   ├── hub.py             # Mission orchestrator + relay bridge
+│   │   ├── mitre.py           # MITRE ATT&CK database (65 technique IDs)
+│   │   ├── knowledge_graph.py # SQLite tactical intelligence graph
+│   │   ├── assessor.py        # Rule-based security situation assessor
 │   │   ├── sovereign_chat.py  # WebSocket chat (X25519 + AES-256-GCM)
 │   │   ├── irc_bot.py         # ShadowSentinel IRC bot (20+ commands)
 │   │   └── ...
 │   ├── ai/                    # AI subsystem
-│   │   ├── engine.py          # Ollama + llama-cpp-python dual backend
+│   │   ├── intent.py          # Intent detector (14 security tool patterns)
+│   │   ├── tree_planner.py    # Sakana AI TreeQuest attack chain planner
+│   │   ├── agents.py          # Agent fleet + Intent→Execute→Analyze dispatch
 │   │   ├── orchestrator.py    # MetaChain autonomous agent
+│   │   ├── auto_orchestrator.py # Unified mission dispatch bridge
+│   │   ├── adversary_sim.py   # Autonomous red team simulation engine
 │   │   ├── classic_brain.py   # Offline ELIZA + Markov conversational AI
 │   │   ├── sisyphus.py        # File integrity sentinel
 │   │   └── ...
-│   ├── ui/                    # GTK pages (30+ tactical interfaces)
-│   ├── modules/               # Offensive/defensive tool wrappers (33+)
+│   ├── ui/                    # GTK pages (40+ tactical interfaces)
+│   ├── modules/               # Offensive/defensive tool wrappers (40+)
+│   │   ├── cve_feed.py        # NVD CVE feed + EPSS + CISA KEV enrichment
+│   │   ├── threat_intel.py    # OTX + AbuseIPDB + URLhaus + Tor exits
+│   │   ├── recon.py           # Nmap + subdomain enum + HTTP probing
+│   │   ├── vuln_scanner.py    # Nuclei + Nikto + SQLmap wrappers
+│   │   └── ...
 │   ├── native/relay/          # Go WebSocket relay (compiled binary)
 │   └── compiler/              # ShadowScript lexer + interpreter
 ├── ai_engine/autoagent/       # MetaChain autonomous agent framework
@@ -301,6 +351,18 @@ Key configuration sections:
 | `irc` | Server, port, channel, SASL auth, sovereign mode, bot personality |
 | `identity` | Operator handle, admin list, master hardware fingerprint |
 | `stealth` | Proxy URL, privacy enforcement, Nexus relay endpoint |
+| `intel` | Threat intel API keys: `otx_api_key`, `abuseipdb_api_key` |
+
+### API Keys (optional — all sources have free/no-key tiers)
+
+| Source | Key Variable | Free Tier | Get Key |
+|---|---|---|---|
+| OTX AlienVault | `intel.otx_api_key` | Anonymous (rate-limited) | otx.alienvault.com |
+| AbuseIPDB | `intel.abuseipdb_api_key` | 1,000 checks/day | abuseipdb.com/register |
+| URLhaus | *(none)* | Unlimited | abuse.ch (no auth) |
+| Tor Exit List | *(none)* | Unlimited | torproject.org (no auth) |
+| CISA KEV | *(none)* | Unlimited | cisa.gov (no auth) |
+| EPSS (first.org) | *(none)* | Unlimited | first.org (no auth) |
 
 ---
 

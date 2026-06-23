@@ -179,6 +179,11 @@ def detect_intent(query: str) -> dict:
                 "matched": intent_type,
             }
 
+    # Fallback: if target looks like a URL, default to web scan
+    url_target = _first(_URL, query)
+    if url_target:
+        return {"type": "nikto_scan", "target": url_target, "confidence": "medium", "matched": "url_fallback"}
+
     return {"type": "general", "target": None, "confidence": "none", "matched": ""}
 
 
