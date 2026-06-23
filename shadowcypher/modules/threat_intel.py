@@ -106,7 +106,10 @@ class ThreatIntel(BaseModule):
             return val
         try:
             from shadowcypher.core.config import config
-            return getattr(config.intel, config_key, "") or ""
+            cfg_path = config.project_root / "config.json"
+            with open(cfg_path) as f:
+                raw = json.load(f)
+            return raw.get("intel", {}).get(config_key, "") or ""
         except Exception:
             return ""
 
