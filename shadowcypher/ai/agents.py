@@ -350,6 +350,11 @@ class AgentRouter:
         """
         Main entry point. Routes query to the best agent and returns the result.
 
+        Intent → Execute → Analyze: if the query contains a recognisable tool
+        intent (nmap, nuclei, threat-intel lookup, etc.), the tool is run first
+        and the real output is injected into the AI prompt so the model analyzes
+        actual data rather than hallucinating results.
+
         Args:
             query: The user's request
             callback: Optional streaming callback for progress updates
@@ -357,13 +362,29 @@ class AgentRouter:
             use_ai_routing: Use AI model for classification (slower but smarter)
             tools_enabled: Allow agents to use tools
         """
+        # 0. INTENT → EXECUTE → ANALYZE
+        effective_query = query
+        try:
+            from shadowcypher.ai.intent import detect_intent, execute_intent, build_analysis_prompt
+            intent = detect_intent(query)
+            if intent["type"] != "general" and intent.get("target") and tools_enabled:
+                if callback:
+                    callback(f"[INTENT] Detected {intent['type']} on {intent['target']} — executing tool first...\n")
+                tool_output = execute_intent(intent, on_output=callback)
+                if tool_output:
+                    effective_query = build_analysis_prompt(query, tool_output, intent)
+                    if callback:
+                        callback(f"[INTENT] Tool complete — analyzing {len(tool_output)} bytes of real output...\n")
+        except Exception as _ie:
+            logger.warning("agents", f"Intent engine error (non-fatal): {_ie}")
+
         # 1. CLASSIFY
         if force_agent and force_agent in AGENT_FLEET:
             agent_id = force_agent
         elif use_ai_routing:
-            agent_id = self.classify_intent_ai(query, callback)
+            agent_id = self.classify_intent_ai(effective_query, callback)
         else:
-            agent_id = self.classify_intent(query)
+            agent_id = self.classify_intent(effective_query)
 
         spec = AGENT_FLEET[agent_id]
         model = self._resolve_model(spec)
@@ -388,7 +409,7 @@ class AgentRouter:
         logger.info("agents", f"DISPATCH: {query[:80]}... → {spec.name} ({model})")
 
         # 2. EXECUTE — agent loop with tool use
-        return self._run_agent(spec, model, query, callback, tools_enabled)
+        return self._run_agent(spec, model, effective_query, callback, tools_enabled)
 
     def _run_agent(self, spec: AgentSpec, model: str, query: str,
                    callback: Callable = None, tools_enabled: bool = True,

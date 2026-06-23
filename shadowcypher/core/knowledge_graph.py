@@ -282,6 +282,34 @@ class KnowledgeGraph:
         logger.info("kg", f"Ingested mission {ctx.mission_id}: {count} nodes/edges added")
         return count
 
+    def ingest_threat_intel(self, result) -> int:
+        """Ingest a ThreatResult from threat_intel.py into the graph."""
+        count = 0
+        node_type = {"ip": "TARGET", "domain": "DOMAIN", "hash": "PAYLOAD"}.get(
+            result.target_type, "TARGET"
+        )
+        self.add_node(
+            result.target, node_type,
+            label=result.target,
+            props={
+                "malicious": result.malicious,
+                "confidence": result.confidence,
+                "abuse_score": result.abuse_score,
+                "otx_pulses": result.pulses,
+                "country": result.country,
+                "isp": result.isp,
+                "tags": result.tags[:10],
+                "sources": result.sources,
+            }
+        )
+        count += 1
+        if result.malicious:
+            self.add_node("THREAT_INTEL", "MISSION", label="Threat Intel")
+            self.link(result.target, "THREAT_INTEL", "FOUND_ON",
+                      weight=result.confidence / 100.0)
+            count += 1
+        return count
+
     def stats(self) -> dict:
         with self._conn() as c:
             nodes = c.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
