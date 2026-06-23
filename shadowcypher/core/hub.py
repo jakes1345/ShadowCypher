@@ -529,6 +529,56 @@ class ShadowHub:
             logger.info("hub", f"MISSION_ARCHIVED: {mid} operation terminated.")
             del self.active_missions[mid]
 
+    def dispatch_auto_scan(
+        self,
+        target: str,
+        on_output: Callable = None,
+        on_complete: Callable = None,
+        confirm_fn: Callable = None,
+        phases: list = None,
+    ) -> str:
+        """
+        Launch an adaptive full-pipeline scan on target in a background thread.
+        Returns a mission ID immediately; streams output via on_output callback.
+
+        Args:
+            target:      IP, hostname, or URL
+            on_output:   Called with each output line as it's produced
+            on_complete: Called with ScanResult when pipeline finishes
+            confirm_fn:  fn(tool, target) → bool  — gates destructive tools (sqlmap)
+            phases:      List of phase names to run (default: all)
+        """
+        from shadowcypher.ai.auto_scan import auto_scan
+
+        mission_id = f"ASCAN-{uuid.uuid4().hex[:8].upper()}"
+        self.telemetry["missions_total"] += 1
+        logger.info("hub", f"AUTO_SCAN_LAUNCH: {mission_id} → {target}")
+
+        def _on_line(line: str):
+            bus.publish("module_log", {"module": f"hub/{mission_id}", "text": line, "level": "INFO"})
+            if on_output:
+                on_output(line)
+
+        def _on_done(result):
+            self._update_telemetry("kg_nodes",
+                __import__("shadowcypher.core.knowledge_graph", fromlist=["kg"]).kg.stats()["nodes"])
+            bus.publish("module_log", {
+                "module": f"hub/{mission_id}",
+                "text": f"AUTO_SCAN_COMPLETE: {result.summary()}",
+                "level": "SUCCESS",
+            })
+            if on_complete:
+                on_complete(result)
+
+        auto_scan.run_async(
+            target,
+            on_output=_on_line,
+            on_complete=_on_done,
+            confirm_fn=confirm_fn,
+            phases=phases,
+        )
+        return mission_id
+
     def is_stealth_ready(self) -> bool:
         """Verifies if the platform's stealth signatures are properly masked."""
         from shadowcypher.core.security import hardener

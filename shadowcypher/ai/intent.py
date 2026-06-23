@@ -81,8 +81,12 @@ _PATTERNS: list[tuple[re.Pattern, str, callable]] = [
     (re.compile(r"\b(hash|md5|sha1|sha256|malware.?hash|file.?hash)", re.I),
      "hash_lookup", lambda t: _first(_HASH, t)),
 
+    # Adaptive full-pipeline auto scan (must be before deep_recon — both match "full scan")
+    (re.compile(r"\b(auto.?scan|adaptive.?scan|full.?assess|full.?scan|scan.?everything|run.?all|complete.?scan|pentest)", re.I),
+     "auto_scan", _target),
+
     # Recon / deep scan
-    (re.compile(r"\b(recon|footprint|attack.?surface|deep.?scan|full.?scan)", re.I),
+    (re.compile(r"\b(recon|footprint|attack.?surface|deep.?scan)", re.I),
      "deep_recon", _target),
 
     # Ghost mode / Tor
@@ -132,6 +136,15 @@ def _register_tools():
         TOOL_REGISTRY["ip_reputation"]     = lambda t, cb: _ti_lookup(threat_intel, t, "ip", cb)
         TOOL_REGISTRY["domain_reputation"] = lambda t, cb: _ti_lookup(threat_intel, t, "domain", cb)
         TOOL_REGISTRY["hash_lookup"]       = lambda t, cb: _ti_lookup(threat_intel, t, "hash", cb)
+    except Exception:
+        pass
+
+    try:
+        from shadowcypher.ai.auto_scan import auto_scan as _auto_scan
+        def _run_auto_scan(t, cb):
+            result = _auto_scan.run(t, on_output=cb)
+            return result.report or result.assessment
+        TOOL_REGISTRY["auto_scan"] = _run_auto_scan
     except Exception:
         pass
 

@@ -22,6 +22,7 @@ class VulnScannerPage(BasePage):
     def _build_ui(self):
         # Strategic Tabs
         notebook = Gtk.Notebook()
+        notebook.append_page(self._build_auto_tab(), Gtk.Label(label="Auto Scan"))
         notebook.append_page(self._build_nikto_tab(), Gtk.Label(label="Nikto"))
         notebook.append_page(self._build_sqlmap_tab(), Gtk.Label(label="SQLmap"))
         notebook.append_page(self._build_nse_tab(), Gtk.Label(label="Nmap NSE"))
@@ -129,3 +130,89 @@ class VulnScannerPage(BasePage):
         target = self.shadow_target.get_text().strip()
         self.terminal.log("ENGAGING_DEEPHAT_HEURISTICS...", "AI")
         self._scanner.shadow_zero_day_scan(target, on_output=self.on_output)
+
+    # ── Auto Scan tab ──────────────────────────────────────────────────────────
+
+    def _build_auto_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_margin_top(15)
+        box.set_margin_bottom(15)
+        box.set_margin_start(15)
+        box.set_margin_end(15)
+
+        # Description
+        label = Gtk.Label()
+        label.set_markup(
+            "<b>Adaptive Security Pipeline</b>\n"
+            "<small>Runs nmap → decides next tools based on findings → CVE + threat intel → AI report</small>"
+        )
+        label.set_xalign(0)
+        box.pack_start(label, False, False, 0)
+
+        row = Gtk.Box(spacing=8)
+        self.auto_target = Gtk.Entry()
+        self.auto_target.set_placeholder_text("Target IP / hostname (e.g. 192.168.1.1)")
+        row.pack_start(self.auto_target, True, True, 0)
+
+        btn = Gtk.Button(label="AUTO SCAN")
+        btn.get_style_context().add_class("suggested-action")
+        btn.connect("clicked", self._on_auto_scan)
+        row.pack_end(btn, False, False, 0)
+        box.pack_start(row, False, False, 0)
+
+        # Phase selector (checkboxes in a flow box)
+        phases_frame = Gtk.Frame(label="Phases")
+        phases_box = Gtk.Box(spacing=6)
+        phases_box.set_margin_top(6)
+        phases_box.set_margin_bottom(6)
+        phases_box.set_margin_start(6)
+        phases_box.set_margin_end(6)
+        self._phase_checks = {}
+        for phase in ["nmap", "web", "vuln", "sqli", "subdomain", "cve", "threat_intel", "assess", "report"]:
+            cb = Gtk.CheckButton(label=phase)
+            cb.set_active(True)
+            phases_box.pack_start(cb, False, False, 0)
+            self._phase_checks[phase] = cb
+        phases_frame.add(phases_box)
+        box.pack_start(phases_frame, False, False, 0)
+
+        return box
+
+    def _on_auto_scan(self, btn):
+        target = self.auto_target.get_text().strip()
+        if not target:
+            return
+
+        selected_phases = [p for p, cb in self._phase_checks.items() if cb.get_active()]
+
+        self.terminal.log(f"AUTO_SCAN_INIT: {target}  phases={selected_phases}", "AUTOSCAN")
+
+        def _confirm(tool: str, tgt: str) -> bool:
+            dialog = Gtk.MessageDialog(
+                transient_for=self.get_toplevel(),
+                flags=0,
+                message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.YES_NO,
+                text=f"Run {tool} on {tgt}?",
+            )
+            dialog.format_secondary_text(
+                f"{tool} is a potentially destructive test. Confirm you own or are authorized to test {tgt}."
+            )
+            resp = dialog.run()
+            dialog.destroy()
+            return resp == Gtk.ResponseType.YES
+
+        def _on_line(line: str):
+            GLib.idle_add(self.terminal.log, line.rstrip(), "AUTOSCAN")
+
+        def _on_done(result):
+            GLib.idle_add(self.terminal.log,
+                          f"AUTO_SCAN_DONE: {result.summary()} ({result.duration_s}s)", "SUCCESS")
+
+        hub.dispatch_auto_scan(
+            target,
+            on_output=_on_line,
+            on_complete=_on_done,
+            confirm_fn=_confirm,
+            phases=selected_phases if selected_phases else None,
+        )
