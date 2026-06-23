@@ -424,14 +424,29 @@ Be specific. Reference actual CVE IDs, port numbers, and ATT&CK technique IDs. N
             f"**Date:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
             f"**Status:** {ctx.stage}",
             "",
-            "## Open Ports & Services",
         ]
+
+        # Rule-based situation assessment (instant, no LLM)
+        try:
+            from shadowcypher.core.assessor import assessor
+            assessment = assessor.assess_findings(
+                cve_matches=ctx.cve_matches,
+                open_ports=ctx.open_ports,
+                target=ctx.target,
+            )
+            lines += ["## Situation Assessment", "```", assessment, "```", ""]
+        except Exception:
+            pass
+
+        lines += ["## Open Ports & Services"]
         for p in ctx.open_ports:
             lines.append(f"- `{p['port']}/{p['proto']}` — {p['service']} {p['version']}")
         lines += ["", "## CVE Intelligence"]
         for m in ctx.cve_matches[:15]:
             attack_tags = mitre.format_tags(mitre.from_finding(m.description))
-            lines.append(f"- **[{m.cvss_severity}]** `{m.cve_id}` CVSS:{m.cvss_score} → {m.matched_service}")
+            kev_tag  = "  **[KEV]**" if getattr(m, "kev_exploited", False) else ""
+            epss_tag = f"  EPSS:{m.epss_score:.1%}" if getattr(m, "epss_score", 0) else ""
+            lines.append(f"- **[{m.cvss_severity}]** `{m.cve_id}` CVSS:{m.cvss_score}{kev_tag}{epss_tag} → {m.matched_service}")
             lines.append(f"  {m.description[:150]}")
             if attack_tags:
                 lines.append(f"  ATT&CK: {attack_tags}")

@@ -30,8 +30,11 @@ from shadowcypher.core.module import BaseModule
 
 OTX_BASE       = "https://otx.alienvault.com/api/v1"
 ABUSEIPDB_BASE = "https://api.abuseipdb.com/api/v2"
+URLHAUS_BASE   = "https://urlhaus-api.abuse.ch/v1"
+TOR_EXIT_URL   = "https://check.torproject.org/torbulkexitlist"
 CACHE_DIR      = os.path.expanduser("~/.shadowcypher/threat_cache")
-CACHE_TTL      = 3600  # 1 hour
+CACHE_TTL      = 3600   # 1 hour
+TOR_CACHE_TTL  = 3600   # refresh Tor exit list hourly
 
 
 # ── Result Types ──────────────────────────────────────────────────────────────
@@ -97,8 +100,12 @@ class ThreatIntel(BaseModule):
         os.makedirs(CACHE_DIR, exist_ok=True)
         self._cache: dict[str, tuple[float, ThreatResult]] = {}  # key → (ts, result)
         self._lock = threading.Lock()
-        self._otx_key      = self._load_key("OTX_API_KEY", "otx_api_key")
+        self._otx_key       = self._load_key("OTX_API_KEY", "otx_api_key")
         self._abuseipdb_key = self._load_key("ABUSEIPDB_API_KEY", "abuseipdb_api_key")
+        # Tor exit list — loaded lazily, refreshed every hour
+        self._tor_exits: set[str] = set()
+        self._tor_exits_ts: float = 0.0
+        self._tor_lock = threading.Lock()
 
     def _load_key(self, env_var: str, config_key: str) -> str:
         val = os.environ.get(env_var, "")
@@ -131,7 +138,7 @@ class ThreatIntel(BaseModule):
         return self.lookup_domain(t, on_output=on_output)
 
     def lookup_ip(self, ip: str, on_output: Callable = None) -> ThreatResult:
-        """Query OTX + AbuseIPDB for an IP address."""
+        """Query OTX + AbuseIPDB + Tor exit list for an IP address."""
         cached = self._get_cache(f"ip:{ip}")
         if cached:
             if on_output:
@@ -143,8 +150,13 @@ class ThreatIntel(BaseModule):
 
         result = ThreatResult(ip, "ip")
 
-        otx_done     = threading.Event()
-        abuse_done   = threading.Event()
+        # Tor exit check is instant (local set lookup after first fetch)
+        self._check_tor_exit(ip, result)
+        if result.tags and "tor-exit-node" in result.tags and on_output:
+            on_output(f"[TI] {ip} is a known Tor exit node\n")
+
+        otx_done   = threading.Event()
+        abuse_done = threading.Event()
 
         def _otx():
             try:
@@ -176,8 +188,30 @@ class ThreatIntel(BaseModule):
             on_output(result.summary() + "\n")
         return result
 
+    def lookup_url(self, url: str, on_output: Callable = None) -> ThreatResult:
+        """Query URLhaus for a specific URL."""
+        cached = self._get_cache(f"url:{url}")
+        if cached:
+            if on_output:
+                on_output(cached.summary() + "\n")
+            return cached
+        if on_output:
+            on_output(f"[TI] Checking URLhaus for: {url[:80]}\n")
+        result = ThreatResult(url, "url")
+        self._urlhaus_check("url", url, result)
+        self._merge_verdict(result)
+        self._set_cache(f"url:{url}", result)
+        if on_output:
+            on_output(result.summary() + "\n")
+        return result
+
+    def is_tor_exit(self, ip: str) -> bool:
+        """Return True if ip is a known Tor exit node."""
+        self._load_tor_exits()
+        return ip in self._tor_exits
+
     def lookup_domain(self, domain: str, on_output: Callable = None) -> ThreatResult:
-        """Query OTX for a domain or hostname."""
+        """Query OTX + URLhaus for a domain or hostname."""
         cached = self._get_cache(f"domain:{domain}")
         if cached:
             if on_output:
@@ -188,10 +222,29 @@ class ThreatIntel(BaseModule):
             on_output(f"[TI] Querying threat intel for domain: {domain}\n")
 
         result = ThreatResult(domain, "domain")
-        try:
-            self._otx_domain(domain, result)
-        except Exception as e:
-            logger.warning("threat_intel", f"OTX domain lookup failed: {e}")
+        done_otx     = threading.Event()
+        done_urlhaus = threading.Event()
+
+        def _otx():
+            try:
+                self._otx_domain(domain, result)
+            except Exception as e:
+                logger.warning("threat_intel", f"OTX domain lookup failed: {e}")
+            finally:
+                done_otx.set()
+
+        def _urlhaus():
+            try:
+                self._urlhaus_check("host", domain, result)
+            except Exception as e:
+                logger.warning("threat_intel", f"URLhaus domain lookup failed: {e}")
+            finally:
+                done_urlhaus.set()
+
+        threading.Thread(target=_otx,     daemon=True).start()
+        threading.Thread(target=_urlhaus, daemon=True).start()
+        done_otx.wait(timeout=12)
+        done_urlhaus.wait(timeout=12)
 
         self._merge_verdict(result)
         self._set_cache(f"domain:{domain}", result)
@@ -221,6 +274,73 @@ class ThreatIntel(BaseModule):
         if on_output:
             on_output(result.summary() + "\n")
         return result
+
+    # ── URLhaus ───────────────────────────────────────────────────────────────
+
+    def _urlhaus_check(self, kind: str, target: str, result: ThreatResult):
+        """
+        kind: "url" | "host" | "hash"
+        Posts to URLhaus lookup endpoints — no auth required.
+        """
+        endpoint = f"{URLHAUS_BASE}/{kind}/"
+        post_data = urllib.parse.urlencode({kind: target}).encode()
+        try:
+            req = urllib.request.Request(
+                endpoint,
+                data=post_data,
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent": "ShadowCypher-ThreatIntel/2.0",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
+                data = json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            logger.debug("threat_intel", f"URLhaus {kind} lookup failed: {e}")
+            return
+
+        status = data.get("query_status", "")
+        if status in ("is_listed", "online"):
+            result.sources.append("URLhaus")
+            result.malicious = True
+            # Collect tags from all URLs under this host/hash
+            for url_entry in data.get("urls", [])[:5]:
+                result.tags.extend(url_entry.get("tags") or [])
+            result.tags.extend(data.get("tags") or [])
+            url_count = data.get("urls_count", len(data.get("urls", [])))
+            if url_count:
+                result.tags.append(f"urlhaus:{url_count}_malicious_urls")
+
+    # ── Tor Exit Nodes ────────────────────────────────────────────────────────
+
+    def _load_tor_exits(self):
+        """Download and cache the Tor bulk exit list. Refreshes hourly."""
+        with self._tor_lock:
+            if self._tor_exits and (time.time() - self._tor_exits_ts) < TOR_CACHE_TTL:
+                return
+            try:
+                req = urllib.request.Request(
+                    TOR_EXIT_URL,
+                    headers={"User-Agent": "ShadowCypher-ThreatIntel/2.0"},
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
+                    lines = resp.read().decode("utf-8").splitlines()
+                self._tor_exits = {
+                    l.strip() for l in lines
+                    if l.strip() and not l.startswith("#")
+                }
+                self._tor_exits_ts = time.time()
+                logger.info("threat_intel", f"Tor exit list: {len(self._tor_exits)} nodes")
+            except Exception as e:
+                logger.warning("threat_intel", f"Tor exit list fetch failed: {e}")
+
+    def _check_tor_exit(self, ip: str, result: ThreatResult):
+        """Flag result if ip is a known Tor exit node (local lookup after first fetch)."""
+        self._load_tor_exits()
+        if ip in self._tor_exits:
+            if "TorProject" not in result.sources:
+                result.sources.append("TorProject")
+            result.tags.append("tor-exit-node")
 
     # ── OTX AlienVault ───────────────────────────────────────────────────────
 
