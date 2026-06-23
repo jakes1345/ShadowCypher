@@ -3,8 +3,7 @@
 </p>
 
 <h1 align="center">SHADOWCYPHER</h1>
-<h3 align="center">Sovereign Tactical Suite + Personal Security Platform</h3>
-
+<h3 align="center">A personal security platform that runs entirely on your machine</h3>
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-3.0.0-00d4ff?style=flat-square" alt="Version"/>
@@ -17,188 +16,216 @@
 
 ---
 
-## Genesis
+## Why This Exists
 
 ShadowCypher started as shell scripts and Python wrappers written late at night while debugging real network problems. Commercial tools kept phoning home. Hosted platforms kept expiring API keys. The fix was to build something that didn't.
 
-The goal: an operator's toolkit that answers to no one but the operator. No telemetry, no cloud dependency, no subscription that can be revoked.
-
-It's now a GTK dashboard backed by a compiled Go signal relay, a local AI inference engine, and over 30 offensive and defensive modules. Every module exists because it was needed, not because it looked good on a feature list.
+The goal is an operator's toolkit that answers to no one but the operator — no telemetry, no cloud dependency, no subscription that can be revoked. It's now a GTK desktop application backed by a compiled Go signal relay, a local AI inference engine, and over 30 offensive and defensive modules. Everything that's in here exists because it was actually needed.
 
 ---
 
-## Architecture Overview
+## How It's Built
 
-ShadowCypher is a dual-core system. The orchestration layer runs on **Python 3.12** with a GTK-3.0 interface, handling everything from mission dispatch to AI inference routing. The signal layer runs on **compiled Go**, providing a high-performance WebSocket relay for swarm coordination, peer discovery, and low-latency command propagation.
+The application is split into two runtimes that talk over a local WebSocket:
+
+- **Python 3.12** handles the GTK interface, AI inference, mission orchestration, and all tool wrappers
+- **Compiled Go** handles the WebSocket relay — concurrent connections without Python's GIL getting in the way
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                        SHADOWCYPHER v3.0.0                               │
 ├──────────────────────┬──────────────────────┬────────────────────────────┤
-│   GTK-3.0 UI         │   AI Engine          │   Native Core (Go)         │
-│   ───────────────    │   ──────────         │   ─────────────────────    │
-│   Cairo Gauges       │   Ollama (GPU)       │   WebSocket Relay          │
-│   Page Router        │   MetaChain Agent    │   Swarm Discovery          │
-│   TacticalTerminal   │   TreeQuest MCTS     │   Token Auth               │
-│   Sidebar Nav        │   Intent→Execute     │   Stealth Module           │
+│   GTK-3.0 Interface  │   AI Engine          │   Native Core (Go)         │
+│                      │                      │                            │
+│   Cairo gauges       │   Ollama (local GPU) │   WebSocket relay          │
+│   Page routing       │   MetaChain agent    │   Swarm discovery          │
+│   TacticalTerminal   │   TreeQuest MCTS     │   Token authentication     │
+│   Sidebar nav        │   Intent→Execute     │   Stealth transport        │
+│   Auto Scan tab      │   AutoScan pipeline  │                            │
 ├──────────────────────┴──────────────────────┴────────────────────────────┤
 │                          EVENT BUS (ShadowBus)                           │
 │                   Thread-safe pub/sub + async dispatch                   │
 ├────────────────────────┬─────────────────────┬───────────────────────────┤
 │  Intelligence Layer    │  Analysis Layer      │  Core Engine              │
-│  ──────────────────    │  ──────────────      │  ────────────             │
+│                        │                      │                           │
 │  CISA KEV (1627 CVEs)  │  Security Assessor  │  Config (Pydantic)        │
-│  EPSS Scoring          │  MITRE ATT&CK Tags  │  Knowledge Graph          │
-│  OTX AlienVault        │  Rule-based Triage  │  AES-256-GCM / X25519    │
-│  AbuseIPDB             │  Pattern Matching   │  Logger (JSONL)           │
-│  URLhaus (malware)     │  Remediation Plans  │  Runner / Forensics       │
-│  Tor Exit Blocklist    │                     │                           │
+│  EPSS scoring          │  MITRE ATT&CK tags  │  Knowledge graph          │
+│  OTX AlienVault        │  Rule-based triage  │  AES-256-GCM / X25519    │
+│  AbuseIPDB             │  Pattern matching   │  Logger (JSONL)           │
+│  URLhaus (malware)     │  Remediation plans  │  Runner / forensics       │
+│  Tor exit blocklist    │                     │                           │
 └────────────────────────┴─────────────────────┴───────────────────────────┘
 ```
 
-### Why This Stack
+### Stack Decisions
 
-| Decision | Rationale |
+| Decision | Reason |
 |---|---|
-| **GTK-3.0** over Electron | 40MB footprint vs 400MB. Native rendering. No Chromium tax on your GPU during an engagement. |
-| **Go relay** over pure Python | WebSocket handling at 10,000+ concurrent connections. Python's GIL makes this impossible natively. |
-| **Local Ollama** over cloud APIs | Your prompts never leave your machine. Model weights live on your GPU. No rate limits, no shared logs, nothing to subpoena. |
-| **Pydantic config** over YAML | Type validation at load time. Environment variable injection. No more "why is my port a string" debugging at 2 AM. |
+| **GTK-3.0** instead of Electron | 40MB vs 400MB. No Chromium process eating GPU during a scan. |
+| **Go relay** instead of pure Python | WebSocket concurrency without the GIL. The relay handles thousands of connections; Python handles the logic. |
+| **Local Ollama** instead of cloud APIs | Your prompts never leave your machine. No rate limits. Nothing to subpoena. |
+| **Pydantic config** instead of raw JSON/YAML | Type validation at load time, environment variable injection, and clear error messages when something is misconfigured. |
 | **AES-256-GCM + X25519** | AEAD encryption with forward-secret key exchange. Every chat session generates ephemeral keys that die when the session ends. |
 
 ---
 
-## Tactical Divisions
+## What It Does
 
-### NEXUS-COMMAND — Situational Awareness & AI Operations
+### Situational Awareness & AI Operations
 
-The nerve center. Everything an operator needs to understand the state of their environment and issue directives.
+The main dashboard and AI interface.
 
-| Module | What It Does |
+| Module | Description |
 |---|---|
-| **Central Command HUD** | Real-time operational dashboard built with Cairo vector graphics. Three arc gauges (CPU, RAM, Disk) with dynamic color shifting at 65% and 85% thresholds. Arsenal status grid showing which tools are installed on the host. Live mission telemetry feed. Refreshes every 1.5 seconds with zero socket overhead. |
-| **Shadow-Synthesizer** | Local AI conversational interface. Supports any Ollama-compatible model (Gemma, LLaMA, DeepSeek, Mistral, Phi, Qwen). Streaming token output. Conversation history with per-session context. Backend switching between Ollama REST and llama-cpp-python for maximum hardware compatibility. |
-| **Quantum-Core** | Deep-analysis AI mode. When a task requires multi-step reasoning—analyzing a packet capture, decomposing a binary, or planning a multi-phase engagement—Quantum-Core engages the local model with a specialized system prompt that forces step-by-step reasoning and self-verification. Runs entirely through your local Ollama instance. No external dependencies. |
-| **Spectre War-Map** | Network topology visualization. Renders discovered nodes on an interactive canvas with connection state, latency indicators, and geographic approximation via GeoIP. Integrated with the Nexus Relay for real-time peer discovery. |
-| **ShadowScript Lab** | Custom tactical scripting language with a hand-written lexer, recursive descent parser, and tree-walking interpreter. Designed for orchestrating complex multi-tool engagements in a domain-specific syntax. Includes a reference grammar bible. |
+| **Command HUD** | Real-time system dashboard with Cairo vector gauges (CPU, RAM, Disk). Color thresholds at 65% and 85%. Live status grid for installed tools. Mission feed. Refreshes every 1.5 seconds. |
+| **Shadow Synthesizer** | Conversational AI interface backed by any Ollama-compatible model (Gemma, LLaMA, DeepSeek, Mistral, Phi, Qwen). Streaming output. Session history. Works with Ollama REST or llama-cpp-python. |
+| **Quantum-Core** | Deep-analysis AI mode with a specialized system prompt that forces step-by-step reasoning and self-verification. For when you need the model to actually think through something rather than riff on it. |
+| **Spectre War-Map** | Network topology canvas. Renders discovered nodes with connection state, latency, and GeoIP approximation. Updates in real time via the Nexus relay. |
+| **ShadowScript Lab** | A domain-specific scripting language for orchestrating multi-tool engagements. Hand-written lexer, recursive descent parser, and tree-walking interpreter. Includes a reference grammar. |
 
-### COVERT-INTEL — Reconnaissance & Intelligence Gathering
+### Reconnaissance & Intelligence
 
-Passive and active intelligence collection across every layer of the stack.
+Passive and active collection across every layer of the stack.
 
-| Module | What It Does |
+| Module | Description |
 |---|---|
-| **Signal Analysis** | Deep network reconnaissance powered by Nmap. Service version detection, OS fingerprinting, script scanning, and traceroute in a unified GTK interface. Results are parsed and fed into the forensic registry for correlation. MITRE ATT&CK technique IDs automatically tagged on all findings. |
-| **Spectral Intelligence** | OSINT toolkit. Sherlock-based username enumeration across 300+ platforms. WHOIS lookups. DNS record enumeration (A, AAAA, MX, NS, TXT, SOA). Reverse IP resolution. All results are stored in the local forensic database. |
-| **Infrastructure Recon** | Full-stack host discovery. ARP scanning for local network mapping. TCP/UDP port sweeps. Banner grabbing. SSL certificate inspection. Designed to build a complete picture of a target environment before engagement. |
-| **Vulnerability Sweep** | Nuclei-based vulnerability scanning with severity filtering and tag-based targeting. Custom template support. Results are cross-referenced with Exploit-DB via SearchSploit for immediate actionability. |
-| **CVE Intelligence** | Live NVD API v2 integration with 6-hour cache. Correlates discovered service banners against the National Vulnerability Database. Automatically enriched with **EPSS scores** (first.org — probability of exploitation in next 30 days) and **CISA KEV membership** (1,627 known exploited CVEs). KEV hits surface as `[KEV]` with federal due dates. |
-| **Threat Intel** | Multi-source IP/domain/hash reputation. **OTX AlienVault** (pulse count + malicious indicators), **AbuseIPDB** (confidence score 0–100), **URLhaus** (live malware delivery URLs, no auth), **Tor exit list** (torproject.org bulk list, local set lookup). All sources queried in parallel; results merged into a unified verdict. Ingested into the knowledge graph. |
-| **Gaming Asset Audit** | Steam/gaming platform security analysis. Account exposure checking, session token validation, and platform-specific vulnerability assessment. |
+| **Signal Analysis** | Network reconnaissance via Nmap. Service version detection, OS fingerprinting, script scanning, traceroute — all in one interface. Results feed into the forensic registry and get tagged with MITRE ATT&CK technique IDs. |
+| **Spectral Intelligence** | OSINT toolkit: Sherlock username search across 300+ platforms, WHOIS, DNS record enumeration (A, AAAA, MX, NS, TXT, SOA), reverse IP resolution. |
+| **Infrastructure Recon** | Host discovery via ARP and nmap. TCP/UDP port sweeps. Banner grabbing. SSL certificate inspection. |
+| **Vulnerability Sweep** | Nuclei-based scanning with severity filtering and tag-based template targeting. Results cross-referenced with Exploit-DB via SearchSploit. |
+| **CVE Intelligence** | Live NVD API v2 feed (6-hour cache). Correlates discovered service banners against the National Vulnerability Database. Automatically enriched with **EPSS scores** (probability of exploitation in next 30 days from first.org) and **CISA KEV membership** (1,627 known exploited CVEs). KEV hits are flagged with federal remediation due dates. |
+| **Threat Intel** | Multi-source reputation checks. **OTX AlienVault** (pulse count + malicious indicators), **AbuseIPDB** (confidence 0–100), **URLhaus** (live malware delivery URLs, no auth needed), **Tor exit list** (local set for O(1) lookup before hitting paid APIs). All sources queried in parallel, merged into a single verdict, ingested into the knowledge graph. |
+| **Gaming Asset Audit** | Steam and gaming platform security: account exposure, session token validation, platform-specific vulnerability assessment. |
 
-### AI INTELLIGENCE PIPELINE — Intent → Execute → Analyze
+### AI Intelligence Pipeline
 
-ShadowCypher's AI layer uses a three-stage pipeline borrowed from production security tooling. Small local models (7B–14B) don't reliably emit tool-call JSON, so rather than trusting the model to invoke tools correctly, the pipeline detects intent from the user's message directly, runs the real tool first, and then feeds the actual output to the AI for analysis.
+This is the part that makes the AI useful for security work.
+
+Small local models (7B–14B parameters) don't reliably emit structured tool-call JSON. So instead of trusting the model to invoke tools correctly, the pipeline detects intent from the user's message, runs the real tool, and then feeds the actual output to the AI for analysis.
 
 ```
-User Query
+User query
     │
     ▼
-Intent Detector (14 patterns: nmap / nuclei / nikto / sqlmap / threat-intel / OSINT / ...)
+Intent Detector (15 patterns: nmap / nuclei / nikto / sqlmap / auto_scan / threat-intel / OSINT / ...)
     │
-    ├── Tool with target detected? ──YES──▶ Execute real tool (nmap, OTX, CVE lookup, ...)
-    │                                              │
-    │                                              ▼
-    │                                    Inject real output into AI prompt
-    │                                              │
-    └── General query? ─────────────────▶ Route to specialist agent
-                                                   │
-                                                   ▼
-                                          AI analyzes actual scan data
-                                          (not hallucinated results)
+    ├── Specific tool + target? ──▶ Execute the real tool first
+    │                                       │
+    │                                       ▼
+    │                              Inject real output into AI prompt
+    │                                       │
+    └── General query? ──────────▶ Route to specialist agent
+                                            │
+                                            ▼
+                                   AI analyzes real scan data
+                                   (not hallucinated output)
 ```
 
-**TreeQuest Attack Chain Planner** (Sakana AI): When you need to plan a full assessment rather than a single tool run, `tree_planner.plan(target, context)` uses Monte Carlo Tree Search (MCTS) to explore sequences of security actions. The local AI predicts what each action would find at each branch; the tree search finds the highest-value path. Returns an ordered action plan with confidence scores. Dangerous actions (`sql_injection`, `vuln_scan`) require explicit operator confirmation before execution.
+**AutoScan Pipeline** — the adaptive full-stack scanner. Point it at a target and it figures out what to run:
 
-**Security Assessor**: After any scan session, `assessor.assess_findings(cves, threat_intel, ports)` produces instant rule-based triage in <1ms — no LLM required. Eight security combination patterns fire advisory text when matched (e.g. `KEV_exploited + high_EPSS + port_open` → "CRITICAL CHAIN — patch immediately"). Output includes threat level, pattern matches, lead CVE/indicator, and prioritized remediation steps.
+1. Nmap service fingerprint → parse open ports and classify (web / database / SSH / etc.)
+2. Domain target? → subdomain enumeration
+3. Web surface found? → Nikto + Nuclei run in parallel
+4. Database port or form URLs found? → SQLmap (requires explicit operator confirmation before running)
+5. CVE correlation against every discovered service banner
+6. Threat intel on the IP (OTX + AbuseIPDB + URLhaus + Tor check)
+7. Rule-based security assessment → knowledge graph ingestion → AI report synthesis
 
-**MITRE ATT&CK Coverage**: 65 ATT&CK technique IDs mapped across all scan/exploit tool outputs. Every finding is automatically tagged with relevant technique IDs and tactics. Mission reports include a full coverage matrix grouped by tactic.
+Results from each phase feed decisions for the next. If Nikto finds form URLs, SQLmap targets those specifically instead of just the homepage. If nmap finds nothing web-related, web scanning phases are skipped entirely. Accessible from the "Auto Scan" tab in the Vulnerability Scanner, or programmatically:
+
+```python
+from shadowcypher.ai.auto_scan import auto_scan
+
+# Full pipeline
+result = auto_scan.run("192.168.1.100", on_output=print)
+
+# With confirmation callback for destructive tests
+result = auto_scan.run(
+    "192.168.1.100",
+    on_output=print,
+    confirm_fn=lambda tool, target: input(f"Run {tool} on {target}? [y/N] ").lower() == "y"
+)
+
+# Non-blocking
+auto_scan.run_async("192.168.1.100", on_output=print, on_complete=lambda r: print(r.summary()))
+
+# Quick scan — nmap + CVE + threat intel only
+result = auto_scan.quick_scan("192.168.1.100")
+```
+
+**TreeQuest Attack Chain Planner** (Sakana AI): When you need to plan a full assessment rather than run a single tool, `tree_planner.plan(target, context)` uses Monte Carlo Tree Search to explore sequences of security actions. The local AI predicts what each action would find; the tree search finds the highest-value path. Returns an ordered plan with confidence scores. Destructive actions (`sql_injection`, `vuln_scan`) require explicit confirmation before execution.
+
+**Security Assessor**: After any scan, `assessor.assess_findings(cves, threat_intel, ports)` produces rule-based triage in under 1ms — no LLM needed. Eight security combination patterns fire advisory text when matched (e.g. `KEV_exploited + high_EPSS + open_port` → "CRITICAL CHAIN — patch immediately"). Output includes threat level, matched patterns, lead CVE/indicator, and prioritized remediation steps.
+
+**MITRE ATT&CK Coverage**: 65 technique IDs mapped across all tool outputs. Every finding is tagged automatically. Reports include a coverage matrix grouped by tactic.
+
+### Offensive Lab
+
+Tools for authorized penetration testing. All of these assume you own the target or have written authorization to test it.
+
+| Module | Description |
+|---|---|
+| **DeepHat Apex** | AI-powered offensive workflow. The MetaChain agent takes a high-level objective, breaks it into tool invocations, runs them in sequence, and synthesizes the findings. Backed by a 30+ tool registry. |
+| **Ghost Factory** | Payload generation via msfvenom. Linux, Windows, macOS targets. ELF, EXE, Mach-O, raw, and Python output formats. Payload history tracking. |
+| **Phishing Synthesis** | Phishing campaign toolkit: template-based page generation, automated Cloudflare tunnel for instant HTTPS, credential capture. Strictly for authorized social engineering engagements. |
+| **Ghost-Hose** | Network stress testing. Five modes: UDP flood, TCP SYN, Layer 7 HTTP, Slowloris, and Mixed. Configurable threads and duration limits. Lab and authorized gauntlet use only. |
+| **Web Layer Attacks** | SQL injection, XSS, SSRF, directory fuzzing (ffuf). Automated scanning and manual injection with custom payloads. |
+| **Key Harvester** | Hydra for network protocol brute-forcing (SSH, FTP, RDP, SMB, HTTP). John the Ripper and Hashcat for offline hash cracking with GPU support. |
+| **Wireless Saturation** | 802.11 testing via Aircrack-ng. WPA/WPA2 cracking, deauth attacks, network enumeration, monitor mode management. |
+
+### Communication, Defense & System Integrity
+
+| Module | Description |
+|---|---|
+| **Sovereign Chat** | End-to-end encrypted chat. AES-256-GCM at rest with per-room derived keys. X25519 ECDH ephemeral key exchange every session — compromise of one session reveals nothing about any other. SQLite persistence. |
+| **Go Signal Relay** | 9.2MB compiled binary for WebSocket swarm coordination. Token authentication. Sub-millisecond relay. Auto-compiled from source on launch if the binary is stale. |
+| **ShadowSentinel IRC Bot** | Modular IRC bot with 20+ commands. Connects to external IRC (Libera) and sovereign Ergo servers. Offline conversational AI via ELIZA + Markov chain. SHA-256 proof-of-work user verification. |
+| **Wraith Protocol** | Emergency wipe interface. Flash-Wipe purges session keys, ephemeral mission data, and forensic artifacts in one action. Confirmation dialogs prevent accidents. |
+| **God-Panel** | System control panel. Live status matrix for every service (Ollama, Go relay, Sovereign Chat, Sisyphus, IRC bot) with real-time latency probes. AI model hot-swapping. Threat registry viewer. |
+| **Sisyphus Sentinel** | Continuous integrity monitoring. SHA-256 hashes every Python source file on a 60-second cycle. Detects unauthorized modifications, syntax corruption, and dependency tampering. |
+| **Citadel Security** | AES-256-GCM vault. PBKDF2 key derivation (200,000 iterations). RSA-OAEP asymmetric ticket encryption. Hardware fingerprint binding. SSH honeypot on port 2222 that mimics OpenSSH 7.4. |
+
+### Operational Anonymity
+
+| Module | Description |
+|---|---|
+| **Ghost Mode** | One-command invisibility: iptables kill-switch routing all traffic through Tor, MAC randomization, hostname/timezone neutralization, DNS leak prevention, RAM-only workspace, system log suppression. Full restore on disengage. |
+| **Shadow Audit** | Anonymity chain validator. Tests Tor, DNS leaks, MAC fingerprinting, hostname/timezone exposure, firewall rules, WireGuard config, browser fingerprints. Returns a score with auto-fix for failed checks. |
+| **Traffic Mirage** | DPI evasion. obfs4 bridge configuration (makes Tor look like HTTPS), cover traffic generation, DNS tunneling, timing obfuscation via `tc netem`. |
+| **Dead Drop** | Anti-forensics: 7-pass file shredding with random rename before unlink, swap sanitization, free-space wiping, LUKS-encrypted USB dead drop creation, PANIC button that destroys keys/databases/configs/logs. |
+| **Trace Eraser** | Forensic log cleaner. Shell histories (12 types), system logs, systemd journal, wtmp/btmp/lastlog, thumbnail caches, recently-used files. Timestamp obfuscation mode. |
+| **Tor Cloak** | Full Tor lifecycle manager. Start/stop/verify, circuit rotation via ControlPort, torified shell sessions, IP protection hardening. |
+
+### Guardian — Personal Device Security
+
+| Module | Description |
+|---|---|
+| **Network Scan** | ARP/nmap device discovery. OS fingerprinting. Flags dangerous services (Telnet, SMB, TR-069, UPnP). Per-device risk assessment. |
+| **Router Audit** | Checks home routers for exposed management ports, ISP remote access (TR-069), UPnP, and weak DNS. Actionable hardening steps. |
+| **Device Monitor** | Continuous monitoring: new devices joining the network, ARP spoofing, device disappearances. Real-time alerting. |
+| **Auto-Harden** | One-command hardening: unattended updates, SSH root disable, iptables default-DROP, core dump disable, file permission lockdown. |
+| **Deep Audit** | Local machine audit: SUID binary check, SSH config review, world-writable file scan, failed login analysis, listening service inventory. |
 
 ---
 
-### OFFENSIVE-LAB — Exploitation & Payload Engineering
+## shadow-cli
 
-Purpose-built tools for authorized penetration testing and red team operations.
-
-| Module | What It Does |
-|---|---|
-| **DeepHat Apex** | AI-powered offensive script synthesis. The MetaChain autonomous agent decomposes a high-level objective ("find and exploit the FTP vulnerability on 10.0.0.5") into discrete tool invocations, executes them sequentially, and synthesizes the results. Powered by the AutoAgent framework with a 30+ tool registry. |
-| **Ghost Factory** | Multi-platform payload generation. Wraps `msfvenom` for Meterpreter payloads across Linux, Windows, and macOS. Supports ELF, EXE, Mach-O, raw, and Python output formats. Tracks generated payloads with mutation history. |
-| **Phishing Synthesis** | Social engineering campaign forge. Template-based phishing page generation with automated Cloudflare tunnel exposure for instant HTTPS. Let's Encrypt integration for custom domain deployments. Credential capture and relay. |
-| **Ghost-Hose** | Network stress testing engine. Five attack modes: UDP flood, TCP SYN, Layer 7 HTTP, Slowloris, and Mixed. Configurable thread count, duration limits, and real-time throughput reporting. Built for authorized lab environments and sacrificial gauntlets only. |
-| **Web Layer Attacks** | SQL injection, XSS, SSRF, and directory fuzzing (ffuf) in a unified interface. Supports both automated scanning and manual injection with custom payloads. |
-| **Key Harvester** | Credential attack suite. Hydra for network brute-forcing (SSH, FTP, RDP, SMB, HTTP). John the Ripper and Hashcat for offline hash cracking with GPU acceleration. Wordlist management and custom rule generation. |
-| **Wireless Saturation** | 802.11 attack toolkit. Aircrack-ng integration for WPA/WPA2 cracking, deauthentication attacks, and wireless network enumeration. Monitor mode management. |
-
-### SOVEREIGN-OPS — Communication, Defense & System Integrity
-
-The infrastructure that keeps you connected, encrypted, and invisible.
-
-| Module | What It Does |
-|---|---|
-| **Sovereign Chat** | Production-grade WebSocket communication hub replacing legacy IRC. Multi-room support with presence tracking. **AES-256-GCM encryption at rest** with per-room derived keys. **X25519 ECDH ephemeral key exchange** on every session for forward secrecy. If a session key is compromised, past and future sessions remain secure. SQLite message persistence with configurable retention. |
-| **Go Signal Relay** | Compiled native binary (9.2MB) handling WebSocket connections for swarm coordination. Token-based authentication. Sub-millisecond message relay. Runs as a background process, automatically compiled from source by the launcher if the binary is stale. |
-| **ShadowSentinel (IRC Bot)** | Skybot-style modular IRC bot with 20+ commands. Connects to both external IRC (Libera) and sovereign Ergo servers. Per-user conversation memory via the Classic Brain (ELIZA + Markov chain, zero network, fully offline). SHA-256 Proof-of-Work challenges for user verification. CTCP fingerprint capture and WHOIS correlation for forensic profiling. |
-| **Wraith Protocol** | Emergency lockdown interface. Spectre Flash-Wipe purges all ephemeral mission data, session keys, and forensic artifacts in a single action. Tunnel termination kills all active processes. Log purge removes operational traces. Confirmation dialogs prevent accidental activation. |
-| **God-Panel** | Full-spectrum system control. Live subsystem matrix showing the status of every service (Ollama, Go Relay, Sovereign Chat, Sisyphus, IRC Sentinel) with real-time latency probes. AI model hot-swapping. Integrity baseline regeneration. Process termination. Threat registry viewer. |
-| **Sisyphus Sentinel** | Continuous integrity monitoring. SHA-256 hashes every Python source file in the project on a 60-second cycle. Detects unauthorized modifications, syntax corruption, and dependency tampering. Broadcasts alerts via the event bus when violations are detected. |
-| **Citadel Security** | AES-256-GCM vault encryption with PBKDF2 key derivation (200,000 iterations). RSA-OAEP asymmetric ticket encryption for admin-user communication. Hardware fingerprinting for machine-level identity verification. SSH honeypot (port 2222) that mimics OpenSSH 7.4 to bait and log adversaries. |
-
-### GHOST-PROTOCOL — Operational Anonymity & Anti-Forensics
-
-Total operational invisibility for when you absolutely cannot be seen.
-
-| Module | What It Does |
-|---|---|
-| **Ghost Mode** | One-command total invisibility. 8 layers: iptables kill-switch (forces ALL traffic through Tor), MAC randomization, hostname/timezone neutralization, DNS leak prevention, RAM-only workspace, system log suppression. Full state restore on disengage. |
-| **Shadow Audit** | Comprehensive anonymity chain validator. Tests Tor, DNS leaks, MAC fingerprinting, hostname/timezone exposure, firewall rules, mesh key permissions, WireGuard config, browser fingerprints. Returns an anonymity score with auto-fix capability. |
-| **Traffic Mirage** | Deep packet inspection evasion. obfs4 bridge configuration (makes Tor look like HTTPS), realistic cover traffic generation, DNS tunneling setup, traffic timing obfuscation via `tc netem` to defeat correlation attacks. |
-| **Dead Drop** | Anti-forensics toolkit. 7-pass secure file shredding with random rename before unlink, swap partition sanitization, free-space wiping, LUKS-encrypted USB dead drop creation, and emergency PANIC button that destroys all keys, databases, configs, and logs instantly. |
-| **Trace Eraser** | Deep forensic log cleaner. Scrubs shell histories (12 types), system logs (auth, syslog, kern, daemon), application traces, systemd journal, wtmp/btmp/lastlog, thumbnail caches, and recently-used files. Timestamp obfuscation mode randomizes file access times. |
-| **Tor Cloak** | Full Tor lifecycle manager. Start/stop/verify Tor, circuit rotation via ControlPort, torified fetch and shell sessions, IP protection hardening (DNS redirect, WebRTC leak info, MAC check). |
-
-### GUARDIAN — Personal Device Security
-
-Protect everything you own. Phones, PCs, tablets, routers, TVs, IoT devices.
-
-| Module | What It Does |
-|---|---|
-| **Network Scan** | Discovers every device on your network via ARP/nmap. Fingerprints ports, identifies OS, flags dangerous services (Telnet, SMB, TR-069, UPnP). Risk assessment per device. |
-| **Router Audit** | Audits your home router for exposed management ports, ISP remote access (TR-069), UPnP, and weak DNS config. Provides actionable hardening recommendations. |
-| **Device Monitor** | Continuous 24/7 threat monitoring. Detects new devices joining your network, ARP spoofing attacks, and device disappearances. Real-time alerting. |
-| **Auto-Harden** | One-command machine hardening: unattended security updates, SSH root login disable, iptables default-DROP policy, core dump disable, sensitive file permission lockdown. |
-| **Deep Audit** | Local machine security audit: SUID binary check, SSH configuration review, world-writable file scan, failed login analysis, listening service inventory. |
-
----
-
-## shadow-cli — AI Security Assistant
-
-ShadowCypher ships with `shadow-cli`, an AI-powered command-line security assistant that can call all ShadowCypher tools through natural language.
+A command-line AI assistant that routes natural language to ShadowCypher tools.
 
 ```bash
 shadow-cli                              # Interactive mode
 shadow-cli -p "scan my network"         # Discovers all devices on your LAN
-shadow-cli -p "engage ghost mode"       # Activates total invisibility
+shadow-cli -p "full scan 192.168.1.100" # Runs the full AutoScan pipeline
+shadow-cli -p "engage ghost mode"       # Activates total anonymity
 shadow-cli -p "am I anonymous?"         # Runs full anonymity audit
 shadow-cli -p "audit my router"         # Checks router for vulnerabilities
-shadow-cli -p "check my traffic"        # Analyzes network traffic patterns
 ```
 
-Powered by an MCP (Model Context Protocol) server that exposes 9 security tools to any compatible AI assistant.
+Backed by an MCP server that exposes security tools to any compatible AI assistant.
 
 ---
 
-## Security Architecture
+## Encryption Architecture
 
 ```
 Client                          Server (Sovereign Chat)
@@ -215,15 +242,15 @@ Client                          Server (Sovereign Chat)
   │══════ AES-256-GCM Encrypted Channel ══════│
 ```
 
-- **Forward Secrecy**: Ephemeral X25519 keys per session. Compromise of one session reveals nothing about past or future sessions.
-- **At-Rest Encryption**: All stored messages are AES-256-GCM encrypted with per-room derived keys.
-- **Admin Identity**: RSA-4096 key pair verification with challenge-response. Hardware fingerprint binding locks admin privileges to a specific machine.
+- **Forward secrecy**: Ephemeral X25519 keys per session. A compromised session key reveals nothing about past or future sessions.
+- **At-rest encryption**: Stored messages are AES-256-GCM encrypted with per-room derived keys.
+- **Admin identity**: RSA-4096 challenge-response with hardware fingerprint binding.
 
 ---
 
-## Event-Driven Architecture
+## Event Architecture
 
-ShadowCypher's modules are decoupled through the **ShadowBus**, a thread-safe, async-aware publish/subscribe event backbone. This eliminates circular imports and allows any module to react to events from any other module without direct dependencies.
+Modules communicate through **ShadowBus**, a thread-safe pub/sub backbone. This eliminates circular imports and lets any module react to events from any other without direct dependencies.
 
 ```python
 # Any module can broadcast
@@ -233,61 +260,45 @@ bus.publish("forensic_update", {"handle": "attacker", "risk": "HIGH"})
 bus.subscribe("forensic_update", lambda data: firewall.block(data["handle"]))
 ```
 
-Key event channels: `mission_output`, `module_log`, `pulse_anomaly`, `forensic_update`, `security_lockdown`, `new_chat_msg`, `sovereign_chat`, `mission_archived`.
+Key channels: `mission_output`, `module_log`, `pulse_anomaly`, `forensic_update`, `security_lockdown`, `new_chat_msg`, `sovereign_chat`, `mission_archived`.
 
 ---
 
 ## Installation
 
-### Prerequisites
+### Requirements
 
 | Dependency | Purpose | Required |
 |---|---|---|
 | Python 3.12+ | Core runtime | ✅ |
 | GTK 3.0 (`python3-gi`, `gir1.2-gtk-3.0`) | Desktop interface | ✅ |
 | Go 1.24+ | Native relay compilation | ✅ |
-| Ollama | Local AI inference (auto-started) | ✅ |
-| `cryptography` (Python) | AES-256-GCM, X25519, RSA | ✅ |
-| `pydantic`, `pydantic-settings` | Configuration engine | ✅ |
-| `aiohttp` | WebSocket chat + Nexus API | ✅ |
+| Ollama | Local AI inference | ✅ |
+| `cryptography` | AES-256-GCM, X25519, RSA | ✅ |
+| `pydantic`, `pydantic-settings` | Configuration | ✅ |
+| `aiohttp` | WebSocket + Nexus API | ✅ |
 | `psutil` | System metrics | ✅ |
-| nmap, hydra, john, hashcat | Offensive tools | Optional |
-| nuclei, ffuf, aircrack-ng | Scanning & wireless | Optional |
+| `treequest>=0.3.2` | MCTS attack chain planner | ✅ |
+| nmap, nuclei, nikto, sqlmap | Scanning tools | Optional |
+| hydra, john, hashcat | Credential testing | Optional |
 | proxychains4, tor | Anonymization | Optional |
 
 ### Quick Start
 
 ```bash
-# Clone the repository
 git clone https://github.com/jakes1345/ShadowCypher.git
 cd ShadowCypher
-
-# Install Python dependencies
 pip install -r requirements.txt
-
-# Launch
 python3 -m shadowcypher.app
 ```
 
 ### Manual Launch
 
 ```bash
-# Activate the virtual environment
-source ai_engine/meta-venv/bin/activate   # Primary
-# or: source venv/bin/activate            # Fallback
-
-# Set environment
+source venv/bin/activate
 export PYTHONPATH="$(pwd):$(pwd)/ai_engine:$PYTHONPATH"
 export SHADOW_PORT=8888
-
-# Run
 python3 -m shadowcypher.app
-```
-
-### System Command (if installed globally)
-
-```bash
-shadowcypher
 ```
 
 ---
@@ -296,28 +307,29 @@ shadowcypher
 
 ```
 ShadowCypher/
-├── shadowcypher/              # Core Python package
+├── shadowcypher/
 │   ├── app.py                 # GTK application entry point
-│   ├── core/                  # Hub, Config, Bus, Runner, Identity, Security
-│   │   ├── hub.py             # Mission orchestrator + relay bridge
+│   ├── core/
+│   │   ├── hub.py             # Mission orchestrator + relay bridge + dispatch_auto_scan()
 │   │   ├── mitre.py           # MITRE ATT&CK database (65 technique IDs)
 │   │   ├── knowledge_graph.py # SQLite tactical intelligence graph
 │   │   ├── assessor.py        # Rule-based security situation assessor
 │   │   ├── sovereign_chat.py  # WebSocket chat (X25519 + AES-256-GCM)
-│   │   ├── irc_bot.py         # ShadowSentinel IRC bot (20+ commands)
 │   │   └── ...
-│   ├── ai/                    # AI subsystem
-│   │   ├── intent.py          # Intent detector (14 security tool patterns)
-│   │   ├── tree_planner.py    # Sakana AI TreeQuest attack chain planner
+│   ├── ai/
+│   │   ├── auto_scan.py       # Adaptive multi-phase security assessment pipeline
+│   │   ├── intent.py          # Intent detector (15 security tool patterns)
+│   │   ├── tree_planner.py    # TreeQuest MCTS attack chain planner
 │   │   ├── agents.py          # Agent fleet + Intent→Execute→Analyze dispatch
 │   │   ├── orchestrator.py    # MetaChain autonomous agent
-│   │   ├── auto_orchestrator.py # Unified mission dispatch bridge
 │   │   ├── adversary_sim.py   # Autonomous red team simulation engine
 │   │   ├── classic_brain.py   # Offline ELIZA + Markov conversational AI
 │   │   ├── sisyphus.py        # File integrity sentinel
 │   │   └── ...
-│   ├── ui/                    # GTK pages (40+ tactical interfaces)
-│   ├── modules/               # Offensive/defensive tool wrappers (40+)
+│   ├── ui/
+│   │   ├── vuln_page.py       # Vulnerability Scanner (Auto Scan tab + Nikto / SQLmap / NSE)
+│   │   └── ...                # 40+ other pages
+│   ├── modules/
 │   │   ├── cve_feed.py        # NVD CVE feed + EPSS + CISA KEV enrichment
 │   │   ├── threat_intel.py    # OTX + AbuseIPDB + URLhaus + Tor exits
 │   │   ├── recon.py           # Nmap + subdomain enum + HTTP probing
@@ -326,107 +338,80 @@ ShadowCypher/
 │   ├── native/relay/          # Go WebSocket relay (compiled binary)
 │   └── compiler/              # ShadowScript lexer + interpreter
 ├── ai_engine/autoagent/       # MetaChain autonomous agent framework
-├── tools/                     # Bundled third-party tools
-├── scripts/                   # Setup and utility scripts
-├── config.json                # Runtime configuration
-└── requirements.txt           # Python dependencies
+├── config.json                # Runtime configuration (gitignored — never pushed)
+└── requirements.txt
 ```
 
 ---
 
 ## Configuration
 
-ShadowCypher uses a Pydantic-based configuration engine with three-tier resolution:
-
-1. **Environment Variables** — `SC_AI__MODEL=gemma4` overrides `config.ai.model`
-2. **config.json** — Persistent configuration file in project root
-3. **Code Defaults** — Sensible defaults for every setting
-
-Key configuration sections:
+Three-tier resolution: environment variables → `config.json` → code defaults.
 
 | Section | Controls |
 |---|---|
 | `ai` | Model name, API base, temperature, token limits, GPU layer count |
-| `tools` | Paths to nmap, hydra, john, hashcat, and 14 other offensive tools |
-| `irc` | Server, port, channel, SASL auth, sovereign mode, bot personality |
-| `identity` | Operator handle, admin list, master hardware fingerprint |
+| `tools` | Paths to nmap, hydra, john, hashcat, and other offensive tools |
+| `irc` | Server, port, channel, SASL auth, bot personality |
+| `identity` | Operator handle, admin list, hardware fingerprint |
 | `stealth` | Proxy URL, privacy enforcement, Nexus relay endpoint |
-| `intel` | Threat intel API keys: `otx_api_key`, `abuseipdb_api_key` |
+| `intel` | API keys for OTX and AbuseIPDB |
 
-### API Keys (optional — all sources have free/no-key tiers)
+### API Keys
 
-| Source | Key Variable | Free Tier | Get Key |
-|---|---|---|---|
-| OTX AlienVault | `intel.otx_api_key` | Anonymous (rate-limited) | otx.alienvault.com |
-| AbuseIPDB | `intel.abuseipdb_api_key` | 1,000 checks/day | abuseipdb.com/register |
-| URLhaus | *(none)* | Unlimited | abuse.ch (no auth) |
-| Tor Exit List | *(none)* | Unlimited | torproject.org (no auth) |
-| CISA KEV | *(none)* | Unlimited | cisa.gov (no auth) |
-| EPSS (first.org) | *(none)* | Unlimited | first.org (no auth) |
-
----
-
-## Contributing
-
-ShadowCypher is a sovereign project. Contributions are welcome from those who understand the mission:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-module`)
-3. Write real implementations (no placeholders, no stubs, no "TODO" comments)
-4. Test against the `ShadowAudit` diagnostic suite (`from shadowcypher.core.audit import auditor; auditor.run_full_diagnostic()`)
-5. Submit a pull request with a clear description of what the code does and why it exists
+| Source | Config key | Free tier |
+|---|---|---|
+| OTX AlienVault | `intel.otx_api_key` | Anonymous (rate-limited) |
+| AbuseIPDB | `intel.abuseipdb_api_key` | 1,000 checks/day |
+| URLhaus | *(none)* | Unlimited, no auth |
+| Tor exit list | *(none)* | Unlimited, no auth |
+| CISA KEV | *(none)* | Unlimited, no auth |
+| EPSS (first.org) | *(none)* | Unlimited, no auth |
 
 ---
 
 ## ShadowOS
 
-An Arch Linux-based live/installable ISO: the ShadowCypher operating environment. Pentest tools, developer workstation, and gaming, all in one hardened OS with Hyprland, a custom Plymouth boot sequence, and ShadowCypher pre-installed at `/opt/shadowcypher`.
+An Arch Linux-based live/installable ISO with ShadowCypher pre-installed. Hyprland, a custom Plymouth boot, pentest tools, dev environment, and gaming — all in one hardened OS.
 
 | Layer | What ships |
-|-------|-----------|
+|---|---|
 | **Kernel** | linux-hardened + sysctl hardening |
 | **Compositor** | Hyprland (Wayland) + Waybar + Wofi + Hyprlock |
-| **Pentest** | nmap, sqlmap, hydra, metasploit, aircrack-ng, bettercap, rustscan, ffuf, nuclei, impacket, netexec, wireshark, and more |
+| **Pentest** | nmap, sqlmap, hydra, metasploit, aircrack-ng, bettercap, rustscan, ffuf, nuclei, impacket, netexec, wireshark |
 | **Dev** | VSCode, neovim, docker, podman, kubectl, rustup, go, nodejs, lazygit, Distrobox |
 | **Gaming** | Steam, Heroic, Lutris, PrismLauncher, MangoHUD, GameScope, wine-staging |
 | **Privacy** | Tor, dnscrypt-proxy, MAC randomization, AppArmor, ufw |
 | **Modes** | `shadow-mode <normal/dev/pentest/privacy/ghost/undercover>` — hot-swap firewall, DNS, autostart |
-| **AI** | ShadowCypher GTK app + Ollama pre-loaded |
 
 **Status: v0.1.0 — ISOs verified, ~7.4 GB**
 
-### Build
-
 ```bash
-# Native (Arch host)
+# Build (Arch host)
 sudo pacman -S archiso
 cd shadowos && sudo ./build.sh
-# → out/shadowos-<date>-x86_64.iso
 
-# Docker (any host)
+# Build (Docker, any host)
 cd shadowos && ./build-docker.sh
-```
 
-### Test in QEMU
-
-```bash
+# Test in QEMU
 qemu-system-x86_64 -enable-kvm -m 4G -cdrom out/shadowos-*.iso -vga virtio
 ```
 
-Default live credentials: `shadow` / `shadow` (user + root). Reset by the installer.
+Default live credentials: `shadow` / `shadow`. Reset by the installer.
 
 ---
 
 ## Legal
 
-ShadowCypher is built exclusively for **authorized security testing**, **research**, and **education**. Every offensive module assumes the operator has explicit written authorization to test the target systems. Unauthorized use of these tools against systems you do not own or have permission to test is illegal and unethical.
+ShadowCypher is built for authorized security testing, research, and education. Every offensive module assumes the operator has explicit written authorization to test the target system. Unauthorized use of these tools against systems you don't own or have permission to test is illegal.
 
-The authors assume no liability for misuse. You are the operator. You own your actions.
+The authors assume no liability for misuse. You own your actions.
 
 ---
 
 <p align="center">
-  <strong>ShadowCypher v3.0.0</strong> · Built with Go, Python, and Cairo.
+  <strong>ShadowCypher v3.0.0</strong> · Python + Go + Cairo
 </p>
 
 <p align="center">
