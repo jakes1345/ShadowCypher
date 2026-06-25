@@ -324,6 +324,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f5dd", "God-Panel", "APEX"),
             ("☢", "Emergency Wipe", "APEX"),
             ("\U0001f4cb", "ShadowCypher Audit", None),
+            ("\U0001f9ec", "AI Lab", None),
             ("\U0001f4de", "Support", None),
         ]
 
@@ -401,6 +402,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "God-Panel": "god_panel.GodPanel",
                 "Emergency Wipe": "wraith_page.WraithProtocol",
                 "ShadowCypher Audit": "audit_page.ShadowCypherAuditPage",
+                "AI Lab": "ai_lab_page.AILabPage",
                 "Support": "support_page.SupportPage",
             }
             if name not in mapping:
