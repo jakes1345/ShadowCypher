@@ -170,7 +170,7 @@ ollama
 # Mozilla telemetry + recent policy changes contradict the distro's brand.
 librewolf
 mullvad-browser-bin
-torbrowser-launcher
+firefox
 chaotic-keyring
 chaotic-mirrorlist
 mpv
