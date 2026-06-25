@@ -383,6 +383,26 @@ class AgentRouter:
         except Exception as _ie:
             logger.warning("agents", f"Intent engine error (non-fatal): {_ie}")
 
+        # DroPE: compress if effective_query is very long (> 6000 tokens worth)
+        try:
+            if len(effective_query) > 21000:
+                from shadowcypher.ai.drope import drope
+                original_len = len(effective_query)
+                effective_query = drope.compress(effective_query, target_tokens=5000)
+                if callback:
+                    callback(f"[DroPE] Compressed query {original_len} → {len(effective_query)} chars\n")
+        except Exception as _de:
+            logger.debug("agents", f"DroPE non-fatal: {_de}")
+
+        # EvoMemory: prepend relevant past context
+        try:
+            from shadowcypher.ai.evo_memory import evo_memory
+            mem_block = evo_memory.context_block(query, top_k=3)
+            if mem_block:
+                effective_query = f"{mem_block}\n\n{effective_query}"
+        except Exception as _me:
+            logger.debug("agents", f"EvoMemory non-fatal: {_me}")
+
         # 1. CLASSIFY
         if force_agent and force_agent in AGENT_FLEET:
             agent_id = force_agent
@@ -413,6 +433,23 @@ class AgentRouter:
 
         logger.info("agents", f"DISPATCH: {query[:80]}... → {spec.name} ({model})")
 
+        # Transformer²: adapt system prompt based on query task type
+        adapted_spec = spec
+        t2_experts: list[str] = []
+        try:
+            from shadowcypher.ai.transformer2 import transformer2
+            t2_cfg = transformer2.adapt(query)
+            t2_experts = t2_cfg["experts_used"]
+            if t2_experts and t2_experts != ["general"]:
+                import copy
+                adapted_spec = copy.copy(spec)
+                adapted_spec.system_prompt = t2_cfg["system_prompt"]
+                adapted_spec.temperature = min(spec.temperature, t2_cfg["temperature"])
+                if callback:
+                    callback(f"[T²] Expert mix: {', '.join(t2_experts)}\n")
+        except Exception as _t2e:
+            logger.debug("agents", f"Transformer² non-fatal: {_t2e}")
+
         # 2. EXECUTE — tree search or standard agent loop
         if use_tree_search:
             try:
@@ -426,11 +463,34 @@ class AgentRouter:
                     f"Based on this security analysis, write a clear, concise final answer "
                     f"to: {query}\n\nAnalysis:\n{best_path[-3000:]}"
                 )
-                return self._run_agent(spec, model, synth_prompt, callback, tools_enabled=False)
+                result = self._run_agent(adapted_spec, model, synth_prompt, callback, tools_enabled=False)
+                self._post_dispatch(query, result, t2_experts)
+                return result
             except Exception as e:
                 logger.warning("agents", f"Tree search failed, falling back: {e}")
 
-        return self._run_agent(spec, model, effective_query, callback, tools_enabled)
+        result = self._run_agent(adapted_spec, model, effective_query, callback, tools_enabled)
+        self._post_dispatch(query, result, t2_experts)
+        return result
+
+    def _post_dispatch(self, query: str, result: str, t2_experts: list):
+        """Record result to EvoMemory and Transformer² fitness tracking."""
+        if not result or result.startswith("[AI] "):
+            return
+        try:
+            from shadowcypher.ai.evo_memory import evo_memory
+            evo_memory.add(result, source="ai_response", tags=t2_experts)
+            evo_memory.add(query, source="user", tags=t2_experts)
+        except Exception:
+            pass
+        try:
+            if t2_experts:
+                from shadowcypher.ai.transformer2 import transformer2
+                # Heuristic fitness: longer, non-error responses score higher
+                score = min(1.0, len(result) / 1000) if len(result) > 100 else 0.3
+                transformer2.record_feedback(t2_experts, score)
+        except Exception:
+            pass
 
     def _run_agent(self, spec: AgentSpec, model: str, query: str,
                    callback: Callable = None, tools_enabled: bool = True,

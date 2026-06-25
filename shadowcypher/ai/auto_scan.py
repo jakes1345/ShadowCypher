@@ -206,6 +206,15 @@ class AutoScan:
 
         emit = lambda msg: on_output(msg) if on_output else None
 
+        # ShinkaEvolver: use evolved scan configuration
+        _evolved_config: dict = {}
+        try:
+            from shadowcypher.ai.shinka_evolver import shinka_evolver
+            _evolved_config = shinka_evolver.best_scan_config()
+            emit(f"[EVOLVE] Scan config: {_evolved_config}\n")
+        except Exception:
+            pass
+
         emit(f"\n{'='*62}\n")
         emit(f"  AutoScan starting: {target}\n")
         emit(f"{'='*62}\n\n")
@@ -364,6 +373,25 @@ class AutoScan:
         saved = self._save_report(result)
         if saved and on_output:
             emit(f"\n[AUTOSCAN] Report saved → {saved.get('text', '')}\n")
+
+        # ShinkaEvolver: record fitness of this scan config
+        if _evolved_config:
+            try:
+                from shadowcypher.ai.shinka_evolver import shinka_evolver
+                n_findings = len(result.ports) + len(result.cve_matches)
+                fitness = min(1.0, n_findings / 20.0)
+                shinka_evolver.record_scan_fitness(_evolved_config, fitness)
+            except Exception:
+                pass
+
+        # EvoMemory: store scan result summary
+        try:
+            from shadowcypher.ai.evo_memory import evo_memory
+            summary = result.summary() if hasattr(result, "summary") else str(result)[:500]
+            evo_memory.add(f"AutoScan {target}: {summary}", source="scan",
+                           tags=["scan", target])
+        except Exception:
+            pass
 
         return result
 
