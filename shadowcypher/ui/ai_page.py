@@ -188,6 +188,23 @@ class AIPage(BasePage):
         btn_send.connect("clicked", self._on_send)
         entry_row.pack_end(btn_send, False, False, 0)
 
+        # Tree search toggle
+        tree_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        tree_row.set_margin_top(4)
+        self.tree_search_toggle = Gtk.CheckButton(label="Tree search (AB-MCTS — explores multiple reasoning paths)")
+        self.tree_search_toggle.set_tooltip_text(
+            "Runs AB-MCTS over reasoning branches before answering. Slower but significantly better on complex assessments."
+        )
+        tree_row.pack_start(self.tree_search_toggle, False, False, 0)
+        self.tree_budget_spin = Gtk.SpinButton()
+        self.tree_budget_spin.set_adjustment(Gtk.Adjustment(value=16, lower=4, upper=64, step_increment=4))
+        self.tree_budget_spin.set_tooltip_text("Search budget (expansions)")
+        self.tree_budget_spin.set_sensitive(False)
+        self.tree_search_toggle.connect("toggled", lambda btn: self.tree_budget_spin.set_sensitive(btn.get_active()))
+        tree_row.pack_start(Gtk.Label(label="budget:"), False, False, 0)
+        tree_row.pack_start(self.tree_budget_spin, False, False, 0)
+        ctrl_box.pack_start(tree_row, False, False, 0)
+
         ctrl_box.pack_start(entry_row, False, False, 0)
 
         # Deep analysis status panel
@@ -395,7 +412,25 @@ class AIPage(BasePage):
 
             GLib.idle_add(self._on_mission_done, result)
 
-        if intensity == "MAX":
+        use_tree = self.tree_search_toggle.get_active()
+        tree_budget = int(self.tree_budget_spin.get_value())
+
+        if use_tree:
+            self.terminal.log(f"Tree search active (budget={tree_budget}) — exploring reasoning paths...", "SYSTEM")
+            self.pod_status.set_value("Searching...")
+            from shadowcypher.ai.tree_reasoner import tree_reasoner
+
+            def _tree_complete(result):
+                GLib.idle_add(self.pod_status.set_value, "Ready")
+                GLib.idle_add(self._on_mission_done, result)
+
+            tree_reasoner.reason_async(
+                msg,
+                on_output=lambda x: GLib.idle_add(self.terminal.log, x, "TREE"),
+                on_complete=_tree_complete,
+                budget=tree_budget,
+            )
+        elif intensity == "MAX":
             self.terminal.log("Switching to deep analysis mode...", "SYSTEM")
             self.quantum_revealer.set_reveal_child(True)
             self.pod_status.set_value("Planning...")

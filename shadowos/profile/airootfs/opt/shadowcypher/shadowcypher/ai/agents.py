@@ -346,7 +346,8 @@ class AgentRouter:
 
     def dispatch(self, query: str, callback: Callable = None,
                  force_agent: str = None, use_ai_routing: bool = True,
-                 tools_enabled: bool = True) -> str:
+                 tools_enabled: bool = True,
+                 use_tree_search: bool = False, tree_budget: int = 16) -> str:
         """
         Main entry point. Routes query to the best agent and returns the result.
 
@@ -354,6 +355,10 @@ class AgentRouter:
         intent (nmap, nuclei, threat-intel lookup, etc.), the tool is run first
         and the real output is injected into the AI prompt so the model analyzes
         actual data rather than hallucinating results.
+
+        use_tree_search: Run AB-MCTS tree search over reasoning paths (slower
+            but much better on complex multi-step security assessments).
+        tree_budget: Number of MCTS expansions (default 16, raise for harder tasks).
 
         Args:
             query: The user's request
@@ -408,7 +413,23 @@ class AgentRouter:
 
         logger.info("agents", f"DISPATCH: {query[:80]}... → {spec.name} ({model})")
 
-        # 2. EXECUTE — agent loop with tool use
+        # 2. EXECUTE — tree search or standard agent loop
+        if use_tree_search:
+            try:
+                from shadowcypher.ai.tree_reasoner import tree_reasoner
+                logger.info("agents", f"Tree search: budget={tree_budget}")
+                best_path = tree_reasoner.reason(
+                    effective_query, budget=tree_budget, on_output=callback
+                )
+                # Final synthesis: compress the best reasoning path into a clean answer
+                synth_prompt = (
+                    f"Based on this security analysis, write a clear, concise final answer "
+                    f"to: {query}\n\nAnalysis:\n{best_path[-3000:]}"
+                )
+                return self._run_agent(spec, model, synth_prompt, callback, tools_enabled=False)
+            except Exception as e:
+                logger.warning("agents", f"Tree search failed, falling back: {e}")
+
         return self._run_agent(spec, model, effective_query, callback, tools_enabled)
 
     def _run_agent(self, spec: AgentSpec, model: str, query: str,
