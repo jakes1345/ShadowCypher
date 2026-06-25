@@ -1,5 +1,5 @@
 """
-Privilege Escalation Module — Local Enumeration & PocEngine Engine.
+Privilege Escalation Module — Local Enumeration & PoC Engine.
 SUID binaries, kernel exploits, sudo misconfigs, cron abuse, capabilities,
 and automated LinPEAS integration.
 """

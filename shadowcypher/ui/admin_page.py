@@ -124,7 +124,7 @@ class AdminPage(BasePage):
         self.workspace.pack_start(frm_gen, False, False, 0)
 
         # ── 5. Citadel Emergency Lockdown ── Moved to Sidebar
-        frm_lock = Gtk.Frame(label="Wraith Protocol (Emergency)")
+        frm_lock = Gtk.Frame(label="Emergency Lockdown")
         box_lock = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         box_lock.set_margin_start(10)
         box_lock.set_margin_end(10)
@@ -229,7 +229,7 @@ class AdminPage(BasePage):
         response = dialog.run()
         if response == Gtk.ResponseType.YES:
             hardener.execute_flash_wipe()
-            self.on_output("[LOCKDOWN] Spectre Flash-Wipe Complete. System isolated.\n")
+            self.on_output("[LOCKDOWN] Flash Wipe complete. System isolated.\n")
         dialog.destroy()
 
     def _on_go_public(self, btn):

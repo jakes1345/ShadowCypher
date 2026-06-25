@@ -108,7 +108,7 @@ class SpectralIntelligencePage(BasePage):
         if not target:
             return
         self.log(f"Intel gather: {target}", "INTEL")
-        hub.dispatch_mission(f"Spectral Intelligence audit on {target}", agent_role="commander")
+        hub.dispatch_mission(f"OSINT audit on {target}", agent_role="commander")
 
     def _on_osint_ssl(self, btn):
         target = self.osint_target.get_text().strip()

@@ -1,5 +1,5 @@
 """
-Wraith Protocol — Emergency Lockdown & Ephemeral Data Destruction.
+Emergency Lockdown — Flash Wipe, tunnel kill, evidence purge.
 Dedicated page for flash-wipe, tunnel termination, and evidence purge.
 """
 
@@ -108,14 +108,14 @@ class WraithProtocol(BasePage):
             parent=self.get_toplevel(), flags=0,
             message_type=Gtk.MessageType.WARNING,
             buttons=Gtk.ButtonsType.YES_NO,
-            text="Confirm Spectre Flash-Wipe?",
+            text="Confirm Flash Wipe?",
         )
         dialog.format_secondary_text("This will purge all ephemeral mission data and lock local vaults.")
         response = dialog.run()
         if response == Gtk.ResponseType.YES:
             from shadowcypher.core.security import hardener
             hardener.execute_flash_wipe()
-            self.log("[LOCKDOWN] Spectre Flash-Wipe Complete.", "WARNING")
+            self.log("[LOCKDOWN] Flash wipe complete.", "WARNING")
             self.pod_status.set_value("ENGAGED")
         dialog.destroy()
 
