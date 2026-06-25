@@ -359,6 +359,12 @@ class AutoScan:
 
         result.duration_s = round(time.time() - t0, 1)
         emit(f"\n[AUTOSCAN] Complete in {result.duration_s}s — {result.summary()}\n")
+
+        # Save structured report files
+        saved = self._save_report(result)
+        if saved and on_output:
+            emit(f"\n[AUTOSCAN] Report saved → {saved.get('text', '')}\n")
+
         return result
 
     # ── Phase helpers ─────────────────────────────────────────────────────────
@@ -396,6 +402,48 @@ class AutoScan:
                 kg.ingest_threat_intel(ti)
         except Exception as e:
             logger.warning("auto_scan", f"KG ingestion error: {e}")
+
+    def _save_report(self, result: ScanResult) -> dict:
+        """Write HTML, text, and JSON report files via core/reporting.py."""
+        try:
+            from shadowcypher.core.reporting import Report
+            report = Report(project_name="AutoScan", target=result.target)
+
+            # Port info as findings
+            for p in result.ports:
+                sev = "Info"
+                if p.is_db:
+                    sev = "Medium"
+                if p.port in {445, 23, 21}:  # SMB, telnet, FTP
+                    sev = "High"
+                report.add_finding(
+                    f"Open port: {p.port}/{p.proto} ({p.service})",
+                    sev,
+                    p.banner() or f"{p.service} on {p.port}",
+                )
+
+            # CVE matches
+            for m in result.cve_matches:
+                report.add_finding(
+                    m.cve_id,
+                    m.cvss_severity or "Medium",
+                    m.description,
+                    cvss=m.cvss_score,
+                    kev=getattr(m, "kev_exploited", False),
+                )
+
+            # Raw tool outputs
+            for tool, out in result.tool_outputs.items():
+                report.add_raw_output(tool, out)
+
+            # AI report text as raw output too
+            if result.report:
+                report.add_raw_output("ai_synthesis", result.report)
+
+            return report.save_all()
+        except Exception as e:
+            logger.warning("auto_scan", f"Report save failed: {e}")
+            return {}
 
     def _synthesize_report(self, result: ScanResult, on_output: Callable) -> str:
         """Ask the AI to synthesize all findings into a structured report."""

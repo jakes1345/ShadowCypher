@@ -40,7 +40,7 @@ TOUR_STEPS: list[TourStep] = [
         ),
     ),
     TourStep(
-        page="Shadow-Synthesizer",
+        page="AI Assistant",
         icon="🤖",
         title="Local AI — Zero Cloud",
         body=(
@@ -85,7 +85,7 @@ TOUR_STEPS: list[TourStep] = [
         ),
     ),
     TourStep(
-        page="Spectral Intelligence",
+        page="Intelligence Center",
         icon="✨",
         title="OSINT — Map Your Target",
         body=(
@@ -96,7 +96,7 @@ TOUR_STEPS: list[TourStep] = [
         ),
     ),
     TourStep(
-        page="Vulnerability Sweep",
+        page="Vuln Scanner",
         icon="🎯",
         title="Find the Holes Before Someone Else Does",
         body=(
@@ -107,7 +107,7 @@ TOUR_STEPS: list[TourStep] = [
         ),
     ),
     TourStep(
-        page="Web & Cloud Strikes",
+        page="Web Security",
         icon="🕵",
         title="Offensive Testing Suite",
         body=(
@@ -140,11 +140,11 @@ TOUR_STEPS: list[TourStep] = [
         ),
     ),
     TourStep(
-        page="Wraith Protocol",
+        page="Emergency Wipe",
         icon="☢",
         title="Emergency Lockdown",
         body=(
-            "If things go sideways: Spectre Flash-Wipe purges session keys, destroys "
+            "If things go sideways: Flash Wipe purges session keys, destroys "
             "forensic artifacts, kills every active process, and scrubs logs — all in one "
             "action. Irreversible by design. The panic button is there for when you need "
             "it to be there. Use it with full intention."
