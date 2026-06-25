@@ -1,7 +1,4 @@
-"""
-Spectral Intelligence — Consolidated Tactical Intelligence Hub.
-Combines Strategic OSINT and Network Recon into a unified operational plane.
-"""
+"""Intelligence page — OSINT and network recon tabs."""
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -15,16 +12,15 @@ from shadowcypher.modules.network import Network
 from shadowcypher.modules.recon import Recon
 
 class SpectralIntelligencePage(BasePage):
-    """The Apex Intelligence Nexus."""
+    """Intelligence hub \u2014 OSINT and network recon."""
 
     def __init__(self, start_tab=0):
-        super().__init__("\u2728 SPECTRAL INTELLIGENCE")
+        super().__init__("\u2728 Intel")
         self._build_ui(start_tab)
 
     def _build_ui(self, start_tab):
-        # 1. Telemetry Strip
-        self.pod_nodes = DataPod("NODES", "0", "cyan")
-        self.pod_intel = DataPod("INTEL_SCORE", "0", "violet")
+        self.pod_nodes = DataPod("Nodes", "0", "cyan")
+        self.pod_intel = DataPod("Intel score", "0", "violet")
         self.metric_strip.pack_start(self.pod_nodes, True, True, 0)
         self.metric_strip.pack_start(self.pod_intel, True, True, 0)
 
@@ -45,7 +41,7 @@ class SpectralIntelligencePage(BasePage):
         self.osint_target.set_placeholder_text("Target Domain, IP, or Email...")
         row1.pack_start(self.osint_target, True, True, 0)
         
-        btn_go = Gtk.Button(label="IGNITE_RECON")
+        btn_go = Gtk.Button(label="Run")
         btn_go.get_style_context().add_class("suggested-action")
         btn_go.connect("clicked", self._on_osint_pulse)
         row1.pack_start(btn_go, False, False, 0)
@@ -57,12 +53,12 @@ class SpectralIntelligencePage(BasePage):
         flow.set_selection_mode(Gtk.SelectionMode.NONE)
         
         actions = [
-            ("SSL_AUDIT", self._on_osint_ssl),
-            ("HTTP_HEADERS", self._on_osint_headers),
-            ("TECH_STACK", self._on_osint_tech),
-            ("WHOIS_ASN", self._on_osint_whois),
-            ("SOCIAL_FP", self._on_osint_social),
-            ("WAYBACK_IO", self._on_osint_wayback)
+            ("SSL Audit", self._on_osint_ssl),
+            ("HTTP Headers", self._on_osint_headers),
+            ("Tech Stack", self._on_osint_tech),
+            ("Whois/ASN", self._on_osint_whois),
+            ("Social FP", self._on_osint_social),
+            ("Wayback", self._on_osint_wayback)
         ]
         for label, handler in actions:
             btn = self.make_action_btn(label, handler)
@@ -92,12 +88,12 @@ class SpectralIntelligencePage(BasePage):
         btn_row.set_selection_mode(Gtk.SelectionMode.NONE)
         
         net_actions = [
-            ("ARP_SCAN", self._on_net_arp),
-            ("TCP_SWEEP", self._on_net_tcp),
-            ("SYN_STEALTH", self._on_net_syn),
-            ("OS_FINGERPRINT", self._on_net_os),
-            ("SERVICE_MAP", self._on_net_service),
-            ("PCAP_MONITOR", self._on_net_pcap)
+            ("ARP Scan", self._on_net_arp),
+            ("TCP Sweep", self._on_net_tcp),
+            ("SYN Stealth", self._on_net_syn),
+            ("OS Detect", self._on_net_os),
+            ("Service Map", self._on_net_service),
+            ("Packet Capture", self._on_net_pcap)
         ]
         for label, handler in net_actions:
             btn = self.make_action_btn(label, handler)
@@ -111,7 +107,7 @@ class SpectralIntelligencePage(BasePage):
         target = self.osint_target.get_text().strip()
         if not target:
             return
-        self.log(f"INITIATING_SPECTRAL_OSINT_PULSE: {target}", "INTEL")
+        self.log(f"Intel gather: {target}", "INTEL")
         hub.dispatch_mission(f"Spectral Intelligence audit on {target}", agent_role="commander")
 
     def _on_osint_ssl(self, btn):

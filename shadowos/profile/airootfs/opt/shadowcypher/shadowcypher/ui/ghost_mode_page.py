@@ -1,8 +1,4 @@
-"""
-Ghost Mode Page — Total Operational Invisibility Control Panel.
-Wraps ghost_mode.py and tor_cloak.py into the app UI.
-All offensive tools should check stealth.active before firing.
-"""
+"""Ghost Mode page — anonymity controls wrapping ghost_mode.py and tor_cloak.py."""
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -36,15 +32,14 @@ def _tor_alive() -> bool:
 
 class GhostModePage(BasePage):
     def __init__(self):
-        super().__init__("\U0001f47a GHOST MODE — OPERATIONAL INVISIBILITY")
+        super().__init__("👺 Ghost Mode")
 
-        # ── Status strip ──
         from shadowcypher.ui.components import DataPod
-        self.pod_ghost    = DataPod("GHOST_MODE",   "INACTIVE", "red")
-        self.pod_tor      = DataPod("TOR_CIRCUIT",  "DOWN",     "red")
-        self.pod_hysteria = DataPod("HYSTERIA2",    "OFF",      "amber")
-        self.pod_dns      = DataPod("DNS_LEAK",     "UNKNOWN",  "amber")
-        self.pod_mac      = DataPod("MAC_SPOOF",    "OFF",      "amber")
+        self.pod_ghost    = DataPod("Ghost Mode", "Off",     "red")
+        self.pod_tor      = DataPod("Tor",        "Down",    "red")
+        self.pod_hysteria = DataPod("Hysteria2",  "Off",     "amber")
+        self.pod_dns      = DataPod("DNS",        "Unknown", "amber")
+        self.pod_mac      = DataPod("MAC",        "Real",    "amber")
         for pod in [self.pod_ghost, self.pod_tor, self.pod_hysteria, self.pod_dns, self.pod_mac]:
             self.metric_strip.pack_start(pod, True, True, 0)
 
@@ -58,7 +53,7 @@ class GhostModePage(BasePage):
         hbox.pack_start(ctrl_col, False, False, 0)
 
         # Ghost Mode engage/disengage
-        ghost_frame = Gtk.Frame(label="GHOST MODE (8-Layer OPSEC)")
+        ghost_frame = Gtk.Frame(label="Ghost Mode (8 anonymity layers)")
         ghost_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         ghost_box.set_margin_top(10)
         ghost_box.set_margin_bottom(10)
@@ -77,12 +72,12 @@ class GhostModePage(BasePage):
         desc.set_xalign(0)
         ghost_box.pack_start(desc, False, False, 0)
 
-        self.engage_btn = Gtk.Button(label="⚡ ENGAGE GHOST MODE")
+        self.engage_btn = Gtk.Button(label="⚡ Enable Ghost Mode")
         self.engage_btn.get_style_context().add_class("destructive-action")
         self.engage_btn.connect("clicked", self._on_engage)
         ghost_box.pack_start(self.engage_btn, False, False, 0)
 
-        self.disengage_btn = Gtk.Button(label="↩ DISENGAGE (Restore)")
+        self.disengage_btn = Gtk.Button(label="↩ Disable (Restore)")
         self.disengage_btn.set_sensitive(False)
         self.disengage_btn.connect("clicked", self._on_disengage)
         ghost_box.pack_start(self.disengage_btn, False, False, 0)
@@ -96,7 +91,7 @@ class GhostModePage(BasePage):
         ctrl_col.pack_start(ghost_frame, False, False, 0)
 
         # Tor controls
-        tor_frame = Gtk.Frame(label="TOR CIRCUIT")
+        tor_frame = Gtk.Frame(label="Tor")
         tor_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         tor_box.set_margin_top(10)
         tor_box.set_margin_bottom(10)
@@ -119,7 +114,7 @@ class GhostModePage(BasePage):
         ctrl_col.pack_start(tor_frame, False, False, 0)
 
         # Identity coverage status
-        id_frame = Gtk.Frame(label="IDENTITY COVERAGE")
+        id_frame = Gtk.Frame(label="Identity coverage")
         id_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         id_box.set_margin_top(8)
         id_box.set_margin_bottom(8)
@@ -152,7 +147,7 @@ class GhostModePage(BasePage):
         ctrl_col.pack_start(id_frame, False, False, 0)
 
         # Quick hardening
-        harden_frame = Gtk.Frame(label="QUICK HARDENING")
+        harden_frame = Gtk.Frame(label="Quick checks")
         harden_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         harden_box.set_margin_top(10)
         harden_box.set_margin_bottom(10)
@@ -171,7 +166,7 @@ class GhostModePage(BasePage):
         ctrl_col.pack_start(harden_frame, False, False, 0)
 
         # Traffic Mirage
-        mirage_frame = Gtk.Frame(label="TRAFFIC MIRAGE")
+        mirage_frame = Gtk.Frame(label="Traffic Mirage")
         mirage_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         mirage_box.set_margin_top(10)
         mirage_box.set_margin_bottom(10)
@@ -203,7 +198,7 @@ class GhostModePage(BasePage):
         ctrl_col.pack_start(mirage_frame, False, False, 0)
 
         # Right: output console
-        console_frame = Gtk.Frame(label="GHOST CONSOLE")
+        console_frame = Gtk.Frame(label="Console")
         console_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
         self.console = Gtk.TextView()
@@ -257,39 +252,35 @@ class GhostModePage(BasePage):
         self.engage_btn.set_sensitive(not ghost)
         self.disengage_btn.set_sensitive(ghost)
 
-        # Ghost pod
         if ghost and tor:
-            self.pod_ghost.update("ACTIVE", "green")
+            self.pod_ghost.update("Active", "green")
         elif ghost:
-            self.pod_ghost.update("PARTIAL", "amber")
+            self.pod_ghost.update("Partial", "amber")
         else:
-            self.pod_ghost.update("INACTIVE", "red")
+            self.pod_ghost.update("Off", "red")
 
-        # Tor pod
-        self.pod_tor.update("UP" if tor else "DOWN", "green" if tor else "red")
+        self.pod_tor.update("Up" if tor else "Down", "green" if tor else "red")
 
-        # Hysteria2 pod
         try:
             from shadowcypher.core.hysteria import hysteria_transport
             if hysteria_transport.running:
-                self.pod_hysteria.update("ACTIVE", "green")
+                self.pod_hysteria.update("Active", "green")
             elif hysteria_transport.available:
-                self.pod_hysteria.update("IDLE", "amber")
+                self.pod_hysteria.update("Idle", "amber")
             else:
                 self.pod_hysteria.update("N/A", "red")
         except Exception:
-            self.pod_hysteria.update("OFF", "amber")
+            self.pod_hysteria.update("Off", "amber")
 
-        # DNS leak check (quick)
         try:
             with open("/etc/resolv.conf") as f:
                 dns = f.read()
             if "Ghost Mode" in dns and "127.0.0.1" in dns:
-                self.pod_dns.update("SECURED", "green")
+                self.pod_dns.update("Secured", "green")
             else:
-                self.pod_dns.update("EXPOSED", "red")
+                self.pod_dns.update("Exposed", "red")
         except Exception:
-            self.pod_dns.update("UNKNOWN", "amber")
+            self.pod_dns.update("Unknown", "amber")
 
         # MAC check — first non-loopback iface, check locally-administered bit
         try:
@@ -301,11 +292,11 @@ class GhostModePage(BasePage):
                 if m and m.group(1) != "lo":
                     first_byte = int(m.group(2).split(":")[0], 16)
                     randomized = bool(first_byte & 0x02)
-                    self.pod_mac.update("RANDOM" if randomized else "REAL",
-                                        "green" if randomized else "red")
+                    self.pod_mac.update("Random" if randomized else "Real",
+                                       "green" if randomized else "red")
                     break
         except Exception:
-            self.pod_mac.update("UNKNOWN", "amber")
+            self.pod_mac.update("Unknown", "amber")
 
         # Identity coverage panel
         self._update_coverage(ghost, tor)

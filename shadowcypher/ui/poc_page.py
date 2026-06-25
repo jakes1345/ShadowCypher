@@ -24,7 +24,7 @@ _REVSHELL_TEMPLATES = {
 
 
 class PocPage(BasePage):
-    """Apex Exploitation Hub. Integrated with ShadowHub."""
+    """Exploitation tools — reverse shells, payloads, MSF integration."""
 
     def __init__(self):
         super().__init__("\U0001f4a3 Exploitation")
@@ -32,9 +32,9 @@ class PocPage(BasePage):
 
     def _build_ui(self):
         # Metric Strip
-        self.pod_stability = DataPod("PAYLOAD_STABILITY", "OPTIMAL", "cyan")
-        self.pod_listeners = DataPod("ACTIVE_LISTENERS", "0", "violet")
-        self.pod_pressure = DataPod("EXPLOIT_PRESSURE", "LOW", "amber")
+        self.pod_stability = DataPod("Payload status", "Ready", "cyan")
+        self.pod_listeners = DataPod("Listeners", "0", "violet")
+        self.pod_pressure = DataPod("Activity", "Low", "amber")
 
         self.metric_strip.pack_start(self.pod_stability, True, True, 0)
         self.metric_strip.pack_start(self.pod_listeners, True, True, 0)
@@ -73,7 +73,7 @@ class PocPage(BasePage):
         self.rs_type.set_active(0)
         row2.pack_start(self.rs_type, True, True, 0)
 
-        btn = Gtk.Button(label="GENERATE_SHELL")
+        btn = Gtk.Button(label="Generate")
         btn.get_style_context().add_class("suggested-action")
         btn.connect("clicked", self._on_revshell)
         row2.pack_end(btn, False, False, 0)
@@ -87,7 +87,7 @@ class PocPage(BasePage):
             return
 
         shell_type = self.rs_type.get_active_text()
-        self.terminal.log(f"GENERATING_{shell_type.upper()}_SHELL for {lhost}:{lport}...", "EXPLOIT")
+        self.terminal.log(f"Generating {shell_type} shell → {lhost}:{lport}", "EXPLOIT")
 
         template = _REVSHELL_TEMPLATES.get(shell_type)
         if template:
@@ -106,13 +106,13 @@ class PocPage(BasePage):
         
         row1 = Gtk.Box(spacing=10)
         self.pl_type = Gtk.ComboBoxText()
-        self.pl_type.append("hollow", "PROCESS_HOLLOWING (svchost.exe)")
-        self.pl_type.append("macro", "VBA_MACRO_GEN (Office)")
-        self.pl_type.append("smuggle", "HTML_SMUGGLING (ISO/EXE)")
+        self.pl_type.append("hollow", "Process Hollowing (svchost.exe)")
+        self.pl_type.append("macro", "VBA Macro (Office)")
+        self.pl_type.append("smuggle", "HTML Smuggling (ISO/EXE)")
         self.pl_type.set_active(0)
         row1.pack_start(self.pl_type, True, True, 0)
         
-        btn = Gtk.Button(label="GENERATE_ELITE_PAYLOAD")
+        btn = Gtk.Button(label="Generate Payload")
         btn.get_style_context().add_class("destructive-action")
         btn.connect("clicked", self._on_generate_elite)
         row1.pack_end(btn, False, False, 0)
@@ -132,27 +132,25 @@ class PocPage(BasePage):
             self.terminal.log("ERROR: LHOST required for payload generation.", "EXPLOIT")
             return
 
-        self.terminal.log(f"INITIATING_{ptype.upper()}_GENERATION...", "APEX")
-        
+        self.terminal.log(f"Generating {ptype} payload...", "INFO")
+
         if ptype == "hollow":
-            # Real Process Hollowing Synthesis via DeepHat
             from shadowcypher.modules.deephat import deephat
-            self.terminal.log("ENGAGING_DEEPHAT: Synthesizing Process Hollowing Weapon...", "AI")
+            self.terminal.log("Using DeepHat to generate process hollowing payload...", "AI")
             filename = deephat.forge_weapon(f"Process Hollowing payload for {lhost}:{lport}", category="hollowing")
-            self.terminal.log(f"WEAPON_FORGED: {filename}", "SUCCESS")
+            self.terminal.log(f"Saved: {filename}", "SUCCESS")
         elif ptype == "smuggle":
-            # Real HTML Smuggling for a synthesized Python Agent
             from shadowcypher.modules.craft_factory import CraftFactory
             from shadowcypher.modules.awareness_sim import Phishing
-            
+
             agent_path = CraftFactory.generate_obfuscated_python(lhost, lport)
             Phishing.generate_html_smuggling(agent_path, "agent_apex.exe.html")
-            self.terminal.log("STEALTH_SMUGGLE_FORGED: payloads/agent_apex.exe.html", "SUCCESS")
+            self.terminal.log("Saved: payloads/agent_apex.exe.html", "SUCCESS")
         elif ptype == "macro":
             from shadowcypher.modules.deephat import deephat
-            self.terminal.log("ENGAGING_DEEPHAT: Synthesizing Evasive VBA Macro...", "AI")
+            self.terminal.log("Using DeepHat to generate VBA macro...", "AI")
             filename = deephat.forge_weapon(f"VBA Macro for reverse shell to {lhost}:{lport}", category="macro")
-            self.terminal.log(f"WEAPON_FORGED: {filename}", "SUCCESS")
+            self.terminal.log(f"Saved: {filename}", "SUCCESS")
         else:
             self.terminal.log(f"Harnessing {ptype} template...", "INFO")
 
@@ -173,7 +171,7 @@ class PocPage(BasePage):
         if not query:
             return
         self.header.set_active(True)
-        self.terminal.log(f"SEARCHING_MSF: {query}", "MSF")
+        self.terminal.log(f"Searching modules: {query}", "MSF")
 
         from shadowcypher.core.runner import runner
 

@@ -6,8 +6,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.shadowcypher.site https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="DENY">
-    <title>ShadowCypher — Sovereign Security Platform</title>
-    <meta name="description" content="ShadowCypher: sovereign tactical security suite with Ghost Mode invisibility, AI-powered security assistant, and personal device protection. Zero telemetry. Zero compromise.">
+    <title>ShadowCypher — Privacy & Security Platform | VPN Alternative</title>
+    <meta name="description" content="ShadowCypher routes all your traffic through Tor, randomizes your MAC address, and locks down DNS — no VPN company, no logs, no subscription. Free and open source. One command to go dark.">
     <link rel="icon" type="image/png" href="/icon-192.png">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.json">
@@ -18,14 +18,15 @@
     <!-- Open Graph / Social preview -->
     <meta property="og:type"        content="website">
     <meta property="og:url"         content="https://shadowcypher.site/">
-    <meta property="og:title"       content="ShadowCypher — Sovereign Security Suite">
-    <meta property="og:description" content="Ghost Mode invisibility, AI-powered security assistant, Guardian network monitor. Zero telemetry. Your devices, your rules.">
+    <meta property="og:title"       content="ShadowCypher — Private internet without a VPN subscription">
+    <meta property="og:description" content="Route all traffic through Tor, randomize your MAC, block DNS leaks — no VPN company in the middle. Free, open source, one command.">
     <meta property="og:image"       content="https://shadowcypher.site/dashboard.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta name="twitter:card"        content="summary_large_image">
-    <meta name="twitter:title"       content="ShadowCypher — Sovereign Security Suite">
-    <meta name="twitter:description" content="Ghost Mode invisibility, AI-powered security assistant, Guardian network monitor. Zero telemetry. Your devices, your rules.">
+    <meta name="twitter:title"       content="ShadowCypher — Private internet without a VPN subscription">
+    <meta name="twitter:description" content="Route all traffic through Tor, randomize your MAC, block DNS leaks — no VPN company in the middle. Free, open source, one command.">
+    <meta name="keywords" content="vpn alternative, tor vpn, open source vpn, self-hosted vpn, privacy tool, anonymous browsing, tor proxy, ghost mode, mac randomization, dns leak prevention, free vpn alternative, linux privacy">
     <meta name="twitter:image"       content="https://shadowcypher.site/dashboard.png">
     <!-- Canonical -->
     <link rel="canonical" href="https://shadowcypher.site/">
@@ -52,7 +53,7 @@
             <div class="nav-indicator" id="navIndicator"></div>
             <a onclick="navTo('home',this)" id="nav-home" class="nav-tab active">Overview</a>
             <a onclick="navTo('arsenal',this)" id="nav-arsenal" class="nav-tab">Arsenal</a>
-            <a onclick="navTo('ghost',this)" id="nav-ghost" class="nav-tab">Ghost</a>
+            <a onclick="navTo('ghost',this)" id="nav-ghost" class="nav-tab">Privacy</a>
             <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
             <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Download</a>
             <a onclick="navTo('shadowos',this)" id="nav-shadowos" class="nav-tab">ShadowOS</a>
@@ -70,11 +71,11 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;min-height:calc(100vh - 200px);align-items:center;padding-bottom:60px;">
             <div class="hero-container" style="text-align:left;">
                 <div class="status-badge"><div class="status-dot"></div>v3.0.0 · Build verified</div>
-                <h1 class="hero-title">Enterprise security,<br><span style="color:var(--accent-primary);">sovereign by design.</span></h1>
-                <p class="hero-subtitle">A unified security platform for offensive testing, anonymity, and personal device protection. Local-first AI. Zero telemetry. Built for operators and engineers who audit their stack, not just use it.</p>
+                <h1 class="hero-title">Privacy without<br><span style="color:var(--accent-primary);">trusting anyone.</span></h1>
+                <p class="hero-subtitle">Most VPNs just move the trust problem — now you're trusting a company instead of your ISP. ShadowCypher routes everything through Tor so there's no company to trust at all. No logs because there's nothing to log. No subscription. Runs entirely on your machine.</p>
                 <div style="display:flex;gap:20px;flex-wrap:wrap;">
-                    <a onclick="navTo('arsenal',document.getElementById('nav-arsenal'))" class="btn-primary">Explore Arsenal</a>
-                    <a onclick="navTo('download',document.getElementById('nav-download'))" class="btn-primary" style="background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);">Download Apps</a>
+                    <a onclick="navTo('ghost',document.getElementById('nav-ghost'))" class="btn-primary">See how it works</a>
+                    <a onclick="navTo('download',document.getElementById('nav-download'))" class="btn-primary" style="background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);">Download</a>
                 </div>
                 <div class="swarm-feed" style="margin-top:40px;width:100%;">
                     <div class="mono" style="font-size:0.7rem;color:var(--accent-primary);margin-bottom:10px;opacity:0.6;">// DEMO: install the agent to see your real network events here</div>
@@ -254,7 +255,7 @@
         <div style="padding:60px 0;border-top:1px solid var(--glass-border);">
             <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// DATA FLOW</div>
             <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:12px;">How everything connects.</h2>
-            <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:48px;max-width:560px;line-height:1.8;">Every component talks to every other. Run a mission on desktop, agent scans your LAN, events hit the API, and your phone lights up in real time.</p>
+            <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:48px;max-width:560px;line-height:1.8;">Every component talks to every other. Run a mission on desktop, agent scans your LAN, events hit the API, and your phone lights up — all in real time.</p>
             <div style="display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:center;row-gap:16px;">
 
                 <!-- Desktop -->
@@ -401,7 +402,7 @@
                 <div>
                     <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// DESIGN PRINCIPLES</div>
                     <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:20px;">Not built for the cloud.<br>Built for the operator.</h2>
-                    <p style="color:var(--text-secondary);line-height:1.8;margin-bottom:20px;">Most security tools phone home. ShadowCypher doesn't. The desktop app runs entirely offline: Ollama for AI inference, local SQLite for state. The agent daemon runs on your hardware. You own your data.</p>
+                    <p style="color:var(--text-secondary);line-height:1.8;margin-bottom:20px;">Most security tools phone home. ShadowCypher doesn't. The desktop app runs entirely offline — Ollama for AI inference, local SQLite for state. The agent daemon runs on your hardware. You own your data.</p>
                     <p style="color:var(--text-secondary);line-height:1.8;">When you do use the cloud (dashboard, push alerts), it's Cloudflare Workers at the edge — your data never touches a central server.</p>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:16px;">
@@ -431,7 +432,7 @@
     <div id="page-arsenal" class="page">
         <div class="content-section">
             <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Tactical Arsenal</h2>
-            <p style="color:var(--text-secondary);margin-bottom:16px;max-width:700px;">29 purpose-built offensive and defensive modules across six mission areas. Every tool was built because it was needed in the field. No fluff, no overlap.</p>
+            <p style="color:var(--text-secondary);margin-bottom:16px;max-width:700px;">29 purpose-built offensive and defensive modules across six mission areas. Every tool was built because it was needed in the field — no fluff, no overlap.</p>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:48px;">
                 <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">RECON</span>
                 <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">EXPLOIT</span>
@@ -746,35 +747,111 @@
     <!-- GHOST PROTOCOL -->
     <div id="page-ghost" class="page">
         <div class="content-section">
-            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Ghost Protocol</h2>
-            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;">An eight-layer anonymity stack for high-risk research and red-team engagements. One command engages the chain; one command restores normal state. Designed for engineers who need verifiable operational privacy.</p>
+            <h2 style="font-size:2.5rem;margin-bottom:10px;">Ghost Mode</h2>
+            <p style="color:var(--text-secondary);margin-bottom:16px;max-width:700px;line-height:1.8;">If you came here looking for a VPN alternative — this is what you want. Ghost Mode routes <strong style="color:#fff;">all</strong> your traffic through Tor, not just your browser. Your MAC address gets randomized. DNS is locked so nothing leaks outside Tor. If the connection drops, iptables kills it — no accidental cleartext. One command on, one command off, one command to verify it's working.</p>
+            <p style="color:var(--text-secondary);margin-bottom:16px;max-width:700px;line-height:1.8;">The fundamental difference from a VPN: there's no company in the middle. With a VPN, you're just moving your trust from your ISP to the VPN provider — and hoping they mean it when they say "no logs." With Tor, the architecture itself makes logging your traffic impossible for any single party. No promises required.</p>
+            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;line-height:1.8;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:14px 18px;"><strong style="color:#f59e0b;">Honest tradeoff:</strong> Tor is slower than a VPN. If you're streaming or gaming, that'll be noticeable. Ghost Mode is built for privacy when you actually need it — research, sensitive browsing, anything where you'd rather be slow and invisible than fast and trackable.</p>
+
+            <!-- VPN vs Ghost comparison -->
+            <div style="margin-bottom:40px;border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;">
+                <div style="background:rgba(180,74,255,0.06);padding:14px 20px;border-bottom:1px solid var(--glass-border);">
+                    <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--accent-primary);letter-spacing:3px;">VPN vs GHOST MODE</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;font-family:var(--font-mono);font-size:0.72rem;">
+                    <div style="padding:12px 20px;border-bottom:1px solid #111;color:#555;font-size:0.62rem;letter-spacing:2px;border-right:1px solid #1a1a1a;">FEATURE</div>
+                    <div style="padding:12px 20px;border-bottom:1px solid #111;color:#555;font-size:0.62rem;letter-spacing:2px;border-right:1px solid #1a1a1a;">NORDVPN / PROTONVPN</div>
+                    <div style="padding:12px 20px;border-bottom:1px solid #111;color:var(--accent-primary);font-size:0.62rem;letter-spacing:2px;">SHADOWCYPHER GHOST</div>
+
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">Hides your IP</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;border-right:1px solid #1a1a1a;">✓ (VPN server sees it)</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">✓ (Tor exit node, not you)</div>
+
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">No logs</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#f59e0b;border-right:1px solid #1a1a1a;">They promise. Trust them?</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">Runs locally. Nothing to log.</div>
+
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">MAC randomization</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#ef4444;border-right:1px solid #1a1a1a;">✗ Not included</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">✓ Layer 3</div>
+
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">DNS leak prevention</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#f59e0b;border-right:1px solid #1a1a1a;">Varies by client</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">✓ Locked by iptables</div>
+
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">Kill-switch</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#f59e0b;border-right:1px solid #1a1a1a;">App-level (bypassable)</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">✓ Kernel-level iptables</div>
+
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">Cost</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#f59e0b;border-right:1px solid #1a1a1a;">$4–$12/month</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">Free. Always.</div>
+
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">Speed</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;border-right:1px solid #1a1a1a;">Fast (single hop)</div>
+                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#f59e0b;">Slower (3 Tor hops) — tradeoff for real anonymity</div>
+
+                    <div style="padding:11px 20px;color:var(--text-secondary);border-right:1px solid #1a1a1a;">Open source</div>
+                    <div style="padding:11px 20px;color:#ef4444;border-right:1px solid #1a1a1a;">Partially / closed</div>
+                    <div style="padding:11px 20px;color:#22c55e;">✓ Fully. Read every line.</div>
+                </div>
+            </div>
+
+            <!-- How to use it (for normal humans) -->
+            <div style="margin-bottom:40px;">
+                <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:20px;">Get private in 60 seconds</h3>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">
+                    <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.2);border-radius:8px;padding:24px;">
+                        <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:var(--accent-primary);margin-bottom:12px;">01</div>
+                        <div style="font-weight:600;margin-bottom:8px;">Install ShadowCypher</div>
+                        <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;">Clone the repo and run the installer. Takes about 2 minutes on any Linux machine. Tor is set up automatically.</div>
+                        <div style="margin-top:14px;background:#000;border-radius:4px;padding:10px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;">git clone github.com/jakes1345/ShadowCypher</div>
+                    </div>
+                    <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.2);border-radius:8px;padding:24px;">
+                        <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:var(--accent-primary);margin-bottom:12px;">02</div>
+                        <div style="font-weight:600;margin-bottom:8px;">Run one command</div>
+                        <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;">Ghost Mode engages 8 layers at once — Tor routing, kill-switch, MAC change, DNS lockdown. Everything.</div>
+                        <div style="margin-top:14px;background:#000;border-radius:4px;padding:10px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;">sudo python3 ghost_mode.py engage</div>
+                    </div>
+                    <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.2);border-radius:8px;padding:24px;">
+                        <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:var(--accent-primary);margin-bottom:12px;">03</div>
+                        <div style="font-weight:600;margin-bottom:8px;">Verify it's working</div>
+                        <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;">Shadow Audit checks every layer — IP, DNS, MAC, hostname, firewall. It tells you exactly what's exposed and fixes it.</div>
+                        <div style="margin-top:14px;background:#000;border-radius:4px;padding:10px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;">python3 shadow_audit.py</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- The 8 layers + sub-tools -->
+            <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:20px;">What's running under the hood</h3>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;">
                 <div class="module-card" style="clip-path:none;border-left:3px solid var(--accent-primary);">
-                    <h3 class="mono" style="margin-bottom:20px;">8 LAYERS OF INVISIBILITY</h3>
+                    <h3 class="mono" style="margin-bottom:20px;font-size:0.8rem;">8 LAYERS, ALL AT ONCE</h3>
                     <ul class="mono" style="font-size:0.75rem;color:var(--accent-primary);list-style:none;line-height:2.5;">
-                        <li>01 // TOR TRANSPARENT REDIRECT</li>
-                        <li>02 // IPTABLES KILL-SWITCH</li>
-                        <li>03 // MAC RANDOMIZATION</li>
-                        <li>04 // HOSTNAME NEUTRALIZE</li>
-                        <li>05 // TIMEZONE → UTC</li>
-                        <li>06 // DNS LEAK PREVENTION</li>
-                        <li>07 // RAM-ONLY WORKSPACE</li>
-                        <li>08 // LOG SUPPRESSION</li>
+                        <li>01 // Tor transparent redirect — all traffic, not just browser</li>
+                        <li>02 // iptables kill-switch — connection dies if Tor drops</li>
+                        <li>03 // MAC randomization — new hardware identity</li>
+                        <li>04 // Hostname neutralization — nothing to fingerprint</li>
+                        <li>05 // Timezone → UTC — no timezone leaks</li>
+                        <li>06 // DNS leak prevention — no queries leaving Tor</li>
+                        <li>07 // RAM-only workspace — nothing written to disk</li>
+                        <li>08 // Log suppression — system logs paused</li>
                     </ul>
                 </div>
                 <div style="display:grid;gap:16px;">
-                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;">TRAFFIC MIRAGE</h3><p style="font-size:0.8rem;color:var(--text-secondary);">obfs4 bridges make Tor look like HTTPS. Cover traffic generation. Timing obfuscation defeats correlation attacks. DNS tunneling.</p></div>
-                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;">DEAD DROP</h3><p style="font-size:0.8rem;color:var(--text-secondary);">7-pass secure shredding. Swap sanitization. LUKS encrypted USB. Emergency PANIC button — destroys all keys, logs, and configs instantly.</p></div>
-                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;">SHADOW AUDIT</h3><p style="font-size:0.8rem;color:var(--text-secondary);">Full anonymity chain validation. DNS leaks, MAC fingerprinting, hostname exposure, timezone leaks, firewall rules. Anonymity score + auto-fix.</p></div>
+                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;font-size:0.8rem;">TRAFFIC MIRAGE</h3><p style="font-size:0.8rem;color:var(--text-secondary);">Makes Tor traffic look like normal HTTPS using obfs4 bridges — useful in countries or networks that block Tor. Adds cover traffic and timing noise to defeat correlation attacks.</p></div>
+                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;font-size:0.8rem;">EMERGENCY WIPE</h3><p style="font-size:0.8rem;color:var(--text-secondary);">One command destroys all keys, session data, logs, and configs. 7-pass file shredding. If you need to disappear fast, this is the button.</p></div>
+                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;font-size:0.8rem;">SHADOW AUDIT</h3><p style="font-size:0.8rem;color:var(--text-secondary);">Runs after Ghost Mode to verify every layer actually worked. Checks real DNS resolution, confirms your IP is a Tor exit node, validates firewall rules. Gives you a score and fixes what's broken.</p></div>
                 </div>
             </div>
-            <div style="margin-top:40px;padding:30px;background:var(--bg-surface);border:1px solid var(--glass-border);">
-                <div class="mono" style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:15px;">// USAGE</div>
-                <code class="mono" style="font-size:0.9rem;color:var(--accent-primary);line-height:2;">
-                    sudo python3 ghost_mode.py engage &nbsp;&nbsp;&nbsp;# Total invisibility<br>
-                    sudo python3 ghost_mode.py disengage # Restore normal<br>
-                    python3 shadow_audit.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Check anonymity score<br>
-                    python3 dead_drop.py panic &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# EMERGENCY: destroy everything
+
+            <!-- Restore -->
+            <div style="margin-top:32px;padding:24px 30px;background:var(--bg-surface);border:1px solid var(--glass-border);border-radius:6px;">
+                <div style="font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:2px;margin-bottom:14px;">FULL COMMAND REFERENCE</div>
+                <code class="mono" style="font-size:0.85rem;color:var(--accent-primary);line-height:2.2;display:block;">
+                    sudo python3 ghost_mode.py engage &nbsp;&nbsp;&nbsp;&nbsp;# Go dark — all 8 layers<br>
+                    sudo python3 ghost_mode.py disengage &nbsp;# Back to normal<br>
+                    python3 shadow_audit.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Verify every layer<br>
+                    python3 dead_drop.py panic &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Emergency wipe
                 </code>
             </div>
         </div>
@@ -784,7 +861,7 @@
     <div id="page-guardian" class="page">
         <div class="content-section">
             <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Guardian</h2>
-            <p style="color:var(--text-secondary);margin-bottom:30px;max-width:700px;">Continuous network monitoring from a daemon running on your machine. Discovers every device, detects ARP spoofing, router exposure, and unauthorized access. All surfaced here in real time.</p>
+            <p style="color:var(--text-secondary);margin-bottom:30px;max-width:700px;">Continuous network monitoring from a daemon running on your machine. Discovers every device, detects ARP spoofing, router exposure, and unauthorized access — all surfaced here in real time.</p>
 
             <!-- Agent status bar -->
             <div id="guardian-agent-bar" style="margin-bottom:30px;padding:16px 20px;background:rgba(180,74,255,0.04);border:1px solid var(--glass-border);border-radius:6px;">
@@ -1032,7 +1109,7 @@
         <div class="content-section">
             <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// SOVEREIGN OPERATING SYSTEM</div>
             <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">ShadowOS</h2>
-            <p style="color:var(--text-secondary);margin-bottom:10px;max-width:720px;line-height:1.8;">An Arch Linux-based live/installable ISO. Enterprise pentest platform, developer workstation, and gaming rig, all in one hardened OS with a custom Hyprland compositor, branded boot sequence, and ShadowCypher pre-installed at <code style="color:var(--accent-primary);">/opt/shadowcypher</code>.</p>
+            <p style="color:var(--text-secondary);margin-bottom:10px;max-width:720px;line-height:1.8;">An Arch Linux-based live/installable ISO. Enterprise pentest platform, developer workstation, and gaming rig — all in one hardened OS with a custom Hyprland compositor, branded boot sequence, and ShadowCypher pre-installed at <code style="color:var(--accent-primary);">/opt/shadowcypher</code>.</p>
             <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:48px;">
                 <span style="font-family:var(--font-mono);font-size:0.6rem;padding:4px 10px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.25);color:var(--accent-primary);border-radius:3px;">v0.1.0</span>
                 <span style="font-family:var(--font-mono);font-size:0.6rem;padding:4px 10px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#22c55e;border-radius:3px;">ISO VERIFIED · ~7.4 GB</span>

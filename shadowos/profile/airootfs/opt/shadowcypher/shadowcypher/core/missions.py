@@ -113,7 +113,7 @@ class SovereignGhostMission(GhostMission):
             self.report("COMPLETE", f"Mission {self.mid} terminated. Intelligence Secured.", 1.0)
             
         except Exception as e:
-            logger.error("ghost", f"SOVEREIGN_MISSION_FAULT: {e}")
+            logger.error("ghost", f"ghost mission error: {e}")
             self._emergency_sever()
 
 def ignite_ghost_operation(target: str):

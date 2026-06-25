@@ -19,7 +19,7 @@ class UltraPlan:
         if not project:
             return "ERROR: No active session project found."
 
-        logger.info("ultraplan", f"PLANNING_MISSION_FOR: {project.name}")
+        logger.info("ultraplan", f"planning: {project.name}")
 
         if use_ai:
             # We dispatch a mission to the AI to generate the roadmap

@@ -9,14 +9,13 @@ from shadowcypher.ui.base_page import BasePage
 
 class ADAssessmentPage(BasePage):
     def __init__(self):
-        super().__init__("\U0001f4bb ACTIVE_DIRECTORY_STRIKE (Impacket & Responder)")
+        super().__init__("\U0001f4bb Active Directory (Impacket & Responder)")
 
         from shadowcypher.ui.components import DataPod
-        
-        # 1. Populate Metrics
-        self.pod_imp = DataPod("IMPACKET_PULSE", "READY", "cyan")
-        self.pod_resp = DataPod("RESPONDER_LINK", "IDLE", "violet")
-        self.pod_hashes = DataPod("HASH_INTENSITY", "0", "amber")
+
+        self.pod_imp = DataPod("Impacket", "Ready", "cyan")
+        self.pod_resp = DataPod("Responder", "Idle", "violet")
+        self.pod_hashes = DataPod("Hashes", "0", "amber")
         
         self.metric_strip.pack_start(self.pod_imp, True, True, 0)
         self.metric_strip.pack_start(self.pod_resp, True, True, 0)
@@ -46,7 +45,7 @@ class ADAssessmentPage(BasePage):
         row = Gtk.Box(spacing=8)
         row.pack_start(Gtk.Label(label="Target IP:"), False, False, 0)
         self.imp_target = Gtk.Entry()
-        self.imp_target.set_placeholder_text("GATEWAY_IP00")
+        self.imp_target.set_placeholder_text("Target IP")
         self.imp_target.set_hexpand(True)
         row.pack_start(self.imp_target, True, True, 0)
         box.pack_start(row, False, False, 0)
@@ -195,12 +194,12 @@ class ADAssessmentPage(BasePage):
         self.krbtgt_entry.set_placeholder_text("KRBTGT_HASH (NTLM)")
         box.pack_start(self.krbtgt_entry, False, False, 0)
 
-        btn = self.make_action_btn("\U0001f3ab FORGE_GOLDEN_TICKET", self._on_golden_ticket, "danger-btn")
+        btn = self.make_action_btn("\U0001f3ab Forge Golden Ticket", self._on_golden_ticket, "danger-btn")
         box.pack_start(btn, False, False, 0)
         return box
 
     def _on_golden_ticket(self, btn):
         sid = self.sid_entry.get_text().strip()
         hash_val = self.krbtgt_entry.get_text().strip()
-        self.terminal.log("INITIATING_DEEPHAT_KERBEROS_FORGE...", "AI")
+        self.terminal.log("Generating golden ticket via DeepHat...", "AI")
         ADAssessment.golden_ticket_forge(sid, hash_val, "Administrator", on_output=self.on_output)

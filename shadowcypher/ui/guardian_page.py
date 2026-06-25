@@ -14,9 +14,9 @@ class GuardianPage(BasePage):
         super().__init__("\U0001f6e1 Guardian — Device Security")
 
         from shadowcypher.ui.components import DataPod
-        self.pod_devices = DataPod("DEVICES_FOUND", "—", "cyan")
-        self.pod_risk = DataPod("HIGHEST_RISK", "—", "amber")
-        self.pod_status = DataPod("SCAN_STATUS", "IDLE", "violet")
+        self.pod_devices = DataPod("devices", "—", "cyan")
+        self.pod_risk = DataPod("risk", "—", "amber")
+        self.pod_status = DataPod("status", "idle", "violet")
         self.metric_strip.pack_start(self.pod_devices, True, True, 0)
         self.metric_strip.pack_start(self.pod_risk, True, True, 0)
         self.metric_strip.pack_start(self.pod_status, True, True, 0)

@@ -157,7 +157,7 @@ class MeshRelay(BaseModule):
         threading.Thread(target=self._heartbeat_loop, daemon=True, name="MeshTelemetry").start()
         threading.Thread(target=self._reaper_loop, daemon=True, name="MeshPruner").start()
 
-        logger.info("mesh", f"MESH_RELAY_ACTIVE: UDP/{self.port} | Node: {self.node_id}")
+        logger.info("mesh", f"mesh relay up — UDP/{self.port} | node {self.node_id}")
         bus.publish("module_status", {
             "module": "mesh_relay", "status": "ONLINE",
             "node_id": self.node_id, "port": self.port,

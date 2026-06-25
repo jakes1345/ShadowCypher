@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 from shadowcypher.core.module import BaseModule
+from shadowcypher.core.mitre import mitre
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.stealth import require_stealth
@@ -42,6 +43,14 @@ class Recon(BaseModule):
         if not validate_target(target):
             return
         self.log(f"PULSING_TARGET: {target} [OS={platform_engine.SYSTEM}]")
+        _stype_tool = {
+            "Quick Port Scan": "nmap_port", "Full Port Scan": "nmap_port",
+            "OS Detection": "nmap_os", "Service Fingerprint": "nmap_service",
+            "Deep Recon": "nmap_deep", "UDP Scan": "nmap_port",
+        }
+        if on_output:
+            tool_key = _stype_tool.get(stype, "nmap_port")
+            on_output(f"[RECON] ATT&CK: {mitre.format_tags(mitre.tag(tool_key))}\n")
         nmap = platform_engine.get_cmd("nmap")
         flag_map = {
             "Quick Port Scan":    ["-F", "--open"],
@@ -81,6 +90,8 @@ class Recon(BaseModule):
         if not validate_target(domain):
             return
         self.log(f"SUBDOMAIN_ENUM: {domain}")
+        if on_output:
+            on_output(f"[RECON] ATT&CK: {mitre.format_tags(mitre.tag('subdomain_enum'))}\n")
         if shutil.which("subfinder"):
             args = ["subfinder", "-d", domain, "-silent", "-all"]
             return self.execute(f"SUBFINDER_{domain}", args, callback=on_output)

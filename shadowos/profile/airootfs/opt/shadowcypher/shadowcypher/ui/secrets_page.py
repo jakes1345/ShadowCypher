@@ -229,7 +229,7 @@ class SecretsPage(BasePage):
 
     def _on_deep_breach(self, btn):
         email = self.breach_target.get_text().strip()
-        self.terminal.log(f"INITIATING_DDEEPHAT_BREACH_CORRELATION: {email}", "AI")
+        self.terminal.log(f"breach lookup → {email}", "AI")
         c = Credentials()
         c.deep_leak_correlation(email, on_output=self.on_output)
 

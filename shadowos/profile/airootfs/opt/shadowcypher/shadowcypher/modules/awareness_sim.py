@@ -88,7 +88,7 @@ class SocialEngineeringAssessment:
         """
         logger.info("social_eng", f"ENGAGING_SECURE_TUNNEL: {mode} (port {port})")
         if on_output:
-            on_output(f"[INFRASTRUCTURE] INITIATING_HTTPS_TUNNEL: {mode.upper()}...\n")
+            on_output(f"[INFRASTRUCTURE] tunnel up → {mode}...\n")
 
         if mode == "cloudflare":
             cmd = ["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{port}"]

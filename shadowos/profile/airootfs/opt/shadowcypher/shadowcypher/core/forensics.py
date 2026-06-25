@@ -84,10 +84,10 @@ class ForensicRegistry:
         try:
             with open(archive_file, "w") as f:
                 json.dump(entry, f, indent=4)
-            logger.info("forensics", f"MISSION_ARCHIVED: {mission_id} saved to registry.")
+            logger.info("forensics", f"archived {mission_id}")
             bus.publish("mission_archived", entry)
         except Exception as e:
-            logger.error("forensics", f"MISSION_ARCHIVE_FAILED: {e}")
+            logger.error("forensics", f"archive failed: {e}")
 
     def _calculate_risk(self, metadata: dict) -> str:
         # Complex heuristic calculation for mission risk

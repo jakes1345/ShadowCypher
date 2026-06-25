@@ -18,9 +18,9 @@ class FirewallPage(BasePage):
         
         # 1. Populate Metrics
         backend = Firewall.detect_backend()
-        self.pod_backend = DataPod("BACKEND", backend.upper(), "cyan")
-        self.pod_status = DataPod("STATUS", "PROTECTED", "violet")
-        self.pod_uptime = DataPod("FILTER_UPTIME", "0:00:00", "amber")
+        self.pod_backend = DataPod("Backend", backend.upper(), "cyan")
+        self.pod_status = DataPod("Status", "Protected", "violet")
+        self.pod_uptime = DataPod("Uptime", "0:00:00", "amber")
         
         self.metric_strip.pack_start(self.pod_backend, True, True, 0)
         self.metric_strip.pack_start(self.pod_status, True, True, 0)
@@ -29,17 +29,17 @@ class FirewallPage(BasePage):
         # ── DEFENSIVE OPERATIONS ──
         ops_box = Gtk.Box(spacing=15)
         
-        lockdown_btn = self.make_action_btn("⚡ INITIATE_SOVEREIGN_LOCKDOWN", self._on_lockdown, "danger-btn")
+        lockdown_btn = self.make_action_btn("⚡ Lockdown", self._on_lockdown, "danger-btn")
         ops_box.pack_start(lockdown_btn, True, True, 0)
-        
-        ghost_btn = self.make_action_btn("👻 GHOST_MODE (DROP ALL)", self._on_ghost, "suggested-action")
+
+        ghost_btn = self.make_action_btn("👻 Drop All", self._on_ghost, "suggested-action")
         ops_box.pack_start(ghost_btn, True, True, 0)
         
         self.workspace.pack_start(ops_box, False, False, 0)
 
         # ── CONNECTION RADAR ──
         radar_lbl = Gtk.Label()
-        radar_lbl.set_markup("<span size='large' weight='bold' foreground='#00ff9d'>[LIVE_CONNECTION_RADAR]</span>")
+        radar_lbl.set_markup("<span size='large' weight='bold' foreground='#00ff9d'>Live Connections</span>")
         radar_lbl.set_halign(Gtk.Align.START)
         self.workspace.pack_start(radar_lbl, False, False, 0)
 
@@ -47,7 +47,7 @@ class FirewallPage(BasePage):
         self.con_tree = Gtk.TreeView(model=self.con_store)
         self.con_tree.get_style_context().add_class("terminal-view")
         
-        for i, title in enumerate(["LOCAL_ADDR", "REMOTE_ADDR", "STATE", "PROCESS"]):
+        for i, title in enumerate(["Local", "Remote", "State", "Process"]):
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn(title, renderer, text=i)
             self.con_tree.append_column(column)
@@ -108,11 +108,11 @@ class FirewallPage(BasePage):
         self._on_view_rules(None)
 
     def _on_lockdown(self, btn):
-        self.clear_output("INITIATING_SOVEREIGN_LOCKDOWN: Shielding mission core...\n")
+        self.clear_output("Applying lockdown rules...\n")
         Firewall.sovereign_lockdown(self.on_output)
 
     def _on_ghost(self, btn):
-        self.clear_output("ACTIVATING_STEALTH_MODE: Silencing inbound signal...\n")
+        self.clear_output("Dropping all inbound traffic...\n")
         Firewall.stealth_mode(self.on_output)
 
     def _refresh_radar(self):

@@ -32,7 +32,7 @@ class ADPivot:
             "-outputfile", output_file
         ]
         
-        logger.info("ad", f"INITIATING_KERBEROAST: {domain} via {dc_ip}")
+        logger.info("ad", f"kerberoast → {domain} via {dc_ip}")
         return runner.execute_task(f"KERBEROAST_{domain}", args, callback=on_output)
 
     @staticmethod

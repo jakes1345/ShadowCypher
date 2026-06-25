@@ -36,6 +36,7 @@ from shadowcypher.core.stealth import require_stealth
 from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.bus import bus
 from shadowcypher.core.knowledge_graph import kg
+from shadowcypher.core.mitre import mitre
 from shadowcypher.modules.cve_feed import cve_feed
 
 REPORTS_DIR = os.path.expanduser("~/.shadowcypher/red_team_reports")
@@ -189,7 +190,10 @@ class AutonomousAdversaryAgent:
         if stop.is_set():
             return
         ctx.stage = "SURFACE_MAP"
-        self._emit(cb, f"\n{'='*60}\n[STAGE 1/5] SURFACE MAP — nmap port scan\n{'='*60}\n")
+        nmap_tool = "nmap_deep" if intensity == "deep" else ("nmap_port" if intensity == "quick" else "nmap_service")
+        stage1_tags = mitre.format_tags(mitre.tag(nmap_tool))
+        self._emit(cb, f"\n{'='*60}\n[STAGE 1/5] SURFACE MAP — nmap port scan\n"
+                       f"ATT&CK: {stage1_tags}\n{'='*60}\n")
         nmap_output = self._run_nmap(ctx.target, ports, intensity, stop, cb)
         ctx.raw_logs["nmap"] = nmap_output
         ctx.open_ports = self._parse_nmap_ports(nmap_output)
@@ -205,7 +209,9 @@ class AutonomousAdversaryAgent:
         if stop.is_set():
             return
         ctx.stage = "CVE_INTEL"
-        self._emit(cb, f"\n{'='*60}\n[STAGE 2/5] CVE INTEL — correlating services vs NVD\n{'='*60}\n")
+        cve_tags = mitre.format_tags(mitre.tag("cve_intel"))
+        self._emit(cb, f"\n{'='*60}\n[STAGE 2/5] CVE INTEL — correlating services vs NVD\n"
+                       f"ATT&CK: {cve_tags}\n{'='*60}\n")
         services = [f"{p['service']} {p['version']}" for p in ctx.open_ports
                     if p.get('version') and p.get('service')]
         if services:
@@ -233,7 +239,9 @@ class AutonomousAdversaryAgent:
         if stop.is_set():
             return
         ctx.stage = "VULN_SCAN"
-        self._emit(cb, f"\n{'='*60}\n[STAGE 4/5] VULN SCAN — nuclei/nikto\n{'='*60}\n")
+        vuln_tags = mitre.format_tags(mitre.tag("nuclei") + mitre.tag("nikto"))
+        self._emit(cb, f"\n{'='*60}\n[STAGE 4/5] VULN SCAN — nuclei/nikto\n"
+                       f"ATT&CK: {vuln_tags}\n{'='*60}\n")
         for url in ctx.http_services[:3]:
             if stop.is_set():
                 break
@@ -360,6 +368,9 @@ class AutonomousAdversaryAgent:
             for p in ctx.open_ports
         ) or "No open ports found."
 
+        tools_used = ["nmap_service", "cve_intel", "http_probe", "nuclei", "nikto"]
+        mitre_section = mitre.coverage_section(tools_used)
+
         prompt = f"""You are analyzing the results of an authorized red team engagement.
 Synthesize the following raw findings into a professional penetration test report.
 
@@ -376,6 +387,9 @@ MISSION ID: {ctx.mission_id}
 ## VULNERABILITY SCANNER FINDINGS
 {vuln_summary}
 
+## MITRE ATT&CK TECHNIQUES EXERCISED
+{mitre_section}
+
 ## INSTRUCTIONS
 Write a structured report with these sections:
 1. Executive Summary (2-3 sentences, business impact focus)
@@ -383,9 +397,10 @@ Write a structured report with these sections:
 3. Critical Findings (CVSS 9.0+ or immediate exploitability)
 4. High/Medium Findings (ranked by exploitability)
 5. Recommended Attack Chains (how findings combine into real attack paths)
-6. Remediation Priority List (what to fix first and why)
+6. MITRE ATT&CK Coverage (map each finding to a technique ID — use the list above)
+7. Remediation Priority List (what to fix first and why)
 
-Be specific. Reference actual CVE IDs and port numbers. No filler text."""
+Be specific. Reference actual CVE IDs, port numbers, and ATT&CK technique IDs. No filler text."""
 
         self._emit(cb, "[AI] Red Phantom synthesizing mission report...\n")
         try:
@@ -409,17 +424,38 @@ Be specific. Reference actual CVE IDs and port numbers. No filler text."""
             f"**Date:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
             f"**Status:** {ctx.stage}",
             "",
-            "## Open Ports & Services",
         ]
+
+        # Rule-based situation assessment (instant, no LLM)
+        try:
+            from shadowcypher.core.assessor import assessor
+            assessment = assessor.assess_findings(
+                cve_matches=ctx.cve_matches,
+                open_ports=ctx.open_ports,
+                target=ctx.target,
+            )
+            lines += ["## Situation Assessment", "```", assessment, "```", ""]
+        except Exception:
+            pass
+
+        lines += ["## Open Ports & Services"]
         for p in ctx.open_ports:
             lines.append(f"- `{p['port']}/{p['proto']}` — {p['service']} {p['version']}")
         lines += ["", "## CVE Intelligence"]
         for m in ctx.cve_matches[:15]:
-            lines.append(f"- **[{m.cvss_severity}]** `{m.cve_id}` CVSS:{m.cvss_score} → {m.matched_service}")
+            attack_tags = mitre.format_tags(mitre.from_finding(m.description))
+            kev_tag  = "  **[KEV]**" if getattr(m, "kev_exploited", False) else ""
+            epss_tag = f"  EPSS:{m.epss_score:.1%}" if getattr(m, "epss_score", 0) else ""
+            lines.append(f"- **[{m.cvss_severity}]** `{m.cve_id}` CVSS:{m.cvss_score}{kev_tag}{epss_tag} → {m.matched_service}")
             lines.append(f"  {m.description[:150]}")
+            if attack_tags:
+                lines.append(f"  ATT&CK: {attack_tags}")
         lines += ["", "## Vulnerability Findings"]
         for f in ctx.vuln_findings[:20]:
-            lines.append(f"- {f}")
+            attack_tags = mitre.format_tags(mitre.from_finding(f))
+            suffix = f"  ← ATT&CK: {attack_tags}" if attack_tags else ""
+            lines.append(f"- {f}{suffix}")
+        lines += ["", mitre.coverage_section(["nmap_service", "cve_intel", "http_probe", "nuclei", "nikto"])]
         return "\n".join(lines)
 
     # ── Parsers ───────────────────────────────────────────────────────────────

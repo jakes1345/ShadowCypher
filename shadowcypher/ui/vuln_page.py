@@ -12,7 +12,7 @@ from shadowcypher.core.logger import logger
 
 
 class VulnScannerPage(BasePage):
-    """Apex Vulnerability Nexus. Integrated with ShadowHub."""
+    """Vulnerability scanner UI."""
 
     def __init__(self):
         super().__init__("\U0001f6e1 Vulnerability Scanner")
@@ -40,7 +40,7 @@ class VulnScannerPage(BasePage):
         self.nikto_target.set_placeholder_text("Target URL/IP")
         row.pack_start(self.nikto_target, True, True, 0)
 
-        btn = Gtk.Button(label="SCAN_NIKTO")
+        btn = Gtk.Button(label="Nikto")
         btn.get_style_context().add_class("suggested-action")
         btn.connect("clicked", self._on_nikto)
         row.pack_end(btn, False, False, 0)
@@ -51,7 +51,7 @@ class VulnScannerPage(BasePage):
         target = self.nikto_target.get_text().strip()
         if not target:
             return
-        self.terminal.log(f"INITIATING_NIKTO_SCAN: {target}", "VULN")
+        self.terminal.log(f"Nikto → {target}", "VULN")
         hub.dispatch_mission(f"Nikto vulnerability scan on {target}")
         self._scanner.nikto_scan(
             target,
@@ -65,10 +65,10 @@ class VulnScannerPage(BasePage):
         box.set_margin_start(15)
         box.set_margin_end(15)
         self.sqlmap_url = Gtk.Entry()
-        self.sqlmap_url.set_placeholder_text("IP/URL for SQLi Check")
+        self.sqlmap_url.set_placeholder_text("URL")
         box.pack_start(self.sqlmap_url, False, False, 0)
 
-        btn = Gtk.Button(label="INJECT_TEST")
+        btn = Gtk.Button(label="sqlmap")
         btn.get_style_context().add_class("destructive-action")
         btn.connect("clicked", self._on_sqlmap)
         box.pack_start(btn, False, False, 0)
@@ -78,7 +78,7 @@ class VulnScannerPage(BasePage):
         url = self.sqlmap_url.get_text().strip()
         if not url:
             return
-        self.terminal.log(f"INITIATING_SQLMAP_PULSE: {url}", "SQLMAP")
+        self.terminal.log(f"SQLmap → {url}", "SQLMAP")
         self._scanner.sqlmap_scan(
             url,
             on_output=lambda x: GLib.idle_add(self.terminal.log, x.strip(), "SQLMAP"),
@@ -94,7 +94,7 @@ class VulnScannerPage(BasePage):
         self.nse_target.set_placeholder_text("Target IP")
         box.pack_start(self.nse_target, False, False, 0)
 
-        btn = Gtk.Button(label="NSE_VULN_AUDIT")
+        btn = Gtk.Button(label="NSE")
         btn.get_style_context().add_class("suggested-action")
         btn.connect("clicked", self._on_nse_vuln)
         box.pack_start(btn, False, False, 0)
@@ -104,7 +104,7 @@ class VulnScannerPage(BasePage):
         target = self.nse_target.get_text().strip()
         if not target:
             return
-        self.terminal.log(f"RUNNING_NSE_VULN_SCRIPTS: {target}", "NMAP")
+        self.terminal.log(f"NSE vuln scripts → {target}", "NMAP")
         # Use nuclei_scan with vuln tags as the NSE equivalent
         self._scanner.nuclei_scan(
             target,
@@ -119,16 +119,16 @@ class VulnScannerPage(BasePage):
         box.set_margin_start(15)
         box.set_margin_end(15)
         self.shadow_target = Gtk.Entry()
-        self.shadow_target.set_placeholder_text("Target for Heuristic Audit")
+        self.shadow_target.set_placeholder_text("target")
         box.pack_start(self.shadow_target, False, False, 0)
 
-        btn = self.make_action_btn("\U0001f441\ufe0f INITIATE_SHADOW_SCAN", self._on_shadow_audit, "danger-btn")
+        btn = self.make_action_btn("\U0001f441\ufe0f Run Shadow Audit", self._on_shadow_audit, "danger-btn")
         box.pack_start(btn, False, False, 0)
         return box
 
     def _on_shadow_audit(self, btn):
         target = self.shadow_target.get_text().strip()
-        self.terminal.log("ENGAGING_DEEPHAT_HEURISTICS...", "AI")
+        self.terminal.log("Running shadow audit...", "AI")
         self._scanner.shadow_zero_day_scan(target, on_output=self.on_output)
 
     # ── Auto Scan tab ──────────────────────────────────────────────────────────
@@ -154,7 +154,7 @@ class VulnScannerPage(BasePage):
         self.auto_target.set_placeholder_text("Target IP / hostname (e.g. 192.168.1.1)")
         row.pack_start(self.auto_target, True, True, 0)
 
-        btn = Gtk.Button(label="AUTO SCAN")
+        btn = Gtk.Button(label="Scan")
         btn.get_style_context().add_class("suggested-action")
         btn.connect("clicked", self._on_auto_scan)
         row.pack_end(btn, False, False, 0)
@@ -185,7 +185,7 @@ class VulnScannerPage(BasePage):
 
         selected_phases = [p for p, cb in self._phase_checks.items() if cb.get_active()]
 
-        self.terminal.log(f"AUTO_SCAN_INIT: {target}  phases={selected_phases}", "AUTOSCAN")
+        self.terminal.log(f"Starting auto scan: {target} ({len(selected_phases)} phases)", "AUTOSCAN")
 
         def _confirm(tool: str, tgt: str) -> bool:
             dialog = Gtk.MessageDialog(
@@ -207,7 +207,7 @@ class VulnScannerPage(BasePage):
 
         def _on_done(result):
             GLib.idle_add(self.terminal.log,
-                          f"AUTO_SCAN_DONE: {result.summary()} ({result.duration_s}s)", "SUCCESS")
+                          f"Auto scan done: {result.summary()} ({result.duration_s}s)", "SUCCESS")
 
         hub.dispatch_auto_scan(
             target,

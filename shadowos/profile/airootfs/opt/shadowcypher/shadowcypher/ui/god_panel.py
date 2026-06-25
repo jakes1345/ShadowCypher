@@ -1,6 +1,4 @@
-"""
-God-Panel — Real-time Sovereign Orchestration & Full-Spectrum System Control.
-"""
+"""God Panel — real-time system control and subsystem status matrix."""
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -20,24 +18,24 @@ class GodPanel(BasePage):
     """Master control panel — live subsystem matrix with kill-switch access."""
 
     def __init__(self):
-        super().__init__("\U0001f9e0 GOD-PANEL: LATENT MATRIX")
+        super().__init__("🧠 System Control")
         from shadowcypher.ui.components import DataPod
 
         self.pod_cpu = DataPod("CPU", "0%", "cyan")
         self.pod_mem = DataPod("RAM", "0%", "violet")
-        self.pod_ai = DataPod("AI_CORE", "INIT", "amber")
-        self.pod_relay = DataPod("GO_RELAY", "SYNC", "cyan")
-        self.pod_chat = DataPod("SOV_CHAT", "IDLE", "green")
-        self.pod_swarm = DataPod("SWARM", "0", "red")
+        self.pod_ai = DataPod("AI", "Starting", "amber")
+        self.pod_relay = DataPod("Relay", "Syncing", "cyan")
+        self.pod_chat = DataPod("Services", "—", "green")
+        self.pod_swarm = DataPod("Nodes", "0", "red")
         for pod in [self.pod_cpu, self.pod_mem, self.pod_ai, self.pod_relay, self.pod_chat, self.pod_swarm]:
             self.metric_strip.pack_start(pod, True, True, 0)
 
         # Subsystem Matrix
-        frm = Gtk.Frame(label="SUBSYSTEM MATRIX")
+        frm = Gtk.Frame(label="Services")
         self.matrix_store = Gtk.ListStore(str, str, str, str)
         tree = Gtk.TreeView(model=self.matrix_store)
         tree.get_style_context().add_class("node-list")
-        for i, t in enumerate(["SUBSYSTEM", "STATUS", "LATENCY", "ENDPOINT"]):
+        for i, t in enumerate(["Service", "Status", "Latency", "Endpoint"]):
             tree.append_column(Gtk.TreeViewColumn(t, Gtk.CellRendererText(), text=i))
         sw = Gtk.ScrolledWindow()
         sw.set_min_content_height(200)
@@ -55,7 +53,7 @@ class GodPanel(BasePage):
         self.workspace.pack_start(frm, True, True, 0)
 
         # AI Model Control
-        frm2 = Gtk.Frame(label="AI ENGINE CONTROL")
+        frm2 = Gtk.Frame(label="AI model")
         row = Gtk.Box(spacing=10)
         row.set_margin_start(10)
         row.set_margin_end(10)
@@ -73,7 +71,7 @@ class GodPanel(BasePage):
         self.workspace.pack_start(frm2, False, False, 0)
 
         # Integrity
-        frm3 = Gtk.Frame(label="INTEGRITY STATUS")
+        frm3 = Gtk.Frame(label="Integrity")
         bx3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         bx3.set_margin_start(10)
         bx3.set_margin_end(10)
@@ -189,7 +187,7 @@ class GodPanel(BasePage):
         model = self.model_entry.get_text().strip()
         if not model:
             return
-        self.log(f"Switching to: {model}", "APEX")
+        self.log(f"Switching model to: {model}", "INFO")
         def _sw():
             from shadowcypher.ai.engine import ai_engine
             ok = ai_engine.switch_model(model, on_progress=lambda m: GLib.idle_add(self.log, m, "INFO"))

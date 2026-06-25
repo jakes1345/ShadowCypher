@@ -85,8 +85,8 @@ class ADAssessment:
         if not os.path.exists(responder_path):
             if on_output:
                 on_output(
-                    f"[ERROR] MISSION_CRITICAL_FAILURE: Responder missing at {responder_path}.\n"
-                    f"[SYSTEM] AD_ATTACK_ENGINE_NOT_PRIMED."
+                    f"[ERROR] Responder not found at {responder_path}\n"
+                    f"[SYSTEM] install Responder to continue"
                 )
             return
 
@@ -105,7 +105,7 @@ class ADAssessment:
         """2026 AI-Forged Golden Ticket: Multi-layered Kerberos persistence synthesis."""
         from shadowcypher.modules.deephat import deephat
         if on_output:
-            on_output("[AD] INITIATING_GOLDEN_TICKET_SYNTHESIS...\n")
+            on_output("[AD] forging golden ticket...\n")
         
         desc = f"Forge a Kerberos Golden Ticket for domain SID {domain_sid} using krbtgt hash {krbtgt_hash}. Target user: {domain_admin}. Include PAC spoofing for 2026-level persistence."
         filename = deephat.forge_weapon(desc, category="kerberos")

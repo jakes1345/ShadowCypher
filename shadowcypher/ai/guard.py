@@ -115,7 +115,7 @@ class ShadowGuard:
         if threats:
             with self._lock:
                 self._stats["redacted"] += 1
-            logger.warning("guard", f"[GUARD] OUTPUT_SANITIZED redactions={len(threats)}")
+            logger.warning("guard", f"Output sanitized: {len(threats)} redaction(s)")
         return GuardResult(action, text, cleaned, threats, 0.0, ms)
 
     def enable(self):

@@ -104,11 +104,11 @@ class OSINT:
     def ai_intel(query, on_output=None):
         """Advanced AI-Driven OSINT Intelligence Synthesis."""
         from shadowcypher.ai.orchestrator import AIOrchestrator
-        logger.info("ai", f"INITIATING_AI_INTEL_GATHERING: {query}")
-        
-        if on_output: 
-            on_output(f"[AI] SEARCHING_GLOBALDB_FOR: {query}")
-            on_output("[AI] CORRELATING_IDENTITY_METADATA...")
+        logger.info("ai", f"ai intel → {query}")
+
+        if on_output:
+            on_output(f"[AI] searching: {query}")
+            on_output("[AI] correlating metadata...")
         
         orch = AIOrchestrator()
         # Uses the local reasoning model to synthesize OSINT findings.

@@ -12,14 +12,13 @@ class ForensicsPage(BasePage):
     """Digital forensics UI."""
 
     def __init__(self):
-        super().__init__("\U0001f52c DIGITAL_FORENSICS_VAULT")
+        super().__init__("🔬 Forensics")
 
         from shadowcypher.ui.components import DataPod
-        
-        # 1. Populate Metrics
-        self.pod_evidence = DataPod("EVIDENCE_LOCKED", "READY", "cyan")
-        self.pod_integrity = DataPod("HOST_INTEGRITY", "VERIFIED", "violet")
-        self.pod_audit = DataPod("AUDIT_PULSE", "NOMINAL", "amber")
+
+        self.pod_evidence = DataPod("Evidence", "Ready", "cyan")
+        self.pod_integrity = DataPod("Host integrity", "Verified", "violet")
+        self.pod_audit = DataPod("Audit", "Ready", "amber")
         
         self.metric_strip.pack_start(self.pod_evidence, True, True, 0)
         self.metric_strip.pack_start(self.pod_integrity, True, True, 0)
@@ -71,7 +70,7 @@ class ForensicsPage(BasePage):
     def _on_file_info(self, btn):
         f = self._get_file()
         if f:
-            self.log(f"ANALYZING_FILE: {f}", "FORENSICS")
+            self.log(f"Analyzing: {f}", "FORENSICS")
             self._engine.analyze_file(
                 f,
                 on_output=lambda x: GLib.idle_add(self.log, x.strip(), "INFO"),
@@ -80,7 +79,7 @@ class ForensicsPage(BasePage):
     def _on_hashes(self, btn):
         f = self._get_file()
         if f:
-            self.log(f"HASHING_FILE: {f}", "FORENSICS")
+            self.log(f"Hashing: {f}", "FORENSICS")
             self._engine.generate_hashes(
                 f,
                 on_output=lambda x: GLib.idle_add(self.log, x.strip(), "INFO"),
@@ -89,7 +88,7 @@ class ForensicsPage(BasePage):
     def _on_strings(self, btn):
         f = self._get_file()
         if f:
-            self.log(f"STRINGS_EXTRACTION: {f}", "FORENSICS")
+            self.log(f"Extracting strings: {f}", "FORENSICS")
             self._engine.extract_strings(
                 f,
                 on_output=lambda x: GLib.idle_add(self.log, x.strip(), "INFO"),
@@ -98,7 +97,7 @@ class ForensicsPage(BasePage):
     def _on_exif(self, btn):
         f = self._get_file()
         if f:
-            self.log(f"EXTRACTING_METADATA: {f}", "FORENSICS")
+            self.log(f"Reading metadata: {f}", "FORENSICS")
             self._engine.extract_metadata(
                 f,
                 on_output=lambda x: GLib.idle_add(self.log, x.strip(), "INFO"),
@@ -107,7 +106,7 @@ class ForensicsPage(BasePage):
     def _on_binwalk(self, btn):
         f = self._get_file()
         if f:
-            self.log(f"BINWALK_AUDIT: {f}", "FORENSICS")
+            self.log(f"Binwalk scan: {f}", "FORENSICS")
             self._engine.binwalk_scan(
                 f,
                 on_output=lambda x: GLib.idle_add(self.log, x.strip(), "INFO"),

@@ -70,11 +70,11 @@ PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING 
             local_ip = self._get_local_ip()
             logger.info("relay", f"ATTEMPTING_UPNP_PORT_MAPPING: External Port {port} -> {local_ip}")
             subprocess.run(["upnpc", "-a", local_ip, str(port), str(port), "UDP"], capture_output=True)
-            logger.info("relay", "UPNP_MAPPING_SUCCESS: Gateway has opened the tactical port.")
+            logger.info("relay", "UPnP mapping successful.")
         except Exception as e:
-            logger.warning("relay", f"UPNP_MAPPING_FAILED: {e} - Manual port forwarding may be required.")
+            logger.warning("relay", f"UPnP mapping failed: {e} — manual port forwarding may be needed.")
 
-        logger.info("relay", f"SOVEREIGN_HUB_CONFIGURED: Port={port} Interface={iface}")
+        logger.info("relay", f"Relay configured: port={port} iface={iface}")
         return conf_file
 
     def _get_local_ip(self):

@@ -56,8 +56,8 @@ def _load_shared_key() -> bytes:
             _KEY_CACHE = raw
             return _KEY_CACHE
 
-    logger.warning("ghost", "GHOST_KEY_MISSING: no master key found. Ghost encryption disabled. "
-                   "Set SHADOWCYPHER_GHOST_KEY env var or write 32 bytes to /etc/shadowcypher/master.key")
+    logger.warning("ghost", "No master key found — ghost encryption disabled. "
+                   "Set SHADOWCYPHER_GHOST_KEY env var or write 32 bytes to /etc/shadowcypher/master.key.")
     return None
 
 
@@ -151,7 +151,7 @@ class GhostOrchestrator:
                 os.chmod(key_file, 0o600)
                 os.chmod(cert_file, 0o644)
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
-                logger.error("ghost", f"GHOST_SSL_GENFAIL: cannot generate cert: {e}")
+                logger.error("ghost", f"Failed to generate TLS cert: {e}")
                 self.running = False
                 return
         context.load_cert_chain(certfile=cert_file, keyfile=key_file)
@@ -168,26 +168,26 @@ class GhostOrchestrator:
             except OSError as e:
                 import errno as _errno
                 if e.errno == _errno.EADDRINUSE:
-                    logger.warning("ghost", f"GHOST_PORT_BUSY: {candidate} in use — trying {candidate + 1}")
+                    logger.warning("ghost", f"Port {candidate} in use — trying {candidate + 1}")
                     # Need a fresh socket for each attempt
                     self.server_socket.close()
                     self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 else:
-                    logger.error("ghost", f"GHOST_FATAL: Could not bind port {candidate}: {e}")
+                    logger.error("ghost", f"Could not bind port {candidate}: {e}")
                     self.running = False
                     return
 
         if bound_port is None:
-            logger.error("ghost", f"GHOST_FATAL: all ports {self.port}–{self.port + 4} in use")
+            logger.error("ghost", f"All ports {self.port}–{self.port + 4} in use — could not start listener")
             self.running = False
             return
 
         if bound_port != self.port:
-            logger.warning("ghost", f"GHOST_ORCHESTRATOR: fell back to port {bound_port}")
+            logger.warning("ghost", f"Fell back to port {bound_port}")
             self.port = bound_port
         else:
-            logger.info("ghost", f"GHOST_ORCHESTRATOR: bound to {bind_host}:{bound_port}")
+            logger.info("ghost", f"Listener bound to {bind_host}:{bound_port}")
 
         self.server_socket.listen(10)
 

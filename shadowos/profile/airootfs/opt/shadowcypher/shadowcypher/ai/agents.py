@@ -350,6 +350,11 @@ class AgentRouter:
         """
         Main entry point. Routes query to the best agent and returns the result.
 
+        Intent → Execute → Analyze: if the query contains a recognisable tool
+        intent (nmap, nuclei, threat-intel lookup, etc.), the tool is run first
+        and the real output is injected into the AI prompt so the model analyzes
+        actual data rather than hallucinating results.
+
         Args:
             query: The user's request
             callback: Optional streaming callback for progress updates
@@ -357,13 +362,29 @@ class AgentRouter:
             use_ai_routing: Use AI model for classification (slower but smarter)
             tools_enabled: Allow agents to use tools
         """
+        # 0. INTENT → EXECUTE → ANALYZE
+        effective_query = query
+        try:
+            from shadowcypher.ai.intent import detect_intent, execute_intent, build_analysis_prompt
+            intent = detect_intent(query)
+            if intent["type"] != "general" and intent.get("target") and tools_enabled:
+                if callback:
+                    callback(f"[INTENT] Detected {intent['type']} on {intent['target']} — executing tool first...\n")
+                tool_output = execute_intent(intent, on_output=callback)
+                if tool_output:
+                    effective_query = build_analysis_prompt(query, tool_output, intent)
+                    if callback:
+                        callback(f"[INTENT] Tool complete — analyzing {len(tool_output)} bytes of real output...\n")
+        except Exception as _ie:
+            logger.warning("agents", f"Intent engine error (non-fatal): {_ie}")
+
         # 1. CLASSIFY
         if force_agent and force_agent in AGENT_FLEET:
             agent_id = force_agent
         elif use_ai_routing:
-            agent_id = self.classify_intent_ai(query, callback)
+            agent_id = self.classify_intent_ai(effective_query, callback)
         else:
-            agent_id = self.classify_intent(query)
+            agent_id = self.classify_intent(effective_query)
 
         spec = AGENT_FLEET[agent_id]
         model = self._resolve_model(spec)
@@ -388,31 +409,44 @@ class AgentRouter:
         logger.info("agents", f"DISPATCH: {query[:80]}... → {spec.name} ({model})")
 
         # 2. EXECUTE — agent loop with tool use
-        return self._run_agent(spec, model, query, callback, tools_enabled)
+        return self._run_agent(spec, model, effective_query, callback, tools_enabled)
 
     def _run_agent(self, spec: AgentSpec, model: str, query: str,
                    callback: Callable = None, tools_enabled: bool = True,
                    max_cycles: int = 15) -> str:
-        """Execute an agent using the unified MetaChain orchestrator."""
-        from shadowcypher.ai.orchestrator import orchestrator
-        
-        result = [None]
+        """Execute an agent. MetaChain when available, direct provider otherwise."""
+        from shadowcypher.ai.orchestrator import orchestrator, _AUTOAGENT_AVAILABLE
+
+        result: list[str] = [None]
         event = threading.Event()
-        
+
         def on_complete(res):
             result[0] = res
             event.set()
 
-        orchestrator.execute_query_async(
-            query, 
-            callback=callback, 
-            on_complete=on_complete, 
-            agent_role=spec.id
-        )
-        
-        # Block until complete (for sync dispatch)
-        event.wait(timeout=600)
-        return result[0] or "TIMEOUT: Mission failed to synchronize."
+        if _AUTOAGENT_AVAILABLE:
+            orchestrator.execute_query_async(
+                query,
+                callback=callback,
+                on_complete=on_complete,
+                agent_role=spec.id,
+            )
+            event.wait(timeout=300)
+        else:
+            # No MetaChain — stream directly from the active provider
+            from shadowcypher.ai.providers import provider_registry
+            system = spec.system_prompt or ""
+            try:
+                result[0] = provider_registry.generate_stream(
+                    query, system_prompt=system,
+                    max_tokens=spec.max_tokens,
+                    temperature=spec.temperature,
+                    on_token=callback,
+                )
+            except Exception as e:
+                result[0] = f"[AI] Error: {e}"
+
+        return result[0] or "[AI] No response."
 
     def _filter_tools(self, categories: list) -> str:
         """Filter TOOL_DEFINITIONS to only include tools for given categories."""
@@ -488,15 +522,23 @@ class AgentRouter:
 
     def dispatch_async(self, query: str, callback: Callable = None,
                        on_complete: Callable = None, **kwargs) -> str:
-        """Non-blocking dispatch. Returns mission ID."""
+        """Non-blocking dispatch. Returns immediately; result delivered via on_complete."""
         mission_id = f"AGT_{int(time.time())}"
 
         def _worker():
-            result = self.dispatch(query, callback=callback, **kwargs)
+            try:
+                result = self.dispatch(query, callback=callback, **kwargs)
+            except Exception as e:
+                result = f"[AGENT_ERROR] {e}"
+                logger.error("agents", f"dispatch_async crashed: {e}")
             if on_complete:
-                on_complete(result)
+                try:
+                    on_complete(result)
+                except Exception:
+                    pass
 
-        threading.Thread(target=_worker, daemon=True).start()
+        threading.Thread(target=_worker, daemon=True,
+                         name=f"AgentDispatch-{mission_id}").start()
         return mission_id
 
     def list_agents(self) -> list[dict]:

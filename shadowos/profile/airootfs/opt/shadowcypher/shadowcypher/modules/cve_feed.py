@@ -25,9 +25,12 @@ from dataclasses import dataclass, field
 from shadowcypher.core.logger import logger
 from shadowcypher.core.module import BaseModule
 
-NVD_API_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-CACHE_DIR = os.path.expanduser("~/.shadowcypher/cve_cache")
+NVD_API_BASE   = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+EPSS_API_BASE  = "https://api.first.org/data/v1/epss"
+KEV_FEED_URL   = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+CACHE_DIR      = os.path.expanduser("~/.shadowcypher/cve_cache")
 CACHE_TTL_HOURS = 6
+KEV_CACHE_TTL_HOURS = 24
 
 
 @dataclass
@@ -40,9 +43,15 @@ class CVEMatch:
     published: str
     matched_service: str      # which banner/service triggered this match
     references: list = field(default_factory=list)
+    # EPSS enrichment
+    epss_score: float = 0.0          # 0–1 probability of exploitation in next 30 days
+    epss_percentile: float = 0.0     # 0–1 percentile rank
+    # KEV enrichment
+    kev_exploited: bool = False      # in CISA Known Exploited Vulnerabilities catalog
+    kev_due_date: str = ""           # federal patching due date if KEV
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "cve_id": self.cve_id,
             "severity": self.cvss_severity,
             "score": self.cvss_score,
@@ -50,12 +59,20 @@ class CVEMatch:
             "description": self.description[:200],
             "published": self.published,
             "references": self.references[:3],
+            "epss_score": round(self.epss_score, 4),
+            "epss_percentile": round(self.epss_percentile, 4),
+            "kev_exploited": self.kev_exploited,
         }
+        if self.kev_due_date:
+            d["kev_due_date"] = self.kev_due_date
+        return d
 
     def __str__(self) -> str:
         bar = "█" * int(self.cvss_score) + "░" * (10 - int(self.cvss_score))
+        kev_tag  = "  [KEV]" if self.kev_exploited else ""
+        epss_tag = f"  EPSS:{self.epss_score:.1%}" if self.epss_score else ""
         return (f"[{self.cvss_severity:8s}] {self.cve_id}  CVSS:{self.cvss_score:4.1f}  "
-                f"{bar}  → {self.matched_service}\n"
+                f"{bar}{kev_tag}{epss_tag}  → {self.matched_service}\n"
                 f"           {self.description[:120]}...")
 
 
@@ -74,6 +91,9 @@ class CVEFeed(BaseModule):
         self._poll_thread: Optional[threading.Thread] = None
         self._polling = False
         self._on_new_cve: Optional[Callable] = None
+        # KEV catalog: cve_id → due_date string (loaded lazily)
+        self._kev: dict[str, str] = {}
+        self._kev_ts: float = 0.0
         self._load_disk_cache()
 
     # ── Public API ────────────────────────────────────────────────────────────
@@ -121,14 +141,22 @@ class CVEFeed(BaseModule):
         # Sort: CRITICAL first, then by score
         all_matches.sort(key=lambda x: x.cvss_score, reverse=True)
 
+        # Enrich with EPSS and KEV data
+        if all_matches:
+            self.enrich_epss(all_matches, on_output=on_output)
+            self.enrich_kev(all_matches, on_output=on_output)
+
         if on_output:
             on_output(f"[CVE] Found {len(all_matches)} CVE(s) for {target}\n")
             crit = [m for m in all_matches if m.cvss_severity == "CRITICAL"]
             high = [m for m in all_matches if m.cvss_severity == "HIGH"]
+            kev  = [m for m in all_matches if m.kev_exploited]
+            if kev:
+                on_output(f"[CVE] CISA KEV: {len(kev)} CVE(s) are actively exploited in the wild\n")
             if crit:
-                on_output(f"[CVE] ⚠️  CRITICAL: {len(crit)} CVE(s) require immediate attention\n")
+                on_output(f"[CVE] CRITICAL: {len(crit)} CVE(s) require immediate attention\n")
             if high:
-                on_output(f"[CVE] 🔴 HIGH: {len(high)} CVE(s)\n")
+                on_output(f"[CVE] HIGH: {len(high)} CVE(s)\n")
             for m in all_matches[:10]:
                 on_output(str(m) + "\n")
 
@@ -185,6 +213,84 @@ class CVEFeed(BaseModule):
                 "total_cves": sum(len(v) for v in self._cache.values()),
                 "oldest_entry_hours": self._oldest_cache_age(),
             }
+
+    # ── EPSS + KEV enrichment ─────────────────────────────────────────────────
+
+    def fetch_cisa_kev(self, force_refresh: bool = False) -> dict[str, str]:
+        """
+        Download the CISA KEV catalog. Returns {cve_id: due_date}.
+        Cached for 24h — the catalog updates daily.
+        """
+        age_hours = (time.time() - self._kev_ts) / 3600
+        if self._kev and not force_refresh and age_hours < KEV_CACHE_TTL_HOURS:
+            return self._kev
+
+        try:
+            req = urllib.request.Request(
+                KEV_FEED_URL,
+                headers={"User-Agent": "ShadowCypher-CVEFeed/2.0"},
+            )
+            with urllib.request.urlopen(req, timeout=20) as resp:  # nosec B310
+                data = json.loads(resp.read().decode("utf-8"))
+            self._kev = {
+                v["cveID"]: v.get("dueDate", "")
+                for v in data.get("vulnerabilities", [])
+            }
+            self._kev_ts = time.time()
+            logger.info("cve_feed", f"KEV catalog loaded: {len(self._kev)} entries")
+        except Exception as e:
+            logger.warning("cve_feed", f"KEV fetch failed: {e}")
+        return self._kev
+
+    def enrich_epss(self, matches: list[CVEMatch], on_output: Callable = None) -> None:
+        """
+        Batch-fetch EPSS scores for a list of CVEMatch objects (in-place update).
+        FIRST.org EPSS API accepts up to 100 CVE IDs per request.
+        """
+        if not matches:
+            return
+        ids = [m.cve_id for m in matches]
+        # Batch into chunks of 100
+        for chunk_start in range(0, len(ids), 100):
+            chunk = ids[chunk_start:chunk_start + 100]
+            cve_param = ",".join(chunk)
+            url = f"{EPSS_API_BASE}?cve={urllib.parse.quote(cve_param)}&envelope=true&skip=0&limit=100"
+            try:
+                req = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": "ShadowCypher-CVEFeed/2.0"},
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
+                    data = json.loads(resp.read().decode("utf-8"))
+                epss_map: dict[str, tuple[float, float]] = {}
+                for item in data.get("data", []):
+                    cve_id = item.get("cve", "")
+                    try:
+                        score = float(item.get("epss", 0))
+                        pct   = float(item.get("percentile", 0))
+                        epss_map[cve_id] = (score, pct)
+                    except (ValueError, TypeError):
+                        pass
+                for m in matches:
+                    if m.cve_id in epss_map:
+                        m.epss_score, m.epss_percentile = epss_map[m.cve_id]
+            except Exception as e:
+                logger.warning("cve_feed", f"EPSS fetch failed: {e}")
+                break
+
+        high_epss = [m for m in matches if m.epss_score >= 0.5]
+        if on_output and high_epss:
+            on_output(f"[EPSS] {len(high_epss)} CVE(s) have >50% exploitation probability\n")
+
+    def enrich_kev(self, matches: list[CVEMatch], on_output: Callable = None) -> None:
+        """Mark CVEMatch objects that appear in the CISA KEV catalog (in-place update)."""
+        kev = self.fetch_cisa_kev()
+        if not kev:
+            return
+        for m in matches:
+            if m.cve_id in kev:
+                m.kev_exploited = True
+                m.kev_due_date  = kev[m.cve_id]
 
     # ── Internals ─────────────────────────────────────────────────────────────
 

@@ -138,13 +138,13 @@ class DashboardPage(Gtk.Box):
         title_lbl = Gtk.Label(xalign=0)
         title_lbl.set_markup(
             "<span font_weight='900' size='large' color='#00d4ff'>"
-            "SHADOW_NODE_HUD</span>"
+            "ShadowCypher</span>"
         )
         header.pack_start(title_lbl, False, False, 0)
 
         self._status = Gtk.Label()
         self._status.set_markup(
-            "<span color='#10b981' font_weight='700'>● ALL SYSTEMS NOMINAL</span>"
+            "<span color='#10b981' font_weight='700'>● All systems ready</span>"
         )
         header.pack_end(self._status, False, False, 0)
         content.pack_start(header, False, False, 0)
@@ -156,9 +156,9 @@ class DashboardPage(Gtk.Box):
         gauges_box = Gtk.Box(spacing=15, homogeneous=False)
         gauges_box.get_style_context().add_class("citadel-pulse")
 
-        self.gauge_cpu = ArcGauge("CPU LOAD", "%", (0, 1.0, 0.61), 120)
-        self.gauge_ram = ArcGauge("MEMORY", "%", (0.6, 0.4, 1.0), 120)
-        self.gauge_disk = ArcGauge("DISK", "%", (1.0, 0.6, 0.1), 120)
+        self.gauge_cpu = ArcGauge("CPU", "%", (0, 1.0, 0.61), 120)
+        self.gauge_ram = ArcGauge("Memory", "%", (0.6, 0.4, 1.0), 120)
+        self.gauge_disk = ArcGauge("Disk", "%", (1.0, 0.6, 0.1), 120)
 
         for g in [self.gauge_cpu, self.gauge_ram, self.gauge_disk]:
             gauges_box.pack_start(g, True, True, 5)
@@ -170,15 +170,15 @@ class DashboardPage(Gtk.Box):
         stats_box.set_row_spacing(10)
         stats_box.set_valign(Gtk.Align.START)
 
-        self.stat_ai = MiniStat("AI_CORE", "NOMINAL", "#8b5cf6")
-        self.stat_missions = MiniStat("ACTIVE_MISSIONS", "0", "#f43f5e")
-        self.stat_uptime = MiniStat("MISSION_UPTIME", "0:00:00", "#38bdf8")
-        self.stat_stealth = MiniStat("STEALTH_SIGNATURE", "4/5 ACTIVE", "#fbbf24")
-        self.stat_threats = MiniStat("THREAT_INTEL", "0 HITS", "#f97316")
-        self.stat_integrity = MiniStat("CORE_INTEGRITY", "VERIFIED", "#10b981")
-        self.stat_relay = MiniStat("SHADOW_PLANE", "SECURE", "#0ea5e9")
-        self.stat_net = MiniStat("GHOST_IO_SPEED", "0 B/s", "#64748b")
-        self.stat_pulse = MiniStat("ENTROPY_SIGNATURE", "NOMINAL", "#00ff9d")
+        self.stat_ai = MiniStat("AI Engine", "Ready", "#8b5cf6")
+        self.stat_missions = MiniStat("Active missions", "0", "#f43f5e")
+        self.stat_uptime = MiniStat("Uptime", "0:00:00", "#38bdf8")
+        self.stat_stealth = MiniStat("Stealth", "4/5 active", "#fbbf24")
+        self.stat_threats = MiniStat("Threat hits", "0", "#f97316")
+        self.stat_integrity = MiniStat("Integrity", "Verified", "#10b981")
+        self.stat_relay = MiniStat("Relay", "Offline", "#0ea5e9")
+        self.stat_net = MiniStat("I/O speed", "0 B/s", "#64748b")
+        self.stat_pulse = MiniStat("Tor", "Off", "#00ff9d")
 
         stats_list = [
             self.stat_ai, self.stat_missions, self.stat_uptime,
@@ -196,7 +196,7 @@ class DashboardPage(Gtk.Box):
         arsenal_lbl = Gtk.Label(xalign=0)
         arsenal_lbl.set_markup(
             "<span font_weight='800' color='#94a3b8' size='small'>"
-            "ARSENAL STATUS</span>"
+            "Tools</span>"
         )
         content.pack_start(arsenal_lbl, False, False, 2)
 
@@ -243,7 +243,7 @@ class DashboardPage(Gtk.Box):
         feed_lbl = Gtk.Label(xalign=0)
         feed_lbl.set_markup(
             "<span font_weight='800' color='#94a3b8' size='small'>"
-            "MISSION TELEMETRY</span>"
+            "Live feed</span>"
         )
         content.pack_start(feed_lbl, False, False, 2)
 
@@ -290,7 +290,7 @@ class DashboardPage(Gtk.Box):
         import socket
         import platform as _plat
 
-        self.terminal.log("══════ SHADOWCYPHER BOOT SEQUENCE ══════", "SYSTEM")
+        self.terminal.log("─── ShadowCypher starting ───", "SYSTEM")
         self.terminal.log(f"  OS: {_plat.system()} {_plat.release()} | Arch: {_plat.machine()}", "INFO")
 
         services = [
@@ -325,7 +325,7 @@ class DashboardPage(Gtk.Box):
         except Exception:
             self.stat_stealth.set_value("N/A")
 
-        self.terminal.log("════════════════════════════════════════", "SYSTEM")
+        self.terminal.log("─────────────────────────────────────────", "SYSTEM")
         return False
 
     def _tick(self):
@@ -349,9 +349,9 @@ class DashboardPage(Gtk.Box):
             stat_map = {
                 self.stat_missions: str(summary.get("active_missions", 0)),
                 self.stat_uptime: summary.get("uptime", "0:00:00"),
-                self.stat_integrity: "VERIFIED" if sisyphus.is_stable else "TAMPERED",
-                self.stat_threats: f"{summary.get('threat_hits', 0)} HITS",
-                self.stat_stealth: "ACTIVE" if hub.is_stealth_ready() else "EXPOSED"
+                self.stat_integrity: "Verified" if sisyphus.is_stable else "Tampered",
+                self.stat_threats: str(summary.get('threat_hits', 0)),
+                self.stat_stealth: "Active" if hub.is_stealth_ready() else "Exposed"
             }
             
             for widget, val in stat_map.items():
@@ -360,12 +360,10 @@ class DashboardPage(Gtk.Box):
             # Signal Bridge (Go Relay) — use flat telemetry key set by health monitor
             relay_up = summary.get("relay_up", False)
             tor_up = summary.get("tor_up", False)
-            relay_lbl = "SECURE" if relay_up else "OFFLINE"
-            self.stat_relay.set_value(relay_lbl)
-            # Show Tor state in pulse stat
-            self.stat_pulse.set_value("TOR UP" if tor_up else "CLEARNET")
+            self.stat_relay.set_value("Connected" if relay_up else "Offline")
+            self.stat_pulse.set_value("Up" if tor_up else "Down")
 
         except Exception as e:
-            logger.debug("ui", f"DASHBOARD_TICK_FAILURE: {e}")
+            logger.debug("ui", f"Dashboard tick error: {e}")
             
         return True

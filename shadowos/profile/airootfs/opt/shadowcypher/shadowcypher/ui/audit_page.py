@@ -14,7 +14,7 @@ class ShadowCypherAuditPage(BasePage):
         super().__init__("\U0001f3af ShadowCypher Audit (Platform Verification)")
         
         info = Gtk.Label()
-        info.set_markup("<span color='#94a3b8'>Execute a deep-spectrum audit of the Obsidian Citadel core and polyglot runtimes.</span>")
+        info.set_markup("<span color='#94a3b8'>Run a full audit of the platform core and installed runtimes.</span>")
         self.workspace.pack_start(info, False, False, 10)
 
         # Audit Display
@@ -25,7 +25,7 @@ class ShadowCypherAuditPage(BasePage):
         self.workspace.pack_start(self.grid, False, False, 0)
 
         btn_box = Gtk.Box(spacing=10)
-        self.audit_btn = Gtk.Button(label="Execute Lethality Audit")
+        self.audit_btn = Gtk.Button(label="Run Audit")
         self.audit_btn.connect("clicked", self._on_audit)
         btn_box.pack_start(self.audit_btn, False, False, 0)
         self.workspace.pack_start(btn_box, False, False, 20)
@@ -35,7 +35,7 @@ class ShadowCypherAuditPage(BasePage):
 
     def _on_audit(self, btn):
         self.audit_btn.set_sensitive(False)
-        self.clear_output("INITIATING_PLATFORM_VERIFICATION_V4.5.9...\n\n")
+        self.clear_output("Running platform audit...\n\n")
         
         # Clear previous grid rows
         for child in self.grid.get_children():
@@ -64,5 +64,5 @@ class ShadowCypherAuditPage(BasePage):
             self._row_count += 1
         
         self.grid.show_all()
-        self.on_output("\n[VERIFICATION_COMPLETE] PLATFORM_STABLE // MISSION_READY\n")
+        self.on_output("\nAudit complete.\n")
         self.audit_btn.set_sensitive(True)

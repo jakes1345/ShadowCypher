@@ -59,7 +59,7 @@ class ShadowScript:
                 return {"ok": False, "msg": "SCAN requires a prior TARGET directive"}
             from shadowcypher.modules.network import Network
             if callback:
-                callback(f"INITIATING_SCAN: {target}")
+                callback(f"scanning → {target}")
             threading.Thread(
                 target=Network.port_scan_tcp_connect,
                 args=(target, args_raw or "1-1000", callback),

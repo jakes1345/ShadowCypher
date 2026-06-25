@@ -32,7 +32,7 @@ class VulnScanner(BaseModule):
         if not validate_target(target):
             return
 
-        self.log(f"INITIATING_NUCLEI_SCAN: {target}")
+        self.log(f"nuclei → {target}")
         if on_output:
             on_output(f"[NUCLEI] ATT&CK: {mitre.format_tags(mitre.tag('nuclei'))}\n")
         nuclei = self.get_tool_path("nuclei")
@@ -53,7 +53,7 @@ class VulnScanner(BaseModule):
         if not validate_target(target):
             return
 
-        self.log(f"INITIATING_SQLMAP_SCAN: {target}")
+        self.log(f"sqlmap → {target}")
         if on_output:
             on_output(f"[SQLMAP] ATT&CK: {mitre.format_tags(mitre.tag('sqlmap'))}\n")
         sqlmap = self.get_tool_path("sqlmap")
@@ -71,7 +71,7 @@ class VulnScanner(BaseModule):
         if not validate_target(target):
             return
 
-        self.log(f"INITIATING_NIKTO_SCAN: {target}")
+        self.log(f"nikto → {target}")
         if on_output:
             on_output(f"[NIKTO] ATT&CK: {mitre.format_tags(mitre.tag('nikto'))}\n")
         nikto = self.get_tool_path("nikto")

@@ -77,7 +77,7 @@ class GatewayDiagnostics(BaseModule):
     def discover_upnp(self, on_output=None):
         """Perform SSDP multicast to identify UPnP-enabled devices on the subnet."""
         if on_output:
-            on_output("[*] INITIATING_UPNP_DISCOVERY...")
+            on_output("[*] scanning for UPnP devices...")
         msg = (
             'M-SEARCH * HTTP/1.1\r\n'
             'HOST: 239.255.255.250:1900\r\n'

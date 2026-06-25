@@ -49,9 +49,9 @@ class Sisyphus:
         risk = entry.get("risk_level", "LOW")
         
         if hostmask and risk == "HIGH":
-            logger.warning("sisyphus", f"GOVERNANCE_PROTOCOL: High-risk threat detected ({hostmask}). Executing Lockdown...")
+            logger.warning("sisyphus", f"High-risk threat: {hostmask} — blocking.")
             firewall.block_host(hostmask)
-            self.broadcast_alert(f"AUTONOMOUS_LOCKDOWN: {hostmask} quarantined.", "CRITICAL")
+            self.broadcast_alert(f"Blocked {hostmask} (autonomous lockdown).", "CRITICAL")
 
     def _init_integrity_baseline(self):
         """Build initial baseline hashes for core framework files. 
@@ -74,9 +74,9 @@ class Sisyphus:
             try:
                 with open(self.integrity_file, "r") as f:
                     static_hashes = json.load(f)
-                logger.info("sisyphus", "INTEGRITY_BASELINE: Loaded static hashes from integrity.json")
+                logger.info("sisyphus", "Loaded integrity baseline from integrity.json.")
             except Exception as e:
-                logger.warning("sisyphus", f"INTEGRITY_BASELINE: Failed to load static hashes: {e}")
+                logger.warning("sisyphus", f"Failed to load integrity baseline: {e}")
 
         new_entries_added = False
         for rel_path in core_files:
@@ -136,7 +136,7 @@ class Sisyphus:
                 self._analyze_and_report(report)
                 time.sleep(self.scan_interval)
             except Exception as e:
-                logger.error("sisyphus", f"SENTINEL_FAULT: {str(e)}")
+                logger.error("sisyphus", f"Audit loop error: {e}")
                 time.sleep(30)
 
     def _execute_audit(self) -> Dict[str, Any]:
@@ -230,11 +230,11 @@ class Sisyphus:
 
         # 2. Integrity Alerts
         for violation in i:
-            self.broadcast_alert(f"INTEGRITY_VIOLATION: {violation}", "SECURITY")
+            self.broadcast_alert(f"Integrity violation: {violation}", "SECURITY")
 
         # 3. Code Quality Alerts
         for error in f["syntax"]:
-            self.broadcast_alert(f"SYNTAX_FAULT: {error}", "ERROR")
+            self.broadcast_alert(f"Syntax error: {error}", "ERROR")
 
         # Update Hub Telemetry
         from shadowcypher.core.hub import hub
@@ -251,7 +251,7 @@ class Sisyphus:
             "level": level,
             "timestamp": datetime.now().isoformat()
         })
-        logger.warning("sisyphus", f"SENTINEL_ALERT [{level}]: {msg}")
+        logger.warning("sisyphus", f"Alert [{level}]: {msg}")
 
     def audit_report(self) -> str:
         """AI-consumable system health summary."""
@@ -261,10 +261,10 @@ class Sisyphus:
         f = report["framework"]
         
         summary = (
-            f"SYSTEM_HEALTH: {'NOMINAL' if not i and not f['syntax'] else 'DEGRADED'}\n"
-            f"VITALS: CPU={v['cpu']}% | RAM={v['ram']}% | DISK={v['disk']}%\n"
-            f"INTEGRITY: {len(i)} violations detected.\n"
-            f"CODE_VAL: {len(f['syntax'])} syntax errors active."
+            f"System health: {'nominal' if not i and not f['syntax'] else 'degraded'}\n"
+            f"Vitals: CPU={v['cpu']}% | RAM={v['ram']}% | Disk={v['disk']}%\n"
+            f"Integrity: {len(i)} violation(s) detected.\n"
+            f"Syntax: {len(f['syntax'])} error(s) active."
         )
         return summary
 
@@ -285,7 +285,7 @@ class Sisyphus:
 
     def generate_baseline(self):
         """Forces a recalculation and persistence of the integrity baseline."""
-        logger.info("sisyphus", "REGENERATING_BASELINE: Manual override requested.")
+        logger.info("sisyphus", "Regenerating integrity baseline...")
         new_hashes = {}
         core_files = [
             "shadowcypher/app.py",
@@ -305,9 +305,9 @@ class Sisyphus:
             import json
             with open(self.integrity_file, "w") as f:
                 json.dump(new_hashes, f, indent=4)
-            logger.info("sisyphus", "BASELINE_REGULARIZED: Static hashes updated.")
+            logger.info("sisyphus", "Integrity baseline saved.")
         except Exception as e:
-            logger.error("sisyphus", f"BASELINE_PERSIST_FAILED: {e}")
+            logger.error("sisyphus", f"Failed to save baseline: {e}")
         
         # Trigger an immediate audit to clear cached 'TAMPERED' status
         self._last_report = self._execute_audit()

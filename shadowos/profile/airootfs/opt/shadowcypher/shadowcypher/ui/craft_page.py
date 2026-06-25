@@ -1,16 +1,15 @@
-"""APEX UI: ARSENAL_FORGE V3.0"""
+"""Payload forge page — generate and obfuscate payloads for authorized testing."""
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod
 from gi.repository import Gtk
 
 class CraftPage(BasePage):
     def __init__(self):
-        super().__init__("🔨 ARSENAL_FORGE")
+        super().__init__("🔨 Payload Forge")
 
-        # 1. Populate Metric Strip
-        self.pod_pulse = DataPod("MUTATION_PULSE", "ACTIVE", "cyan")
-        self.pod_depth = DataPod("OBF_DEPTH", "LEVEL_3", "violet")
-        self.pod_entropy = DataPod("ENTROPY", "HIGH", "amber")
+        self.pod_pulse = DataPod("Status", "Active", "cyan")
+        self.pod_depth = DataPod("Obfuscation", "Level 3", "violet")
+        self.pod_entropy = DataPod("Entropy", "High", "amber")
 
         self.metric_strip.pack_start(self.pod_pulse, True, True, 0)
         self.metric_strip.pack_start(self.pod_depth, True, True, 0)
@@ -45,7 +44,7 @@ class CraftPage(BasePage):
         row2.pack_start(self.lport_entry, False, False, 0)
         deck.pack_start(row2, False, False, 0)
         
-        btn = self.make_action_btn("⚡ INITIATE_ARSENAL_FORGE", self._on_forge)
+        btn = self.make_action_btn("⚡ Generate", self._on_forge)
         deck.pack_start(btn, False, False, 0)
         
         self.workspace.pack_start(deck, True, True, 0)
@@ -59,7 +58,7 @@ class CraftPage(BasePage):
         lport = self.lport_entry.get_text().strip()
         
         self.terminal.clear()
-        self.terminal.log(f"INITIATING_FORGE: {ptype.upper()} -> {lhost}:{lport}", "SYSTEM")
+        self.terminal.log(f"Generating {ptype} payload → {lhost}:{lport}", "SYSTEM")
         
         def _on_out(line):
             GLib.idle_add(self.terminal.log, line.strip(), "FORGE")
@@ -68,12 +67,12 @@ class CraftPage(BasePage):
             CraftFactory.generate_evasive_elf(lhost, lport, on_output=_on_out)
         elif ptype == "ps1":
             path = CraftFactory.generate_stealth_powershell(lhost, lport, on_output=_on_out)
-            self.terminal.log(f"ARTIFACT_STORED: {path}", "SUCCESS")
+            self.terminal.log(f"Saved: {path}", "SUCCESS")
         elif ptype == "py_xor":
             path = CraftFactory.generate_obfuscated_python(lhost, lport)
-            self.terminal.log(f"ARTIFACT_STORED: {path}", "SUCCESS")
+            self.terminal.log(f"Saved: {path}", "SUCCESS")
         elif ptype == "py_c2":
             b64 = CraftFactory.generate_stealth_c2_python(lhost, lport)
-            self.terminal.log("ENCRYPTED_AGENT_BASE64:", "SUCCESS")
+            self.terminal.log("Encrypted agent (base64):", "SUCCESS")
             self.terminal.log(b64, "DATA")
 

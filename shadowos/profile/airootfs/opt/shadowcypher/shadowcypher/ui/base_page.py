@@ -1,7 +1,4 @@
-"""
-BasePage — The Apex Foundation for all ShadowCypher tactical modules.
-Directly integrated with ShadowComponents and ShadowHub.
-"""
+"""BasePage — shared layout and helpers for all ShadowCypher pages."""
 
 import gi
 import subprocess
@@ -17,10 +14,7 @@ from shadowcypher.core.hub import hub
 _SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "scripts")
 
 class BasePage(Gtk.Box):
-    """
-    Apex Base Page.
-    Standardizes the Tactical HUD across all tactical modules.
-    """
+    """Base class for all pages — provides shared layout, terminal, and helpers."""
 
     def __init__(self, title: str, **kwargs):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0, **kwargs)
@@ -33,17 +27,14 @@ class BasePage(Gtk.Box):
         self.main_pod.get_style_context().add_class("card")
         self.pack_start(self.main_pod, True, True, 0)
 
-        # 1. Apex Header
         self.header = TacticalHeader(title.upper())
         self.main_pod.pack_start(self.header, False, False, 0)
 
-        # 2. Tactical Metric Strip
         self.metric_strip = Gtk.Box(spacing=10)
         self.metric_strip.set_margin_start(20)
         self.metric_strip.set_margin_end(20)
         self.main_pod.pack_start(self.metric_strip, False, False, 0)
 
-        # 3. Tactical Environment (H-Box)
         self.tactical_env = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.main_pod.pack_start(self.tactical_env, True, True, 0)
 
@@ -54,7 +45,6 @@ class BasePage(Gtk.Box):
         self.workspace.set_margin_end(20)
         self.tactical_env.pack_start(self.workspace, True, True, 0)
 
-        # 3b. Intelligence Sidebar (Righty) - Fills the 'Barren' space
         self.intel_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.intel_sidebar.set_size_request(300, -1)
         self.intel_sidebar.set_margin_start(10)
@@ -62,17 +52,16 @@ class BasePage(Gtk.Box):
         self.intel_sidebar.set_margin_top(20)
         
         intel_header = Gtk.Label()
-        intel_header.set_markup("<span size='small' weight='bold' color='#94a3b8'>// IN-MEMORY_INTELLIGENCE</span>")
+        intel_header.set_markup("<span size='small' weight='bold' color='#94a3b8'>// Intelligence</span>")
         intel_header.set_halign(Gtk.Align.START)
         self.intel_sidebar.pack_start(intel_header, False, False, 0)
         
-        self.mission_state_lbl = Gtk.Label(label="STATE: ANALYZING_VECTORS...")
+        self.mission_state_lbl = Gtk.Label(label="Analyzing...")
         self.mission_state_lbl.set_halign(Gtk.Align.START)
         self.intel_sidebar.pack_start(self.mission_state_lbl, False, False, 10)
         
         self.tactical_env.pack_end(self.intel_sidebar, False, False, 0)
 
-        # 4. Apex Terminal (Mission Oversight)
         self.terminal = TacticalTerminal(height=340)
         self.main_pod.pack_start(self.terminal, True, True, 0)
         
@@ -83,9 +72,9 @@ class BasePage(Gtk.Box):
         GLib.idle_add(self.terminal.log, text, tag)
 
     def run_mission(self, query, role="adversary"):
-        """Centralized Mission Dispatch."""
+        """Dispatch an AI mission via hub."""
         self.header.set_active(True)
-        self.log(f"INITIATING_MISSION: {query}", "APEX")
+        self.log(f"Mission: {query}", "INFO")
         hub.dispatch_mission(query, agent_role=role)
 
     def make_action_btn(self, label, handler, style="suggested-action"):

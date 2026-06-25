@@ -19,3 +19,4 @@ branding/work/
 *.key
 *.pem
 authorized_keys.bak
+pkg-cache/

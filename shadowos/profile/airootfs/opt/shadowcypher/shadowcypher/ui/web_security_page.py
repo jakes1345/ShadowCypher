@@ -14,9 +14,9 @@ class WebSecurityPage(BasePage):
         from shadowcypher.ui.components import DataPod
 
         # Metric Strip
-        self.pod_vulns = DataPod("VULNS_FOUND", "0", "cyan")
-        self.pod_speed = DataPod("SCAN_SPEED", "NORMAL", "violet")
-        self.pod_status = DataPod("ENGINE_STATUS", "IDLE", "amber")
+        self.pod_vulns = DataPod("vulns", "0", "cyan")
+        self.pod_speed = DataPod("speed", "normal", "violet")
+        self.pod_status = DataPod("status", "idle", "amber")
 
         self.metric_strip.pack_start(self.pod_vulns, True, True, 0)
         self.metric_strip.pack_start(self.pod_speed, True, True, 0)
@@ -167,7 +167,7 @@ class WebSecurityPage(BasePage):
         except ValueError:
             threads, duration = 100, 60
         
-        self.clear_output(f"IGNITING_MHDDoS_STRIKE: {target} [{method}]\n\n")
+        self.clear_output(f"MHDDoS → {target} [{method}]\n\n")
         self.run_job(
             WebSecurity.mhddos_strike(
                 target,

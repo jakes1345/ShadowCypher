@@ -22,13 +22,12 @@ from shadowcypher.core.platform import platform_engine
 
 class ShadowCypherWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
-        super().__init__(application=app, title="SHADOWCYPHER_APEX")
+        super().__init__(application=app, title="ShadowCypher")
         self.set_default_size(1280, 720)
         self.set_size_request(800, 600)
         self.set_resizable(True)
         self.set_position(Gtk.WindowPosition.CENTER)
-        
-        # APEX_IDENTITY: Force WM Class for taskbar icon binding
+
         self.set_wmclass("ShadowCypher", "org.shadowcypher.ShadowCypher")
         GLib.set_prgname("ShadowCypher")
         
@@ -286,13 +285,13 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
 
         # (icon, label, badge)  badge=None means no badge
         pages = [
-            ("---", "COMMAND CENTER", None),
+            ("---", "Command Center", None),
             ("\U0001f4ca", "Central Command HUD", None),
             ("\U0001f5fa", "Spectre War-Map", None),
             ("\U0001f5c4", "Artifact Crypt", None),
             ("\U0001f916", "Shadow-Synthesizer", "APEX"),
             ("\U0001f510", "Guardian AI", None),
-            ("---", "INTELLIGENCE", None),
+            ("---", "Intelligence", None),
             ("✨", "Spectral Intelligence", "APEX"),
             ("\U0001f3af", "Vulnerability Sweep", None),
             ("\U0001f310", "Network Scanner", None),

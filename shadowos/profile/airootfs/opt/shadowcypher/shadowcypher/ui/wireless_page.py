@@ -133,6 +133,6 @@ class WirelessPage(BasePage):
         if not bssid:
             self.clear_output("Enter at least one target BSSID for the swarm.")
             return
-        self.terminal.log(f"INITIATING_DDEEPHAT_SIGNAL_SUPPRESSION: {bssid}", "AI")
+        self.terminal.log(f"Starting deauth swarm: {bssid}", "AI")
         w = Wireless()
         w.deauth_swarm([bssid], on_output=self.on_output)

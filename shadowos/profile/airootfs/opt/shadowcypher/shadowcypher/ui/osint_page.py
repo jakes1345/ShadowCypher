@@ -123,26 +123,26 @@ class OSINTPage(BasePage):
         target = self._get_target()
         if not target:
             return
-        self.terminal.log(f"INITIATING_SOCIAL_FOOTPRINT_SEARCH: {target}", "OSINT")
+        self.terminal.log(f"Social footprint: {target}", "OSINT")
         self._deep_osint.social_footprint(target, on_output=self.on_output)
 
     def _on_email(self, btn):
         target = self._get_target()
         if not target:
             return
-        self.terminal.log(f"INITIATING_DEEP_EMAIL_AUDIT: {target}", "OSINT")
+        self.terminal.log(f"Email audit: {target}", "OSINT")
         self._deep_osint.email_audit(target, on_output=self.on_output)
 
     def _on_ghunt(self, btn):
         target = self._get_target()
         if not target:
             return
-        self.terminal.log(f"INITIATING_GHUNT_PIVOT: {target}", "OSINT")
+        self.terminal.log(f"GHunt pivot: {target}", "OSINT")
         self.run_job(self._deep_osint.ghunt_pivot(target, on_output=self.on_output))
 
     def _on_wayback(self, btn):
         target = self._get_target()
         if not target:
             return
-        self.terminal.log(f"INITIATING_WAYBACK_RECON: {target}", "OSINT")
+        self.terminal.log(f"Wayback recon: {target}", "OSINT")
         self.run_job(self._deep_osint.wayback_recon(target, on_output=self.on_output))

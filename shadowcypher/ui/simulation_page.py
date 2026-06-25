@@ -1,7 +1,4 @@
-"""
-ShadowCypher Combat Deck — Arsenal Control Plane.
-Dedicated UI for Chaos Engine stress testing and WebForge payload research.
-"""
+"""Simulation page — network stress testing and web security research."""
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -12,19 +9,18 @@ from shadowcypher.ui.components import DataPod
 
 class SimulationDeck(BasePage):
     def __init__(self):
-        super().__init__("COMBAT DECK")
+        super().__init__("Simulation")
         self._build_combat_ui()
 
     def _build_combat_ui(self):
-        # Metric pods
-        self.pod_status = DataPod("ENGINE_STATUS", "IDLE")
-        self.pod_threads = DataPod("ACTIVE_THREADS", "0")
-        self.pod_packets = DataPod("PACKETS_SENT", "0")
+        self.pod_status = DataPod("Status", "Idle")
+        self.pod_threads = DataPod("Threads", "0")
+        self.pod_packets = DataPod("Packets", "0")
         for pod in [self.pod_status, self.pod_threads, self.pod_packets]:
             self.metric_strip.pack_start(pod, True, True, 5)
 
         # --- CHAOS ENGINE SECTION ---
-        chaos_frame = Gtk.Frame(label="CHAOS ENGINE (Network Stress)")
+        chaos_frame = Gtk.Frame(label="Network Stress Test")
         chaos_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         chaos_box.set_margin_start(10)
         chaos_box.set_margin_end(10)
@@ -58,10 +54,10 @@ class SimulationDeck(BasePage):
         chaos_box.pack_start(opts_row, False, False, 0)
 
         btn_row = Gtk.Box(spacing=8)
-        self.chaos_btn = self.make_action_btn("INITIATE CHAOS", self._on_chaos_click, "destructive-action")
+        self.chaos_btn = self.make_action_btn("Start Stress Test", self._on_chaos_click, "destructive-action")
         btn_row.pack_start(self.chaos_btn, False, False, 0)
 
-        self.stop_btn = self.make_action_btn("HALT", self._on_stop_click, "suggested-action")
+        self.stop_btn = self.make_action_btn("Stop", self._on_stop_click, "suggested-action")
         btn_row.pack_start(self.stop_btn, False, False, 0)
         chaos_box.pack_start(btn_row, False, False, 0)
 
@@ -69,7 +65,7 @@ class SimulationDeck(BasePage):
         self.workspace.pack_start(chaos_frame, False, False, 0)
 
         # --- WEBFORGE V2 SECTION ---
-        forge_frame = Gtk.Frame(label="WEBFORGE V2 (Browser Research)")
+        forge_frame = Gtk.Frame(label="Web Tests")
         forge_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         forge_box.set_margin_start(10)
         forge_box.set_margin_end(10)
@@ -104,7 +100,7 @@ class SimulationDeck(BasePage):
             return
 
         if not validate_target(target):
-            self.log(f"REJECTED: Invalid target '{target}'", "error")
+            self.log(f"Invalid target: {target}", "error")
             return
 
         try:
@@ -112,11 +108,11 @@ class SimulationDeck(BasePage):
             duration = int(self.duration_entry.get_text().strip())
             threads = int(self.threads_entry.get_text().strip())
         except ValueError:
-            self.log("ERROR: Port, duration, threads must be integers", "error")
+            self.log("ERROR: Port, duration, and threads must be integers", "error")
             return
 
-        self.log(f"CHAOS_INIT: UDP Flux -> {target}:{port} | {threads}T x {duration}s", "system")
-        self.pod_status.set_value("ACTIVE")
+        self.log(f"Stress test → {target}:{port} | {threads} threads × {duration}s", "system")
+        self.pod_status.set_value("Active")
         self.pod_threads.set_value(str(threads))
         self.header.set_active(True)
 
@@ -128,19 +124,19 @@ class SimulationDeck(BasePage):
     def _on_stop_click(self, btn):
         from shadowcypher.modules.chaos import chaos
         chaos.stop()
-        self.pod_status.set_value("HALTED")
+        self.pod_status.set_value("Stopped")
         self.pod_threads.set_value("0")
         self.header.set_active(False)
-        self.log("CHAOS_HALTED: All threads terminated", "success")
+        self.log("Stopped.", "success")
 
     def _auto_stop(self):
         from shadowcypher.modules.chaos import chaos
         if chaos.active:
             chaos.stop()
-        GLib.idle_add(self.pod_status.set_value, "IDLE")
+        GLib.idle_add(self.pod_status.set_value, "Idle")
         GLib.idle_add(self.pod_threads.set_value, "0")
         GLib.idle_add(self.header.set_active, False)
-        self.log("CHAOS_COMPLETE: Duration elapsed", "success")
+        self.log("Stress test complete.", "success")
         return False
 
     def _on_forge_click(self, btn):
@@ -158,7 +154,7 @@ class SimulationDeck(BasePage):
             self.log("ERROR: Specify a target URL/host in the Target field", "error")
             return
         if not validate_target(target):
-            self.log(f"REJECTED: Invalid target '{target}'", "error")
+            self.log(f"Invalid target: {target}", "error")
             return
 
         def cb(line):
@@ -176,8 +172,8 @@ class SimulationDeck(BasePage):
         }
         handler = dispatch.get(exploit_type)
         if not handler:
-            self.log(f"FORGE_ERROR: Unknown exploit type '{exploit_type}'", "error")
+            self.log(f"Unknown test type: {exploit_type}", "error")
             return
 
-        self.log(f"FORGE_STARTING: {exploit_type.upper()} -> {target}", "ai")
+        self.log(f"Running {exploit_type} test → {target}", "ai")
         threading.Thread(target=handler, daemon=True).start()

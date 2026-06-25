@@ -23,12 +23,11 @@ class Runner:
 
     def _init_perf_env(self) -> Dict[str, str]:
         env = os.environ.copy()
-        # APEX Optimization: only apply mold on Linux
         if self.platform.IS_LINUX:
             env["RUSTFLAGS"] = "-C target-cpu=native -C linker=mold"
             env['LDFLAGS'] = "-fuse-ld=mold"
-        
-        # STEALTH: Global Proxy Injection
+
+        # Inject proxy settings if configured
         from shadowcypher.core.config import config
         proxy = config.get("stealth", "proxy_url")
         if proxy:
@@ -135,7 +134,7 @@ class Runner:
             
             proc.wait(timeout=1800)
             if callback:
-                callback(f"\n[MISSION_{name[:4]}_TERM: Return {proc.returncode}]")
+                callback(f"\n[done: exit {proc.returncode}]")
         except subprocess.TimeoutExpired:
             proc.kill()
             if callback:

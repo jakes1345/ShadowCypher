@@ -96,7 +96,7 @@ class Kairos:
                         try:
                             from shadowcypher.core.missions import ignite_ghost_operation
                             ignite_ghost_operation(potential_ip)
-                            logger.info("kairos", f"AUTO_MISSION_IGNITED: Triggered Ghost Operation for high-risk target {potential_ip}")
+                            logger.info("kairos", f"ghost op triggered for high-risk target {potential_ip}")
                         except Exception:
                             pass
                 break  # One alert per line
