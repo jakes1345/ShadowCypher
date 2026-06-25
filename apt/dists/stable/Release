@@ -6,10 +6,10 @@ Version: 3.0.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Thu, 25 Jun 2026 02:23:43 +0000
+Date: Thu, 25 Jun 2026 02:25:32 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- 41b775e82b625fa37ecd64a634981738 29 main/binary-amd64/Packages.gz
+ 83f3ea2de3cfaa4645b808ddaa36c7a8 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- a58f6c2b0a69e2da29ebc1b8e3aef3f9604108ed1497422920908d3cca1834cc 29 main/binary-amd64/Packages.gz
+ 106e4333fcea014943364ad5b31bae015143194fa3599a09b7d9eb0f966cb7ec 29 main/binary-amd64/Packages.gz
