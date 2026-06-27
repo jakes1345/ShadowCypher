@@ -9,26 +9,26 @@ Version: 3.0.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Thu, 25 Jun 2026 02:38:13 +0000
+Date: Sat, 27 Jun 2026 23:14:02 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- 4305723ab11b28090b4b247cae8a134f 29 main/binary-amd64/Packages.gz
+ 5fd68eaef792b04398b9f43bb7e2a0a7 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- 7a7eca47d4fe3ac78c31da9d6ce0e3aab6c988a8236a8d9c31e2074b67469dff 29 main/binary-amd64/Packages.gz
+ 81c62d7bddadf96eaa3e26bbd86a0beba14ecb03b4422bcfb42331bc57516516 29 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmo8lJUACgkQ2fHRjxMT
-8IOW6g/+KlvwQ+f9rLs6Bzr/6S54Zz/+94Mm9FLVKzC4DW73iXLcg6lGYdPGcjFJ
-qjLkO0M5u9PerIUBxt/aNtIpd0selU8IqgjCeZTqG66fd4AwtRqPL0ENpJC4ZxtH
-5Ey1K2hdmVDBagMx2XpE6znMLZedxiSnOr214kaSadBWvdy6kSrop2XiRfUboxUC
-yayYT3iivLPtUOf/guCzv0Ln4jsEw2c18rFOaptQtdcIvbnEG39wJmjPDxb6uHia
-rFWQBubLrJHF5ifTWFRde+/sjEMLaiResfqijw0k2McKKK3qXxmBBkyF53eWyINQ
-lWj/HGNV1vijBd6wwl8waTlmUI/4BFBHqpJX6zngmRncKJqNIXYmS0cALw1gPFUW
-UNjv+9CzeAEMyWyGkS30whHK6hIwkwkfGetgOzkT9E/GaApE4FI2p+rGzEOoTvz3
-dcVZZaCbeUxVbZmUlFIiLKH2WQo6UBByAX8tTp2YPvW3kFN7cBJg9gHehZ4CHiCJ
-yHBkKD4ixMPILxmk8niq4/iCiWNqY/GlAuyFmmCmDF4acWR+zFVgIK/wqNvzjFR5
-Z5AfHfiSGHJB+vGvufAF5XcWus7WXbdb+YQLcG+6EpX8juXmBsAo69h57Deti3rp
-okq900tJTsgCyQH/JHlUlYemAZmCcJJjPfuwm88mSZfdLNNgWFE=
-=hNY+
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpAWToACgkQ2fHRjxMT
+8IN3HA/7Bo+bqYVrRGR/0V/RA0K8pGUH2ezWf/pm1gaFPQ1I3NS7WPeycxTxprR5
+lE/FEvN1TVvqi87xmpQ3U3GPoVhrX5Mhosi0Wug5VBWRb1AS0PnDhOj7YtBe/IGj
+jECmTRsAXcYhDGAqIoc3D7jY3p4Zwu2WsoqZO0x6nJHRAUzC9cgA+2ioaFCVzPKk
+f9C28m/s/KnUfEXC9VSatEPUsmoSqOj83YLyCEZG1nJqgB5/h6q1mYo0Rngq4/JO
+KIflcgG1msmSEHnUSN8bmlTtzMNW5ht2AxtMi9ahUSLz8BAvQQGOkHsZpXBFCxut
+8TegMj+qofEcF6m2kW0tETTYuEcnUfamwaAhBg24xsdrwuvQuSRdH9n63fPqJz2V
+uEXJe1WdOuuIaL/UO8cXyS9fi023EoIEvbfk5uqCeCtymqQ9IzfjeuuVo7i5Intv
+51N44kZYVHZDrebQRakEoxB84NptMwAsjZHB1N/PLPumeSD6zqO9NpseUg7laYx6
+enFrrgyOnhyZGRV/8ICHkaaPfV+3mj7LriZXmNSwcjHLoBOpZ6ljfKNhrukW/23b
+UyHDvw/OFEL+Jwq84tYAx6aSt+vbu8IAM6HuhtGp1gvmOtyswWFJlybACAwKT6KH
+Z74QYTVggYmabekj05bjNb08TEBpcg13sY2OmHpPP2vHLPymsaw=
+=3ugF
 -----END PGP SIGNATURE-----
