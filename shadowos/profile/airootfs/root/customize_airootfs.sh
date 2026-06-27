@@ -23,6 +23,7 @@ pip install --break-system-packages --no-cache-dir \
 
 # Services
 systemctl enable NetworkManager.service
+systemctl enable iwd.service
 systemctl enable sddm.service
 systemctl enable ollama.service
 systemctl enable ufw.service
