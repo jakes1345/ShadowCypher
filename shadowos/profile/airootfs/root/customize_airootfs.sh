@@ -9,9 +9,22 @@ echo "LANG=en_US.UTF-8" > /etc/locale.conf
 # Default shell
 chsh -s /usr/bin/zsh
 
+# ── ShadowCypher Python deps (pip-only, not in Arch repos) ───────────────────
+# Install into system Python so launch.sh (which uses system python3) can find them.
+# Arch packages handle numpy/scipy/bs4/etc; only pip-only packages go here.
+pip install --break-system-packages --no-cache-dir \
+    treequest \
+    ulid-py \
+    "shinka-evolve" \
+    "litellm>=1.0.0" \
+    inquirer \
+    mem0ai \
+    2>/dev/null || echo "[WARNING] Some pip packages failed to install — non-fatal"
+
 # Services
 systemctl enable NetworkManager.service
 systemctl enable sddm.service
+systemctl enable ollama.service
 systemctl enable ufw.service
 systemctl enable apparmor.service
 systemctl enable fail2ban.service

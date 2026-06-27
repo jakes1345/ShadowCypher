@@ -1,11 +1,17 @@
-import numpy as np
 import threading
 import time
 from typing import List, Dict, Any, Optional
-from scipy.ndimage import gaussian_laplace
 
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
+
+try:
+    import numpy as np
+    from scipy.ndimage import gaussian_laplace
+    _NUMPY_AVAILABLE = True
+except ImportError:
+    _NUMPY_AVAILABLE = False
+    logger.warning("pulse", "numpy/scipy not installed — spectrum analysis disabled")
 
 class ShadowPulse:
     """
@@ -16,7 +22,7 @@ class ShadowPulse:
 
     def __init__(self):
         self._active = False
-        self._samples: Dict[str, np.ndarray] = {}
+        self._samples: Dict[str, list] = {}
         self._max_history = 1024
         self._lock = threading.Lock()
         
@@ -27,23 +33,28 @@ class ShadowPulse:
 
     def ingest(self, stream_id: str, value: float):
         """Ingest a temporal data point (e.g. packet size, CPU spike)."""
+        if not _NUMPY_AVAILABLE:
+            return
         with self._lock:
             if stream_id not in self._samples:
-                self._samples[stream_id] = np.zeros(self._max_history)
-            
-            # Shift existing data and append new value
-            samples_array = self._samples[stream_id]
-            samples_array[:-1] = samples_array[1:]
-            samples_array[-1] = value
+                self._samples[stream_id] = [0.0] * self._max_history
+            arr = self._samples[stream_id]
+            arr.pop(0)
+            arr.append(value)
 
     def analyze_spectrum(self, stream_id: str) -> Dict[str, Any]:
         """
         Performs Scale-Space Analysis (Approximation of WST) on the requested stream.
         Detects translation-invariant transients by analyzing feature energy across scales.
         """
+        if not _NUMPY_AVAILABLE:
+            return {"status": "UNAVAILABLE", "reason": "numpy not installed"}
         with self._lock:
-            data = self._samples.get(stream_id)
-            if data is None or np.sum(np.abs(data)) == 0:
+            raw = self._samples.get(stream_id)
+            if raw is None:
+                return {"status": "INSUFFICIENT_DATA"}
+            data = np.array(raw)
+            if np.sum(np.abs(data)) == 0:
                 return {"status": "INSUFFICIENT_DATA"}
 
         # --- DSP CORE: Scale-Space Analysis using Gaussian Derivatives ---
@@ -109,7 +120,7 @@ class ShadowPulse:
         """Flush the spectrum buffers."""
         with self._lock:
             if stream_id:
-                self._samples[stream_id] = np.zeros(self._max_history)
+                self._samples[stream_id] = [0.0] * self._max_history
             else:
                 self._samples = {}
         logger.info("pulse", "SPECTRUM_BUFFERS_FLUSHED")

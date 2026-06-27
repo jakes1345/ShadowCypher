@@ -163,6 +163,15 @@ python-aiohttp
 python-psutil
 uvicorn
 ollama
+# Python deps not covered by pip-install step (available in Arch repos)
+python-beautifulsoup4
+python-numpy
+python-scipy
+python-dotenv
+python-prompt_toolkit
+python-huggingface-hub
+python-scikit-learn
+python-matplotlib
 
 # Apps
 # Browsers — privacy-first: LibreWolf default, Mullvad for anti-fingerprint,
