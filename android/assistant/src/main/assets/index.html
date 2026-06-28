@@ -10,7 +10,8 @@ html, body {
   width: 100%; height: 100%;
   background: #06060f;
   overflow: hidden;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-family: -apple-system, 'SF Pro Display', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ── BOOT SCREEN ──────────────────────────────────────────── */
@@ -19,152 +20,344 @@ html, body {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   background: #06060f;
-  transition: opacity 0.6s ease, visibility 0.6s;
+  transition: opacity 0.7s ease, visibility 0.7s;
 }
 #shadow-boot.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 
-/* Scanline effect */
 #shadow-boot::before {
   content: '';
   position: absolute; inset: 0;
   background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(180,74,255,0.015) 2px,
-    rgba(180,74,255,0.015) 4px
+    0deg, transparent, transparent 2px,
+    rgba(180,74,255,0.015) 2px, rgba(180,74,255,0.015) 4px
   );
   pointer-events: none;
 }
 
-/* Radar rings */
 .boot-rings {
   position: relative;
   width: 220px; height: 220px;
   margin-bottom: 48px;
 }
 .boot-ring {
-  position: absolute;
-  border-radius: 50%;
+  position: absolute; border-radius: 50%;
   border: 1px solid rgba(180,74,255,0.15);
   animation: ring-pulse 3s ease-in-out infinite;
 }
-.boot-ring:nth-child(1) { inset: 0;         animation-delay: 0s; }
-.boot-ring:nth-child(2) { inset: 20px;      animation-delay: 0.4s; }
-.boot-ring:nth-child(3) { inset: 40px;      animation-delay: 0.8s; }
-.boot-ring:nth-child(4) { inset: 60px;      animation-delay: 1.2s; }
-.boot-ring:nth-child(5) { inset: 80px;      animation-delay: 1.6s; }
-
-/* Sonar sweep */
-.boot-sweep {
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    rgba(180,74,255,0) 320deg,
-    rgba(180,74,255,0.35) 360deg
-  );
-  animation: sweep 2.4s linear infinite;
+.boot-ring:nth-child(1) { inset: 0; animation-delay: 0s; }
+.boot-ring:nth-child(2) { inset: 20px; animation-delay: 0.4s; }
+.boot-ring:nth-child(3) { inset: 40px; animation-delay: 0.8s; }
+.boot-ring:nth-child(4) { inset: 60px; animation-delay: 1.2s; }
+.boot-ring:nth-child(5) { inset: 80px; animation-delay: 1.6s; }
+@keyframes ring-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.02); }
 }
 
-/* Center orb */
+.boot-sweep {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(
+    from 0deg, transparent 75%,
+    rgba(180,74,255,0.25) 90%, rgba(180,74,255,0.05) 100%
+  );
+  animation: sweep 3s linear infinite;
+}
+@keyframes sweep { to { transform: rotate(360deg); } }
+
 .boot-orb {
   position: absolute;
-  inset: 88px;
+  inset: 90px;
   border-radius: 50%;
-  background: radial-gradient(circle at 38% 36%, #c77dff, #4a00cc);
-  box-shadow: 0 0 28px rgba(180,74,255,0.6), 0 0 60px rgba(180,74,255,0.2);
+  background: radial-gradient(circle at 35% 35%, #c77dff, #6c1fff 60%, #2d006e);
+  box-shadow: 0 0 40px rgba(180,74,255,0.5), 0 0 80px rgba(108,31,255,0.25);
   animation: orb-breathe 3s ease-in-out infinite;
 }
-
-@keyframes ring-pulse {
-  0%, 100% { border-color: rgba(180,74,255,0.12); }
-  50%       { border-color: rgba(180,74,255,0.45); }
-}
-@keyframes sweep {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
 @keyframes orb-breathe {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 28px rgba(180,74,255,0.6), 0 0 60px rgba(180,74,255,0.2); }
-  50%       { transform: scale(1.08); box-shadow: 0 0 44px rgba(180,74,255,0.8), 0 0 90px rgba(180,74,255,0.3); }
+  0%, 100% { box-shadow: 0 0 30px rgba(180,74,255,0.4), 0 0 60px rgba(108,31,255,0.2); }
+  50% { box-shadow: 0 0 50px rgba(180,74,255,0.7), 0 0 100px rgba(108,31,255,0.35); }
 }
 
-/* Title */
 .boot-title {
-  font-size: 2.8rem;
-  font-weight: 700;
-  letter-spacing: 0.35em;
-  color: #e2e8f0;
-  text-transform: uppercase;
-  margin-bottom: 6px;
+  font-size: 2rem; font-weight: 700; letter-spacing: 0.5em;
+  color: #e2e8f0; text-transform: uppercase; margin-bottom: 6px;
   animation: glitch 6s infinite;
 }
 @keyframes glitch {
   0%, 92%, 100% { text-shadow: none; transform: none; }
-  93%  { text-shadow: -2px 0 #b44aff; transform: translateX(2px); }
-  94%  { text-shadow:  2px 0 #00e0a4; transform: translateX(-2px); }
-  95%  { text-shadow: none; transform: none; }
-  96%  { text-shadow: -3px 0 #b44aff, 3px 0 #00e0a4; transform: skewX(1deg); }
-  97%  { text-shadow: none; transform: none; }
+  93% { text-shadow: -2px 0 #b44aff; transform: translateX(2px); }
+  94% { text-shadow: 2px 0 #00e0a4; transform: translateX(-2px); }
+  95% { text-shadow: none; transform: none; }
+  96% { text-shadow: -3px 0 #b44aff, 3px 0 #00e0a4; transform: skewX(1deg); }
+  97% { text-shadow: none; transform: none; }
 }
 
 .boot-sub {
-  font-size: 0.65rem;
-  letter-spacing: 0.3em;
-  color: rgba(180,74,255,0.7);
-  margin-bottom: 52px;
-  text-transform: uppercase;
+  font-size: 0.65rem; letter-spacing: 0.3em;
+  color: rgba(180,74,255,0.7); margin-bottom: 52px; text-transform: uppercase;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
 }
 
-/* Terminal log */
 .boot-log {
-  width: 280px;
-  font-size: 0.62rem;
-  letter-spacing: 0.05em;
-  color: rgba(148,163,184,0.6);
-  line-height: 1.8;
-  min-height: 108px;
+  width: 280px; font-size: 0.62rem; letter-spacing: 0.05em;
+  color: rgba(148,163,184,0.6); line-height: 1.8; min-height: 108px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
 }
 .boot-log-line { opacity: 0; animation: line-in 0.15s forwards; }
-.boot-log-line.ok   { color: rgba(0,224,164,0.8); }
+.boot-log-line.ok { color: rgba(0,224,164,0.8); }
 .boot-log-line.warn { color: rgba(245,158,11,0.8); }
 @keyframes line-in {
   from { opacity: 0; transform: translateX(-6px); }
-  to   { opacity: 1; transform: none; }
+  to { opacity: 1; transform: none; }
 }
 
-/* Progress bar */
 .boot-progress-wrap {
-  width: 260px;
-  height: 3px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 2px;
-  margin-top: 28px;
-  overflow: hidden;
+  width: 260px; height: 3px; background: rgba(255,255,255,0.06);
+  border-radius: 2px; margin-top: 28px; overflow: hidden;
 }
 .boot-progress-bar {
-  height: 100%;
-  width: 0%;
+  height: 100%; width: 0%;
   background: linear-gradient(90deg, #6c1fff, #b44aff, #00e0a4);
-  border-radius: 2px;
-  transition: width 0.4s ease;
+  border-radius: 2px; transition: width 0.4s ease;
   box-shadow: 0 0 8px rgba(180,74,255,0.6);
 }
 
-.boot-cursor {
-  display: inline-block;
-  width: 7px; height: 1em;
-  background: rgba(180,74,255,0.8);
-  vertical-align: text-bottom;
-  animation: blink 1s step-end infinite;
+/* ── HOME SCREEN ──────────────────────────────────────────── */
+#shadow-home {
+  position: fixed; inset: 0;
+  display: none; flex-direction: column;
+  background: #06060f;
 }
-@keyframes blink { 50% { opacity: 0; } }
+#shadow-home.visible { display: flex; }
+
+/* Top status bar */
+.sh-topbar {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.sh-brand {
+  font-size: 0.7rem; letter-spacing: 4px; font-weight: 700;
+  color: #b44aff; text-transform: uppercase;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+.sh-status {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.65rem; font-family: 'JetBrains Mono', 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+.sh-status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #374151;
+}
+.sh-status-dot.connected { background: #22c55e; }
+.sh-status-dot.error { background: #ef4444; }
+.sh-status-label { color: #6b7280; }
+.sh-status-label.connected { color: #22c55e; }
+.sh-status-label.error { color: #ef4444; }
+
+/* Stats row */
+.sh-stats-row {
+  flex-shrink: 0;
+  display: flex; gap: 1px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.04);
+}
+.sh-stat {
+  flex: 1; padding: 10px 12px;
+  background: #06060f;
+  text-align: center;
+}
+.sh-stat-val {
+  font-size: 1.1rem; font-weight: 700;
+  color: #e2e8f0; line-height: 1;
+}
+.sh-stat-val.warn { color: #f59e0b; }
+.sh-stat-val.danger { color: #ef4444; }
+.sh-stat-label {
+  font-size: 0.55rem; letter-spacing: 1.5px; text-transform: uppercase;
+  color: #374151; margin-top: 3px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Orb area */
+.sh-orb-area {
+  flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 20px 16px 12px;
+}
+.sh-orb-ring {
+  width: 80px; height: 80px; border-radius: 50%;
+  border: 1.5px solid rgba(180,74,255,0.3);
+  display: flex; align-items: center; justify-content: center;
+  animation: sh-ring-pulse 3s ease-in-out infinite;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+@keyframes sh-ring-pulse {
+  0%, 100% { border-color: rgba(180,74,255,0.2); }
+  50% { border-color: rgba(180,74,255,0.6); }
+}
+.sh-orb {
+  width: 58px; height: 58px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #c77dff, #6c1fff);
+  box-shadow: 0 0 20px rgba(180,74,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease;
+}
+.sh-orb.listening {
+  background: radial-gradient(circle at 35% 35%, #ff9999, #cc1a1a);
+  animation: sh-orb-pulse 0.5s ease-in-out infinite alternate;
+}
+.sh-orb.thinking {
+  background: radial-gradient(circle at 35% 35%, #4de8c2, #0070f3);
+  animation: sh-orb-think 1.2s ease-in-out infinite;
+}
+.sh-orb.speaking {
+  animation: sh-orb-speak 0.25s ease-in-out infinite alternate;
+}
+@keyframes sh-orb-pulse {
+  from { transform: scale(0.9); box-shadow: 0 0 14px rgba(239,68,68,0.5); }
+  to { transform: scale(1.1); box-shadow: 0 0 36px rgba(239,68,68,0.8); }
+}
+@keyframes sh-orb-think {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.93); }
+}
+@keyframes sh-orb-speak {
+  from { transform: scaleY(0.9); }
+  to { transform: scaleY(1.1); }
+}
+.sh-orb svg { width: 24px; height: 24px; color: white; }
+.sh-state-label {
+  margin-top: 8px;
+  font-size: 0.6rem; letter-spacing: 4px; text-transform: uppercase;
+  color: rgba(180,74,255,0.7);
+  font-family: 'JetBrains Mono', monospace;
+}
+.sh-partial {
+  font-size: 0.85rem; color: rgba(226,232,240,0.6);
+  margin-top: 6px; font-style: italic; min-height: 20px;
+  text-align: center; padding: 0 16px;
+}
+
+/* Chat history */
+.sh-history {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+.sh-history::-webkit-scrollbar { display: none; }
+
+.sh-msg {
+  max-width: 85%; display: flex; flex-direction: column; gap: 3px;
+}
+.sh-msg.user { align-self: flex-end; align-items: flex-end; }
+.sh-msg.shadow { align-self: flex-start; align-items: flex-start; }
+
+.sh-bubble {
+  padding: 10px 14px; border-radius: 16px;
+  font-size: 0.9rem; line-height: 1.5;
+}
+.sh-msg.user .sh-bubble {
+  background: #6c1fff;
+  color: #fff;
+  border-radius: 16px 16px 4px 16px;
+}
+.sh-msg.shadow .sh-bubble {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e2e8f0;
+  border-radius: 16px 16px 16px 4px;
+}
+.sh-msg-time {
+  font-size: 0.6rem; color: #374151;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sh-empty-hint {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 20px; text-align: center;
+}
+.sh-empty-hint-title {
+  font-size: 0.95rem; color: #4b5563; font-weight: 600;
+}
+.sh-empty-hint-sub {
+  font-size: 0.8rem; color: #374151; line-height: 1.6;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Quick chips */
+.sh-chips {
+  flex-shrink: 0;
+  display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 10px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.sh-chips::-webkit-scrollbar { display: none; }
+.sh-chip {
+  flex-shrink: 0;
+  font-size: 0.6rem; letter-spacing: 1px; text-transform: uppercase;
+  padding: 6px 14px; border-radius: 20px;
+  background: rgba(180,74,255,0.07);
+  border: 1px solid rgba(180,74,255,0.2);
+  color: rgba(180,74,255,0.8); cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.sh-chip:active { background: rgba(180,74,255,0.2); }
+
+/* Input bar */
+.sh-input-bar {
+  flex-shrink: 0;
+  display: flex; gap: 8px; align-items: center;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: #06060f;
+}
+.sh-text-input {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 22px;
+  padding: 11px 16px; color: #e2e8f0;
+  font-size: 0.92rem; outline: none;
+  font-family: -apple-system, 'SF Pro Display', sans-serif;
+}
+.sh-text-input:focus { border-color: rgba(180,74,255,0.4); }
+.sh-text-input::placeholder { color: #374151; }
+.sh-mic-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: linear-gradient(135deg, #6c1fff, #b44aff);
+  border: none; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  flex-shrink: 0; -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 12px rgba(180,74,255,0.35);
+  transition: transform 0.15s;
+}
+.sh-mic-btn:active { transform: scale(0.88); }
+.sh-mic-btn svg { width: 20px; height: 20px; color: white; }
+.sh-mic-btn.listening {
+  background: linear-gradient(135deg, #cc1a1a, #ff4444);
+  box-shadow: 0 2px 16px rgba(239,68,68,0.5);
+}
+.sh-send-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(180,74,255,0.15);
+  border: 1px solid rgba(180,74,255,0.25);
+  cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  flex-shrink: 0; -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, background 0.15s;
+}
+.sh-send-btn:active { transform: scale(0.88); background: rgba(180,74,255,0.25); }
+.sh-send-btn svg { width: 18px; height: 18px; color: #b44aff; }
 </style>
 </head>
 <body>
 
-<!-- Boot screen — visible immediately, hidden once assistant is ready -->
+<!-- Boot screen -->
 <div id="shadow-boot">
   <div class="boot-rings">
     <div class="boot-ring"></div>
@@ -175,14 +368,106 @@ html, body {
     <div class="boot-sweep"></div>
     <div class="boot-orb"></div>
   </div>
-
   <div class="boot-title">SHADOW</div>
   <div class="boot-sub">SOVEREIGN AI ASSISTANT</div>
-
   <div class="boot-log" id="boot-log"></div>
-
   <div class="boot-progress-wrap">
     <div class="boot-progress-bar" id="boot-bar"></div>
+  </div>
+</div>
+
+<!-- Home screen -->
+<div id="shadow-home">
+  <!-- Top bar -->
+  <div class="sh-topbar">
+    <div class="sh-brand">SHADOW</div>
+    <div class="sh-status">
+      <div class="sh-status-dot" id="sh-dot"></div>
+      <span class="sh-status-label" id="sh-status-label">NOT CONNECTED</span>
+    </div>
+  </div>
+
+  <!-- Guardian stats row -->
+  <div class="sh-stats-row" id="sh-stats-row" style="display:none">
+    <div class="sh-stat">
+      <div class="sh-stat-val" id="sh-stat-devices">—</div>
+      <div class="sh-stat-label">Devices</div>
+    </div>
+    <div class="sh-stat">
+      <div class="sh-stat-val" id="sh-stat-incidents">—</div>
+      <div class="sh-stat-label">Incidents</div>
+    </div>
+    <div class="sh-stat">
+      <div class="sh-stat-val" id="sh-stat-cves">—</div>
+      <div class="sh-stat-label">CVEs</div>
+    </div>
+    <div class="sh-stat">
+      <div class="sh-stat-val" id="sh-stat-agents">—</div>
+      <div class="sh-stat-label">Agents</div>
+    </div>
+  </div>
+
+  <!-- Orb (tap to talk) -->
+  <div class="sh-orb-area">
+    <div class="sh-orb-ring" id="sh-orb-ring" onclick="ShadowHome.tapMic()">
+      <div class="sh-orb" id="sh-orb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+        </svg>
+      </div>
+    </div>
+    <div class="sh-state-label" id="sh-state-label">TAP TO TALK</div>
+    <div class="sh-partial" id="sh-partial"></div>
+  </div>
+
+  <!-- Chat history -->
+  <div id="sh-history-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+    <div class="sh-empty-hint" id="sh-empty-hint">
+      <div class="sh-empty-hint-title">How can I help?</div>
+      <div class="sh-empty-hint-sub">
+        Tap the orb to speak<br>
+        or type below<br><br>
+        Try: "scan my network" · "any incidents?"<br>
+        "set a 5 min timer" · "who is Elon Musk"
+      </div>
+    </div>
+    <div class="sh-history" id="sh-history" style="display:none"></div>
+  </div>
+
+  <!-- Quick chips -->
+  <div class="sh-chips" id="sh-chips">
+    <button class="sh-chip" onclick="ShadowHome.runChip('Scan my network')">Scan</button>
+    <button class="sh-chip" onclick="ShadowHome.runChip('Any active incidents?')">Incidents</button>
+    <button class="sh-chip" onclick="ShadowHome.runChip('What devices are on my network?')">Devices</button>
+    <button class="sh-chip" onclick="ShadowHome.runChip('Network summary')">Summary</button>
+    <button class="sh-chip" onclick="ShadowHome.runChip('Any CVE alerts?')">CVEs</button>
+    <button class="sh-chip" onclick="ShadowHome.runChip('Am I in any data breaches?')">Breach?</button>
+    <button class="sh-chip" onclick="ShadowHome.runChip('Set a timer for 5 minutes')">Timer</button>
+  </div>
+
+  <!-- Input bar -->
+  <div class="sh-input-bar">
+    <input
+      id="sh-text-input"
+      class="sh-text-input"
+      type="text"
+      placeholder="Ask Shadow anything…"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button class="sh-send-btn" onclick="ShadowHome.submitText()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+    <button class="sh-mic-btn" id="sh-mic-btn" onclick="ShadowHome.tapMic()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+      </svg>
+    </button>
   </div>
 </div>
 
@@ -192,16 +477,16 @@ html, body {
 <script>
 // ── Boot screen controller ────────────────────────────────────────────────────
 window.ShadowBoot = (() => {
-  const log   = document.getElementById('boot-log');
-  const bar   = document.getElementById('boot-bar');
-  const boot  = document.getElementById('shadow-boot');
+  const log  = document.getElementById('boot-log');
+  const bar  = document.getElementById('boot-bar');
+  const boot = document.getElementById('shadow-boot');
 
   const LINES = [
-    { text: '> INITIALIZING SHADOW CORE...',    cls: '',     delay: 0    },
-    { text: '> LOADING INTENT CLASSIFIER...',   cls: 'ok',   delay: 600  },
-    { text: '> MOUNTING STT ENGINE...',         cls: '',     delay: 1100 },
-    { text: '> CALIBRATING WAKE WORD MODEL...', cls: '',     delay: 1700 },
-    { text: '> CONNECTING NATIVE BRIDGE...',    cls: '',     delay: 2300 },
+    { text: '> INITIALIZING SHADOW CORE...', cls: '', delay: 0 },
+    { text: '> LOADING INTENT CLASSIFIER...', cls: 'ok', delay: 600 },
+    { text: '> MOUNTING STT ENGINE...', cls: '', delay: 1100 },
+    { text: '> CALIBRATING WAKE WORD MODEL...', cls: '', delay: 1700 },
+    { text: '> CONNECTING NATIVE BRIDGE...', cls: '', delay: 2300 },
   ];
 
   let lineIdx = 0;
@@ -219,10 +504,7 @@ window.ShadowBoot = (() => {
   }
   nextLine();
 
-  // Progress driven externally (by Kotlin via evaluateJavascript)
-  function setProgress(pct) {
-    bar.style.width = Math.min(100, pct) + '%';
-  }
+  function setProgress(pct) { bar.style.width = Math.min(100, pct) + '%'; }
 
   function addLine(text, cls = '') {
     const el = document.createElement('div');
@@ -235,7 +517,10 @@ window.ShadowBoot = (() => {
   function ready() {
     setProgress(100);
     addLine('> SHADOW ONLINE', 'ok');
-    setTimeout(() => { boot.classList.add('hidden'); }, 700);
+    setTimeout(() => {
+      boot.classList.add('hidden');
+      document.getElementById('shadow-home').classList.add('visible');
+    }, 700);
   }
 
   function modelDownloading() {
@@ -246,10 +531,208 @@ window.ShadowBoot = (() => {
   function error(msg) {
     addLine('> ERROR: ' + msg, 'warn');
     addLine('> VOICE: GOOGLE STT FALLBACK ACTIVE', '');
-    setTimeout(() => { boot.classList.add('hidden'); }, 1200);
+    setTimeout(() => {
+      boot.classList.add('hidden');
+      document.getElementById('shadow-home').classList.add('visible');
+    }, 1400);
   }
 
   return { setProgress, addLine, ready, modelDownloading, error };
+})();
+
+// ── Home screen controller ────────────────────────────────────────────────────
+window.ShadowHome = (() => {
+  let state = 'idle'; // idle | listening | thinking | speaking
+  let isListening = false;
+  const MAX_HISTORY = 50;
+  let _messages = [];
+
+  function _ts() {
+    const now = new Date();
+    return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+  }
+
+  function addMessage(role, text) {
+    _messages.push({ role, text, time: _ts() });
+    if (_messages.length > MAX_HISTORY) _messages = _messages.slice(-MAX_HISTORY);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const hist = document.getElementById('sh-history');
+    const hint = document.getElementById('sh-empty-hint');
+    if (_messages.length === 0) {
+      hist.style.display = 'none';
+      hint.style.display = '';
+      return;
+    }
+    hist.style.display = '';
+    hint.style.display = 'none';
+    hist.innerHTML = _messages.map(m => `
+      <div class="sh-msg ${m.role}">
+        <div class="sh-bubble">${escHtml(m.text)}</div>
+        <div class="sh-msg-time">${m.time}</div>
+      </div>
+    `).join('');
+    hist.scrollTop = hist.scrollHeight;
+  }
+
+  function escHtml(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  }
+
+  function setState(s) {
+    state = s;
+    const orb = document.getElementById('sh-orb');
+    const label = document.getElementById('sh-state-label');
+    const micBtn = document.getElementById('sh-mic-btn');
+    if (!orb) return;
+
+    orb.className = 'sh-orb ' + s;
+    micBtn.className = 'sh-mic-btn' + (s === 'listening' ? ' listening' : '');
+
+    const labels = {
+      idle: 'TAP TO TALK',
+      listening: '// LISTENING',
+      thinking: '// PROCESSING',
+      speaking: '// SPEAKING',
+    };
+    if (label) label.textContent = labels[s] || s.toUpperCase();
+
+    const textInput = document.getElementById('sh-text-input');
+    if (textInput) textInput.disabled = (s === 'listening' || s === 'thinking');
+  }
+
+  function updateGuardianStats(ctx) {
+    if (!ctx) return;
+    const statsRow = document.getElementById('sh-stats-row');
+    const dot = document.getElementById('sh-dot');
+    const lbl = document.getElementById('sh-status-label');
+
+    if (ctx.me?.email) {
+      dot.className = 'sh-status-dot connected';
+      lbl.className = 'sh-status-label connected';
+      lbl.textContent = ctx.me.email;
+      statsRow.style.display = '';
+    } else {
+      dot.className = 'sh-status-dot error';
+      lbl.className = 'sh-status-label error';
+      lbl.textContent = 'NOT CONNECTED';
+      statsRow.style.display = 'none';
+      return;
+    }
+
+    const s = ctx.summary;
+    if (!s) return;
+    const devices = document.getElementById('sh-stat-devices');
+    const incidents = document.getElementById('sh-stat-incidents');
+    const cves = document.getElementById('sh-stat-cves');
+    const agents = document.getElementById('sh-stat-agents');
+
+    if (devices) devices.textContent = s.devices?.length ?? '—';
+
+    const activeInc = (s.incidents || []).filter(i => !i.resolved).length;
+    if (incidents) {
+      incidents.textContent = activeInc;
+      incidents.className = 'sh-stat-val' + (activeInc > 0 ? ' danger' : '');
+    }
+
+    const critCves = (s.cve_alerts || []).filter(c => c.severity === 'CRITICAL').length;
+    if (cves) {
+      cves.textContent = s.cve_alerts?.length ?? '—';
+      cves.className = 'sh-stat-val' + (critCves > 0 ? ' danger' : (s.cve_alerts?.length > 0 ? ' warn' : ''));
+    }
+
+    const onlineAgents = (s.agents || []).filter(a => a.online).length;
+    if (agents) {
+      agents.textContent = `${onlineAgents}/${s.agents?.length ?? 0}`;
+      agents.className = 'sh-stat-val' + (onlineAgents === 0 && s.agents?.length > 0 ? ' warn' : '');
+    }
+  }
+
+  async function tapMic() {
+    if (state === 'thinking' || state === 'speaking') return;
+    if (state === 'listening') {
+      // Stop listening
+      if (window.ShadowAssistant) {
+        window.Capacitor?.Plugins?.ShadowAssistant?.stopListening().catch(() => {});
+      }
+      setState('idle');
+      return;
+    }
+    await ShadowAssistant.startListening();
+  }
+
+  async function submitText() {
+    const input = document.getElementById('sh-text-input');
+    const text = input?.value?.trim();
+    if (!text || state === 'thinking' || state === 'speaking' || state === 'listening') return;
+    input.value = '';
+    processInput(text);
+  }
+
+  async function runChip(text) {
+    if (state !== 'idle') return;
+    processInput(text);
+  }
+
+  async function processInput(text) {
+    addMessage('user', text);
+    setState('thinking');
+    document.getElementById('sh-partial').textContent = '';
+
+    try {
+      // Delegate to assistant.js router
+      const response = await window._shadowRoute(text);
+      if (response) {
+        addMessage('shadow', response);
+        setState('speaking');
+        try {
+          await window.Capacitor?.Plugins?.ShadowAssistant?.speak({ text: response, rate: 1.05 });
+        } catch (_) {}
+        setState('idle');
+      } else {
+        setState('idle');
+      }
+    } catch (e) {
+      addMessage('shadow', 'Command failed: ' + (e.message || 'unknown error'));
+      setState('idle');
+    }
+  }
+
+  function onSpeechResult(transcript) {
+    if (!transcript) { setState('idle'); return; }
+    document.getElementById('sh-partial').textContent = '';
+    processInput(transcript);
+  }
+
+  function onPartialResult(transcript) {
+    const el = document.getElementById('sh-partial');
+    if (el) el.textContent = transcript + '…';
+  }
+
+  function onSpeechError(msg) {
+    const friendly = {
+      'STT error 7': 'No speech detected.',
+      'STT error 6': 'No match — please speak more clearly.',
+      'Microphone permission denied': 'Microphone access denied.',
+    };
+    addMessage('shadow', friendly[msg] || msg);
+    setState('idle');
+  }
+
+  // Key handler for text input
+  document.getElementById('sh-text-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); submitText(); }
+  });
+
+  return {
+    tapMic, submitText, runChip,
+    updateGuardianStats,
+    onSpeechResult, onPartialResult, onSpeechError,
+    setState,
+    addMessage,
+  };
 })();
 </script>
 </body>

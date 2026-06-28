@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -99,7 +100,7 @@ fun IncidentsScreen(viewModel: GuardianViewModel) {
                             text = "No incidents detected.\nYour network looks clean.",
                             color = ColorTextSecondary,
                             fontSize = 14.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -111,7 +112,7 @@ fun IncidentsScreen(viewModel: GuardianViewModel) {
                     Spacer(Modifier.height(4.dp))
                 }
                 items(unresolved, key = { it.id }) { incident ->
-                    IncidentRow(incident, dimmed = false)
+                    IncidentRow(incident, dimmed = false, onAcknowledge = { viewModel.acknowledgeIncident(incident.id) })
                 }
             }
 
@@ -122,7 +123,7 @@ fun IncidentsScreen(viewModel: GuardianViewModel) {
                     Spacer(Modifier.height(4.dp))
                 }
                 items(resolved, key = { it.id }) { incident ->
-                    IncidentRow(incident, dimmed = true)
+                    IncidentRow(incident, dimmed = true, onAcknowledge = null)
                 }
             }
 
@@ -152,7 +153,11 @@ private fun SectionDividerLabel(text: String) {
 }
 
 @Composable
-private fun IncidentRow(incident: Incident, dimmed: Boolean) {
+private fun IncidentRow(
+    incident: Incident,
+    dimmed: Boolean,
+    onAcknowledge: (() -> Unit)?
+) {
     val alpha = if (dimmed) 0.45f else 1f
     val severityColor = when (incident.severity.orEmpty().uppercase()) {
         "CRITICAL" -> ColorCritical
@@ -191,7 +196,7 @@ private fun IncidentRow(incident: Incident, dimmed: Boolean) {
                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "RESOLVED",
+                                text = "ACKNOWLEDGED",
                                 color = ColorLow.copy(alpha = 0.7f),
                                 fontSize = 9.sp,
                                 fontFamily = FontFamily.Monospace,
@@ -213,16 +218,37 @@ private fun IncidentRow(incident: Incident, dimmed: Boolean) {
                     text = incident.description.orEmpty(),
                     color = ColorTextSecondary.copy(alpha = alpha),
                     fontSize = 13.sp,
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(6.dp))
-                Text(
-                    text = incident.created_at.take(16).replace("T", "  "),
-                    color = ColorTextSecondary.copy(alpha = alpha * 0.7f),
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = incident.created_at.take(16).replace("T", "  "),
+                        color = ColorTextSecondary.copy(alpha = alpha * 0.7f),
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    if (onAcknowledge != null) {
+                        TextButton(
+                            onClick = onAcknowledge,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = "ACKNOWLEDGE",
+                                color = ColorAccentPurple,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                }
             }
         }
     }

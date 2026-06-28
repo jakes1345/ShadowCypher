@@ -3,13 +3,17 @@ package site.shadowcypher.app.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import site.shadowcypher.app.data.Agent
+import site.shadowcypher.app.data.CveAlert
 import site.shadowcypher.app.data.GuardianRepository
 import site.shadowcypher.app.data.GuardianSummary
+import site.shadowcypher.app.data.Incident
 import site.shadowcypher.app.data.Me
 import site.shadowcypher.app.data.Mission
 
@@ -44,9 +48,18 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     private val _apiKey = MutableStateFlow(repo.getApiKey())
     val apiKey: StateFlow<String> = _apiKey.asStateFlow()
 
+    // Flattened CVE alerts derived from summary — own StateFlow so CVE screen
+    // can observe it without re-collecting the whole summary.
+    private val _cveAlerts = MutableStateFlow<List<CveAlert>>(emptyList())
+    val cveAlerts: StateFlow<List<CveAlert>> = _cveAlerts.asStateFlow()
+
+    private var autoRefreshJob: Job? = null
+    private val activeMissionPolls = mutableMapOf<String, Job>()
+
     init {
         if (repo.getApiKey().isNotBlank()) {
             refresh()
+            startAutoRefresh()
         }
     }
 
@@ -60,12 +73,30 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
             meResult.onFailure { _error.value = it.message }
 
             val summaryResult = repo.fetchSummary()
-            summaryResult.onSuccess { _summary.value = it }
+            summaryResult.onSuccess {
+                _summary.value = it
+                _cveAlerts.value = it.cve_alerts
+            }
             summaryResult.onFailure {
                 if (_error.value == null) _error.value = it.message
             }
 
             _isLoading.value = false
+        }
+    }
+
+    private fun startAutoRefresh() {
+        autoRefreshJob?.cancel()
+        autoRefreshJob = viewModelScope.launch {
+            while (true) {
+                delay(30_000)
+                if (repo.getApiKey().isNotBlank()) {
+                    repo.fetchSummary().onSuccess {
+                        _summary.value = it
+                        _cveAlerts.value = it.cve_alerts
+                    }
+                }
+            }
         }
     }
 
@@ -82,22 +113,42 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         _scanTriggered.value = false
     }
 
-fun setApiKey(key: String) {
+    fun acknowledgeIncident(incidentId: String) {
+        viewModelScope.launch {
+            repo.acknowledgeIncident(incidentId)
+                .onSuccess {
+                    // Optimistically update local state
+                    _summary.value = _summary.value?.let { s ->
+                        s.copy(incidents = s.incidents.map { i ->
+                            if (i.id == incidentId) i.copy(resolved = true) else i
+                        })
+                    }
+                }
+                .onFailure { _error.value = "Acknowledge failed: ${it.message}" }
+        }
+    }
+
+    fun setApiKey(key: String) {
         repo.saveApiKey(key)
         _apiKey.value = key
         if (key.isNotBlank()) {
             refresh()
+            startAutoRefresh()
         } else {
+            autoRefreshJob?.cancel()
             _me.value = null
             _summary.value = null
+            _cveAlerts.value = emptyList()
         }
     }
 
     fun clearApiKey() {
         repo.clearApiKey()
         _apiKey.value = ""
+        autoRefreshJob?.cancel()
         _me.value = null
         _summary.value = null
+        _cveAlerts.value = emptyList()
     }
 
     fun dismissError() {
@@ -115,7 +166,12 @@ fun setApiKey(key: String) {
     fun loadMissions(agentId: String? = null) {
         viewModelScope.launch {
             repo.listMissions(agentId)
-                .onSuccess { _missions.value = it.missions }
+                .onSuccess { resp ->
+                    _missions.value = resp.missions
+                    // Start polling any missions that are still running
+                    resp.missions.filter { it.status == "running" || it.status == "queued" }
+                        .forEach { pollMissionUntilDone(it.id) }
+                }
                 .onFailure { _error.value = "Missions: ${it.message}" }
         }
     }
@@ -127,8 +183,29 @@ fun setApiKey(key: String) {
                 .onSuccess {
                     _missionStatus.value = "Mission ${it.mission_id} queued"
                     loadMissions(agentId)
+                    pollMissionUntilDone(it.mission_id)
                 }
                 .onFailure { _missionStatus.value = "Failed: ${it.message}" }
+        }
+    }
+
+    fun pollMissionUntilDone(missionId: String) {
+        if (activeMissionPolls.containsKey(missionId)) return
+        activeMissionPolls[missionId] = viewModelScope.launch {
+            repeat(120) { // max 6 minutes of polling
+                delay(3_000)
+                repo.getMission(missionId).onSuccess { updated ->
+                    _missions.value = _missions.value.map { if (it.id == missionId) updated else it }
+                    if (updated.status == "completed" || updated.status == "failed") {
+                        activeMissionPolls.remove(missionId)
+                        return@launch
+                    }
+                }.onFailure {
+                    activeMissionPolls.remove(missionId)
+                    return@launch
+                }
+            }
+            activeMissionPolls.remove(missionId)
         }
     }
 

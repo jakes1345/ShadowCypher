@@ -10,9 +10,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Devices
-import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -30,9 +30,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import site.shadowcypher.app.service.BackgroundSyncWorker
 import site.shadowcypher.app.service.NotificationHelper
+import site.shadowcypher.app.ui.screen.CveScreen
 import site.shadowcypher.app.ui.screen.DashboardScreen
 import site.shadowcypher.app.ui.screen.DevicesScreen
-import site.shadowcypher.app.ui.screen.EcosystemScreen
 import site.shadowcypher.app.ui.screen.IncidentsScreen
 import site.shadowcypher.app.ui.screen.MissionsScreen
 import site.shadowcypher.app.ui.screen.SettingsScreen
@@ -44,7 +44,7 @@ sealed class NavRoute(val route: String, val label: String, val icon: ImageVecto
     object Devices : NavRoute("devices", "Devices", Icons.Default.Devices)
     object Incidents : NavRoute("incidents", "Incidents", Icons.Default.Warning)
     object Missions : NavRoute("missions", "Missions", Icons.Default.PlayArrow)
-    object Ecosystem : NavRoute("ecosystem", "Ecosystem", Icons.Default.Hub)
+    object Cve : NavRoute("cve", "CVEs", Icons.Default.BugReport)
     object Settings : NavRoute("settings", "Settings", Icons.Default.Settings)
 }
 
@@ -53,7 +53,7 @@ private val navItems = listOf(
     NavRoute.Devices,
     NavRoute.Incidents,
     NavRoute.Missions,
-    NavRoute.Ecosystem,
+    NavRoute.Cve,
     NavRoute.Settings
 )
 
@@ -153,8 +153,8 @@ fun ShadowGuardianApp() {
                 composable(NavRoute.Missions.route) {
                     MissionsScreen(viewModel = viewModel)
                 }
-                composable(NavRoute.Ecosystem.route) {
-                    EcosystemScreen()
+                composable(NavRoute.Cve.route) {
+                    CveScreen(viewModel = viewModel)
                 }
                 composable(NavRoute.Settings.route) {
                     SettingsScreen(viewModel = viewModel)

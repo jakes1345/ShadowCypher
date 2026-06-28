@@ -96,6 +96,11 @@ class GuardianRepository(private val context: Context) {
         buildApi(requireKey()).getMission(missionId)
     }
 
+    suspend fun acknowledgeIncident(id: String): Result<Unit> = runCatching {
+        buildApi(requireKey()).acknowledgeIncident(id)
+        Unit
+    }
+
     suspend fun listMissions(agentId: String? = null): Result<MissionListResponse> = runCatching {
         buildApi(requireKey()).listMissions(agentId)
     }

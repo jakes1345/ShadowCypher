@@ -1,5 +1,6 @@
 package site.shadowcypher.app.data
 
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -19,6 +20,9 @@ interface GuardianApi {
 
     @GET("/v1/incidents")
     suspend fun getIncidents(): List<Incident>
+
+    @POST("/v1/incidents/{id}/acknowledge")
+    suspend fun acknowledgeIncident(@Path("id") id: String): Response<Unit>
 
     @GET("/v1/agents")
     suspend fun getAgents(): AgentsResponse

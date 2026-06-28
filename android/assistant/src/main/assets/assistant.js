@@ -76,7 +76,11 @@ const ShadowAssistant = (() => {
   // ── Bootstrap ──────────────────────────────────────────────────────────────
 
   async function init() {
-    if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
+    if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
+      // Non-native preview mode: just show home screen
+      window.ShadowBoot?.ready();
+      return;
+    }
 
     const boot = window.ShadowBoot;
 
@@ -100,7 +104,6 @@ const ShadowAssistant = (() => {
       plugin.addListener('partialResult', handlePartialResult);
       plugin.addListener('speechError', handleSpeechError);
       plugin.addListener('voskProgress', (d) => {
-        // Fired by Kotlin when Vosk model is downloading
         if (d.downloading) boot?.modelDownloading();
         if (d.progress != null) boot?.setProgress(25 + d.progress * 0.5);
       });
@@ -109,7 +112,10 @@ const ShadowAssistant = (() => {
         boot?.setProgress(85);
       });
       plugin.addListener('voskError', (d) => boot?.error(d.message || 'STT unavailable'));
-      plugin.addListener('listeningStarted', () => setState('listening'));
+      plugin.addListener('listeningStarted', () => {
+        setState('listening');
+        window.ShadowHome?.setState('listening');
+      });
       plugin.addListener('speechEnded', () => {
         if (state === 'listening') setState('thinking');
       });
@@ -124,7 +130,11 @@ const ShadowAssistant = (() => {
       } catch (_) {}
 
       // Pre-load KB + classifier in background
-      if (apiKey) loadGuardianContext().catch(() => {});
+      if (apiKey) {
+        loadGuardianContext().then(() => {
+          window.ShadowHome?.updateGuardianStats(guardianCtx);
+        }).catch(() => {});
+      }
       loadKB().catch(() => {});
       if (typeof ShadowClassifier !== 'undefined') {
         ShadowClassifier.load().then(() => {
@@ -139,7 +149,7 @@ const ShadowAssistant = (() => {
       const status = await plugin.checkAssistStatus();
       if (status.wasAssistLaunch) handleAssistInvoke({ source: 'launch' });
 
-      // Boot complete — dismiss loading screen
+      // Boot complete — home screen shown by boot controller
       boot?.ready();
       console.log('[ShadowAssistant] Ready. key:', apiKey ? 'set' : 'missing');
     } catch (e) {
@@ -850,51 +860,72 @@ const ShadowAssistant = (() => {
   // ── Input handlers ────────────────────────────────────────────────────────
 
   async function handleAssistInvoke() {
-    show();
+    // Refresh guardian context and update home screen stats
     await loadGuardianContext();
+    window.ShadowHome?.updateGuardianStats(guardianCtx);
+    // If called as assist intent, show the overlay briefly and auto-listen
+    show();
     setTimeout(() => startListening(), 400);
   }
 
   function handlePartialResult(data) {
+    // Update both the overlay and the home screen
     const el = document.getElementById('sa-transcript');
     if (el) el.textContent = data.transcript + '…';
+    window.ShadowHome?.onPartialResult(data.transcript || '');
   }
 
   async function handleSpeechResult(data) {
     const transcript = data.transcript?.trim();
-    if (!transcript) { setState('idle'); return; }
+    if (!transcript) {
+      setState('idle');
+      window.ShadowHome?.setState('idle');
+      return;
+    }
 
     _lastTranscript = transcript;
-    document.getElementById('sa-transcript').textContent = `"${transcript}"`;
+    const transcriptEl = document.getElementById('sa-transcript');
+    if (transcriptEl) transcriptEl.textContent = `"${transcript}"`;
     setState('thinking');
+    window.ShadowHome?.setState('thinking');
 
     try {
       const response = await route(transcript);
       if (response) {
-        document.getElementById('sa-response').textContent = response;
+        const respEl = document.getElementById('sa-response');
+        if (respEl) respEl.textContent = response;
         setState('speaking');
+        window.ShadowHome?.setState('speaking');
+        // Add to chat history
+        window.ShadowHome?.addMessage('user', transcript);
+        window.ShadowHome?.addMessage('shadow', response);
         if (plugin) await plugin.speak({ text: response, rate: 1.05 });
         setState('idle');
-        setTimeout(() => _animatedDismiss(), 2500);
+        window.ShadowHome?.setState('idle');
+        // Dismiss the overlay if it's open — home screen has the result
+        if (overlay?.classList.contains('active')) _animatedDismiss();
       }
     } catch (e) {
-      document.getElementById('sa-response').textContent = 'Command failed.';
+      const respEl = document.getElementById('sa-response');
+      if (respEl) respEl.textContent = 'Command failed.';
+      window.ShadowHome?.addMessage('shadow', 'Command failed: ' + (e.message || ''));
       setState('idle');
-      setTimeout(() => _animatedDismiss(), 2500);
+      window.ShadowHome?.setState('idle');
     }
   }
 
   function handleSpeechError(data) {
     const el = document.getElementById('sa-response');
-    if (el) {
-      const friendly = {
-        'STT error 7': 'No speech detected. Try again.',
-        'STT error 6': 'No match. Speak clearly.',
-        'Microphone permission denied': 'Microphone access denied.',
-      };
-      el.textContent = friendly[data.message] || data.message;
-    }
+    const friendly = {
+      'STT error 7': 'No speech detected. Try again.',
+      'STT error 6': 'No match. Speak clearly.',
+      'Microphone permission denied': 'Microphone access denied.',
+    };
+    const msg = friendly[data.message] || data.message;
+    if (el) el.textContent = msg;
+    window.ShadowHome?.onSpeechError(data.message);
     setState('idle');
+    window.ShadowHome?.setState('idle');
   }
 
   // ── System command intercept (no LLM needed) ──────────────────────────────
@@ -1177,7 +1208,7 @@ const ShadowAssistant = (() => {
 
   return { init, show, dismiss, startListening, openSettings,
            _saveApiKey, _clearApiKey, _closeSettings, _toggleKeyVisibility,
-           _runChip, _submitText, _toggleWakeWord };
+           _runChip, _submitText, _toggleWakeWord, route };
 })();
 
 if (document.readyState === 'loading') {
@@ -1192,3 +1223,6 @@ Object.defineProperty(window, 'ShadowAssistant', {
   configurable: false,
   enumerable: true
 });
+
+// Expose the router for the home screen's processInput to call directly
+window._shadowRoute = ShadowAssistant.route;
