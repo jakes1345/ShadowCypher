@@ -105,7 +105,9 @@ sleep 8
 
 echo ""
 echo -e "${CYAN}[SYSTEMD]${NC}"
-failed_units=$(ssh_run "systemctl --failed --no-pager --plain 2>/dev/null | grep -c ' failed'" || echo "0")
+failed_units=$(ssh_run "systemctl list-units --state=failed --no-pager --plain --no-legend 2>/dev/null | wc -l")
+failed_units=${failed_units//[^0-9]/}
+[[ -z "$failed_units" ]] && failed_units=0
 if [[ "${failed_units:-0}" -eq 0 ]]; then
     pass "no failed systemd units"
 else

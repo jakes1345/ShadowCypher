@@ -1,11 +1,12 @@
 """First-run welcome dialog — lets the user pick a nickname instead of editing JSON."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Pango
 
 from shadowcypher.core.config import config
-from shadowcypher.core.onboarding import set_nickname, _default_nick
+from shadowcypher.core.onboarding import _default_nick, set_nickname
 
 
 def needs_onboarding() -> bool:
@@ -30,18 +31,18 @@ def show_welcome(parent=None) -> str:
     box.set_margin_bottom(16)
 
     title = Gtk.Label()
-    title.set_markup(
-        "<span size='x-large' weight='bold' color='#38bdf8'>\u26a1 Welcome, Operator</span>"
-    )
+    title.set_markup("<span size='x-large' weight='bold' color='#38bdf8'>\u26a1 Welcome, Operator</span>")
     title.set_halign(Gtk.Align.START)
     box.pack_start(title, False, False, 0)
 
-    desc = Gtk.Label(label=(
-        "Choose a handle for your ShadowCypher operator profile.\n"
-        "This is the name you'll use on the Sovereign IRC network,\n"
-        "in mission tickets, and in audit logs. You can change it later\n"
-        "from the Admin tab."
-    ))
+    desc = Gtk.Label(
+        label=(
+            "Choose a handle for your ShadowCypher operator profile.\n"
+            "This is the name you'll use on the Sovereign IRC network,\n"
+            "in mission tickets, and in audit logs. You can change it later\n"
+            "from the Admin tab."
+        )
+    )
     desc.set_halign(Gtk.Align.START)
     desc.set_line_wrap(True)
     box.pack_start(desc, False, False, 0)
@@ -54,9 +55,7 @@ def show_welcome(parent=None) -> str:
 
     hint = Gtk.Label()
     hint.set_markup(
-        "<span size='small' color='#64748b'>"
-        "3\u201324 chars. Uniqueness is per-network, not enforced locally."
-        "</span>"
+        "<span size='small' color='#64748b'>3\u201324 chars. Uniqueness is per-network, not enforced locally.</span>"
     )
     hint.set_halign(Gtk.Align.START)
     box.pack_start(hint, False, False, 0)
@@ -82,8 +81,9 @@ def show_welcome(parent=None) -> str:
     dlg.destroy()
 
     try:
-        set_nickname(config.project_root, chosen)
-        config.load_from_json(config.project_root / "config.json")
+        _cfg = config.writable_config_path()
+        set_nickname(config.project_root, chosen, _cfg)
+        config.load_from_json(_cfg)
     except Exception:
         pass
 

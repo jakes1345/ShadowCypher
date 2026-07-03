@@ -3,13 +3,15 @@ ShadowCypher Enterprise Configuration Engine.
 Migrated to Pydantic for strict typing and environment variable support.
 """
 
-import os
 import json
+import os
 import shutil
-from typing import Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, Optional
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class AISettings(BaseSettings):
     model: str = "claude-haiku-4-5-20251001"
@@ -22,6 +24,7 @@ class AISettings(BaseSettings):
     providers: Dict[str, Any] = {}
     model_file: str = "Llama-3.2-3B-Instruct-Q4_K_M.gguf"
     model_repo: str = "bartowski/Llama-3.2-3B-Instruct-GGUF"
+
 
 class ToolPaths(BaseSettings):
     nmap: str = "nmap"
@@ -50,6 +53,7 @@ class ToolPaths(BaseSettings):
     cloudflared: str = "cloudflared"
     certbot: str = "certbot"
 
+
 class IRCSettings(BaseSettings):
     server: str = "irc.libera.chat"
     port: int = 6697
@@ -67,37 +71,36 @@ class IRCSettings(BaseSettings):
     sovereign_server: str = "127.0.0.1"
     sovereign_port: int = 6667
 
+
 class IdentitySettings(BaseSettings):
     handle: str = ""
     role: str = "operator"
     admin_list: list[str] = []
-    
+
+
 class StealthSettings(BaseSettings):
-    proxy_url: str = "" # e.g. "socks5://127.0.0.1:9050"
+    proxy_url: str = ""  # e.g. "socks5://127.0.0.1:9050"
     relay_enabled: bool = False
     enforce_privacy: bool = False
     nexus_relay_url: str = "http://127.0.0.1:9999"
 
+
 class Config(BaseSettings):
     """Apex Enterprise Configuration Model."""
-    model_config = SettingsConfigDict(
-        env_prefix="SC_", 
-        env_nested_delimiter="__",
-        env_file=".env",
-        extra="ignore"
-    )
+
+    model_config = SettingsConfigDict(env_prefix="SC_", env_nested_delimiter="__", env_file=".env", extra="ignore")
 
     # Core metadata
     app_name: str = "ShadowCypher Apex"
     version: str = "3.0.0-enterprise"
-    
+
     # Sub-settings
     ai: AISettings = AISettings()
     tools: ToolPaths = ToolPaths()
     irc: IRCSettings = IRCSettings()
     identity: IdentitySettings = IdentitySettings()
     stealth: StealthSettings = StealthSettings()
-    
+
     # Path Resolution
     project_root: Path = Field(default_factory=lambda: Path(__file__).resolve().parent.parent.parent)
 
@@ -148,9 +151,31 @@ class Config(BaseSettings):
         except Exception:
             return default
 
+    def writable_config_path(self) -> Path:
+        """Return a config.json path we can actually write to.
+
+        Installed systems keep config next to the app in a writable project
+        root. On the live ISO (and any read-only /opt deploy) that directory is
+        root-owned — or overlay-mounted so ownership *looks* writable but writes
+        still fail — so operator config lives under XDG config home instead,
+        matching the ShadowOS rule that operator-private state belongs in the
+        user's home, not shared app code. We probe with a real write rather
+        than trusting os.access(), which is unreliable on overlayfs.
+        """
+        global _writable_cfg_cache
+        if _writable_cfg_cache is not None:
+            return _writable_cfg_cache
+        local = self.project_root / "config.json"
+        if _path_is_writable(local):
+            _writable_cfg_cache = local
+        else:
+            xdg = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
+            _writable_cfg_cache = Path(xdg) / "shadowcypher" / "config.json"
+        return _writable_cfg_cache
+
     def save_to_json(self, path: Optional[Path] = None) -> None:
         """Persist current config to disk."""
-        path = path or (self.project_root / "config.json")
+        path = Path(path) if path else self.writable_config_path()
         data: Dict[str, Any] = {}
         for key in ["app_name", "version"]:
             data[key] = getattr(self, key)
@@ -158,12 +183,14 @@ class Config(BaseSettings):
             section = getattr(self, section_name)
             data[section_name] = section.model_dump() if hasattr(section, "model_dump") else dict(section)
         try:
+            path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, "w") as f:
                 json.dump(data, f, indent=2, default=str)
         except Exception as e:
             # Import here to avoid circular at module load
             try:
                 from shadowcypher.core.logger import logger
+
                 logger.error("config", f"Failed to save config: {e}")
             except Exception:
                 pass
@@ -228,15 +255,48 @@ class Config(BaseSettings):
         # 4. Final Fallback
         return getattr(self.tools, tool_attr, tool_name)
 
+
+_writable_cfg_cache: Optional[Path] = None
+
+
+def _path_is_writable(target: Path) -> bool:
+    """Probe the EXACT config file for append-writability.
+
+    Testing the directory is not enough: on the live ISO a root-run import
+    (apply-fixes runs as root) can leave a root-owned config.json in an
+    otherwise-writable dir, which then blocks the operator. os.access() is also
+    unreliable on overlayfs. So we attempt to open the real file and clean up
+    if we created it, leaving onboarding to populate it properly.
+    """
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        existed = target.exists()
+        with open(target, "a"):
+            pass
+        if not existed:
+            try:
+                target.unlink()
+            except OSError:
+                pass
+        return True
+    except OSError:
+        return False
+
+
 # Global singleton
 config = Config()
+# 1. Baked defaults ship in the (possibly read-only) project root.
+config.load_from_json(config.project_root / "config.json")
+# 2. Per-user overrides live in a writable location (XDG on the live ISO).
 try:
     from shadowcypher.core.onboarding import ensure_user_config
-    ensure_user_config(config.project_root)
+
+    _user_cfg = ensure_user_config(config.project_root, config.writable_config_path())
+    config.load_from_json(_user_cfg)
 except Exception:
     pass
-config.load_from_json(config.project_root / "config.json")
 
 # Import logger AFTER singleton for enterprise bootstrap
 from shadowcypher.core.logger import logger
+
 logger.info("config", f"ENTERPRISE_CORE_LOADED: {config.app_name} v{config.version}")
