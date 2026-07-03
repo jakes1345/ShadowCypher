@@ -106,6 +106,8 @@ configs/
 # Test artifacts
 test_venv/
 test_out.txt
+# Leaked mock filesystem artifact (mocked config writing real dirs keyed by id())
+MagicMock/
 
 # Root-level screenshot captures
 dashboard*.png
@@ -163,3 +165,7 @@ store_assets/*.p12
 shadowos/keys/
 shadowos/*.qcow2
 shadowos/test-disk.qcow2
+
+# Aider
+.aider*
+.aider.conf.yml
