@@ -155,8 +155,8 @@ class ShadowVaultPage(BasePage):
                     rel_path = os.path.relpath(path, findings_dir)
                     self.store.append([rel_path, ext, _human_size(size), ts, integrity, path])
                     count += 1
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("vault_page", f"Failed to index artifact {f}: {e}")
 
         self.stats_bar.set_markup(
             f"<span color='#64748b'>{count} artifacts | "
