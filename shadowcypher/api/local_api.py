@@ -137,6 +137,35 @@ class ScheduleListResponse(BaseModel):
 	schedules: list[ScheduledMissionResponse]
 
 
+class IncidentRuleRequest(BaseModel):
+	name: str
+	condition: str
+	severity_threshold: str
+	actions: list[str]
+	description: Optional[str] = None
+
+
+class IncidentRuleResponse(BaseModel):
+	id: str
+	name: str
+	condition: str
+	severity_threshold: str
+	actions: list[str]
+	enabled: bool
+	created_at: str
+	description: Optional[str]
+
+
+class RuleListResponse(BaseModel):
+	rules: list[IncidentRuleResponse]
+
+
+class ProcessIncidentRequest(BaseModel):
+	incident_type: str
+	severity: str
+	details: dict
+
+
 # ── FastAPI App ──────────────────────────────────────────────────────────
 
 app = FastAPI(title="ShadowCypher Guardian API", version="1.0")
@@ -575,6 +604,103 @@ async def start_scheduler(token: str = Depends(verify_token)):
 	scheduler = get_mission_scheduler()
 	scheduler.start()
 	return {"status": "started"}
+
+
+@app.post("/v1/incident-rules", response_model=IncidentRuleResponse)
+async def create_incident_rule(req: IncidentRuleRequest, token: str = Depends(verify_token)):
+	"""Create a new incident response rule."""
+	from shadowcypher.core.incident_response import get_incident_response_engine
+
+	engine = get_incident_response_engine()
+	rule_id = engine.create_rule(
+		name=req.name,
+		condition=req.condition,
+		severity_threshold=req.severity_threshold,
+		actions=req.actions,
+		description=req.description,
+	)
+
+	rule = engine.get_rule(rule_id)
+	from dataclasses import asdict
+	return asdict(rule)
+
+
+@app.get("/v1/incident-rules", response_model=RuleListResponse)
+async def list_incident_rules(token: str = Depends(verify_token)):
+	"""List all incident response rules."""
+	from shadowcypher.core.incident_response import get_incident_response_engine
+
+	engine = get_incident_response_engine()
+	rules = engine.list_rules()
+
+	from dataclasses import asdict
+	return RuleListResponse(rules=[asdict(r) for r in rules])
+
+
+@app.get("/v1/incident-rules/{rule_id}", response_model=IncidentRuleResponse)
+async def get_incident_rule(rule_id: str, token: str = Depends(verify_token)):
+	"""Get an incident response rule by ID."""
+	from shadowcypher.core.incident_response import get_incident_response_engine
+
+	engine = get_incident_response_engine()
+	rule = engine.get_rule(rule_id)
+
+	if not rule:
+		raise HTTPException(status_code=404, detail=f"Rule {rule_id} not found")
+
+	from dataclasses import asdict
+	return asdict(rule)
+
+
+@app.put("/v1/incident-rules/{rule_id}", response_model=IncidentRuleResponse)
+async def update_incident_rule(
+	rule_id: str, updates: dict, token: str = Depends(verify_token)
+):
+	"""Update an incident response rule."""
+	from shadowcypher.core.incident_response import get_incident_response_engine
+
+	engine = get_incident_response_engine()
+	if not engine.update_rule(rule_id, **updates):
+		raise HTTPException(status_code=404, detail=f"Rule {rule_id} not found")
+
+	rule = engine.get_rule(rule_id)
+	from dataclasses import asdict
+	return asdict(rule)
+
+
+@app.delete("/v1/incident-rules/{rule_id}")
+async def delete_incident_rule(rule_id: str, token: str = Depends(verify_token)):
+	"""Delete an incident response rule."""
+	from shadowcypher.core.incident_response import get_incident_response_engine
+
+	engine = get_incident_response_engine()
+	if not engine.delete_rule(rule_id):
+		raise HTTPException(status_code=404, detail=f"Rule {rule_id} not found")
+
+	return {"status": "deleted", "rule_id": rule_id}
+
+
+@app.post("/v1/incidents/process")
+async def process_incident(req: ProcessIncidentRequest, token: str = Depends(verify_token)):
+	"""Process an incident and trigger automated responses."""
+	from shadowcypher.core.incident_response import get_incident_response_engine
+	import uuid
+
+	engine = get_incident_response_engine()
+	incident_id = f"incident-{uuid.uuid4().hex[:8]}"
+
+	response_id = engine.process_incident(
+		incident_id=incident_id,
+		incident_type=req.incident_type,
+		severity=req.severity,
+		details=req.details,
+	)
+
+	return {
+		"incident_id": incident_id,
+		"response_id": response_id,
+		"status": "processed" if response_id else "no_match",
+	}
 
 
 @app.websocket("/ws/missions/{mission_id}")
