@@ -102,6 +102,16 @@ class MissionListResponse(BaseModel):
 	missions: list[Mission]
 
 
+class ChatRequest(BaseModel):
+	query: str
+	context: Optional[str] = None
+
+
+class ChatResponse(BaseModel):
+	response: str
+	confidence: float = 0.8
+
+
 # ── FastAPI App ──────────────────────────────────────────────────────────
 
 app = FastAPI(title="ShadowCypher Guardian API", version="1.0")
@@ -125,6 +135,8 @@ def verify_token(authorization: str = Header(None)) -> str:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Authorization header format")
 
 	token = parts[1]
+	# Reload config each request to pick up changes
+	config.load_from_json()
 	expected_token = config.get("identity", "handle", default="operator")
 
 	if token != expected_token:
@@ -290,6 +302,32 @@ async def get_mission(mission_id: str, token: str = Depends(verify_token)):
 async def list_missions(agent_id: Optional[str] = None, token: str = Depends(verify_token)):
 	"""List all missions, optionally filtered by agent."""
 	return MissionListResponse(missions=[])
+
+
+@app.post("/v1/llm/chat", response_model=ChatResponse)
+async def llm_chat(req: ChatRequest, token: str = Depends(verify_token)):
+	"""Chat with local LLM (for Android Shadow AI app)."""
+	# TODO: Route to actual Ollama/LLM backend
+	# For now, return mock response
+	prompt = req.query
+	mock_responses = {
+		"hello": "Hi there! I'm Shadow, your personal security assistant. How can I help protect your network?",
+		"status": "Your network looks secure. No incidents detected in the last 24 hours.",
+		"scan": "Starting a quick network scan. I'll report any new devices or open ports.",
+		"": "I didn't catch that. Try asking about your network status, running a scan, or checking for threats.",
+	}
+
+	response = None
+	for key in mock_responses:
+		if key.lower() in prompt.lower():
+			response = mock_responses[key]
+			break
+
+	if not response:
+		response = mock_responses[""]
+
+	logger.info("local_api", f"LLM query: {prompt[:50]}... → {response[:50]}...")
+	return ChatResponse(response=response, confidence=0.85)
 
 
 @app.get("/health")
