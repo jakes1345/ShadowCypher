@@ -1,19 +1,22 @@
-"""
-Intent detector — maps user messages to security tool actions.
-
-The key insight from real-world local model usage: small models don't reliably
-emit tool_call JSON. Instead, detect intent from the user's message directly,
-execute the tool, then give the AI the real output to analyze.
-
-Usage:
-    from shadowcypher.ai.intent import detect_intent, TOOL_REGISTRY
-    intent = detect_intent("scan 192.168.1.1 for open ports")
-    # → {"type": "nmap_scan", "target": "192.168.1.1", "confidence": "high"}
-"""
-
 from __future__ import annotations
+import os
 import re
-from typing import Optional
+import threading
+from typing import Optional, Callable, Any, Dict, List
+from dataclasses import dataclass
+
+# ── Tool Definition ───────────────────────────────────────────────────────────
+
+@dataclass
+class Tool:
+    name: str
+    description: str
+    executor: Callable[[str, Callable], Any]
+    parameters: List[str] = None
+
+    def __post_init__(self):
+        if self.parameters is None:
+            self.parameters = ["target"]
 
 # ── Target extractors ─────────────────────────────────────────────────────────
 
@@ -22,7 +25,12 @@ _DOMAIN = r"((?:[a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,})"
 _URL    = r"(https?://[^\s]+)"
 _CVE    = r"(CVE-\d{4}-\d{4,})"
 _HASH   = r"([a-fA-F0-9]{32,64})"
+_PATH   = r"(~?/[^\s\"']+|\.\.?/[^\s\"']+)"
 _TARGET = rf"(?:{_URL}|{_IP}|{_DOMAIN})"
+
+# Matches the async task_id format produced by shadowcypher.core.runner.Runner
+# (f"{name[:4]}_{uuid4()[:4]}"), used to detect fire-and-forget tool executors.
+_TASK_ID_RE = re.compile(r"^[A-Za-z0-9]{2,6}_[0-9a-f]{4}$")
 
 def _first(pattern: str, text: str) -> Optional[str]:
     m = re.search(pattern, text, re.I)
@@ -54,8 +62,38 @@ _PATTERNS: list[tuple[re.Pattern, str, callable]] = [
      "sqlmap_scan", _target),
 
     # Subdomain enumeration
+    (re.compile(r"\b(amass)\b", re.I),
+     "amass_enum", lambda t: _first(_DOMAIN, t)),
+
     (re.compile(r"\b(subdomain|subfinder|enumerate.{0,20}domain|dns.?enum)", re.I),
      "subdomain_enum", lambda t: _first(_DOMAIN, t)),
+
+    # Fast port discovery (naabu) vs full nmap
+    (re.compile(r"\b(naabu|fast.?port.?scan|quick.?port.?discovery)", re.I),
+     "naabu_scan", _target),
+
+    # Web crawling
+    (re.compile(r"\b(katana|crawl.{0,20}(site|url|web)|spider.{0,20}web)", re.I),
+     "katana_crawl", _target),
+
+    # YARA malware scanning
+    (re.compile(r"\b(yara|malware.?scan|scan.{0,20}(malware|rootkit.?signature))", re.I),
+     "yara_scan", lambda t: _first(_PATH, t)),
+
+    # Local rootkit / hardening audit
+    (re.compile(r"\b(rkhunter|rootkit.?(hunt|check|scan|detect)|check.{0,15}rootkit)", re.I),
+     "rkhunter_scan", lambda t: "localhost"),
+
+    (re.compile(r"\b(lynis|harden(ing)?.?audit|system.?harden|cis.?benchmark)", re.I),
+     "lynis_audit", lambda t: "localhost"),
+
+    # TLS/SSL configuration audit
+    (re.compile(r"\b(testssl|tls.?audit|ssl.?audit|cipher.?check|heartbleed|check.{0,15}(tls|ssl|cert))", re.I),
+     "tls_audit", _target),
+
+    # Fail2ban jail status
+    (re.compile(r"\b(fail2ban|banned.?ip|jail.?status|check.{0,15}ban)", re.I),
+     "fail2ban_status", lambda t: "status"),
 
     # CVE lookup
     (re.compile(r"\b(CVE-\d{4}-\d{4,})", re.I),
@@ -96,9 +134,9 @@ _PATTERNS: list[tuple[re.Pattern, str, callable]] = [
 
 
 # ── Tool registry ─────────────────────────────────────────────────────────────
-# Maps intent_type → executor function (lazy-imported at call time)
+# Maps intent_type → Tool object
 
-TOOL_REGISTRY: dict[str, callable] = {}
+TOOL_REGISTRY: dict[str, Tool] = {}
 
 def _register_tools():
     """Lazy registration — only imports when first needed."""
@@ -109,33 +147,36 @@ def _register_tools():
     try:
         from shadowcypher.modules.recon import Recon
         _recon = Recon()
-        TOOL_REGISTRY["nmap_scan"]      = lambda t, cb: _recon.pulse_target(t, "Service Fingerprint", on_output=cb)
-        TOOL_REGISTRY["deep_recon"]     = lambda t, cb: _recon.deep_recon(t, on_output=cb)
-        TOOL_REGISTRY["subdomain_enum"] = lambda t, cb: _recon.subdomain_enum(t, on_output=cb)
-        TOOL_REGISTRY["whois_lookup"]   = lambda t, cb: _recon.http_probe(t, on_output=cb)
+        TOOL_REGISTRY["nmap_scan"]      = Tool("nmap_scan", "Perform a port scan and service fingerprinting", lambda t, cb: _recon.pulse_target(t, "Service Fingerprint", on_output=cb))
+        TOOL_REGISTRY["deep_recon"]     = Tool("deep_recon", "Perform deep reconnaissance and footprinting", lambda t, cb: _recon.deep_recon(t, on_output=cb))
+        TOOL_REGISTRY["subdomain_enum"] = Tool("subdomain_enum", "Enumerate subdomains for a given domain", lambda t, cb: _recon.subdomain_enum(t, on_output=cb))
+        TOOL_REGISTRY["whois_lookup"]   = Tool("whois_lookup", "Perform WHOIS lookup on a domain or IP", lambda t, cb: _recon.http_probe(t, on_output=cb))
+        TOOL_REGISTRY["amass_enum"]     = Tool("amass_enum", "Deep subdomain/asset enumeration via OWASP Amass", lambda t, cb: _recon.amass_enum(t, on_output=cb))
+        TOOL_REGISTRY["naabu_scan"]     = Tool("naabu_scan", "Ultra-fast SYN port discovery via naabu", lambda t, cb: _recon.naabu_scan(t, on_output=cb))
+        TOOL_REGISTRY["katana_crawl"]   = Tool("katana_crawl", "Crawl a web target to enumerate endpoints/JS assets", lambda t, cb: _recon.katana_crawl(t, on_output=cb))
     except Exception:
         pass
 
     try:
         from shadowcypher.modules.vuln_scanner import VulnScanner
         _vuln = VulnScanner()
-        TOOL_REGISTRY["nuclei_scan"] = lambda t, cb: _vuln.nuclei_scan(t, on_output=cb)
-        TOOL_REGISTRY["nikto_scan"]  = lambda t, cb: _vuln.nikto_scan(t, on_output=cb)
-        TOOL_REGISTRY["sqlmap_scan"] = lambda t, cb: _vuln.sqlmap_scan(t, on_output=cb)
+        TOOL_REGISTRY["nuclei_scan"] = Tool("nuclei_scan", "Run Nuclei vulnerability templates", lambda t, cb: _vuln.nuclei_scan(t, on_output=cb))
+        TOOL_REGISTRY["nikto_scan"]  = Tool("nikto_scan", "Perform a Nikto web server scan", lambda t, cb: _vuln.nikto_scan(t, on_output=cb))
+        TOOL_REGISTRY["sqlmap_scan"] = Tool("sqlmap_scan", "Test for SQL injection vulnerabilities", lambda t, cb: _vuln.sqlmap_scan(t, on_output=cb))
     except Exception:
         pass
 
     try:
         from shadowcypher.modules.cve_feed import cve_feed
-        TOOL_REGISTRY["cve_lookup"] = lambda t, cb: _cve_lookup(cve_feed, t, cb)
+        TOOL_REGISTRY["cve_lookup"] = Tool("cve_lookup", "Lookup CVE details for a specific ID", lambda t, cb: _cve_lookup(cve_feed, t, cb))
     except Exception:
         pass
 
     try:
         from shadowcypher.modules.threat_intel import threat_intel
-        TOOL_REGISTRY["ip_reputation"]     = lambda t, cb: _ti_lookup(threat_intel, t, "ip", cb)
-        TOOL_REGISTRY["domain_reputation"] = lambda t, cb: _ti_lookup(threat_intel, t, "domain", cb)
-        TOOL_REGISTRY["hash_lookup"]       = lambda t, cb: _ti_lookup(threat_intel, t, "hash", cb)
+        TOOL_REGISTRY["ip_reputation"]     = Tool("ip_reputation", "Check IP reputation and threat intel", lambda t, cb: _ti_lookup(threat_intel, t, "ip", cb))
+        TOOL_REGISTRY["domain_reputation"] = Tool("domain_reputation", "Check domain reputation and threat intel", lambda t, cb: _ti_lookup(threat_intel, t, "domain", cb))
+        TOOL_REGISTRY["hash_lookup"]       = Tool("hash_lookup", "Lookup file hash in threat intel databases", lambda t, cb: _ti_lookup(threat_intel, t, "hash", cb))
     except Exception:
         pass
 
@@ -144,7 +185,34 @@ def _register_tools():
         def _run_auto_scan(t, cb):
             result = _auto_scan.run(t, on_output=cb)
             return result.report or result.assessment
-        TOOL_REGISTRY["auto_scan"] = _run_auto_scan
+        TOOL_REGISTRY["auto_scan"] = Tool("auto_scan", "Run the full adaptive security assessment pipeline", _run_auto_scan)
+    except Exception:
+        pass
+
+    try:
+        from shadowcypher.modules.yara_scan import yara_scan
+        def _run_yara(t, cb):
+            return yara_scan.scan_directory(t, on_output=cb) if os.path.isdir(t) else yara_scan.scan_file(t, on_output=cb)
+        TOOL_REGISTRY["yara_scan"] = Tool("yara_scan", "Scan a file or directory on the local host for known malware patterns via YARA", _run_yara)
+    except Exception:
+        pass
+
+    try:
+        from shadowcypher.modules.host_audit import host_audit
+        TOOL_REGISTRY["rkhunter_scan"] = Tool("rkhunter_scan", "Scan the local host for rootkits/backdoors via rkhunter", lambda t, cb: host_audit.rkhunter_scan(on_output=cb))
+        TOOL_REGISTRY["lynis_audit"]   = Tool("lynis_audit", "Run a Lynis system hardening audit on the local host", lambda t, cb: host_audit.lynis_audit(on_output=cb))
+    except Exception:
+        pass
+
+    try:
+        from shadowcypher.modules.tls_audit import tls_audit
+        TOOL_REGISTRY["tls_audit"] = Tool("tls_audit", "Audit a host's TLS/SSL configuration and certificate for known vulnerabilities", lambda t, cb: tls_audit.full_audit(t, on_output=cb))
+    except Exception:
+        pass
+
+    try:
+        from shadowcypher.modules.fail2ban_mgr import fail2ban_manager
+        TOOL_REGISTRY["fail2ban_status"] = Tool("fail2ban_status", "Show fail2ban jail status and banned IPs on the local host", lambda t, cb: fail2ban_manager.status(on_output=cb))
     except Exception:
         pass
 
@@ -200,30 +268,44 @@ def detect_intent(query: str) -> dict:
     return {"type": "general", "target": None, "confidence": "none", "matched": ""}
 
 
-def execute_intent(intent: dict, on_output: callable = None) -> Optional[str]:
+def execute_intent(intent: dict, on_output: callable = None, timeout: float = 1800.0) -> Optional[str]:
     """
     Execute the tool for a detected intent. Returns raw tool output as string.
     Returns None if intent is general or tool unavailable.
+
+    Most Recon/VulnScanner tools run asynchronously via the shared Runner
+    (spawn a background thread, return a task_id immediately). We block
+    until the runner's completion marker ("[done: exit N]"/"[TIMEOUT]")
+    arrives so callers actually get the real tool output instead of an
+    empty string. Synchronous tools (CVE/threat-intel lookups, auto_scan)
+    already return full output directly and never emit that marker, so we
+    only wait when the executor's return value looks like a runner task_id.
     """
     if intent["type"] == "general" or not intent.get("target"):
         return None
 
     _register_tools()
-    fn = TOOL_REGISTRY.get(intent["type"])
-    if not fn:
+    tool = TOOL_REGISTRY.get(intent["type"])
+    if not tool:
         return None
 
     output_lines: list[str] = []
+    done_event = threading.Event()
 
     def _collect(line: str):
         output_lines.append(line)
         if on_output:
             on_output(line)
+        if isinstance(line, str) and ("[done: exit" in line or line.startswith("[TIMEOUT]")):
+            done_event.set()
 
     try:
-        fn(intent["target"], _collect)
+        result = tool.executor(intent["target"], _collect)
     except Exception as e:
         return f"[TOOL_ERROR] {intent['type']} failed: {e}"
+
+    if not done_event.is_set() and isinstance(result, str) and _TASK_ID_RE.match(result):
+        done_event.wait(timeout=timeout)
 
     return "".join(output_lines) or None
 

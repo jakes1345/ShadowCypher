@@ -4,6 +4,7 @@ High-fidelity cross-platform discovery and service mapping.
 """
 
 import re
+import os
 import shutil
 import subprocess
 from shadowcypher.core.module import BaseModule
@@ -105,6 +106,64 @@ class Recon(BaseModule):
         )
         return self.execute(f"DNS_BRUTE_{domain}", ["bash", "-c", script], callback=on_output)
 
+    def amass_enum(self, domain, passive=True, on_output=None):
+        """Deep subdomain/asset enumeration via OWASP Amass — broader source
+        coverage than subfinder (certificate transparency, scraping, APIs,
+        recursive brute-forcing). Slower; best for a thorough one-off sweep."""
+        require_stealth(on_output=on_output)
+        if not validate_target(domain):
+            return
+        self.log(f"AMASS_ENUM: {domain}")
+        if on_output:
+            on_output(f"[RECON] ATT&CK: {mitre.format_tags(mitre.tag('amass_enum'))}\n")
+        amass = self.get_tool_path("amass")
+        if not shutil.which(amass) and not os.path.isabs(amass):
+            if on_output:
+                on_output("[RECON] amass not found — install: pacman -S amass / apt install amass\n")
+            return
+        mode = "enum" if passive else "enum -active -brute"
+        args = [amass] + mode.split() + ["-d", domain, "-timeout", "10"]
+        return self.execute(f"AMASS_{domain}", args, callback=on_output)
+
+    def naabu_scan(self, target, ports=None, top_ports=1000, on_output=None):
+        """Ultra-fast SYN port discovery via naabu — a lighter, faster first
+        pass than nmap for wide port ranges before running a detailed
+        Service Fingerprint scan on whatever comes back open."""
+        require_stealth(on_output=on_output)
+        if not validate_target(target):
+            return
+        self.log(f"NAABU_SCAN: {target}")
+        if on_output:
+            on_output(f"[RECON] ATT&CK: {mitre.format_tags(mitre.tag('naabu_scan'))}\n")
+        naabu = self.get_tool_path("naabu")
+        if not shutil.which(naabu) and not os.path.isabs(naabu):
+            if on_output:
+                on_output("[RECON] naabu not found — install: go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest\n")
+            return
+        args = [naabu, "-host", target, "-silent"]
+        args += ["-p", ports] if ports else ["-top-ports", str(top_ports)]
+        return self.execute(f"NAABU_{target}", args, callback=on_output)
+
+    def katana_crawl(self, url, depth=3, js_crawl=True, on_output=None):
+        """Crawl a web target via katana to enumerate endpoints/JS assets
+        before targeted fuzzing (ffuf) or vuln scanning (nuclei)."""
+        require_stealth(on_output=on_output)
+        if not validate_target(url):
+            return
+        self.log(f"KATANA_CRAWL: {url}")
+        if on_output:
+            on_output(f"[RECON] ATT&CK: {mitre.format_tags(mitre.tag('katana_crawl'))}\n")
+        katana = self.get_tool_path("katana")
+        if not shutil.which(katana) and not os.path.isabs(katana):
+            if on_output:
+                on_output("[RECON] katana not found — install: go install github.com/projectdiscovery/katana/cmd/katana@latest\n")
+            return
+        target = url if "://" in url else f"https://{url}"
+        args = [katana, "-u", target, "-silent", "-depth", str(depth)]
+        if js_crawl:
+            args.append("-jc")
+        return self.execute(f"KATANA_{url}", args, callback=on_output)
+
     # ── HTTP Probing ──
 
     def http_probe(self, targets_file_or_domain, on_output=None):
@@ -118,7 +177,6 @@ class Recon(BaseModule):
                 "-no-color",
             ]
             # If it's a file use -l, otherwise -u
-            import os
             if os.path.isfile(targets_file_or_domain):
                 args += ["-l", targets_file_or_domain]
             else:

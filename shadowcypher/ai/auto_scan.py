@@ -34,6 +34,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Optional, Callable
 from shadowcypher.core.logger import logger
+from shadowcypher.ai.intent import _TASK_ID_RE
 
 # ── Port classification ───────────────────────────────────────────────────────
 
@@ -403,13 +404,28 @@ class AutoScan:
             lambda cb: self._recon.pulse_target(target, "Service Fingerprint", on_output=cb)
         )
 
-    def _collect(self, fn: Callable) -> str:
-        """Run a tool function that accepts on_output callback, collect all output."""
+    def _collect(self, fn: Callable, timeout: float = 1800.0) -> str:
+        """Run a tool function that accepts on_output callback, collect all output.
+
+        Recon/VulnScanner tools run asynchronously via the shared Runner
+        (spawn a background thread, return a task_id immediately). We must
+        block until the runner's completion marker ("[done: exit N]" /
+        "[TIMEOUT]") arrives, otherwise every phase returns near-instantly
+        with empty output. Only wait when the callable's return value looks
+        like a runner task_id — some future callers may already be sync.
+        """
         lines: list[str] = []
+        done_event = threading.Event()
+
         def _cb(line: str):
             lines.append(line)
+            if isinstance(line, str) and ("[done: exit" in line or line.startswith("[TIMEOUT]")):
+                done_event.set()
+
         try:
-            fn(_cb)
+            result = fn(_cb)
+            if not done_event.is_set() and isinstance(result, str) and _TASK_ID_RE.match(result):
+                done_event.wait(timeout=timeout)
         except Exception as e:
             lines.append(f"[ERROR] {e}\n")
         return "".join(lines)
