@@ -303,7 +303,8 @@ class DashboardPage(Gtk.Box):
             try:
                 with socket.create_connection(("127.0.0.1", port), timeout=0.4):
                     self.terminal.log(f"  ✓ {name:<14} ONLINE  :{port}", "SUCCESS")
-            except Exception:
+            except Exception as e:
+                logger.debug("dashboard", f"Service check failed for {name}:{port}: {e}")
                 self.terminal.log(f"  ✗ {name:<14} OFFLINE :{port}", "WARNING")
 
         # Ollama check
@@ -312,7 +313,8 @@ class DashboardPage(Gtk.Box):
             urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=1)  # nosec B310
             self.terminal.log("  ✓ Ollama AI     ONLINE  :11434", "SUCCESS")
             self.stat_ai.set_value("Ollama (local)")
-        except Exception:
+        except Exception as e:
+            logger.debug("dashboard", f"Ollama health check failed: {e}")
             self.terminal.log("  ✗ Ollama AI     OFFLINE :11434", "WARNING")
             self.stat_ai.set_value("OFFLINE")
 
@@ -322,7 +324,8 @@ class DashboardPage(Gtk.Box):
             caps = stealth_web.get_capabilities()
             n = sum(1 for v in caps.values() if v)
             self.stat_stealth.set_value(f"{n}/{len(caps)} Active")
-        except Exception:
+        except Exception as e:
+            logger.debug("dashboard", f"Failed to get stealth capabilities: {e}")
             self.stat_stealth.set_value("N/A")
 
         self.terminal.log("─────────────────────────────────────────", "SYSTEM")
