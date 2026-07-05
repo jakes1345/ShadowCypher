@@ -204,12 +204,19 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-	"""Initialize scheduler on API startup."""
+	"""Initialize scheduler and audit agent on API startup."""
 	try:
 		from shadowcypher.core.mission_executor import setup_scheduler_integration
 		setup_scheduler_integration()
 	except Exception as e:
 		logger.error("local_api", f"Failed to initialize scheduler: {e}")
+
+	try:
+		from shadowcypher.core.module_audit_agent import get_module_audit_agent
+		agent = get_module_audit_agent()
+		agent.start()
+	except Exception as e:
+		logger.error("local_api", f"Failed to initialize audit agent: {e}")
 
 
 def verify_token(authorization: str = Header(None)) -> str:
@@ -750,6 +757,37 @@ async def get_modules_summary(token: str = Depends(verify_token)):
 	summary = modules.get_module_summary()
 
 	return summary
+
+
+@app.post("/v1/audit/start")
+async def start_audit_agent(token: str = Depends(verify_token)):
+	"""Start the automated module audit agent."""
+	from shadowcypher.core.module_audit_agent import get_module_audit_agent
+
+	agent = get_module_audit_agent()
+	agent.start()
+
+	return {"status": "started"}
+
+
+@app.post("/v1/audit/stop")
+async def stop_audit_agent(token: str = Depends(verify_token)):
+	"""Stop the automated module audit agent."""
+	from shadowcypher.core.module_audit_agent import get_module_audit_agent
+
+	agent = get_module_audit_agent()
+	agent.stop()
+
+	return {"status": "stopped"}
+
+
+@app.get("/v1/audit/status")
+async def get_audit_status(token: str = Depends(verify_token)):
+	"""Get automated audit agent status."""
+	from shadowcypher.core.module_audit_agent import get_module_audit_agent
+
+	agent = get_module_audit_agent()
+	return agent.get_status()
 
 
 @app.post("/v1/incidents/process")
