@@ -44,7 +44,7 @@ class Device(BaseModel):
 	ip: Optional[str]
 	hostname: Optional[str]
 	mac: Optional[str]
-	device_type: str = "unknown"
+	device_type: Optional[str] = "unknown"
 	vendor: Optional[str]
 	status: Optional[str] = None
 
@@ -173,7 +173,7 @@ async def get_summary(token: str = Depends(verify_token)):
 			ip=d.get("ip"),
 			hostname=d.get("hostname"),
 			mac=d.get("mac"),
-			device_type=d.get("device_type", "unknown"),
+			device_type=d.get("device_type") or "unknown",
 			vendor=d.get("vendor"),
 			status=d.get("status"),
 		)
