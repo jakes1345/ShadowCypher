@@ -348,6 +348,38 @@ async def llm_chat(req: ChatRequest, token: str = Depends(verify_token)):
 	return ChatResponse(response=response, confidence=0.85)
 
 
+@app.get("/v1/scan-history", response_model=list[dict])
+async def get_scan_history(scan_type: Optional[str] = None, limit: int = 10, token: str = Depends(verify_token)):
+	"""Get historical scans from the database."""
+	from shadowcypher.core.scan_history import get_scan_history
+
+	history = get_scan_history()
+	scans = history.get_recent_scans(scan_type=scan_type, limit=limit)
+	return scans
+
+
+@app.get("/v1/scan-history/{scan_id}", response_model=dict)
+async def get_scan_detail(scan_id: str, token: str = Depends(verify_token)):
+	"""Get detailed results of a specific scan."""
+	from shadowcypher.core.scan_history import get_scan_history
+
+	history = get_scan_history()
+	detail = history.get_scan_details(scan_id)
+	if not detail:
+		raise HTTPException(status_code=404, detail=f"Scan {scan_id} not found")
+	return detail
+
+
+@app.get("/v1/statistics", response_model=dict)
+async def get_statistics(token: str = Depends(verify_token)):
+	"""Get aggregate statistics about all scans."""
+	from shadowcypher.core.scan_history import get_scan_history
+
+	history = get_scan_history()
+	stats = history.get_statistics()
+	return stats
+
+
 @app.get("/health")
 async def health():
 	"""Health check endpoint (no auth required)."""
