@@ -324,3 +324,26 @@ def get_mission_executor() -> MissionExecutor:
     if _mission_executor is None:
         _mission_executor = MissionExecutor()
     return _mission_executor
+
+
+def setup_scheduler_integration():
+    """Integrate MissionScheduler with MissionExecutor."""
+    try:
+        from shadowcypher.core.mission_scheduler import get_mission_scheduler
+
+        executor = get_mission_executor()
+        scheduler = get_mission_scheduler()
+
+        def on_scheduled_mission(scheduled):
+            """Callback when scheduler triggers a mission."""
+            if scheduled.mission_type == "network_scan":
+                executor.execute_network_scan(subnet=scheduled.target)
+            elif scheduled.mission_type == "host_audit":
+                executor.execute_host_audit(target=scheduled.target or "localhost")
+            logger.info("mission_executor", f"Executed scheduled {scheduled.mission_type} from {scheduled.id}")
+
+        scheduler.register_callback(on_scheduled_mission)
+        scheduler.start()
+        logger.info("mission_executor", "Scheduler integration complete")
+    except Exception as e:
+        logger.error("mission_executor", f"Failed to setup scheduler: {e}")

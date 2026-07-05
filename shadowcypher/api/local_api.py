@@ -113,6 +113,30 @@ class ChatResponse(BaseModel):
 	confidence: float = 0.8
 
 
+class ScheduledMissionRequest(BaseModel):
+	mission_type: str
+	frequency: str  # hourly, daily, weekly, monthly
+	target: Optional[str] = None
+	description: Optional[str] = None
+
+
+class ScheduledMissionResponse(BaseModel):
+	id: str
+	mission_type: str
+	frequency: str
+	enabled: bool
+	target: Optional[str]
+	last_run_at: Optional[str]
+	next_run_at: Optional[str]
+	run_count: int
+	created_at: str
+	description: Optional[str]
+
+
+class ScheduleListResponse(BaseModel):
+	schedules: list[ScheduledMissionResponse]
+
+
 # ── FastAPI App ──────────────────────────────────────────────────────────
 
 app = FastAPI(title="ShadowCypher Guardian API", version="1.0")
@@ -124,6 +148,16 @@ app.add_middleware(
 	allow_methods=["*"],
 	allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def startup_event():
+	"""Initialize scheduler on API startup."""
+	try:
+		from shadowcypher.core.mission_executor import setup_scheduler_integration
+		setup_scheduler_integration()
+	except Exception as e:
+		logger.error("local_api", f"Failed to initialize scheduler: {e}")
 
 
 def verify_token(authorization: str = Header(None)) -> str:
@@ -456,6 +490,91 @@ async def get_effectiveness(token: str = Depends(verify_token)):
 
 	analytics = get_scan_analytics()
 	return analytics.get_scan_effectiveness()
+
+
+@app.post("/v1/schedules", response_model=ScheduledMissionResponse)
+async def create_schedule(req: ScheduledMissionRequest, token: str = Depends(verify_token)):
+	"""Create a new recurring mission schedule."""
+	from shadowcypher.core.mission_scheduler import get_mission_scheduler
+
+	scheduler = get_mission_scheduler()
+	schedule_id = scheduler.create_schedule(
+		mission_type=req.mission_type,
+		frequency=req.frequency,
+		target=req.target,
+		description=req.description,
+	)
+
+	schedule = scheduler.get_schedule(schedule_id)
+	from dataclasses import asdict
+	return asdict(schedule)
+
+
+@app.get("/v1/schedules", response_model=ScheduleListResponse)
+async def list_schedules(token: str = Depends(verify_token)):
+	"""List all mission schedules."""
+	from shadowcypher.core.mission_scheduler import get_mission_scheduler
+
+	scheduler = get_mission_scheduler()
+	schedules = scheduler.list_schedules()
+
+	from dataclasses import asdict
+	return ScheduleListResponse(
+		schedules=[asdict(s) for s in schedules]
+	)
+
+
+@app.get("/v1/schedules/{schedule_id}", response_model=ScheduledMissionResponse)
+async def get_schedule(schedule_id: str, token: str = Depends(verify_token)):
+	"""Get a schedule by ID."""
+	from shadowcypher.core.mission_scheduler import get_mission_scheduler
+
+	scheduler = get_mission_scheduler()
+	schedule = scheduler.get_schedule(schedule_id)
+
+	if not schedule:
+		raise HTTPException(status_code=404, detail=f"Schedule {schedule_id} not found")
+
+	from dataclasses import asdict
+	return asdict(schedule)
+
+
+@app.put("/v1/schedules/{schedule_id}", response_model=ScheduledMissionResponse)
+async def update_schedule(
+	schedule_id: str, updates: dict, token: str = Depends(verify_token)
+):
+	"""Update a schedule."""
+	from shadowcypher.core.mission_scheduler import get_mission_scheduler
+
+	scheduler = get_mission_scheduler()
+	if not scheduler.update_schedule(schedule_id, **updates):
+		raise HTTPException(status_code=404, detail=f"Schedule {schedule_id} not found")
+
+	schedule = scheduler.get_schedule(schedule_id)
+	from dataclasses import asdict
+	return asdict(schedule)
+
+
+@app.delete("/v1/schedules/{schedule_id}")
+async def delete_schedule(schedule_id: str, token: str = Depends(verify_token)):
+	"""Delete a schedule."""
+	from shadowcypher.core.mission_scheduler import get_mission_scheduler
+
+	scheduler = get_mission_scheduler()
+	if not scheduler.delete_schedule(schedule_id):
+		raise HTTPException(status_code=404, detail=f"Schedule {schedule_id} not found")
+
+	return {"status": "deleted", "schedule_id": schedule_id}
+
+
+@app.post("/v1/schedules/start")
+async def start_scheduler(token: str = Depends(verify_token)):
+	"""Start the mission scheduler."""
+	from shadowcypher.core.mission_scheduler import get_mission_scheduler
+
+	scheduler = get_mission_scheduler()
+	scheduler.start()
+	return {"status": "started"}
 
 
 @app.websocket("/ws/missions/{mission_id}")
