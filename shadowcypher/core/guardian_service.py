@@ -1,16 +1,19 @@
 """
 Guardian Service — Bridge between Guardian scans and API endpoints.
 Manages scan results, device inventory, incidents, and CVE tracking.
+Persists scan history to database for historical analysis.
 """
 
 import os
 import json
+import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
 from shadowcypher.core.logger import logger
 from shadowcypher.core.hub import hub
+from shadowcypher.core.scan_history import get_scan_history
 
 
 class GuardianService:
@@ -26,7 +29,7 @@ class GuardianService:
             logger.warning("guardian_service", f"Failed to import knowledge graph: {e}")
 
     def get_recent_devices(self, limit_hours: int = 24) -> List[Dict[str, Any]]:
-        """Return devices from recent Guardian scans."""
+        """Return devices from recent Guardian scans and database history."""
         devices = []
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=limit_hours)
 
@@ -41,8 +44,29 @@ class GuardianService:
                         devices.extend(data)
                     elif isinstance(data, dict) and "devices" in data:
                         devices.extend(data["devices"])
+                        # Save to history
+                        scan_history = get_scan_history()
+                        scan_id = f"scan-{uuid.uuid4().hex[:8]}"
+                        scan_history.save_scan(
+                            scan_id=scan_id,
+                            scan_type="network_scan",
+                            devices=data.get("devices", []),
+                            incidents=[],
+                        )
                 except Exception as e:
                     logger.debug("guardian_service", f"Failed to parse {file_path}: {e}")
+
+        # Also fetch from history database if no recent files
+        if not devices:
+            try:
+                scan_history = get_scan_history()
+                recent_scans = scan_history.get_recent_scans("network_scan", limit=5)
+                for scan in recent_scans:
+                    scan_detail = scan_history.get_scan_details(scan["id"])
+                    if scan_detail:
+                        devices.extend(scan_detail.get("devices", []))
+            except Exception as e:
+                logger.debug("guardian_service", f"Failed to fetch history: {e}")
 
         # Augment with knowledge graph data if available
         if self.kg:

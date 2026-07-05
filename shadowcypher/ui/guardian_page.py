@@ -28,6 +28,7 @@ class GuardianPage(BasePage):
         notebook.append_page(self._build_router_tab(), Gtk.Label(label="Router Audit"))
         notebook.append_page(self._build_monitor_tab(), Gtk.Label(label="Monitor"))
         notebook.append_page(self._build_harden_tab(), Gtk.Label(label="Harden"))
+        notebook.append_page(self._build_host_audit_tab(), Gtk.Label(label="Host Audit"))
         notebook.append_page(self._build_fail2ban_tab(), Gtk.Label(label="Fail2Ban"))
         notebook.append_page(self._build_tls_tab(), Gtk.Label(label="TLS Audit"))
         notebook.append_page(self._build_yara_tab(), Gtk.Label(label="YARA Scan"))
@@ -173,6 +174,25 @@ class GuardianPage(BasePage):
             self.pod_status.update("HARDENING")
             self.run_script("guardian.py", ["harden"], sudo=True)
 
+    def _build_host_audit_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+
+        lbl = Gtk.Label()
+        lbl.set_markup("<span size='small' color='#94a3b8'>Deep local host audit: rootkit detection (rkhunter), hardening assessment (Lynis), system misconfiguration checks. Requires root.</span>")
+        lbl.set_line_wrap(True)
+        lbl.set_xalign(0)
+        box.pack_start(lbl, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=8)
+        btn_row.pack_start(self.make_action_btn("RKHunter Scan", self._on_rkhunter), False, False, 0)
+        btn_row.pack_start(self.make_action_btn("Lynis Audit", self._on_lynis), False, False, 0)
+        box.pack_start(btn_row, False, False, 0)
+        return box
+
     def _build_fail2ban_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.set_margin_start(12)
@@ -242,6 +262,38 @@ class GuardianPage(BasePage):
         btn_row.pack_start(self.make_action_btn("Scan with YARA", self._on_yara), False, False, 0)
         box.pack_start(btn_row, False, False, 0)
         return box
+
+    def _on_rkhunter(self, btn):
+        self.pod_status.update("SCANNING ROOTKITS")
+        self.terminal.log("Running RKHunter scan (rootkit detection)...", "INFO")
+        try:
+            from shadowcypher.modules.host_audit import HostAudit
+            auditor = HostAudit()
+            output = auditor.rkhunter_scan(on_output=lambda msg: self.terminal.log(msg, "INFO"))
+            if output:
+                self.terminal.log(output, "SUCCESS")
+            else:
+                self.terminal.log("RKHunter not available (install: pacman -S rkhunter)", "WARN")
+        except Exception as e:
+            logger.error("guardian_page", f"RKHunter scan failed: {e}")
+            self.terminal.log(f"Error: {e}", "ERROR")
+        self.pod_status.update("idle")
+
+    def _on_lynis(self, btn):
+        self.pod_status.update("AUDITING HOST")
+        self.terminal.log("Running Lynis system hardening audit...", "INFO")
+        try:
+            from shadowcypher.modules.host_audit import HostAudit
+            auditor = HostAudit()
+            output = auditor.lynis_scan(on_output=lambda msg: self.terminal.log(msg, "INFO"))
+            if output:
+                self.terminal.log(output, "SUCCESS")
+            else:
+                self.terminal.log("Lynis not available (install: pacman -S lynis)", "WARN")
+        except Exception as e:
+            logger.error("guardian_page", f"Lynis audit failed: {e}")
+            self.terminal.log(f"Error: {e}", "ERROR")
+        self.pod_status.update("idle")
 
     def _on_fail2ban(self, btn):
         self.pod_status.update("CHECKING JAILS")
