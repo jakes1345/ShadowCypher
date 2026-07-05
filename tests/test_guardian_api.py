@@ -353,6 +353,61 @@ def test_audit_agent():
     print(f"✓ Audit agent status verified: running={status['running']}")
 
 
+def test_action_execution():
+    """Test security action execution."""
+    # Block an IP
+    resp = requests.post(
+        f"{BASE_URL}/v1/actions/block-ip?ip=198.51.100.42&reason=Suspicious+activity",
+        headers=HEADERS
+    )
+    assert resp.status_code == 200
+    result = resp.json()
+    assert result["action"] == "block_ip"
+    assert result["success"] == True
+    print(f"✓ IP blocked: {result['target']}")
+
+    # Get action history
+    resp = requests.get(f"{BASE_URL}/v1/actions/history?limit=10", headers=HEADERS)
+    assert resp.status_code == 200
+    history = resp.json()
+    assert isinstance(history, list)
+    print(f"✓ Action history retrieved: {len(history)} actions")
+
+    # Get action statistics
+    resp = requests.get(f"{BASE_URL}/v1/actions/statistics", headers=HEADERS)
+    assert resp.status_code == 200
+    stats = resp.json()
+    assert "total_actions" in stats
+    assert "success_rate" in stats
+    print(f"✓ Action statistics: {stats['total_actions']} total, {stats['success_rate']:.0f}% success")
+
+
+def test_automation_pipeline():
+    """Test end-to-end automation: incident → response → action."""
+    # Create incident that triggers malware response rule
+    payload = {
+        "incident_type": "malware_detected",
+        "severity": "critical",
+        "details": {
+            "title": "Test malware incident",
+            "file_path": "/tmp/test.bin",
+            "malware_family": "Test.Generic"
+        }
+    }
+    resp = requests.post(f"{BASE_URL}/v1/incidents/process", json=payload, headers=HEADERS)
+    assert resp.status_code == 200
+    incident = resp.json()
+    assert incident["status"] == "processed"
+    print(f"✓ Automation pipeline triggered: incident → response → actions")
+
+    # Verify actions were executed
+    resp = requests.get(f"{BASE_URL}/v1/actions/statistics", headers=HEADERS)
+    assert resp.status_code == 200
+    stats = resp.json()
+    assert stats["total_actions"] > 0
+    print(f"✓ Security actions executed: {stats['total_actions']} total")
+
+
 def test_unauthorized_access():
     """Test that endpoints require proper auth."""
     resp = requests.get(f"{BASE_URL}/v1/me")  # No auth header
@@ -392,6 +447,8 @@ def run_all_tests():
         ("Incident Processing", test_incident_processing),
         ("Guardian Modules", test_guardian_modules),
         ("Audit Agent", test_audit_agent),
+        ("Action Execution", test_action_execution),
+        ("Automation Pipeline", test_automation_pipeline),
     ]
 
     passed = 0
