@@ -235,8 +235,28 @@ class MissionExecutor:
         self.callbacks[mission_id].append(callback)
 
     def _notify_mission_update(self, mission_id: str, mission: Mission):
-        """Notify all subscribers of mission update."""
+        """Notify all subscribers of mission update (async-safe)."""
         callbacks = self.callbacks.get(mission_id, [])
+
+        # Notify WebSocket manager if available
+        try:
+            from shadowcypher.api.websocket_server import get_ws_manager
+            manager = get_ws_manager()
+            # Schedule async broadcast
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.create_task(
+                        manager.broadcast_mission_update(mission_id, asdict(mission))
+                    )
+            except RuntimeError:
+                # No event loop in this thread, try to create one
+                pass
+        except ImportError:
+            pass  # WebSocket not available
+
+        # Call other callbacks
         for callback in callbacks:
             try:
                 callback(asdict(mission))

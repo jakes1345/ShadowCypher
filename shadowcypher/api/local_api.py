@@ -8,12 +8,13 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import FastAPI, Depends, HTTPException, status, Header
+from fastapi import FastAPI, Depends, HTTPException, status, Header, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 from shadowcypher.core.logger import logger
 from shadowcypher.core.config import config
+from shadowcypher.api.websocket_server import subscribe_to_mission
 
 
 # ── Data Models ──────────────────────────────────────────────────────────
@@ -455,6 +456,19 @@ async def get_effectiveness(token: str = Depends(verify_token)):
 
 	analytics = get_scan_analytics()
 	return analytics.get_scan_effectiveness()
+
+
+@app.websocket("/ws/missions/{mission_id}")
+async def websocket_mission_updates(mission_id: str, websocket: WebSocket):
+	"""WebSocket endpoint for real-time mission updates.
+
+	Clients connect and receive updates as mission status changes.
+	Message types:
+	  - initial_state: Current mission status on connect
+	  - mission_update: Status change (mission status changed)
+	  - mission_status: Response to get_status query
+	"""
+	await subscribe_to_mission(mission_id, websocket)
 
 
 @app.get("/health")
