@@ -166,6 +166,29 @@ class ProcessIncidentRequest(BaseModel):
 	details: dict
 
 
+class ModuleResultResponse(BaseModel):
+	module_type: str
+	timestamp: str
+	target: str
+	status: str
+	findings: list[dict]
+	execution_time: float
+	error: Optional[str] = None
+
+
+class ModuleScanRequest(BaseModel):
+	modules: Optional[list[str]] = None  # specific modules, or None for all
+	host: Optional[str] = "localhost"
+	target_path: Optional[str] = "/tmp"
+
+
+class ModuleSummaryResponse(BaseModel):
+	total_scans: int
+	total_findings: int
+	by_severity: dict
+	by_module: dict
+
+
 # ── FastAPI App ──────────────────────────────────────────────────────────
 
 app = FastAPI(title="ShadowCypher Guardian API", version="1.0")
@@ -678,6 +701,55 @@ async def delete_incident_rule(rule_id: str, token: str = Depends(verify_token))
 		raise HTTPException(status_code=404, detail=f"Rule {rule_id} not found")
 
 	return {"status": "deleted", "rule_id": rule_id}
+
+
+@app.post("/v1/modules/scan", response_model=list[ModuleResultResponse])
+async def scan_modules(req: ModuleScanRequest, token: str = Depends(verify_token)):
+	"""Run Guardian security modules (fail2ban, host_audit, tls_audit, yara_scan)."""
+	from shadowcypher.core.guardian_modules import get_guardian_modules
+	from dataclasses import asdict
+
+	modules = get_guardian_modules()
+
+	if req.modules and len(req.modules) > 0:
+		# Run specific modules
+		results = []
+		for module_name in req.modules:
+			if module_name == "fail2ban":
+				results.append(modules.run_fail2ban_scan(req.host))
+			elif module_name == "host_audit":
+				results.append(modules.run_host_audit(req.host))
+			elif module_name == "tls_audit":
+				results.append(modules.run_tls_audit(req.host))
+			elif module_name == "yara_scan":
+				results.append(modules.run_yara_scan(req.target_path))
+	else:
+		# Run all modules
+		results = modules.run_all_modules(req.host)
+
+	return [asdict(r) for r in results]
+
+
+@app.get("/v1/modules/findings", response_model=list[dict])
+async def get_module_findings(module_type: Optional[str] = None, limit: int = 50, token: str = Depends(verify_token)):
+	"""Get recent findings from Guardian module scans."""
+	from shadowcypher.core.guardian_modules import get_guardian_modules
+
+	modules = get_guardian_modules()
+	findings = modules.get_recent_findings(module_type=module_type, limit=limit)
+
+	return findings
+
+
+@app.get("/v1/modules/summary", response_model=ModuleSummaryResponse)
+async def get_modules_summary(token: str = Depends(verify_token)):
+	"""Get summary of all Guardian module scans."""
+	from shadowcypher.core.guardian_modules import get_guardian_modules
+
+	modules = get_guardian_modules()
+	summary = modules.get_module_summary()
+
+	return summary
 
 
 @app.post("/v1/incidents/process")
