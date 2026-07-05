@@ -276,13 +276,13 @@ async def get_agents(token: str = Depends(verify_token)):
 
 
 @app.post("/v1/scans", response_model=ScanResponse)
-async def trigger_scan(token: str = Depends(verify_token)):
-	"""Trigger a network scan (from Guardian page)."""
-	from shadowcypher.core.guardian_service import get_guardian_service
+async def trigger_scan(subnet: Optional[str] = None, token: str = Depends(verify_token)):
+	"""Trigger a network scan (from Guardian page or Android app)."""
+	from shadowcypher.core.mission_executor import get_mission_executor
 
 	try:
-		guardian = get_guardian_service()
-		mission_id = guardian.trigger_scan()
+		executor = get_mission_executor()
+		mission_id = executor.execute_network_scan(subnet=subnet)
 		logger.info("local_api", f"Scan triggered from Android app (mission {mission_id})")
 		return ScanResponse(success=True, message=f"Scan initiated (mission {mission_id})")
 	except Exception as e:
@@ -301,25 +301,57 @@ async def create_mission(
 	return CreateMissionResponse(mission_id=mission_id, status="pending")
 
 
-@app.get("/v1/missions/{mission_id}", response_model=Mission)
+@app.get("/v1/missions/{mission_id}", response_model=dict)
 async def get_mission(mission_id: str, token: str = Depends(verify_token)):
 	"""Get mission status and output."""
-	return Mission(
-		id=mission_id,
-		agent_id="agent-001",
-		status="completed",
-		created_at=datetime.now(timezone.utc).isoformat(),
-		started_at=datetime.now(timezone.utc).isoformat(),
-		completed_at=datetime.now(timezone.utc).isoformat(),
-		result_output="Scan complete. 3 devices found.",
-		exit_code=0,
-	)
+	from shadowcypher.core.mission_executor import get_mission_executor
+
+	executor = get_mission_executor()
+	mission = executor.get_mission(mission_id)
+
+	if not mission:
+		raise HTTPException(status_code=404, detail=f"Mission {mission_id} not found")
+
+	return {
+		"id": mission.id,
+		"type": mission.type,
+		"target": mission.target,
+		"status": mission.status,
+		"created_at": mission.created_at,
+		"started_at": mission.started_at,
+		"completed_at": mission.completed_at,
+		"result_output": mission.result_output,
+		"devices_found": mission.devices_found,
+		"incidents_found": mission.incidents_found,
+		"exit_code": mission.exit_code,
+	}
 
 
-@app.get("/v1/missions", response_model=MissionListResponse)
-async def list_missions(agent_id: Optional[str] = None, token: str = Depends(verify_token)):
-	"""List all missions, optionally filtered by agent."""
-	return MissionListResponse(missions=[])
+@app.get("/v1/missions", response_model=dict)
+async def list_missions(status: Optional[str] = None, limit: int = 50, token: str = Depends(verify_token)):
+	"""List all missions, optionally filtered by status."""
+	from shadowcypher.core.mission_executor import get_mission_executor
+
+	executor = get_mission_executor()
+	missions = executor.list_missions(status=status, limit=limit)
+
+	return {
+		"missions": [
+			{
+				"id": m.id,
+				"type": m.type,
+				"target": m.target,
+				"status": m.status,
+				"created_at": m.created_at,
+				"started_at": m.started_at,
+				"completed_at": m.completed_at,
+				"devices_found": m.devices_found,
+				"incidents_found": m.incidents_found,
+			}
+			for m in missions
+		],
+		"total": len(missions),
+	}
 
 
 @app.post("/v1/llm/chat", response_model=ChatResponse)
