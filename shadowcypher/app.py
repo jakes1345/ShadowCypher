@@ -462,12 +462,22 @@ def main():
 
     from shadowcypher.core.hub import hub
     from shadowcypher.ai.sisyphus import sisyphus
-    
+    from shadowcypher.api import start_server
+    import threading
+
     logger.info("hub", "BOOTING_APEX_PREDATOR_CORE...")
-    
+
     hub.system_status = "OPTIMIZING"
     sisyphus.start()
-    
+
+    # Start local Guardian API for Android app
+    try:
+        api_thread = threading.Thread(target=start_server, daemon=True)
+        api_thread.start()
+        logger.info("hub", "Guardian API started on 0.0.0.0:9999")
+    except Exception as e:
+        logger.error("hub", f"Failed to start Guardian API: {e}")
+
     app = ShadowCypherApp()
     app.run(sys.argv)
 

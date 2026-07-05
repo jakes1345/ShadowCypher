@@ -8,9 +8,11 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-private const val BASE_URL = "https://api.shadowcypher.site"
+private const val BASE_URL_REMOTE = "https://api.shadowcypher.site"
+private const val BASE_URL_LOCAL = "http://10.0.2.2:9999"  // Android emulator: 10.0.2.2 maps to host localhost
 const val PREFS_NAME = "shadow_prefs"
 const val PREF_API_KEY = "sc_api_key"
+const val PREF_BASE_URL = "sc_base_url"
 
 class GuardianRepository(private val context: Context) {
 
@@ -30,6 +32,13 @@ class GuardianRepository(private val context: Context) {
         prefs.edit().remove(PREF_API_KEY).apply()
         _cachedApiKey = ""
         _cachedApi = null
+    }
+
+    fun getBaseUrl(): String = prefs.getString(PREF_BASE_URL, BASE_URL_LOCAL) ?: BASE_URL_LOCAL
+
+    fun setBaseUrl(url: String) {
+        prefs.edit().putString(PREF_BASE_URL, url).apply()
+        _cachedApi = null  // Invalidate cache
     }
 
     private fun buildApi(apiKey: String): GuardianApi {
@@ -55,8 +64,9 @@ class GuardianRepository(private val context: Context) {
             .addInterceptor(logging)
             .build()
 
+        val baseUrl = getBaseUrl()
         val api = Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(baseUrl)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
