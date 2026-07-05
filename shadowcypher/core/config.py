@@ -49,6 +49,14 @@ class ToolPaths(BaseSettings):
     nikto: str = "nikto"
     nuclei: str = "nuclei"
     dalfox: str = "dalfox"
+    amass: str = "amass"
+    naabu: str = "naabu"
+    katana: str = "katana"
+    yara: str = "yara"
+    rkhunter: str = "rkhunter"
+    lynis: str = "lynis"
+    fail2ban_client: str = "fail2ban-client"
+    testssl: str = "testssl.sh"
     proxychains4: str = "proxychains4"
     cloudflared: str = "cloudflared"
     certbot: str = "certbot"
@@ -111,7 +119,9 @@ class Config(BaseSettings):
         try:
             with open(path, "r") as f:
                 data = json.load(f)
-        except Exception:
+        except Exception as e:
+            import sys
+            print(f"WARNING: Failed to load config from {path}: {e}", file=sys.stderr)
             return
 
         for k, v in data.items():
@@ -123,13 +133,15 @@ class Config(BaseSettings):
                     try:
                         if hasattr(attr, sk):
                             setattr(attr, sk, sv)
-                    except Exception:
-                        pass  # Skip fields that don't match the model
+                    except Exception as e:
+                        import sys
+                        print(f"DEBUG: Failed to set nested config {k}.{sk}: {e}", file=sys.stderr)
             else:
                 try:
                     setattr(self, k, v)
-                except Exception:
-                    pass
+                except Exception as e:
+                    import sys
+                    print(f"DEBUG: Failed to set config {k}: {e}", file=sys.stderr)
 
     def get(self, *keys: str, default: Any = None) -> Any:
         """
@@ -162,16 +174,18 @@ class Config(BaseSettings):
         user's home, not shared app code. We probe with a real write rather
         than trusting os.access(), which is unreliable on overlayfs.
         """
-        global _writable_cfg_cache
-        if _writable_cfg_cache is not None:
-            return _writable_cfg_cache
+        cache_key = str(self.project_root)
+        cached = _writable_cfg_cache.get(cache_key)
+        if cached is not None:
+            return cached
         local = self.project_root / "config.json"
         if _path_is_writable(local):
-            _writable_cfg_cache = local
+            resolved = local
         else:
             xdg = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
-            _writable_cfg_cache = Path(xdg) / "shadowcypher" / "config.json"
-        return _writable_cfg_cache
+            resolved = Path(xdg) / "shadowcypher" / "config.json"
+        _writable_cfg_cache[cache_key] = resolved
+        return resolved
 
     def save_to_json(self, path: Optional[Path] = None) -> None:
         """Persist current config to disk."""
@@ -256,7 +270,7 @@ class Config(BaseSettings):
         return getattr(self.tools, tool_attr, tool_name)
 
 
-_writable_cfg_cache: Optional[Path] = None
+_writable_cfg_cache: Dict[str, Path] = {}
 
 
 def _path_is_writable(target: Path) -> bool:
@@ -293,8 +307,9 @@ try:
 
     _user_cfg = ensure_user_config(config.project_root, config.writable_config_path())
     config.load_from_json(_user_cfg)
-except Exception:
-    pass
+except Exception as e:
+    import sys
+    print(f"WARNING: config startup failed: {e}", file=sys.stderr)
 
 # Import logger AFTER singleton for enterprise bootstrap
 from shadowcypher.core.logger import logger
