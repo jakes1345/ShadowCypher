@@ -189,6 +189,23 @@ class ModuleSummaryResponse(BaseModel):
 	by_module: dict
 
 
+class ActionHistoryResponse(BaseModel):
+	action: str
+	target: str
+	success: bool
+	message: str
+	timestamp: str
+
+
+class ActionStatisticsResponse(BaseModel):
+	total_actions: int
+	success_rate: float
+	by_action: dict
+	by_result: dict
+	blocked_ips: list[str]
+	quarantined_files: list[str]
+
+
 # ── FastAPI App ──────────────────────────────────────────────────────────
 
 app = FastAPI(title="ShadowCypher Guardian API", version="1.0")
@@ -788,6 +805,75 @@ async def get_audit_status(token: str = Depends(verify_token)):
 
 	agent = get_module_audit_agent()
 	return agent.get_status()
+
+
+@app.get("/v1/actions/history", response_model=list[ActionHistoryResponse])
+async def get_action_history(limit: int = 100, token: str = Depends(verify_token)):
+	"""Get history of executed security actions."""
+	from shadowcypher.core.action_executor import get_action_executor
+
+	executor = get_action_executor()
+	return executor.get_action_history(limit=limit)
+
+
+@app.get("/v1/actions/statistics", response_model=ActionStatisticsResponse)
+async def get_action_statistics(token: str = Depends(verify_token)):
+	"""Get security action execution statistics."""
+	from shadowcypher.core.action_executor import get_action_executor
+
+	executor = get_action_executor()
+	return executor.get_statistics()
+
+
+@app.post("/v1/actions/block-ip")
+async def block_ip(ip: str, reason: Optional[str] = None, token: str = Depends(verify_token)):
+	"""Block an IP address."""
+	from shadowcypher.core.action_executor import get_action_executor
+
+	executor = get_action_executor()
+	result = executor.block_ip(ip, reason=reason or "Manual block")
+
+	return {
+		"action": result.action,
+		"target": result.target,
+		"success": result.success,
+		"message": result.message,
+		"timestamp": result.timestamp
+	}
+
+
+@app.post("/v1/actions/quarantine-file")
+async def quarantine_file(file_path: str, reason: Optional[str] = None, token: str = Depends(verify_token)):
+	"""Quarantine a suspicious file."""
+	from shadowcypher.core.action_executor import get_action_executor
+
+	executor = get_action_executor()
+	result = executor.quarantine_file(file_path, reason=reason or "Manual quarantine")
+
+	return {
+		"action": result.action,
+		"target": result.target,
+		"success": result.success,
+		"message": result.message,
+		"timestamp": result.timestamp
+	}
+
+
+@app.post("/v1/actions/isolate-device")
+async def isolate_device(device_ip: str, reason: Optional[str] = None, token: str = Depends(verify_token)):
+	"""Isolate a device from the network."""
+	from shadowcypher.core.action_executor import get_action_executor
+
+	executor = get_action_executor()
+	result = executor.isolate_device(device_ip, reason=reason or "Manual isolation")
+
+	return {
+		"action": result.action,
+		"target": result.target,
+		"success": result.success,
+		"message": result.message,
+		"timestamp": result.timestamp
+	}
 
 
 @app.post("/v1/incidents/process")

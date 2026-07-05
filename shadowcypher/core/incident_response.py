@@ -232,6 +232,10 @@ class IncidentResponseEngine:
 
     def _execute_action(self, action: str, details: Dict):
         """Execute a single response action."""
+        from shadowcypher.core.action_executor import get_action_executor
+
+        executor = get_action_executor()
+
         if action == ResponseAction.ALERT:
             self._action_alert(details)
         elif action == ResponseAction.LOG:
@@ -239,12 +243,23 @@ class IncidentResponseEngine:
         elif action == ResponseAction.ESCALATE:
             self._action_escalate(details)
         elif action == ResponseAction.ISOLATE:
+            device_ip = details.get("device_ip")
+            if device_ip:
+                executor.isolate_device(device_ip, reason=details.get("title", "Threat detected"))
             self._action_isolate(details)
         elif action == ResponseAction.BLOCK:
+            source_ip = details.get("source_ip")
+            if source_ip:
+                executor.block_ip(source_ip, reason=details.get("title", "Threat detected"))
             self._action_block(details)
         elif action == ResponseAction.QUARANTINE:
+            file_path = details.get("file_path")
+            if file_path:
+                executor.quarantine_file(file_path, reason=details.get("title", "Threat detected"))
             self._action_quarantine(details)
         elif action == ResponseAction.PATCH:
+            package = details.get("package")
+            executor.patch_system(package)
             self._action_patch(details)
 
     def _action_alert(self, details: Dict):
