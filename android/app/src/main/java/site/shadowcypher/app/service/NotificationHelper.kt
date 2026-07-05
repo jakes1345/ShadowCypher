@@ -1,11 +1,16 @@
 package site.shadowcypher.app.service
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import site.shadowcypher.app.data.Incident
 
 const val CHANNEL_INCIDENTS = "channel_incidents"
@@ -15,6 +20,7 @@ const val CHANNEL_SYNC = "channel_sync"
 object NotificationHelper {
 
     fun createChannels(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         nm.createNotificationChannel(
@@ -55,9 +61,17 @@ object NotificationHelper {
         notifiedPrefs(context).edit().clear().apply()
     }
 
+    private fun hasNotificationPermission(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+        return ContextCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    @SuppressLint("MissingPermission") // gated by hasNotificationPermission() below
     fun postIncidentNotification(context: Context, incident: Incident) {
         val nm = NotificationManagerCompat.from(context)
-        if (!nm.areNotificationsEnabled()) return
+        if (!nm.areNotificationsEnabled() || !hasNotificationPermission(context)) return
 
         val prefs = notifiedPrefs(context)
         val key = "incident_${incident.id}"
@@ -78,9 +92,10 @@ object NotificationHelper {
         nm.notify(notifId, notification)
     }
 
+    @SuppressLint("MissingPermission") // gated by hasNotificationPermission() below
     fun postCveNotification(context: Context, cveId: String, description: String) {
         val nm = NotificationManagerCompat.from(context)
-        if (!nm.areNotificationsEnabled()) return
+        if (!nm.areNotificationsEnabled() || !hasNotificationPermission(context)) return
 
         val prefs = notifiedPrefs(context)
         val key = "cve_${cveId}"
