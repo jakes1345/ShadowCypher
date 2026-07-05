@@ -115,7 +115,8 @@ class GodPanel(BasePage):
                         pass
                 rtt = f"{((_time.monotonic() - t0) * 1000):.0f}ms"
                 results.append([name, "ONLINE", rtt, str(port)])
-            except Exception:
+            except Exception as e:
+                logger.debug("god_panel", f"Failed to check service {name}:{port}: {e}")
                 results.append([name, "OFFLINE", "—", str(port)])
 
         # Sisyphus integrity sentinel
@@ -123,7 +124,8 @@ class GodPanel(BasePage):
             from shadowcypher.ai.sisyphus import sisyphus
             state = "STABLE" if sisyphus.is_stable else "TAMPERED"
             results.append(["Sisyphus", state, "—", "—"])
-        except Exception:
+        except Exception as e:
+            logger.debug("god_panel", f"Sisyphus check failed: {e}")
             results.append(["Sisyphus", "ERROR", "—", "—"])
 
         # CVE Feed
@@ -131,7 +133,8 @@ class GodPanel(BasePage):
             from shadowcypher.modules.cve_feed import cve_feed
             active = getattr(cve_feed, "_active", False) or getattr(cve_feed, "running", False)
             results.append(["CVE Feed", "ACTIVE" if active else "IDLE", "—", "NVD"])
-        except Exception:
+        except Exception as e:
+            logger.debug("god_panel", f"CVE feed check failed: {e}")
             results.append(["CVE Feed", "UNAVAIL", "—", "—"])
 
         # Knowledge Graph
@@ -139,7 +142,8 @@ class GodPanel(BasePage):
             from shadowcypher.core.knowledge_graph import kg
             stats = kg.stats()
             results.append(["Knowledge Graph", f"{stats.get('nodes', 0)} nodes", "—", "—"])
-        except Exception:
+        except Exception as e:
+            logger.debug("god_panel", f"Knowledge graph check failed: {e}")
             results.append(["Knowledge Graph", "UNAVAIL", "—", "—"])
 
         # Ghost nodes
@@ -147,7 +151,8 @@ class GodPanel(BasePage):
             from shadowcypher.core.ghost import ghost_orchestrator
             node_count = len(ghost_orchestrator.get_active_nodes())
             results.append(["Shadow Nodes", f"{node_count} linked", "—", "44444"])
-        except Exception:
+        except Exception as e:
+            logger.debug("god_panel", f"Ghost nodes check failed: {e}")
             results.append(["Shadow Nodes", "0 linked", "—", "44444"])
 
         def _update_ui():
@@ -177,10 +182,10 @@ class GodPanel(BasePage):
                 from shadowcypher.ai.sisyphus import sisyphus
                 s = "✅ STABLE" if sisyphus.is_stable else "⚠️ TAMPERED"
                 self.integrity_label.set_markup(f"<span color='{'#10b981' if sisyphus.is_stable else '#f43f5e'}'>{s}</span>")
-            except Exception:
-                pass
-        except Exception:
-            pass
+            except Exception as e:
+                logger.debug("god_panel", f"Failed to update integrity status: {e}")
+        except Exception as e:
+            logger.debug("god_panel", f"_tick metrics update failed: {e}")
         return True
 
     def _on_switch_model(self, btn):
