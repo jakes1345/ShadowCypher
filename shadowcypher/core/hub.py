@@ -75,8 +75,8 @@ class RelayBridge:
         if self.websocket:
             try:
                 await self.websocket.send(json.dumps(data))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("hub", f"Failed to send relay signal: {e}")
 
     def _handle_signal(self, data: dict):
         typ = data.get("type")
@@ -263,8 +263,8 @@ class ShadowHub:
                     stats = guard.get_stats()
                     self._update_telemetry("guard_blocked", stats.get("blocked", 0))
                     self._update_telemetry("guard_scanned", stats.get("scanned", 0))
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("hub", f"Failed to fetch guard stats: {e}")
         threading.Thread(target=_guard_telemetry, daemon=True, name="GuardTelemetry").start()
         logger.info("hub", "ShadowGuard telemetry active")
 
@@ -364,11 +364,11 @@ class ShadowHub:
             }
             try:
                 asyncio.run_coroutine_threadsafe(
-                    self.relay_bridge.send(msg), 
+                    self.relay_bridge.send(msg),
                     self.relay_bridge.loop
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("hub", f"Failed to send to relay bridge: {e}")
 
     def _on_intel_discovered(self, intel: Dict[str, Any]) -> None:
         typ = intel.get("type", "unknown")
@@ -388,8 +388,8 @@ class ShadowHub:
             self._update_telemetry("kg_nodes", stats["nodes"])
             self._update_telemetry("kg_edges", stats["edges"])
             logger.info("hub", f"Red team complete: {summary}")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("hub", f"Red team summary failed: {e}")
 
     def _on_pulse_anomaly(self, event: Dict[str, Any]) -> None:
         stream = event.get("stream", "unknown")
@@ -465,6 +465,32 @@ class ShadowHub:
             use_ai_routing=False,
         )
 
+        return mission_id
+
+    def dispatch_agentic_mission(self, target: str, goal: str) -> str:
+        """
+        Launch an autonomous agentic mission.
+        The AI will chain tools dynamically to achieve the goal.
+        """
+        from shadowcypher.ai.agentic_loop import shadow_loop
+
+        mission_id = f"AGENT-{uuid.uuid4().hex[:8].upper()}"
+        mission = Mission(id=mission_id, query=goal, role="commander")
+        self.active_missions[mission_id] = mission
+        self.telemetry["missions_total"] += 1
+        
+        logger.info("hub", f"Launching agentic mission {mission_id} -> Goal: {goal}")
+
+        def _run():
+            # Stream loop updates to the hub's mission update system
+            result = shadow_loop.run(
+                target=target, 
+                goal=goal, 
+                on_step_update=lambda msg: self._update_mission(mission_id, msg)
+            )
+            self._finalize_mission(mission_id, result)
+
+        threading.Thread(target=_run, daemon=True, name=f"AgentLoop-{mission_id}").start()
         return mission_id
 
     def _update_mission(self, mid: str, msg: str) -> None:
