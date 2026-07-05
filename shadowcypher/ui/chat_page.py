@@ -277,8 +277,8 @@ class ChatPage(Gtk.Box):
             if rooms != self._rooms:
                 self._rooms = rooms
                 GLib.idle_add(self._refresh_room_list)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("chat_page", f"Failed to fetch rooms: {e}")
 
     def _fetch_messages(self):
         if not self._api_key:
@@ -293,8 +293,8 @@ class ChatPage(Gtk.Box):
                 self._messages.extend(new_msgs)
                 self._messages.sort(key=lambda m: m["created_at"])
                 GLib.idle_add(self._render_new_messages, new_msgs)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("chat_page", f"Failed to fetch messages: {e}")
 
     def _fetch_online(self):
         if not self._api_key:
@@ -305,16 +305,16 @@ class ChatPage(Gtk.Box):
             if online != self._online:
                 self._online = online
                 GLib.idle_add(self._refresh_online)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("chat_page", f"Failed to fetch online status: {e}")
 
     def _send_presence(self):
         if not self._api_key:
             return
         try:
             _api_post("/v1/chat/presence", self._api_key, {"room": self._current_room})
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("chat_page", f"Failed to send presence: {e}")
 
     # ── Render ────────────────────────────────────────────────────────────────
 
