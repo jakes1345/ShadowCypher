@@ -135,8 +135,7 @@ def verify_token(authorization: str = Header(None)) -> str:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Authorization header format")
 
 	token = parts[1]
-	# Reload config each request to pick up changes
-	config.load_from_json()
+	# Get the operator handle from config
 	expected_token = config.get("identity", "handle", default="operator")
 
 	if token != expected_token:
