@@ -297,6 +297,62 @@ def test_incident_processing():
     print(f"✓ Malware incident processed with automated response")
 
 
+def test_guardian_modules():
+    """Test Guardian module scanning endpoints."""
+    # Trigger module scans
+    payload = {"modules": ["fail2ban"]}
+    resp = requests.post(f"{BASE_URL}/v1/modules/scan", json=payload, headers=HEADERS)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    print(f"✓ Module scan triggered: {data[0]['module_type']}")
+
+    # Get module findings
+    resp = requests.get(f"{BASE_URL}/v1/modules/findings", headers=HEADERS)
+    assert resp.status_code == 200
+    findings = resp.json()
+    assert isinstance(findings, list)
+    print(f"✓ Retrieved {len(findings)} module findings")
+
+    # Get module summary
+    resp = requests.get(f"{BASE_URL}/v1/modules/summary", headers=HEADERS)
+    assert resp.status_code == 200
+    summary = resp.json()
+    assert "total_scans" in summary
+    assert "total_findings" in summary
+    assert "by_module" in summary
+    print(f"✓ Module summary: {summary['total_scans']} scans, {summary['total_findings']} findings")
+
+
+def test_audit_agent():
+    """Test automated audit agent control."""
+    # Get initial status
+    resp = requests.get(f"{BASE_URL}/v1/audit/status", headers=HEADERS)
+    assert resp.status_code == 200
+    status = resp.json()
+    assert "running" in status
+    assert "schedule" in status
+    print(f"✓ Audit agent running: {status['running']}")
+
+    # Stop audit agent
+    resp = requests.post(f"{BASE_URL}/v1/audit/stop", headers=HEADERS)
+    assert resp.status_code == 200
+    print("✓ Audit agent stopped")
+
+    # Start audit agent
+    resp = requests.post(f"{BASE_URL}/v1/audit/start", headers=HEADERS)
+    assert resp.status_code == 200
+    print("✓ Audit agent started")
+
+    # Verify status
+    resp = requests.get(f"{BASE_URL}/v1/audit/status", headers=HEADERS)
+    assert resp.status_code == 200
+    status = resp.json()
+    assert status["running"] == True
+    print(f"✓ Audit agent status verified: running={status['running']}")
+
+
 def test_unauthorized_access():
     """Test that endpoints require proper auth."""
     resp = requests.get(f"{BASE_URL}/v1/me")  # No auth header
@@ -334,6 +390,8 @@ def run_all_tests():
         ("Mission Schedules", test_mission_schedules),
         ("Incident Response Rules", test_incident_response_rules),
         ("Incident Processing", test_incident_processing),
+        ("Guardian Modules", test_guardian_modules),
+        ("Audit Agent", test_audit_agent),
     ]
 
     passed = 0
