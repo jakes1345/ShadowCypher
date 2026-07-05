@@ -181,6 +181,122 @@ def test_llm_chat():
     print(f"✓ LLM chat: Got response (confidence: {data['confidence']})")
 
 
+def test_mission_schedules():
+    """Test mission scheduling endpoints."""
+    # Create a schedule
+    payload = {
+        "mission_type": "network_scan",
+        "frequency": "daily",
+        "target": "192.168.1.0/24",
+        "description": "Daily network scan"
+    }
+    resp = requests.post(f"{BASE_URL}/v1/schedules", json=payload, headers=HEADERS)
+    assert resp.status_code == 200
+    schedule = resp.json()
+    assert schedule["mission_type"] == "network_scan"
+    assert schedule["frequency"] == "daily"
+    print(f"✓ Mission schedule created: {schedule['id']}")
+
+    # List schedules
+    resp = requests.get(f"{BASE_URL}/v1/schedules", headers=HEADERS)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "schedules" in data
+    print(f"✓ Listed {len(data['schedules'])} schedules")
+
+    # Get specific schedule
+    resp = requests.get(f"{BASE_URL}/v1/schedules/{schedule['id']}", headers=HEADERS)
+    assert resp.status_code == 200
+    assert resp.json()["id"] == schedule["id"]
+    print(f"✓ Retrieved schedule {schedule['id']}")
+
+    # Update schedule
+    resp = requests.put(
+        f"{BASE_URL}/v1/schedules/{schedule['id']}",
+        json={"enabled": False},
+        headers=HEADERS
+    )
+    assert resp.status_code == 200
+    print(f"✓ Updated schedule (disabled)")
+
+    # Delete schedule
+    resp = requests.delete(f"{BASE_URL}/v1/schedules/{schedule['id']}", headers=HEADERS)
+    assert resp.status_code == 200
+    print(f"✓ Deleted schedule")
+
+
+def test_incident_response_rules():
+    """Test incident response rule management."""
+    # List default rules
+    resp = requests.get(f"{BASE_URL}/v1/incident-rules", headers=HEADERS)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "rules" in data
+    default_rule_count = len(data["rules"])
+    print(f"✓ Found {default_rule_count} default incident response rules")
+
+    # Create custom rule
+    payload = {
+        "name": "Database Breach Response",
+        "condition": "database",
+        "severity_threshold": "critical",
+        "actions": ["alert", "escalate", "log"],
+        "description": "Custom database breach response"
+    }
+    resp = requests.post(f"{BASE_URL}/v1/incident-rules", json=payload, headers=HEADERS)
+    assert resp.status_code == 200
+    rule = resp.json()
+    assert rule["name"] == "Database Breach Response"
+    print(f"✓ Custom incident rule created: {rule['id']}")
+
+    # Get rule
+    resp = requests.get(f"{BASE_URL}/v1/incident-rules/{rule['id']}", headers=HEADERS)
+    assert resp.status_code == 200
+    assert resp.json()["id"] == rule["id"]
+    print(f"✓ Retrieved incident rule")
+
+    # Delete rule
+    resp = requests.delete(f"{BASE_URL}/v1/incident-rules/{rule['id']}", headers=HEADERS)
+    assert resp.status_code == 200
+    print(f"✓ Deleted incident rule")
+
+
+def test_incident_processing():
+    """Test incident detection and automated response."""
+    # Process CVE incident
+    payload = {
+        "incident_type": "cve_detected",
+        "severity": "critical",
+        "details": {
+            "title": "Critical CVE detected",
+            "cve_id": "CVE-2024-5678",
+            "device_ip": "192.168.1.100"
+        }
+    }
+    resp = requests.post(f"{BASE_URL}/v1/incidents/process", json=payload, headers=HEADERS)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "incident_id" in data
+    assert data["status"] == "processed"
+    print(f"✓ CVE incident processed: {data['incident_id']}")
+
+    # Process malware incident
+    payload = {
+        "incident_type": "malware_detected",
+        "severity": "high",
+        "details": {
+            "title": "Malware detected",
+            "file_path": "/tmp/malware.bin",
+            "device_ip": "192.168.1.101"
+        }
+    }
+    resp = requests.post(f"{BASE_URL}/v1/incidents/process", json=payload, headers=HEADERS)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "processed"
+    print(f"✓ Malware incident processed with automated response")
+
+
 def test_unauthorized_access():
     """Test that endpoints require proper auth."""
     resp = requests.get(f"{BASE_URL}/v1/me")  # No auth header
@@ -215,6 +331,9 @@ def run_all_tests():
         ("Mission Lifecycle", test_mission_lifecycle),
         ("Missions List", test_missions_list),
         ("LLM Chat", test_llm_chat),
+        ("Mission Schedules", test_mission_schedules),
+        ("Incident Response Rules", test_incident_response_rules),
+        ("Incident Processing", test_incident_processing),
     ]
 
     passed = 0
