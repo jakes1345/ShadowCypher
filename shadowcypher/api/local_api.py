@@ -412,6 +412,51 @@ async def get_statistics(token: str = Depends(verify_token)):
 	return stats
 
 
+@app.get("/v1/analytics/timeline", response_model=dict)
+async def get_timeline(days: int = 30, token: str = Depends(verify_token)):
+	"""Get device discovery timeline over past N days."""
+	from shadowcypher.core.scan_analytics import get_scan_analytics
+
+	analytics = get_scan_analytics()
+	return analytics.get_device_discovery_timeline(days=days)
+
+
+@app.get("/v1/analytics/risk-distribution", response_model=dict)
+async def get_risk_dist(token: str = Depends(verify_token)):
+	"""Get distribution of devices by risk level."""
+	from shadowcypher.core.scan_analytics import get_scan_analytics
+
+	analytics = get_scan_analytics()
+	return analytics.get_risk_distribution()
+
+
+@app.get("/v1/analytics/threats", response_model=dict)
+async def get_threats(token: str = Depends(verify_token)):
+	"""Get aggregate threat summary."""
+	from shadowcypher.core.scan_analytics import get_scan_analytics
+
+	analytics = get_scan_analytics()
+	return analytics.get_threat_summary()
+
+
+@app.get("/v1/analytics/top-devices", response_model=dict)
+async def get_top_devices(limit: int = 10, token: str = Depends(verify_token)):
+	"""Get devices with most incidents."""
+	from shadowcypher.core.scan_analytics import get_scan_analytics
+
+	analytics = get_scan_analytics()
+	return {"top_devices": analytics.get_top_devices_by_incident_count(limit=limit)}
+
+
+@app.get("/v1/analytics/effectiveness", response_model=dict)
+async def get_effectiveness(token: str = Depends(verify_token)):
+	"""Get scan effectiveness metrics."""
+	from shadowcypher.core.scan_analytics import get_scan_analytics
+
+	analytics = get_scan_analytics()
+	return analytics.get_scan_effectiveness()
+
+
 @app.get("/health")
 async def health():
 	"""Health check endpoint (no auth required)."""
