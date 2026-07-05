@@ -162,73 +162,88 @@ async def get_me(token: str = Depends(verify_token)):
 @app.get("/v1/guardian/summary", response_model=GuardianSummary)
 async def get_summary(token: str = Depends(verify_token)):
 	"""Get Guardian summary: devices, incidents, CVEs, agents."""
-	now = datetime.now(timezone.utc).isoformat()
+	from shadowcypher.core.guardian_service import get_guardian_service
 
-	# TODO: Pull from Guardian page / KG instead of mock data
+	guardian = get_guardian_service()
+
+	# Get real data from Guardian scans and knowledge graph
+	device_data = guardian.get_recent_devices()
+	devices = [
+		Device(
+			ip=d.get("ip"),
+			hostname=d.get("hostname"),
+			mac=d.get("mac"),
+			device_type=d.get("device_type", "unknown"),
+			vendor=d.get("vendor"),
+			status=d.get("status"),
+		)
+		for d in device_data
+	]
+
+	incident_data = guardian.get_incidents(limit=10)
+	incidents = [
+		Incident(
+			id=inc.get("id", str(uuid.uuid4())),
+			category=inc.get("category"),
+			severity=inc.get("severity"),
+			title=inc.get("title"),
+			created_at=inc.get("created_at", datetime.now(timezone.utc).isoformat()),
+			acknowledged=inc.get("acknowledged", False),
+		)
+		for inc in incident_data
+	]
+
+	cve_data = guardian.get_cve_alerts(limit=5)
+	cve_alerts = [
+		CveAlert(
+			cve_id=alert.get("cve_id"),
+			severity=alert.get("severity"),
+			description=alert.get("description"),
+			affected_device=alert.get("affected_device"),
+		)
+		for alert in cve_data
+	]
+
+	agent_data = guardian.get_agents()
+	agents = [
+		Agent(
+			id=agent.get("id"),
+			hostname=agent.get("hostname"),
+			online=agent.get("online", True),
+			last_seen_at=agent.get("last_seen_at"),
+			os=agent.get("os"),
+			agent_version=agent.get("agent_version"),
+		)
+		for agent in agent_data
+	]
+
 	return GuardianSummary(
-		agents=[
-			Agent(
-				id="agent-001",
-				hostname="localhost",
-				online=True,
-				last_seen_at=now,
-				os="Linux",
-				agent_version="1.0.0",
-			)
-		],
-		devices=[
-			Device(
-				ip="192.168.1.1",
-				hostname="router",
-				mac="00:11:22:33:44:55",
-				device_type="router",
-				vendor="Netgear",
-				status="online",
-			),
-			Device(
-				ip="192.168.1.100",
-				hostname="desktop",
-				mac="aa:bb:cc:dd:ee:ff",
-				device_type="desktop",
-				vendor="Unknown",
-				status="online",
-			),
-		],
-		incidents=[
-			Incident(
-				id=str(uuid.uuid4()),
-				category="port_scan",
-				severity="medium",
-				title="Unusual port scan detected from 192.168.1.50",
-				created_at=now,
-				acknowledged=False,
-			)
-		],
-		cve_alerts=[
-			CveAlert(
-				cve_id="CVE-2024-1234",
-				severity="high",
-				description="Remote code execution in OpenSSH",
-				affected_device="router",
-			)
-		],
-		last_scan_at=now,
+		agents=agents,
+		devices=devices,
+		incidents=incidents,
+		cve_alerts=cve_alerts,
+		last_scan_at=guardian.get_last_scan_time(),
 	)
 
 
 @app.get("/v1/incidents", response_model=list[Incident])
 async def get_incidents(token: str = Depends(verify_token)):
 	"""Get all incidents."""
-	now = datetime.now(timezone.utc).isoformat()
+	from shadowcypher.core.guardian_service import get_guardian_service
+
+	guardian = get_guardian_service()
+	incident_data = guardian.get_incidents(limit=50)
+
 	return [
 		Incident(
-			id=str(uuid.uuid4()),
-			category="port_scan",
-			severity="medium",
-			title="Unusual port scan detected",
-			created_at=now,
-			acknowledged=False,
+			id=inc.get("id", str(uuid.uuid4())),
+			category=inc.get("category"),
+			severity=inc.get("severity"),
+			title=inc.get("title"),
+			created_at=inc.get("created_at", datetime.now(timezone.utc).isoformat()),
+			acknowledged=inc.get("acknowledged", False),
 		)
+		for inc in incident_data
 	]
 
 
@@ -241,25 +256,22 @@ async def acknowledge_incident(incident_id: str, token: str = Depends(verify_tok
 @app.get("/v1/agents", response_model=AgentsResponse)
 async def get_agents(token: str = Depends(verify_token)):
 	"""Get all agents (autonomous workers)."""
-	now = datetime.now(timezone.utc).isoformat()
+	from shadowcypher.core.guardian_service import get_guardian_service
+
+	guardian = get_guardian_service()
+	agent_data = guardian.get_agents()
+
 	return AgentsResponse(
 		agents=[
 			Agent(
-				id="agent-001",
-				hostname="localhost",
-				online=True,
-				last_seen_at=now,
-				os="Linux",
-				agent_version="1.0.0",
-			),
-			Agent(
-				id="agent-002",
-				hostname="remote-scanner",
-				online=False,
-				last_seen_at=None,
-				os="Linux",
-				agent_version="1.0.0",
-			),
+				id=agent.get("id"),
+				hostname=agent.get("hostname"),
+				online=agent.get("online", True),
+				last_seen_at=agent.get("last_seen_at"),
+				os=agent.get("os"),
+				agent_version=agent.get("agent_version"),
+			)
+			for agent in agent_data
 		]
 	)
 
@@ -267,9 +279,16 @@ async def get_agents(token: str = Depends(verify_token)):
 @app.post("/v1/scans", response_model=ScanResponse)
 async def trigger_scan(token: str = Depends(verify_token)):
 	"""Trigger a network scan (from Guardian page)."""
-	logger.info("local_api", "Scan triggered from Guardian Android app")
-	# TODO: Trigger Guardian.quick_scan() here
-	return ScanResponse(success=True, message="Scan initiated")
+	from shadowcypher.core.guardian_service import get_guardian_service
+
+	try:
+		guardian = get_guardian_service()
+		mission_id = guardian.trigger_scan()
+		logger.info("local_api", f"Scan triggered from Android app (mission {mission_id})")
+		return ScanResponse(success=True, message=f"Scan initiated (mission {mission_id})")
+	except Exception as e:
+		logger.error("local_api", f"Failed to trigger scan: {e}")
+		return ScanResponse(success=False, message=f"Scan failed: {e}")
 
 
 @app.post("/v1/agents/{agent_id}/missions", response_model=CreateMissionResponse)
