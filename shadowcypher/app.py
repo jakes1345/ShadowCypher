@@ -456,9 +456,10 @@ class ShadowCypherApp(Gtk.Application):
 def main():
     try:
         if os.getuid() == 0:
-            os.nice(-10) 
-    except Exception:
-        pass
+            os.nice(-10)
+    except Exception as e:
+        import sys
+        print(f"DEBUG: Failed to adjust process priority: {e}", file=sys.stderr)
 
     from shadowcypher.core.hub import hub
     from shadowcypher.ai.sisyphus import sisyphus
