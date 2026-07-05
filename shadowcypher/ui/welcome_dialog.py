@@ -6,6 +6,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from shadowcypher.core.config import config
+from shadowcypher.core.logger import logger
 from shadowcypher.core.onboarding import is_valid_name, set_nickname
 
 
@@ -89,7 +90,7 @@ def show_welcome(parent=None) -> str:
 		_cfg = config.writable_config_path()
 		set_nickname(config.project_root, chosen, _cfg)
 		config.load_from_json(_cfg)
-	except Exception:
-		pass
+	except Exception as e:
+		logger.warning("welcome_dialog", f"Failed to persist nickname '{chosen}': {e}")
 
 	return chosen
