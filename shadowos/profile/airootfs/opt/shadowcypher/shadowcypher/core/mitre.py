@@ -86,6 +86,9 @@ _TOOL_MAP: dict[str, list[str]] = {
     "nmap_deep":        ["T1595", "T1595.002", "T1046", "T1082"],
     "masscan":          ["T1595", "T1595.001", "T1046"],
     "subdomain_enum":   ["T1590.002", "T1593"],
+    "amass_enum":       ["T1590.002", "T1593", "T1596"],
+    "naabu_scan":       ["T1595", "T1595.001", "T1046"],
+    "katana_crawl":     ["T1593", "T1595.002"],
     "http_probe":       ["T1595.002", "T1592"],
     # Vulnerability scanners
     "nuclei":           ["T1595.002", "T1190"],

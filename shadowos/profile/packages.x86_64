@@ -45,6 +45,8 @@ ufw
 nftables
 conntrack-tools
 fail2ban
+rkhunter
+lynis
 macchanger
 gnupg
 pass
@@ -230,6 +232,7 @@ subfinder
 httpx
 nuclei
 # katana is AUR-only — installed via `go install` in shadowos-firstboot
+# testssl.sh is not packaged for Arch — installed via git clone in shadowos-firstboot
 naabu
 mitmproxy
 exploitdb

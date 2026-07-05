@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -124,7 +125,7 @@ func handleProxy(conn net.Conn) {
 	io.ReadFull(conn, buf[:2])
 	port := (uint16(buf[0]) << 8) | uint16(buf[1])
 	
-	dest := fmt.Sprintf("%s:%d", addr, port)
+	dest := net.JoinHostPort(addr, strconv.Itoa(int(port)))
 	remote, err := net.Dial("tcp", dest)
 	if err != nil {
 		conn.Write([]byte{0x05, 0x01, 0x00, 0x01, 0, 0, 0, 0, 0, 0})

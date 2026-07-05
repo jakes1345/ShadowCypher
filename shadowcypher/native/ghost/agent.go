@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"time"
 
 	"golang.org/x/net/proxy"
@@ -261,7 +262,7 @@ func handleProxyConn(c net.Conn) {
 	}
 	io.ReadFull(c, buf[:2])
 	p := (int(buf[0]) << 8) | int(buf[1])
-	target := fmt.Sprintf("%s:%d", addr, p)
+	target := net.JoinHostPort(addr, strconv.Itoa(p))
 
 	remote, err := net.Dial("tcp", target)
 	if err != nil {

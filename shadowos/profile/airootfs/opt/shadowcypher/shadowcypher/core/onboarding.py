@@ -14,18 +14,22 @@ from pathlib import Path
 
 
 def _default_nick() -> str:
-    base = (os.environ.get("USER") or os.environ.get("USERNAME") or "operator")
+    base = os.environ.get("USER") or os.environ.get("USERNAME") or "operator"
     base = "".join(c for c in base if c.isalnum() or c in "_-")[:12] or "operator"
     return f"{base}_{secrets.token_hex(2)}"
 
 
-def ensure_user_config(project_root: Path) -> Path:
+def ensure_user_config(project_root: Path, cfg_path: Path | None = None) -> Path:
     """Ensure config.json exists. Creates it from config.example.json if missing.
+
+    ``cfg_path`` overrides where the active config is written (used on read-only
+    deployments to redirect operator config to the user's home). Defaults to
+    ``project_root/config.json`` for installed systems.
 
     Returns the path to the active config.json.
     Safe to call repeatedly — only writes if config.json does not exist.
     """
-    cfg_path = project_root / "config.json"
+    cfg_path = Path(cfg_path) if cfg_path else project_root / "config.json"
     if cfg_path.exists():
         return cfg_path
 
@@ -43,6 +47,7 @@ def ensure_user_config(project_root: Path) -> Path:
     if not data["identity"].get("handle"):
         data["identity"]["handle"] = _default_nick()
 
+    cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(json.dumps(data, indent=2))
     try:
         cfg_path.chmod(0o600)
@@ -51,9 +56,9 @@ def ensure_user_config(project_root: Path) -> Path:
     return cfg_path
 
 
-def set_nickname(project_root: Path, new_nick: str) -> None:
+def set_nickname(project_root: Path, new_nick: str, cfg_path: Path | None = None) -> None:
     """Persist a new handle/nick to config.json."""
-    cfg_path = ensure_user_config(project_root)
+    cfg_path = ensure_user_config(project_root, cfg_path)
     data = json.loads(cfg_path.read_text())
     data.setdefault("identity", {})["handle"] = new_nick
     data.setdefault("irc", {})["bot_nick"] = data["irc"].get("bot_nick") or "ShadowSentinel"

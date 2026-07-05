@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -206,7 +207,7 @@ func (s *RelayServer) handleTitanFrame(data []byte) {
 	opCode := data[0]
 	missionID := (uint16(data[1]) << 8) | uint16(data[2])
 	
-	msg := Message{Type: "titan_event", MissionID: missionID}
+	msg := Message{Type: "titan_event", MissionID: strconv.Itoa(int(missionID))}
 	
 	switch opCode {
 	case 0xA1: // AI_DELEGATION

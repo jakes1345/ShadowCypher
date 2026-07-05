@@ -113,6 +113,19 @@ PACMAN
         GOBIN=/usr/local/bin go install github.com/projectdiscovery/katana/cmd/katana@latest 2>&1 | tail -3 || true
     fi
 
+    # testssl.sh (TLS/SSL config + vuln auditor — not in any Arch repo; pure
+    # bash + openssl, no build step needed, just clone and symlink)
+    if ! command -v testssl.sh >/dev/null; then
+        echo "[*] Installing testssl.sh..."
+        if git clone --depth 1 https://github.com/drwetter/testssl.sh.git \
+            /opt/testssl.sh 2>&1 | tail -3; then
+            ln -sf /opt/testssl.sh/testssl.sh /usr/local/bin/testssl.sh
+            echo "    testssl.sh installed"
+        else
+            echo "    testssl.sh clone failed (skipping)"
+        fi
+    fi
+
     # ── 3. BlackArch keyring (if it failed at build time) ──────────────────
     if [[ ! -f /etc/pacman.d/blackarch-keyring ]] && command -v pacman >/dev/null 2>&1; then
         echo "[*] Importing BlackArch keyring..."
