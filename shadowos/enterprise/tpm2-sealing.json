@@ -1,0 +1,258 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_at": "2026-01-15T00:00:00Z",
+    "last_updated": "2026-01-15T00:00:00Z",
+    "description": "TPM 2.0 Sealing Configuration for ShadowCypher Enterprise",
+    "product": "ShadowCypher",
+    "module": "TPM 2.0 Key Sealing"
+  },
+  "tpm_device": {
+    "path": "/dev/tpm0",
+    "type": "tpm2",
+    "firmware": "trusted_firmware_2_0",
+    "access_method": "kernel_character_device",
+    "required_group": "tpm",
+    "documentation": "Standard Linux TPM 2.0 character device interface"
+  },
+  "sealing_policy": {
+    "name": "ShadowCypher_Primary_Sealing",
+    "description": "Seals encryption keys to platform firmware, configuration, and secure boot state",
+    "pcr_selection": [0, 1, 7],
+    "pcr_hash_algorithm": "sha256",
+    "pcr_explanation": {
+      "pcr0": {
+        "name": "Core Root of Trust for Measurement",
+        "binds_to": "Firmware integrity (CRTM, BIOS/UEFI code)",
+        "purpose": "Detects firmware modifications or malicious BIOS",
+        "stability": "Changes on firmware updates only",
+        "risk_high": false,
+        "risk_high_reason": "Legitimate firmware updates require re-sealing"
+      },
+      "pcr1": {
+        "name": "Platform Configuration",
+        "binds_to": "Hardware configuration (CPU, chipset, memory layout)",
+        "purpose": "Detects hardware changes or hardware swaps",
+        "stability": "Changes only on significant hardware modifications",
+        "risk_high": false,
+        "risk_high_reason": "Minor hardware changes (RAM upgrade) may trigger re-sealing"
+      },
+      "pcr7": {
+        "name": "Secure Boot State",
+        "binds_to": "Secure Boot enablement, Boot Manager, Bootloader",
+        "purpose": "Detects secure boot bypass or tampering",
+        "stability": "Stable unless secure boot disabled",
+        "risk_high": true,
+        "risk_high_reason": "Disabling secure boot prevents unsealing - requires recovery key"
+      }
+    },
+    "sealing_workflow": [
+      "1. Read current PCR values (0, 1, 7)",
+      "2. Create sealing policy: keys only unseal when PCRs match",
+      "3. Seal encryption key with TPM primary key",
+      "4. Store sealed blob (cannot be read without matching PCRs)",
+      "5. Verify unsealing works (test before deployment)"
+    ]
+  },
+  "key_derivation": {
+    "algorithm": "TPM2_KDF_HMAC_SHA256",
+    "key_length_bits": 256,
+    "master_key_derivation": "TPM_RNG -> HMAC-SHA256 -> 256-bit key",
+    "backup_key_derivation": "OpenSSL_RAND -> 256-bit independent key",
+    "key_rotation_interval_days": 90,
+    "documentation": "Master key never leaves TPM; backup key provides independent access"
+  },
+  "backup_unsealing": {
+    "enabled": true,
+    "method": "independent_backup_key",
+    "storage_location": "/var/lib/shadowcypher/backup-unseal.key",
+    "backup_key_length_bits": 256,
+    "key_derivation": "OpenSSL random, independent of TPM",
+    "purpose": "Recovery access if TPM fails or is inaccessible",
+    "security_model": "Separate security boundary from TPM; requires secure storage",
+    "recommendations": [
+      "Store backup key in password manager (KeePass, 1Password, Bitwarden)",
+      "Keep copy in physical safe or secure location",
+      "Rotate annually or after security incidents",
+      "Audit all backup key usage attempts"
+    ]
+  },
+  "recovery_thresholds": {
+    "tpm_unavailable_timeout_seconds": 30,
+    "pcr_mismatch_action": "deny_unseal_and_alert",
+    "max_recovery_attempts": 5,
+    "recovery_attempt_backoff_seconds": 60,
+    "alert_on_recovery_threshold_exceeded": true,
+    "escalation_contact": "security-admin@shadowcypher.site",
+    "recovery_procedures": {
+      "scenario_1": {
+        "name": "TPM Hardware Failure",
+        "action": "Use backup unsealing key",
+        "steps": [
+          "Boot from recovery media",
+          "Load backup-unseal.key",
+          "Run: cryptsetup open --key-file=/path/to/backup.key /dev/encrypted_device shadowcypher",
+          "Proceed with system recovery or replacement"
+        ]
+      },
+      "scenario_2": {
+        "name": "Firmware Update (PCR Change)",
+        "action": "Re-seal after firmware update",
+        "steps": [
+          "Boot into BIOS/UEFI",
+          "Apply firmware update from vendor",
+          "Boot into OS",
+          "Run: tpm2-config.sh seal-create (creates new sealing policy)",
+          "Run: tpm2-config.sh unseal-key (verify re-sealing)",
+          "Generate new backup key: tpm2-config.sh backup-key-generate"
+        ]
+      },
+      "scenario_3": {
+        "name": "Secure Boot Disabled",
+        "action": "Recovery access and re-enable secure boot",
+        "steps": [
+          "Boot from recovery media (may not have TPM-sealed access)",
+          "Re-enable Secure Boot in BIOS/UEFI",
+          "Boot into OS",
+          "Re-seal keys: tpm2-config.sh seal-create && tpm2-config.sh seal-key"
+        ]
+      }
+    }
+  },
+  "audit_settings": {
+    "enabled": true,
+    "log_location": "/var/log/shadowcypher-tpm.log",
+    "log_rotation": {
+      "enabled": true,
+      "max_size_mb": 100,
+      "retention_days": 90,
+      "compression": "gzip"
+    },
+    "events_logged": [
+      "tpm_check_success",
+      "tpm_check_failure",
+      "tpm_initialization",
+      "key_seal_operation",
+      "key_unseal_operation",
+      "pcr_verification_success",
+      "pcr_verification_failure",
+      "attestation_quote_generated",
+      "attestation_quote_verified",
+      "backup_key_generated",
+      "recovery_unlock_attempt",
+      "recovery_unlock_success",
+      "recovery_unlock_failure",
+      "pcr_mismatch_detected",
+      "tpm_unavailable"
+    ],
+    "audit_frequency": {
+      "manual_audit_interval_hours": 24,
+      "weekly_summary": true,
+      "monthly_deep_review": true
+    },
+    "alert_thresholds": {
+      "consecutive_unseal_failures": 3,
+      "pcr_mismatches_per_day": 1,
+      "recovery_attempts_per_hour": 2
+    }
+  },
+  "threat_model": {
+    "assumptions": [
+      "TPM 2.0 module is genuine and firmware is not compromised",
+      "Secure Boot is enabled and enforced throughout boot chain",
+      "UEFI/BIOS firmware is kept up-to-date",
+      "Physical access to device is controlled",
+      "System entropy is sufficient for cryptographic operations",
+      "Backup key is stored securely (separate from device)"
+    ],
+    "protected_against": {
+      "encryption_key_extraction": "Key sealed in TPM, never plaintext on disk",
+      "firmware_tampering": "PCR0 sealing detects BIOS/UEFI modifications",
+      "hardware_substitution": "PCR1 sealing detects hardware changes",
+      "secure_boot_bypass": "PCR7 sealing detects boot integrity violations",
+      "replay_attacks": "Attestation uses nonce + monotonic counter",
+      "unauthorized_unsealing": "Requires matching PCRs or backup key"
+    },
+    "not_protected_against": [
+      "Physical attacks on TPM module (side-channel, reverse engineering)",
+      "Malicious firmware (assumes UEFI/BIOS is trustworthy)",
+      "Compromised kernel post-boot (integrity assumes clean boot)",
+      "Cold-boot attacks (mitigated by FDE + RAM encryption, not TPM)",
+      "Hypervisor attacks in VM environments (requires vTPM + different model)"
+    ]
+  },
+  "compliance_requirements": {
+    "standards": [
+      "NIST SP 800-147B (Secure Boot Guidelines)",
+      "NIST SP 800-53 SC-7 (Boundary Protection)",
+      "FIPS 140-2 (Cryptographic Modules)",
+      "Common Criteria EAL4"
+    ],
+    "security_controls": [
+      "SC-7: Cryptographic binding to hardware platform",
+      "SC-28: Encrypted key material at rest",
+      "SI-7: Hardware-based integrity verification",
+      "AU-2: Audit and accountability logging"
+    ]
+  },
+  "operational_procedures": {
+    "initial_setup": {
+      "description": "Steps to set up TPM 2.0 sealing for the first time",
+      "procedures": [
+        {
+          "step": 1,
+          "command": "tpm2-config.sh check",
+          "description": "Verify TPM 2.0 is present and accessible",
+          "expected_output": "TPM 2.0 detected and accessible"
+        },
+        {
+          "step": 2,
+          "command": "tpm2-config.sh init",
+          "description": "Initialize TPM environment and create primary key",
+          "expected_output": "Primary key created"
+        },
+        {
+          "step": 3,
+          "command": "tpm2-config.sh seal-create",
+          "description": "Create sealing policy based on current PCR values",
+          "expected_output": "Sealing policy created for PCRs: 0,1,7"
+        },
+        {
+          "step": 4,
+          "command": "tpm2-config.sh seal-key <encryption_key>",
+          "description": "Seal the LUKS master key to TPM",
+          "expected_output": "Key sealed and stored"
+        },
+        {
+          "step": 5,
+          "command": "tpm2-config.sh unseal-test",
+          "description": "Test that unsealing works correctly",
+          "expected_output": "Seal/unseal test PASSED"
+        },
+        {
+          "step": 6,
+          "command": "tpm2-config.sh backup-key-generate",
+          "description": "Generate independent backup unsealing key",
+          "expected_output": "Backup key generated",
+          "important": "Store backup key in secure location, separate from device"
+        }
+      ]
+    },
+    "maintenance": {
+      "daily": "Monitor system for TPM errors in logs",
+      "weekly": "Review audit log for anomalies",
+      "monthly": "Run attestation verification: tpm2-config.sh attestation",
+      "quarterly": "Test recovery procedures with backup key",
+      "annually": "Update firmware, rotate backup key, re-seal keys"
+    }
+  },
+  "feature_flags": {
+    "tpm_sealing_enabled": true,
+    "pcr_enforcement_strict": true,
+    "backup_key_required": true,
+    "audit_logging_enabled": true,
+    "attestation_enabled": true,
+    "secure_boot_required": true,
+    "recovery_mode_enabled": true
+  }
+}

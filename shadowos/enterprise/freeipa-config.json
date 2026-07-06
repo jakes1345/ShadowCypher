@@ -1,0 +1,251 @@
+{
+  "freeipa": {
+    "realm": "SHADOWCYPHER.SITE",
+    "domain": "shadowcypher.site",
+    "servers": [
+      {
+        "hostname": "freeipa-1.shadowcypher.site",
+        "role": "master",
+        "priority": 10
+      },
+      {
+        "hostname": "freeipa-2.shadowcypher.site",
+        "role": "replica",
+        "priority": 20
+      },
+      {
+        "hostname": "freeipa-3.shadowcypher.site",
+        "role": "replica",
+        "priority": 30
+      }
+    ],
+    "kdc_servers": [
+      "freeipa-1.shadowcypher.site",
+      "freeipa-2.shadowcypher.site",
+      "freeipa-3.shadowcypher.site"
+    ]
+  },
+  "ldap": {
+    "protocol": "ldaps",
+    "port": 636,
+    "base_dn": "dc=shadowcypher,dc=site",
+    "bind_dn": "uid=admin,cn=users,cn=accounts,dc=shadowcypher,dc=site",
+    "connection_timeout": 10,
+    "operation_timeout": 30,
+    "pool_size": 10,
+    "tls_ca_cert": "/etc/ipa/ca.crt",
+    "tls_client_cert": "/etc/ipa/client.crt",
+    "tls_client_key": "/etc/ipa/client.key",
+    "require_cert": "DEMAND",
+    "schema_version": "3"
+  },
+  "kerberos": {
+    "ccache_type": "FILE",
+    "ccache_dir": "/tmp",
+    "keytab_path": "/etc/krb5.keytab",
+    "clockskew": 300,
+    "ticket_lifetime": 86400,
+    "renew_lifetime": 604800,
+    "forwardable": true,
+    "proxiable": false,
+    "canonicalize": false,
+    "default_principal": "admin@SHADOWCYPHER.SITE"
+  },
+  "password_policy": {
+    "min_length": 12,
+    "max_age_days": 90,
+    "min_age_days": 0,
+    "history_count": 24,
+    "max_fail_count": 6,
+    "fail_interval_seconds": 1800,
+    "lockout_duration_seconds": 1800,
+    "require_uppercase": true,
+    "require_lowercase": true,
+    "require_digits": true,
+    "require_special": true
+  },
+  "user_sync": {
+    "vault_endpoint": "https://vault.shadowcypher.site/api/v1",
+    "vault_token": "${VAULT_TOKEN}",
+    "sync_interval_seconds": 300,
+    "batch_size": 50,
+    "retry_attempts": 3,
+    "retry_delay_seconds": 10,
+    "conflict_resolution": "vault_wins",
+    "auto_disable_missing": true,
+    "audit_changes": true
+  },
+  "groups": {
+    "default_groups": [
+      {
+        "name": "shadow-admins",
+        "description": "Guardian vault administrators with full system access",
+        "gidNumber": 5000
+      },
+      {
+        "name": "shadow-auditors",
+        "description": "Security auditors with read-only access to logs and configurations",
+        "gidNumber": 5001
+      },
+      {
+        "name": "shadow-analysts",
+        "description": "Threat analysts with operational access to investigation tools",
+        "gidNumber": 5002
+      },
+      {
+        "name": "shadow-soc",
+        "description": "Security operations center staff with limited operational access",
+        "gidNumber": 5003
+      },
+      {
+        "name": "shadow-incident-response",
+        "description": "Incident response team with elevated investigation privileges",
+        "gidNumber": 5004
+      },
+      {
+        "name": "shadow-compliance",
+        "description": "Compliance and risk management personnel",
+        "gidNumber": 5005
+      }
+    ],
+    "role_mappings": {
+      "admin": ["shadow-admins"],
+      "auditor": ["shadow-auditors"],
+      "analyst": ["shadow-analysts"],
+      "soc": ["shadow-soc"],
+      "incident-response": ["shadow-incident-response", "shadow-analysts"],
+      "compliance": ["shadow-compliance"]
+    }
+  },
+  "sudo_rules": [
+    {
+      "name": "soc-operator-sudo",
+      "description": "Limited operational privileges for SOC operators",
+      "users": ["%shadow-soc"],
+      "hosts": ["+shadowcypher-servers"],
+      "commands": [
+        "/bin/systemctl restart *",
+        "/usr/bin/tail -f /var/log/*",
+        "/usr/bin/journalctl -f"
+      ],
+      "run_as_user": "root",
+      "run_as_group": "root",
+      "options": ["!authenticate", "log_output"]
+    },
+    {
+      "name": "incident-response-sudo",
+      "description": "Full operational privileges for incident response team",
+      "users": ["%shadow-incident-response"],
+      "hosts": ["+shadowcypher-servers"],
+      "commands": ["ALL"],
+      "run_as_user": "ALL",
+      "run_as_group": "ALL",
+      "options": ["!authenticate", "log_output"]
+    },
+    {
+      "name": "admin-unrestricted-sudo",
+      "description": "Unrestricted sudo for system administrators",
+      "users": ["%shadow-admins"],
+      "hosts": ["ALL"],
+      "commands": ["ALL"],
+      "run_as_user": "ALL",
+      "run_as_group": "ALL",
+      "options": ["log_output", "log_input"]
+    }
+  ],
+  "certificate_authority": {
+    "root_cn": "ShadowCypher Root",
+    "root_validity_days": 3650,
+    "intermediate_cn": "ShadowCypher Enterprise CA",
+    "intermediate_validity_days": 1825,
+    "server_cert_validity_days": 1095,
+    "user_cert_validity_days": 365,
+    "crl_next_update_days": 30,
+    "renewal_warning_days": 60,
+    "auto_renew": true,
+    "key_size": 2048,
+    "signature_algorithm": "sha256WithRSAEncryption"
+  },
+  "audit": {
+    "enabled": true,
+    "log_level": "info",
+    "log_file": "/var/log/freeipa/audit.log",
+    "log_format": "json",
+    "retention_days": 90,
+    "siem_endpoint": "https://siem.shadowcypher.site/api/v1/logs",
+    "siem_enabled": true,
+    "log_user_changes": true,
+    "log_group_changes": true,
+    "log_sudo_usage": true,
+    "log_certificate_operations": true,
+    "log_authentication_failures": true,
+    "log_password_changes": true,
+    "alert_on_admin_changes": true,
+    "alert_threshold_failed_logins": 5
+  },
+  "monitoring": {
+    "health_check_interval_seconds": 60,
+    "ldap_check_enabled": true,
+    "kdc_check_enabled": true,
+    "ca_check_enabled": true,
+    "replication_check_enabled": true,
+    "alert_replication_lag_seconds": 300,
+    "alert_ldap_down": true,
+    "alert_kdc_down": true,
+    "metrics_endpoint": "https://prometheus.shadowcypher.site/metrics"
+  },
+  "security": {
+    "tls_min_version": "1.2",
+    "allowed_ciphers": "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384",
+    "disable_anonymous_bind": true,
+    "enforce_password_reset_on_first_login": true,
+    "session_timeout_minutes": 60,
+    "max_failed_login_attempts": 6,
+    "account_lockout_duration_minutes": 30,
+    "password_expiry_warning_days": 14,
+    "require_mfa": false,
+    "mfa_grace_period_days": 7,
+    "ip_whitelist_enabled": false,
+    "ip_whitelist": []
+  },
+  "integration": {
+    "guardian_vault": {
+      "enabled": true,
+      "sync_enabled": true,
+      "attributes_map": {
+        "user_id": "uid",
+        "full_name": "cn",
+        "email": "mail",
+        "role": "description",
+        "clearance_level": "clearanceLevel",
+        "status": "nsAccountLock"
+      }
+    },
+    "sssd": {
+      "enabled": true,
+      "provider": "ldap",
+      "auth_provider": "krb5",
+      "chpass_provider": "krb5",
+      "sudo_provider": "ldap",
+      "enumerate": false,
+      "cache_expiration_seconds": 3600
+    },
+    "pam": {
+      "enabled": true,
+      "mkhomedir": true,
+      "required_pam_modules": ["pam_sss.so", "pam_krb5.so"]
+    }
+  },
+  "deployment": {
+    "environment": "production",
+    "ha_enabled": true,
+    "replica_count": 3,
+    "backup_enabled": true,
+    "backup_directory": "/var/backups/freeipa",
+    "backup_retention_days": 30,
+    "disaster_recovery_enabled": true,
+    "dns_replication": true,
+    "ldap_replication": true,
+    "ca_replication": true
+  }
+}
