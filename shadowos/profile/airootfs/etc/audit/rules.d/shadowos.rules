@@ -1,0 +1,39 @@
+# ShadowOS Audit Rules - CIS Compliance
+
+# Remove any existing rules
+-D
+
+# Buffer Size
+-b 8192
+
+# Failure Mode
+-f 2
+
+# Audit system configuration
+-w /etc/audit/ -k audit-config
+-w /etc/libaudit.conf -k audit-config
+-w /etc/audisp/ -k audit-config
+
+# File integrity monitoring
+-w /bin/ -p wa -k binaries
+-w /sbin/ -p wa -k binaries
+-w /usr/bin/ -p wa -k binaries
+-w /usr/sbin/ -p wa -k binaries
+
+# System calls - process execution
+-a exit,always -F arch=b64 -S execve -k exec
+
+# System calls - authentication
+-a exit,always -F arch=b64 -S adjtimex,settimeofday -k time-change
+-a exit,always -F arch=b64 -S sethostname,setdomainname -k network-modifications
+-a exit,always -F arch=b64 -S setsockopt -k network-modifications
+
+# Monitor for file deletion
+-a exit,always -F arch=b64 -S unlink,unlinkat,rename,renameat -F auid>=1000 -F auid!=-1 -k delete
+
+# System administration monitoring
+-w /etc/sudoers -p wa -k scope
+-w /etc/sudoers.d/ -p wa -k scope
+
+# Make configuration immutable
+-e 2
