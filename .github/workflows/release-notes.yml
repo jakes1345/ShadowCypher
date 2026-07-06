@@ -1,0 +1,27 @@
+name: Create Release Notes
+
+on:
+  push:
+    tags:
+      - 'shadowos-v*'
+
+jobs:
+  release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Generate release notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/shadowos-v}
+          python3 shadowos/release_notes.py "$VERSION" > /tmp/release_notes.md
+
+      - name: Upload release notes
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: /tmp/release_notes.md
