@@ -1,0 +1,5 @@
+# ShadowOS DNS Security Configuration
+
+# Use systemd-resolved
+nameserver 127.0.0.53
+options edns0 trust-ad

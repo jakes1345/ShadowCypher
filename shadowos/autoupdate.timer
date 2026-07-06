@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily ShadowOS Security Update Check
+Requires=autoupdate.service
+
+[Timer]
+OnBootSec=1h
+OnUnitActiveSec=1d
+AccuracySec=1m
+
+[Install]
+WantedBy=timers.target

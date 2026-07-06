@@ -1,0 +1,13 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Path
+Target = usr/*
+Target = etc/*
+
+[Action]
+Description = Checking for security updates...
+When = PostTransaction
+Exec = /usr/local/bin/shadowos-autoupdate-check
+NeedsTargets
