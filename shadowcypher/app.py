@@ -201,7 +201,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         lbl = Gtk.Label()
         lbl.set_markup(
             f"<b>ShadowCypher v{info['version']} available</b>  "
-            f"<span color='#94a3b8'>Run <tt>shadowcypher --update</tt> or pull from GitHub.</span>"
+            f"<span color='#94a3b8'>Run <tt>shadowcypher --update</tt> to install.</span>"
         )
         bar.get_content_area().pack_start(lbl, False, False, 0)
         bar.connect("response", lambda b, _: b.destroy())

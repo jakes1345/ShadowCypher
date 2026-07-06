@@ -245,7 +245,7 @@ class HysteriaTransport:
         if not self.available:
             print("  hysteria2 binary not found.")
             print("  Arch/ShadowOS:  yay -S hysteria")
-            print("  Other Linux:    https://github.com/apernet/hysteria/releases")
+            print("  Other Linux:    Visit https://hysteria.network for downloads")
             return False
 
         print("  You need a Hysteria2 server. Options:")
