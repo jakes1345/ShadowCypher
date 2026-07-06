@@ -1,0 +1,296 @@
+{
+  "registry_version": "1.0.0",
+  "last_updated": "2026-07-05T00:00:00Z",
+  "devices": [
+    {
+      "id": "APPLE-IPHONE-15-PRO",
+      "manufacturer": "Apple",
+      "model": "iPhone 15 Pro",
+      "variant": "A3093, A3096",
+      "specifications": {
+        "processor": "Apple A17 Pro",
+        "memory_gb": 8,
+        "storage_type": "NVMe",
+        "storage_capacity_gb": 256,
+        "form_factor": "smartphone",
+        "os_platforms": ["iOS 17+"]
+      },
+      "certification": {
+        "level": "gold",
+        "issued_date": "2024-01-15",
+        "expiration_date": "2026-01-15",
+        "compliance_standards": ["NIST CSF", "CIS Controls", "OWASP Mobile"],
+        "security_patches_required": true,
+        "biometric_support": true,
+        "encrypted_storage": true,
+        "secure_boot": true
+      },
+      "audit_trail": {
+        "last_verified": "2026-07-05T00:00:00Z",
+        "verification_count": 12,
+        "issues_found": 0
+      }
+    },
+    {
+      "id": "APPLE-IPHONE-15",
+      "manufacturer": "Apple",
+      "model": "iPhone 15",
+      "variant": "A3087, A3090",
+      "specifications": {
+        "processor": "Apple A16 Bionic",
+        "memory_gb": 6,
+        "storage_type": "NVMe",
+        "storage_capacity_gb": 128,
+        "form_factor": "smartphone",
+        "os_platforms": ["iOS 17+"]
+      },
+      "certification": {
+        "level": "gold",
+        "issued_date": "2023-09-22",
+        "expiration_date": "2025-09-22",
+        "compliance_standards": ["NIST CSF", "CIS Controls", "OWASP Mobile"],
+        "security_patches_required": true,
+        "biometric_support": true,
+        "encrypted_storage": true,
+        "secure_boot": true
+      },
+      "audit_trail": {
+        "last_verified": "2026-07-04T00:00:00Z",
+        "verification_count": 18,
+        "issues_found": 0
+      }
+    },
+    {
+      "id": "GOOGLE-PIXEL-9-PRO",
+      "manufacturer": "Google",
+      "model": "Pixel 9 Pro",
+      "variant": "G6PJ6",
+      "specifications": {
+        "processor": "Google Tensor G4",
+        "memory_gb": 16,
+        "storage_type": "UFS 4.0",
+        "storage_capacity_gb": 256,
+        "form_factor": "smartphone",
+        "os_platforms": ["Android 14+", "Android 15+"]
+      },
+      "certification": {
+        "level": "gold",
+        "issued_date": "2024-08-22",
+        "expiration_date": "2026-08-22",
+        "compliance_standards": ["NIST CSF", "CIS Controls", "OWASP Mobile"],
+        "security_patches_required": true,
+        "biometric_support": true,
+        "encrypted_storage": true,
+        "secure_boot": true
+      },
+      "audit_trail": {
+        "last_verified": "2026-07-05T00:00:00Z",
+        "verification_count": 8,
+        "issues_found": 0
+      }
+    },
+    {
+      "id": "SAMSUNG-GALAXY-S24-ULTRA",
+      "manufacturer": "Samsung",
+      "model": "Galaxy S24 Ultra",
+      "variant": "SM-S918B",
+      "specifications": {
+        "processor": "Snapdragon 8 Gen 3",
+        "memory_gb": 12,
+        "storage_type": "UFS 4.0",
+        "storage_capacity_gb": 256,
+        "form_factor": "smartphone",
+        "os_platforms": ["Android 14+", "Android 15+"]
+      },
+      "certification": {
+        "level": "silver",
+        "issued_date": "2024-01-29",
+        "expiration_date": "2025-07-29",
+        "compliance_standards": ["NIST CSF", "CIS Controls"],
+        "security_patches_required": true,
+        "biometric_support": true,
+        "encrypted_storage": true,
+        "secure_boot": true
+      },
+      "audit_trail": {
+        "last_verified": "2026-07-03T00:00:00Z",
+        "verification_count": 15,
+        "issues_found": 1
+      }
+    },
+    {
+      "id": "APPLE-MACBOOK-PRO-16-M4",
+      "manufacturer": "Apple",
+      "model": "MacBook Pro 16-inch",
+      "variant": "M4 Max",
+      "specifications": {
+        "processor": "Apple M4 Max",
+        "memory_gb": 36,
+        "storage_type": "NVMe",
+        "storage_capacity_gb": 1024,
+        "form_factor": "laptop",
+        "os_platforms": ["macOS 14.6+", "macOS 15+"]
+      },
+      "certification": {
+        "level": "gold",
+        "issued_date": "2024-05-14",
+        "expiration_date": "2026-05-14",
+        "compliance_standards": ["NIST CSF", "CIS Controls", "ISO 27001"],
+        "security_patches_required": true,
+        "biometric_support": true,
+        "encrypted_storage": true,
+        "secure_boot": true
+      },
+      "audit_trail": {
+        "last_verified": "2026-07-05T00:00:00Z",
+        "verification_count": 10,
+        "issues_found": 0
+      }
+    },
+    {
+      "id": "DELL-XPS-15-PLUS",
+      "manufacturer": "Dell",
+      "model": "XPS 15 Plus",
+      "variant": "9730",
+      "specifications": {
+        "processor": "Intel Core Ultra 9 185H",
+        "memory_gb": 32,
+        "storage_type": "NVMe",
+        "storage_capacity_gb": 1024,
+        "form_factor": "laptop",
+        "os_platforms": ["Windows 11 Pro", "Ubuntu 24.04"]
+      },
+      "certification": {
+        "level": "silver",
+        "issued_date": "2024-02-01",
+        "expiration_date": "2025-08-01",
+        "compliance_standards": ["NIST CSF", "CIS Controls"],
+        "security_patches_required": true,
+        "biometric_support": true,
+        "encrypted_storage": true,
+        "secure_boot": true
+      },
+      "audit_trail": {
+        "last_verified": "2026-07-02T00:00:00Z",
+        "verification_count": 9,
+        "issues_found": 2
+      }
+    },
+    {
+      "id": "LENOVO-THINKPAD-X1-CARBON",
+      "manufacturer": "Lenovo",
+      "model": "ThinkPad X1 Carbon",
+      "variant": "Gen 13",
+      "specifications": {
+        "processor": "Intel Core Ultra 9",
+        "memory_gb": 32,
+        "storage_type": "NVMe",
+        "storage_capacity_gb": 1024,
+        "form_factor": "laptop",
+        "os_platforms": ["Windows 11 Pro", "Fedora 40+"]
+      },
+      "certification": {
+        "level": "silver",
+        "issued_date": "2024-03-15",
+        "expiration_date": "2025-09-15",
+        "compliance_standards": ["NIST CSF", "CIS Controls"],
+        "security_patches_required": true,
+        "biometric_support": true,
+        "encrypted_storage": true,
+        "secure_boot": true
+      },
+      "audit_trail": {
+        "last_verified": "2026-07-04T00:00:00Z",
+        "verification_count": 7,
+        "issues_found": 0
+      }
+    },
+    {
+      "id": "APPLE-IPAD-PRO-12-M4",
+      "manufacturer": "Apple",
+      "model": "iPad Pro 12.9-inch",
+      "variant": "M4",
+      "specifications": {
+        "processor": "Apple M4",
+        "memory_gb": 16,
+        "storage_type": "NVMe",
+        "storage_capacity_gb": 512,
+        "form_factor": "tablet",
+        "os_platforms": ["iPadOS 17+"]
+      },
+      "certification": {
+        "level": "gold",
+        "issued_date": "2024-05-15",
+        "expiration_date": "2026-05-15",
+        "compliance_standards": ["NIST CSF", "CIS Controls", "OWASP Mobile"],
+        "security_patches_required": true,
+        "biometric_support": true,
+        "encrypted_storage": true,
+        "secure_boot": true
+      },
+      "audit_trail": {
+        "last_verified": "2026-07-05T00:00:00Z",
+        "verification_count": 5,
+        "issues_found": 0
+      }
+    },
+    {
+      "id": "SAMSUNG-GALAXY-TAB-S10-ULTRA",
+      "manufacturer": "Samsung",
+      "model": "Galaxy Tab S10 Ultra",
+      "variant": "SM-X910",
+      "specifications": {
+        "processor": "Snapdragon 8 Gen 3 Leading Version",
+        "memory_gb": 12,
+        "storage_type": "UFS 4.0",
+        "storage_capacity_gb": 512,
+        "form_factor": "tablet",
+        "os_platforms": ["Android 14+", "Android 15+"]
+      },
+      "certification": {
+        "level": "bronze",
+        "issued_date": "2024-04-10",
+        "expiration_date": "2025-04-10",
+        "compliance_standards": ["NIST CSF"],
+        "security_patches_required": true,
+        "biometric_support": true,
+        "encrypted_storage": true,
+        "secure_boot": false
+      },
+      "audit_trail": {
+        "last_verified": "2026-06-28T00:00:00Z",
+        "verification_count": 4,
+        "issues_found": 3
+      }
+    },
+    {
+      "id": "NVIDIA-JETSON-ORIN-NX",
+      "manufacturer": "NVIDIA",
+      "model": "Jetson Orin NX",
+      "variant": "Development Kit",
+      "specifications": {
+        "processor": "NVIDIA Orin NX",
+        "memory_gb": 8,
+        "storage_type": "microSD",
+        "storage_capacity_gb": 64,
+        "form_factor": "single-board-computer",
+        "os_platforms": ["JetPack 6.0+"]
+      },
+      "certification": {
+        "level": "bronze",
+        "issued_date": "2024-06-01",
+        "expiration_date": "2025-06-01",
+        "compliance_standards": ["NIST CSF"],
+        "security_patches_required": false,
+        "biometric_support": false,
+        "encrypted_storage": false,
+        "secure_boot": false
+      },
+      "audit_trail": {
+        "last_verified": "2026-07-01T00:00:00Z",
+        "verification_count": 3,
+        "issues_found": 5
+      }
+    }
+  ]
+}
