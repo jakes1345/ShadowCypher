@@ -9,26 +9,26 @@ Version: 3.0.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Mon, 06 Jul 2026 18:51:08 +0000
+Date: Mon, 06 Jul 2026 18:55:27 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- 49b71b5c315a0c855a88964f3f4bd1d7 29 main/binary-amd64/Packages.gz
+ b911ec07310ddedb98cbef0b551d25be 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- 53dfa72bcd0237171725dda10287a4535ac4735e6f93f3ff6df355e19d295952 29 main/binary-amd64/Packages.gz
+ 2be034d2b522e15d1f986cffe10b3ee94a3d5c812d7779771aa84bda4857ae11 29 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpL+RwACgkQ2fHRjxMT
-8IOHbhAAooUpY/zvq9n+x9NIdf8LM/4gXKDgXI7KTDPnVhh7lNgt7OgBVkwoJGKK
-jR9mMjevTfpLrDw76j7ZcthW+jCuKSi9wU3nWxo0/pKWYNoc6/4p6O7uQHLBk1xf
-NIOk0v7wTCX8D6upGc2iphJZ8WihoanHnMd7FaYkSbB6Gdv/k8F0OAyvp8SbpAdz
-7JKF1S41C22wgVa5iatr1PzH8y9pTX7U/5U5aVSElUiDYqrIPtjQfGvA8r+vPxRX
-n6HBg9TVkax1et3oEqg7p4oL0X9yF8G9dOSmmp2+K3ZPrgqr7D3Iy60kkv++enyJ
-nwMWSbPtKIBOR788mTyZBUylL/aLp/hZOtnGh+iHESm/MlkhQ+UW1yJbjG7vjZQk
-SiAc7C4IgvPc/9V9kgvaRewxhE8XLNhbj+K25BH3AOqn+po8mdvStkM3lR4jbN5l
-2MlA0xsTXt4oI4qK/vNNj8j/UJFZqn9k90jVwMYZLt3tJWqi/QoM+w+Z/CkWYgl4
-7x+snQ56+SBEk/OGdKj7U10C0iH180gxKGUoHw+zvaiWAYnGNocZRhprw0ajGdd9
-cb0imn+Smi0XYCCJPYoADA7wPVvB7o236npgVbQUMjs1dwC66oOKG9irwww+qpp+
-wgFSs2RQyJ2F83KR3FrBDLqVk1Ydn8OGVcG3FdNviL9E8KBZ1dI=
-=UWhu
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpL+h8ACgkQ2fHRjxMT
+8IOGEg/+MlxFv1Dt472arUsqxuDkjLC9xTp4K6BtGYZvVKx1e0Erp37Rq7lnOpGR
+1B0vK5SriyWIFTvb/lQSHY0roslJmG0Nsh1dKjqtR5NyhfsuMR//pa9/IoeDFgyr
+gG9ycdlaw82CNCoE7KaKK/4WWxp0w1xSYaNVrq8gZSzeY3mjnEPvC9Tp2Qa8OI9g
+tchNYJxmI77hY+xVxOYtzJlwgnFS7QYgWKR41VpmnYw5iw4ItKIfpvaUKfwz0gjx
+0EOhl3bPKhaQR3Ta91c7WdcO/Yqa3HMJQEkKLDHvAQaYY2JXoNik6DnCOpl+NqC6
++Q2Q1NNaHSI+ycy4f0d0+mzC/2ErY09PGqJaherSYNEjofQDX6M17iTedlHvobuv
+xBRkc230EHBITpEt23ktQ3U1+6rHG1izeTDqflQIpAczRv6oWSVgds5gIjo+mOAC
+LHY2BH4uFI0Zl48mgbB4VO5vkT5lSzOXjIRzeUvP1+J008S7mnXf73y1PHg4ssq/
+LaF9jyH2EiCgsuqPRMdA1cAcctn3oVLFkTS77ry0pOUexY+LgcHqO6H8fhILVlO+
+EL289PbNfo+rFnDJq3kvC0YQuMCKUsIYqehRUcrPF+OkQHuBtx5zyTmTU+tkiqHm
+lVZ/VHhdB/4jx7hJd7mypsQPYQQATsaSVbrka8Zei3dtXPuWoRc=
+=Cx7j
 -----END PGP SIGNATURE-----
