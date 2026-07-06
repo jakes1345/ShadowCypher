@@ -16,6 +16,9 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
+          mkdir -p ~/.gnupg
+          echo "allow-loopback-pinentry" > ~/.gnupg/gpg-agent.conf
+          gpgconf --kill gpg-agent || true
           echo "$GPG_PRIVATE_KEY" | gpg --import --no-tty --batch --passphrase "$GPG_PASSPHRASE"
 
       - name: Build ISO
@@ -32,8 +35,14 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           cd shadowos/out
-          gpg --no-tty --batch --passphrase "$GPG_PASSPHRASE" --detach-sign shadowos-*.iso
-          gpg --no-tty --batch --passphrase "$GPG_PASSPHRASE" --detach-sign SHA256SUMS
+          gpg --pinentry-mode loopback --no-tty --batch --passphrase "$GPG_PASSPHRASE" --detach-sign shadowos-*.iso
+          gpg --pinentry-mode loopback --no-tty --batch --passphrase "$GPG_PASSPHRASE" --detach-sign SHA256SUMS
+
+      - name: Export public key
+        run: |
+          cd shadowos/out
+          gpg --export --armor > shadowos_release.pub
+          echo "Public key exported: shadowos_release.pub"
 
       - name: Create release
         uses: softprops/action-gh-release@v1
@@ -43,6 +52,7 @@ jobs:
             shadowos/out/shadowos-*.iso.sig
             shadowos/out/SHA256SUMS
             shadowos/out/SHA256SUMS.sig
+            shadowos/out/shadowos_release.pub
           body: |
             ShadowOS Enterprise ${{ github.ref_name }}
 

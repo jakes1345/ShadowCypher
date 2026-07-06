@@ -8,11 +8,16 @@
 
 ## Signing Process
 
+Automated in CI (`.github/workflows/sign-release.yml`):
+
 1. Build ISO: `./build.sh`
 2. Generate hash: `sha256sum shadowos-*.iso > SHA256SUMS`
-3. Sign hash: `gpg --detach-sign SHA256SUMS`
-4. Sign ISO: `gpg --detach-sign shadowos-*.iso`
-5. Upload all to downloads server
+3. Sign hash: `gpg --pinentry-mode loopback --detach-sign SHA256SUMS`
+4. Sign ISO: `gpg --pinentry-mode loopback --detach-sign shadowos-*.iso`
+5. Export public key: `gpg --export --armor > shadowos_release.pub`
+6. Upload all to GitHub Release
+
+Public key (`shadowos_release.pub`) is automatically exported by CI and included in releases.
 
 ## Verification (User)
 

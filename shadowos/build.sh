@@ -83,13 +83,3 @@ mkarchiso -v -w "$WORK" -o "$OUT" "$PROFILE"
 
 echo ">> Done. ISO in: $OUT"
 ls -lh "$OUT"/*.iso 2>/dev/null || ls -lh "$OUT"
-
-# Generate checksums
-echo ">> Generating checksums"
-cd "$OUT"
-sha256sum shadowos-*.iso > SHA256SUMS
-tar czf shadowos-$(date +%Y%m%d).iso.tar.gz shadowos-*.iso 2>/dev/null || true
-sha256sum shadowos-*.iso.tar.gz >> SHA256SUMS 2>/dev/null || true
-
-echo "✓ Checksums generated: SHA256SUMS"
-cat SHA256SUMS
