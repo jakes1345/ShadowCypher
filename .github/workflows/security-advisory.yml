@@ -1,0 +1,33 @@
+name: Security Advisory Check
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+  push:
+    paths:
+      - 'shadowos/profile/packages.x86_64'
+      - 'shadowos/build.sh'
+
+jobs:
+  security-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run security scan
+        run: |
+          chmod +x shadowos/security_scan.sh
+          ./shadowos/security_scan.sh
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report-*.md
+
+      - name: Check for critical vulnerabilities
+        run: |
+          if grep -qi "critical" security-report-*.md; then
+            echo "⚠️  Critical vulnerabilities found!"
+            exit 1
+          fi
