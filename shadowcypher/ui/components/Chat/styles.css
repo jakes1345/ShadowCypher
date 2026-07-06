@@ -1,0 +1,124 @@
+/* shadowcypher/ui/components/Chat/styles.css */
+.vault-unlock-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.vault-unlock-dialog {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 2px solid #00ff41;
+    border-radius: 8px;
+    padding: 40px;
+    width: 300px;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+    font-family: 'Courier New', monospace;
+}
+
+.vault-lock-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.vault-unlock-dialog h2 {
+    color: #00ff41;
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px #00ff41;
+}
+
+.vault-password-input {
+    width: 100%;
+    padding: 10px;
+    margin: 20px 0;
+    background: #0f0f1e;
+    border: 1px solid #00ff41;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    border-radius: 4px;
+}
+
+.unlock-button {
+    background: #00ff41;
+    color: #000;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.unlock-button:hover {
+    box-shadow: 0 0 20px #00ff41;
+    transform: scale(1.05);
+}
+
+.conversation-list {
+    width: 300px;
+    background: #1a1a2e;
+    border-right: 1px solid #00ff41;
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+}
+
+.conversation-item {
+    padding: 15px;
+    border-bottom: 1px solid #0f3460;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.conversation-item:hover {
+    background: #0f3460;
+    border-left: 3px solid #00ff41;
+}
+
+.conversation-item.active {
+    background: #0f3460;
+    border-left: 3px solid #00ff41;
+}
+
+.conversation-name {
+    color: #00ff41;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.message {
+    margin: 10px 0;
+    padding: 10px 15px;
+    border-radius: 4px;
+    max-width: 70%;
+}
+
+.message.sent {
+    margin-left: auto;
+    background: #00ff41;
+    color: #000;
+}
+
+.message.received {
+    background: #0f3460;
+    color: #00ff41;
+    border-left: 2px solid #00ff41;
+}
+
+.error-message {
+    color: #ff4444;
+    margin: 10px 0;
+    font-size: 12px;
+}
