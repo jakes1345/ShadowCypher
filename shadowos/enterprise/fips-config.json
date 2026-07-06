@@ -1,0 +1,254 @@
+{
+  "fips_mode": {
+    "enabled": false,
+    "description": "FIPS 140-2 Level 1 compliance mode for ShadowCypher Enterprise",
+    "last_updated": "2026-01-15T00:00:00Z",
+    "compliance_level": "FIPS-140-2-Level-1"
+  },
+  "openssl_configuration": {
+    "version": "3.x",
+    "fips_provider": {
+      "module_path": "/usr/lib64/ossl-modules/fips.so",
+      "fallback_path": "/usr/lib/ossl-modules/fips.so",
+      "activate_on_startup": true,
+      "self_test_enabled": true
+    },
+    "base_provider": {
+      "module_path": "/usr/lib64/ossl-modules/base.so",
+      "fallback_path": "/usr/lib/ossl-modules/base.so"
+    },
+    "config_file": "/etc/ssl/fips.conf"
+  },
+  "approved_cipher_suites": {
+    "aes_cbc": [
+      "AES-128-CBC",
+      "AES-192-CBC",
+      "AES-256-CBC"
+    ],
+    "aes_gcm": [
+      "AES-128-GCM",
+      "AES-192-GCM",
+      "AES-256-GCM"
+    ],
+    "rsa": [
+      "RSA-2048-OAEP",
+      "RSA-3072-OAEP",
+      "RSA-4096-OAEP"
+    ],
+    "ecdsa": [
+      "ECDSA-P256",
+      "ECDSA-P384",
+      "ECDSA-P521"
+    ]
+  },
+  "hash_algorithms": {
+    "approved": [
+      "SHA-256",
+      "SHA-384",
+      "SHA-512",
+      "SHA-512/224",
+      "SHA-512/256"
+    ],
+    "legacy_support": [
+      "SHA-1",
+      "SHA-224"
+    ],
+    "forbidden": [
+      "MD5",
+      "MD4",
+      "MD2",
+      "SHA-0"
+    ]
+  },
+  "key_sizes": {
+    "rsa_minimum_bits": 2048,
+    "ecc_minimum_bits": 256,
+    "aes_allowed_bits": [128, 192, 256],
+    "enforcement": "strict"
+  },
+  "key_derivation": {
+    "pbkdf2": {
+      "hash_algorithm": "SHA-256",
+      "minimum_iterations": 10000,
+      "recommended_iterations": 100000,
+      "salt_length_bits": 128
+    },
+    "hkdf": {
+      "hash_algorithm": "SHA-256",
+      "info_length_bits": 256
+    }
+  },
+  "random_number_generation": {
+    "source": "/dev/urandom",
+    "method": "SP-800-90A-DRBG",
+    "seed_length_bits": 256,
+    "entropy_threshold": 1000
+  },
+  "self_testing": {
+    "enabled": true,
+    "frequency_seconds": 3600,
+    "modules_tested": [
+      "AES-encryption",
+      "SHA-256-hashing",
+      "RSA-key-generation",
+      "ECDSA-signing",
+      "PBKDF2-derivation"
+    ],
+    "timeout_seconds": 30,
+    "failure_action": "halt_operations"
+  },
+  "compliance_validation": {
+    "enabled": true,
+    "validation_interval_days": 90,
+    "check_kernel_modules": true,
+    "check_entropy_source": true,
+    "check_system_crypto_policy": true,
+    "report_generation": true
+  },
+  "compliance_reporting": {
+    "destination": "/var/log/shadowcypher/fips-compliance.log",
+    "user_report": "~/.shadowcypher/fips-compliance.json",
+    "format": "JSON",
+    "include_algorithm_audit": true,
+    "include_key_size_audit": true,
+    "include_self_test_results": true,
+    "include_system_snapshot": true,
+    "retention_days": 365,
+    "encrypt_reports": true
+  },
+  "guardian_vault_protection": {
+    "vault_encryption_algorithm": "AES-256-GCM",
+    "vault_key_derivation": "PBKDF2-SHA256",
+    "pbkdf2_iterations": 100000,
+    "vault_key_size_bits": 256,
+    "master_key_protection": "RSA-2048-OAEP",
+    "authentication_token_algorithm": "HMAC-SHA256",
+    "vault_audit_enabled": true,
+    "audit_operations": [
+      "READ",
+      "WRITE",
+      "DELETE",
+      "KEY_ROTATION",
+      "ALGORITHM_CHANGE"
+    ]
+  },
+  "kernel_crypto_modules": {
+    "required": [
+      "aes-generic",
+      "sha256_generic",
+      "ecdsa",
+      "crc32c_generic"
+    ],
+    "hardware_acceleration": {
+      "aes_ni": {
+        "module_name": "aesni_intel",
+        "available_on_cpu_feature": "aes",
+        "recommended": true
+      },
+      "ghash": {
+        "module_name": "ghash_clmul_intel",
+        "available_on_cpu_feature": "pclmul",
+        "recommended": true
+      }
+    },
+    "load_on_startup": true
+  },
+  "system_crypto_policy": {
+    "framework": "update-crypto-policies",
+    "policy_name": "FIPS",
+    "alternative_policies": [
+      "FIPS:SHA1",
+      "DEFAULT",
+      "LEGACY"
+    ],
+    "applicable_systems": [
+      "RHEL",
+      "Fedora",
+      "CentOS",
+      "Debian",
+      "Ubuntu"
+    ]
+  },
+  "emergency_fallback": {
+    "enable_on_fips_failure": false,
+    "fallback_algorithms": [
+      "AES-256-CBC",
+      "RSA-2048",
+      "SHA-256"
+    ],
+    "fallback_requires_approval": true,
+    "alert_destination": "security@shadowcypher.local",
+    "log_location": "/var/log/shadowcypher/fips-fallback.log",
+    "notification_delay_seconds": 60
+  },
+  "audit_configuration": {
+    "syslog_enabled": true,
+    "syslog_tag": "FIPS_COMPLIANCE",
+    "audit_levels": [
+      "algorithm_usage",
+      "key_generation",
+      "self_test_results",
+      "mode_changes",
+      "compliance_validation"
+    ],
+    "log_retention_days": 90,
+    "tamper_detection": true,
+    "immutable_log_location": "/var/log/shadowcypher/fips-audit.log"
+  },
+  "performance_optimization": {
+    "hardware_acceleration_enabled": true,
+    "connection_pooling_enabled": true,
+    "key_caching_enabled": true,
+    "cache_ttl_seconds": 3600,
+    "estimated_throughput_impact_percent": 8,
+    "estimated_latency_impact_ms": 2
+  },
+  "operational_procedures": {
+    "enable_requires_root": true,
+    "disable_requires_root": true,
+    "disable_requires_authorization": true,
+    "requires_system_reboot": true,
+    "backup_config_before_changes": true,
+    "validation_after_enable": true
+  },
+  "compliance_certifications": {
+    "standards": [
+      "FIPS-140-2-Level-1",
+      "NIST-SP-800-52-Rev-2",
+      "NIST-SP-800-132",
+      "NIST-SP-800-90A"
+    ],
+    "applicable_frameworks": [
+      "FedRAMP",
+      "NIST-800-171-CMMC-Level-1",
+      "DOD-Impact-Level-2",
+      "HIPAA",
+      "PCI-DSS-Level-1",
+      "SOC-2-Type-II"
+    ]
+  },
+  "troubleshooting": {
+    "common_issues": [
+      {
+        "issue": "FIPS module not available",
+        "install_command_debian": "sudo apt-get install openssl libssl-dev",
+        "install_command_rhel": "sudo dnf install openssl openssl-devel"
+      },
+      {
+        "issue": "Self-test failed",
+        "diagnostic": "Check entropy: cat /proc/sys/kernel/random/entropy_avail",
+        "diagnostic2": "Review kernel messages: dmesg | grep fips"
+      },
+      {
+        "issue": "Performance degradation",
+        "solution": "Enable hardware acceleration (AES-NI)",
+        "check": "cat /proc/cpuinfo | grep -o aes"
+      }
+    ]
+  },
+  "versioning": {
+    "schema_version": "1.0",
+    "configuration_version": "1.0",
+    "last_validated": "2026-01-15T00:00:00Z"
+  }
+}

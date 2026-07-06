@@ -1,0 +1,393 @@
+{
+  "version": "1.0.0",
+  "name": "ShadowCypher Enterprise Secure Boot Policy",
+  "description": "Production-grade UEFI Secure Boot configuration for enterprise deployments",
+  "created_at": "2026-07-05T00:00:00Z",
+  "last_updated": "2026-07-05T00:00:00Z",
+
+  "keys": {
+    "platform_key": {
+      "name": "PK",
+      "description": "Platform Key - top-level authority for Secure Boot",
+      "path": "/etc/secure-boot/keys/PK.crt",
+      "key_path": "/etc/secure-boot/keys/PK.key",
+      "algorithm": "RSA-4096",
+      "digest": "SHA256",
+      "validity_days": 3650,
+      "subject": "/CN=ShadowCypher PK",
+      "issuer": "ShadowCypher Security",
+      "rotation_interval_days": 365,
+      "critical": true
+    },
+    "key_exchange_key": {
+      "name": "KEK",
+      "description": "Key Exchange Key - manages db and dbx databases",
+      "path": "/etc/secure-boot/keys/KEK.crt",
+      "key_path": "/etc/secure-boot/keys/KEK.key",
+      "algorithm": "RSA-4096",
+      "digest": "SHA256",
+      "validity_days": 3650,
+      "subject": "/CN=ShadowCypher KEK",
+      "issuer": "ShadowCypher Security",
+      "rotation_interval_days": 90,
+      "critical": true
+    },
+    "signature_database": {
+      "name": "db",
+      "description": "Signature Database - authorized bootloaders and kernels",
+      "path": "/etc/secure-boot/keys/db.crt",
+      "key_path": "/etc/secure-boot/keys/db.key",
+      "algorithm": "RSA-4096",
+      "digest": "SHA256",
+      "validity_days": 3650,
+      "subject": "/CN=ShadowCypher db",
+      "issuer": "ShadowCypher Security",
+      "rotation_interval_days": 180,
+      "critical": true
+    },
+    "forbidden_database": {
+      "name": "dbx",
+      "description": "Forbidden Database - revoked certificates and hashes",
+      "path": "/etc/secure-boot/keys/dbx.crt",
+      "key_path": "/etc/secure-boot/keys/dbx.key",
+      "algorithm": "RSA-4096",
+      "digest": "SHA256",
+      "validity_days": 3650,
+      "subject": "/CN=ShadowCypher dbx",
+      "issuer": "ShadowCypher Security",
+      "rotation_interval_days": 180,
+      "critical": true
+    }
+  },
+
+  "signing": {
+    "algorithms": {
+      "primary": "RSA-4096",
+      "fallback": "RSA-2048",
+      "digest": "SHA256",
+      "padding": "PKCS1v15"
+    },
+    "certificate_authorities": [
+      {
+        "name": "ShadowCypher Root CA",
+        "certificate_path": "/etc/secure-boot/keys/db.crt",
+        "key_path": "/etc/secure-boot/keys/db.key",
+        "trusted": true
+      },
+      {
+        "name": "Microsoft Corporation UEFICertificate Authority",
+        "certificate_path": "/etc/secure-boot/certs/ms-uefisecurebootca.crt",
+        "key_path": null,
+        "trusted": true
+      },
+      {
+        "name": "Canonical Ltd. Secure Boot Signing",
+        "certificate_path": "/etc/secure-boot/certs/canonical-secureboot.crt",
+        "key_path": null,
+        "trusted": true
+      }
+    ],
+    "timestamp_authority": {
+      "enabled": true,
+      "url": "http://timestamp.comodoca.com/authenticode",
+      "algorithm": "SHA256"
+    }
+  },
+
+  "bootloaders": {
+    "shim": {
+      "name": "Shim Bootloader",
+      "path": "/boot/efi/EFI/ubuntu/shimx64.efi",
+      "alt_path": "/boot/efi/EFI/debian/shimx64.efi",
+      "sign": false,
+      "description": "UEFI Secure Boot shim (signed by Microsoft)",
+      "version": "15.7",
+      "verify": true,
+      "pin_to_db": false
+    },
+    "grub": {
+      "name": "GRUB Bootloader",
+      "path": "/boot/efi/EFI/ubuntu/grubx64.efi",
+      "alt_path": "/boot/efi/EFI/debian/grubx64.efi",
+      "sign": true,
+      "certificate": "/etc/secure-boot/keys/db.crt",
+      "key": "/etc/secure-boot/keys/db.key",
+      "description": "GNU GRUB EFI bootloader",
+      "version": "2.06",
+      "verify": true,
+      "pin_to_db": true,
+      "hash_algorithm": "SHA256"
+    },
+    "fallback": {
+      "name": "Fallback EFI",
+      "path": "/boot/efi/EFI/ubuntu/fallback.efi",
+      "alt_path": "/boot/efi/EFI/debian/fallback.efi",
+      "sign": false,
+      "description": "EFI fallback boot mechanism",
+      "verify": false,
+      "pin_to_db": false
+    }
+  },
+
+  "boot_entries": {
+    "preferred_order": [
+      {
+        "name": "ubuntu",
+        "description": "Ubuntu (GRUB + Secure Boot)"
+      },
+      {
+        "name": "debian",
+        "description": "Debian (GRUB + Secure Boot)"
+      },
+      {
+        "name": "cd/dvd",
+        "description": "UEFI: CD/DVD"
+      },
+      {
+        "name": "usb",
+        "description": "UEFI: USB Device"
+      }
+    ],
+    "boot_timeout_seconds": 10,
+    "allow_boot_menu": false,
+    "setup_mode_allowed": false
+  },
+
+  "kernel_parameters": {
+    "base": "quiet splash",
+    "secure_boot_related": [
+      "module.sig_enforce=1",
+      "lockdown=integrity",
+      "efi=runtime"
+    ],
+    "audit": [
+      "audit=1",
+      "audit_backlog_limit=8192"
+    ],
+    "security": [
+      "apparmor=1",
+      "security=apparmor"
+    ]
+  },
+
+  "secure_boot_mode": {
+    "name": "strict",
+    "description": "Production security mode - no unsigned code allowed",
+    "allow_recovery": false,
+    "allow_setup_mode": false,
+    "fail_secure": true,
+    "audit_only": false,
+    "options": {
+      "strict": {
+        "description": "Production mode - enforce all signatures",
+        "unsigned_allowed": false,
+        "recovery_allowed": false,
+        "boot_on_failure": false
+      },
+      "audit": {
+        "description": "Audit mode - log violations but allow boot",
+        "unsigned_allowed": true,
+        "recovery_allowed": true,
+        "boot_on_failure": true
+      }
+    }
+  },
+
+  "recovery": {
+    "enabled": true,
+    "recovery_key_path": "/etc/secure-boot/recovery/recovery.key",
+    "recovery_certificate_path": "/etc/secure-boot/recovery/recovery.crt",
+    "require_physical_access": true,
+    "require_tpm_challenge": true,
+    "max_recovery_attempts": 3,
+    "recovery_timeout_minutes": 10,
+    "audit_recovery_events": true,
+    "split_recovery_key": {
+      "enabled": true,
+      "shares": 5,
+      "threshold": 3
+    },
+    "recovery_boot_options": [
+      {
+        "name": "single_user_mode",
+        "description": "Boot to single-user mode with recovery",
+        "requires_password": true,
+        "timeout_minutes": 5
+      },
+      {
+        "name": "disable_secureboot",
+        "description": "Temporarily disable Secure Boot",
+        "requires_password": true,
+        "requires_physical_access": true,
+        "timeout_minutes": 30
+      }
+    ]
+  },
+
+  "firmware_settings": {
+    "setup_password": {
+      "enabled": true,
+      "store_location": "TPM2.0"
+    },
+    "secure_boot_variable_protection": {
+      "enabled": true,
+      "prevent_clear": true,
+      "prevent_toggle": true
+    },
+    "firmware_update_protection": {
+      "enabled": true,
+      "require_password": true,
+      "allow_rollback": false
+    },
+    "efi_variable_acl": {
+      "pk": {
+        "readable": false,
+        "writable": false
+      },
+      "kek": {
+        "readable": true,
+        "writable": false
+      },
+      "db": {
+        "readable": true,
+        "writable": false
+      },
+      "dbx": {
+        "readable": true,
+        "writable": false
+      }
+    }
+  },
+
+  "revocation": {
+    "revocation_database": "/etc/secure-boot/revocation/revoked-hashes.db",
+    "revocation_certificates": "/etc/secure-boot/revocation/revoked-certs/",
+    "auto_update_enabled": true,
+    "update_frequency_hours": 24,
+    "revocation_server": "https://updates.shadowcypher.site/secureboot/revocation",
+    "certificate_revocation_list_url": "https://updates.shadowcypher.site/secureboot/crl.pem"
+  },
+
+  "monitoring": {
+    "boot_verification_logging": {
+      "enabled": true,
+      "log_path": "/var/log/secure-boot-verification.log",
+      "log_failed_attempts": true,
+      "log_successful_boots": true
+    },
+    "unsigned_module_attempts": {
+      "enabled": true,
+      "log_path": "/var/log/unsigned-modules.log",
+      "alert_on_detection": true
+    },
+    "efi_variable_modification": {
+      "enabled": true,
+      "log_path": "/var/log/efi-var-changes.log",
+      "alert_on_changes": true
+    },
+    "boot_entry_changes": {
+      "enabled": true,
+      "log_path": "/var/log/boot-entry-changes.log",
+      "alert_on_changes": true
+    },
+    "secure_boot_toggle": {
+      "enabled": true,
+      "log_path": "/var/log/secureboot-toggle.log",
+      "alert_on_disable": true
+    }
+  },
+
+  "alerting": {
+    "enabled": true,
+    "channels": [
+      {
+        "type": "syslog",
+        "enabled": true,
+        "facility": "auth",
+        "priority": "critical"
+      },
+      {
+        "type": "journal",
+        "enabled": true,
+        "priority": "critical"
+      },
+      {
+        "type": "email",
+        "enabled": true,
+        "recipients": [
+          "security@shadowcypher.site"
+        ],
+        "subject_prefix": "[SECUREBOOT ALERT]"
+      }
+    ],
+    "alert_conditions": [
+      "boot_verification_failure",
+      "unsigned_module_load_attempt",
+      "secure_boot_disable_attempt",
+      "efi_variable_modification",
+      "key_enrollment_failure",
+      "revoked_certificate_detected"
+    ]
+  },
+
+  "compliance": {
+    "standards": [
+      "UEFI 2.10 Specification",
+      "NIST SP 800-193 (Platform Firmware Security)",
+      "FIPS 140-2"
+    ],
+    "enforcement": {
+      "fips_mode": true,
+      "require_uefi_2_1_plus": true,
+      "require_tpm_2_0": false
+    }
+  },
+
+  "maintenance": {
+    "key_rotation": {
+      "pk_rotation_interval_days": 365,
+      "kek_rotation_interval_days": 90,
+      "db_rotation_interval_days": 180,
+      "auto_rotation_enabled": false,
+      "next_pk_rotation": "2027-07-05T00:00:00Z",
+      "next_kek_rotation": "2026-10-03T00:00:00Z",
+      "next_db_rotation": "2027-01-02T00:00:00Z"
+    },
+    "backup": {
+      "enabled": true,
+      "backup_path": "/var/backups/secureboot-keys",
+      "backup_frequency": "monthly",
+      "encrypt_backup": true,
+      "backup_encryption_key": "/etc/secure-boot/backup/master-key"
+    },
+    "audit_trail": {
+      "enabled": true,
+      "retention_days": 7300,
+      "archive_path": "/var/log/secureboot-archive"
+    }
+  },
+
+  "notifications": {
+    "setup_completion": {
+      "enabled": true,
+      "recipient": "security@shadowcypher.site"
+    },
+    "upcoming_key_rotation": {
+      "enabled": true,
+      "days_before": 14,
+      "recipient": "security@shadowcypher.site"
+    },
+    "key_compromise_suspected": {
+      "enabled": true,
+      "immediate": true,
+      "recipient": "security@shadowcypher.site",
+      "escalation_recipient": "incident-response@shadowcypher.site"
+    }
+  },
+
+  "debug": {
+    "verbose_logging": false,
+    "dry_run_mode": false,
+    "skip_validations": false
+  }
+}
