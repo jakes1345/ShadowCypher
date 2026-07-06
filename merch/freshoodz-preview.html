@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ShadowCypher × Freshoodz Style — Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #06060f; color: #fff; font-family: monospace; }
+
+  .header {
+    padding: 50px 60px 40px;
+    border-bottom: 1px solid #1a1a2e;
+  }
+  .header h1 { font-size: 13px; letter-spacing: 8px; color: #555; margin-bottom: 10px; }
+  .header h2 { font-size: 36px; letter-spacing: 4px; line-height: 1.2; }
+  .header h2 span { background: linear-gradient(90deg,#00d4ff,#a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { color: #444; font-size: 12px; letter-spacing: 3px; margin-top: 12px; max-width: 600px; line-height: 1.8; }
+
+  /* ── COMPARISON ROW ─────────────────────────────────────── */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-bottom: 1px solid #1a1a2e;
+  }
+  .compare-panel {
+    padding: 40px 60px;
+    border-right: 1px solid #1a1a2e;
+  }
+  .compare-panel:last-child { border-right: none; }
+  .compare-panel h3 { font-size: 11px; letter-spacing: 4px; color: #555; margin-bottom: 6px; }
+  .compare-panel p { font-size: 12px; color: #444; letter-spacing: 1px; line-height: 1.8; }
+  .compare-panel ul { list-style: none; margin-top: 10px; }
+  .compare-panel ul li { font-size: 11px; color: #444; letter-spacing: 1px; padding: 3px 0; }
+  .compare-panel ul li::before { content: "→ "; color: #00d4ff; }
+  .compare-panel.ours ul li::before { color: #a855f7; }
+
+  /* ── HOODIE SECTION ─────────────────────────────────────── */
+  .designs-section {
+    padding: 60px;
+  }
+  .designs-section > h2 {
+    font-size: 11px; letter-spacing: 6px; color: #555; margin-bottom: 50px;
+    padding-bottom: 16px; border-bottom: 1px solid #111;
+  }
+
+  .design-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 80px;
+  }
+
+  .design-card {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .design-card h3 {
+    font-size: 18px;
+    letter-spacing: 3px;
+    font-weight: bold;
+  }
+  .design-card .subtitle {
+    font-size: 10px; color: #555; letter-spacing: 3px; margin-top: -18px;
+  }
+  .design-card .desc {
+    font-size: 11px; color: #444; letter-spacing: 1px; line-height: 1.9;
+  }
+  .design-card .specs {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .design-card .specs span {
+    font-size: 10px; color: #a855f7; letter-spacing: 2px;
+  }
+  .design-card .price {
+    font-size: 20px; color: #00d4ff; letter-spacing: 2px;
+  }
+
+  /* Hoodie mockup */
+  .hoodie-mock {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3/4;
+    background: #0a0a18;
+    border: 1px solid #1a1a2e;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hoodie-mock::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 40%, #00d4ff08 0%, transparent 70%);
+  }
+
+  /* CSS hoodie shape */
+  .hoodie-shape {
+    position: absolute;
+    width: 78%;
+    height: 85%;
+    top: 8%;
+    left: 11%;
+    background: #111124;
+    clip-path: polygon(
+      30% 0%, 70% 0%,
+      82% 5%, 100% 5%, 100% 100%,
+      0% 100%, 0% 5%, 18% 5%
+    );
+    border-radius: 0 0 8px 8px;
+  }
+  /* Hood pocket (bottom front) */
+  .hoodie-pocket {
+    position: absolute;
+    bottom: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 42%;
+    height: 10%;
+    border: 1px solid #1a1a30;
+    border-radius: 0 0 8px 8px;
+    border-top: none;
+  }
+  /* Drawstring  */
+  .hoodie-drawstring {
+    position: absolute;
+    top: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 18%;
+    background: linear-gradient(#1a1a30, transparent);
+  }
+  /* Back design overlay */
+  .hoodie-design {
+    position: absolute;
+    width: 64%;
+    height: 64%;
+    top: 16%;
+    left: 18%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hoodie-design object {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  /* Subtle hoodie fabric texture overlay */
+  .hoodie-seam-left {
+    position: absolute;
+    left: 20%;
+    top: 5%;
+    height: 95%;
+    width: 1px;
+    background: linear-gradient(transparent, #ffffff08, #ffffff04, transparent);
+  }
+  .hoodie-seam-right {
+    position: absolute;
+    right: 20%;
+    top: 5%;
+    height: 95%;
+    width: 1px;
+    background: linear-gradient(transparent, #ffffff08, #ffffff04, transparent);
+  }
+
+  .badge-row {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;
+  }
+  .badge {
+    font-size: 9px; letter-spacing: 2px; padding: 3px 8px;
+    border: 1px solid #1a1a30; color: #555;
+  }
+  .badge.b-cyan { border-color: #00d4ff44; color: #00d4ff; }
+  .badge.b-purple { border-color: #a855f744; color: #a855f7; }
+  .badge.b-green { border-color: #00ff4144; color: #00ff41; }
+
+  /* ── QUALITY SECTION ─────────────────────────────────────── */
+  .quality-section {
+    padding: 60px;
+    border-top: 1px solid #1a1a2e;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+  }
+  .quality-section h2 { font-size: 11px; letter-spacing: 6px; color: #555; margin-bottom: 28px; }
+  .spec-table { width: 100%; border-collapse: collapse; }
+  .spec-table td {
+    padding: 12px 0; font-size: 11px; letter-spacing: 1px;
+    border-bottom: 1px solid #111;
+  }
+  .spec-table td:first-child { color: #444; width: 45%; }
+  .spec-table td:last-child { color: #00d4ff; }
+  .spec-table tr:last-child td { border-bottom: none; }
+
+  .supplier-card {
+    background: #0a0a18; border: 1px solid #1a1a30; border-radius: 8px; padding: 24px;
+    margin-bottom: 16px;
+  }
+  .supplier-card h4 { font-size: 13px; letter-spacing: 2px; margin-bottom: 8px; }
+  .supplier-card p { font-size: 11px; color: #444; letter-spacing: 1px; line-height: 1.8; }
+  .supplier-card .tag { font-size: 9px; color: #a855f7; letter-spacing: 2px; margin-bottom: 8px; display: block; }
+
+  @media (max-width: 1100px) {
+    .design-row { grid-template-columns: 1fr; }
+    .compare { grid-template-columns: 1fr; }
+    .quality-section { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>SHADOWCYPHER MERCH · SEASON 01</h1>
+  <h2>FRESHOODZ <span>QUALITY</span><br>SC <span>CHARACTER</span></h2>
+  <p>
+    What ShadowCypher looks like at Freshoodz's level: heavyweight French terry, scene-based back graphics,
+    premium print methods. The same energy you get from pulling on one of their hoodies —
+    but SC characters, SC world.
+  </p>
+</div>
+
+<!-- COMPARISON -->
+<div class="compare">
+  <div class="compare-panel">
+    <h3>FRESHOODZ DNA</h3>
+    <p>What made their hoodies feel premium and collectible:</p>
+    <ul>
+      <li>400–500gsm heavyweight French terry</li>
+      <li>Enzyme-washed for lived-in softness out of the box</li>
+      <li>Full-scene back graphics — not just a logo</li>
+      <li>Nature + street culture illustration style</li>
+      <li>Bold silhouettes readable at 20 feet</li>
+      <li>Garment-dyed colorways (not dyed-fabric cuts)</li>
+      <li>Flatlock seam construction (no raw-edge rub)</li>
+      <li>Woven brand label, no printed tag</li>
+    </ul>
+  </div>
+  <div class="compare-panel ours">
+    <h3>SC ADAPTATION</h3>
+    <p>How ShadowCypher translates that into our world:</p>
+    <ul>
+      <li>450gsm French terry blank — Royal Apparel or Baran Tekstil (Turkish)</li>
+      <li>Enzyme wash / stone wash — same soft-from-day-1 feel</li>
+      <li>Full-scene back graphics — ghost in a world, not floating on black</li>
+      <li>Cyber + streetwear illustration — SC characters in environments</li>
+      <li>Neon glow print method (discharge base + water-based ink on top)</li>
+      <li>Garment-dyed black with cyan/purple overdye options</li>
+      <li>Flatlock seaming, woven SC ghost label at hem</li>
+      <li>Drop shoulder, boxy cut — same silhouette as Freshoodz</li>
+    </ul>
+  </div>
+</div>
+
+<!-- DESIGNS -->
+<div class="designs-section">
+  <h2>3 SCENE DESIGNS — FRESHOODZ APPROACH</h2>
+
+  <div class="design-row">
+
+    <!-- DESIGN 1 -->
+    <div class="design-card">
+      <h3>CITY NIGHT</h3>
+      <p class="subtitle">FH-01 · BACK PRINT</p>
+      <div class="hoodie-mock">
+        <div class="hoodie-shape"></div>
+        <div class="hoodie-seam-left"></div>
+        <div class="hoodie-seam-right"></div>
+        <div class="hoodie-design">
+          <object data="designs/fh-01-city-night.svg" type="image/svg+xml"></object>
+        </div>
+        <div class="hoodie-pocket"></div>
+      </div>
+      <p class="desc">
+        Ghost standing on a city rooftop at night. Neon-lit skyline below, matrix rain in the air,
+        circuit windows in the buildings. Same cinematic city scene energy as Freshoodz nature
+        landscapes — just digitized.
+      </p>
+      <div class="badge-row">
+        <span class="badge b-cyan">SCREEN PRINT BACK</span>
+        <span class="badge b-purple">EMBROIDERY CHEST</span>
+        <span class="badge b-green">WATER-BASED INK</span>
+      </div>
+      <div class="specs">
+        <span>450GSM FRENCH TERRY · DROP SHOULDER</span>
+        <span>ENZYME WASH · FLATLOCK SEAM</span>
+        <span>DISCHARGE BASE + WATER-BASED OVER</span>
+      </div>
+      <p class="price">$68</p>
+    </div>
+
+    <!-- DESIGN 2 -->
+    <div class="design-card">
+      <h3>DIGITAL PEAKS</h3>
+      <p class="subtitle">FH-02 · BACK PRINT</p>
+      <div class="hoodie-mock">
+        <div class="hoodie-shape"></div>
+        <div class="hoodie-seam-left"></div>
+        <div class="hoodie-seam-right"></div>
+        <div class="hoodie-design">
+          <object data="designs/fh-02-digital-peaks.svg" type="image/svg+xml"></object>
+        </div>
+        <div class="hoodie-pocket"></div>
+      </div>
+      <p class="desc">
+        Aurora borealis sky over circuit-board mountain ranges, ghost standing at the summit peak.
+        This is the SC version of a Freshoodz nature hoodie — mountains and aurora, but the mountains
+        are built from topology contour lines and circuit nodes.
+      </p>
+      <div class="badge-row">
+        <span class="badge b-cyan">SCREEN PRINT BACK</span>
+        <span class="badge b-purple">EMBROIDERY CHEST</span>
+        <span class="badge b-green">WATER-BASED INK</span>
+      </div>
+      <div class="specs">
+        <span>450GSM FRENCH TERRY · DROP SHOULDER</span>
+        <span>ENZYME WASH · FLATLOCK SEAM</span>
+        <span>5-COLOR SCREEN PRINT + GLOW SPOT</span>
+      </div>
+      <p class="price">$68</p>
+    </div>
+
+    <!-- DESIGN 3 -->
+    <div class="design-card">
+      <h3>THE AWAKENING</h3>
+      <p class="subtitle">FH-03 · BACK PRINT</p>
+      <div class="hoodie-mock">
+        <div class="hoodie-shape"></div>
+        <div class="hoodie-seam-left"></div>
+        <div class="hoodie-seam-right"></div>
+        <div class="hoodie-design">
+          <object data="designs/fh-03-the-awakening.svg" type="image/svg+xml"></object>
+        </div>
+        <div class="hoodie-pocket"></div>
+      </div>
+      <p class="desc">
+        Ghost bursting through a cracked data portal in the ground, beam of light shooting upward,
+        energy shards flying, lightning erupting from both sides. Maximum drama. The Freshoodz
+        "moment of energy" composition — but cyber.
+      </p>
+      <div class="badge-row">
+        <span class="badge b-cyan">SCREEN PRINT BACK</span>
+        <span class="badge b-purple">GLOW-IN-DARK INK</span>
+        <span class="badge b-green">WATER-BASED INK</span>
+      </div>
+      <div class="specs">
+        <span>450GSM FRENCH TERRY · DROP SHOULDER</span>
+        <span>ENZYME WASH · FLATLOCK SEAM</span>
+        <span>DISCHARGE + GLOW-IN-DARK SPOT INK</span>
+      </div>
+      <p class="price">$72</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- QUALITY / HOW TO BUILD IT -->
+<div class="quality-section">
+  <div>
+    <h2>HOW TO BUILD THIS QUALITY</h2>
+
+    <table class="spec-table">
+      <tr><td>Fabric weight</td><td>420–480gsm French terry</td></tr>
+      <tr><td>Fabric content</td><td>100% cotton or 80/20 cotton-poly</td></tr>
+      <tr><td>Construction</td><td>Flatlock seaming throughout</td></tr>
+      <tr><td>Wash treatment</td><td>Enzyme wash (pre-shrunk, butter soft)</td></tr>
+      <tr><td>Silhouette</td><td>Drop shoulder, relaxed boxy fit</td></tr>
+      <tr><td>Hem label</td><td>Woven SC ghost label (no printed tag)</td></tr>
+      <tr><td>Hood</td><td>Double-layer lined hood, metal eyelets</td></tr>
+      <tr><td>Print method</td><td>Discharge base + water-based over-print</td></tr>
+      <tr><td>Print placement</td><td>Full back scene + left chest SC logo embroidery</td></tr>
+      <tr><td>Minimum order</td><td>50–100 pcs per design (use Printful to test first)</td></tr>
+    </table>
+  </div>
+
+  <div>
+    <h2>RECOMMENDED SUPPLIERS</h2>
+
+    <div class="supplier-card">
+      <span class="tag">TURKISH MANUFACTURER · BEST QUALITY</span>
+      <h4>BARAN TEKSTİL / BLANK MANUFACTURER (TR)</h4>
+      <p>
+        Turkish mills produce the closest quality to what Freshoodz used. 450gsm French terry,
+        enzyme wash standard, flatlock construction. MOQ ~100 units. Contact via Alibaba verified
+        or direct at trade shows (Istanbul apparel fairs). 8–12 week lead time. ~$18–24/unit at 100pc.
+      </p>
+    </div>
+
+    <div class="supplier-card">
+      <span class="tag">US DOMESTIC · FASTER LEAD TIME</span>
+      <h4>ROYAL APPAREL (California)</h4>
+      <p>
+        Made in USA, 400gsm+ French terry available, shorter lead times. Higher unit cost (~$28–35)
+        but no import complexity. Good for first runs. royalapparel.net
+      </p>
+    </div>
+
+    <div class="supplier-card">
+      <span class="tag">PRINT TESTING · NO MINIMUM</span>
+      <h4>PRINTFUL (TEST ONLY)</h4>
+      <p>
+        Use Printful to test which designs get orders before committing to a 100-unit run.
+        DTG quality is not Freshoodz-level but good enough to validate demand.
+        Once a design sells 20+ units → manufacture properly.
+      </p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

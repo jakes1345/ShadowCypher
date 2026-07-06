@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1300">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- HOOD outer silhouette -->
+  <path d="M500,55 L820,290 L850,430 L810,460 L190,460 L150,430 L180,290 Z"
+        fill="none" stroke="url(#grad1)" stroke-width="4" filter="url(#softGlow)"/>
+  <!-- Hood crease lines -->
+  <line x1="500" y1="55" x2="500" y2="460" stroke="white" stroke-width="1.5" opacity="0.12"/>
+  <line x1="500" y1="55" x2="260" y2="340" stroke="white" stroke-width="1" opacity="0.08"/>
+  <line x1="500" y1="55" x2="740" y2="340" stroke="white" stroke-width="1" opacity="0.08"/>
+  <!-- Hood brim inner curve -->
+  <path d="M210,430 Q500,395 790,430" fill="none" stroke="white" stroke-width="2" opacity="0.35"/>
+
+  <!-- EYES -->
+  <rect x="330" y="268" width="120" height="32" rx="5" fill="#00d4ff" filter="url(#glow)"/>
+  <rect x="550" y="268" width="120" height="32" rx="5" fill="#00d4ff" filter="url(#glow)"/>
+  <rect x="340" y="272" width="100" height="12" rx="3" fill="white" opacity="0.55"/>
+  <rect x="560" y="272" width="100" height="12" rx="3" fill="white" opacity="0.55"/>
+
+  <!-- BODY / ROBE -->
+  <path d="M150,430 L90,500 L70,720 L110,930 L890,930 L930,720 L910,500 L850,430"
+        fill="none" stroke="url(#grad1)" stroke-width="3.5" stroke-linejoin="round"/>
+  <!-- Robe center line -->
+  <line x1="500" y1="460" x2="500" y2="930" stroke="white" stroke-width="1.5" opacity="0.18"/>
+  <!-- Robe folds left -->
+  <path d="M270,500 L230,730 L250,930" fill="none" stroke="white" stroke-width="1" opacity="0.12"/>
+  <path d="M190,480 L155,690 L165,930" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.18"/>
+  <!-- Robe folds right -->
+  <path d="M730,500 L770,730 L750,930" fill="none" stroke="white" stroke-width="1" opacity="0.12"/>
+  <path d="M810,480 L845,690 L835,930" fill="none" stroke="#a855f7" stroke-width="1" opacity="0.18"/>
+
+  <!-- Chest SC badge -->
+  <circle cx="500" cy="650" r="52" fill="none" stroke="url(#grad1)" stroke-width="2" opacity="0.45"/>
+  <circle cx="500" cy="650" r="44" fill="none" stroke="white" stroke-width="1" opacity="0.12"/>
+  <text x="500" y="663" text-anchor="middle" font-family="monospace" font-size="34" font-weight="bold"
+        fill="url(#grad1)" opacity="0.55">SC</text>
+
+  <!-- LEFT LIGHTNING BOLT -->
+  <path d="M62,370 L95,425 L72,425 L112,500 L84,500 L128,578"
+        fill="none" stroke="#00d4ff" stroke-width="4" stroke-linejoin="round" filter="url(#softGlow)"/>
+
+  <!-- RIGHT LIGHTNING BOLT -->
+  <path d="M938,370 L905,425 L928,425 L888,500 L916,500 L872,578"
+        fill="none" stroke="#a855f7" stroke-width="4" stroke-linejoin="round" filter="url(#softGlow)"/>
+
+  <!-- Circuit nodes bottom -->
+  <line x1="180" y1="985" x2="820" y2="985" stroke="url(#grad1)" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="260" cy="985" r="5" fill="#00d4ff" opacity="0.8"/>
+  <circle cx="380" cy="985" r="4" fill="#a855f7" opacity="0.7"/>
+  <circle cx="500" cy="985" r="8" fill="#00ff41" opacity="0.9" filter="url(#softGlow)"/>
+  <circle cx="620" cy="985" r="4" fill="#a855f7" opacity="0.7"/>
+  <circle cx="740" cy="985" r="5" fill="#00d4ff" opacity="0.8"/>
+  <line x1="500" y1="930" x2="500" y2="985" stroke="#00ff41" stroke-width="1.5" opacity="0.4" stroke-dasharray="4 3"/>
+
+  <!-- WORDMARK -->
+  <text x="500" y="1090" text-anchor="middle" font-family="monospace" font-size="80" font-weight="bold"
+        fill="white" letter-spacing="6">SHADOW</text>
+  <text x="500" y="1180" text-anchor="middle" font-family="monospace" font-size="80" font-weight="bold"
+        fill="url(#grad1)" letter-spacing="6">CYPHER</text>
+  <text x="500" y="1240" text-anchor="middle" font-family="monospace" font-size="15"
+        fill="white" letter-spacing="10" opacity="0.45">PROTECT · ENCRYPT · SOVEREIGN</text>
+</svg>

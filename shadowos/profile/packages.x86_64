@@ -389,6 +389,39 @@ cups-filters
 system-config-printer
 
 # === Privacy / comms ===
-
-# === Security daemons (referenced in customize_airootfs.sh) ===
 nheko
+
+# === Enterprise Features (FreeIPA, FIPS, TPM, SELinux, Compliance) ===
+# Identity Management
+freeipa-client
+krb5
+openldap
+
+# Encryption & Hardware Security
+cryptsetup
+tpm2-tools
+tpm2-abrmd
+tpm2-tss
+tpm2-pkcs11
+efibootmgr
+shim-signed
+
+# SELinux & Mandatory Access Control
+selinux-policy
+selinux-policy-default
+selinux-python
+
+# FIPS 140-2 Compliance
+openssl
+libgcrypt
+libsodium
+
+# Audit & Compliance
+audit
+systemd-journal-remote
+aide
+
+# DNSSEC & Network Security
+bind-tools
+unbound
+ldns

@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 720">
+  <!-- SHADOW SQUAD - three Ghost characters side by side: big, medium, small (adult/teen/kid) -->
+  <defs>
+    <linearGradient id="bg5" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" stop-color="#12122a"/>
+      <stop offset="100%" stop-color="#0a0a18"/>
+    </linearGradient>
+    <linearGradient id="gg5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="eg5" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="zg5" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="aura5" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="25"/>
+    </filter>
+  </defs>
+
+  <!-- Group aura glow -->
+  <ellipse cx="450" cy="380" rx="400" ry="280" fill="#a855f7" opacity="0.06" filter="url(#aura5)"/>
+
+  <!-- ═══ LEFT CHARACTER - SMALL (kid, 65% scale) ═══ -->
+  <g transform="translate(135, 115) scale(0.62)">
+    <!-- Body -->
+    <path d="M 300,72 C 378,70 438,120 445,188 C 452,248 438,290 420,308 C 450,322 472,358 472,398 C 472,448 458,492 442,530 C 428,566 412,594 408,628 C 404,652 396,670 378,678 C 364,684 348,686 335,682 C 325,692 315,696 300,696 C 285,696 275,692 265,682 C 252,686 236,684 222,678 C 204,670 196,652 192,628 C 188,594 172,566 158,530 C 142,492 128,448 128,398 C 128,358 150,322 180,308 C 162,290 148,248 155,188 C 162,120 222,70 300,72 Z"
+          fill="#0e0e22"/>
+    <path d="M 300,72 C 378,70 438,120 445,188 C 452,248 438,290 420,308 C 450,322 472,358 472,398 C 472,448 458,492 442,530 C 428,566 412,594 408,628 C 404,652 396,670 378,678 C 364,684 348,686 335,682 C 325,692 315,696 300,696 C 285,696 275,692 265,682 C 252,686 236,684 222,678 C 204,670 196,652 192,628 C 188,594 172,566 158,530 C 142,492 128,448 128,398 C 128,358 150,322 180,308 C 162,290 148,248 155,188 C 162,120 222,70 300,72 Z"
+          fill="none" stroke="#00d4ff" stroke-width="3.5" filter="url(#zg5)"/>
+    <!-- Face void -->
+    <path d="M 248,148 C 238,148 222,162 220,190 C 218,222 228,262 248,276 L 352,276 C 372,262 382,222 380,190 C 378,162 362,148 352,148 Z" fill="#05050c"/>
+    <!-- CUTE round eyes (kid version) -->
+    <ellipse cx="252" cy="220" rx="24" ry="26" fill="#0a0a1e" stroke="#00d4ff" stroke-width="2.5" filter="url(#zg5)"/>
+    <rect x="240" y="210" width="24" height="18" rx="5" fill="#00d4ff" filter="url(#eg5)"/>
+    <circle cx="246" cy="215" r="5" fill="white" opacity="0.7"/>
+    <ellipse cx="348" cy="220" rx="24" ry="26" fill="#0a0a1e" stroke="#00d4ff" stroke-width="2.5" filter="url(#zg5)"/>
+    <rect x="336" y="210" width="24" height="18" rx="5" fill="#00d4ff" filter="url(#eg5)"/>
+    <circle cx="342" cy="215" r="5" fill="white" opacity="0.7"/>
+    <!-- Tiny smile -->
+    <path d="M 268,258 Q 300,272 332,258" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" opacity="0.65"/>
+    <!-- Small feet -->
+    <ellipse cx="250" cy="680" rx="46" ry="22" fill="#0d0d22" stroke="#00d4ff" stroke-width="2.5"/>
+    <ellipse cx="350" cy="680" rx="46" ry="22" fill="#0d0d22" stroke="#00d4ff" stroke-width="2.5"/>
+    <!-- Small arms -->
+    <ellipse cx="112" cy="420" rx="32" ry="50" fill="#0d0d22" stroke="#00d4ff" stroke-width="2.5" transform="rotate(-12,112,420)"/>
+    <ellipse cx="488" cy="420" rx="32" ry="50" fill="#0d0d22" stroke="#00d4ff" stroke-width="2.5" transform="rotate(12,488,420)"/>
+    <!-- Small ZAP -->
+    <path d="M 72,340 L 90,366 L 78,366 L 98,400" fill="none" stroke="#00d4ff" stroke-width="3.5" stroke-linecap="round" filter="url(#zg5)"/>
+    <path d="M 528,340 L 510,366 L 522,366 L 502,400" fill="none" stroke="#a855f7" stroke-width="3.5" stroke-linecap="round" filter="url(#zg5)"/>
+  </g>
+
+  <!-- ═══ CENTER CHARACTER - LARGE (adult, full size) ═══ -->
+  <g transform="translate(270, 40)">
+    <!-- Body -->
+    <path d="M 300,72 C 378,70 438,120 445,188 C 452,248 438,290 420,308 C 450,322 472,358 472,398 C 472,448 458,492 442,530 C 428,566 412,594 408,628 C 404,652 396,670 378,678 C 364,684 348,686 335,682 C 325,692 315,696 300,696 C 285,696 275,692 265,682 C 252,686 236,684 222,678 C 204,670 196,652 192,628 C 188,594 172,566 158,530 C 142,492 128,448 128,398 C 128,358 150,322 180,308 C 162,290 148,248 155,188 C 162,120 222,70 300,72 Z"
+          fill="#0c0c20"/>
+    <path d="M 300,72 C 378,70 438,120 445,188 C 452,248 438,290 420,308 C 450,322 472,358 472,398 C 472,448 458,492 442,530 C 428,566 412,594 408,628 C 404,652 396,670 378,678 C 364,684 348,686 335,682 C 325,692 315,696 300,696 C 285,696 275,692 265,682 C 252,686 236,684 222,678 C 204,670 196,652 192,628 C 188,594 172,566 158,530 C 142,492 128,448 128,398 C 128,358 150,322 180,308 C 162,290 148,248 155,188 C 162,120 222,70 300,72 Z"
+          fill="none" stroke="url(#gg5)" stroke-width="4" filter="url(#eg5)"/>
+    <!-- Hood dome -->
+    <ellipse cx="300" cy="200" rx="126" ry="116" fill="#161630" opacity="0.5"/>
+    <!-- Brim -->
+    <path d="M 180,300 Q 300,330 420,300" fill="none" stroke="#a855f7" stroke-width="2.5" opacity="0.55"/>
+    <!-- Face void -->
+    <path d="M 248,148 C 238,148 222,162 220,190 C 218,222 228,262 248,276 L 352,276 C 372,262 382,222 380,190 C 378,162 362,148 352,148 Z" fill="#060610"/>
+    <!-- Visor line -->
+    <path d="M 224,220 L 248,205 L 352,205 L 376,220" fill="none" stroke="#a855f7" stroke-width="2" opacity="0.5"/>
+    <!-- EYES - main character, confident -->
+    <rect x="228" y="222" width="68" height="24" rx="4" fill="#00d4ff" filter="url(#eg5)"/>
+    <rect x="234" y="226" width="56" height="10" rx="2" fill="white" opacity="0.6"/>
+    <rect x="304" y="222" width="68" height="24" rx="4" fill="#00d4ff" filter="url(#eg5)"/>
+    <rect x="310" y="226" width="56" height="10" rx="2" fill="white" opacity="0.6"/>
+    <!-- SC chest badge -->
+    <path d="M 272,398 L 300,378 L 328,398 L 318,430 L 300,444 L 282,430 Z"
+          fill="none" stroke="#a855f7" stroke-width="2" opacity="0.45"/>
+    <text x="300" y="416" text-anchor="middle" font-family="monospace" font-size="18" font-weight="bold" fill="#a855f7" opacity="0.5">SC</text>
+    <!-- Feet -->
+    <ellipse cx="250" cy="680" rx="48" ry="24" fill="#0f0f22" stroke="#a855f7" stroke-width="2.5"/>
+    <ellipse cx="350" cy="680" rx="48" ry="24" fill="#0f0f22" stroke="#a855f7" stroke-width="2.5"/>
+    <!-- Arms -->
+    <ellipse cx="115" cy="420" rx="35" ry="55" fill="#0f0f22" stroke="#a855f7" stroke-width="2.5" transform="rotate(-12,115,420)"/>
+    <ellipse cx="485" cy="420" rx="35" ry="55" fill="#0f0f22" stroke="#a855f7" stroke-width="2.5" transform="rotate(12,485,420)"/>
+    <!-- ZAP bolts - full size -->
+    <path d="M 88,340 L 108,368 L 94,368 L 118,408" fill="none" stroke="#00d4ff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#eg5)"/>
+    <path d="M 78,385 L 100,415 L 84,415 L 108,455" fill="none" stroke="#00d4ff" stroke-width="3.5" stroke-linecap="round" filter="url(#zg5)" opacity="0.8"/>
+    <path d="M 512,340 L 492,368 L 506,368 L 482,408" fill="none" stroke="#a855f7" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#eg5)"/>
+    <path d="M 522,385 L 500,415 L 516,415 L 492,455" fill="none" stroke="#a855f7" stroke-width="3.5" stroke-linecap="round" filter="url(#zg5)" opacity="0.8"/>
+  </g>
+
+  <!-- ═══ RIGHT CHARACTER - MEDIUM (teen, 80% scale) ═══ -->
+  <g transform="translate(555, 90) scale(0.78)">
+    <!-- Body -->
+    <path d="M 300,72 C 378,70 438,120 445,188 C 452,248 438,290 420,308 C 450,322 472,358 472,398 C 472,448 458,492 442,530 C 428,566 412,594 408,628 C 404,652 396,670 378,678 C 364,684 348,686 335,682 C 325,692 315,696 300,696 C 285,696 275,692 265,682 C 252,686 236,684 222,678 C 204,670 196,652 192,628 C 188,594 172,566 158,530 C 142,492 128,448 128,398 C 128,358 150,322 180,308 C 162,290 148,248 155,188 C 162,120 222,70 300,72 Z"
+          fill="#0e0e22"/>
+    <path d="M 300,72 C 378,70 438,120 445,188 C 452,248 438,290 420,308 C 450,322 472,358 472,398 C 472,448 458,492 442,530 C 428,566 412,594 408,628 C 404,652 396,670 378,678 C 364,684 348,686 335,682 C 325,692 315,696 300,696 C 285,696 275,692 265,682 C 252,686 236,684 222,678 C 204,670 196,652 192,628 C 188,594 172,566 158,530 C 142,492 128,448 128,398 C 128,358 150,322 180,308 C 162,290 148,248 155,188 C 162,120 222,70 300,72 Z"
+          fill="none" stroke="#a855f7" stroke-width="3.5" filter="url(#zg5)"/>
+    <!-- Face void -->
+    <path d="M 248,148 C 238,148 222,162 220,190 C 218,222 228,262 248,276 L 352,276 C 372,262 382,222 380,190 C 378,162 362,148 352,148 Z" fill="#06060e"/>
+    <!-- EYES - teen, slightly narrower/cooler -->
+    <path d="M 228,224 L 296,214 L 298,240 L 228,250 Z" fill="#a855f7" filter="url(#eg5)"/>
+    <path d="M 233,228 L 292,220 L 293,236 L 233,244 Z" fill="white" opacity="0.55"/>
+    <path d="M 302,214 L 370,224 L 370,250 L 302,240 Z" fill="#a855f7" filter="url(#eg5)"/>
+    <path d="M 307,220 L 366,228 L 366,244 L 307,236 Z" fill="white" opacity="0.55"/>
+    <!-- Feet -->
+    <ellipse cx="250" cy="680" rx="46" ry="22" fill="#0d0d22" stroke="#a855f7" stroke-width="2.5"/>
+    <ellipse cx="350" cy="680" rx="46" ry="22" fill="#0d0d22" stroke="#a855f7" stroke-width="2.5"/>
+    <!-- Arms -->
+    <ellipse cx="112" cy="420" rx="32" ry="52" fill="#0d0d22" stroke="#a855f7" stroke-width="2.5" transform="rotate(-12,112,420)"/>
+    <ellipse cx="488" cy="420" rx="32" ry="52" fill="#0d0d22" stroke="#a855f7" stroke-width="2.5" transform="rotate(12,488,420)"/>
+    <!-- Teen ZAP -->
+    <path d="M 80,340 L 100,368 L 86,368 L 108,404" fill="none" stroke="#a855f7" stroke-width="4" stroke-linecap="round" filter="url(#zg5)"/>
+    <path d="M 520,340 L 500,368 L 514,368 L 492,404" fill="none" stroke="#00d4ff" stroke-width="4" stroke-linecap="round" filter="url(#zg5)"/>
+  </g>
+
+  <!-- Ground shadow connecting them -->
+  <ellipse cx="450" cy="682" rx="355" ry="18" fill="#a855f7" opacity="0.08" filter="url(#aura5)"/>
+
+  <!-- WORDMARK -->
+  <text x="450" y="728" text-anchor="middle" font-family="monospace" font-size="46" font-weight="bold"
+        fill="white" letter-spacing="5">SHADOWCYPHER</text>
+  <text x="450" y="762" text-anchor="middle" font-family="monospace" font-size="13"
+        fill="url(#gg5)" letter-spacing="8" opacity="0.65">SHADOW SQUAD</text>
+</svg>

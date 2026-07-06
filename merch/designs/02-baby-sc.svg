@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 620">
+  <!-- BABY SC - chibi version, massive head, tiny body, super cute -->
+  <defs>
+    <linearGradient id="bg2" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" stop-color="#14142e"/>
+      <stop offset="100%" stop-color="#0a0a18"/>
+    </linearGradient>
+    <filter id="eg2" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="zg2" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="aura2" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+  </defs>
+
+  <!-- Soft aura glow -->
+  <ellipse cx="250" cy="300" rx="200" ry="260" fill="#a855f7" opacity="0.07" filter="url(#aura2)"/>
+
+  <!-- ===== CHIBI: BIG HEAD (takes 60% of canvas) ===== -->
+  <!-- Head shape - nearly perfect circle, very round -->
+  <circle cx="250" cy="195" r="168" fill="url(#bg2)"/>
+  <!-- Head glow outline -->
+  <circle cx="250" cy="195" r="168" fill="none" stroke="#a855f7" stroke-width="3.5"/>
+  <circle cx="250" cy="195" r="168" fill="none" stroke="#a855f7" stroke-width="12" opacity="0.18" filter="url(#zg2)"/>
+
+  <!-- Hood point at top -->
+  <path d="M 218,52 C 234,26 266,26 282,52 L 268,80 C 260,70 240,70 232,80 Z"
+        fill="#14142e" stroke="#a855f7" stroke-width="2.5"/>
+
+  <!-- Face void (inside hood) -->
+  <ellipse cx="250" cy="210" rx="100" ry="95" fill="#06060e"/>
+
+  <!-- EYES - big, round, expressive (chibi style = round not rectangular) -->
+  <!-- Left eye -->
+  <ellipse cx="208" cy="200" rx="32" ry="36" fill="#0a0a1e"/>
+  <ellipse cx="208" cy="200" rx="32" ry="36" fill="none" stroke="#00d4ff" stroke-width="3" filter="url(#eg2)"/>
+  <ellipse cx="208" cy="200" rx="22" ry="26" fill="#00d4ff" opacity="0.15"/>
+  <!-- Left pupil - glowing bright -->
+  <rect x="192" y="188" width="32" height="24" rx="6" fill="#00d4ff" filter="url(#eg2)"/>
+  <ellipse cx="201" cy="194" rx="7" ry="7" fill="white" opacity="0.7"/>
+  <!-- Right eye -->
+  <ellipse cx="292" cy="200" rx="32" ry="36" fill="#0a0a1e"/>
+  <ellipse cx="292" cy="200" rx="32" ry="36" fill="none" stroke="#00d4ff" stroke-width="3" filter="url(#eg2)"/>
+  <ellipse cx="292" cy="200" rx="22" ry="26" fill="#00d4ff" opacity="0.15"/>
+  <!-- Right pupil -->
+  <rect x="276" y="188" width="32" height="24" rx="6" fill="#00d4ff" filter="url(#eg2)"/>
+  <ellipse cx="285" cy="194" rx="7" ry="7" fill="white" opacity="0.7"/>
+
+  <!-- Tiny smile / smirk -->
+  <path d="M 225,255 Q 250,272 275,255" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- Rosy cheeks (cute!) -->
+  <ellipse cx="170" cy="240" rx="22" ry="14" fill="#a855f7" opacity="0.2"/>
+  <ellipse cx="330" cy="240" rx="22" ry="14" fill="#a855f7" opacity="0.2"/>
+
+  <!-- ===== TINY BODY ===== -->
+  <!-- Body - small and round, quarter the head size -->
+  <ellipse cx="250" cy="430" rx="85" ry="75" fill="url(#bg2)"/>
+  <ellipse cx="250" cy="430" rx="85" ry="75" fill="none" stroke="#a855f7" stroke-width="3"/>
+  <ellipse cx="250" cy="430" rx="85" ry="75" fill="none" stroke="#a855f7" stroke-width="10" opacity="0.14" filter="url(#zg2)"/>
+
+  <!-- SC on body -->
+  <text x="250" y="438" text-anchor="middle" font-family="monospace" font-size="26" font-weight="bold"
+        fill="#00d4ff" opacity="0.7">SC</text>
+
+  <!-- TINY FEET -->
+  <ellipse cx="205" cy="510" rx="38" ry="20" fill="#10102a" stroke="#a855f7" stroke-width="2.5"/>
+  <ellipse cx="295" cy="510" rx="38" ry="20" fill="#10102a" stroke="#a855f7" stroke-width="2.5"/>
+
+  <!-- TINY ARMS - like little nubs -->
+  <ellipse cx="152" cy="415" rx="28" ry="20" fill="#10102a" stroke="#a855f7" stroke-width="2.5" transform="rotate(-25,152,415)"/>
+  <ellipse cx="348" cy="415" rx="28" ry="20" fill="#10102a" stroke="#a855f7" stroke-width="2.5" transform="rotate(25,348,415)"/>
+
+  <!-- Mini lightning bolts (cute small version) -->
+  <path d="M 78,180 L 92,200 L 83,200 L 100,225"
+        fill="none" stroke="#00d4ff" stroke-width="3.5" stroke-linecap="round" filter="url(#zg2)"/>
+  <path d="M 422,180 L 408,200 L 417,200 L 400,225"
+        fill="none" stroke="#a855f7" stroke-width="3.5" stroke-linecap="round" filter="url(#zg2)"/>
+
+  <!-- Floating hearts/stars (cute extra detail) -->
+  <text x="96" cy="150" font-family="monospace" font-size="16" fill="#a855f7" opacity="0.6">✦</text>
+  <text x="96" y="158" font-family="monospace" font-size="16" fill="#a855f7" opacity="0.6">✦</text>
+  <text x="390" y="158" font-family="monospace" font-size="12" fill="#00d4ff" opacity="0.6">✦</text>
+  <text x="405" y="142" font-family="monospace" font-size="16" fill="#00d4ff" opacity="0.5">✦</text>
+
+  <!-- WORDMARK -->
+  <text x="250" y="576" text-anchor="middle" font-family="monospace" font-size="32" font-weight="bold"
+        fill="white" letter-spacing="4">SHADOWCYPHER</text>
+  <text x="250" y="608" text-anchor="middle" font-family="monospace" font-size="11"
+        fill="#a855f7" letter-spacing="8" opacity="0.65">BABY SC</text>
+</svg>

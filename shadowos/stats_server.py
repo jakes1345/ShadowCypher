@@ -17,7 +17,7 @@ class DownloadStats:
             'by_version': {},
             'by_region': {},
             'by_os': {},
-            'unique_ips': set(),
+            'unique_ips': [],
             'last_updated': datetime.now().isoformat()
         }
 
@@ -38,6 +38,10 @@ class DownloadStats:
         if source_os not in self.data['by_os']:
             self.data['by_os'][source_os] = 0
         self.data['by_os'][source_os] += 1
+
+        # Track unique IPs
+        if ip not in self.data['unique_ips'] and ip != 'unknown':
+            self.data['unique_ips'].append(ip)
 
         self.data['last_updated'] = datetime.now().isoformat()
         self.save()

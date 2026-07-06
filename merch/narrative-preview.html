@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ShadowCypher — Narrative Hoodie Collection</title>
+<style>
+  :root {
+    --bg: #04020e;
+    --bg2: #06040f;
+    --surface: #0c0a1a;
+    --surface2: #100e20;
+    --cyan: #00d4ff;
+    --purple: #a855f7;
+    --green: #00ff41;
+    --text: #e8e8f4;
+    --muted: #6060a0;
+    --border: #1a1630;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #06040f 0%, #0a0620 50%, #06040f 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 40px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 50% 50%, rgba(0,212,255,0.04) 0%, transparent 70%);
+  }
+  .header-eyebrow {
+    font-size: 10px;
+    letter-spacing: 6px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+  .header h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: bold;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #fff 0%, var(--cyan) 50%, var(--purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .header-sub {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    position: relative;
+  }
+
+  /* Manifesto section */
+  .manifesto {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 60px 20px 0;
+    text-align: center;
+  }
+  .manifesto h2 {
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: var(--purple);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .manifesto p {
+    font-size: 15px;
+    line-height: 1.8;
+    color: #9090c0;
+    margin-bottom: 16px;
+  }
+  .manifesto strong {
+    color: var(--text);
+  }
+  .manifesto .divider {
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    margin: 36px auto;
+  }
+
+  /* Chapter grid */
+  .chapter-grid {
+    max-width: 1200px;
+    margin: 60px auto 0;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 48px;
+  }
+
+  /* Individual chapter card */
+  .chapter-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .chapter-card:hover {
+    border-color: rgba(0,212,255,0.25);
+  }
+
+  /* Hoodie mockup */
+  .hoodie-mockup {
+    background: var(--bg);
+    padding: 24px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .hoodie-mockup::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 60%, rgba(0,212,255,0.04) 0%, transparent 70%);
+  }
+  .hoodie-svg-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+  }
+  /* CSS hoodie shape */
+  .hoodie-shape {
+    position: relative;
+    width: 100%;
+    padding-bottom: 115%;
+    background: #111018;
+    clip-path: polygon(
+      30% 0%, 70% 0%,
+      78% 6%, 88% 8%, 100% 16%,
+      100% 100%, 0% 100%,
+      0% 16%, 12% 8%, 22% 6%
+    );
+    border: 1px solid #1c1830;
+    overflow: hidden;
+  }
+  .hoodie-design-area {
+    position: absolute;
+    top: 18%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 88%;
+    height: 72%;
+    overflow: hidden;
+  }
+  .hoodie-design-area img,
+  .hoodie-design-area object {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+  }
+  /* Hoodie details */
+  .hoodie-pocket {
+    position: absolute;
+    bottom: 22%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36%;
+    height: 8%;
+    border: 1px solid #1c1830;
+    border-radius: 2px 2px 0 0;
+  }
+  .hoodie-drawstring {
+    position: absolute;
+    top: 5%;
+    left: 44%;
+    width: 12%;
+    height: 1.5px;
+    background: #1c1830;
+  }
+  .hoodie-drawstring::before {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    left: 10%;
+    width: 1px;
+    height: 14px;
+    background: #1c1830;
+  }
+  .hoodie-drawstring::after {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    right: 10%;
+    width: 1px;
+    height: 14px;
+    background: #1c1830;
+  }
+  .hoodie-label {
+    position: absolute;
+    bottom: 4%;
+    right: 8%;
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: #2a2040;
+    text-transform: uppercase;
+  }
+
+  /* Chapter info */
+  .chapter-info {
+    padding: 24px 24px 28px;
+    border-top: 1px solid var(--border);
+  }
+  .chapter-num {
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .chapter-title {
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .chapter-tagline {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .chapter-tagline.cyan  { color: var(--cyan); }
+  .chapter-tagline.purple { color: var(--purple); }
+  .chapter-tagline.green  { color: var(--green); }
+  .chapter-story {
+    font-size: 12px;
+    line-height: 1.75;
+    color: #7070a8;
+    margin-bottom: 20px;
+  }
+  .chapter-story strong {
+    color: #a0a0cc;
+  }
+  .chapter-vibe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .vibe-tag {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid #1a1630;
+    color: var(--muted);
+    border-radius: 2px;
+  }
+  .vibe-tag.hot {
+    border-color: rgba(0,212,255,0.25);
+    color: rgba(0,212,255,0.7);
+  }
+
+  /* Print section */
+  .print-section {
+    max-width: 1200px;
+    margin: 72px auto 0;
+    padding: 0 20px;
+  }
+  .section-header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .section-header h2 {
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: var(--purple);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-header p {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Spec table */
+  .spec-table {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .spec-table tr {
+    border-bottom: 1px solid var(--border);
+  }
+  .spec-table tr:last-child {
+    border-bottom: none;
+  }
+  .spec-table td {
+    padding: 14px 20px;
+    font-size: 12px;
+  }
+  .spec-table td:first-child {
+    width: 36%;
+    color: var(--muted);
+    letter-spacing: 1px;
+    background: var(--surface);
+  }
+  .spec-table td:last-child {
+    color: var(--text);
+    background: var(--bg2);
+  }
+  .spec-table td span.good {
+    color: var(--green);
+  }
+  .spec-table td span.warn {
+    color: #f59e0b;
+  }
+
+  /* Production roadmap */
+  .roadmap {
+    max-width: 1200px;
+    margin: 72px auto 0;
+    padding: 0 20px;
+  }
+  .roadmap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    margin-top: 36px;
+  }
+  .roadmap-phase {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+  }
+  .roadmap-phase .phase-label {
+    font-size: 9px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .roadmap-phase h3 {
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .roadmap-phase p {
+    font-size: 11px;
+    line-height: 1.7;
+    color: #5050888;
+    color: var(--muted);
+  }
+  .roadmap-phase .phase-cyan { border-left: 3px solid var(--cyan); }
+  .roadmap-phase .phase-purple { border-left: 3px solid var(--purple); }
+  .roadmap-phase .phase-green { border-left: 3px solid var(--green); }
+  .roadmap-phase-inner.phase-cyan { padding-left: 16px; border-left: 3px solid var(--cyan); }
+  .roadmap-phase-inner.phase-purple { padding-left: 16px; border-left: 3px solid var(--purple); }
+  .roadmap-phase-inner.phase-green { padding-left: 16px; border-left: 3px solid var(--green); }
+
+  /* Raw SVG preview */
+  .raw-section {
+    max-width: 1200px;
+    margin: 72px auto 0;
+    padding: 0 20px;
+  }
+  .raw-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 36px;
+  }
+  @media (max-width: 768px) {
+    .raw-grid { grid-template-columns: 1fr; }
+  }
+  .raw-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    padding: 20px;
+    text-align: center;
+  }
+  .raw-card img {
+    width: 100%;
+    height: auto;
+    display: block;
+    margin-bottom: 16px;
+  }
+  .raw-card .raw-name {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .raw-card .raw-tagline {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 80px;
+    padding: 40px 20px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  .footer p {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #2a2040;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-eyebrow">ShadowCypher Apparel — Season One</div>
+  <h1>THE STORY COLLECTION</h1>
+  <div class="header-sub">Three designs. Three chapters. One truth.</div>
+</div>
+
+<!-- Manifesto -->
+<div class="manifesto">
+  <h2>Why this exists</h2>
+  <p>
+    Most streetwear is decoration. A logo. A pattern. Something to fill the space.
+    <strong>This isn't that.</strong>
+  </p>
+  <p>
+    Every piece in this collection tells a chapter. Late nights you lived.
+    The feeling of being the only one who gets it. The weight of protecting something
+    that most people can't even see. If you've felt any of that —
+    <strong>you already know what these designs mean.</strong>
+  </p>
+  <p>
+    The shadow doesn't explain himself. He just shows up.
+  </p>
+  <div class="divider"></div>
+</div>
+
+<!-- Chapter Cards -->
+<div class="chapter-grid">
+
+  <!-- Chapter 01: 3AM -->
+  <div class="chapter-card">
+    <div class="hoodie-mockup">
+      <div class="hoodie-svg-wrapper">
+        <div class="hoodie-shape">
+          <div class="hoodie-design-area">
+            <img src="designs/sc-3am.svg" alt="3:17 AM Design"/>
+          </div>
+          <div class="hoodie-pocket"></div>
+          <div class="hoodie-drawstring"></div>
+          <div class="hoodie-label">SHADOWCYPHER</div>
+        </div>
+      </div>
+    </div>
+    <div class="chapter-info">
+      <div class="chapter-num">Chapter 01 of 03</div>
+      <div class="chapter-title">THE GRIND</div>
+      <div class="chapter-tagline cyan">3:17 AM · The Grind Never Stops</div>
+      <p class="chapter-story">
+        Dual monitors. Rain on the window. Clock says 3:17.
+        <strong>You should've gone to bed hours ago.</strong>
+        But the cursor is blinking and the code isn't done and somehow
+        this is the best part of the day — when the noise stops and
+        it's just you and the work. This one's for every night like that.
+      </p>
+      <div class="chapter-vibe">
+        <span class="vibe-tag hot">Night Coder</span>
+        <span class="vibe-tag hot">Builder</span>
+        <span class="vibe-tag">Late Nights</span>
+        <span class="vibe-tag">The Grind</span>
+        <span class="vibe-tag">Origin Story</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chapter 02: Ghost Mode -->
+  <div class="chapter-card">
+    <div class="hoodie-mockup">
+      <div class="hoodie-svg-wrapper">
+        <div class="hoodie-shape">
+          <div class="hoodie-design-area">
+            <img src="designs/sc-ghost-mode.svg" alt="Ghost Mode Design"/>
+          </div>
+          <div class="hoodie-pocket"></div>
+          <div class="hoodie-drawstring"></div>
+          <div class="hoodie-label">SHADOWCYPHER</div>
+        </div>
+      </div>
+    </div>
+    <div class="chapter-info">
+      <div class="chapter-num">Chapter 02 of 03</div>
+      <div class="chapter-title">GHOST MODE</div>
+      <div class="chapter-tagline purple">They Can't See Me</div>
+      <p class="chapter-story">
+        Walk through any crowd and watch.
+        <strong>Everyone's face is lit up by a phone. Nobody is here.</strong>
+        But you see it. You see all of it. The thing about being different is
+        you can't turn it off — but you start to realize: maybe invisible
+        isn't a curse. Maybe it's your superpower.
+        Ghost Mode is on. Always.
+      </p>
+      <div class="chapter-vibe">
+        <span class="vibe-tag hot">Lone Wolf</span>
+        <span class="vibe-tag hot">Invisible</span>
+        <span class="vibe-tag">Ghost</span>
+        <span class="vibe-tag">Crowd Scene</span>
+        <span class="vibe-tag">Awakened</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chapter 03: Standing Watch -->
+  <div class="chapter-card">
+    <div class="hoodie-mockup">
+      <div class="hoodie-svg-wrapper">
+        <div class="hoodie-shape">
+          <div class="hoodie-design-area">
+            <img src="designs/sc-standing-watch.svg" alt="Standing Watch Design"/>
+          </div>
+          <div class="hoodie-pocket"></div>
+          <div class="hoodie-drawstring"></div>
+          <div class="hoodie-label">SHADOWCYPHER</div>
+        </div>
+      </div>
+    </div>
+    <div class="chapter-info">
+      <div class="chapter-num">Chapter 03 of 03</div>
+      <div class="chapter-title">STANDING WATCH</div>
+      <div class="chapter-tagline green">He Never Sleeps So You Can</div>
+      <p class="chapter-story">
+        Midnight. Arms crossed. City spread out below.
+        <strong>Everyone is sleeping. He never does.</strong>
+        Not because he can't — because someone has to watch.
+        The guardian doesn't ask for credit. Doesn't need a spotlight.
+        He's just there. Every night. On the ledge.
+        While you rest, he's already on the next thing.
+      </p>
+      <div class="chapter-vibe">
+        <span class="vibe-tag hot">Protector</span>
+        <span class="vibe-tag hot">Guardian</span>
+        <span class="vibe-tag">Night Watch</span>
+        <span class="vibe-tag">Silent Hero</span>
+        <span class="vibe-tag">The Summit</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Print Specs -->
+<div class="print-section">
+  <div class="section-header">
+    <h2>Production Specs</h2>
+    <p>Quality that holds up. What these hoodies are made of.</p>
+  </div>
+  <table class="spec-table">
+    <tr>
+      <td>Weight</td>
+      <td><span class="good">450gsm French Terry</span> — thick, structured, substantial. Not the papery stuff.</td>
+    </tr>
+    <tr>
+      <td>Finish</td>
+      <td><span class="good">Enzyme Wash</span> — softens the surface without killing the weight. Lived-in from day one.</td>
+    </tr>
+    <tr>
+      <td>Construction</td>
+      <td>Drop shoulder, flatlock seaming, kangaroo pocket, drawstring. No corners cut on construction.</td>
+    </tr>
+    <tr>
+      <td>Print Method</td>
+      <td><span class="good">Discharge + Water-Based Ink</span> — prints into the fabric, not on top of it. Won't crack, won't peel.</td>
+    </tr>
+    <tr>
+      <td>Labels</td>
+      <td>Woven internal label, heat-removed brand tag. Clean neck, ShadowCypher branded.</td>
+    </tr>
+    <tr>
+      <td>Current Phase</td>
+      <td><span class="warn">POD via Printful (testing demand)</span> — production upgrade at 50+ units/design</td>
+    </tr>
+    <tr>
+      <td>Target Supplier</td>
+      <td>Turkish mill (Baran Tekstil) or Royal Apparel — same construction tier as original Freshoodz</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Production Roadmap -->
+<div class="roadmap">
+  <div class="section-header">
+    <h2>Drop Roadmap</h2>
+    <p>How this collection goes from design file to your hands.</p>
+  </div>
+  <div class="roadmap-grid">
+    <div class="roadmap-phase">
+      <div class="roadmap-phase-inner phase-cyan">
+        <div class="phase-label">Phase 01 · Now</div>
+        <h3>Demand Test</h3>
+        <p>Printful POD. Live on Shopify. Learn which designs actually move before committing to inventory. No dead stock, no wasted capital.</p>
+      </div>
+    </div>
+    <div class="roadmap-phase">
+      <div class="roadmap-phase-inner phase-purple">
+        <div class="phase-label">Phase 02 · 50+ Units</div>
+        <h3>Real Production</h3>
+        <p>Hit 50 orders per design → switch to Turkish mill. 450gsm French terry, enzyme wash, discharge print. Same specs, 3x the quality, better margin.</p>
+      </div>
+    </div>
+    <div class="roadmap-phase">
+      <div class="roadmap-phase-inner phase-green">
+        <div class="phase-label">Phase 03 · Brand</div>
+        <h3>Season Two</h3>
+        <p>Expand the story. New chapters, new characters. Woven label, custom packaging, limited drops. ShadowCypher as a real streetwear brand.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Raw SVG Designs -->
+<div class="raw-section">
+  <div class="section-header">
+    <h2>Raw Designs</h2>
+    <p>Print files — what actually goes on the garment.</p>
+  </div>
+  <div class="raw-grid">
+    <div class="raw-card">
+      <img src="designs/sc-3am.svg" alt="3:17 AM"/>
+      <div class="raw-name">sc-3am</div>
+      <div class="raw-tagline">The Grind / 3:17 AM</div>
+    </div>
+    <div class="raw-card">
+      <img src="designs/sc-ghost-mode.svg" alt="Ghost Mode"/>
+      <div class="raw-name">sc-ghost-mode</div>
+      <div class="raw-tagline">They Can't See Me</div>
+    </div>
+    <div class="raw-card">
+      <img src="designs/sc-standing-watch.svg" alt="Standing Watch"/>
+      <div class="raw-name">sc-standing-watch</div>
+      <div class="raw-tagline">He Never Sleeps So You Can</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <p>ShadowCypher · Season One · Story Collection · Not For Everyone</p>
+</div>
+
+</body>
+</html>

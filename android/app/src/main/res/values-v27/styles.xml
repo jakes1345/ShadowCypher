@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Same-named styles are resolved per-config, not merged, so this must
+         restate every item from values/styles.xml plus the API 27+ one
+         (android:windowLightNavigationBar) — never just the new attribute. -->
+    <style name="Theme.ShadowGuardian" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#09090b</item>
+        <item name="android:statusBarColor">#09090b</item>
+        <item name="android:navigationBarColor">#111113</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorPrimary">#b44aff</item>
+        <item name="colorPrimaryDark">#2a1040</item>
+        <item name="colorAccent">#b44aff</item>
+    </style>
+
+</resources>

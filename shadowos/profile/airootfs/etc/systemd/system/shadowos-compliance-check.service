@@ -1,0 +1,12 @@
+[Unit]
+Description=ShadowOS Compliance Audit Check
+After=auditd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/compliance-audit.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

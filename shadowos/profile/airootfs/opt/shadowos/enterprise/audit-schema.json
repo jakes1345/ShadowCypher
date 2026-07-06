@@ -1,0 +1,298 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ShadowCypher Audit Event Schema",
+  "description": "Unified audit event structure for centralized audit framework",
+  "type": "object",
+  "required": ["timestamp", "source", "user", "action", "result", "event_id"],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Unique event identifier (UUID)",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC3339 formatted timestamp of event occurrence"
+    },
+    "source": {
+      "type": "object",
+      "required": ["type", "name"],
+      "description": "Event source information",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["auditd", "syslog", "application", "kernel", "network", "guardian_vault", "auth_service"],
+          "description": "Type of event source"
+        },
+        "name": {
+          "type": "string",
+          "description": "Specific source identifier (hostname, service name, module)"
+        },
+        "ip_address": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "Source IP address if applicable"
+        },
+        "component": {
+          "type": "string",
+          "description": "Component or subsystem generating the event"
+        }
+      }
+    },
+    "user": {
+      "type": "object",
+      "required": ["id"],
+      "description": "User context information",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User identifier (UID or username)"
+        },
+        "name": {
+          "type": "string",
+          "description": "User display name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address"
+        },
+        "session_id": {
+          "type": "string",
+          "description": "Session identifier for tracking user activity"
+        },
+        "privileged": {
+          "type": "boolean",
+          "description": "Whether user was running with elevated privileges"
+        }
+      }
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "authentication",
+        "authorization",
+        "read",
+        "write",
+        "delete",
+        "execute",
+        "configuration_change",
+        "privilege_escalation",
+        "vault_access",
+        "encryption_key_operation",
+        "encryption_key_generation",
+        "encryption_key_rotation",
+        "decryption",
+        "audit_log_access",
+        "network_connection",
+        "file_access",
+        "permission_change",
+        "security_event",
+        "anomaly_detection",
+        "policy_violation",
+        "system_error"
+      ],
+      "description": "Type of action performed"
+    },
+    "result": {
+      "type": "object",
+      "required": ["status"],
+      "description": "Result of the action",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["success", "failure", "denied", "error", "partial"],
+          "description": "Overall result status"
+        },
+        "error_code": {
+          "type": "integer",
+          "description": "Numeric error or result code"
+        },
+        "error_message": {
+          "type": "string",
+          "description": "Human-readable error or result message"
+        },
+        "details": {
+          "type": "object",
+          "description": "Additional result details"
+        }
+      }
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "authentication",
+        "authorization",
+        "data_access",
+        "data_modification",
+        "system_administration",
+        "network_activity",
+        "security_event",
+        "compliance",
+        "forensics",
+        "vault_operation",
+        "encryption_operation"
+      ],
+      "description": "Event categorization for filtering and analysis"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low", "informational"],
+      "description": "Severity level of the event"
+    },
+    "resource": {
+      "type": "object",
+      "description": "Resource affected by the action",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["file", "directory", "key", "credential", "vault", "policy", "user", "group", "process", "network"],
+          "description": "Type of resource"
+        },
+        "identifier": {
+          "type": "string",
+          "description": "Resource name, path, or ID"
+        },
+        "owner": {
+          "type": "string",
+          "description": "Resource owner or parent identifier"
+        }
+      }
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Identifier for correlating related events"
+    },
+    "parent_event_id": {
+      "type": "string",
+      "description": "Reference to parent event for event chains"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Custom fields and additional context"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags for event classification and search"
+    }
+  },
+  "definitions": {
+    "alert_rule": {
+      "type": "object",
+      "title": "Alert Trigger Rule",
+      "required": ["rule_id", "name", "conditions", "actions"],
+      "properties": {
+        "rule_id": {
+          "type": "string",
+          "description": "Unique rule identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable rule name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Rule description and purpose"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether rule is active"
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "Conditions that trigger the alert"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["log", "alert", "notification", "block", "escalate", "remediate"]
+          },
+          "description": "Actions to take when rule triggers"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "Alert severity level"
+        },
+        "notification_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Notification recipients (emails, webhooks)"
+        }
+      }
+    },
+    "retention_policy": {
+      "type": "object",
+      "title": "Log Retention Policy",
+      "required": ["policy_id", "retention_days", "archive_strategy"],
+      "properties": {
+        "policy_id": {
+          "type": "string",
+          "description": "Unique policy identifier"
+        },
+        "retention_days": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of days to retain logs"
+        },
+        "archive_strategy": {
+          "type": "string",
+          "enum": ["delete", "compress", "archive_cold_storage", "immutable_archive"],
+          "description": "Action to take after retention period"
+        },
+        "compression": {
+          "type": "boolean",
+          "description": "Whether to compress archived logs"
+        },
+        "encryption": {
+          "type": "boolean",
+          "description": "Whether to encrypt archived logs"
+        }
+      }
+    },
+    "export_format": {
+      "type": "string",
+      "enum": ["json", "csv", "syslog", "siem_json", "elasticsearch", "splunk"],
+      "description": "Supported export formats"
+    }
+  },
+  "examples": [
+    {
+      "event_id": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2026-07-05T14:30:22Z",
+      "source": {
+        "type": "guardian_vault",
+        "name": "vault-01",
+        "component": "credential_access"
+      },
+      "user": {
+        "id": "user:jack",
+        "name": "Jack",
+        "email": "bigjacob710@gmail.com",
+        "privileged": true
+      },
+      "action": "vault_access",
+      "category": "vault_operation",
+      "severity": "high",
+      "result": {
+        "status": "success"
+      },
+      "resource": {
+        "type": "vault",
+        "identifier": "credentials:github"
+      }
+    }
+  ]
+}

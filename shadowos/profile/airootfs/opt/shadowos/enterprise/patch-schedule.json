@@ -1,0 +1,174 @@
+{
+  "patch": {
+    "source": "https://patches.shadowcypher.site/enterprise/",
+    "check_interval_hours": 24,
+    "cve_severity_thresholds": {
+      "critical": 9.0,
+      "high": 7.0,
+      "medium": 5.0,
+      "low": 0.0
+    },
+    "auto_patch_level": "critical",
+    "signing_key": "/etc/shadowcypher/patch-signing.pub"
+  },
+  "maintenance_window": {
+    "enabled": true,
+    "day": "sunday",
+    "start_time": "02:00",
+    "end_time": "04:00",
+    "timezone": "UTC"
+  },
+  "deployment": {
+    "strategy": "phased",
+    "total_nodes": 100,
+    "nodes": [
+      "node-1",
+      "node-2",
+      "node-3"
+    ],
+    "phase_schedule": {
+      "day_1": {
+        "percentage": 5,
+        "duration_hours": 24,
+        "rollback_enabled": true
+      },
+      "day_2": {
+        "percentage": 25,
+        "duration_hours": 24,
+        "rollback_enabled": true
+      },
+      "day_3": {
+        "percentage": 50,
+        "duration_hours": 24,
+        "rollback_enabled": true
+      },
+      "day_4": {
+        "percentage": 100,
+        "duration_hours": 0,
+        "rollback_enabled": true
+      }
+    },
+    "status": "pending"
+  },
+  "kernel_live_patching": {
+    "enabled": true,
+    "method": "kpatch",
+    "verify_after_load": true,
+    "auto_load_on_boot": false,
+    "patch_module_path": "/lib/modules/live-patch"
+  },
+  "monitoring": {
+    "enabled": true,
+    "post_deployment_duration_seconds": 300,
+    "check_interval_seconds": 10,
+    "metrics": {
+      "cpu_threshold_percent": 95,
+      "memory_threshold_percent": 90,
+      "error_rate_multiplier": 2.0,
+      "database_query_latency_ms": 10000,
+      "health_check_failure_threshold_percent": 30
+    }
+  },
+  "rollback": {
+    "automatic_triggers_enabled": true,
+    "timeout_seconds": 300,
+    "on_failure": "automatic_rollback",
+    "notify_on_rollback": true,
+    "preserve_logs": true
+  },
+  "compliance": {
+    "cve_timeline_enforcement": true,
+    "generate_audit_trail": true,
+    "weekly_summary_enabled": true,
+    "monthly_report_enabled": true,
+    "external_audit_support": true,
+    "deployment_timelines": {
+      "critical": 2,
+      "high": 7,
+      "medium": 30,
+      "low": 60
+    }
+  },
+  "vulnerability_scanning": {
+    "enabled": true,
+    "scanner": "trivy",
+    "scan_interval_hours": 24,
+    "severity_thresholds": [
+      "CRITICAL",
+      "HIGH"
+    ],
+    "database_update_frequency": "daily",
+    "vulnerability_sources": [
+      "nvd",
+      "github"
+    ]
+  },
+  "staging": {
+    "enabled": true,
+    "environment_type": "isolated",
+    "snapshot_capable": true,
+    "test_suite_enabled": true,
+    "performance_baseline": {
+      "cpu_usage_percent": 35,
+      "memory_usage_percent": 45,
+      "disk_io_utilization_percent": 20,
+      "degradation_threshold_percent": 5
+    }
+  },
+  "notification": {
+    "enabled": true,
+    "channels": [
+      "slack",
+      "email"
+    ],
+    "slack": {
+      "webhook_url": "${SLACK_WEBHOOK_URL}",
+      "channel": "#security-patches",
+      "mention_on_critical": "@security-team"
+    },
+    "email": {
+      "from": "patches@shadowcypher.site",
+      "to": [
+        "security@shadowcypher.site",
+        "ops@shadowcypher.site"
+      ],
+      "subject_prefix": "[ShadowCypher Patches]"
+    }
+  },
+  "reporting": {
+    "enabled": true,
+    "report_directory": "/var/log/shadowcypher/patches/reports",
+    "weekly_report_day": "monday",
+    "weekly_report_time": "09:00",
+    "monthly_report_day": 1,
+    "monthly_report_time": "09:00",
+    "include_in_report": [
+      "patches_applied",
+      "cve_references",
+      "deployment_timeline",
+      "test_results",
+      "monitoring_data",
+      "rollback_status"
+    ]
+  },
+  "validation": {
+    "functional_tests_enabled": true,
+    "security_tests_enabled": true,
+    "performance_tests_enabled": true,
+    "compatibility_tests_enabled": true,
+    "regression_tests_enabled": true,
+    "load_tests_enabled": true,
+    "post_patch_commands": [
+      "systemctl status shadowcypher",
+      "curl -s http://localhost:8080/health",
+      "docker ps -a --filter status=running"
+    ]
+  },
+  "logging": {
+    "enabled": true,
+    "log_directory": "/var/log/shadowcypher/patches",
+    "log_level": "INFO",
+    "retention_days": 90,
+    "compress_logs": true
+  }
+}

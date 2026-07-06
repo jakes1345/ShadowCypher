@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000">
+  <defs>
+    <linearGradient id="g5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="glow5">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft5">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Ghost silhouette - bold geometric -->
+  <!-- Head/dome -->
+  <path d="M400,80
+           C 260,80 160,175 160,300
+           L 160,580
+           Q 160,610 185,610 Q 210,610 225,585
+           Q 250,545 275,585 Q 300,625 325,585
+           Q 350,545 375,585 Q 400,625 425,585
+           Q 450,545 475,585 Q 500,625 525,585
+           Q 550,545 575,585 Q 600,625 615,585
+           Q 630,560 640,580
+           L 640,300
+           C 640,175 540,80 400,80 Z"
+        fill="none" stroke="url(#g5)" stroke-width="4.5" filter="url(#soft5)"/>
+
+  <!-- Ghost inner glow outline -->
+  <path d="M400,105
+           C 278,105 185,193 185,300
+           L 185,560
+           Q 210,535 225,555 Q 250,580 275,555
+           Q 300,530 325,555 Q 350,580 375,555
+           Q 400,530 425,555 Q 450,580 475,555
+           Q 500,530 525,555 Q 550,580 575,555
+           Q 590,540 615,560
+           L 615,300
+           C 615,193 522,105 400,105 Z"
+        fill="none" stroke="white" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- Eyes -->
+  <ellipse cx="320" cy="290" rx="38" ry="28" fill="#00d4ff" filter="url(#glow5)"/>
+  <ellipse cx="480" cy="290" rx="38" ry="28" fill="#00d4ff" filter="url(#glow5)"/>
+  <!-- Eye pupils -->
+  <ellipse cx="320" cy="290" rx="16" ry="18" fill="white" opacity="0.8"/>
+  <ellipse cx="480" cy="290" rx="16" ry="18" fill="white" opacity="0.8"/>
+  <!-- Eye shine -->
+  <circle cx="312" cy="283" r="6" fill="white"/>
+  <circle cx="472" cy="283" r="6" fill="white"/>
+
+  <!-- Ghost body circuit lines -->
+  <line x1="400" y1="360" x2="400" y2="500" stroke="#a855f7" stroke-width="1.5" opacity="0.3" stroke-dasharray="6 4"/>
+  <line x1="300" y1="400" x2="500" y2="400" stroke="#00d4ff" stroke-width="1" opacity="0.25"/>
+  <circle cx="400" cy="420" r="12" fill="none" stroke="url(#g5)" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Floating dots around ghost -->
+  <circle cx="120" cy="250" r="4" fill="#00d4ff" opacity="0.5" filter="url(#soft5)"/>
+  <circle cx="100" cy="340" r="3" fill="#a855f7" opacity="0.4"/>
+  <circle cx="130" cy="430" r="5" fill="#00d4ff" opacity="0.45"/>
+  <circle cx="680" cy="250" r="4" fill="#a855f7" opacity="0.5" filter="url(#soft5)"/>
+  <circle cx="700" cy="340" r="3" fill="#00d4ff" opacity="0.4"/>
+  <circle cx="670" cy="430" r="5" fill="#a855f7" opacity="0.45"/>
+  <circle cx="200" cy="160" r="3" fill="#00ff41" opacity="0.5"/>
+  <circle cx="600" cy="160" r="3" fill="#00ff41" opacity="0.5"/>
+
+  <!-- GHOST PROTOCOL text -->
+  <text x="400" y="720" text-anchor="middle" font-family="monospace" font-size="22"
+        fill="#00d4ff" letter-spacing="10" font-weight="bold">GHOST PROTOCOL</text>
+  <line x1="140" y1="736" x2="660" y2="736" stroke="url(#g5)" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Main wordmark -->
+  <text x="400" y="820" text-anchor="middle" font-family="monospace" font-size="60" font-weight="bold"
+        fill="white" letter-spacing="3">SHADOW</text>
+  <text x="400" y="892" text-anchor="middle" font-family="monospace" font-size="60" font-weight="bold"
+        fill="url(#g5)" letter-spacing="3">CYPHER</text>
+  <text x="400" y="942" text-anchor="middle" font-family="monospace" font-size="12"
+        fill="white" letter-spacing="8" opacity="0.35">UNDETECTABLE · UNSTOPPABLE</text>
+</svg>

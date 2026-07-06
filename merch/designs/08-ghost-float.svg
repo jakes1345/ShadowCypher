@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 820">
+  <!-- GHOST FLOAT - ghost levitating, wavy bottom like a real ghost, glow beneath -->
+  <defs>
+    <linearGradient id="gg8" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="wavGrad8" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0c0c20"/><stop offset="100%" stop-color="#06060e" stop-opacity="0.5"/>
+    </linearGradient>
+    <filter id="eg8" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow8big" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+    <filter id="zg8" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Ground glow / float aura under ghost -->
+  <ellipse cx="310" cy="720" rx="160" ry="28" fill="#00d4ff" opacity="0.12" filter="url(#glow8big)"/>
+  <ellipse cx="310" cy="720" rx="110" ry="18" fill="#a855f7" opacity="0.1" filter="url(#glow8big)"/>
+
+  <!-- Floating particles drifting up -->
+  <circle cx="180" cy="640" r="5" fill="#00d4ff" opacity="0.5" filter="url(#zg8)"/>
+  <circle cx="440" cy="610" r="4" fill="#a855f7" opacity="0.5" filter="url(#zg8)"/>
+  <circle cx="200" cy="560" r="3" fill="#00ff41" opacity="0.4"/>
+  <circle cx="420" cy="540" r="3.5" fill="#00d4ff" opacity="0.45"/>
+  <circle cx="160" cy="490" r="2.5" fill="#a855f7" opacity="0.35"/>
+  <circle cx="460" cy="470" r="3" fill="#00d4ff" opacity="0.4"/>
+  <circle cx="230" cy="420" r="4" fill="#a855f7" opacity="0.3" filter="url(#zg8)"/>
+  <circle cx="390" cy="400" r="4.5" fill="#00d4ff" opacity="0.35" filter="url(#zg8)"/>
+  <circle cx="145" cy="380" r="2" fill="#00ff41" opacity="0.4"/>
+  <circle cx="475" cy="360" r="2" fill="#a855f7" opacity="0.4"/>
+
+  <!-- Ghost body - CLASSIC GHOST SHAPE - rounded top + wavy bottom -->
+  <!-- The wavy tail is the key feature -->
+  <path d="
+    M 310,80
+    C 418,78 502,148 506,238
+    C 510,318 490,378 464,406
+    C 490,422 510,460 510,500
+    C 510,540 502,570 492,590
+    C 510,596 516,614 506,628
+    C 492,648 470,646 458,630
+    C 442,648 414,660 390,644
+    C 370,660 340,668 310,660
+    C 280,668 250,660 230,644
+    C 206,660 178,648 162,630
+    C 150,646 128,648 114,628
+    C 104,614 110,596 128,590
+    C 118,570 110,540 110,500
+    C 110,460 130,422 156,406
+    C 130,378 110,318 114,238
+    C 118,148 202,78 310,80 Z"
+    fill="#0c0c20"/>
+
+  <!-- Glow outline -->
+  <path d="
+    M 310,80
+    C 418,78 502,148 506,238
+    C 510,318 490,378 464,406
+    C 490,422 510,460 510,500
+    C 510,540 502,570 492,590
+    C 510,596 516,614 506,628
+    C 492,648 470,646 458,630
+    C 442,648 414,660 390,644
+    C 370,660 340,668 310,660
+    C 280,668 250,660 230,644
+    C 206,660 178,648 162,630
+    C 150,646 128,648 114,628
+    C 104,614 110,596 128,590
+    C 118,570 110,540 110,500
+    C 110,460 130,422 156,406
+    C 130,378 110,318 114,238
+    C 118,148 202,78 310,80 Z"
+    fill="none" stroke="url(#gg8)" stroke-width="3.5" filter="url(#eg8)"/>
+
+  <!-- Hood dome inner -->
+  <ellipse cx="310" cy="238" rx="148" ry="138" fill="#111128" opacity="0.55"/>
+
+  <!-- Hood point -->
+  <path d="M 270,80 C 284,52 336,52 350,80 L 336,108 C 326,96 294,96 284,108 Z"
+        fill="#121230" stroke="url(#gg8)" stroke-width="2.5"/>
+
+  <!-- Face void -->
+  <path d="M 206,152 C 192,152 172,172 170,210 C 167,258 184,318 210,338 L 410,338 C 436,318 453,258 450,210 C 448,172 428,152 414,152 Z"
+        fill="#040408"/>
+
+  <!-- EYES - big, wide, slightly upward angled = wonder/floating feeling -->
+  <rect x="192" y="256" width="124" height="42" rx="8" fill="#00d4ff" filter="url(#eg8)"/>
+  <rect x="202" y="264" width="104" height="18" rx="5" fill="white" opacity="0.6"/>
+  <rect x="200" y="258" width="110" height="10" rx="4" fill="white" opacity="0.2"/>
+
+  <rect x="304" y="256" width="124" height="42" rx="8" fill="#00d4ff" filter="url(#eg8)"/>
+  <rect x="314" y="264" width="104" height="18" rx="5" fill="white" opacity="0.6"/>
+  <rect x="312" y="258" width="110" height="10" rx="4" fill="white" opacity="0.2"/>
+
+  <!-- Subtle O-mouth (floating = peaceful/surprised) -->
+  <ellipse cx="310" cy="318" rx="26" ry="18" fill="none" stroke="#a855f7" stroke-width="2.5" opacity="0.5"/>
+
+  <!-- Ghost arms drifting outward/upward (floaty) -->
+  <ellipse cx="98" cy="460" rx="30" ry="48" fill="#0d0d22" stroke="#00d4ff" stroke-width="2.5"
+           transform="rotate(-22, 98, 460)" filter="url(#zg8)"/>
+  <ellipse cx="522" cy="460" rx="30" ry="48" fill="#0d0d22" stroke="#a855f7" stroke-width="2.5"
+           transform="rotate(22, 522, 460)" filter="url(#zg8)"/>
+
+  <!-- ZAP bolts on sides -->
+  <path d="M 48,350 L 70,384 L 56,384 L 80,428" fill="none" stroke="#00d4ff" stroke-width="4.5" stroke-linecap="round" filter="url(#eg8)"/>
+  <path d="M 572,350 L 550,384 L 564,384 L 540,428" fill="none" stroke="#a855f7" stroke-width="4.5" stroke-linecap="round" filter="url(#eg8)"/>
+
+  <!-- Shadow / reflection below ghost (suggests levitation) -->
+  <ellipse cx="310" cy="712" rx="120" ry="14" fill="#0a0a1e"/>
+  <ellipse cx="310" cy="712" rx="90" ry="9" fill="#1a1a38"/>
+
+  <!-- WORDMARK -->
+  <text x="310" y="766" text-anchor="middle" font-family="monospace" font-size="44" font-weight="bold"
+        fill="white" letter-spacing="3">SHADOWCYPHER</text>
+  <text x="310" y="800" text-anchor="middle" font-family="monospace" font-size="12"
+        fill="url(#gg8)" letter-spacing="7" opacity="0.65">GHOST FLOAT</text>
+</svg>

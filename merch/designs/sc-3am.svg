@@ -1,0 +1,257 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 860">
+  <defs>
+    <radialGradient id="glowCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00d4aa" stop-opacity="0.26"/>
+      <stop offset="100%" stop-color="#00d4aa" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowPurple" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.26"/>
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fadeBot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a12" stop-opacity="0"/>
+      <stop offset="52%" stop-color="#0a0a12" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#050508" stop-opacity="1"/>
+    </linearGradient>
+    <pattern id="deskGrain" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="#0f0f1a"/>
+      <line x1="0" y1="0" x2="6" y2="6" stroke="#131320" stroke-width="0.5"/>
+    </pattern>
+    <pattern id="keys" width="16" height="13" patternUnits="userSpaceOnUse">
+      <rect width="16" height="13" fill="#18182e"/>
+      <rect x="1.5" y="1.5" width="12" height="9.5" rx="2" fill="#20203a"/>
+    </pattern>
+  </defs>
+
+  <!-- Desk surface -->
+  <rect width="680" height="860" fill="url(#deskGrain)"/>
+
+  <!-- Monitor ambient glows -->
+  <ellipse cx="224" cy="264" rx="220" ry="165" fill="url(#glowCyan)"/>
+  <ellipse cx="456" cy="264" rx="220" ry="165" fill="url(#glowPurple)"/>
+
+  <!-- Mousepad -->
+  <rect x="140" y="374" width="378" height="186" rx="10" fill="#121224"/>
+
+  <!-- Monitor stands -->
+  <rect x="176" y="322" width="70" height="10" rx="3" fill="#181828"/>
+  <rect x="192" y="300" width="14" height="26" rx="3" fill="#141424"/>
+  <rect x="398" y="322" width="70" height="10" rx="3" fill="#181828"/>
+  <rect x="414" y="300" width="14" height="26" rx="3" fill="#141424"/>
+
+  <!-- LEFT MONITOR -->
+  <rect x="98" y="134" width="254" height="172" rx="8" fill="#0a0a1a"/>
+  <rect x="102" y="138" width="246" height="164" rx="6" fill="#111124"/>
+  <!-- Screen area -->
+  <rect x="108" y="144" width="234" height="152" rx="2" fill="#0d1117"/>
+  <!-- Code editor — syntax colour strips -->
+  <rect x="114" y="152" width="30" height="3.5" rx="1" fill="#ff79c6"/>
+  <rect x="148" y="152" width="48" height="3.5" rx="1" fill="#f8f8f2" opacity="0.7"/>
+  <rect x="200" y="152" width="24" height="3.5" rx="1" fill="#8be9fd"/>
+  <rect x="114" y="161" width="20" height="3.5" rx="1" fill="#50fa7b"/>
+  <rect x="138" y="161" width="36" height="3.5" rx="1" fill="#00d4aa"/>
+  <rect x="178" y="161" width="28" height="3.5" rx="1" fill="#f8f8f2" opacity="0.6"/>
+  <rect x="118" y="170" width="38" height="3.5" rx="1" fill="#8be9fd"/>
+  <rect x="160" y="170" width="18" height="3.5" rx="1" fill="#ff79c6"/>
+  <rect x="182" y="170" width="32" height="3.5" rx="1" fill="#f1fa8c"/>
+  <rect x="114" y="179" width="24" height="3.5" rx="1" fill="#50fa7b"/>
+  <rect x="142" y="179" width="50" height="3.5" rx="1" fill="#f8f8f2" opacity="0.65"/>
+  <rect x="114" y="188" width="16" height="3.5" rx="1" fill="#ff79c6"/>
+  <rect x="134" y="188" width="44" height="3.5" rx="1" fill="#8be9fd"/>
+  <rect x="182" y="188" width="20" height="3.5" rx="1" fill="#00d4aa"/>
+  <rect x="118" y="197" width="32" height="3.5" rx="1" fill="#50fa7b"/>
+  <rect x="154" y="197" width="26" height="3.5" rx="1" fill="#00d4aa"/>
+  <rect x="114" y="206" width="54" height="3.5" rx="1" fill="#f8f8f2" opacity="0.7"/>
+  <rect x="172" y="206" width="18" height="3.5" rx="1" fill="#ff79c6"/>
+  <rect x="118" y="215" width="20" height="3.5" rx="1" fill="#8be9fd"/>
+  <rect x="142" y="215" width="40" height="3.5" rx="1" fill="#f8f8f2" opacity="0.6"/>
+  <rect x="114" y="224" width="26" height="3.5" rx="1" fill="#50fa7b"/>
+  <rect x="144" y="224" width="16" height="3.5" rx="1" fill="#f1fa8c"/>
+  <rect x="164" y="224" width="36" height="3.5" rx="1" fill="#f8f8f2" opacity="0.65"/>
+  <rect x="118" y="233" width="44" height="3.5" rx="1" fill="#8be9fd"/>
+  <rect x="166" y="233" width="22" height="3.5" rx="1" fill="#ff79c6"/>
+  <rect x="114" y="242" width="22" height="3.5" rx="1" fill="#50fa7b"/>
+  <rect x="140" y="242" width="46" height="3.5" rx="1" fill="#f8f8f2" opacity="0.7"/>
+  <rect x="118" y="251" width="30" height="3.5" rx="1" fill="#8be9fd"/>
+  <rect x="152" y="251" width="20" height="3.5" rx="1" fill="#00d4aa"/>
+  <rect x="114" y="260" width="40" height="3.5" rx="1" fill="#f8f8f2" opacity="0.65"/>
+  <rect x="158" y="260" width="14" height="3.5" rx="1" fill="#ff79c6"/>
+  <!-- blinking cursor -->
+  <rect x="114" y="276" width="7" height="3.5" rx="0.5" fill="#00d4aa"/>
+  <!-- screen border glow -->
+  <rect x="108" y="144" width="234" height="152" rx="2" fill="none" stroke="#00d4aa" stroke-width="1.5" opacity="0.7"/>
+  <text x="225" y="131" font-family="monospace" font-size="9" fill="#00d4aa" text-anchor="middle" opacity="0.5">● main.py</text>
+
+  <!-- RIGHT MONITOR -->
+  <rect x="326" y="134" width="254" height="172" rx="8" fill="#0a0a1a"/>
+  <rect x="330" y="138" width="246" height="164" rx="6" fill="#111124"/>
+  <!-- Dashboard screen -->
+  <rect x="336" y="144" width="234" height="152" rx="2" fill="#0d0d1f"/>
+  <!-- stat blocks row -->
+  <rect x="342" y="152" width="66" height="14" rx="2" fill="#1e1e3f"/>
+  <rect x="344" y="155" width="42" height="7" rx="1" fill="#8b5cf6" opacity="0.7"/>
+  <rect x="414" y="152" width="66" height="14" rx="2" fill="#1e1e3f"/>
+  <rect x="416" y="155" width="30" height="7" rx="1" fill="#7c3aed" opacity="0.55"/>
+  <rect x="486" y="152" width="78" height="14" rx="2" fill="#1e1e3f"/>
+  <rect x="488" y="155" width="54" height="7" rx="1" fill="#6d28d9" opacity="0.65"/>
+  <!-- graph area -->
+  <rect x="342" y="172" width="222" height="62" rx="2" fill="#0a0a18"/>
+  <polyline points="346,222 358,208 370,226 382,196 394,214 406,202 418,228 430,186 442,210 454,200 466,220 478,194 490,212 502,204 514,220 526,207 538,222 548,208"
+            fill="none" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="346,222 358,208 370,226 382,196 394,214 406,202 418,228 430,186 442,210 454,200 466,220 478,194 490,212 502,204 514,220 526,207 538,222 548,208"
+            fill="none" stroke="#c4b5fd" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+  <!-- data rows -->
+  <rect x="342" y="240" width="46" height="12" rx="2" fill="#1e1e3f"/>
+  <rect x="344" y="243" width="30" height="6" rx="1" fill="#4c1d95" opacity="0.65"/>
+  <rect x="394" y="240" width="46" height="12" rx="2" fill="#1e1e3f"/>
+  <rect x="396" y="243" width="22" height="6" rx="1" fill="#5b21b6" opacity="0.55"/>
+  <rect x="446" y="240" width="46" height="12" rx="2" fill="#1e1e3f"/>
+  <rect x="448" y="243" width="38" height="6" rx="1" fill="#7c3aed" opacity="0.7"/>
+  <rect x="498" y="240" width="62" height="12" rx="2" fill="#1e1e3f"/>
+  <rect x="500" y="243" width="50" height="6" rx="1" fill="#8b5cf6" opacity="0.6"/>
+  <!-- mini charts bottom -->
+  <rect x="342" y="258" width="70" height="32" rx="2" fill="#0a0a18"/>
+  <rect x="418" y="258" width="70" height="32" rx="2" fill="#0a0a18"/>
+  <rect x="494" y="258" width="70" height="32" rx="2" fill="#0a0a18"/>
+  <!-- screen border glow -->
+  <rect x="336" y="144" width="234" height="152" rx="2" fill="none" stroke="#8b5cf6" stroke-width="1.5" opacity="0.7"/>
+  <text x="453" y="131" font-family="monospace" font-size="9" fill="#8b5cf6" text-anchor="middle" opacity="0.5">● dashboard</text>
+
+  <!-- Monitor cable between them -->
+  <rect x="335" y="230" width="8" height="60" rx="3" fill="#1a1a2a"/>
+
+  <!-- KEYBOARD -->
+  <rect x="156" y="384" width="316" height="92" rx="8" fill="#141428"/>
+  <rect x="160" y="388" width="308" height="84" rx="5" fill="url(#keys)"/>
+  <rect x="160" y="388" width="308" height="84" rx="5" fill="none" stroke="#282848" stroke-width="1"/>
+  <!-- spacebar row highlight -->
+  <rect x="196" y="456" width="164" height="11" rx="3" fill="#222240"/>
+
+  <!-- MOUSE -->
+  <ellipse cx="544" cy="434" rx="27" ry="37" fill="#141428"/>
+  <ellipse cx="544" cy="434" rx="22" ry="32" fill="#1c1c32"/>
+  <line x1="544" y1="408" x2="544" y2="458" stroke="#282848" stroke-width="1"/>
+  <rect x="539" y="418" width="10" height="16" rx="5" fill="#282848"/>
+
+  <!-- USB cable keyboard -->
+  <path d="M 318 476 C 305 496 280 506 254 518 C 220 532 196 550 174 566"
+        fill="none" stroke="#252545" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- USB cable mouse -->
+  <path d="M 544 471 C 550 492 558 512 562 542"
+        fill="none" stroke="#252545" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- ENERGY DRINK CAN (circle from above) -->
+  <circle cx="88" cy="432" r="30" fill="#141428"/>
+  <circle cx="88" cy="432" r="25" fill="#1c1c38"/>
+  <circle cx="88" cy="432" r="16" fill="#0e0e22"/>
+  <circle cx="88" cy="432" r="9" fill="#161628"/>
+  <!-- Top of can — avoid SC letters (Snapchat risk), use lightning bolt instead -->
+  <path d="M 92 424 L 86 432 L 91 432 L 85 440 L 94 430 L 89 430 Z" fill="#00d4aa" opacity="0.85"/>
+  <path d="M 70 413 L 75 408 L 80 413" fill="none" stroke="#2e2e50" stroke-width="1.5"/>
+
+  <!-- PHONE (face down / screen off, left edge) -->
+  <rect x="34" y="292" width="56" height="96" rx="7" fill="#111122"/>
+  <rect x="38" y="296" width="48" height="88" rx="5" fill="#090914"/>
+  <circle cx="62" cy="260" r="5" fill="#ff3333" opacity="0.85"/>
+
+  <!-- DIGITAL CLOCK -->
+  <rect x="566" y="334" width="92" height="40" rx="4" fill="#0a0505"/>
+  <rect x="568" y="336" width="88" height="36" rx="3" fill="#0d0707"/>
+  <text x="612" y="362" font-family="'Courier New', Courier, monospace" font-size="26"
+        fill="#ff2222" text-anchor="middle" font-weight="bold" letter-spacing="3">3:17</text>
+  <rect x="566" y="334" width="92" height="40" rx="4" fill="none" stroke="#ff2222" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- POST-IT NOTE -->
+  <rect x="578" y="222" width="76" height="68" rx="2" fill="#f1c40f" opacity="0.88"/>
+  <line x1="586" y1="240" x2="646" y2="240" stroke="#c4a400" stroke-width="0.8" opacity="0.5"/>
+  <line x1="586" y1="250" x2="646" y2="250" stroke="#c4a400" stroke-width="0.8" opacity="0.5"/>
+  <line x1="586" y1="260" x2="646" y2="260" stroke="#c4a400" stroke-width="0.8" opacity="0.5"/>
+  <line x1="586" y1="270" x2="638" y2="270" stroke="#c4a400" stroke-width="0.8" opacity="0.5"/>
+  <text x="616" y="238" font-family="sans-serif" font-size="7.5" fill="#8a7000" text-anchor="middle">ship it</text>
+  <text x="616" y="249" font-family="sans-serif" font-size="7.5" fill="#8a7000" text-anchor="middle">by friday</text>
+  <text x="616" y="260" font-family="sans-serif" font-size="7.5" fill="#8a7000" text-anchor="middle">no excuses</text>
+
+  <!-- ── THE GUY ────────────────────────────────────────
+       Seated at desk, back to viewer, hood up. Face never shown.
+       Could be anyone. Probably is everyone.
+       Monitor light catches the hood edges: cyan left, purple right.
+  ──────────────────────────────────────────────────────── -->
+
+  <!-- Screen light ambient spilling onto back/hood -->
+  <ellipse cx="250" cy="390" rx="150" ry="90" fill="#00d4aa" opacity="0.035"/>
+  <ellipse cx="440" cy="390" rx="150" ry="90" fill="#8b5cf6" opacity="0.035"/>
+
+  <!-- HOODIE BODY — boxy, oversized, back view -->
+  <path d="M 190 468 C 182 510 180 552 182 596 L 498 596 C 500 552 498 510 490 468 Z"
+        fill="#10101e"/>
+  <!-- Body side panels — subtle shape variation so it's not a flat rectangle -->
+  <path d="M 190 468 C 185 495 182 530 182 560" fill="none" stroke="#0c0c18" stroke-width="1" opacity="0.4"/>
+  <path d="M 490 468 C 495 495 498 530 498 560" fill="none" stroke="#0c0c18" stroke-width="1" opacity="0.4"/>
+
+  <!-- LEFT SLEEVE — hanging to the side, forearm on desk -->
+  <path d="M 194 480 C 174 498 156 520 146 552 C 142 564 152 570 162 566
+           C 174 536 190 512 208 490 Z" fill="#10101e"/>
+  <!-- RIGHT SLEEVE -->
+  <path d="M 486 480 C 506 498 524 520 534 552 C 538 564 528 570 518 566
+           C 506 536 490 512 472 490 Z" fill="#10101e"/>
+
+  <!-- SHOULDERS — wide, hoodie drop-shoulder silhouette -->
+  <path d="M 198 472 C 204 448 228 434 274 428 L 340 424 L 406 428
+           C 452 434 476 448 482 472 Z" fill="#10101e"/>
+
+  <!-- HOOD — back view. Rounded dome with slight peak. Slightly pitched forward (programmer lean). -->
+  <path d="M 286 436
+           C 278 402 276 362 284 330
+           C 294 298 316 278 340 274
+           C 364 278 386 298 396 330
+           C 404 362 402 402 394 436
+           Z" fill="#10101e"/>
+
+  <!-- Hood center seam (fabric ridge from peak to neck opening) -->
+  <path d="M 340 276 C 340 320 340 378 340 434" fill="none" stroke="#080816" stroke-width="1.8" opacity="0.55"/>
+
+  <!-- Hood peak — slight point gives it character, not a perfect dome -->
+  <path d="M 326 276 C 332 254 348 254 354 276" fill="#10101e"/>
+
+  <!-- Hood fabric shadows — left and right panel creases -->
+  <path d="M 288 400 C 285 374 286 342 292 316" fill="none" stroke="#080816" stroke-width="2.5" stroke-linecap="round" opacity="0.45"/>
+  <path d="M 392 400 C 395 374 394 342 388 316" fill="none" stroke="#080816" stroke-width="2.5" stroke-linecap="round" opacity="0.45"/>
+
+  <!-- MONITOR LIGHT CATCHING HOOD EDGES — the humanizing detail -->
+  <!-- Cyan (left monitor) catches left hood edge -->
+  <path d="M 286 420 C 280 388 279 350 287 322" fill="none" stroke="#00d4aa" stroke-width="2.5" stroke-linecap="round" opacity="0.20"/>
+  <path d="M 290 432 C 284 398 283 356 291 326" fill="none" stroke="#00d4aa" stroke-width="1" stroke-linecap="round" opacity="0.10"/>
+  <!-- Purple (right monitor) catches right hood edge -->
+  <path d="M 394 420 C 400 388 401 350 393 322" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round" opacity="0.20"/>
+  <path d="M 390 432 C 396 398 397 356 389 326" fill="none" stroke="#8b5cf6" stroke-width="1" stroke-linecap="round" opacity="0.10"/>
+
+  <!-- HEADPHONES arc over the hood — tells you there's a person inside -->
+  <path d="M 298 365 C 304 318 376 318 382 365"
+        fill="none" stroke="#1a1a2c" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="295" cy="369" rx="11" ry="13" fill="#141426"/>
+  <ellipse cx="385" cy="369" rx="11" ry="13" fill="#141426"/>
+  <ellipse cx="295" cy="369" rx="6"  ry="7"  fill="#0e0e1c"/>
+  <ellipse cx="385" cy="369" rx="6"  ry="7"  fill="#0e0e1c"/>
+
+  <!-- Back center seam + kangaroo pocket curve -->
+  <line x1="340" y1="430" x2="340" y2="592" stroke="#080816" stroke-width="1.8" opacity="0.5"/>
+  <path d="M 272 538 Q 340 550 408 538" fill="none" stroke="#0c0c18" stroke-width="2" opacity="0.55"/>
+
+  <!-- Tiny SC embroidered logo on back — like it's actually printed on the hoodie -->
+  <text x="340" y="510" font-family="'Courier New', monospace" font-size="10" font-weight="bold"
+        fill="#1e1e34" text-anchor="middle" letter-spacing="3" opacity="0.6">SC</text>
+
+  <!-- CHAIR HEADREST (barely visible behind/below figure) -->
+  <rect x="222" y="596" width="236" height="46" rx="23" fill="#0e0e1e"/>
+  <rect x="232" y="600" width="216" height="38" rx="19" fill="#131328"/>
+
+  <!-- Bottom fade for wordmark -->
+  <rect x="0" y="608" width="680" height="252" fill="url(#fadeBot)"/>
+
+  <!-- WORDMARK -->
+  <text x="340" y="722" font-family="Arial Black, Arial, sans-serif" font-size="34"
+        fill="#ffffff" text-anchor="middle" font-weight="900" letter-spacing="7">SHADOWCYPHER</text>
+  <line x1="192" y1="740" x2="488" y2="740" stroke="#00d4aa" stroke-width="1" opacity="0.55"/>
+  <text x="340" y="762" font-family="'Courier New', Courier, monospace" font-size="12"
+        fill="#00d4aa" text-anchor="middle" letter-spacing="3" opacity="0.88">3:17 AM  ·  THE GRIND NEVER STOPS</text>
+</svg>

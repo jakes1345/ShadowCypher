@@ -5,7 +5,7 @@ iso_name="shadowos"
 iso_label="SHADOWOS_$(date +%Y%m)"
 iso_publisher="ShadowCypher <https://shadowcypher.site>"
 iso_application="ShadowOS Live/Install Medium"
-iso_version="0.1.0-$(date +%Y.%m.%d)"
+iso_version="3.0.0-enterprise-$(date +%Y.%m.%d)"
 install_dir="shadowos"
 buildmodes=('iso')
 bootmodes=('bios.syslinux.mbr' 'bios.syslinux.eltorito' 'uefi-x64.grub.esp')
@@ -45,4 +45,14 @@ file_permissions=(
   ["/etc/shadowos/modes/undercover/apply.sh"]="0:0:0755"
   ["/etc/shadowos/modes/_network_open.sh"]="0:0:0755"
   ["/etc/skel/.ssh"]="0:0:0700"
+  # Enterprise features
+  ["/usr/local/bin/compliance-audit.sh"]="0:0:0755"
+  ["/usr/local/bin/freeipa-setup.py"]="0:0:0755"
+  ["/usr/local/bin/luks-setup.sh"]="0:0:0755"
+  ["/usr/local/bin/tpm2-config.sh"]="0:0:0755"
+  ["/usr/local/bin/secureboot-enable.sh"]="0:0:0755"
+  ["/usr/local/bin/fips-enable.sh"]="0:0:0755"
+  ["/usr/local/bin/patch-policy.sh"]="0:0:0755"
+  ["/usr/local/bin/selinux-generator.sh"]="0:0:0755"
+  ["/usr/local/bin/audit-daemon.py"]="0:0:0755"
 )

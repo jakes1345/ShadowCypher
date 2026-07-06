@@ -1,0 +1,11 @@
+[Unit]
+Description=ShadowOS Daily Compliance Check
+Requires=shadowos-compliance-check.service
+
+[Timer]
+OnBootSec=30min
+OnUnitActiveSec=24h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

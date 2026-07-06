@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 820">
+  <!-- GHOST TRIO - three ghost faces stacked vertically in a totem-pole/column style -->
+  <defs>
+    <linearGradient id="gg7a" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="gg7b" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff3060"/><stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="gg7c" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00ff41"/><stop offset="100%" stop-color="#00d4ff"/>
+    </linearGradient>
+    <filter id="eg7" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="zg7" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Vertical connecting line/spine -->
+  <line x1="350" y1="60" x2="350" y2="730" stroke="url(#gg7a)" stroke-width="2" opacity="0.25" stroke-dasharray="6 4"/>
+
+  <!-- ══ FACE 1 - TOP (Cyan/default) ══ -->
+  <g transform="translate(155, 40) scale(0.78)">
+    <path d="M 300,35 C 420,33 510,105 518,200 C 526,285 505,345 480,372 C 514,390 540,430 540,475 C 540,530 516,564 490,580 L 490,655 L 110,655 L 110,580 C 84,564 60,530 60,475 C 60,430 86,390 120,372 C 95,345 74,285 82,200 C 90,105 180,33 300,35 Z"
+          fill="#0c0c1e"/>
+    <path d="M 300,35 C 420,33 510,105 518,200 C 526,285 505,345 480,372 C 514,390 540,430 540,475 C 540,530 516,564 490,580 L 490,655 L 110,655 L 110,580 C 84,564 60,530 60,475 C 60,430 86,390 120,372 C 95,345 74,285 82,200 C 90,105 180,33 300,35 Z"
+          fill="none" stroke="url(#gg7a)" stroke-width="4" filter="url(#eg7)"/>
+    <path d="M 300,35 C 340,8 360,8 340,35 L 326,62 C 316,50 284,50 274,62 L 260,35 C 240,8 260,8 300,35 Z" fill="#121228" stroke="url(#gg7a)" stroke-width="2"/>
+    <path d="M 168,120 C 150,120 128,148 126,200 C 122,265 142,345 175,378 L 425,378 C 458,345 478,265 474,200 C 472,148 450,120 432,120 Z" fill="#040408"/>
+    <rect x="148" y="296" width="128" height="42" rx="7" fill="#00d4ff" filter="url(#eg7)"/>
+    <rect x="157" y="303" width="108" height="18" rx="4" fill="white" opacity="0.6"/>
+    <rect x="324" y="296" width="128" height="42" rx="7" fill="#00d4ff" filter="url(#eg7)"/>
+    <rect x="333" y="303" width="108" height="18" rx="4" fill="white" opacity="0.6"/>
+    <!-- ZAP small -->
+    <path d="M 40,250 L 56,274 L 45,274 L 64,306" fill="none" stroke="#00d4ff" stroke-width="3.5" stroke-linecap="round" filter="url(#zg7)"/>
+    <path d="M 560,250 L 544,274 L 555,274 L 536,306" fill="none" stroke="#a855f7" stroke-width="3.5" stroke-linecap="round" filter="url(#zg7)"/>
+  </g>
+
+  <!-- ══ FACE 2 - MIDDLE (Rage/red) ══ -->
+  <g transform="translate(155, 258) scale(0.78)">
+    <path d="M 300,35 C 420,33 510,105 518,200 C 526,285 505,345 480,372 C 514,390 540,430 540,475 C 540,530 516,564 490,580 L 490,655 L 110,655 L 110,580 C 84,564 60,530 60,475 C 60,430 86,390 120,372 C 95,345 74,285 82,200 C 90,105 180,33 300,35 Z"
+          fill="#120a0e"/>
+    <path d="M 300,35 C 420,33 510,105 518,200 C 526,285 505,345 480,372 C 514,390 540,430 540,475 C 540,530 516,564 490,580 L 490,655 L 110,655 L 110,580 C 84,564 60,530 60,475 C 60,430 86,390 120,372 C 95,345 74,285 82,200 C 90,105 180,33 300,35 Z"
+          fill="none" stroke="url(#gg7b)" stroke-width="4" filter="url(#eg7)"/>
+    <path d="M 168,120 C 150,120 128,148 126,200 C 122,265 142,345 175,378 L 425,378 C 458,345 478,265 474,200 C 472,148 450,120 432,120 Z" fill="#0a0206"/>
+    <!-- ANGRY eyes angled -->
+    <path d="M 148,298 L 276,282 L 278,322 L 148,338 Z" fill="#ff3060" filter="url(#eg7)"/>
+    <path d="M 153,304 L 272,290 L 273,316 L 153,330 Z" fill="white" opacity="0.55"/>
+    <path d="M 322,282 L 452,298 L 452,338 L 322,322 Z" fill="#ff3060" filter="url(#eg7)"/>
+    <path d="M 327,290 L 448,304 L 448,330 L 327,316 Z" fill="white" opacity="0.55"/>
+    <!-- Angry brows -->
+    <path d="M 142,268 L 180,252" fill="none" stroke="#ff3060" stroke-width="4" stroke-linecap="round" filter="url(#zg7)"/>
+    <path d="M 420,252 L 458,268" fill="none" stroke="#ff3060" stroke-width="4" stroke-linecap="round" filter="url(#zg7)"/>
+    <!-- ZAP red -->
+    <path d="M 38,250 L 56,276 L 43,276 L 64,310" fill="none" stroke="#ff3060" stroke-width="4" stroke-linecap="round" filter="url(#eg7)"/>
+    <path d="M 562,250 L 544,276 L 557,276 L 536,310" fill="none" stroke="#ff3060" stroke-width="4" stroke-linecap="round" filter="url(#eg7)"/>
+  </g>
+
+  <!-- ══ FACE 3 - BOTTOM (Green/chill/cool) ══ -->
+  <g transform="translate(155, 476) scale(0.78)">
+    <path d="M 300,35 C 420,33 510,105 518,200 C 526,285 505,345 480,372 C 514,390 540,430 540,475 C 540,530 516,564 490,580 L 490,655 L 110,655 L 110,580 C 84,564 60,530 60,475 C 60,430 86,390 120,372 C 95,345 74,285 82,200 C 90,105 180,33 300,35 Z"
+          fill="#080e08"/>
+    <path d="M 300,35 C 420,33 510,105 518,200 C 526,285 505,345 480,372 C 514,390 540,430 540,475 C 540,530 516,564 490,580 L 490,655 L 110,655 L 110,580 C 84,564 60,530 60,475 C 60,430 86,390 120,372 C 95,345 74,285 82,200 C 90,105 180,33 300,35 Z"
+          fill="none" stroke="url(#gg7c)" stroke-width="4" filter="url(#eg7)"/>
+    <path d="M 168,120 C 150,120 128,148 126,200 C 122,265 142,345 175,378 L 425,378 C 458,345 478,265 474,200 C 472,148 450,120 432,120 Z" fill="#040a04"/>
+    <!-- COOL squinting eyes - half-closed -->
+    <rect x="148" y="296" width="128" height="42" rx="7" fill="#00ff41" filter="url(#eg7)"/>
+    <rect x="156" y="316" width="112" height="22" rx="4" fill="#080e08" opacity="0.9"/>
+    <rect x="157" y="303" width="108" height="11" rx="4" fill="white" opacity="0.55"/>
+    <rect x="324" y="296" width="128" height="42" rx="7" fill="#00ff41" filter="url(#eg7)"/>
+    <rect x="332" y="316" width="112" height="22" rx="4" fill="#080e08" opacity="0.9"/>
+    <rect x="333" y="303" width="108" height="11" rx="4" fill="white" opacity="0.55"/>
+    <!-- ZAP green -->
+    <path d="M 38,250 L 56,276 L 43,276 L 64,310" fill="none" stroke="#00ff41" stroke-width="4" stroke-linecap="round" filter="url(#eg7)"/>
+    <path d="M 562,250 L 544,276 L 557,276 L 536,310" fill="none" stroke="#00d4ff" stroke-width="4" stroke-linecap="round" filter="url(#eg7)"/>
+  </g>
+
+  <!-- WORDMARK at bottom -->
+  <text x="350" y="780" text-anchor="middle" font-family="monospace" font-size="44" font-weight="bold"
+        fill="white" letter-spacing="4">SHADOWCYPHER</text>
+  <text x="350" y="816" text-anchor="middle" font-family="monospace" font-size="12"
+        fill="url(#gg7a)" letter-spacing="8" opacity="0.65">GHOST TRIO · THREE MODES</text>
+</svg>
