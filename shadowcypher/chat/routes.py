@@ -89,6 +89,11 @@ def add_contact(
     except (ValueError, binascii.Error):
         raise HTTPException(status_code=400, detail="Invalid public key")
 
+    # Find the contact user by username
+    contact_user = db.query(User).filter(User.username == request.contact_username).first()
+    if not contact_user:
+        raise HTTPException(status_code=404, detail="Contact user not found")
+
     contact = Contact(
         user_id=current_user.id,
         contact_username=request.contact_username,
@@ -99,6 +104,22 @@ def add_contact(
     db.add(contact)
     db.commit()
     db.refresh(contact)
+
+    # Create conversation between current user and contact user
+    existing_conv = db.query(Conversation).filter(
+        ((Conversation.user_id_1 == current_user.id) & (Conversation.user_id_2 == contact_user.id)) |
+        ((Conversation.user_id_1 == contact_user.id) & (Conversation.user_id_2 == current_user.id))
+    ).first()
+
+    if not existing_conv:
+        # Create empty encrypted session key as placeholder
+        conversation = Conversation(
+            user_id_1=current_user.id,
+            user_id_2=contact_user.id,
+            encrypted_session_key=b'\x00' * 32  # Placeholder
+        )
+        db.add(conversation)
+        db.commit()
 
     return AddContactResponse(
         contact_id=contact.id,
