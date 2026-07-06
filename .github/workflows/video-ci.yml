@@ -1,0 +1,391 @@
+name: Video Processing & Publishing
+
+on:
+  push:
+    paths:
+      - 'videos/**'
+      - '.github/workflows/video-ci.yml'
+    branches:
+      - main
+      - develop
+  pull_request:
+    paths:
+      - 'videos/**'
+      - '.github/workflows/video-ci.yml'
+  workflow_dispatch:
+
+env:
+  VIDEO_INPUT_DIR: videos/raw
+  VIDEO_OUTPUT_DIR: videos/processed
+  THUMBNAIL_OUTPUT_DIR: videos/thumbnails
+  SUBTITLE_OUTPUT_DIR: videos/subtitles
+
+jobs:
+  detect-videos:
+    name: Detect Changed Videos
+    runs-on: ubuntu-latest
+    outputs:
+      video-files: ${{ steps.detect.outputs.files }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed video files
+        id: detect
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            FILES=$(git diff --name-only origin/${{ github.base_ref }} | grep -E '\.(mp4|mov|mkv|avi|flv)$' || true)
+          else
+            FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep -E '\.(mp4|mov|mkv|avi|flv)$' || true)
+          fi
+
+          if [ -z "$FILES" ]; then
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "files=" >> $GITHUB_OUTPUT
+          else
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            JSON_FILES=$(echo "$FILES" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "files=$JSON_FILES" >> $GITHUB_OUTPUT
+          fi
+
+  validate-videos:
+    name: Validate Video Files
+    runs-on: ubuntu-latest
+    needs: detect-videos
+    if: needs.detect-videos.outputs.has-changes == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg mediainfo
+
+      - name: Validate video files
+        run: |
+          FILES='${{ needs.detect-videos.outputs.video-files }}'
+
+          for file in $(echo "$FILES" | jq -r '.[]'); do
+            echo "Validating: $file"
+
+            if [ ! -f "$file" ]; then
+              echo "ERROR: File not found - $file"
+              exit 1
+            fi
+
+            # Check if file is a valid video
+            ffmpeg -v error -select_streams v:0 -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1:nokey=1 "$file" | grep -q "video" || {
+              echo "ERROR: Invalid video file - $file"
+              exit 1
+            }
+
+            echo "✓ Valid video file: $file"
+          done
+
+  encode-videos:
+    name: Encode Videos
+    runs-on: ubuntu-latest
+    needs: [detect-videos, validate-videos]
+    if: needs.detect-videos.outputs.has-changes == 'true'
+    strategy:
+      matrix:
+        preset: [
+          { name: '1080p-30fps', scale: '1920:1080', fps: 30, bitrate: '3500k' },
+          { name: '720p-30fps', scale: '1280:720', fps: 30, bitrate: '2000k' },
+          { name: 'mobile-preview', scale: '854:480', fps: 24, bitrate: '1200k' }
+        ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Create output directories
+        run: |
+          mkdir -p ${{ env.VIDEO_OUTPUT_DIR }}/${{ matrix.preset.name }}
+          mkdir -p ${{ env.SUBTITLE_OUTPUT_DIR }}
+          mkdir -p ${{ env.THUMBNAIL_OUTPUT_DIR }}
+
+      - name: Encode videos to ${{ matrix.preset.name }}
+        run: |
+          FILES='${{ needs.detect-videos.outputs.video-files }}'
+
+          for file in $(echo "$FILES" | jq -r '.[]'); do
+            filename=$(basename "$file" | sed 's/\.[^.]*$//')
+            output_file="${{ env.VIDEO_OUTPUT_DIR }}/${{ matrix.preset.name }}/${filename}.mp4"
+
+            echo "Encoding $file to $output_file (preset: ${{ matrix.preset.name }})"
+
+            ffmpeg -i "$file" \
+              -vf "scale=${{ matrix.preset.scale }}:force_original_aspect_ratio=decrease:force_divisible_by=2" \
+              -c:v libx264 \
+              -preset fast \
+              -crf 23 \
+              -r ${{ matrix.preset.fps }} \
+              -b:v ${{ matrix.preset.bitrate }} \
+              -c:a aac \
+              -b:a 128k \
+              -ar 48000 \
+              -y \
+              "$output_file"
+
+            if [ $? -eq 0 ]; then
+              echo "✓ Encoded: $output_file"
+            else
+              echo "ERROR: Failed to encode $file"
+              exit 1
+            fi
+          done
+
+      - name: Upload encoded videos
+        uses: actions/upload-artifact@v4
+        with:
+          name: encoded-videos-${{ matrix.preset.name }}
+          path: ${{ env.VIDEO_OUTPUT_DIR }}/${{ matrix.preset.name }}/
+          retention-days: 30
+
+  generate-thumbnails:
+    name: Generate Thumbnails
+    runs-on: ubuntu-latest
+    needs: [detect-videos, validate-videos]
+    if: needs.detect-videos.outputs.has-changes == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Create thumbnail directory
+        run: mkdir -p ${{ env.THUMBNAIL_OUTPUT_DIR }}
+
+      - name: Generate thumbnails
+        run: |
+          FILES='${{ needs.detect-videos.outputs.video-files }}'
+
+          for file in $(echo "$FILES" | jq -r '.[]'); do
+            filename=$(basename "$file" | sed 's/\.[^.]*$//')
+            output_thumb="${{ env.THUMBNAIL_OUTPUT_DIR }}/${filename}-thumbnail.png"
+
+            echo "Generating thumbnail for: $file"
+
+            # Extract thumbnail at 10% of video duration
+            ffmpeg -i "$file" \
+              -vf "select=eq(n\,int(1*N/25)),scale=1280:720:force_original_aspect_ratio=decrease" \
+              -vsync vfr \
+              -q:v 2 \
+              "$output_thumb"
+
+            if [ $? -eq 0 ]; then
+              echo "✓ Generated: $output_thumb"
+            else
+              echo "ERROR: Failed to generate thumbnail for $file"
+              exit 1
+            fi
+          done
+
+      - name: Upload thumbnails
+        uses: actions/upload-artifact@v4
+        with:
+          name: thumbnails
+          path: ${{ env.THUMBNAIL_OUTPUT_DIR }}/
+          retention-days: 30
+
+  extract-subtitles:
+    name: Extract & Generate Subtitles
+    runs-on: ubuntu-latest
+    needs: [detect-videos, validate-videos]
+    if: needs.detect-videos.outputs.has-changes == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg python3 python3-pip
+          pip3 install --upgrade pip
+
+      - name: Create subtitle directory
+        run: mkdir -p ${{ env.SUBTITLE_OUTPUT_DIR }}
+
+      - name: Extract embedded subtitles
+        run: |
+          FILES='${{ needs.detect-videos.outputs.video-files }}'
+
+          for file in $(echo "$FILES" | jq -r '.[]'); do
+            filename=$(basename "$file" | sed 's/\.[^.]*$//')
+            output_sub="${{ env.SUBTITLE_OUTPUT_DIR }}/${filename}.vtt"
+
+            echo "Extracting subtitles from: $file"
+
+            # Check for embedded subtitles
+            ffmpeg -i "$file" -t 1 -c:s copy -t 0 "${output_sub}" 2>/dev/null || true
+
+            # If no embedded subtitles, create placeholder
+            if [ ! -f "$output_sub" ]; then
+              printf "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\n[Auto-generated subtitle placeholder]\n[Please add or update manually with actual captions]\n" > "$output_sub"
+              echo "✓ Created placeholder subtitles: $output_sub"
+            else
+              echo "✓ Extracted subtitles: $output_sub"
+            fi
+          done
+
+      - name: Upload subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: subtitles
+          path: ${{ env.SUBTITLE_OUTPUT_DIR }}/
+          retention-days: 30
+
+  publish-videos:
+    name: Publish Videos (Dry Run)
+    runs-on: ubuntu-latest
+    needs: [detect-videos, encode-videos, generate-thumbnails, extract-subtitles]
+    if: needs.detect-videos.outputs.has-changes == 'true' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download encoded videos
+        uses: actions/download-artifact@v4
+        with:
+          pattern: encoded-videos-*
+          path: ${{ env.VIDEO_OUTPUT_DIR }}
+
+      - name: Download thumbnails
+        uses: actions/download-artifact@v4
+        with:
+          name: thumbnails
+          path: ${{ env.THUMBNAIL_OUTPUT_DIR }}
+
+      - name: Download subtitles
+        uses: actions/download-artifact@v4
+        with:
+          name: subtitles
+          path: ${{ env.SUBTITLE_OUTPUT_DIR }}
+
+      - name: List processed files
+        run: |
+          echo "=== Encoded Videos ==="
+          find ${{ env.VIDEO_OUTPUT_DIR }} -type f -name "*.mp4" | sort
+
+          echo ""
+          echo "=== Thumbnails ==="
+          find ${{ env.THUMBNAIL_OUTPUT_DIR }} -type f | sort
+
+          echo ""
+          echo "=== Subtitles ==="
+          find ${{ env.SUBTITLE_OUTPUT_DIR }} -type f | sort
+
+      - name: Generate publishing metadata
+        run: |
+          VIDEOS=$(find ${{ env.VIDEO_OUTPUT_DIR }} -type f -name "*.mp4" | wc -l)
+          THUMBS=$(find ${{ env.THUMBNAIL_OUTPUT_DIR }} -type f | wc -l)
+          SUBS=$(find ${{ env.SUBTITLE_OUTPUT_DIR }} -type f | wc -l)
+          TIMESTAMP=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          cat > publishing-metadata.json << JSON_EOF
+          {
+            "videos_processed": $VIDEOS,
+            "thumbnails_generated": $THUMBS,
+            "subtitles_created": $SUBS,
+            "timestamp": "$TIMESTAMP",
+            "workflow_run": "$WORKFLOW_URL"
+          }
+          JSON_EOF
+          cat publishing-metadata.json
+
+      - name: Store publishing metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: publishing-metadata
+          path: publishing-metadata.json
+          retention-days: 90
+
+  update-index:
+    name: Update Tutorial Index
+    runs-on: ubuntu-latest
+    needs: [detect-videos, publish-videos]
+    if: needs.detect-videos.outputs.has-changes == 'true' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+
+      - name: Download publishing metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: publishing-metadata
+
+      - name: Update VIDEO_TUTORIALS.md
+        run: |
+          echo "Updating VIDEO_TUTORIALS.md with processing metadata..."
+
+          METADATA=$(cat publishing-metadata.json)
+          TIMESTAMP=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+
+          # Update last updated timestamp
+          sed -i "s/\*\*Last Updated\*\*: .*/\*\*Last Updated\*\*: $TIMESTAMP/" VIDEO_TUTORIALS.md
+
+          echo "✓ Updated VIDEO_TUTORIALS.md"
+
+      - name: Commit changes
+        run: |
+          git config --local user.email "github-actions@shadowcypher.site"
+          git config --local user.name "ShadowCypher CI"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git add VIDEO_TUTORIALS.md
+            COMMIT_MSG=$(cat <<'COMMIT_EOF'
+          docs: update video tutorial index with processing metadata
+
+          Automated update from video processing workflow.
+          - Processed videos with encoding optimization
+          - Generated thumbnails and subtitles
+          - Updated tutorial metadata
+          COMMIT_EOF
+            )
+            git commit -m "$COMMIT_MSG"
+            git push
+          else
+            echo "No changes to commit"
+          fi
+
+  notify:
+    name: Notify on Completion
+    runs-on: ubuntu-latest
+    needs: [detect-videos, encode-videos, generate-thumbnails, extract-subtitles, publish-videos]
+    if: always() && needs.detect-videos.outputs.has-changes == 'true'
+    steps:
+      - name: Check job status
+        run: |
+          if [ "${{ needs.encode-videos.result }}" == "success" ] && \
+             [ "${{ needs.generate-thumbnails.result }}" == "success" ] && \
+             [ "${{ needs.extract-subtitles.result }}" == "success" ]; then
+            echo "✓ All video processing jobs completed successfully"
+            exit 0
+          else
+            echo "✗ Some video processing jobs failed"
+            exit 1
+          fi
+
+      - name: Summary
+        run: |
+          echo "Video Processing Workflow Summary"
+          echo "=================================="
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+          echo "Processing Results:"
+          echo "- Encoding: ${{ needs.encode-videos.result }}"
+          echo "- Thumbnails: ${{ needs.generate-thumbnails.result }}"
+          echo "- Subtitles: ${{ needs.extract-subtitles.result }}"
+          echo "- Publishing: ${{ needs.publish-videos.result }}"
