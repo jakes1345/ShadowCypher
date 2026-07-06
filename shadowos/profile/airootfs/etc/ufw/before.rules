@@ -1,0 +1,48 @@
+# Rules that should be processed before user rules.
+# Rules in this file are applied to all profiles.
+
+*filter
+:ufw-before-input - [0:0]
+:ufw-before-output - [0:0]
+:ufw-before-forward - [0:0]
+:ufw-not-input - [0:0]
+:ufw-not-output - [0:0]
+:ufw-not-forward - [0:0]
+:ufw-user-input - [0:0]
+:ufw-user-output - [0:0]
+:ufw-user-forward - [0:0]
+:ufw-user-limit - [0:0]
+:ufw-user-limit-accept - [0:0]
+:ufw-track-input - [0:0]
+:ufw-track-output - [0:0]
+:ufw-track-forward - [0:0]
+:ufw-logging-deny - [0:0]
+:ufw-logging-allow - [0:0]
+:ufw-logging-reject - [0:0]
+
+# Don't delete these required lines, otherwise there will be errors
+-A ufw-before-input -j ufw-logging-deny -m state --state INVALID
+-A ufw-before-input -j DROP -m state --state INVALID
+-A ufw-before-input -i lo -j ACCEPT
+-A ufw-before-input -j ufw-user-input
+-A ufw-before-output -j ufw-user-output
+-A ufw-before-forward -j ufw-user-forward
+
+# ACCEPT mss clamp
+-A ufw-before-forward -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+-A ufw-before-forward -p tcp --tcp-flags SYN,RST RST -j TCPMSS --clamp-mss-to-pmtu
+
+# Disable ICMP redirects
+-A ufw-before-input -p icmp --icmp-type redirect -j DROP
+-A ufw-before-output -p icmp --icmp-type redirect -j DROP
+-A ufw-before-forward -p icmp --icmp-type redirect -j DROP
+
+# Accept established connections
+-A ufw-before-input -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A ufw-before-input -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# Don't track packets for forwarded ports
+-A ufw-before-forward -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A ufw-before-forward -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+COMMIT
