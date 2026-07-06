@@ -18,7 +18,7 @@ import './GroupChat.css';
 
 interface ChatProps {
     token: string | null;
-    currentUser: string;
+    currentUser: { username: string };
 }
 
 export default function Chat({ token, currentUser }: ChatProps) {
@@ -124,7 +124,7 @@ export default function Chat({ token, currentUser }: ChatProps) {
                     <>
                         {selectedConversation ? (
                             <>
-                                <ConversationWindow messages={messages} currentUser={currentUser} />
+                                <ConversationWindow messages={messages} currentUser={currentUser.username} />
                                 <MessageInput onSend={handleSendMessage} />
                             </>
                         ) : (
@@ -144,7 +144,7 @@ export default function Chat({ token, currentUser }: ChatProps) {
                                     groupId={selectedGroup}
                                     currentUser={currentUser}
                                     token={token}
-                                    sessionKey={groupSessionKey}
+                                    currentGroup={getGroupData()}
                                 />
                                 <div className="group-sidebar">
                                     <button
@@ -153,10 +153,10 @@ export default function Chat({ token, currentUser }: ChatProps) {
                                     >
                                         {showGroupAdmin ? 'Hide Admin' : 'Show Admin'}
                                     </button>
-                                    {showGroupAdmin && (
+                                    {showGroupAdmin && getGroupData() && (
                                         <GroupAdminPanel
                                             groupId={selectedGroup}
-                                            creatorId={getGroupData()?.creator_id || ''}
+                                            creatorId={getGroupData()!.creator_id}
                                             currentUser={currentUser}
                                             token={token}
                                         />

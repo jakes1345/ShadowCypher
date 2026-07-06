@@ -2,27 +2,51 @@ import { useState, useCallback } from 'react';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+/**
+ * Group — team chat container
+ * group_key: hex-encoded 32-byte AES-256 key (current)
+ * new_group_key_hex: rotated key (if null, use group_key)
+ * key_version: incremented on key rotation
+ * created_at: unix timestamp in seconds
+ */
 export interface Group {
     id: string;
     name: string;
-    creator_id: string;
-    created_at: string;
+    creator_id: string;  // User ID (string) who created group
+    group_key: string;   // Hex-encoded 32-byte key
+    new_group_key_hex: string | null;  // Rotated key (null = no rotation pending)
+    key_version: number;  // Incremented on key rotation
+    created_at: number;  // Unix timestamp (seconds)
 }
 
+/**
+ * GroupMessage — encrypted message in group
+ * encrypted_message: hex-encoded ciphertext (includes 16-byte auth tag)
+ * nonce: hex-encoded 12-byte nonce
+ * created_at: unix timestamp in seconds
+ */
 export interface GroupMessage {
     id: string;
     group_id: string;
-    sender_id: string;
-    encrypted_message: string;
-    nonce: string;
-    created_at: string;
+    sender_id: string;  // User ID (string) who sent message
+    encrypted_message: string;  // Hex-encoded ciphertext + auth tag
+    nonce: string;  // Hex-encoded 12-byte nonce
+    key_version: number;  // Which group key version was used to encrypt
+    created_at: number;  // Unix timestamp (seconds)
 }
 
+/**
+ * GroupMember — user membership record
+ * joined_at: unix timestamp in seconds
+ */
 export interface GroupMember {
-    id: string;
-    group_id: string;
-    user_id: string;
-    joined_at: string;
+    id: string;  // Member record UUID
+    user_id: string;  // User ID (string)
+    joined_at: number;  // Unix timestamp (seconds)
+}
+
+interface DecryptedMessage extends GroupMessage {
+    plaintext?: string;
 }
 
 export function useGroupChat(token: string | null) {
@@ -163,6 +187,38 @@ export function useGroupChat(token: string | null) {
         }
     }, [token]);
 
+    /**
+     * Decrypt messages using the current group key
+     * Handles key version mismatches gracefully
+     */
+    const decryptMessages = useCallback(
+        async (messages: GroupMessage[], groupKey: string, keyVersion: number): Promise<DecryptedMessage[]> => {
+            const { decryptGroupMessage } = await import('../crypto/chatCrypto');
+
+            return Promise.all(
+                messages.map(async (msg) => {
+                    // Only decrypt if key version matches (supports key rotation)
+                    if (msg.key_version === keyVersion) {
+                        try {
+                            const plaintext = await decryptGroupMessage(
+                                msg.encrypted_message,
+                                msg.nonce,
+                                groupKey
+                            );
+                            return { ...msg, plaintext };
+                        } catch (err) {
+                            console.warn(`Failed to decrypt message ${msg.id}:`, err);
+                            return { ...msg, plaintext: '[Decryption failed]' };
+                        }
+                    }
+                    // Different key version — skip decryption
+                    return msg;
+                })
+            );
+        },
+        []
+    );
+
     return {
         groups,
         currentGroupMessages,
@@ -175,6 +231,7 @@ export function useGroupChat(token: string | null) {
         fetchGroupMembers,
         sendMessage,
         addMember,
-        removeMember
+        removeMember,
+        decryptMessages
     };
 }

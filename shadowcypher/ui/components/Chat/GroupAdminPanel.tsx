@@ -4,7 +4,7 @@ import { useGroupChat } from '../../hooks/useGroupChat';
 interface GroupAdminPanelProps {
     groupId: string;
     creatorId: string;
-    currentUser: string;
+    currentUser: { username: string };
     token: string | null;
 }
 
@@ -25,7 +25,7 @@ export const GroupAdminPanel: React.FC<GroupAdminPanelProps> = ({
     }, [groupId, fetchGroupMembers]);
 
     // Only creator can manage
-    const isCreator = currentUser === creatorId;
+    const isCreator = currentUser.username === creatorId;
 
     const handleAddMember = async (e: React.FormEvent) => {
         e.preventDefault();
