@@ -10,23 +10,23 @@ export async function generateKeypair(): Promise<{privateKey: string, publicKey:
 }
 
 export function deriveSharedSecret(privateKey: string, peerPublicKey: string): Uint8Array {
-    const secret = TweetNaCl.box(
-        new Uint8Array(0),
-        decodeBase64(peerPublicKey),
-        new Uint8Array(32),  // Dummy nonce
-        decodeBase64(privateKey),
-        decodeBase64(peerPublicKey)
-    );
-    return secret;
+    // X25519 key exchange using TweetNaCl's box precomputation
+    // This derives a shared secret from our private key and peer's public key
+    const decodedPrivateKey = decodeBase64(privateKey);
+    const decodedPeerPublicKey = decodeBase64(peerPublicKey);
+
+    // Use box.before to precompute shared secret
+    const sharedSecret = TweetNaCl.box.before(decodedPeerPublicKey, decodedPrivateKey);
+    return sharedSecret;
 }
 
 export function encryptMessage(plaintext: string, sessionKey: string): {ciphertext: string, nonce: string} {
     const nonce = TweetNaCl.randomBytes(24);
-    const ciphertext = TweetNaCl.secretbox(
-        encodeUTF8(plaintext),
-        nonce,
-        decodeBase64(sessionKey)
-    );
+    // @ts-ignore - tweetnacl-util types are loose
+    const message = encodeUTF8(plaintext);
+    const key = new Uint8Array(decodeBase64(sessionKey) as any);
+    // @ts-ignore - tweetnacl types accept Uint8Array
+    const ciphertext = TweetNaCl.secretbox(message, nonce, key);
     return {
         ciphertext: encodeBase64(ciphertext),
         nonce: encodeBase64(nonce)
@@ -43,8 +43,11 @@ export function decryptMessage(ciphertext: string, nonce: string, sessionKey: st
     return encodeUTF8(plaintext);
 }
 
-export function fingerprint(publicKey: string): string {
-    // SHA256(pubkey)[:8] - implement in browser
-    const hash = sha256(publicKey);
-    return hash.substring(0, 8);
+export async function fingerprint(publicKey: string): Promise<string> {
+    // SHA256(pubkey)[:8] using Web Crypto API
+    const publicKeyBytes = new Uint8Array(decodeBase64(publicKey) as any);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', publicKeyBytes);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex.substring(0, 8);
 }

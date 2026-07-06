@@ -5,6 +5,7 @@ import { ConversationWindow } from './ConversationWindow';
 import { MessageInput } from './MessageInput';
 import { ContactDiscovery } from './ContactDiscovery';
 import { useChat } from '../../hooks/useChat';
+import { encryptMessage } from '../../crypto/chatCrypto';
 import './styles.css';
 
 interface ChatProps {
@@ -15,6 +16,7 @@ interface ChatProps {
 export default function Chat({ token, currentUser }: ChatProps) {
     const [vaultUnlocked, setVaultUnlocked] = useState(false);
     const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
+    const [sessionKey, setSessionKey] = useState<string | null>(null);
     const { conversations, messages, fetchConversations, fetchMessages, sendMessage } = useChat(token);
 
     useEffect(() => {
@@ -26,6 +28,9 @@ export default function Chat({ token, currentUser }: ChatProps) {
     useEffect(() => {
         if (selectedConversation && token) {
             fetchMessages(selectedConversation);
+            // In a real app, fetch or derive the session key for this conversation
+            // For now, use a placeholder that would be set via context or state management
+            setSessionKey(localStorage.getItem(`sessionKey_${selectedConversation}`) || null);
         }
     }, [selectedConversation, token, fetchMessages]);
 
@@ -34,10 +39,15 @@ export default function Chat({ token, currentUser }: ChatProps) {
     }
 
     const handleSendMessage = async (plaintext: string) => {
-        if (!selectedConversation) return;
-        // Encrypt message client-side
-        // const { ciphertext, nonce } = await encryptMessage(...);
-        // await sendMessage(selectedConversation, ciphertext, nonce);
+        if (!selectedConversation || !sessionKey) return;
+        try {
+            const { ciphertext, nonce } = encryptMessage(plaintext, sessionKey);
+            await sendMessage(selectedConversation, ciphertext, nonce);
+            // Optionally refresh messages after sending
+            await fetchMessages(selectedConversation);
+        } catch (error) {
+            console.error('Failed to send message:', error);
+        }
     };
 
     return (
