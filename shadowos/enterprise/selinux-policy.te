@@ -1,0 +1,340 @@
+policy_module(shadowcypher_guardian, 1.0.0)
+
+################################################################################
+## Type Enforcement Policy for ShadowCypher Guardian Vault Enterprise
+##
+## This policy module defines mandatory access control rules for the Guardian
+## vault, encryption key management, and associated security infrastructure.
+##
+## Policy compiled for: permissive testing -> enforcing production
+## Kernel version: 5.x+ with SELinux support
+################################################################################
+
+## ============================================================================
+## Require declarations for kernel and base policy interfaces
+## ============================================================================
+
+require {
+	type init_t;
+	type kernel_t;
+	type sysfs_t;
+	type proc_t;
+	type tmpfs_t;
+	type devpts_t;
+	type var_t;
+	type var_lib_t;
+	type var_run_t;
+	type var_tmp_t;
+	type etc_t;
+	type user_home_t;
+	type user_tmp_t;
+	type user_devpts_t;
+	type syslog_t;
+	type auditd_t;
+	type unconfined_t;
+	class file { create read write append getattr setattr unlink lock };
+	class dir { create read write getattr setattr search add_name remove_name };
+	class process { transition signal signull noatsecure siginh rlimitinh };
+	class unix_stream_socket { create read write connect listen accept };
+	class unix_dgram_socket { create read write connect sendto recvfrom };
+	class capability { dac_override dac_read_search kill setgid setuid net_raw sys_resource };
+	class capability2 { syslog wake_alarm };
+}
+
+################################################################################
+## Type Definitions
+################################################################################
+
+## Guardian Vault Types
+type guardian_vault_t;
+type guardian_vault_exec_t;
+type guardian_vault_tmp_t;
+type guardian_vault_var_run_t;
+type guardian_vault_var_lib_t;
+
+## Encryption Key Types
+type guardian_key_t;
+type guardian_key_dir_t;
+
+## Encrypted Data Types
+type guardian_encrypted_data_t;
+type guardian_encrypted_data_dir_t;
+
+## Audit Log Types
+type guardian_audit_log_t;
+type guardian_audit_log_dir_t;
+
+## Configuration Types
+type guardian_config_t;
+type guardian_config_dir_t;
+
+## Temporary Work Space
+type guardian_tmp_t;
+
+## Socket Types
+type guardian_socket_t;
+
+################################################################################
+## Attribute Definitions
+################################################################################
+
+attribute guardian_domain;
+attribute guardian_file_type;
+attribute encrypted_file_type;
+attribute key_file_type;
+attribute audit_file_type;
+attribute guardian_tmpfs_type;
+
+## Type attribute assignments
+typeattribute guardian_vault_t guardian_domain;
+typeattribute guardian_vault_tmp_t guardian_tmpfs_type, guardian_file_type;
+typeattribute guardian_tmp_t guardian_tmpfs_type, guardian_file_type;
+typeattribute guardian_encrypted_data_t encrypted_file_type, guardian_file_type;
+typeattribute guardian_key_t key_file_type, guardian_file_type;
+typeattribute guardian_audit_log_t audit_file_type, guardian_file_type;
+
+################################################################################
+## Domain Initialization
+################################################################################
+
+## Mark guardian_vault_t as a domain (running process type)
+allow guardian_vault_t guardian_vault_t : process { transition signal_perms };
+
+################################################################################
+## File Access Rules
+################################################################################
+
+## Guardian Vault - Encrypted Data Access
+## The vault can read/write/execute encrypted data files
+allow guardian_vault_t guardian_encrypted_data_t : file {
+	create read write append getattr setattr lock ioctl open
+};
+allow guardian_vault_t guardian_encrypted_data_dir_t : dir {
+	search getattr read write add_name remove_name create
+};
+
+## Guardian Vault - Key Material Access
+## Only the vault can read key files; strict protection
+allow guardian_vault_t guardian_key_t : file {
+	read getattr open
+};
+allow guardian_vault_t guardian_key_dir_t : dir {
+	search getattr read
+};
+
+## Prevent unauthorized key access via neverallow
+neverallow ~guardian_vault_t guardian_key_t : file {
+	read write append execute
+};
+
+## Guardian Vault - Audit Log Access
+## Vault can write to audit logs
+allow guardian_vault_t guardian_audit_log_t : file {
+	write append getattr setattr open
+};
+allow guardian_vault_t guardian_audit_log_dir_t : dir {
+	search getattr write add_name
+};
+
+## Guardian Vault - Configuration Access
+## Vault can read (not modify) configuration
+allow guardian_vault_t guardian_config_t : file {
+	read getattr open
+};
+allow guardian_vault_t guardian_config_dir_t : dir {
+	search getattr read
+};
+
+## Guardian Vault - Temporary Files
+## Vault can create and manage temporary files
+allow guardian_vault_t guardian_vault_tmp_t : file {
+	create read write append getattr setattr unlink lock ioctl open
+};
+allow guardian_vault_t guardian_vault_var_run_t : file {
+	create read write append getattr setattr unlink lock open
+};
+allow guardian_vault_t guardian_vault_var_run_t : dir {
+	search getattr write add_name remove_name
+};
+allow guardian_vault_t var_tmp_t : dir { search getattr write };
+allow guardian_vault_t var_tmp_t : file { create write unlink getattr };
+
+## Guardian Vault - Library and Var/Lib Access
+allow guardian_vault_t guardian_vault_var_lib_t : file {
+	create read write append getattr setattr lock ioctl open
+};
+allow guardian_vault_t guardian_vault_var_lib_t : dir {
+	search getattr write add_name remove_name create
+};
+allow guardian_vault_t var_lib_t : dir { search getattr };
+
+## Guardian Vault - Standard System File Access
+## Read access to essential system files
+allow guardian_vault_t etc_t : file { read getattr open };
+allow guardian_vault_t etc_t : dir { search getattr };
+allow guardian_vault_t proc_t : file { read getattr open };
+allow guardian_vault_t sysfs_t : dir { search getattr };
+allow guardian_vault_t sysfs_t : file { read getattr open };
+
+## Deny access to user home directories
+neverallow guardian_vault_t user_home_t : dir { search };
+neverallow guardian_vault_t user_home_t : file { read write };
+
+## Deny access to unprivileged user tmpfs
+neverallow guardian_vault_t user_tmp_t : file { read write };
+neverallow guardian_vault_t user_devpts_t : chr_file { read write };
+
+################################################################################
+## Process and Domain Transition Rules
+################################################################################
+
+## Allow guardian vault to transition to/from own domain
+allow guardian_vault_t guardian_vault_exec_t : file {
+	read execute getattr open
+};
+allow guardian_vault_t guardian_vault_t : process {
+	fork signal signull ptrace
+};
+
+## Allow init to transition to guardian vault domain
+allow init_t guardian_vault_exec_t : file { read execute getattr open };
+allow init_t guardian_vault_t : process { transition };
+
+################################################################################
+## Capability Rules
+################################################################################
+
+## Guardian Vault - Required Capabilities
+## dac_override: bypass file permissions for vault operations
+## dac_read_search: read directories without permission
+## kill: signal management for subprocesses
+## setuid/setgid: privilege management
+## net_raw: raw socket access if needed for network monitoring
+## sys_resource: resource limit management
+
+allow guardian_vault_t self : capability {
+	dac_override dac_read_search kill setgid setuid sys_resource
+};
+
+## Deny dangerous capabilities
+neverallow guardian_vault_t self : capability {
+	net_admin sys_admin sys_boot sys_module
+};
+
+## Capability2 restrictions
+allow guardian_vault_t self : capability2 { };
+
+################################################################################
+## IPC and Socket Rules
+################################################################################
+
+## Self-communication via unix sockets
+allow guardian_vault_t self : unix_stream_socket {
+	create read write listen accept connect ioctl
+};
+allow guardian_vault_t self : unix_dgram_socket {
+	create read write connect sendto recvfrom
+};
+
+## Create socket files in var/run
+allow guardian_vault_t guardian_socket_t : sock_file {
+	create read write unlink getattr setattr
+};
+allow guardian_vault_t var_run_t : dir {
+	search getattr write add_name remove_name
+};
+
+################################################################################
+## Logging and Audit Rules
+################################################################################
+
+## Allow audit daemon to read guardian audit logs
+allow auditd_t guardian_audit_log_t : file {
+	read getattr open
+};
+
+## Allow syslog access for logging
+allow guardian_vault_t syslog_t : unix_dgram_socket { sendto };
+
+## Allow kernel logging
+allow guardian_vault_t self : capability { sys_admin };
+
+################################################################################
+## Execution Rules
+################################################################################
+
+## Guardian vault can execute helper scripts in its domain
+allow guardian_vault_t guardian_vault_exec_t : file { execute_no_trans };
+
+################################################################################
+## File Transition Rules
+################################################################################
+
+## When guardian_vault_t creates files in /var/lib/shadowcypher,
+## automatically label them as guardian_vault_var_lib_t
+filetrans_pattern(guardian_vault_t, var_lib_t, guardian_vault_var_lib_t, file)
+filetrans_pattern(guardian_vault_t, var_lib_t, guardian_vault_var_lib_t, dir)
+
+## When guardian_vault_t creates files in /var/run,
+## automatically label them as guardian_vault_var_run_t
+filetrans_pattern(guardian_vault_t, var_run_t, guardian_vault_var_run_t, file)
+
+## When guardian_vault_t creates files in /var/tmp,
+## automatically label them as guardian_vault_tmp_t
+filetrans_pattern(guardian_vault_t, var_tmp_t, guardian_vault_tmp_t, file)
+
+################################################################################
+## Network Access Rules
+################################################################################
+
+## Guardian vault requires network access for threat feeds
+## and potentially cloud sync (restricted to specific ports)
+allow guardian_vault_t self : tcp_socket {
+	create read write bind listen accept connect
+};
+allow guardian_vault_t self : udp_socket {
+	create read write bind connect
+};
+
+## Note: Detailed network rules would be in interface definitions
+## For production, use network port-specific rules and firewall policies
+
+################################################################################
+## Don't Audit Rules (Reduce Log Noise)
+################################################################################
+
+## Don't log denied capability checks that are expected
+dontaudit guardian_vault_t self : capability { sys_ptrace };
+
+################################################################################
+## Comments for Common Patterns
+################################################################################
+
+## File Transitions Pattern:
+## filetrans_pattern(source_domain, parent_dir_type, new_file_type, object_class)
+##
+## This automatically labels new files created by source_domain in
+## parent_dir_type directories with new_file_type
+
+## Allow Rules Pattern:
+## allow source_type target_type : object_class { permissions };
+##
+## Example: allow domain file_type : file { read write };
+##
+## Object classes: file, dir, process, capability, unix_stream_socket, etc.
+
+## Neverallow Rules Pattern:
+## neverallow source_type target_type : object_class { permissions };
+##
+## These are compile-time checks that policy must never contain certain rules.
+## Useful for security critical restrictions.
+
+## Attribute Pattern:
+## attribute attribute_name;
+## typeattribute type_name attribute_name;
+##
+## Groups related types for concise rules
+
+################################################################################
+## End of SELinux Type Enforcement Policy Module
+################################################################################
