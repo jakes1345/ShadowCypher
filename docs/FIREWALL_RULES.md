@@ -170,4 +170,3 @@ sudo systemctl disable ufw
 
 - **CIS Compliance:** See [CIS_COMPLIANCE.md](CIS_COMPLIANCE.md)
 - **Kernel Hardening:** See [sysctl parameters](../shadowos/profile/airootfs/etc/sysctl.d/99-shadowos.conf)
-- **SSH Hardening:** See [SSH_HARDENING.md](SSH_HARDENING.md)
