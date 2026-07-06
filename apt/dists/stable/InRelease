@@ -9,26 +9,26 @@ Version: 3.0.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Mon, 06 Jul 2026 18:55:27 +0000
+Date: Mon, 06 Jul 2026 23:16:22 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- b911ec07310ddedb98cbef0b551d25be 29 main/binary-amd64/Packages.gz
+ ec4bc48e1e08818ccaeda4cb885d3c46 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- 2be034d2b522e15d1f986cffe10b3ee94a3d5c812d7779771aa84bda4857ae11 29 main/binary-amd64/Packages.gz
+ 12b18c0d1bf6574a55f936fffa5bd16f814e94d7981cf6e48dbec107a4ad4cce 29 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpL+h8ACgkQ2fHRjxMT
-8IOGEg/+MlxFv1Dt472arUsqxuDkjLC9xTp4K6BtGYZvVKx1e0Erp37Rq7lnOpGR
-1B0vK5SriyWIFTvb/lQSHY0roslJmG0Nsh1dKjqtR5NyhfsuMR//pa9/IoeDFgyr
-gG9ycdlaw82CNCoE7KaKK/4WWxp0w1xSYaNVrq8gZSzeY3mjnEPvC9Tp2Qa8OI9g
-tchNYJxmI77hY+xVxOYtzJlwgnFS7QYgWKR41VpmnYw5iw4ItKIfpvaUKfwz0gjx
-0EOhl3bPKhaQR3Ta91c7WdcO/Yqa3HMJQEkKLDHvAQaYY2JXoNik6DnCOpl+NqC6
-+Q2Q1NNaHSI+ycy4f0d0+mzC/2ErY09PGqJaherSYNEjofQDX6M17iTedlHvobuv
-xBRkc230EHBITpEt23ktQ3U1+6rHG1izeTDqflQIpAczRv6oWSVgds5gIjo+mOAC
-LHY2BH4uFI0Zl48mgbB4VO5vkT5lSzOXjIRzeUvP1+J008S7mnXf73y1PHg4ssq/
-LaF9jyH2EiCgsuqPRMdA1cAcctn3oVLFkTS77ry0pOUexY+LgcHqO6H8fhILVlO+
-EL289PbNfo+rFnDJq3kvC0YQuMCKUsIYqehRUcrPF+OkQHuBtx5zyTmTU+tkiqHm
-lVZ/VHhdB/4jx7hJd7mypsQPYQQATsaSVbrka8Zei3dtXPuWoRc=
-=Cx7j
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpMN0YACgkQ2fHRjxMT
+8IN4fw/+Kd/RtemZgfT493zYXRb4kb95akuw4cZarDJMyyi5TMjcPUPb1vMYkWh1
+xdNpM5uE24mKGGR+Cc69nTp+hUBSQzICWq7xHjcaKB9EoDOgaaQOvq+psTkSe2aH
+Tzf4L35AsPShlYDeRA8Hyym7LsAZgETanL9PC7cKueuRVd+O7bOsr0arXjuAccqu
+EWX6/KNb5L9eSHNqNM5UvqBqThfS7xxK2v0A3lnUzctv8EV0N/X8LAZijji8rA0G
+hJ11qj4+s9ez+mS5jNuo/cjhDdNnHSD+/xbcR/KzuhxEnLO/AGZOOWkGqh8i8ngD
+CXdZknBWyaCmbV+8k9lOytV7WtJnisbMCH4oilnMWlrXcCjUQFOdR8U1vehaHuhO
+w6/D5p9Kkc9imbpnNx8RQXStSHVdnejYxySnaNDrrAMgTcK5JTxrlrU7p45Ji/Yd
+G0gGz/6IRbD04WlUCNmU/gDDWm8NQzU2Jpq9+QDzzzV6S8cZ4XUpmU1uyvzXSVhH
+GVbpRn89Ai2caEIOW6p5w2K0qfn4X25STTHn8fZAqOYzvRPsfLe2XAPqgllGQQXS
+JaMMVUuXB5+eKIkoY3dnnRrd5KJvQ8iiqExbjpb0/3wXcMnYiDEhNk/9WKBBNdIf
+4RHQAeUH7xTnk/yStHvjMMmzOV9t7u4MNUi0YyQyFSmziDn3uL0=
+=X7l5
 -----END PGP SIGNATURE-----
