@@ -307,6 +307,20 @@ def send_p2p(
     """Send message via P2P to another instance."""
     session = SessionLocal()
     try:
+        # Verify target instance exists
+        target_instance = instance_registry.get_instance(session, req.to_instance_id)
+        if not target_instance:
+            raise HTTPException(status_code=404, detail="Target instance not found")
+
+        # Verify target's owner is a trusted contact
+        contact = session.query(Contact).filter(
+            Contact.user_id == current_user.id,
+            Contact.id == target_instance.user_id,
+            Contact.is_trusted == True
+        ).first()
+        if not contact:
+            raise HTTPException(status_code=403, detail="Target instance owner is not a trusted contact")
+
         # Get sender's instance (implicit: first/primary instance for user)
         instances = instance_registry.list_online_instances(session, current_user.id)
         if not instances:

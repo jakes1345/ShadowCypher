@@ -10,6 +10,7 @@ import socket
 import ssl
 import time
 import json
+import ipaddress
 from shadowcypher.chat.db import SessionLocal
 from shadowcypher.chat.models import Instance, P2PConnection
 from shadowcypher.chat import instance_registry
@@ -50,10 +51,25 @@ class P2PMessage:
             nonce=bytes.fromhex(obj["nonce"])
         )
 
+def _is_safe_endpoint(endpoint: str) -> bool:
+    """Validate endpoint IP to prevent SSRF (no loopback, private, link-local, or multicast)."""
+    try:
+        ip_str = endpoint.rsplit(":", 1)[0]
+        ip = ipaddress.ip_address(ip_str)
+        if ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_multicast:
+            return False
+        return True
+    except (ValueError, IndexError):
+        return False
+
 def connect_p2p(from_instance_id: str, to_instance_id: str, session: Session) -> socket.socket | None:
     """Establish P2P connection to target instance."""
     to_instance = instance_registry.get_instance(session, to_instance_id)
     if not to_instance or not to_instance.is_online:
+        return None
+
+    # SSRF check: reject internal IPs
+    if not _is_safe_endpoint(to_instance.endpoint):
         return None
 
     try:
@@ -78,20 +94,25 @@ def send_p2p_message(from_instance_id: str, to_instance_id: str, ciphertext: byt
     try:
         key = (from_instance_id, to_instance_id)
 
+        # Check cache without blocking
+        sock = None
         with connection_lock:
-            # Check if connection exists and is active
             if key in p2p_connections:
                 sock = p2p_connections[key]
-            else:
-                sock = connect_p2p(from_instance_id, to_instance_id, session)
-                if sock:
-                    p2p_connections[key] = sock
 
-        # Try P2P
-        if key in p2p_connections and p2p_connections[key]:
+        # Dial WITHOUT lock (blocking operation)
+        if not sock:
+            sock = connect_p2p(from_instance_id, to_instance_id, session)
+
+        if not sock:
+            return {"status": "failed", "via": "p2p"}
+
+        # Send WITH lock
+        with connection_lock:
+            p2p_connections[key] = sock
             try:
                 msg = P2PMessage(from_instance_id, to_instance_id, ciphertext, nonce)
-                p2p_connections[key].sendall(msg.to_json().encode() + b"\n")
+                sock.sendall(msg.to_json().encode() + b"\n")
 
                 # Log P2P connection
                 conn = session.query(P2PConnection).filter(
@@ -106,12 +127,9 @@ def send_p2p_message(from_instance_id: str, to_instance_id: str, ciphertext: byt
                 return {"status": "delivered", "via": "p2p"}
             except Exception as e:
                 print(f"P2P send failed: {e}")
-                with connection_lock:
-                    if key in p2p_connections:
-                        del p2p_connections[key]
-
-        # Fall back to relay (handled by caller)
-        return {"status": "failed", "via": "p2p"}
+                if key in p2p_connections:
+                    del p2p_connections[key]
+                return {"status": "failed", "via": "p2p"}
     finally:
         session.close()
 
