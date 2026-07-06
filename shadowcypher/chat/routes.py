@@ -1,14 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
-from shadowcypher.chat.models import User, Contact, Conversation, Message
+from shadowcypher.chat.models import User, Contact, Conversation, Message, Instance
 from shadowcypher.chat.auth import create_jwt_token, validate_jwt_token
 from shadowcypher.chat.crypto import fingerprint
 from shadowcypher.chat.schemas import (
     RegisterRequest, RegisterResponse, LoginRequest, LoginResponse,
     AddContactRequest, AddContactResponse, SendMessageRequest, SendMessageResponse,
-    ConversationSummary, MessageResponse
+    ConversationSummary, MessageResponse, InstanceRegisterRequest, InstanceResponse
 )
 from shadowcypher.chat.db import SessionLocal
+from shadowcypher.chat import instance_registry
 from datetime import datetime
 import binascii
 from typing import Optional
@@ -217,4 +218,77 @@ def get_messages(
             nonce=binascii.hexlify(msg.nonce).decode()
         )
         for msg in messages
+    ]
+
+# ─── Instance Discovery & Registration ───
+
+@router.post("/instances/register", response_model=InstanceResponse, status_code=201)
+def register_instance(
+    req: InstanceRegisterRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Register a Shadow instance."""
+    try:
+        pubkey = bytes.fromhex(req.public_key)
+        instance = instance_registry.register_instance(db, current_user.id, pubkey, req.endpoint)
+        return InstanceResponse(
+            instance_id=instance.instance_id,
+            public_key=instance.public_key.hex(),
+            endpoint=instance.endpoint,
+            is_online=instance.is_online,
+            last_heartbeat=instance.last_heartbeat
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/instances/{instance_id}/heartbeat")
+def heartbeat_instance(
+    instance_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Heartbeat to keep instance online."""
+    success = instance_registry.heartbeat(db, instance_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Instance not found")
+    return {"status": "ok"}
+
+
+@router.get("/instances/{instance_id}", response_model=InstanceResponse)
+def get_instance(
+    instance_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Fetch instance by ID (for P2P discovery)."""
+    instance = instance_registry.get_instance(db, instance_id)
+    if not instance:
+        raise HTTPException(status_code=404, detail="Instance not found")
+    return InstanceResponse(
+        instance_id=instance.instance_id,
+        public_key=instance.public_key.hex(),
+        endpoint=instance.endpoint,
+        is_online=instance.is_online,
+        last_heartbeat=instance.last_heartbeat
+    )
+
+
+@router.get("/instances", response_model=list[InstanceResponse])
+def list_instances(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List all online instances for the user."""
+    instances = instance_registry.list_online_instances(db, current_user.id)
+    return [
+        InstanceResponse(
+            instance_id=i.instance_id,
+            public_key=i.public_key.hex(),
+            endpoint=i.endpoint,
+            is_online=i.is_online,
+            last_heartbeat=i.last_heartbeat
+        )
+        for i in instances
     ]

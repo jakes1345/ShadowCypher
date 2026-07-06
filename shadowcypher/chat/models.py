@@ -1,6 +1,8 @@
 from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
+import time
+import uuid
 
 Base = declarative_base()
 
@@ -55,3 +57,24 @@ class Message(Base):
     delivery_status = Column(String(20), default="pending")  # "pending", "sent", "delivered"
 
     conversation = relationship("Conversation", back_populates="messages")
+
+class Instance(Base):
+    """Shadow instance registry for P2P discovery."""
+    __tablename__ = "instances"
+
+    instance_id = Column(String(36), primary_key=True)  # UUID
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    public_key = Column(LargeBinary, nullable=False)  # X25519 pubkey (32 bytes)
+    endpoint = Column(String(255), nullable=True)  # "IP:port" or "onion.local" or None
+    last_heartbeat = Column(Integer, nullable=False)  # Unix timestamp
+    is_online = Column(Boolean, default=True, nullable=False)
+    created_at = Column(Integer, nullable=False)
+
+    def __init__(self, user_id, pubkey, endpoint=None):
+        self.instance_id = str(uuid.uuid4())
+        self.user_id = user_id
+        self.public_key = pubkey
+        self.endpoint = endpoint
+        self.last_heartbeat = int(time.time())
+        self.is_online = True
+        self.created_at = int(time.time())

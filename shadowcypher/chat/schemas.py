@@ -46,3 +46,15 @@ class MessageResponse(BaseModel):
     timestamp: int
     encrypted_message: str  # Hex-encoded
     nonce: str  # Hex-encoded
+
+class InstanceRegisterRequest(BaseModel):
+    instance_id: str  # UUID
+    public_key: str  # Hex-encoded X25519 pubkey
+    endpoint: Optional[str] = None  # "IP:port" or "onion.local"
+
+class InstanceResponse(BaseModel):
+    instance_id: str
+    public_key: str  # Hex
+    endpoint: Optional[str]
+    is_online: bool
+    last_heartbeat: int
