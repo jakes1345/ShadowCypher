@@ -1,0 +1,47 @@
+name: Update Download Statistics
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # Daily at noon UTC
+  workflow_dispatch:
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Generate statistics report
+        run: |
+          python3 shadowos/stats_server.py > /tmp/stats.json
+          cat /tmp/stats.json
+
+      - name: Update README with stats
+        run: |
+          python3 << 'EOF'
+          import json
+          with open('/tmp/stats.json') as f:
+              stats = json.load(f)
+
+          # Update docs/DOWNLOAD_STATS.md with current stats
+          with open('docs/DOWNLOAD_STATS.md', 'w') as f:
+              f.write(f"# Download Statistics\n\n")
+              f.write(f"**Total Downloads:** {stats['summary']['total']}\n")
+              f.write(f"**Last Updated:** {stats['summary']['updated']}\n\n")
+              f.write(f"## By Version\n\n")
+              for v, count in stats['by_version'].items():
+                  f.write(f"- {v}: {count}\n")
+          EOF
+
+      - name: Commit statistics
+        run: |
+          git config user.name "ShadowOS Bot"
+          git config user.email "bot@shadowcypher.site"
+          git add docs/DOWNLOAD_STATS.md
+          git commit -m "chore: update download statistics" || true
+          git push || true
