@@ -1,0 +1,31 @@
+{
+  "mirrors": [
+    {
+      "name": "Primary CDN",
+      "url": "https://dl.shadowcypher.site/shadowos",
+      "location": "US (Primary)",
+      "bandwidth": "10 Gbps",
+      "uptime_percent": 99.99,
+      "last_sync": "2026-07-05T22:00:00Z"
+    },
+    {
+      "name": "EU Mirror",
+      "url": "https://eu.mirrors.shadowcypher.site/shadowos",
+      "location": "Germany (EU)",
+      "bandwidth": "1 Gbps",
+      "uptime_percent": 99.95,
+      "last_sync": "2026-07-05T21:55:00Z"
+    },
+    {
+      "name": "Asia Mirror",
+      "url": "https://asia.mirrors.shadowcypher.site/shadowos",
+      "location": "Singapore (Asia)",
+      "bandwidth": "500 Mbps",
+      "uptime_percent": 99.9,
+      "last_sync": "2026-07-05T21:50:00Z"
+    }
+  ],
+  "last_updated": "2026-07-05T22:00:00Z",
+  "total_mirrors": 3,
+  "recommended": "https://dl.shadowcypher.site"
+}
