@@ -90,3 +90,55 @@ class P2PConnection(Base):
     created_at = Column(Integer, nullable=False)
     last_activity = Column(Integer, nullable=False)
     messages_sent = Column(Integer, default=0, nullable=False)
+
+class Group(Base):
+    """Encrypted group channel."""
+    __tablename__ = "groups"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # creator
+    name = Column(String(255), nullable=False)  # encrypted group name (stored with device key)
+    group_key_version = Column(Integer, default=1, nullable=False)
+    created_at = Column(Integer, nullable=False)
+
+    def __init__(self, user_id, name):
+        self.id = str(uuid.uuid4())
+        self.user_id = user_id
+        self.name = name
+        self.created_at = int(time.time())
+
+class GroupMember(Base):
+    """Group membership (user is member of group)."""
+    __tablename__ = "group_members"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    group_id = Column(String(36), ForeignKey("groups.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # member
+    joined_at = Column(Integer, nullable=False)
+
+    def __init__(self, group_id, user_id):
+        self.id = str(uuid.uuid4())
+        self.group_id = group_id
+        self.user_id = user_id
+        self.joined_at = int(time.time())
+
+class GroupMessage(Base):
+    """Encrypted message in group."""
+    __tablename__ = "group_messages"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    group_id = Column(String(36), ForeignKey("groups.id"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    encrypted_message = Column(LargeBinary, nullable=False)  # AES-256-GCM ciphertext
+    nonce = Column(LargeBinary, nullable=False)  # 96-bit nonce
+    group_key_version = Column(Integer, nullable=False)  # which group_key version was used
+    timestamp = Column(Integer, nullable=False)
+
+    def __init__(self, group_id, sender_id, encrypted_message, nonce, group_key_version):
+        self.id = str(uuid.uuid4())
+        self.group_id = group_id
+        self.sender_id = sender_id
+        self.encrypted_message = encrypted_message
+        self.nonce = nonce
+        self.group_key_version = group_key_version
+        self.timestamp = int(time.time())
