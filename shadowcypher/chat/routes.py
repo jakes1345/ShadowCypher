@@ -12,6 +12,7 @@ from shadowcypher.chat.schemas import (
 from shadowcypher.chat.db import SessionLocal
 from shadowcypher.chat import instance_registry
 from shadowcypher.chat import p2p_relay
+from shadowcypher.chat import fallback
 from datetime import datetime
 import binascii
 from typing import Optional
@@ -130,40 +131,58 @@ def add_contact(
     )
 
 @router.post("/send-message", response_model=SendMessageResponse, status_code=201)
-def send_message(
+def send_message_hybrid(
     request: SendMessageRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Send encrypted message in conversation"""
-    conversation = db.query(Conversation).filter(
-        Conversation.id == request.conversation_id
-    ).first()
-
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
+    """Send message with P2P fallback."""
+    session = SessionLocal()
     try:
-        ciphertext = binascii.unhexlify(request.encrypted_message)
-        nonce = binascii.unhexlify(request.nonce)
-    except (ValueError, binascii.Error):
-        raise HTTPException(status_code=400, detail="Invalid message encoding")
+        user_id = current_user.id
+        conversation = session.query(Conversation).filter(
+            Conversation.id == request.conversation_id
+        ).first()
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
 
-    message = Message(
-        conversation_id=request.conversation_id,
-        encrypted_message=ciphertext,
-        nonce=nonce,
-        sender=current_user.username,
-        delivery_status="sent"
-    )
-    db.add(message)
-    db.commit()
-    db.refresh(message)
+        try:
+            ciphertext = binascii.unhexlify(request.encrypted_message)
+            nonce = binascii.unhexlify(request.nonce)
+        except (ValueError, binascii.Error):
+            raise HTTPException(status_code=400, detail="Invalid message encoding")
 
-    return SendMessageResponse(
-        message_id=message.id,
-        delivery_status=message.delivery_status
-    )
+        # Determine recipient user ID
+        recipient_id = conversation.user_id_2 if conversation.user_id_1 == user_id else conversation.user_id_1
+
+        # Try P2P first, fall back to relay
+        result = fallback.send_with_fallback(
+            recipient_id,
+            ciphertext,
+            nonce,
+            request.conversation_id,
+            from_instance_id=None,  # Phase 1: no P2P instance, relay only
+            session=session
+        )
+
+        if result["status"] != "delivered":
+            raise HTTPException(status_code=500, detail="Failed to send message")
+
+        # Query the sent message from the database
+        message = session.query(Message).filter(
+            Message.conversation_id == request.conversation_id,
+            Message.encrypted_message == ciphertext
+        ).order_by(Message.id.desc()).first()
+
+        if not message:
+            raise HTTPException(status_code=500, detail="Message not found after creation")
+
+        return SendMessageResponse(
+            message_id=message.id,
+            delivery_status=message.delivery_status
+        )
+    finally:
+        session.close()
 
 @router.get("/conversations", response_model=list[ConversationSummary])
 def list_conversations(
