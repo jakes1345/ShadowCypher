@@ -1,0 +1,9 @@
+.instance-list { padding: 16px; border: 1px solid #00ff41; border-radius: 4px; background: #0f0f1e; }
+.instance-list h3 { color: #00ff41; margin-top: 0; }
+.instance-list ul { list-style: none; padding: 0; }
+.instance-list li { padding: 8px; margin-bottom: 8px; border: 1px solid #00ff4155; border-radius: 4px; display: flex; align-items: center; gap: 8px; }
+.instance-list li.online { background: #00ff4111; }
+.instance-list li.offline { background: #ff414111; opacity: 0.6; }
+.status-indicator { font-size: 12px; flex-shrink: 0; }
+.instance-id { font-family: monospace; color: #00ff41; flex: 0 0 auto; }
+.endpoint { color: #00ff41aa; font-family: monospace; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; }

@@ -4,6 +4,8 @@ import { ConversationList } from './ConversationList';
 import { ConversationWindow } from './ConversationWindow';
 import { MessageInput } from './MessageInput';
 import { ContactDiscovery } from './ContactDiscovery';
+import { InstanceDiscovery } from './InstanceDiscovery';
+import { InstanceList } from './InstanceList';
 import { useChat } from '../../hooks/useChat';
 import { encryptMessage } from '../../crypto/chatCrypto';
 import './styles.css';
@@ -17,6 +19,7 @@ export default function Chat({ token, currentUser }: ChatProps) {
     const [vaultUnlocked, setVaultUnlocked] = useState(false);
     const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
     const [sessionKey, setSessionKey] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'messages' | 'instances'>('messages');
     const { conversations, messages, fetchConversations, fetchMessages, sendMessage } = useChat(token);
 
     useEffect(() => {
@@ -58,13 +61,36 @@ export default function Chat({ token, currentUser }: ChatProps) {
                 onSelect={setSelectedConversation}
             />
             <div className="chat-main">
-                {selectedConversation ? (
+                <div className="chat-tabs">
+                    <button
+                        className={`tab-button ${activeTab === 'messages' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('messages')}
+                    >
+                        Messages
+                    </button>
+                    <button
+                        className={`tab-button ${activeTab === 'instances' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('instances')}
+                    >
+                        Instances
+                    </button>
+                </div>
+                {activeTab === 'messages' ? (
                     <>
-                        <ConversationWindow messages={messages} currentUser={currentUser} />
-                        <MessageInput onSend={handleSendMessage} />
+                        {selectedConversation ? (
+                            <>
+                                <ConversationWindow messages={messages} currentUser={currentUser} />
+                                <MessageInput onSend={handleSendMessage} />
+                            </>
+                        ) : (
+                            <div className="no-conversation">Select a conversation or <ContactDiscovery onAddContact={() => {}} /></div>
+                        )}
                     </>
                 ) : (
-                    <div className="no-conversation">Select a conversation or <ContactDiscovery onAddContact={() => {}} /></div>
+                    <div className="instances-panel">
+                        <InstanceDiscovery onInstanceAdded={() => {}} />
+                        <InstanceList />
+                    </div>
                 )}
             </div>
         </div>
