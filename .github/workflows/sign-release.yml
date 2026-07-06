@@ -1,0 +1,53 @@
+name: Sign & Release ShadowOS
+
+on:
+  push:
+    tags:
+      - 'shadowos-v*'
+
+jobs:
+  sign-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --import --no-tty --batch --passphrase "$GPG_PASSPHRASE"
+
+      - name: Build ISO
+        run: cd shadowos && ./build.sh
+
+      - name: Generate checksums
+        run: |
+          cd shadowos/out
+          sha256sum shadowos-*.iso > SHA256SUMS
+          sha256sum shadowos-*.iso.tar.gz >> SHA256SUMS
+
+      - name: Sign artifacts
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          cd shadowos/out
+          gpg --no-tty --batch --passphrase "$GPG_PASSPHRASE" --detach-sign shadowos-*.iso
+          gpg --no-tty --batch --passphrase "$GPG_PASSPHRASE" --detach-sign SHA256SUMS
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            shadowos/out/shadowos-*.iso
+            shadowos/out/shadowos-*.iso.sig
+            shadowos/out/SHA256SUMS
+            shadowos/out/SHA256SUMS.sig
+          body: |
+            ShadowOS Enterprise ${{ github.ref_name }}
+
+            **Verify integrity:**
+            ```bash
+            gpg --verify SHA256SUMS.sig
+            sha256sum -c SHA256SUMS
+            ```
