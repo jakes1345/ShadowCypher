@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 import time
@@ -99,6 +99,7 @@ class Group(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # creator
     name = Column(String(255), nullable=False)  # encrypted group name (stored with device key)
     group_key_version = Column(Integer, default=1, nullable=False)
+    new_group_key_hex = Column(String(64), nullable=True)  # New key after rotation (hex-encoded 32 bytes)
     created_at = Column(Integer, nullable=False)
 
     def __init__(self, user_id, name):
@@ -115,6 +116,8 @@ class GroupMember(Base):
     group_id = Column(String(36), ForeignKey("groups.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # member
     joined_at = Column(Integer, nullable=False)
+
+    __table_args__ = (UniqueConstraint('group_id', 'user_id', name='uq_group_user'),)
 
     def __init__(self, group_id, user_id):
         self.id = str(uuid.uuid4())

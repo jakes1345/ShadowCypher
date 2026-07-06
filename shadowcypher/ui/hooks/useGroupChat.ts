@@ -147,15 +147,15 @@ export function useGroupChat(token: string | null) {
         }
     }, [token]);
 
-    const removeMember = useCallback(async (groupId: string, userId: string) => {
+    const removeMember = useCallback(async (groupId: string, memberId: string) => {
         if (!token) return false;
         try {
-            const res = await fetch(`${API_BASE}/chat/groups/${groupId}/members/${userId}`, {
+            const res = await fetch(`${API_BASE}/chat/groups/${groupId}/members/${memberId}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (!res.ok) throw new Error('Failed to remove member');
-            setCurrentGroupMembers(prev => prev.filter(m => m.user_id !== userId));
+            setCurrentGroupMembers(prev => prev.filter(m => m.id !== memberId));
             return true;
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unknown error');

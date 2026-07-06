@@ -294,10 +294,11 @@ def test_group_e2e_flow():
     new_key_version = get_group_key_version(group["id"])
     assert new_key_version == 2
 
-    # ─── Step 8: Generate new group_key for v2 ───
-    # In production, this would be distributed via DM
-    # For testing, we generate a new key
-    new_group_key = os.urandom(32)
+    # ─── Step 8: Fetch new group_key for v2 from server ───
+    # The server generated and stored the new key during key rotation
+    updated_group = get_group(alice, group["id"])
+    assert updated_group["new_group_key_hex"] is not None
+    new_group_key = bytes.fromhex(updated_group["new_group_key_hex"])
 
     # ─── Step 9: Alice sends new message with key_version 2 ───
     new_msg = "Charlie is out, proceed with new plan"

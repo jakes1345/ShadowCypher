@@ -42,12 +42,12 @@ export const GroupAdminPanel: React.FC<GroupAdminPanelProps> = ({
         }
     };
 
-    const handleRemoveMember = async (userId: string) => {
+    const handleRemoveMember = async (memberId: string, userId: string) => {
         if (!window.confirm(`Remove ${userId} from group?`)) return;
 
         setSubmitting(true);
         try {
-            await removeMember(groupId, userId);
+            await removeMember(groupId, memberId);
         } finally {
             setSubmitting(false);
         }
@@ -99,7 +99,7 @@ export const GroupAdminPanel: React.FC<GroupAdminPanelProps> = ({
                                 {member.user_id !== creatorId && (
                                     <button
                                         className="remove-button"
-                                        onClick={() => handleRemoveMember(member.user_id)}
+                                        onClick={() => handleRemoveMember(member.id, member.user_id)}
                                         disabled={submitting}
                                     >
                                         Remove

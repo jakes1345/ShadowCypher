@@ -78,9 +78,11 @@ class GroupResponse(BaseModel):
     user_id: int
     name: str
     group_key_version: int
+    new_group_key_hex: Optional[str] = None  # Hex-encoded new key after rotation
     created_at: int
 
 class GroupMemberResponse(BaseModel):
+    id: str
     user_id: int
     joined_at: int
 
