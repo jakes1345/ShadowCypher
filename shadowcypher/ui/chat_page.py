@@ -91,8 +91,30 @@ class ChatPage(Gtk.Box):
         sidebar.set_size_request(200, -1)
         sidebar.get_style_context().add_class("chat-sidebar")
 
+        # Encrypted Groups Section
+        groups_header = Gtk.Label()
+        groups_header.set_markup("<span weight='bold' color='#00f2ff' size='small'>🔒 ENCRYPTED GROUPS</span>")
+        groups_header.set_halign(Gtk.Align.START)
+        groups_header.set_margin_start(12)
+        groups_header.set_margin_top(12)
+        groups_header.set_margin_bottom(6)
+        sidebar.pack_start(groups_header, False, False, 0)
+
+        self._group_list = Gtk.ListBox()
+        self._group_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        sidebar.pack_start(self._group_list, False, False, 0)
+
+        # Create New Group Button
+        create_btn = Gtk.Button(label="+ Create Group")
+        create_btn.set_margin_start(12)
+        create_btn.set_margin_end(12)
+        create_btn.set_margin_bottom(12)
+        create_btn.connect("clicked", self._on_create_group)
+        sidebar.pack_start(create_btn, False, False, 0)
+
+        # Public Channels Section
         sidebar_header = Gtk.Label()
-        sidebar_header.set_markup("<span weight='bold' color='#94a3b8' size='small'>CHANNELS</span>")
+        sidebar_header.set_markup("<span weight='bold' color='#94a3b8' size='small'>PUBLIC CHANNELS</span>")
         sidebar_header.set_halign(Gtk.Align.START)
         sidebar_header.set_margin_start(12)
         sidebar_header.set_margin_top(12)
@@ -412,6 +434,72 @@ class ChatPage(Gtk.Box):
             empty.set_halign(Gtk.Align.START)
             self._online_box.pack_start(empty, False, False, 0)
             empty.show()
+
+    # ── Group Chat ───────────────────────────────────────────────────────────
+
+    def _on_create_group(self, *_):
+        dialog = Gtk.Dialog(
+            title="Create Encrypted Group",
+            transient_for=self.get_toplevel(),
+            modal=True,
+        )
+        dialog.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                          Gtk.STOCK_OK, Gtk.ResponseType.OK)
+
+        content = dialog.get_content_area()
+        content.set_margin_top(12)
+        content.set_margin_start(12)
+        content.set_margin_end(12)
+        content.set_margin_bottom(12)
+
+        label = Gtk.Label(label="Group Name:")
+        label.set_halign(Gtk.Align.START)
+        content.pack_start(label, False, False, 0)
+
+        entry = Gtk.Entry()
+        entry.set_placeholder_text("e.g., Team Alpha")
+        content.pack_start(entry, False, False, 6)
+
+        content.show_all()
+
+        response = dialog.run()
+        group_name = entry.get_text().strip()
+        dialog.destroy()
+
+        if response == Gtk.ResponseType.OK and group_name:
+            self._create_group_api(group_name)
+
+    def _create_group_api(self, group_name: str):
+        if not self._api_key:
+            self._show_error("No API key configured.")
+            return
+
+        def _do_create():
+            try:
+                data = _api_post(
+                    "/chat/groups", self._api_key,
+                    {"name": group_name}
+                )
+                GLib.idle_add(self._on_group_created, data)
+            except Exception as e:
+                GLib.idle_add(self._show_error, f"Failed to create group: {e}")
+
+        threading.Thread(target=_do_create, daemon=True).start()
+
+    def _on_group_created(self, group: dict):
+        row = Gtk.ListBoxRow()
+        label = Gtk.Label(label=f"🔒 {group['name']}")
+        label.set_halign(Gtk.Align.START)
+        row.add(label)
+        row.show_all()
+        self._group_list.add(row)
+
+    def _on_room_selected(self, listbox, row):
+        if row:
+            self._current_room = row.get_index()
+            self._messages = []
+            self._msg_box.foreach(lambda w: w.destroy(), None)
+            self._fetch_messages()
 
     # ── Send ─────────────────────────────────────────────────────────────────
 
