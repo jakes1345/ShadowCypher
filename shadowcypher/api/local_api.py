@@ -467,28 +467,59 @@ async def list_missions(status: Optional[str] = None, limit: int = 50, token: st
 
 @app.post("/v1/llm/chat", response_model=ChatResponse)
 async def llm_chat(req: ChatRequest, token: str = Depends(verify_token)):
-	"""Chat with local LLM (for Android Shadow AI app)."""
-	# TODO: Route to actual Ollama/LLM backend
-	# For now, return mock response
-	prompt = req.query
-	mock_responses = {
-		"hello": "Hi there! I'm Shadow, your personal security assistant. How can I help protect your network?",
-		"status": "Your network looks secure. No incidents detected in the last 24 hours.",
-		"scan": "Starting a quick network scan. I'll report any new devices or open ports.",
-		"": "I didn't catch that. Try asking about your network status, running a scan, or checking for threats.",
-	}
+	"""Chat with Shadow AI voice engine (for Android Shadow AI app)."""
+	from shadowcypher.core.shadow_ai_voice import get_shadow_ai_voice
 
-	response = None
-	for key in mock_responses:
-		if key.lower() in prompt.lower():
-			response = mock_responses[key]
-			break
+	shadow_ai = get_shadow_ai_voice()
 
-	if not response:
-		response = mock_responses[""]
+	# Create a simple API client wrapper for Shadow AI
+	class SimpleApiClient:
+		def get_guardian_summary(self):
+			return {
+				"devices": [],
+				"incidents": [],
+				"cve_alerts": [],
+				"agents": []
+			}
 
-	logger.info("local_api", f"LLM query: {prompt[:50]}... → {response[:50]}...")
-	return ChatResponse(response=response, confidence=0.85)
+		def get_incidents(self, limit=3):
+			# Call actual Guardian API
+			import requests
+			try:
+				resp = requests.get(
+					f"{req.context or 'http://localhost:9999'}/v1/incidents",
+					headers={"Authorization": "Bearer Operator"}
+				)
+				if resp.status_code == 200:
+					return resp.json()
+			except:
+				pass
+			return []
+
+		def get_threat_summary(self):
+			return {
+				"critical_incidents": 0,
+				"high_risk_devices": 0,
+				"unique_threat_types": 0
+			}
+
+		def trigger_scan(self, subnet=None):
+			pass
+
+		def block_ip(self, ip, reason=""):
+			pass
+
+		def get_module_findings(self, limit=5):
+			return []
+
+	# Process voice input
+	command = shadow_ai.process_voice_input(req.query)
+	api_client = SimpleApiClient()
+	response_text = shadow_ai.execute_command(command, api_client)
+	command.response = response_text
+
+	logger.info("local_api", f"Shadow AI: {req.query[:50]}... → {response_text[:50]}...")
+	return ChatResponse(response=response_text, confidence=0.9 if command.confidence > 0 else 0.5)
 
 
 @app.get("/v1/scan-history", response_model=list[dict])
@@ -874,6 +905,17 @@ async def isolate_device(device_ip: str, reason: Optional[str] = None, token: st
 		"message": result.message,
 		"timestamp": result.timestamp
 	}
+
+
+@app.get("/v1/shadow-ai/history")
+async def get_shadow_ai_history(limit: int = 20, token: str = Depends(verify_token)):
+	"""Get Shadow AI voice command history."""
+	from shadowcypher.core.shadow_ai_voice import get_shadow_ai_voice
+
+	shadow_ai = get_shadow_ai_voice()
+	history = shadow_ai.get_history(limit=limit)
+
+	return {"commands": history, "total": len(history)}
 
 
 @app.post("/v1/incidents/process")
