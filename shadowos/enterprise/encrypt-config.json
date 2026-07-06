@@ -1,0 +1,69 @@
+{
+  "encryption": {
+    "algorithm": "AES-256",
+    "cipher": "aes-xts-plain64",
+    "key_size": 512,
+    "key_size_unit": "bits",
+    "iter_time": 2000,
+    "iter_time_unit": "milliseconds",
+    "pbkdf": "pbkdf2",
+    "hash_algorithm": "sha256",
+    "sector_size": 512
+  },
+  "volumes": {
+    "guardian_vault": {
+      "device": "/dev/mapper/shadowcypher-vault",
+      "mount_point": "/mnt/guardian-vault",
+      "filesystem": "ext4",
+      "mount_options": "defaults,errors=remount-ro,noatime",
+      "permissions": "700",
+      "owner": "root",
+      "group": "root"
+    }
+  },
+  "paths": {
+    "master_keys": "/mnt/guardian-vault/master-keys",
+    "credentials": "/mnt/guardian-vault/credentials",
+    "audit_logs": "/mnt/guardian-vault/audit-logs",
+    "threat_feeds": "/mnt/guardian-vault/threat-feeds"
+  },
+  "backup": {
+    "enabled": true,
+    "backup_luks_header": true,
+    "header_backup_location": "/var/backups/shadowcypher/luks-headers",
+    "recovery_key_backup": true,
+    "recovery_key_location": "/var/backups/shadowcypher/recovery-keys"
+  },
+  "security": {
+    "double_encryption_enabled": true,
+    "key_rotation_months": 12,
+    "audit_logging_enabled": true,
+    "audit_log_path": "/mnt/guardian-vault/audit-logs/encryption-events.log"
+  },
+  "performance": {
+    "aes_ni_required": false,
+    "expected_throughput_mbps": 500,
+    "expected_cpu_overhead_percent": 10
+  },
+  "integration": {
+    "guardian_vault_enabled": true,
+    "boot_encryption_enabled": false,
+    "boot_encryption_path": "/boot",
+    "home_encryption_enabled": false,
+    "home_encryption_path": "/home",
+    "auto_unlock_tpm": false,
+    "tpm_pcr_indexes": [0, 1, 7]
+  },
+  "maintenance": {
+    "fsck_schedule": "monthly",
+    "trim_enabled": true,
+    "defrag_enabled": false,
+    "key_slot_maintenance": true
+  },
+  "recovery": {
+    "recovery_mode_enabled": true,
+    "offline_recovery_keys": 2,
+    "recovery_key_storage": "offline-secure",
+    "emergency_wipe_enabled": false
+  }
+}
