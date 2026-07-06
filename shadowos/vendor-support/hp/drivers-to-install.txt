@@ -1,0 +1,104 @@
+# HP EliteBook/ProBook Essential Drivers
+# Compatible with Arch Linux kernel and ShadowOS
+# Last Updated: 2026-07-06
+
+# Firmware and CPU microcode
+linux-firmware
+intel-microcode
+
+# HP-specific utilities
+hp-managed-client
+hp-omen-gcc
+
+# Network drivers
+networkmanager
+networkmanager-openvpn
+iw
+wpa_supplicant
+dhcpcd
+ethtool
+
+# NVIDIA GPU drivers (ProBook/EliteBook dGPU)
+nvidia-dkms
+nvidia-prime
+nvidia-settings
+
+# AMD GPU drivers (some HP models)
+xf86-video-amdgpu
+xf86-video-ati
+
+# Intel integrated graphics
+libva-intel-driver
+libva
+xf86-video-intel
+
+# Audio
+alsa-utils
+pulseaudio
+pulseaudio-alsa
+pulseaudio-jack
+
+# Input devices
+xf86-input-synaptics
+xf86-input-libinput
+
+# Wireless/Bluetooth
+bluez
+bluez-utils
+iwd
+
+# Power management
+tlp
+powertop
+cpupower
+thermald
+
+# HP Smart Card Reader support
+libccid
+pcsc-tools
+
+# Fingerprint/Biometric (if present)
+libfprint-2
+fprintd
+pam-fprintd
+
+# Storage
+smartmontools
+nvme-cli
+mdadm
+lvm2
+cryptsetup
+
+# File systems
+btrfs-progs
+xfsprogs
+
+# TPM utilities
+tpm2-tools
+tpm2-abrmd
+
+# Security scanning
+aide
+rkhunter
+
+# Monitoring
+htop
+iotop
+hwinfo
+inxi
+dmidecode
+
+# BIOS/Firmware
+fwupd
+efibootmgr
+efivar
+
+# VPN and network security
+openconnect
+openvpn
+wireguard-tools
+
+# Additional utilities
+usbguard
+acpi
+upower

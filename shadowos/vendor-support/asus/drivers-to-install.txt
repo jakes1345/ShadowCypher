@@ -1,0 +1,106 @@
+# ASUS ProBook/VivoBook/ROG Essential Drivers
+# Compatible with Arch Linux kernel and ShadowOS
+# Last Updated: 2026-07-06
+
+# Firmware and CPU microcode
+linux-firmware
+intel-microcode
+amd-microcode
+
+# ASUS-specific utilities
+asusctl
+supergfxctl
+asus-nb-ctrl
+
+# Network drivers
+networkmanager
+networkmanager-openvpn
+iw
+wpa_supplicant
+dhcpcd
+ethtool
+
+# NVIDIA GPU drivers (ROG/ProBook with dGPU)
+nvidia-dkms
+nvidia-prime
+nvidia-settings
+cuda-toolkit
+
+# AMD GPU drivers (Ryzen ProBook)
+xf86-video-amdgpu
+xf86-video-ati
+libva-mesa-driver
+
+# Intel integrated graphics
+libva-intel-driver
+libva
+xf86-video-intel
+
+# Audio (ASUS has Realtek codecs)
+alsa-utils
+pulseaudio
+pulseaudio-alsa
+sof-firmware
+
+# Input devices
+xf86-input-libinput
+xf86-input-synaptics
+
+# Wireless/Bluetooth
+bluez
+bluez-utils
+iwd
+
+# Power management
+tlp
+powertop
+cpupower
+thermald
+
+# Storage
+smartmontools
+nvme-cli
+mdadm
+lvm2
+cryptsetup
+
+# File systems
+btrfs-progs
+xfsprogs
+
+# TPM utilities
+tpm2-tools
+tpm2-abrmd
+
+# ASUS LED control (ROG series)
+openrgb
+asusctl
+
+# VPN and network security
+openconnect
+openvpn
+wireguard-tools
+
+# Monitoring
+htop
+iotop
+hwinfo
+inxi
+dmidecode
+
+# BIOS/Firmware
+fwupd
+efibootmgr
+efivar
+
+# Gaming-related
+gamemode
+lib32-gamemode
+wine
+wine-gecko
+wine-mono
+
+# Additional
+usbguard
+acpi
+upower
