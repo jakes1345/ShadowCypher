@@ -1,0 +1,536 @@
+{
+  "version": "1.0.0",
+  "policy_name": "ShadowCypher Enterprise Compliance Audit",
+  "effective_date": "2026-01-01",
+  "description": "Production-grade audit logging policy for SOC2 Type II and ISO/IEC 27001 compliance",
+
+  "audit_rules": {
+    "authentication": {
+      "enabled": true,
+      "description": "Track authentication attempts and user access",
+      "rules": [
+        {
+          "rule_id": "AUTH_001",
+          "name": "sudo_execution",
+          "syscalls": ["execve"],
+          "paths": ["/bin/sudo", "/usr/bin/sudo"],
+          "filter": "always,exit",
+          "action": "log"
+        },
+        {
+          "rule_id": "AUTH_002",
+          "name": "login_attempts",
+          "paths": ["/var/log/faillog", "/var/log/lastlog", "/var/log/tallylog"],
+          "permissions": ["write", "attribute_change"],
+          "action": "log"
+        },
+        {
+          "rule_id": "AUTH_003",
+          "name": "password_changes",
+          "syscalls": ["open", "openat"],
+          "paths": ["/etc/shadow", "/etc/passwd", "/etc/gshadow", "/etc/group"],
+          "filter": "write",
+          "action": "log"
+        }
+      ]
+    },
+
+    "file_monitoring": {
+      "enabled": true,
+      "description": "Monitor critical system and application files",
+      "rules": [
+        {
+          "rule_id": "FILE_001",
+          "name": "audit_config_change",
+          "paths": ["/etc/audit", "/etc/audisp", "/var/log/audit"],
+          "permissions": ["write", "attribute_change"],
+          "action": "log_critical"
+        },
+        {
+          "rule_id": "FILE_002",
+          "name": "vault_access",
+          "paths": ["/var/lib/shadowcypher", "/var/lib/shadowcypher-secure"],
+          "permissions": ["read", "write", "attribute_change"],
+          "action": "log",
+          "include_user": true,
+          "include_process": true
+        },
+        {
+          "rule_id": "FILE_003",
+          "name": "vault_deletion",
+          "syscalls": ["unlink", "unlinkat", "rename", "renameat"],
+          "paths": ["/var/lib/shadowcypher"],
+          "action": "log_critical"
+        },
+        {
+          "rule_id": "FILE_004",
+          "name": "system_config_change",
+          "paths": ["/etc", "/usr/bin", "/usr/sbin"],
+          "permissions": ["write"],
+          "action": "log"
+        },
+        {
+          "rule_id": "FILE_005",
+          "name": "kernel_config",
+          "paths": ["/etc/sysctl.conf", "/sys"],
+          "permissions": ["write"],
+          "action": "log_critical"
+        }
+      ]
+    },
+
+    "process_monitoring": {
+      "enabled": true,
+      "description": "Monitor sensitive process execution",
+      "rules": [
+        {
+          "rule_id": "PROC_001",
+          "name": "privileged_execution",
+          "syscalls": ["execve"],
+          "paths": ["/usr/bin/cryptsetup", "/sbin/cryptsetup", "/usr/bin/openssl", "/usr/bin/gpg"],
+          "action": "log"
+        },
+        {
+          "rule_id": "PROC_002",
+          "name": "network_daemon_execution",
+          "syscalls": ["execve"],
+          "paths": ["/usr/sbin/sshd", "/usr/sbin/named", "/usr/bin/curl"],
+          "action": "log"
+        },
+        {
+          "rule_id": "PROC_003",
+          "name": "core_dumps",
+          "syscalls": ["rlimit"],
+          "action": "log"
+        }
+      ]
+    },
+
+    "network_monitoring": {
+      "enabled": true,
+      "description": "Monitor network activities and connections",
+      "rules": [
+        {
+          "rule_id": "NET_001",
+          "name": "raw_socket_creation",
+          "syscalls": ["socket"],
+          "parameters": {
+            "domain": "PF_PACKET",
+            "type": "SOCK_RAW"
+          },
+          "action": "log"
+        },
+        {
+          "rule_id": "NET_002",
+          "name": "firewall_changes",
+          "syscalls": ["iptables", "ip6tables"],
+          "action": "log_critical"
+        },
+        {
+          "rule_id": "NET_003",
+          "name": "network_namespace",
+          "syscalls": ["unshare", "setns"],
+          "parameters": {
+            "ns_type": "CLONE_NEWNET"
+          },
+          "action": "log"
+        }
+      ]
+    },
+
+    "system_administration": {
+      "enabled": true,
+      "description": "Monitor system administration activities",
+      "rules": [
+        {
+          "rule_id": "SYSADM_001",
+          "name": "mount_operations",
+          "syscalls": ["mount", "umount2"],
+          "action": "log"
+        },
+        {
+          "rule_id": "SYSADM_002",
+          "name": "time_change",
+          "syscalls": ["adjtimex", "settimeofday", "clock_settime"],
+          "action": "log_critical"
+        },
+        {
+          "rule_id": "SYSADM_003",
+          "name": "network_config",
+          "syscalls": ["sethostname", "setdomainname"],
+          "action": "log"
+        },
+        {
+          "rule_id": "SYSADM_004",
+          "name": "module_operations",
+          "syscalls": ["init_module", "delete_module"],
+          "action": "log_critical"
+        }
+      ]
+    }
+  },
+
+  "log_retention": {
+    "hot_days": 30,
+    "warm_days": 90,
+    "cold_days": 2555,
+    "max_size_bytes": 524288000,
+    "rotation_policy": "daily_or_size",
+    "size_limit_mb": 500,
+    "compression": "xz",
+    "compression_level": 6
+  },
+
+  "archive": {
+    "enabled": true,
+    "destination": "/var/audit/archive",
+    "encrypt": true,
+    "encryption_algorithm": "aes-256-cbc",
+    "verify_after_archive": true,
+    "remote_backup": {
+      "enabled": false,
+      "endpoint": "https://backup.shadowcypher.site/archive",
+      "method": "https",
+      "verify_certificate": true,
+      "retry_count": 3,
+      "retry_delay_seconds": 300
+    }
+  },
+
+  "tamper_detection": {
+    "enabled": true,
+    "hmac_algorithm": "sha256",
+    "hash_verification_interval_hours": 6,
+    "chain_integrity_check": true,
+    "ntp_sync_check": true,
+    "max_clock_skew_seconds": 5,
+    "timestamp_verification": true
+  },
+
+  "siem": {
+    "enabled": false,
+    "host": "siem.internal.shadowcypher.site",
+    "port": 514,
+    "protocol": "tls",
+    "format": "cef",
+    "batch_mode": false,
+    "batch_interval_seconds": 300,
+    "batch_size": 1000,
+    "tls": {
+      "certificate_path": "/etc/shadowcypher/certs/siem-client.crt",
+      "key_path": "/etc/shadowcypher/certs/siem-client.key",
+      "ca_path": "/etc/shadowcypher/certs/siem-ca.crt",
+      "verify_hostname": true
+    },
+    "reconnect": {
+      "enabled": true,
+      "max_attempts": 5,
+      "backoff_seconds": 60
+    },
+    "format_options": {
+      "include_hostname": true,
+      "include_process_name": true,
+      "include_user_info": true,
+      "include_severity": true
+    }
+  },
+
+  "alerting": {
+    "enabled": true,
+    "alert_thresholds": {
+      "failed_auth_attempts_per_minute": {
+        "threshold": 5,
+        "severity": "high",
+        "action": "alert_and_log"
+      },
+      "audit_config_modification": {
+        "threshold": 1,
+        "severity": "critical",
+        "action": "alert_immediately"
+      },
+      "vault_unauthorized_access": {
+        "threshold": 1,
+        "severity": "critical",
+        "action": "alert_and_incident"
+      },
+      "log_file_modification": {
+        "threshold": 0,
+        "severity": "critical",
+        "action": "alert_immediately"
+      },
+      "audit_daemon_stop": {
+        "threshold": 0,
+        "severity": "critical",
+        "action": "alert_and_recover"
+      },
+      "log_size_threshold_percentage": {
+        "threshold": 95,
+        "severity": "medium",
+        "action": "alert_and_archive"
+      },
+      "archive_failure": {
+        "threshold": 1,
+        "severity": "high",
+        "action": "alert_and_retry"
+      },
+      "integrity_check_failure": {
+        "threshold": 0,
+        "severity": "critical",
+        "action": "alert_immediately"
+      }
+    },
+    "alert_channels": {
+      "email": {
+        "enabled": true,
+        "recipients": ["security@shadowcypher.site", "audit@shadowcypher.site"],
+        "smtp_server": "smtp.resend.com",
+        "smtp_port": 587,
+        "use_tls": true,
+        "from": "alerts@shadowcypher.site"
+      },
+      "syslog": {
+        "enabled": true,
+        "facility": "LOCAL2",
+        "severity_mapping": {
+          "critical": "crit",
+          "high": "err",
+          "medium": "warning",
+          "low": "info"
+        }
+      },
+      "slack": {
+        "enabled": false,
+        "webhook_url": "",
+        "channel": "#security-alerts",
+        "mention_on_critical": true
+      },
+      "pagerduty": {
+        "enabled": false,
+        "service_key": "",
+        "integration_key": ""
+      }
+    }
+  },
+
+  "compliance": {
+    "standards": [
+      {
+        "standard": "SOC2 Type II",
+        "controls_mapped": [
+          "CC6.1 - Logical Access Controls",
+          "CC7.1 - System Monitoring",
+          "CC7.2 - Monitoring Tools",
+          "A1.2 - Availability"
+        ],
+        "evidence_collection": true,
+        "audit_frequency": "annual"
+      },
+      {
+        "standard": "ISO/IEC 27001:2022",
+        "controls_mapped": [
+          "A.12.4.1 - Recording user activities",
+          "A.12.4.3 - Administrator and operator logs",
+          "A.12.4.4 - Synchronization of system clocks",
+          "A.14.2.1 - Change log maintenance",
+          "A.13.1.3 - Logging of information security events"
+        ],
+        "evidence_collection": true,
+        "audit_frequency": "annual"
+      },
+      {
+        "standard": "PCI DSS 4.0",
+        "controls_mapped": [
+          "3.4 - Protection of Cardholder Data",
+          "10.1 - Logging User Access to Resources",
+          "10.2 - Logging Cardholder Data Access"
+        ],
+        "evidence_collection": false,
+        "audit_frequency": "annual"
+      }
+    ],
+    "audit_frequency_days": 365,
+    "evidence_retention_days": 2555,
+    "compliance_officer": "security@shadowcypher.site",
+    "annual_audit_scheduled": true,
+    "last_audit_date": "2025-12-15",
+    "next_audit_date": "2026-12-15"
+  },
+
+  "reporting": {
+    "enabled": true,
+    "reports": {
+      "daily_summary": {
+        "enabled": true,
+        "schedule": "01:00",
+        "timezone": "UTC",
+        "format": "json",
+        "recipients": ["audit@shadowcypher.site"],
+        "include_sections": [
+          "event_count_by_type",
+          "critical_alerts",
+          "system_health",
+          "archive_status"
+        ]
+      },
+      "weekly_digest": {
+        "enabled": true,
+        "schedule": "monday 02:00",
+        "format": "html",
+        "recipients": ["security@shadowcypher.site"],
+        "include_sections": [
+          "top_users",
+          "anomalies",
+          "compliance_status",
+          "recommendations"
+        ]
+      },
+      "monthly_report": {
+        "enabled": true,
+        "schedule": "1st day of month 03:00",
+        "format": "pdf",
+        "recipients": ["audit@shadowcypher.site", "security@shadowcypher.site"],
+        "include_sections": [
+          "executive_summary",
+          "detailed_analysis",
+          "trend_analysis",
+          "compliance_assessment",
+          "policy_effectiveness"
+        ]
+      },
+      "annual_audit_report": {
+        "enabled": true,
+        "schedule": "december 1 04:00",
+        "format": "pdf",
+        "recipients": ["security@shadowcypher.site", "compliance@shadowcypher.site"],
+        "include_sections": [
+          "year_summary",
+          "incident_analysis",
+          "control_effectiveness",
+          "audit_findings",
+          "recommendations_for_next_year"
+        ]
+      }
+    }
+  },
+
+  "monitoring": {
+    "enabled": true,
+    "health_checks": {
+      "audit_daemon_status": {
+        "enabled": true,
+        "check_interval_minutes": 5,
+        "alert_on_failure": true
+      },
+      "log_file_integrity": {
+        "enabled": true,
+        "check_interval_hours": 6,
+        "verify_permissions": true,
+        "alert_on_failure": true
+      },
+      "log_size_monitoring": {
+        "enabled": true,
+        "check_interval_minutes": 30,
+        "alert_at_threshold": 95
+      },
+      "archive_operations": {
+        "enabled": true,
+        "check_interval_hours": 1,
+        "alert_on_failure": true,
+        "retry_failed_archives": true
+      },
+      "siem_connectivity": {
+        "enabled": true,
+        "check_interval_minutes": 15,
+        "alert_on_disconnect": true
+      },
+      "ntp_synchronization": {
+        "enabled": true,
+        "check_interval_hours": 1,
+        "max_skew_seconds": 5,
+        "alert_on_failure": true
+      }
+    }
+  },
+
+  "recovery": {
+    "daemon_failure": {
+      "auto_restart": true,
+      "restart_attempts": 3,
+      "restart_delay_seconds": 30,
+      "alert_after_attempt": 2
+    },
+    "log_storage_failure": {
+      "failover_enabled": true,
+      "failover_destination": "/var/audit/emergency",
+      "fallback_to_syslog": true
+    },
+    "archive_failure": {
+      "retry_enabled": true,
+      "retry_attempts": 3,
+      "retry_delay_minutes": 60,
+      "queue_failed_archives": true
+    }
+  },
+
+  "guardian_vault": {
+    "audit_events": [
+      {
+        "event_name": "vault_unlock",
+        "log_always": true,
+        "include_details": ["user_id", "timestamp", "duration", "ip_address", "mfa_used", "unlock_method"]
+      },
+      {
+        "event_name": "vault_decrypt",
+        "log_always": true,
+        "include_details": ["user_id", "timestamp", "key_type", "key_id", "action", "purpose"]
+      },
+      {
+        "event_name": "vault_key_operation",
+        "log_always": true,
+        "include_details": ["user_id", "timestamp", "operation", "key_type", "status", "error_message"]
+      },
+      {
+        "event_name": "vault_recovery",
+        "log_always": true,
+        "include_details": ["user_id", "timestamp", "recovery_type", "recovery_code_used", "authorization", "status"]
+      }
+    ],
+    "access_pattern_analysis": {
+      "enabled": true,
+      "track_frequency": true,
+      "track_time_patterns": true,
+      "track_location_patterns": true,
+      "track_concurrent_access": true,
+      "track_bulk_operations": true
+    },
+    "integrity_monitoring": {
+      "enabled": true,
+      "monitor_database_size": true,
+      "verify_contents_hash": true,
+      "detect_modifications": true,
+      "verify_encryption": true,
+      "verify_backups": true
+    }
+  },
+
+  "security_best_practices": {
+    "segregation_of_duties": true,
+    "independent_verification": true,
+    "least_privilege_enforcement": true,
+    "defense_in_depth_layers": 5,
+    "documentation_required": true,
+    "regular_testing": true,
+    "staff_training": true,
+    "automation_level": "high"
+  },
+
+  "technical_specifications": {
+    "kernel_version_minimum": "5.10",
+    "auditd_version_minimum": "3.0",
+    "buffer_size": 8192,
+    "rate_limit": 0,
+    "failure_mode": "continue",
+    "max_log_file_mb": 500,
+    "log_format": "enriched_json"
+  }
+}
