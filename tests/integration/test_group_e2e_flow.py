@@ -128,12 +128,13 @@ def fetch_group_messages(user, group_id):
 
 
 def get_group(user, group_id):
-    """Fetch group metadata"""
-    # Note: There's no direct GET endpoint for groups in the routes
-    # We'll fetch via list_group_members to get members, but we need to query DB directly
-    # For now, we'll track group state in the test
-    # This would require a GET /groups/{group_id} endpoint which doesn't exist yet
-    pass
+    """Fetch group metadata including new key after rotation"""
+    response = client.get(
+        f"/chat/groups/{group_id}",
+        headers={"Authorization": f"Bearer {user.token}"}
+    )
+    assert response.status_code == 200
+    return response.json()
 
 
 def list_members(user, group_id):
@@ -206,9 +207,6 @@ def test_group_e2e_flow():
     # ─── Step 3: Alice adds Bob and Charlie to group ───
     add_member(alice, group_id=group["id"], member_user_id=bob.user_id)
     add_member(alice, group_id=group["id"], member_user_id=charlie.user_id)
-
-    # Alice must be added as well (creator is a member)
-    add_member(alice, group_id=group["id"], member_user_id=alice.user_id)
 
     # Verify membership
     members = list_members(alice, group_id=group["id"])

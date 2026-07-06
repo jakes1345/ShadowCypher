@@ -16,6 +16,7 @@ from shadowcypher.chat import p2p_relay
 from shadowcypher.chat import fallback
 from datetime import datetime
 import binascii
+import os
 from typing import Optional
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -382,11 +383,18 @@ def create_group(
     db.add(group)
     db.commit()
     db.refresh(group)
+
+    # Auto-add creator as group member
+    creator_member = GroupMember(group_id=group.id, user_id=current_user.id)
+    db.add(creator_member)
+    db.commit()
+
     return GroupResponse(
         id=group.id,
         user_id=group.user_id,
         name=group.name,
         group_key_version=group.group_key_version,
+        new_group_key_hex=group.new_group_key_hex,
         created_at=group.created_at
     )
 
@@ -409,7 +417,7 @@ def add_group_member(
     db.add(member)
     db.commit()
     db.refresh(member)
-    return GroupMemberResponse(user_id=member.user_id, joined_at=member.joined_at)
+    return GroupMemberResponse(id=member.id, user_id=member.user_id, joined_at=member.joined_at)
 
 
 @router.delete("/groups/{group_id}/members/{member_id}")
@@ -436,6 +444,9 @@ def remove_group_member(
     db.delete(member)
     # Rotate group key on member removal
     group.group_key_version += 1
+    # Generate new 32-byte group key and store it
+    new_group_key = os.urandom(32)
+    group.new_group_key_hex = new_group_key.hex()
     db.commit()
     return {"status": "ok", "new_key_version": group.group_key_version}
 
@@ -446,13 +457,85 @@ def list_group_members(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List group members."""
+    """List group members. User must be a member of the group."""
     group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
+    # Check if current user is a member of the group
+    is_member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.user_id == current_user.id
+    ).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+
     members = db.query(GroupMember).filter(GroupMember.group_id == group_id).all()
-    return [GroupMemberResponse(user_id=m.user_id, joined_at=m.joined_at) for m in members]
+    return [GroupMemberResponse(id=m.id, user_id=m.user_id, joined_at=m.joined_at) for m in members]
+
+
+@router.get("/groups/{group_id}", response_model=GroupResponse)
+def get_group(
+    group_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get group metadata including new key after rotation."""
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    # Check if current user is a member of the group
+    is_member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.user_id == current_user.id
+    ).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+
+    return GroupResponse(
+        id=group.id,
+        user_id=group.user_id,
+        name=group.name,
+        group_key_version=group.group_key_version,
+        new_group_key_hex=group.new_group_key_hex,
+        created_at=group.created_at
+    )
+
+
+@router.get("/groups", response_model=list[GroupResponse])
+def list_groups(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List all groups user is a member of (including groups they created)."""
+    # Get groups where user is creator
+    created_groups = db.query(Group).filter(Group.user_id == current_user.id).all()
+
+    # Get groups where user is member
+    group_ids = db.query(GroupMember.group_id).filter(
+        GroupMember.user_id == current_user.id
+    ).all()
+    member_groups = db.query(Group).filter(
+        Group.id.in_([g[0] for g in group_ids])
+    ).all() if group_ids else []
+
+    # Combine and deduplicate
+    groups_dict = {g.id: g for g in created_groups}
+    for g in member_groups:
+        groups_dict[g.id] = g
+
+    return [
+        GroupResponse(
+            id=g.id,
+            user_id=g.user_id,
+            name=g.name,
+            group_key_version=g.group_key_version,
+            new_group_key_hex=g.new_group_key_hex,
+            created_at=g.created_at
+        )
+        for g in groups_dict.values()
+    ]
 
 
 @router.delete("/groups/{group_id}")

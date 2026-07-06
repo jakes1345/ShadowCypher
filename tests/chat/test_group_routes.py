@@ -179,14 +179,14 @@ def test_remove_group_member(client):
     assert add_response.status_code == 201
     member_uuid = add_response.json()["user_id"]
 
-    # Get group before removal
+    # Get group before removal - should have creator + added member = 2 members
     list_response = client.get(
         f"/chat/groups/{group_id}/members",
         headers=creator_headers
     )
     assert list_response.status_code == 200
     members_before = list_response.json()
-    assert len(members_before) == 1
+    assert len(members_before) == 2  # Creator auto-added + explicitly added member
 
     # Remove member
     remove_response = client.delete(
@@ -206,6 +206,7 @@ def test_list_group_members(client):
         json={"username": "group_creator_list", "public_key": "4" * 64}
     )
     creator_token = register_response_1.json()["token"]
+    creator_id = register_response_1.json()["user_id"]
     creator_headers = {"Authorization": f"Bearer {creator_token}"}
 
     # Register members
@@ -241,15 +242,16 @@ def test_list_group_members(client):
         headers=creator_headers
     )
 
-    # List members
+    # List members - should have creator (auto-added) + 2 explicitly added = 3 total
     list_response = client.get(
         f"/chat/groups/{group_id}/members",
         headers=creator_headers
     )
     assert list_response.status_code == 200
     members = list_response.json()
-    assert len(members) == 2
+    assert len(members) == 3  # Creator auto-added + 2 explicitly added
     user_ids = [m["user_id"] for m in members]
+    assert creator_id in user_ids  # Creator is auto-added
     assert member_id_1 in user_ids
     assert member_id_2 in user_ids
 
@@ -352,3 +354,131 @@ def test_group_key_rotation_on_member_removal(client):
     # This test demonstrates the endpoint structure
     # Full key rotation testing would require database queries
     # or additional endpoints to fetch group details
+
+
+def test_list_groups(client):
+    """Test listing all groups for a user"""
+    # Register user
+    register_response = client.post(
+        "/chat/register",
+        json={"username": "list_groups_user", "public_key": "c1" * 32}
+    )
+    user_token = register_response.json()["token"]
+    user_headers = {"Authorization": f"Bearer {user_token}"}
+
+    # Create multiple groups
+    group1_response = client.post(
+        "/chat/groups",
+        json={"name": "Group 1"},
+        headers=user_headers
+    )
+    group1_id = group1_response.json()["id"]
+    assert group1_response.status_code == 201
+
+    group2_response = client.post(
+        "/chat/groups",
+        json={"name": "Group 2"},
+        headers=user_headers
+    )
+    group2_id = group2_response.json()["id"]
+    assert group2_response.status_code == 201
+
+    # List groups
+    list_response = client.get(
+        "/chat/groups",
+        headers=user_headers
+    )
+    assert list_response.status_code == 200
+    groups = list_response.json()
+    assert len(groups) == 2
+    group_ids = [g["id"] for g in groups]
+    assert group1_id in group_ids
+    assert group2_id in group_ids
+    # Verify structure
+    for group in groups:
+        assert "id" in group
+        assert "name" in group
+        assert "user_id" in group
+        assert "group_key_version" in group
+        assert "created_at" in group
+
+
+def test_list_groups_with_memberships(client):
+    """Test listing groups where user is member and creator"""
+    # Register creator
+    register_response_1 = client.post(
+        "/chat/register",
+        json={"username": "list_groups_creator", "public_key": "c2" * 32}
+    )
+    creator_token = register_response_1.json()["token"]
+    creator_headers = {"Authorization": f"Bearer {creator_token}"}
+
+    # Register member
+    register_response_2 = client.post(
+        "/chat/register",
+        json={"username": "list_groups_member", "public_key": "c3" * 32}
+    )
+    member_id = register_response_2.json()["user_id"]
+    member_token = register_response_2.json()["token"]
+    member_headers = {"Authorization": f"Bearer {member_token}"}
+
+    # Creator makes a group
+    group_response = client.post(
+        "/chat/groups",
+        json={"name": "Creator's Group"},
+        headers=creator_headers
+    )
+    group_id = group_response.json()["id"]
+
+    # Add member to group
+    add_response = client.post(
+        f"/chat/groups/{group_id}/members",
+        json={"user_id": member_id},
+        headers=creator_headers
+    )
+    assert add_response.status_code == 201
+
+    # Member lists groups - should see the group they were added to
+    list_response = client.get(
+        "/chat/groups",
+        headers=member_headers
+    )
+    assert list_response.status_code == 200
+    groups = list_response.json()
+    assert len(groups) == 1
+    assert groups[0]["id"] == group_id
+
+
+def test_list_group_members_unauthorized(client):
+    """Test that non-member cannot list group members"""
+    # Register creator
+    register_response_1 = client.post(
+        "/chat/register",
+        json={"username": "list_members_creator", "public_key": "c4" * 32}
+    )
+    creator_token = register_response_1.json()["token"]
+    creator_headers = {"Authorization": f"Bearer {creator_token}"}
+
+    # Register non-member
+    register_response_2 = client.post(
+        "/chat/register",
+        json={"username": "list_members_non_member", "public_key": "c5" * 32}
+    )
+    non_member_token = register_response_2.json()["token"]
+    non_member_headers = {"Authorization": f"Bearer {non_member_token}"}
+
+    # Create group
+    create_response = client.post(
+        "/chat/groups",
+        json={"name": "Auth Check Group"},
+        headers=creator_headers
+    )
+    group_id = create_response.json()["id"]
+
+    # Non-member tries to list members - should fail with 403
+    list_response = client.get(
+        f"/chat/groups/{group_id}/members",
+        headers=non_member_headers
+    )
+    assert list_response.status_code == 403
+    assert "not a member" in list_response.json()["detail"].lower()
