@@ -458,7 +458,10 @@ def remove_group_member(
     # Generate new 32-byte group key
     new_group_key = os.urandom(32).hex()
     # Store in key_versions JSON
-    key_versions = json.loads(group.key_versions or '{}')
+    try:
+        key_versions = json.loads(group.key_versions or '{}')
+    except json.JSONDecodeError:
+        key_versions = {}  # Fallback on corruption
     key_versions[str(group.group_key_version)] = new_group_key
     group.key_versions = json.dumps(key_versions)
     db.commit()

@@ -1,9 +1,10 @@
 # shadowcypher/chat/group_crypto.py
 
 from shadowcypher.chat.crypto import derive_session_key, encrypt_message, decrypt_message
+from typing import Union
 import os
 
-def derive_group_session_key(group_key, group_id: str, key_version: int) -> bytes:
+def derive_group_session_key(group_key: Union[bytes, str], group_id: str, key_version: int) -> bytes:
     """Derive per-message session key from group's shared group_key.
 
     Args:
@@ -22,7 +23,7 @@ def derive_group_session_key(group_key, group_id: str, key_version: int) -> byte
     salt_str = f"{group_id}:{key_version}"
     return derive_session_key(group_key, salt_str)
 
-def encrypt_group_message(plaintext: str, group_key, group_id: str, key_version: int) -> tuple:
+def encrypt_group_message(plaintext: str, group_key: Union[bytes, str], group_id: str, key_version: int) -> tuple:
     """Encrypt plaintext message using group's shared key.
 
     Args:
@@ -35,7 +36,7 @@ def encrypt_group_message(plaintext: str, group_key, group_id: str, key_version:
     ciphertext, nonce = encrypt_message(plaintext, session_key)
     return ciphertext, nonce
 
-def decrypt_group_message(ciphertext: bytes, nonce: bytes, group_key, group_id: str, key_version: int) -> str:
+def decrypt_group_message(ciphertext: bytes, nonce: bytes, group_key: Union[bytes, str], group_id: str, key_version: int) -> str:
     """Decrypt group message using group's shared key and key version.
 
     Args:
