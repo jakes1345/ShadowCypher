@@ -1,0 +1,42 @@
+name: Verify Release Artifacts
+
+on:
+  workflow_run:
+    workflows: ["Sign & Release ShadowOS"]
+    types: [completed]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Import verification key
+        env:
+          GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
+        run: echo "$GPG_PUBLIC_KEY" | gpg --import
+
+      - name: Verify ISO signature
+        run: gpg --verify shadowos-*.iso.sig shadowos-*.iso
+
+      - name: Verify checksums
+        run: |
+          gpg --verify SHA256SUMS.sig
+          sha256sum -c SHA256SUMS
+
+      - name: Check ISO integrity
+        run: |
+          # Mount ISO and verify key files
+          mkdir -p /tmp/iso-check
+          sudo mount -o loop shadowos-*.iso /tmp/iso-check
+          test -f /tmp/iso-check/boot/vmlinuz-linux
+          sudo umount /tmp/iso-check
+
+      - name: Report verification success
+        run: echo "✓ All release artifacts verified successfully"
