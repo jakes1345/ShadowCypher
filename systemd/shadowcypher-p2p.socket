@@ -1,0 +1,11 @@
+[Unit]
+Description=ShadowCypher P2P Instance Listener
+Documentation=https://shadowcypher.site/docs
+
+[Socket]
+ListenStream=19999
+Accept=yes
+NoDelay=true
+
+[Install]
+WantedBy=sockets.target

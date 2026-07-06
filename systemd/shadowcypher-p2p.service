@@ -1,0 +1,16 @@
+[Unit]
+Description=ShadowCypher P2P Instance Listener Service
+Documentation=https://shadowcypher.site/docs
+Requires=shadowcypher-p2p.socket
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m shadowcypher.ui.gtk.instance_listener
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+Also=shadowcypher-p2p.socket
+WantedBy=multi-user.target
