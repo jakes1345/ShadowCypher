@@ -1,0 +1,45 @@
+# Legacy BIOS Kernel Parameters
+# Kernel boot parameters optimized for traditional BIOS systems
+
+# Root filesystem
+root=/dev/mapper/shadowos-root
+
+# Console and output
+console=tty0
+console=ttyS0,115200n8
+
+# Security parameters
+apparmor=1
+security=apparmor
+
+# Memory settings for older systems
+mem=exact
+
+# Systemd parameters
+systemd.show_status=auto
+systemd.log_target=journal-or-kmsg
+
+# Kernel hardening
+kernel.kptr_restrict=2
+kernel.dmesg_restrict=1
+kernel.printk=3 3 3 3
+
+# Memory protection
+slub_debug=F
+slab_nomerge
+
+# IOMMU (may not be available on all older systems)
+iommu=force
+
+# Disable features problematic on older hardware
+nowatchdog
+nohz_full=
+
+# Performance and compatibility
+preempt=voluntary
+acpi=force
+pci=nomsi
+
+# Legacy features that may be needed
+noapic
+nolapic

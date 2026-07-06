@@ -1,0 +1,62 @@
+# Secure Boot Kernel Parameters
+# Enhanced security parameters for Secure Boot enabled systems
+
+# Root filesystem
+root=/dev/mapper/shadowos-root
+
+# Console and output
+console=tty0
+console=ttyS0,115200n8
+
+# Security parameters - enhanced for Secure Boot
+apparmor=1
+security=apparmor
+enforce=1
+
+# Secure Boot specific
+efi=noruntime
+efivarfs=secure
+tpm=crb
+tpm_crb=force
+
+# Trusted Platform Module
+tpm_tis=force
+tpm2_tis=force
+
+# Kernel signature verification
+ima=enforce
+ima_audit=1
+ima_appraise=enforce
+ima_appraise_tcb=1
+ima_hash=sha256
+
+# UEFI secure boot enforcement
+efi_load_option=0
+
+# Systemd parameters
+systemd.show_status=auto
+systemd.log_target=journal-or-kmsg
+
+# Enhanced kernel hardening
+kernel.kptr_restrict=3
+kernel.dmesg_restrict=1
+kernel.printk=0 0 0 0
+kernel.unprivileged_bpf_disabled=1
+kernel.unprivileged_userns_clone=0
+
+# Memory protection
+slub_debug=FZP
+slab_nomerge
+
+# Disable unnecessary features
+nowatchdog
+nokaslr
+module.sig_enforce=1
+
+# Control Flow Integrity
+iommu=force
+amd_iommu=force,pt
+intel_iommu=force,pt
+
+# Performance parameters
+preempt=voluntary

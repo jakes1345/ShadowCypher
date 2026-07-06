@@ -1,0 +1,42 @@
+# UEFI Kernel Parameters
+# Optimized kernel boot parameters for UEFI systems
+
+# Root filesystem
+root=/dev/mapper/shadowos-root
+
+# Console and output
+console=tty0
+console=ttyS0,115200n8
+
+# Security parameters
+apparmor=1
+security=apparmor
+
+# TPM and secure boot
+tpm=crb
+efi=noruntime
+
+# Systemd parameters
+systemd.show_status=auto
+systemd.log_target=journal-or-kmsg
+
+# Kernel hardening
+kernel.kptr_restrict=2
+kernel.dmesg_restrict=1
+kernel.printk=3 3 3 3
+
+# Memory protection
+slub_debug=F
+slab_nomerge
+
+# IOMMU and virtualization
+iommu=force
+amd_iommu=force
+intel_iommu=force
+
+# Disable unnecessary features
+nowatchdog
+nokaslr
+
+# Performance parameters
+preempt=voluntary

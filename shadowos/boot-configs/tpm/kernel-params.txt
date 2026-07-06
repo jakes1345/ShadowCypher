@@ -1,0 +1,67 @@
+# TPM 2.0 Kernel Parameters
+# Kernel boot parameters optimized for TPM 2.0 measured boot
+
+# Root filesystem
+root=/dev/mapper/shadowos-root
+
+# Console and output
+console=tty0
+console=ttyS0,115200n8
+
+# TPM 2.0 Device Configuration
+tpm_crb=force
+tpm_tis=force
+tpm2_eventlog=enable
+
+# Integrity Measurement Architecture (IMA)
+ima=enforce
+ima_audit=1
+ima_appraise=enforce
+ima_appraise_tcb=1
+ima_hash=sha256
+ima_template=ima-ng
+ima_template_hash=sha256
+
+# Extended Verification Module (EVM)
+evm=enforce
+evm_x509_path=/etc/keys/x509_evm.der
+evm_ignore_errors=0
+
+# PCR measurement extensions
+dm_verity.error_behavior=permanent
+dm_verity.ops_mode=enforce
+
+# Security parameters
+apparmor=1
+security=apparmor
+lockdown=integrity
+
+# Kernel signature verification
+module.sig_enforce=1
+
+# Memory protection
+slub_debug=FZP
+slab_nomerge
+
+# UEFI and TPM integration
+efi=noruntime
+efivarfs=secure
+
+# Kernel hardening
+kernel.kptr_restrict=3
+kernel.dmesg_restrict=1
+kernel.printk=0 0 0 0
+kernel.unprivileged_bpf_disabled=1
+kernel.unprivileged_userns_clone=0
+kernel.yama.ptrace_scope=3
+
+# Systemd parameters
+systemd.show_status=auto
+systemd.log_target=journal-or-kmsg
+
+# Disable unnecessary features
+nowatchdog
+nokaslr
+
+# Attestation parameters
+tpm_crb.log_level=2
