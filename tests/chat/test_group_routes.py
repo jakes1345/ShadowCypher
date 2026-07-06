@@ -49,7 +49,7 @@ def test_create_group(client, auth_headers):
     data = response.json()
     assert data["name"] == "Test Group"
     assert data["id"] is not None
-    assert data["group_key_version"] == 1
+    assert data["key_version"] == 1
     assert data["created_at"] > 0
 
 
@@ -349,7 +349,7 @@ def test_group_key_rotation_on_member_removal(client):
         headers=creator_headers
     )
     group_id = create_response.json()["id"]
-    assert create_response.json()["group_key_version"] == 1
+    assert create_response.json()["key_version"] == 1
 
     # This test demonstrates the endpoint structure
     # Full key rotation testing would require database queries
@@ -398,8 +398,8 @@ def test_list_groups(client):
     for group in groups:
         assert "id" in group
         assert "name" in group
-        assert "user_id" in group
-        assert "group_key_version" in group
+        assert "creator_id" in group
+        assert "key_version" in group
         assert "created_at" in group
 
 

@@ -71,11 +71,11 @@ def create_group(user, name):
 
     return {
         "id": group_data["id"],
-        "user_id": group_data["user_id"],
+        "creator_id": group_data["creator_id"],
         "name": group_data["name"],
-        "group_key_version": group_data["group_key_version"],
+        "key_version": group_data["key_version"],
         "created_at": group_data["created_at"],
-        "group_key": group_key,  # Track for test
+        "group_key": group_data["group_key"],  # Track for test
     }
 
 
@@ -199,10 +199,10 @@ def test_group_e2e_flow():
 
     # ─── Step 2: Alice creates group "Team Vault" ───
     group = create_group(alice, name="Team Vault")
-    assert group["user_id"] == alice.user_id
-    assert group["group_key_version"] == 1
+    assert group["creator_id"] == alice.user_id
+    assert group["key_version"] == 1
     assert group["name"] == "Team Vault"
-    assert len(group["group_key"]) == 32  # Group key is 32 bytes
+    assert len(group["group_key"]) == 64  # Group key is hex-encoded 32 bytes
 
     # ─── Step 3: Alice adds Bob and Charlie to group ───
     add_member(alice, group_id=group["id"], member_user_id=bob.user_id)
@@ -220,7 +220,7 @@ def test_group_e2e_flow():
         alice_msg,
         group_key=group["group_key"],
         group_id=group["id"],
-        key_version=group["group_key_version"]
+        key_version=group["key_version"]
     )
     send_group_message(alice, group_id=group["id"], encrypted_message=ciphertext_alice, nonce=nonce_alice)
 
@@ -230,7 +230,7 @@ def test_group_e2e_flow():
         bob_msg,
         group_key=group["group_key"],
         group_id=group["id"],
-        key_version=group["group_key_version"]
+        key_version=group["key_version"]
     )
     send_group_message(bob, group_id=group["id"], encrypted_message=ciphertext_bob, nonce=nonce_bob)
 
@@ -245,7 +245,7 @@ def test_group_e2e_flow():
         bytes.fromhex(alice_messages[0]["nonce"]),
         group_key=group["group_key"],
         group_id=group["id"],
-        key_version=alice_messages[0]["group_key_version"]
+        key_version=alice_messages[0]["key_version"]
     )
     assert alice_decrypted_1 == alice_msg
 
@@ -254,7 +254,7 @@ def test_group_e2e_flow():
         bytes.fromhex(alice_messages[1]["nonce"]),
         group_key=group["group_key"],
         group_id=group["id"],
-        key_version=alice_messages[1]["group_key_version"]
+        key_version=alice_messages[1]["key_version"]
     )
     assert alice_decrypted_2 == bob_msg
 
@@ -267,7 +267,7 @@ def test_group_e2e_flow():
         bytes.fromhex(bob_messages[0]["nonce"]),
         group_key=group["group_key"],
         group_id=group["id"],
-        key_version=bob_messages[0]["group_key_version"]
+        key_version=bob_messages[0]["key_version"]
     )
     assert bob_decrypted_1 == alice_msg
 
@@ -276,7 +276,7 @@ def test_group_e2e_flow():
         bytes.fromhex(bob_messages[1]["nonce"]),
         group_key=group["group_key"],
         group_id=group["id"],
-        key_version=bob_messages[1]["group_key_version"]
+        key_version=bob_messages[1]["key_version"]
     )
     assert bob_decrypted_2 == bob_msg
 
@@ -288,17 +288,16 @@ def test_group_e2e_flow():
     charlie_member_id = get_group_member_id(group["id"], charlie.user_id)
     assert charlie_member_id is not None
 
-    remove_member(alice, group_id=group["id"], member_id=charlie_member_id)
+    removal_response = remove_member(alice, group_id=group["id"], member_id=charlie_member_id)
 
     # Verify key_version incremented
     new_key_version = get_group_key_version(group["id"])
     assert new_key_version == 2
 
-    # ─── Step 8: Fetch new group_key for v2 from server ───
-    # The server generated and stored the new key during key rotation
-    updated_group = get_group(alice, group["id"])
-    assert updated_group["new_group_key_hex"] is not None
-    new_group_key = bytes.fromhex(updated_group["new_group_key_hex"])
+    # ─── Step 8: Get new group_key from removal response ───
+    # The removal endpoint returns the new key (creator sends it to remaining members via P2P DM)
+    assert removal_response["new_group_key_hex"] is not None
+    new_group_key = removal_response["new_group_key_hex"]
 
     # ─── Step 9: Alice sends new message with key_version 2 ───
     new_msg = "Charlie is out, proceed with new plan"
@@ -315,14 +314,14 @@ def test_group_e2e_flow():
     assert len(fresh_messages) == 3
 
     # Verify the new message has key_version 2
-    assert fresh_messages[2]["group_key_version"] == 2
+    assert fresh_messages[2]["key_version"] == 2
 
     bob_new_decrypted = decrypt_group_message(
         bytes.fromhex(fresh_messages[2]["encrypted_message"]),
         bytes.fromhex(fresh_messages[2]["nonce"]),
         group_key=new_group_key,
         group_id=group["id"],
-        key_version=fresh_messages[2]["group_key_version"]
+        key_version=fresh_messages[2]["key_version"]
     )
     assert bob_new_decrypted == new_msg
 

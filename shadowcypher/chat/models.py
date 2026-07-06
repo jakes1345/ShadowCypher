@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
+import os
 import time
 import uuid
 
@@ -98,14 +99,16 @@ class Group(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # creator
     name = Column(String(255), nullable=False)  # encrypted group name (stored with device key)
+    group_key_hex = Column(String(64), nullable=False)  # Version 1 encryption key (hex-encoded 32 bytes)
     group_key_version = Column(Integer, default=1, nullable=False)
-    new_group_key_hex = Column(String(64), nullable=True)  # New key after rotation (hex-encoded 32 bytes)
+    key_versions = Column(String, nullable=True)  # JSON dict of all key versions: {"2": "abc...", "3": "def...", ...}
     created_at = Column(Integer, nullable=False)
 
     def __init__(self, user_id, name):
         self.id = str(uuid.uuid4())
         self.user_id = user_id
         self.name = name
+        self.group_key_hex = os.urandom(32).hex()
         self.created_at = int(time.time())
 
 class GroupMember(Base):

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
+import json
 from shadowcypher.chat.models import User, Contact, Conversation, Message, Instance, Group, GroupMember, GroupMessage
 from shadowcypher.chat.auth import create_jwt_token, validate_jwt_token
 from shadowcypher.chat.crypto import fingerprint
@@ -8,7 +9,7 @@ from shadowcypher.chat.schemas import (
     AddContactRequest, AddContactResponse, SendMessageRequest, SendMessageResponse,
     ConversationSummary, MessageResponse, InstanceRegisterRequest, InstanceResponse,
     P2PSendRequest, P2PSendResponse, GroupCreate, GroupAddMember, GroupResponse, GroupMemberResponse,
-    GroupMessageRequest, GroupMessageResponse
+    GroupMessageRequest, GroupMessageResponse, GroupMemberRemovalResponse
 )
 from shadowcypher.chat.db import SessionLocal
 from shadowcypher.chat import instance_registry
@@ -20,6 +21,16 @@ import os
 from typing import Optional
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+def get_group_key(group: Group) -> str:
+    """Get the current encryption key for a group based on group_key_version."""
+    if group.group_key_version == 1:
+        return group.group_key_hex
+    # For versions > 1, look up in key_versions JSON
+    if group.key_versions:
+        key_versions = json.loads(group.key_versions)
+        return key_versions.get(str(group.group_key_version), group.group_key_hex)
+    return group.group_key_hex  # Fallback
 
 def get_db():
     db = SessionLocal()
@@ -391,10 +402,10 @@ def create_group(
 
     return GroupResponse(
         id=group.id,
-        user_id=group.user_id,
+        creator_id=group.user_id,
         name=group.name,
-        group_key_version=group.group_key_version,
-        new_group_key_hex=group.new_group_key_hex,
+        group_key=get_group_key(group),
+        key_version=group.group_key_version,
         created_at=group.created_at
     )
 
@@ -420,7 +431,7 @@ def add_group_member(
     return GroupMemberResponse(id=member.id, user_id=member.user_id, joined_at=member.joined_at)
 
 
-@router.delete("/groups/{group_id}/members/{member_id}")
+@router.delete("/groups/{group_id}/members/{member_id}", response_model=GroupMemberRemovalResponse)
 def remove_group_member(
     group_id: str,
     member_id: str,
@@ -444,11 +455,18 @@ def remove_group_member(
     db.delete(member)
     # Rotate group key on member removal
     group.group_key_version += 1
-    # Generate new 32-byte group key and store it
-    new_group_key = os.urandom(32)
-    group.new_group_key_hex = new_group_key.hex()
+    # Generate new 32-byte group key
+    new_group_key = os.urandom(32).hex()
+    # Store in key_versions JSON
+    key_versions = json.loads(group.key_versions or '{}')
+    key_versions[str(group.group_key_version)] = new_group_key
+    group.key_versions = json.dumps(key_versions)
     db.commit()
-    return {"status": "ok", "new_key_version": group.group_key_version}
+    return GroupMemberRemovalResponse(
+        status="ok",
+        new_key_version=group.group_key_version,
+        new_group_key_hex=new_group_key
+    )
 
 
 @router.get("/groups/{group_id}/members", response_model=list[GroupMemberResponse])
@@ -495,10 +513,10 @@ def get_group(
 
     return GroupResponse(
         id=group.id,
-        user_id=group.user_id,
+        creator_id=group.user_id,
         name=group.name,
-        group_key_version=group.group_key_version,
-        new_group_key_hex=group.new_group_key_hex,
+        group_key=get_group_key(group),
+        key_version=group.group_key_version,
         created_at=group.created_at
     )
 
@@ -528,10 +546,10 @@ def list_groups(
     return [
         GroupResponse(
             id=g.id,
-            user_id=g.user_id,
+            creator_id=g.user_id,
             name=g.name,
-            group_key_version=g.group_key_version,
-            new_group_key_hex=g.new_group_key_hex,
+            group_key=get_group_key(g),
+            key_version=g.group_key_version,
             created_at=g.created_at
         )
         for g in groups_dict.values()
@@ -602,8 +620,8 @@ def send_group_message(
         sender_id=message.sender_id,
         encrypted_message=binascii.hexlify(message.encrypted_message).decode(),
         nonce=binascii.hexlify(message.nonce).decode(),
-        timestamp=message.timestamp,
-        group_key_version=message.group_key_version
+        created_at=message.timestamp,
+        key_version=message.group_key_version
     )
 
 
@@ -638,8 +656,8 @@ def get_group_messages(
             sender_id=m.sender_id,
             encrypted_message=binascii.hexlify(m.encrypted_message).decode(),
             nonce=binascii.hexlify(m.nonce).decode(),
-            timestamp=m.timestamp,
-            group_key_version=m.group_key_version
+            created_at=m.timestamp,
+            key_version=m.group_key_version
         )
         for m in messages
     ]

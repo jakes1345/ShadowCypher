@@ -75,16 +75,22 @@ class GroupAddMember(BaseModel):
 
 class GroupResponse(BaseModel):
     id: str
-    user_id: int
+    creator_id: int  # User ID of group creator
     name: str
-    group_key_version: int
-    new_group_key_hex: Optional[str] = None  # Hex-encoded new key after rotation
+    group_key: str  # Hex-encoded current 32-byte AES-256 key
+    key_version: int  # Current key rotation version
+    new_group_key_hex: Optional[str] = None  # Rotated key (null = no pending rotation, sent via P2P DM instead)
     created_at: int
 
 class GroupMemberResponse(BaseModel):
     id: str
     user_id: int
     joined_at: int
+
+class GroupMemberRemovalResponse(BaseModel):
+    status: str  # "ok"
+    new_key_version: int
+    new_group_key_hex: str  # Creator gets new key to send to remaining members via P2P DM
 
 class GroupMessageRequest(BaseModel):
     encrypted_message: str  # hex-encoded AES-256-GCM ciphertext
@@ -96,5 +102,5 @@ class GroupMessageResponse(BaseModel):
     sender_id: int
     encrypted_message: str
     nonce: str
-    timestamp: int
-    group_key_version: int
+    created_at: int
+    key_version: int
