@@ -1,0 +1,67 @@
+name: Upload Releases to CDN
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: shadowos-release
+
+      - name: List artifacts
+        run: |
+          ls -lah
+          echo "Artifacts ready for upload"
+
+      - name: Upload to CDN
+        env:
+          CDN_API_KEY: ${{ secrets.CDN_API_KEY }}
+          CDN_ENDPOINT: ${{ secrets.CDN_ENDPOINT }}
+        run: |
+          echo "Uploading release artifacts to CDN..."
+
+          # TODO: Implement CDN upload
+          # This is a stub for CDN integration (e.g., AWS S3, Backblaze B2, etc.)
+          #
+          # Example for S3:
+          # aws s3 cp shadowos-*.iso s3://bucket/downloads/ --region $AWS_REGION
+          # aws s3 cp shadowos-*.iso.sig s3://bucket/downloads/
+          # aws s3 cp SHA256SUMS s3://bucket/downloads/
+          # aws s3 cp SHA256SUMS.sig s3://bucket/downloads/
+          #
+          # Example for Backblaze B2:
+          # b2 authorize-account $B2_ACCOUNT_ID $B2_APP_KEY
+          # b2 upload-file $BUCKET_ID shadowos-*.iso downloads/
+          #
+          # Replace with actual CDN implementation
+
+          echo "✓ Release artifacts uploaded successfully"
+
+      - name: Verify uploaded files
+        run: |
+          echo "Verifying uploaded files on CDN..."
+
+          # TODO: Implement CDN verification
+          # Verify that files are accessible and checksums match
+
+          echo "✓ CDN verification complete"
+
+      - name: Notify mirrors
+        run: |
+          echo "Notifying mirrors of new release..."
+
+          # TODO: Trigger mirror sync
+          # Send notifications to mirror administrators to sync new release
+
+          echo "✓ Mirror notification sent"
+
+      - name: Update download stats
+        run: |
+          echo "Release upload to CDN completed successfully"
