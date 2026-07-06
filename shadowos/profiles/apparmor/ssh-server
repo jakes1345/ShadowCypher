@@ -1,0 +1,20 @@
+#include <tunables/global>
+
+profile ssh-server /usr/bin/sshd {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/openssl>
+
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability setgid,
+  capability setuid,
+  capability sys_chroot,
+  capability sys_tty_config,
+
+  /etc/ssh/sshd_config r,
+  /etc/ssh/moduli r,
+  /etc/ssh/ssh_host_* r,
+  /var/run/sshd.pid w,
+}

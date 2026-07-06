@@ -1,0 +1,37 @@
+#include <tunables/global>
+
+profile shadowcypher-guardian flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+
+  # Capabilities needed
+  capability dac_override,
+  capability sys_admin,
+  capability sys_ptrace,
+  capability net_admin,
+
+  # Socket access
+  network inet stream,
+  network inet dgram,
+  network unix stream,
+
+  # File access
+  /opt/shadowcypher/shadowcypher/** rwix,
+  /opt/shadowcypher/guardian/** rwix,
+  /var/lib/shadowcypher/** rwix,
+  /run/guardian* rwix,
+
+  # Log files
+  /var/log/guardian* w,
+  owner /root/.local/share/shadowcypher/** rwk,
+  owner /root/.config/shadowcypher/** rwk,
+
+  # System access (monitoring)
+  /proc/*/stat r,
+  /proc/*/status r,
+  /sys/class/net/*/statistics/* r,
+
+  # Deny other access
+  deny /etc/shadow rwx,
+  deny /etc/gshadow rwx,
+}
