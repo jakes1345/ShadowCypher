@@ -104,3 +104,10 @@ class GroupMessageResponse(BaseModel):
     nonce: str
     created_at: int
     key_version: int
+
+class VaultUnlockRequest(BaseModel):
+    vault_password: str
+
+class VaultUnlockResponse(BaseModel):
+    status: str  # "unlocked"
+    vault_key: str  # Derived from vault password using PBKDF2

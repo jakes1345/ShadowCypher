@@ -9,7 +9,8 @@ from shadowcypher.chat.schemas import (
     AddContactRequest, AddContactResponse, SendMessageRequest, SendMessageResponse,
     ConversationSummary, MessageResponse, InstanceRegisterRequest, InstanceResponse,
     P2PSendRequest, P2PSendResponse, GroupCreate, GroupAddMember, GroupResponse, GroupMemberResponse,
-    GroupMessageRequest, GroupMessageResponse, GroupMemberRemovalResponse
+    GroupMessageRequest, GroupMessageResponse, GroupMemberRemovalResponse,
+    VaultUnlockRequest, VaultUnlockResponse
 )
 from shadowcypher.chat.db import SessionLocal
 from shadowcypher.chat import instance_registry
@@ -19,6 +20,9 @@ from datetime import datetime
 import binascii
 import os
 from typing import Optional
+import hashlib
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -664,3 +668,38 @@ def get_group_messages(
         )
         for m in messages
     ]
+
+
+# ─── Vault ──────────────────────────────────────────────────────────────
+
+@router.post("/vault/unlock", response_model=VaultUnlockResponse)
+def unlock_vault(
+    req: VaultUnlockRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Unlock vault with master password. Derives encryption key from password + user ID.
+
+    This adds a second factor to message decryption:
+    - Device unlock (biometric/PIN) gets you into the app
+    - Vault password is required to decrypt group messages
+
+    If device is seized, attacker needs BOTH device unlock + vault password.
+    """
+    # Use PBKDF2 to derive a strong key from the vault password
+    # Salt is derived from user ID to ensure different users get different keys
+    salt = hashlib.sha256(f"vault_{current_user.id}".encode()).digest()[:16]
+
+    kdf = PBKDF2(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+    )
+
+    vault_key = kdf.derive(req.vault_password.encode())
+    vault_key_hex = vault_key.hex()
+
+    return VaultUnlockResponse(
+        status="unlocked",
+        vault_key=vault_key_hex
+    )
