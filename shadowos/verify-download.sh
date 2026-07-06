@@ -41,7 +41,7 @@ fi
 echo ""
 echo "Verifying file integrity..."
 cd "$BASEDIR"
-if sha256sum -c SHA256SUMS --ignore-missing 2>/dev/null | grep "$FILENAME"; then
+if sha256sum -c SHA256SUMS --ignore-missing 2>/dev/null | grep "$FILENAME: OK"; then
     echo "✓ SHA256 checksum valid"
 else
     echo "✗ SHA256 checksum INVALID - file is corrupted"

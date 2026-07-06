@@ -33,10 +33,12 @@ jobs:
             --include='*.json' --include='*.png' --include='*.jpg' \
             --include='*.jpeg' --include='*.gif' --include='*.svg' \
             --include='*.ico' --include='*.webp' --include='*.woff*' \
-            --include='*.ttf' --include='*.eot' \
+            --include='*.ttf' --include='*.eot' --include='*.md' --include='*.sh' \
             --include='blog/' --include='blog/**' \
             --include='r/' --include='r/**' \
             --include='agent/' --include='agent/**' \
+            --include='docs/' --include='docs/**' \
+            --include='shadowos/' --include='shadowos/verify-download.sh' \
             --include='sitemap.xml' \
             --include='_redirects' --include='CNAME' --include='.nojekyll' \
             --include='manifest.json' --include='sw.js' \

@@ -10,58 +10,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download release artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: shadowos-release
-
-      - name: List artifacts
+      - name: Get release artifacts from GitHub
         run: |
-          ls -lah
-          echo "Artifacts ready for upload"
+          # Get release ID from tag
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ github.ref_name }} --jq .id)
+          echo "RELEASE_ID=$RELEASE_ID" >> $GITHUB_ENV
 
-      - name: Upload to CDN
+          # List assets in the release
+          echo "Release assets:"
+          gh api repos/${{ github.repository }}/releases/${{ env.RELEASE_ID }}/assets --jq '.[] | .name'
         env:
-          CDN_API_KEY: ${{ secrets.CDN_API_KEY }}
-          CDN_ENDPOINT: ${{ secrets.CDN_ENDPOINT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify artifacts in release
         run: |
-          echo "Uploading release artifacts to CDN..."
+          RELEASE_ID=${{ env.RELEASE_ID }}
+          assets=$(gh api repos/${{ github.repository }}/releases/${{ env.RELEASE_ID }}/assets --jq '.[] | .name')
 
-          # TODO: Implement CDN upload
-          # This is a stub for CDN integration (e.g., AWS S3, Backblaze B2, etc.)
-          #
-          # Example for S3:
-          # aws s3 cp shadowos-*.iso s3://bucket/downloads/ --region $AWS_REGION
-          # aws s3 cp shadowos-*.iso.sig s3://bucket/downloads/
-          # aws s3 cp SHA256SUMS s3://bucket/downloads/
-          # aws s3 cp SHA256SUMS.sig s3://bucket/downloads/
-          #
-          # Example for Backblaze B2:
-          # b2 authorize-account $B2_ACCOUNT_ID $B2_APP_KEY
-          # b2 upload-file $BUCKET_ID shadowos-*.iso downloads/
-          #
-          # Replace with actual CDN implementation
+          echo "Checking for required release files..."
 
-          echo "✓ Release artifacts uploaded successfully"
+          # Check for critical files
+          if echo "$assets" | grep -q "shadowos.*\.iso$" && \
+             echo "$assets" | grep -q "SHA256SUMS" && \
+             echo "$assets" | grep -q "shadowos_release.pub"; then
+            echo "✓ All required release files present"
+          else
+            echo "✗ Missing required release files"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify uploaded files
+      - name: CDN sync ready
         run: |
-          echo "Verifying uploaded files on CDN..."
-
-          # TODO: Implement CDN verification
-          # Verify that files are accessible and checksums match
-
-          echo "✓ CDN verification complete"
-
-      - name: Notify mirrors
-        run: |
-          echo "Notifying mirrors of new release..."
-
-          # TODO: Trigger mirror sync
-          # Send notifications to mirror administrators to sync new release
-
-          echo "✓ Mirror notification sent"
-
-      - name: Update download stats
-        run: |
-          echo "Release upload to CDN completed successfully"
+          echo "✓ Release artifacts verified and ready for CDN sync"
+          echo "Next: Configure CDN sync (S3, Backblaze B2, or similar)"
+          echo "Artifacts are available in GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/${{ github.ref_name }}"
