@@ -57,3 +57,12 @@ class InstanceResponse(BaseModel):
     endpoint: Optional[str]
     is_online: bool
     last_heartbeat: int
+
+class P2PSendRequest(BaseModel):
+    to_instance_id: str
+    encrypted_message: str  # hex-encoded ciphertext
+    nonce: str  # hex-encoded nonce
+
+class P2PSendResponse(BaseModel):
+    status: str  # "delivered" | "failed"
+    via: str  # "p2p" | "relay"

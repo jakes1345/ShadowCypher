@@ -6,10 +6,12 @@ from shadowcypher.chat.crypto import fingerprint
 from shadowcypher.chat.schemas import (
     RegisterRequest, RegisterResponse, LoginRequest, LoginResponse,
     AddContactRequest, AddContactResponse, SendMessageRequest, SendMessageResponse,
-    ConversationSummary, MessageResponse, InstanceRegisterRequest, InstanceResponse
+    ConversationSummary, MessageResponse, InstanceRegisterRequest, InstanceResponse,
+    P2PSendRequest, P2PSendResponse
 )
 from shadowcypher.chat.db import SessionLocal
 from shadowcypher.chat import instance_registry
+from shadowcypher.chat import p2p_relay
 from datetime import datetime
 import binascii
 from typing import Optional
@@ -292,3 +294,38 @@ def list_instances(
         )
         for i in instances
     ]
+
+
+# ─── P2P Message Relay ───
+
+@router.post("/instances/send-p2p", response_model=P2PSendResponse)
+def send_p2p(
+    req: P2PSendRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send message via P2P to another instance."""
+    session = SessionLocal()
+    try:
+        # Get sender's instance (implicit: first/primary instance for user)
+        instances = instance_registry.list_online_instances(session, current_user.id)
+        if not instances:
+            raise HTTPException(status_code=400, detail="No active instances")
+
+        from_instance_id = instances[0].instance_id  # Use primary instance
+
+        try:
+            ciphertext = binascii.unhexlify(req.encrypted_message)
+            nonce = binascii.unhexlify(req.nonce)
+        except (ValueError, binascii.Error):
+            raise HTTPException(status_code=400, detail="Invalid message encoding")
+
+        result = p2p_relay.send_p2p_message(from_instance_id, req.to_instance_id, ciphertext, nonce)
+
+        if result["status"] == "delivered":
+            return P2PSendResponse(status="delivered", via=result["via"])
+        else:
+            # Return failure, caller will retry via relay
+            return P2PSendResponse(status="failed", via="p2p")
+    finally:
+        session.close()

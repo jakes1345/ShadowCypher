@@ -78,3 +78,15 @@ class Instance(Base):
         self.last_heartbeat = int(time.time())
         self.is_online = True
         self.created_at = int(time.time())
+
+class P2PConnection(Base):
+    """Tracks active P2P connections between instances."""
+    __tablename__ = "p2p_connections"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    from_instance_id = Column(String(36), ForeignKey("instances.instance_id"), nullable=False)
+    to_instance_id = Column(String(36), ForeignKey("instances.instance_id"), nullable=False)
+    status = Column(String(20), nullable=False)  # "active", "closed", "failed"
+    created_at = Column(Integer, nullable=False)
+    last_activity = Column(Integer, nullable=False)
+    messages_sent = Column(Integer, default=0, nullable=False)
