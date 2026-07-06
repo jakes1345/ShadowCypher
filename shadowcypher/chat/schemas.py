@@ -83,3 +83,16 @@ class GroupResponse(BaseModel):
 class GroupMemberResponse(BaseModel):
     user_id: int
     joined_at: int
+
+class GroupMessageRequest(BaseModel):
+    encrypted_message: str  # hex-encoded AES-256-GCM ciphertext
+    nonce: str  # hex-encoded 96-bit nonce
+
+class GroupMessageResponse(BaseModel):
+    id: str
+    group_id: str
+    sender_id: int
+    encrypted_message: str
+    nonce: str
+    timestamp: int
+    group_key_version: int

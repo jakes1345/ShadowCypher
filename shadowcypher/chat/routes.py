@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
-from shadowcypher.chat.models import User, Contact, Conversation, Message, Instance, Group, GroupMember
+from shadowcypher.chat.models import User, Contact, Conversation, Message, Instance, Group, GroupMember, GroupMessage
 from shadowcypher.chat.auth import create_jwt_token, validate_jwt_token
 from shadowcypher.chat.crypto import fingerprint
 from shadowcypher.chat.schemas import (
     RegisterRequest, RegisterResponse, LoginRequest, LoginResponse,
     AddContactRequest, AddContactResponse, SendMessageRequest, SendMessageResponse,
     ConversationSummary, MessageResponse, InstanceRegisterRequest, InstanceResponse,
-    P2PSendRequest, P2PSendResponse, GroupCreate, GroupAddMember, GroupResponse, GroupMemberResponse
+    P2PSendRequest, P2PSendResponse, GroupCreate, GroupAddMember, GroupResponse, GroupMemberResponse,
+    GroupMessageRequest, GroupMessageResponse
 )
 from shadowcypher.chat.db import SessionLocal
 from shadowcypher.chat import instance_registry
@@ -470,3 +471,92 @@ def delete_group(
     db.delete(group)
     db.commit()
     return {"status": "ok"}
+
+
+# ─── Group Messages ───
+
+@router.post("/groups/{group_id}/messages", response_model=GroupMessageResponse, status_code=201)
+def send_group_message(
+    group_id: str,
+    req: GroupMessageRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send encrypted message to group."""
+    # Verify group exists
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    # Verify user is member of group
+    member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+
+    try:
+        ciphertext = binascii.unhexlify(req.encrypted_message)
+        nonce = binascii.unhexlify(req.nonce)
+    except (ValueError, binascii.Error):
+        raise HTTPException(status_code=400, detail="Invalid message encoding")
+
+    message = GroupMessage(
+        group_id=group_id,
+        sender_id=current_user.id,
+        encrypted_message=ciphertext,
+        nonce=nonce,
+        group_key_version=group.group_key_version
+    )
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+
+    return GroupMessageResponse(
+        id=message.id,
+        group_id=message.group_id,
+        sender_id=message.sender_id,
+        encrypted_message=binascii.hexlify(message.encrypted_message).decode(),
+        nonce=binascii.hexlify(message.nonce).decode(),
+        timestamp=message.timestamp,
+        group_key_version=message.group_key_version
+    )
+
+
+@router.get("/groups/{group_id}/messages", response_model=list[GroupMessageResponse])
+def get_group_messages(
+    group_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Fetch encrypted messages from group."""
+    # Verify group exists
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    # Verify user is member
+    member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.user_id == current_user.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+
+    messages = db.query(GroupMessage).filter(
+        GroupMessage.group_id == group_id
+    ).order_by(GroupMessage.timestamp).all()
+
+    return [
+        GroupMessageResponse(
+            id=m.id,
+            group_id=m.group_id,
+            sender_id=m.sender_id,
+            encrypted_message=binascii.hexlify(m.encrypted_message).decode(),
+            nonce=binascii.hexlify(m.nonce).decode(),
+            timestamp=m.timestamp,
+            group_key_version=m.group_key_version
+        )
+        for m in messages
+    ]
