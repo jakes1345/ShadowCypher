@@ -1,0 +1,52 @@
+#!/bin/bash
+# Check Guardian service status
+
+echo "Guardian Service Status"
+echo "======================="
+echo ""
+
+# Check API service
+echo "Guardian API (port 9999):"
+if systemctl is-active --quiet guardian-api; then
+    echo "  ✓ Running"
+    systemctl status guardian-api --no-pager | grep -E "Active:|Process"
+else
+    echo "  ✗ Not running"
+fi
+
+echo ""
+
+# Check dashboard server
+echo "Guardian Dashboard (port 8888):"
+if nc -z localhost 8888 2>/dev/null; then
+    echo "  ✓ Running"
+else
+    echo "  ✗ Not running"
+fi
+
+echo ""
+
+# Check API connectivity
+echo "API Connectivity:"
+if curl -s http://localhost:9999/health > /dev/null 2>&1; then
+    HEALTH=$(curl -s http://localhost:9999/health)
+    echo "  ✓ Online"
+    echo "  Response: $HEALTH"
+else
+    echo "  ✗ Offline"
+fi
+
+echo ""
+
+# Show recent errors
+echo "Recent Errors (if any):"
+journalctl -u guardian-api -n 5 --no-pager 2>/dev/null | grep -i error || echo "  (none)"
+
+echo ""
+
+# Quick commands
+echo "Quick commands:"
+echo "  • guardian-launch  — Open Guardian dashboard"
+echo "  • guardian-stop    — Stop Guardian services"
+echo "  • guardian-logs    — View full Guardian logs"
+echo ""

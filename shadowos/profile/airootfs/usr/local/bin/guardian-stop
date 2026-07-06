@@ -1,0 +1,17 @@
+#!/bin/bash
+# Stop Guardian services
+
+echo "Stopping Guardian services..."
+
+# Stop API service
+if systemctl is-active --quiet guardian-api; then
+    sudo systemctl stop guardian-api
+    echo "✓ Guardian API stopped"
+fi
+
+# Stop dashboard server
+pkill -f "http.server.*8888" 2>/dev/null || true
+echo "✓ Guardian Dashboard stopped"
+
+echo ""
+echo "Guardian services stopped."

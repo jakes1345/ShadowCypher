@@ -1,0 +1,58 @@
+#!/bin/bash
+# Guardian Quick Launch Script
+# Starts Guardian API and opens dashboard in browser
+
+set -e
+
+echo "🛡️  Guardian Security Platform Launcher"
+echo "======================================="
+
+# Check if Guardian API is already running
+if systemctl is-active --quiet guardian-api; then
+    echo "✓ Guardian API is already running (port 9999)"
+else
+    echo "Starting Guardian API service..."
+    sudo systemctl start guardian-api
+    sleep 2
+
+    if systemctl is-active --quiet guardian-api; then
+        echo "✓ Guardian API started successfully"
+    else
+        echo "✗ Failed to start Guardian API"
+        echo "Run: sudo systemctl status guardian-api for details"
+        exit 1
+    fi
+fi
+
+# Check if dashboard server is running
+if nc -z localhost 8888 2>/dev/null; then
+    echo "✓ Guardian Dashboard is already running (port 8888)"
+else
+    echo "Starting Guardian Dashboard server..."
+    cd /opt/shadowcypher/shadowcypher/api
+    nohup python3 -m http.server 8888 > /tmp/guardian-dashboard.log 2>&1 &
+    sleep 1
+    echo "✓ Guardian Dashboard started on port 8888"
+fi
+
+# Open browser to dashboard
+echo ""
+echo "Opening Guardian Dashboard in browser..."
+xdg-open "http://localhost:8888/dashboard.html" 2>/dev/null || \
+    firefox "http://localhost:8888/dashboard.html" 2>/dev/null || \
+    google-chrome "http://localhost:8888/dashboard.html" 2>/dev/null || \
+    echo "Please open http://localhost:8888/dashboard.html manually"
+
+echo ""
+echo "✓ Guardian is ready!"
+echo ""
+echo "Available endpoints:"
+echo "  • Dashboard: http://localhost:8888/dashboard.html"
+echo "  • API: http://localhost:9999"
+echo "  • API Docs: http://localhost:9999/docs"
+echo ""
+echo "Commands:"
+echo "  • guardian-stop    — Stop Guardian services"
+echo "  • guardian-status  — Check Guardian status"
+echo "  • guardian-logs    — View Guardian logs"
+echo ""

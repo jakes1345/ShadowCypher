@@ -1,0 +1,11 @@
+#!/bin/bash
+# View Guardian service logs
+
+if [ "$1" == "-f" ] || [ "$1" == "--follow" ]; then
+    echo "Following Guardian API logs (Ctrl+C to exit)..."
+    journalctl -u guardian-api -f
+else
+    echo "Guardian API Recent Logs (last 50 lines):"
+    echo "=========================================="
+    journalctl -u guardian-api -n 50 --no-pager
+fi

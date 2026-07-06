@@ -1,0 +1,20 @@
+[Unit]
+Description=Guardian Security API Service
+Documentation=https://shadowcypher.site/guardian
+After=network.target
+Before=multi-user.target
+
+[Service]
+Type=simple
+User=shadow
+WorkingDirectory=/opt/shadowcypher
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+ExecStart=/usr/bin/python3 -m shadowcypher.api.local_api
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=guardian-api
+
+[Install]
+WantedBy=multi-user.target
