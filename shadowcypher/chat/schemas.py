@@ -48,7 +48,6 @@ class MessageResponse(BaseModel):
     nonce: str  # Hex-encoded
 
 class InstanceRegisterRequest(BaseModel):
-    instance_id: str  # UUID
     public_key: str  # Hex-encoded X25519 pubkey
     endpoint: Optional[str] = None  # "IP:port" or "onion.local"
 

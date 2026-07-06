@@ -67,3 +67,21 @@ def test_list_online_instances(session, test_user):
     instance_registry.register_instance(session, test_user.id, pubkey2, "instance2.local")
     online = instance_registry.list_online_instances(session, test_user.id)
     assert len(online) == 2
+
+
+def test_instance_timeout_marks_offline(session, test_user):
+    """Instances timeout and marked offline after 5+ minutes without heartbeat."""
+    pubkey = b"t" * 32
+    instance = instance_registry.register_instance(session, test_user.id, pubkey, "timeout.local")
+
+    # Manually set last_heartbeat to 6 minutes ago
+    instance.last_heartbeat = int(time.time()) - 360
+    session.commit()
+
+    # Fetch should mark as offline
+    fetched = instance_registry.get_instance(session, instance.instance_id)
+    assert not fetched.is_online
+
+    # list_online_instances should exclude it
+    online = instance_registry.list_online_instances(session, test_user.id)
+    assert len(online) == 0
