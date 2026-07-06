@@ -332,9 +332,13 @@ def send_p2p(
             raise HTTPException(status_code=404, detail="Target instance not found")
 
         # Verify target's owner is a trusted contact
+        target_owner = session.query(User).filter(User.id == target_instance.user_id).first()
+        if not target_owner:
+            raise HTTPException(status_code=404, detail="Instance owner not found")
+
         contact = session.query(Contact).filter(
             Contact.user_id == current_user.id,
-            Contact.id == target_instance.user_id,
+            Contact.contact_username == target_owner.username,
             Contact.is_trusted == True
         ).first()
         if not contact:
