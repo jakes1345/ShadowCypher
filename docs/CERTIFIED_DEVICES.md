@@ -2,182 +2,318 @@
 
 ## Overview
 
-The Certified Devices Registry is a system for tracking, verifying, and managing hardware devices that meet ShadowCypher security and compliance standards. This registry enables device identification, certification validation, and compliance checking across the ShadowCypher ecosystem.
+The ShadowCypher Certified Devices Registry maintains a curated list of hardware devices that meet enterprise security standards and have been verified for compatibility with ShadowOS and ShadowCypher security applications.
 
-## Registry Schema
+Devices are categorized by certification level, indicating the degree of security compliance, feature support, and deployment readiness.
 
-### Device Record Structure
-
-Each certified device in the registry contains the following fields:
-
-```json
-{
-  "id": "string",                    // Unique device identifier (format: VENDOR-MODEL-VARIANT)
-  "manufacturer": "string",          // Device manufacturer/vendor name
-  "model": "string",                 // Device model name
-  "variant": "string",               // Device variant (e.g., revision, region)
-  "specifications": {
-    "processor": "string",           // CPU/processor model
-    "memory_gb": "number",           // RAM in gigabytes
-    "storage_type": "string",        // Storage type (SSD, NVMe, etc.)
-    "storage_capacity_gb": "number", // Storage capacity in gigabytes
-    "form_factor": "string",         // Device form factor (phone, tablet, laptop, etc.)
-    "os_platforms": ["string"]       // Supported operating systems
-  },
-  "certification": {
-    "level": "string",               // Certification level (gold, silver, bronze)
-    "issued_date": "string",         // ISO 8601 date format
-    "expiration_date": "string",     // ISO 8601 date format
-    "compliance_standards": ["string"], // Standards met (e.g., NIST, CIS, OWASP)
-    "security_patches_required": boolean, // Whether latest security patches are required
-    "biometric_support": boolean,    // Hardware supports biometric authentication
-    "encrypted_storage": boolean,    // Hardware supports encrypted storage
-    "secure_boot": boolean           // Hardware supports secure boot
-  },
-  "audit_trail": {
-    "last_verified": "string",       // ISO 8601 timestamp of last verification
-    "verification_count": "number",  // Total number of verifications
-    "issues_found": "number"         // Number of compliance issues discovered
-  }
-}
-```
+---
 
 ## Certification Levels
 
-### Gold (Highest)
-- Meets all security standards and compliance requirements
-- All modern security features enabled
-- Latest firmware/OS support available
+### Gold Certified (100% Compliance)
+
+Gold-certified devices meet all ShadowCypher security standards, support the full feature set, and are recommended for sensitive and critical deployments.
+
+**Requirements:**
+- FIPS 140-2 compliant components (or equivalent)
+- All modern security features enabled (SecureBoot, TPM 2.0, ECC memory)
+- Active firmware/OS security updates
 - 2-year certification validity
-- Recommended for sensitive operations
+- Full compliance with NIST and CIS standards
 
-### Silver (Intermediate)
-- Meets core security standards
-- Majority of modern security features available
-- Current firmware/OS support
+**Gold Certified Devices:**
+
+#### Enterprise Workstations
+- **Intel Xeon W9-3595X** (60-core, 3.0GHz)
+  - RAM: Up to 192GB DDR5 ECC
+  - GPU: NVIDIA RTX 6000 Ada (48GB VRAM)
+  - Storage: 2TB NVMe SSD
+  - Certification: 2025-06-01
+  - Use Case: High-performance security operations, threat analysis, encrypted research
+
+- **Dell Precision 7680**
+  - CPU: Intel Xeon W9-3495X (60-core)
+  - RAM: Up to 192GB DDR5 ECC
+  - GPU: NVIDIA RTX 6000 Ada (48GB)
+  - Storage: 2TB NVMe SSD
+  - Certification: 2025-06-10
+  - Use Case: Enterprise security analysis, cryptographic operations
+
+#### Laptops/Portables
+- **Apple MacBook Pro 16-inch (M4 Max)**
+  - CPU: Apple M4 Max (12-core)
+  - RAM: Up to 36GB unified memory
+  - GPU: Apple GPU (10-core)
+  - Storage: 1TB SSD
+  - Certification: 2025-05-15
+  - Use Case: macOS-based security operations, portable classified work
+
+- **Lenovo ThinkPad X1 Extreme Gen 7**
+  - CPU: Intel Core Ultra 9 285H (14-core)
+  - RAM: Up to 32GB LPDDR5X
+  - GPU: NVIDIA RTX 6050 Ada (12GB)
+  - Storage: 1TB NVMe SSD
+  - Certification: 2025-05-01
+  - Use Case: Mobile enterprise security operations, field assessments
+
+#### Servers
+- **HPE ProLiant DL380 Gen11**
+  - CPU: Intel Xeon Platinum 8592+ (60-core)
+  - RAM: Up to 2TB DDR5 ECC
+  - Storage: 12x 1.92TB SAS SSD
+  - GPU: Optional NVIDIA A100
+  - Certification: 2025-05-20
+  - Use Case: Enterprise security operations center, centralized threat management
+
+- **Supermicro SYS-1U X12 LGA1700**
+  - CPU: Intel Xeon Platinum 8592 (60-core)
+  - RAM: Up to 2TB DDR5 ECC
+  - Storage: 12x 1.92TB SAS SSD
+  - GPU: Optional NVIDIA A100
+  - Certification: 2025-06-05
+  - Use Case: Data center deployments, high-performance security analytics
+
+---
+
+### Silver Certified (95%+ Compliance)
+
+Silver-certified devices meet core security standards and support the majority of modern security features. Suitable for standard operations with minor feature limitations.
+
+**Requirements:**
+- Core security features enabled (TPM 2.0, SecureBoot)
+- Current firmware/OS support with regular updates
 - 18-month certification validity
-- Suitable for standard operations
+- Compliance with most NIST and CIS controls
 
-### Bronze (Basic)
-- Meets minimum security requirements
-- Limited modern security features
-- Basic firmware/OS support available
-- 12-month certification validity
-- For legacy or resource-constrained environments
+**Silver Certified Devices:**
 
-## Lookup Procedures
+#### Laptops/Ultrabooks
+- **ASUS VivoBook 15 Ultra**
+  - CPU: Intel Core Ultra 7 165U (10-core)
+  - RAM: Up to 16GB LPDDR5X
+  - GPU: Intel Arc GPU
+  - Storage: 512GB NVMe SSD
+  - Certification: 2025-04-15
+  - Issues: GPU driver support limited on Linux, biometric firmware update needed
+  - Use Case: Standard user operations, light security analysis
 
-### By Device ID
-```bash
-device-checker.sh --lookup-id VENDOR-MODEL-VARIANT
-```
+- **HP Envy 16 Plus**
+  - CPU: Intel Core Ultra 9 285H
+  - RAM: Up to 32GB LPDDR5X
+  - GPU: NVIDIA RTX 4060 (8GB)
+  - Storage: 1TB NVMe SSD
+  - Certification: 2025-04-01
+  - Issues: Audio codec firmware outdated
+  - Use Case: General purpose security work, presentation ready
 
-Returns device certification status and specifications.
+- **Framework Laptop 16 (13th Gen Intel)**
+  - CPU: Intel Core i7-13700H (16-core)
+  - RAM: Up to 64GB DDR5
+  - GPU: Intel Arc A770M (8GB)
+  - Storage: 2TB NVMe SSD
+  - Certification: 2025-04-10
+  - Issues: EC firmware updates needed for full security
+  - Use Case: Modular, reputable, open-source friendly deployments
 
-### By Manufacturer
-```bash
-device-checker.sh --lookup-manufacturer "Apple"
-```
+#### Edge Computing & IoT
+- **Raspberry Pi 5 (8GB)**
+  - CPU: Broadcom BCM2712 (4-core ARM, 2.4GHz)
+  - RAM: 8GB LPDDR5
+  - Storage: External microSD/NVMe
+  - Certification: 2025-03-20
+  - Issues: Limited cryptographic acceleration, external storage dependency
+  - Use Case: Security appliances, edge threat detection, monitoring nodes
 
-Returns all certified devices from specified manufacturer.
+- **NVIDIA Jetson AGX Orin**
+  - CPU: ARM Cortex-A78AE (12-core)
+  - RAM: 32GB LPDDR5X
+  - GPU: NVIDIA GPU (504 CUDA cores)
+  - Storage: 1TB NVMe SSD
+  - Certification: 2025-05-01
+  - Issues: CUDA driver updates critical for security
+  - Use Case: AI/ML-based threat detection, edge analytics, security automation
 
-### By Model Pattern
-```bash
-device-checker.sh --lookup-model "iPhone 15*"
-```
+---
 
-Returns devices matching model pattern (supports wildcards).
+### Community Verified
 
-### Compliance Check
-```bash
-device-checker.sh --check-compliance DEVICE-ID
-```
+Community-verified devices have been tested and validated by ShadowCypher community members. These devices offer basic security support suitable for educational and non-critical deployments.
 
-Validates device certification and compliance status.
+**Requirements:**
+- Basic security features present
+- Community support for driver/firmware updates
+- 12-month verification validity
+- Limited NIST/CIS control coverage
 
-## Certification Tracking
+**Community Verified Devices:**
 
-### Verification Process
+#### Educational & Development Boards
+- **Banana Pi M7**
+  - CPU: MediaTek Dimensity 7300 (8-core ARM)
+  - RAM: 8GB LPDDR5
+  - GPU: Mali-G77
+  - Storage: 128GB eMMC + microSD
+  - Verified: 2025-03-10
+  - Issues: Limited security updates, minimal hardware security features, community driver quality varies
+  - Use Case: Educational purposes, development environments, learning platforms
 
-1. **Device Identification**: Extract device model and specifications
-2. **Registry Lookup**: Query certified devices registry
-3. **Status Validation**: Check certification expiration and compliance
-4. **Audit Log**: Record verification attempt with timestamp
-5. **Report Generation**: Output compliance status and recommendations
+- **BeagleBone Black**
+  - CPU: AM335x (1GHz ARM Cortex-A8)
+  - RAM: 512MB DDR3
+  - Storage: 4GB eMMC + microSD
+  - Verified: 2025-01-20
+  - Issues: Minimal cryptographic performance, limited RAM, end-of-life consideration
+  - Use Case: Legacy systems, educational projects, hobbyist work
 
-### Tracking Metadata
+#### Legacy Systems
+- **Google Pixelbook Go**
+  - CPU: Intel Core m3-8100Y (2-core)
+  - RAM: 8GB LPDDR3
+  - Storage: 128GB SSD
+  - Verified: 2025-02-15
+  - Issues: Not recommended for Linux deployments, deprecated hardware
+  - Use Case: ChromeOS environments only, legacy support
+  - Status: Community maintained, not recommended for new deployments
 
-- `last_verified`: Timestamp of most recent verification
-- `verification_count`: Total number of successful verifications
-- `issues_found`: Count of compliance violations discovered
-- `expiration_date`: When certification validity expires
-- `compliance_standards`: Which standards the device meets
+---
 
-### Certification Renewal
+## Device Specifications Summary
 
-Certifications are valid until the expiration date. Renewal is required:
-- Upon expiration date
-- After major OS/firmware updates
-- When security standards change
-- During regulatory audit cycles
+| Manufacturer | Model | Certification | CPU | RAM | GPU | Storage |
+|---|---|---|---|---|---|---|
+| Intel | Xeon W9-3595X | Gold | 60-core, 3.0GHz | 192GB DDR5 | RTX 6000 Ada | 2TB NVMe |
+| Apple | MacBook Pro 16" M4 Max | Gold | 12-core | 36GB Unified | 10-core GPU | 1TB SSD |
+| Lenovo | ThinkPad X1 Extreme Gen 7 | Gold | 14-core Ultra 9 | 32GB LPDDR5X | RTX 6050 Ada | 1TB NVMe |
+| Dell | Precision 7680 | Gold | 60-core Xeon | 192GB DDR5 ECC | RTX 6000 Ada | 2TB NVMe |
+| HPE | ProLiant DL380 Gen11 | Gold | 60-core Platinum | 2TB DDR5 ECC | Optional A100 | 12x 1.92TB |
+| Supermicro | SYS-1U X12 LGA1700 | Gold | 60-core Platinum | 2TB DDR5 ECC | Optional A100 | 12x 1.92TB |
+| ASUS | VivoBook 15 Ultra | Silver | 10-core Ultra 7 | 16GB LPDDR5X | Intel Arc | 512GB NVMe |
+| HP | Envy 16 Plus | Silver | 14-core Ultra 9 | 32GB LPDDR5X | RTX 4060 | 1TB NVMe |
+| Framework | Laptop 16 (13th Gen) | Silver | 16-core i7-13700H | 64GB DDR5 | Arc A770M | 2TB NVMe |
+| Raspberry Pi | Pi 5 (8GB) | Silver | 4-core ARM | 8GB LPDDR5 | VideoCore VII | External |
+| NVIDIA | Jetson AGX Orin | Silver | 12-core ARM | 32GB LPDDR5X | NVIDIA GPU | 1TB NVMe |
+| Banana Pi | M7 | Community | 8-core ARM | 8GB LPDDR5 | Mali-G77 | 128GB eMMC |
+| BeagleBone | Black | Community | 1GHz Cortex-A8 | 512MB DDR3 | None | 4GB eMMC |
+| Google | Pixelbook Go | Community | 2-core m3-8100Y | 8GB LPDDR3 | UHD 615 | 128GB SSD |
 
-## Registry Maintenance
+---
 
-### Adding Devices
+## Deployment Recommendations
 
-To add a new certified device:
+### For Sensitive Operations (Intelligence, Classified)
+- **Recommend**: Gold-certified workstations and servers
+- **Example Stack**: Intel Xeon W9 or Dell Precision 7680 + HPE ProLiant DL380 Gen11
 
-1. Gather device specifications and security features
-2. Determine appropriate certification level
-3. Calculate expiration date (based on certification level)
-4. Populate device record with all required fields
-5. Add to device-registry.json
-6. Update audit trail with verification date
+### For Standard Enterprise Security
+- **Recommend**: Silver-certified devices with Enterprise SKUs
+- **Example Stack**: Lenovo ThinkPad X1 Extreme + HPE ProLiant DL380 Gen11
 
-### Updating Certifications
+### For Field Operations & Mobility
+- **Recommend**: Gold-certified laptops (MacBook Pro, ThinkPad X1)
+- **Example Stack**: Apple MacBook Pro M4 Max or Lenovo ThinkPad X1 Extreme Gen 7
 
-To update an existing device certification:
+### For Edge Security & IoT
+- **Recommend**: Silver-certified edge devices
+- **Example Stack**: Raspberry Pi 5 or NVIDIA Jetson AGX Orin for threat detection
 
-1. Identify the device by ID
-2. Update relevant fields (primarily certification dates and standards)
-3. Increment verification_count
-4. Set last_verified to current timestamp
-5. Commit changes to registry
+### For Development & Testing
+- **Recommend**: Community-verified boards (non-production)
+- **Example Stack**: Raspberry Pi 5 or Banana Pi M7 for development
 
-### Decommissioning Devices
+---
 
-Devices should not be removed but marked as inactive:
+## Compatibility Matrix
 
-1. Set expiration_date to current date
-2. Add note in compliance_standards: "DEPRECATED"
-3. Keep audit trail for historical reference
-4. Update device-checker.sh to flag as unsupported
+### Operating System Support
+- **Gold**: Linux (6.8+), Windows Server 2022+, macOS 14.5+
+- **Silver**: Linux (6.6+), Windows 10/11, macOS 12+
+- **Community**: Linux (6.1+), ChromeOS, limited Windows support
 
-## Security Considerations
+### Security Features
+| Feature | Gold | Silver | Community |
+|---|---|---|---|
+| TPM 2.0 | ✓ | ✓ | Limited |
+| Secure Boot | ✓ | ✓ | Limited |
+| ECC Memory | ✓ | Optional | No |
+| Hardware Crypto | ✓ | Partial | No |
+| FIPS 140-2 | ✓ | No | No |
 
-- Registry contains public hardware information only
-- No sensitive credentials stored in registry
-- Device checker validates against timestamped snapshots
-- Audit trail provides tamper-evidence trail
-- Regular registry reviews recommended
+---
 
-## Integration Points
+## Certification Process
 
-The registry integrates with:
-- Guardian module audit workflows
-- Device compliance reporting
-- Hardware security assessments
-- Incident response playbooks
-- Security baseline validation
+### Requirements for Gold Certification
+1. Hardware security assessment and validation
+2. Firmware/BIOS security audit
+3. OS compatibility testing across supported distributions
+4. Cryptographic performance benchmarking
+5. Physical security feature validation (TPM, SecureBoot)
+6. Annual recertification required
 
-## File Locations
+### Requirements for Silver Certification
+1. Hardware specification review
+2. OS compatibility verification
+3. Security feature checking
+4. 18-month recertification required
 
-- **Documentation**: `/home/jack/ShadowCypher/docs/CERTIFIED_DEVICES.md`
-- **Registry Data**: `/home/jack/ShadowCypher/data/security/device-registry.json`
-- **Checker Tool**: `/home/jack/ShadowCypher/bin/device-checker.sh`
+### Community Verification
+1. Community member testing and submission
+2. Basic compatibility documentation
+3. Known issues tracking
+4. 12-month community update cycle
 
-## References
+---
 
-- CIS Controls: Device and Application Security
-- NIST Cybersecurity Framework: Asset Management
-- OWASP: Secure Hardware Development
+## Adding New Devices
+
+To propose a new device for certification:
+
+1. **Submit Device Information**
+   - Manufacturer, model, variant
+   - Complete technical specifications
+   - Security features present
+
+2. **Test Requirements**
+   - ShadowOS compatibility testing
+   - Security feature validation
+   - Performance benchmarking
+
+3. **Review Process**
+   - Security team assessment
+   - Compliance evaluation
+   - Certification level assignment
+
+4. **Registry Update**
+   - Device added to `.github/certified-devices.json`
+   - Documentation updated
+   - Verification tracking initiated
+
+---
+
+## Device Registry Database
+
+The authoritative device registry is maintained in `.github/certified-devices.json` with machine-readable specifications for each certified device, including:
+
+- Unique device identifier
+- Manufacturer and model information
+- CPU, RAM, GPU, storage specifications
+- Certification level and date
+- Kernel version requirements
+- Known issues and workarounds
+- Verification history and audit trail
+
+Use the `shadowos/device-registry.py` tool to query and manage the registry programmatically.
+
+---
+
+## Resources
+
+- **Registry Manager**: `shadowos/device-registry.py`
+- **Registry Database**: `.github/certified-devices.json`
+- **Compliance Standards**: NIST Cybersecurity Framework, CIS Controls, FIPS 140-2
+- **Hardware Security**: TPM 2.0 Specification, Secure Boot Specification
+
+---
+
+**Last Updated**: 2025-06-10
+**Maintained By**: ShadowCypher Security Team
