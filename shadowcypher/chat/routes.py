@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
-from shadowcypher.chat.models import User, Contact, Conversation, Message, Instance
+from shadowcypher.chat.models import User, Contact, Conversation, Message, Instance, Group, GroupMember
 from shadowcypher.chat.auth import create_jwt_token, validate_jwt_token
 from shadowcypher.chat.crypto import fingerprint
 from shadowcypher.chat.schemas import (
     RegisterRequest, RegisterResponse, LoginRequest, LoginResponse,
     AddContactRequest, AddContactResponse, SendMessageRequest, SendMessageResponse,
     ConversationSummary, MessageResponse, InstanceRegisterRequest, InstanceResponse,
-    P2PSendRequest, P2PSendResponse
+    P2PSendRequest, P2PSendResponse, GroupCreate, GroupAddMember, GroupResponse, GroupMemberResponse
 )
 from shadowcypher.chat.db import SessionLocal
 from shadowcypher.chat import instance_registry
@@ -366,3 +366,107 @@ def send_p2p(
             return P2PSendResponse(status="failed", via="p2p")
     finally:
         session.close()
+
+
+# ─── Group Management ───
+
+@router.post("/groups", response_model=GroupResponse, status_code=201)
+def create_group(
+    req: GroupCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create new group."""
+    group = Group(user_id=current_user.id, name=req.name)
+    db.add(group)
+    db.commit()
+    db.refresh(group)
+    return GroupResponse(
+        id=group.id,
+        user_id=group.user_id,
+        name=group.name,
+        group_key_version=group.group_key_version,
+        created_at=group.created_at
+    )
+
+
+@router.post("/groups/{group_id}/members", response_model=GroupMemberResponse, status_code=201)
+def add_group_member(
+    group_id: str,
+    req: GroupAddMember,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Add member to group (admin only)."""
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if group.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only group creator can add members")
+
+    member = GroupMember(group_id=group_id, user_id=req.user_id)
+    db.add(member)
+    db.commit()
+    db.refresh(member)
+    return GroupMemberResponse(user_id=member.user_id, joined_at=member.joined_at)
+
+
+@router.delete("/groups/{group_id}/members/{member_id}")
+def remove_group_member(
+    group_id: str,
+    member_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Remove member from group (admin only, triggers key rotation)."""
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if group.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only group creator can remove members")
+
+    member = db.query(GroupMember).filter(
+        GroupMember.id == member_id,
+        GroupMember.group_id == group_id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    db.delete(member)
+    # Rotate group key on member removal
+    group.group_key_version += 1
+    db.commit()
+    return {"status": "ok", "new_key_version": group.group_key_version}
+
+
+@router.get("/groups/{group_id}/members", response_model=list[GroupMemberResponse])
+def list_group_members(
+    group_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List group members."""
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    members = db.query(GroupMember).filter(GroupMember.group_id == group_id).all()
+    return [GroupMemberResponse(user_id=m.user_id, joined_at=m.joined_at) for m in members]
+
+
+@router.delete("/groups/{group_id}")
+def delete_group(
+    group_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete group (admin only)."""
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if group.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only group creator can delete")
+
+    db.delete(group)
+    db.commit()
+    return {"status": "ok"}

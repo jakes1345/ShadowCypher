@@ -66,3 +66,20 @@ class P2PSendRequest(BaseModel):
 class P2PSendResponse(BaseModel):
     status: str  # "delivered" | "failed"
     via: str  # "p2p" | "relay"
+
+class GroupCreate(BaseModel):
+    name: str
+
+class GroupAddMember(BaseModel):
+    user_id: int
+
+class GroupResponse(BaseModel):
+    id: str
+    user_id: int
+    name: str
+    group_key_version: int
+    created_at: int
+
+class GroupMemberResponse(BaseModel):
+    user_id: int
+    joined_at: int
