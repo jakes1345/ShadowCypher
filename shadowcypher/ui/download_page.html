@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShadowCypher — Download</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0a0e27 0%, #1a0033 100%);
+            color: #e2e8f0;
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { font-size: 3em; margin-bottom: 10px; color: #00f2ff; text-align: center; }
+        .subtitle { text-align: center; color: #94a3b8; margin-bottom: 60px; font-size: 1.1em; }
+
+        .downloads {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .download-card {
+            background: rgba(13, 17, 23, 0.8);
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            border-radius: 8px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .download-card:hover {
+            border-color: rgba(0, 242, 255, 0.6);
+            background: rgba(13, 17, 23, 0.95);
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+        }
+
+        .download-card h2 {
+            color: #00f2ff;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .download-card p {
+            color: #cbd5e1;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #00f2ff 0%, #0088ff 100%);
+            color: #05070a;
+            padding: 12px 30px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 242, 255, 0.3);
+        }
+
+        .version-info {
+            text-align: center;
+            color: #64748b;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 40px;
+        }
+
+        .requirements {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 3px solid #22c55e;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ShadowCypher</h1>
+        <p class="subtitle">Enterprise Security Platform — Download Now</p>
+
+        <div class="downloads">
+            <!-- Desktop App -->
+            <div class="download-card">
+                <h2>🖥️ Desktop App</h2>
+                <p>Full-featured security suite for Linux. Includes encrypted chat, threat intel, and guardian vault.</p>
+                <p style="font-size: 0.9em; color: #64748b;">Latest Version: <span id="version">Loading...</span></p>
+                <a href="javascript:downloadDesktop()" class="download-btn">Download Linux</a>
+            </div>
+
+            <!-- Mobile App -->
+            <div class="download-card">
+                <h2>📱 Mobile App</h2>
+                <p>ShadowCypher Guardian for Android. Encrypted messaging, threat detection, and secure ID vault.</p>
+                <p style="font-size: 0.9em; color: #64748b;">Latest Version: <span id="mobile-version">Loading...</span></p>
+                <a href="javascript:downloadMobile()" class="download-btn">Download APK</a>
+            </div>
+
+            <!-- ShadowOS -->
+            <div class="download-card">
+                <h2>🔒 ShadowOS</h2>
+                <p>Hardened Linux distribution with privacy-first defaults, encrypted group channels, and integrated threat intel.</p>
+                <p style="font-size: 0.9em; color: #64748b;">Latest Version: <span id="os-version">Loading...</span></p>
+                <a href="javascript:downloadOS()" class="download-btn">Download ISO</a>
+            </div>
+        </div>
+
+        <div class="requirements">
+            <h3 style="margin-bottom: 10px;">✓ System Requirements</h3>
+            <p><strong>Desktop:</strong> Linux (Ubuntu 20.04+, Fedora 35+, Arch)</p>
+            <p><strong>Mobile:</strong> Android 9.0+</p>
+            <p><strong>ShadowOS:</strong> 2GB RAM, 20GB disk, x86-64 processor</p>
+        </div>
+
+        <div class="version-info">
+            <p>All downloads are hosted on our secure servers. Source code is proprietary.</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">Need help? Visit <strong>shadowcypher.site/support</strong></p>
+        </div>
+    </div>
+
+    <script>
+        async function fetchLatestVersion() {
+            try {
+                const res = await fetch('https://api.shadowcypher.site/api/latest');
+                const data = await res.json();
+                document.getElementById('version').textContent = data.version;
+                document.getElementById('mobile-version').textContent = data.version;
+                document.getElementById('os-version').textContent = data.version;
+                return data;
+            } catch (e) {
+                console.error('Failed to fetch version:', e);
+            }
+        }
+
+        async function downloadDesktop() {
+            const res = await fetch('https://api.shadowcypher.site/api/latest');
+            const data = await res.json();
+            window.location.href = `https://releases.shadowcypher.site/v${data.version}/shadowcypher-linux.tar.gz`;
+        }
+
+        async function downloadMobile() {
+            const res = await fetch('https://api.shadowcypher.site/api/latest');
+            const data = await res.json();
+            window.location.href = `https://releases.shadowcypher.site/v${data.version}/shadowcypher-guardian.apk`;
+        }
+
+        async function downloadOS() {
+            const res = await fetch('https://api.shadowcypher.site/api/latest');
+            const data = await res.json();
+            window.location.href = `https://releases.shadowcypher.site/v${data.version}/shadowcypher-os.iso`;
+        }
+
+        // Load version on page load
+        fetchLatestVersion();
+    </script>
+</body>
+</html>

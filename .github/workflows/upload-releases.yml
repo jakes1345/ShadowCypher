@@ -41,8 +41,36 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: CDN sync ready
+      - name: Download release artifacts
         run: |
-          echo "✓ Release artifacts verified and ready for CDN sync"
-          echo "Next: Configure CDN sync (S3, Backblaze B2, or similar)"
-          echo "Artifacts are available in GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/${{ github.ref_name }}"
+          mkdir -p ./release-artifacts
+          RELEASE_ID=${{ env.RELEASE_ID }}
+
+          # Download all assets from the release
+          gh api repos/${{ github.repository }}/releases/${{ env.RELEASE_ID }}/assets \
+            --jq '.[] | .url' | while read asset_url; do
+            gh api "$asset_url" > ./release-artifacts/$(basename "$asset_url")
+          done
+
+          echo "Downloaded artifacts:"
+          ls -lh ./release-artifacts/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to releases.shadowcypher.site
+        run: |
+          VERSION=${{ github.ref_name }}
+          RELEASE_DIR="releases/v${VERSION#v}"
+
+          # Create remote directory
+          mkdir -p $HOME/.ssh
+          ssh-keyscan -H ${{ secrets.RELEASE_SERVER_HOST }} >> $HOME/.ssh/known_hosts 2>/dev/null
+
+          # Upload artifacts via SFTP/SCP
+          scp -r ./release-artifacts/* \
+            ${{ secrets.RELEASE_SERVER_USER }}@${{ secrets.RELEASE_SERVER_HOST }}:$RELEASE_DIR/
+
+          echo "✓ Artifacts uploaded to releases.shadowcypher.site/v${VERSION#v}/"
+        env:
+          SSH_KEY: ${{ secrets.RELEASE_SERVER_SSH_KEY }}
+        if: success()
