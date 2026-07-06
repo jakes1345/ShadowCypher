@@ -1,0 +1,32 @@
+{
+  "gold": {
+    "boot_time_max": 30,
+    "disk_detection": 100,
+    "usb_ports": "all",
+    "wireless": "native",
+    "suspend_resume": "reliable",
+    "thermal": "working",
+    "battery": "accurate",
+    "compatibility_percent": 100
+  },
+  "silver": {
+    "boot_time_max": 45,
+    "disk_detection": 95,
+    "usb_ports": "most",
+    "wireless": "with_driver",
+    "suspend_resume": "mostly_reliable",
+    "thermal": "working",
+    "battery": "mostly_accurate",
+    "compatibility_percent": 95
+  },
+  "bronze": {
+    "boot_time_max": 60,
+    "disk_detection": 90,
+    "usb_ports": "some",
+    "wireless": "documented_workaround",
+    "suspend_resume": "workaround_exists",
+    "thermal": "acceptable",
+    "battery": "detectable",
+    "compatibility_percent": 85
+  }
+}
