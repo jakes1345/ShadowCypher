@@ -1,0 +1,37 @@
+name: Generate Changelog
+
+on:
+  push:
+    tags:
+      - 'shadowos-v*'
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Generate changelog
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/shadowos-v}
+          python3 shadowos/changelog.py "$VERSION" > /tmp/changelog_entry.md
+
+      - name: Update CHANGELOG.md
+        run: |
+          (echo "# ShadowOS Changelog"; cat /tmp/changelog_entry.md; echo ""; tail -n +2 CHANGELOG.md) > CHANGELOG.md.tmp
+          mv CHANGELOG.md.tmp CHANGELOG.md
+
+      - name: Commit changelog
+        run: |
+          git config user.name "ShadowOS Bot"
+          git config user.email "bot@shadowcypher.site"
+          git add CHANGELOG.md
+          git commit -m "docs: update changelog for release" || true
+          git push
