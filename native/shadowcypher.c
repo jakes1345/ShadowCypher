@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 
 #include <gtk/gtk.h>
+#include "auth.h"
 
 #define APP_TITLE "ShadowCypher"
 #define APP_ID "shadow.shadowcypher"
@@ -693,9 +694,100 @@ static void apply_css(GtkWidget *w)
     gtk_widget_set_name(w, "main-window");
 }
 
+static gboolean show_login_dialog(GtkApplication *app)
+{
+    if (auth_is_authenticated()) {
+        return FALSE;
+    }
+
+    GtkWidget *dialog = gtk_dialog_new_with_buttons("Login", NULL, GTK_DIALOG_MODAL,
+                                                     "Login", GTK_RESPONSE_OK,
+                                                     "Quit", GTK_RESPONSE_CANCEL, NULL);
+    gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
+    gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+
+    GtkBox *content = GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog)));
+    gtk_container_set_border_width(GTK_CONTAINER(content), 12);
+
+    GtkWidget *title = gtk_label_new("ShadowCypher Authentication");
+    GtkCssProvider *css = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(css, "label { font-size: 16pt; font-weight: bold; }", -1, NULL);
+    gtk_style_context_add_provider(gtk_widget_get_style_context(title),
+                                   GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_unref(css);
+    gtk_box_pack_start(content, title, FALSE, FALSE, 8);
+
+    GtkWidget *grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 8);
+    gtk_box_pack_start(content, grid, FALSE, FALSE, 0);
+
+    GtkWidget *l_email = gtk_label_new("Email:");
+    gtk_grid_attach(GTK_GRID(grid), l_email, 0, 0, 1, 1);
+    GtkWidget *e_email = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(e_email), "user@example.com");
+    gtk_grid_attach(GTK_GRID(grid), e_email, 1, 0, 1, 1);
+
+    GtkWidget *l_pass = gtk_label_new("Password:");
+    gtk_grid_attach(GTK_GRID(grid), l_pass, 0, 1, 1, 1);
+    GtkWidget *e_pass = gtk_entry_new();
+    gtk_entry_set_visibility(GTK_ENTRY(e_pass), FALSE);
+    gtk_entry_set_placeholder_text(GTK_ENTRY(e_pass), "••••••••");
+    gtk_grid_attach(GTK_GRID(grid), e_pass, 1, 1, 1, 1);
+
+    GtkWidget *error = gtk_label_new("");
+    gtk_label_set_line_wrap(GTK_LABEL(error), TRUE);
+    gtk_box_pack_start(content, error, FALSE, FALSE, 0);
+
+    gtk_widget_show_all(dialog);
+
+    while (1) {
+        gint response = gtk_dialog_run(GTK_DIALOG(dialog));
+
+        if (response == GTK_RESPONSE_CANCEL) {
+            gtk_widget_destroy(dialog);
+            return FALSE;
+        }
+
+        if (response == GTK_RESPONSE_OK) {
+            const char *email = gtk_entry_get_text(GTK_ENTRY(e_email));
+            const char *password = gtk_entry_get_text(GTK_ENTRY(e_pass));
+
+            if (!email || !*email || !password || !*password) {
+                gtk_label_set_text(GTK_LABEL(error), "Email and password required");
+                continue;
+            }
+
+            if (!auth_login(email, password)) {
+                gtk_label_set_text(GTK_LABEL(error), "Login failed: invalid credentials");
+                gtk_entry_set_text(GTK_ENTRY(e_pass), "");
+                continue;
+            }
+
+            if (!auth_save_token()) {
+                gtk_label_set_text(GTK_LABEL(error), "Failed to save authentication token");
+                continue;
+            }
+
+            gtk_widget_destroy(dialog);
+            return TRUE;
+        }
+    }
+}
+
 static void on_activate(GtkApplication *app, gpointer user_data)
 {
     (void)user_data;
+
+    // Initialize authentication system
+    auth_init();
+
+    // Show login dialog if not authenticated
+    if (!show_login_dialog(app)) {
+        g_application_quit(G_APPLICATION(app));
+        return;
+    }
 
     GtkWidget *win = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(win), APP_TITLE);

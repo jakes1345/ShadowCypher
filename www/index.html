@@ -30,7 +30,7 @@
     <link rel="canonical" href="https://shadowcypher.site/">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> -->
 </head>
 <body>
     <canvas id="bg-canvas"></canvas>
@@ -1972,15 +1972,15 @@
             });
         }
 
-        // Supabase Initialization
+        // Supabase Initialization (Disabled for Phase 3 - using JWT auth instead)
         let supabaseClient = null;
-        try {
-            const SUPABASE_URL = 'https://umruqwvyipylfslwwozj.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcnVxd3Z5aXB5bGZzbHd3b3pqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyNDY1NzYsImV4cCI6MjA5MjgyMjU3Nn0.KSjgi54wIOZ_6LSp6Bs_plmtyeOKpul8FXwQhHqwtm4';
-            if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && typeof supabase !== 'undefined') {
-                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            }
-        } catch (e) { console.error("Supabase Init Error:", e); }
+        // try {
+        //     const SUPABASE_URL = 'https://umruqwvyipylfslwwozj.supabase.co';
+        //     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcnVxd3Z5aXB5bGZzbHd3b3pqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyNDY1NzYsImV4cCI6MjA5MjgyMjU3Nn0.KSjgi54wIOZ_6LSp6Bs_plmtyeOKpul8FXwQhHqwtm4';
+        //     if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && typeof supabase !== 'undefined') {
+        //         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        //     }
+        // } catch (e) { console.error("Supabase Init Error:", e); }
 
         // Toast helper for auth + status messages
         function cliPrint(msg, color) {
@@ -3285,11 +3285,15 @@
 
         // One-shot bootstrap — checks active session on page load (onAuthStateChange covers everything after)
         async function checkSession() {
-            if (!supabaseClient) return;
-            try {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                if (session) updateUIForUser(session.user);
-            } catch (e) {}
+            // Check JWT auth (Phase 3)
+            if (authToken && currentUser) {
+                // Update UI for authenticated user
+                try {
+                    if (document.getElementById('auth-banner')) {
+                        document.getElementById('auth-banner').remove();
+                    }
+                } catch (e) {}
+            }
         }
 
         function toggleAuth(view) {
@@ -3369,7 +3373,7 @@
         }
 
         window.addEventListener('load',()=>{
-            wireAuthState();
+            // wireAuthState();  // Disabled: using JWT auth instead of Supabase
             checkSession();
             updateIndicator(document.querySelector('.nav-tab.active'));
             // Hex dump — paused when app is backgrounded
@@ -3445,8 +3449,13 @@
             document.getElementById('incident-modal').style.display = 'none';
         }
 
-        document.getElementById('incident-modal').addEventListener('click', function(e) {
-            if (e.target === this) closeIncidentModal();
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('incident-modal');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) closeIncidentModal();
+                });
+            }
         });
 
         // ─── AUTHENTICATION FUNCTIONS ──────────────────────────────────────────────
