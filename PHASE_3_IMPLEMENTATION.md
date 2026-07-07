@@ -16,8 +16,11 @@
 - **Chat UI**: Real-time room list, message history with decryption, presence tracking
 
 ### Desktop App (GTK C)
-- **Phase 3.4 TODO**: Add login modal and auth token integration
-- **Chat Tab**: Already displays Phase 3 feature description
+- **Phase 3.4 ✅**: Login modal + JWT token integration complete
+  - GTK login dialog on app startup
+  - Token stored in ~/.local/share/shadowcypher/auth_token
+  - Bearer token used for API calls
+- **Chat Tab**: Displays Phase 3 feature description
 
 ## API Endpoints
 
@@ -159,13 +162,21 @@ POST /v1/chat/groups/{group_id}/rotate-key
 
 ## Remaining Work
 
-### Phase 3.4: Desktop App Auth
-- [ ] Add login modal to GTK app
-- [ ] Store JWT token in ~/.config/shadowcypher/auth.json
-- [ ] Use Bearer token for API calls to backend
-- [ ] Add logout option
+### Phase 3.4: Desktop App Auth ✅
+- [x] Add login modal to GTK app
+- [x] Store JWT token in ~/.local/share/shadowcypher/auth_token
+- [x] Use Bearer token for API calls to backend
+- [ ] Add logout option (coming soon)
 
-### Phase 3.5: Production Hardening
+### Phase 3.5: End-to-End Testing
+- [ ] Test full register → login → send message → receive & decrypt flow
+- [ ] Test on web (shadowcypher.site)
+- [ ] Test on desktop app (native/shadowcypher binary)
+- [ ] Verify cross-platform message exchange
+- [ ] Test key rotation scenario (add/remove group members)
+- [ ] Verify error handling (invalid creds, expired token, network errors)
+
+### Phase 3.6: Production Hardening
 - [ ] Replace in-memory storage with PostgreSQL
 - [ ] Add database persistence layer
 - [ ] Implement proper salt storage (per-message or per-user)
