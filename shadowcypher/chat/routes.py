@@ -22,7 +22,8 @@ import os
 from typing import Optional
 import hashlib
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -689,11 +690,12 @@ def unlock_vault(
     # Salt is derived from user ID to ensure different users get different keys
     salt = hashlib.sha256(f"vault_{current_user.id}".encode()).digest()[:16]
 
-    kdf = PBKDF2(
+    kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
         salt=salt,
         iterations=100000,
+        backend=default_backend()
     )
 
     vault_key = kdf.derive(req.vault_password.encode())
