@@ -23,14 +23,14 @@
 #define USER_ARG_MAX 48
 #define USER_ARG_LEN 512
 
-enum { PAGE_OVERVIEW, PAGE_NETWORK, PAGE_SYSTEM, PAGE_FIREWALL, PAGE_LOGS, PAGE_TOOLS, N_PAGES };
+enum { PAGE_OVERVIEW, PAGE_NETWORK, PAGE_SYSTEM, PAGE_FIREWALL, PAGE_LOGS, PAGE_CHAT, PAGE_TOOLS, N_PAGES };
 
 static const char *PAGE_IDS[] = {
-    "overview", "network", "system", "firewall", "logs", "tools"
+    "overview", "network", "system", "firewall", "logs", "chat", "tools"
 };
 
 static const char *PAGE_LABELS[] = {
-    "Overview", "Network", "System", "Firewall", "Logs", "Tools"
+    "Overview", "Network", "System", "Firewall", "Logs", "Chat", "Tools"
 };
 
 static char project_root[4096];
@@ -571,6 +571,97 @@ static GtkWidget *build_tools_page(ToolsCtx *ctx)
     return v;
 }
 
+static GtkWidget *build_chat_page(void)
+{
+    GtkWidget *v = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+    gtk_widget_set_margin_start(v, 24);
+    gtk_widget_set_margin_end(v, 24);
+    gtk_widget_set_margin_top(v, 24);
+    gtk_widget_set_margin_bottom(v, 24);
+
+    GtkWidget *title = gtk_label_new("// ENCRYPTED GROUP CHAT");
+    gtk_label_set_xalign(GTK_LABEL(title), 0);
+    gtk_style_context_add_class(gtk_widget_get_style_context(title), "title-1");
+    gtk_box_pack_start(GTK_BOX(v), title, FALSE, FALSE, 0);
+
+    GtkWidget *desc = gtk_label_new(
+        "Military-grade encrypted messaging for team collaboration. Zero-knowledge group "
+        "channels with automatic key rotation.");
+    gtk_label_set_xalign(GTK_LABEL(desc), 0);
+    gtk_label_set_line_wrap(GTK_LABEL(desc), TRUE);
+    gtk_box_pack_start(GTK_BOX(v), desc, FALSE, FALSE, 0);
+
+    GtkWidget *features_label = gtk_label_new("Features");
+    gtk_label_set_xalign(GTK_LABEL(features_label), 0);
+    gtk_style_context_add_class(gtk_widget_get_style_context(features_label), "title-1");
+    gtk_box_pack_start(GTK_BOX(v), features_label, FALSE, FALSE, 8);
+
+    const char *features[] = {
+        "🔒 AES-256-GCM encryption — Server never holds plaintext messages or keys",
+        "🔄 Automatic key rotation — Old messages readable, new messages use rotated keys",
+        "👥 Group management — Create groups, add/remove members, admin-only controls",
+        "📱 Multi-platform — Desktop app, Android APK, Web interface"
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(features); i++) {
+        GtkWidget *f = gtk_label_new(features[i]);
+        gtk_label_set_xalign(GTK_LABEL(f), 0);
+        gtk_label_set_line_wrap(GTK_LABEL(f), TRUE);
+        gtk_widget_set_margin_start(f, 12);
+        gtk_box_pack_start(GTK_BOX(v), f, FALSE, FALSE, 4);
+    }
+
+    GtkWidget *tech_label = gtk_label_new("Under the Hood");
+    gtk_label_set_xalign(GTK_LABEL(tech_label), 0);
+    gtk_style_context_add_class(gtk_widget_get_style_context(tech_label), "title-1");
+    gtk_box_pack_start(GTK_BOX(v), tech_label, FALSE, FALSE, 8);
+
+    const char *specs[] = {
+        "algorithm: AES-256-GCM",
+        "key_size: 256 bits",
+        "nonce: 96-bit per message",
+        "auth: Galois/Counter Mode",
+        "key_derivation: PBKDF2-HMAC-SHA256",
+        "iterations: 100,000",
+        "forward_secrecy: true",
+        "server_knowledge: encrypted blobs only"
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(specs); i++) {
+        GtkWidget *spec = gtk_label_new(specs[i]);
+        gtk_label_set_xalign(GTK_LABEL(spec), 0);
+        gtk_style_context_add_class(gtk_widget_get_style_context(spec), "dim-label");
+        gtk_widget_set_margin_start(spec, 12);
+        gtk_box_pack_start(GTK_BOX(v), spec, FALSE, FALSE, 2);
+    }
+
+    GtkWidget *sep = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_box_pack_start(GTK_BOX(v), sep, FALSE, FALSE, 12);
+
+    GtkWidget *security_label = gtk_label_new("Zero-Knowledge Model");
+    gtk_label_set_xalign(GTK_LABEL(security_label), 0);
+    gtk_style_context_add_class(gtk_widget_get_style_context(security_label), "title-1");
+    gtk_box_pack_start(GTK_BOX(v), security_label, FALSE, FALSE, 4);
+
+    const char *scenarios[] = {
+        "Device locked: Can't access app (biometric/PIN required)",
+        "Device unlocked: Still need vault password to decrypt messages",
+        "Vault unlocked: Only then can messages be read",
+        "Server seized: Encrypted blobs are useless (no keys stored)"
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(scenarios); i++) {
+        GtkWidget *scenario = gtk_label_new(scenarios[i]);
+        gtk_label_set_xalign(GTK_LABEL(scenario), 0);
+        gtk_label_set_line_wrap(GTK_LABEL(scenario), TRUE);
+        gtk_widget_set_margin_start(scenario, 12);
+        gtk_box_pack_start(GTK_BOX(v), scenario, FALSE, FALSE, 4);
+    }
+
+    GtkWidget *scrolled = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
+        GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    gtk_container_add(GTK_CONTAINER(scrolled), v);
+    return scrolled;
+}
+
 static void tools_win_destroy(GtkWidget *w, gpointer data)
 {
     (void)w;
@@ -651,6 +742,8 @@ static void on_activate(GtkApplication *app, gpointer user_data)
     gtk_stack_add_named(GTK_STACK(stack), page_scrolled_text(&b_sys), PAGE_IDS[PAGE_SYSTEM]);
     gtk_stack_add_named(GTK_STACK(stack), page_scrolled_text(&b_fw), PAGE_IDS[PAGE_FIREWALL]);
     gtk_stack_add_named(GTK_STACK(stack), page_scrolled_text(&b_log), PAGE_IDS[PAGE_LOGS]);
+
+    gtk_stack_add_named(GTK_STACK(stack), build_chat_page(), PAGE_IDS[PAGE_CHAT]);
 
     ToolsCtx *tools = g_new0(ToolsCtx, 1);
     gtk_stack_add_named(GTK_STACK(stack), build_tools_page(tools), PAGE_IDS[PAGE_TOOLS]);
