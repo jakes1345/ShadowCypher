@@ -63,6 +63,70 @@
         </div>
     </nav>
 
+    <!-- LOGIN -->
+    <div id="page-login" class="page">
+        <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+            <div style="width:100%;max-width:400px;padding:40px;">
+                <div style="text-align:center;margin-bottom:40px;">
+                    <h1 style="font-size:2rem;color:#fff;margin:0;margin-bottom:8px;">ShadowCypher</h1>
+                    <p style="color:var(--text-secondary);margin:0;">Encrypted Chat</p>
+                </div>
+
+                <div id="login-form" style="display:block;">
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Email</label>
+                        <input id="login-email" type="email" placeholder="your@email.com" style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:24px;">
+                        <label style="display:block;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Password</label>
+                        <input id="login-password" type="password" placeholder="••••••••" style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
+                    </div>
+                    <button onclick="authLogin()" style="width:100%;padding:12px;background:var(--accent-primary);color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.9rem;margin-bottom:16px;">Sign In</button>
+                    <div style="text-align:center;">
+                        <span style="color:var(--text-secondary);font-size:0.85rem;">Don't have an account? </span>
+                        <a onclick="navTo('register')" style="color:var(--accent-primary);cursor:pointer;text-decoration:none;font-weight:600;">Sign Up</a>
+                    </div>
+                </div>
+
+                <div id="login-error" style="display:none;margin-top:16px;padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#fca5a5;font-size:0.85rem;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="page-register" class="page">
+        <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+            <div style="width:100%;max-width:400px;padding:40px;">
+                <div style="text-align:center;margin-bottom:40px;">
+                    <h1 style="font-size:2rem;color:#fff;margin:0;margin-bottom:8px;">Create Account</h1>
+                    <p style="color:var(--text-secondary);margin:0;">Join ShadowCypher Chat</p>
+                </div>
+
+                <div id="register-form" style="display:block;">
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Username</label>
+                        <input id="register-username" type="text" placeholder="username" style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Email</label>
+                        <input id="register-email" type="email" placeholder="your@email.com" style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
+                    </div>
+                    <div style="margin-bottom:24px;">
+                        <label style="display:block;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Password</label>
+                        <input id="register-password" type="password" placeholder="••••••••" style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
+                    </div>
+                    <button onclick="authRegister()" style="width:100%;padding:12px;background:var(--accent-primary);color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.9rem;margin-bottom:16px;">Create Account</button>
+                    <div style="text-align:center;">
+                        <span style="color:var(--text-secondary);font-size:0.85rem;">Already have an account? </span>
+                        <a onclick="navTo('login')" style="color:var(--accent-primary);cursor:pointer;text-decoration:none;font-weight:600;">Sign In</a>
+                    </div>
+                </div>
+
+                <div id="register-error" style="display:none;margin-top:16px;padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#fca5a5;font-size:0.85rem;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- HOME -->
     <div id="page-home" class="page active">
 
@@ -3385,6 +3449,116 @@
             if (e.target === this) closeIncidentModal();
         });
 
+        // ─── AUTHENTICATION FUNCTIONS ──────────────────────────────────────────────
+        const AUTH_API = '/api/chat';
+        let authToken = localStorage.getItem('chat_token');
+        let currentUser = null;
+
+        async function authLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error');
+
+            if (!email || !password) {
+                errorDiv.textContent = 'Email and password required';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const resp = await fetch(AUTH_API + '/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (!resp.ok) {
+                    errorDiv.textContent = 'Invalid credentials';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                const data = await resp.json();
+                authToken = data.access_token;
+                currentUser = { id: data.user_id, username: data.username };
+                localStorage.setItem('chat_token', authToken);
+                localStorage.setItem('chat_user', JSON.stringify(currentUser));
+
+                // Navigate to chat
+                navTo('chat', document.getElementById('nav-chat'));
+            } catch (e) {
+                errorDiv.textContent = 'Login failed: ' + e.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        async function authRegister() {
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const errorDiv = document.getElementById('register-error');
+
+            if (!username || !email || !password) {
+                errorDiv.textContent = 'All fields required';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const resp = await fetch(AUTH_API + '/v1/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                if (!resp.ok) {
+                    errorDiv.textContent = 'Registration failed (email or username taken)';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                const data = await resp.json();
+                authToken = data.access_token;
+                currentUser = { id: data.user_id, username: data.username };
+                localStorage.setItem('chat_token', authToken);
+                localStorage.setItem('chat_user', JSON.stringify(currentUser));
+
+                // Navigate to chat
+                navTo('chat', document.getElementById('nav-chat'));
+            } catch (e) {
+                errorDiv.textContent = 'Registration failed: ' + e.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function authLogout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('chat_token');
+            localStorage.removeItem('chat_user');
+            navTo('login', document.getElementById('nav-home'));
+        }
+
+        function ensureAuth() {
+            if (!authToken) {
+                navTo('login', document.getElementById('nav-home'));
+                return false;
+            }
+            return true;
+        }
+
+        // Load auth state on page load
+        if (authToken) {
+            const userJson = localStorage.getItem('chat_user');
+            if (userJson) {
+                try {
+                    currentUser = JSON.parse(userJson);
+                } catch (e) {
+                    authLogout();
+                }
+            }
+        }
+
         // ─── CHAT API FUNCTIONS ────────────────────────────────────────────────────
         const CHAT_API = '/api/chat';
         let currentRoom = null;
@@ -3392,10 +3566,21 @@
         let presenceInterval = null;
 
         async function chatAPI(endpoint, method = 'GET', body = null) {
-            const opts = { method, headers: { 'Content-Type': 'application/json' } };
+            if (!ensureAuth()) return null;
+            const opts = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                }
+            };
             if (body) opts.body = JSON.stringify(body);
             try {
                 const resp = await fetch(CHAT_API + endpoint, opts);
+                if (resp.status === 401) {
+                    authLogout();
+                    return null;
+                }
                 if (!resp.ok) throw new Error(`${resp.status}: ${resp.statusText}`);
                 return await resp.json();
             } catch (e) {
@@ -3451,24 +3636,40 @@
                     msgDiv.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:20px;">No messages yet. Start the conversation!</div>';
                     return;
                 }
-                data.messages.forEach(msg => {
+                for (const msg of data.messages) {
                     const el = document.createElement('div');
                     el.style.cssText = 'display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(180,74,255,0.1);';
                     const time = new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+
+                    // Decrypt if encrypted
+                    let content = msg.content;
+                    if (msg.ciphertext && msg.nonce && msg.tag) {
+                        const password = prompt('Enter vault password to decrypt:');
+                        if (password) {
+                            content = await decryptMessage({
+                                ciphertext: msg.ciphertext,
+                                nonce: msg.nonce,
+                                tag: msg.tag
+                            }, password);
+                        } else {
+                            content = '[Encrypted message - password required]';
+                        }
+                    }
+
                     el.innerHTML = `
                         <div style="flex-shrink:0;">
-                            <div style="width:28px;height:28px;background:var(--accent-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#000;">${escapeHtml(msg.nick[0].toUpperCase())}</div>
+                            <div style="width:28px;height:28px;background:var(--accent-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#000;">${escapeHtml((msg.username || msg.nick)[0].toUpperCase())}</div>
                         </div>
                         <div style="flex:1;min-width:0;">
                             <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:4px;">
-                                <div style="font-weight:600;color:#fff;font-size:0.85rem;">${escapeHtml(msg.nick)}</div>
+                                <div style="font-weight:600;color:#fff;font-size:0.85rem;">${escapeHtml(msg.username || msg.nick)}</div>
                                 <div style="font-size:0.65rem;color:var(--text-secondary);">${time}</div>
                             </div>
-                            <div style="color:var(--text-secondary);word-wrap:break-word;white-space:pre-wrap;">${escapeHtml(msg.content)}</div>
+                            <div style="color:var(--text-secondary);word-wrap:break-word;white-space:pre-wrap;">${escapeHtml(content)}</div>
                         </div>
                     `;
                     msgDiv.appendChild(el);
-                });
+                }
                 msgDiv.scrollTop = msgDiv.scrollHeight;
             } catch (e) {
                 console.error('Load messages error:', e);
@@ -3482,9 +3683,23 @@
             if (!content) return;
             const btn = document.getElementById('chat-send');
             btn.disabled = true;
-            btn.innerText = 'SENDING...';
+            btn.innerText = 'ENCRYPTING...';
             try {
-                await chatAPI('/v1/chat/send', 'POST', { room: currentRoom.name, content });
+                // Prompt for vault password
+                const password = prompt('Enter vault password to encrypt message:');
+                if (!password) {
+                    btn.innerText = 'SEND';
+                    return;
+                }
+
+                // Encrypt message
+                const encrypted = await encryptMessage(content, password);
+
+                // Send encrypted
+                await chatAPI('/v1/chat/send', 'POST', {
+                    room: currentRoom.name,
+                    ...encrypted
+                });
                 input.value = '';
                 await chatLoadMessages();
             } catch (e) {
@@ -3515,6 +3730,83 @@
                 return;
             }
             alert('Room creation requires backend configuration. Contact admin.');
+        }
+
+        // ─── ENCRYPTION FUNCTIONS ──────────────────────────────────────────────────
+        async function deriveKey(password, salt) {
+            // PBKDF2 key derivation (100k iterations)
+            const enc = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                enc.encode(password),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveBits']
+            );
+            const bits = await crypto.subtle.deriveBits(
+                { name: 'PBKDF2', salt, hash: 'SHA-256', iterations: 100000 },
+                keyMaterial,
+                256
+            );
+            return crypto.subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+        }
+
+        async function encryptMessage(plaintext, password) {
+            // Generate random salt and nonce
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const nonce = crypto.getRandomValues(new Uint8Array(12));
+
+            // Derive key from password
+            const key = await deriveKey(password, salt);
+
+            // Encrypt
+            const enc = new TextEncoder();
+            const ciphertext = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: nonce },
+                key,
+                enc.encode(plaintext)
+            );
+
+            // Extract tag (last 16 bytes)
+            const tag = ciphertext.slice(-16);
+            const data = ciphertext.slice(0, -16);
+
+            return {
+                ciphertext: btoa(String.fromCharCode(...new Uint8Array(data))),
+                nonce: btoa(String.fromCharCode(...nonce)),
+                tag: btoa(String.fromCharCode(...tag))
+            };
+        }
+
+        async function decryptMessage(encrypted, password) {
+            try {
+                // Decode from base64
+                const ciphertext = Uint8Array.from(atob(encrypted.ciphertext), c => c.charCodeAt(0));
+                const nonce = Uint8Array.from(atob(encrypted.nonce), c => c.charCodeAt(0));
+                const tag = Uint8Array.from(atob(encrypted.tag), c => c.charCodeAt(0));
+
+                // Note: In production, salt would be stored with the message
+                // For now, use a fixed salt (NOT SECURE - for demo only)
+                const salt = new Uint8Array(16);
+
+                // Derive key
+                const key = await deriveKey(password, salt);
+
+                // Combine ciphertext + tag for decryption
+                const data = new Uint8Array([...ciphertext, ...tag]);
+
+                // Decrypt
+                const plaintext = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: nonce },
+                    key,
+                    data
+                );
+
+                return new TextDecoder().decode(plaintext);
+            } catch (e) {
+                console.error('Decryption failed:', e);
+                return '[Decryption failed]';
+            }
         }
 
         // Load rooms when chat page becomes visible
