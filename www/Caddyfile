@@ -2,8 +2,9 @@
     root * /srv
 
     # Reverse proxy for chat API to backend (uses Fly internal DNS for inter-app communication)
-    reverse_proxy /api/chat/* http://shadowcypher-chat.internal:8000 {
-        uri strip_prefix /api/chat
+    @chat path /api/chat/*
+    rewrite @chat {path.regexp 1 \/api\/chat\/?(.*)} /{1}
+    reverse_proxy @chat http://shadowcypher-chat.internal:8000 {
         # Allow proxy to fail gracefully if backend is starting up
         unhealthy_status 500 502 503
         unhealthy_latency 5s
