@@ -4,7 +4,7 @@ import base64
 from typing import Tuple
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+from cryptography.hazmat.primitives.kdf import pbkdf2
 from pydantic import BaseModel
 
 # Encryption constants
@@ -33,7 +33,7 @@ def derive_key_from_password(password: str, salt: bytes = None) -> Tuple[bytes, 
     if salt is None:
         salt = os.urandom(SALT_LENGTH)
 
-    kdf = PBKDF2(
+    kdf = pbkdf2.PBKDF2(
         algorithm=hashes.SHA256(),
         length=KEY_LENGTH,
         salt=salt,
