@@ -1,0 +1,23 @@
+:8080 {
+    root * /srv
+
+    # SPA routing - serve index.html for all routes except static assets
+    try_files {path} {path}/ /index.html
+
+    # Serve static files with cache headers
+    file_server {
+        disable_canonical_uris
+    }
+
+    # Security headers
+    header {
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    }
+
+    # Compression
+    encode gzip
+}

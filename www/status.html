@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Status — ShadowCypher</title>
+    <link rel="icon" type="image/png" href="/icon-192.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        body { background: var(--bg-base); color: #ddd; font-family: var(--font-main); max-width: 720px; margin: 0 auto; padding: 60px 24px; line-height: 1.6; }
+        .check { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; background: rgba(180,74,255,0.04); border: 1px solid var(--glass-border); margin-bottom: 10px; }
+        .label { display: flex; align-items: center; gap: 10px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #555; }
+        .dot.ok { background: var(--success); box-shadow: 0 0 12px var(--success); }
+        .dot.bad { background: var(--accent-secondary); box-shadow: 0 0 12px var(--accent-secondary); }
+        .meta { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+    <a href="/" style="color:var(--accent-primary);font-family:var(--font-mono);font-size:0.8rem;text-decoration:none;letter-spacing:2px;">← SHADOWCYPHER</a>
+    <h1 style="font-size:2.2rem;margin:30px 0 10px;color:#fff;">System Status</h1>
+    <p style="color:var(--text-secondary);font-family:var(--font-mono);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;" id="overall-status">checking…</p>
+
+    <div style="margin-top:40px;" id="checks">
+        <div class="check">
+            <div class="label"><div class="dot" id="dot-api"></div><strong>API</strong> <span style="color:var(--text-secondary);font-size:0.8rem;">shadowcypher-api.shadowcypher.workers.dev</span></div>
+            <div class="meta" id="meta-api">—</div>
+        </div>
+        <div class="check">
+            <div class="label"><div class="dot" id="dot-site"></div><strong>Marketing site</strong> <span style="color:var(--text-secondary);font-size:0.8rem;">shadowcypher.site</span></div>
+            <div class="meta" id="meta-site">—</div>
+        </div>
+        <div class="check">
+            <div class="label"><div class="dot" id="dot-supabase"></div><strong>Auth & database</strong> <span style="color:var(--text-secondary);font-size:0.8rem;">Supabase</span></div>
+            <div class="meta" id="meta-supabase">—</div>
+        </div>
+        <div class="check">
+            <div class="label"><div class="dot" id="dot-stripe"></div><strong>Payments</strong> <span style="color:var(--text-secondary);font-size:0.8rem;">Stripe</span></div>
+            <div class="meta" id="meta-stripe">—</div>
+        </div>
+    </div>
+
+    <p style="margin-top:30px; color:var(--text-secondary); font-size:0.8rem;">
+        Refresh every 30s · Last checked: <span id="last-check">—</span>
+    </p>
+
+    <p style="margin-top:60px; padding-top:30px; border-top:1px solid var(--glass-border); color:var(--text-secondary); font-size:0.85rem;">
+        Incident updates also posted to GitHub: <a href="https://github.com/jakes1345/ShadowCypher/issues" style="color:var(--accent-primary);">github.com/jakes1345/ShadowCypher/issues</a>
+    </p>
+
+    <script>
+        async function checkOne(label, url, key) {
+            const t0 = performance.now();
+            try {
+                const resp = await fetch(url, { method: 'GET', cache: 'no-store' });
+                const ms = Math.round(performance.now() - t0);
+                const ok = resp.ok || (resp.status >= 200 && resp.status < 500);
+                document.getElementById('dot-' + key).className = 'dot ' + (ok ? 'ok' : 'bad');
+                document.getElementById('meta-' + key).textContent = `${resp.status} · ${ms}ms`;
+                return ok;
+            } catch {
+                document.getElementById('dot-' + key).className = 'dot bad';
+                document.getElementById('meta-' + key).textContent = 'unreachable';
+                return false;
+            }
+        }
+        async function refresh() {
+            const results = await Promise.all([
+                checkOne('api', 'https://shadowcypher-api.shadowcypher.workers.dev/v1/health', 'api'),
+                checkOne('site', '/manifest.json', 'site'),
+                checkOne('supabase', 'https://umruqwvyipylfslwwozj.supabase.co/auth/v1/health', 'supabase'),
+                checkOne('stripe', 'https://api.stripe.com/healthcheck', 'stripe'),
+            ]);
+            const allOk = results.every(Boolean);
+            document.getElementById('overall-status').innerHTML = allOk
+                ? '<span style="color:var(--success);">All systems operational</span>'
+                : '<span style="color:var(--accent-secondary);">Degraded — see below</span>';
+            document.getElementById('last-check').textContent = new Date().toLocaleTimeString();
+        }
+        refresh();
+        setInterval(refresh, 30000);
+    </script>
+</body>
+</html>

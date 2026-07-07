@@ -147,8 +147,7 @@ backend/api/.dev.vars
 backend/api/.wrangler/
 
 # Capacitor
-node_modules/
-www/
+backend/api/node_modules/
 ios/
 
 # Android — ignore secrets and build output only

@@ -55,6 +55,7 @@
             <a onclick="navTo('arsenal',this)" id="nav-arsenal" class="nav-tab">Arsenal</a>
             <a onclick="navTo('ghost',this)" id="nav-ghost" class="nav-tab">Privacy</a>
             <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
+            <a onclick="navTo('chat',this)" id="nav-chat" class="nav-tab">💬 Chat</a>
             <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Download</a>
             <a onclick="navTo('shadowos',this)" id="nav-shadowos" class="nav-tab">ShadowOS</a>
             <a href="/shadow.html" class="nav-tab" style="color:#b44aff;">Shadow</a>
@@ -1014,6 +1015,76 @@
                     <span style="color:#666;font-size:0.82rem;">Loading CVE feed…</span>
                 </div>
                 <div id="threat-feed-error" style="display:none;color:#666;font-size:0.82rem;margin-top:8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHAT -->
+    <!-- ── Encrypted Group Channels ──────────────────────────────────────── -->
+    <div id="page-chat" class="page">
+        <div class="content-section">
+            <h2 class="mono" style="font-size:1.8rem;letter-spacing:4px;margin-bottom:8px;">// ENCRYPTED GROUP CHAT</h2>
+            <p style="color:var(--text-secondary);margin-bottom:48px;max-width:600px;">Military-grade encrypted messaging for team collaboration. Zero-knowledge group channels with automatic key rotation.</p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;margin-bottom:60px;">
+                <!-- Features -->
+                <div>
+                    <h3 style="font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:32px;">Features</h3>
+                    <div style="display:flex;flex-direction:column;gap:24px;">
+                        <div>
+                            <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">🔒 ENCRYPTION</div>
+                            <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;">AES-256-GCM encryption. Server never holds plaintext messages or keys — only encrypted blobs.</p>
+                        </div>
+                        <div>
+                            <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">🔄 KEY ROTATION</div>
+                            <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;">Automatic key rotation when members leave. Old messages stay readable, new messages require new key.</p>
+                        </div>
+                        <div>
+                            <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">👥 GROUP MANAGEMENT</div>
+                            <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;">Create groups, add/remove members, manage permissions. Admin-only controls on sensitive operations.</p>
+                        </div>
+                        <div>
+                            <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">📱 MULTI-PLATFORM</div>
+                            <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;">Desktop app, Android APK, web interface. Chat across all your devices seamlessly.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technical Details -->
+                <div>
+                    <h3 style="font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:32px;">Under the Hood</h3>
+                    <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.25);border-radius:8px;padding:24px;font-family:var(--font-mono);font-size:0.75rem;color:var(--text-secondary);line-height:1.8;">
+                        <div><span style="color:var(--accent-primary);">algorithm</span>: AES-256-GCM</div>
+                        <div><span style="color:var(--accent-primary);">key_size</span>: 256 bits</div>
+                        <div><span style="color:var(--accent-primary);">nonce</span>: 96-bit per message</div>
+                        <div><span style="color:var(--accent-primary);">auth</span>: Galois/Counter Mode</div>
+                        <div style="margin-top:12px;border-top:1px solid rgba(180,74,255,0.2);padding-top:12px;">
+                            <div><span style="color:var(--accent-primary);">key_derivation</span>: PBKDF2-HMAC-SHA256</div>
+                            <div><span style="color:var(--accent-primary);">iterations</span>: 100,000</div>
+                            <div><span style="color:var(--accent-primary);">forward_secrecy</span>: true</div>
+                            <div style="margin-top:8px;"><span style="color:#22c55e;">server_knowledge</span>: encrypted blobs only</div>
+                        </div>
+                    </div>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;margin-top:16px;line-height:1.6;">Passwords are never stored. Keys are derived client-side and secured with your device lock. Lost passwords cannot be recovered.</p>
+                </div>
+            </div>
+
+            <!-- Security Model -->
+            <div style="background:rgba(34,197,94,0.04);border-left:3px solid rgb(34,197,94);padding:24px;border-radius:6px;margin-bottom:60px;">
+                <h3 style="font-size:1.1rem;font-weight:700;color:rgb(34,197,94);margin-bottom:12px;">🛡️ Zero-Knowledge Model</h3>
+                <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;">If someone seizes your device:</p>
+                <ul style="color:var(--text-secondary);font-size:0.9rem;line-height:2;margin-left:24px;margin-top:12px;">
+                    <li>📱 <strong>Device locked:</strong> Can't access app (biometric/PIN required)</li>
+                    <li>🔓 <strong>Device unlocked:</strong> Still need vault password to decrypt messages</li>
+                    <li>🔑 <strong>Vault unlocked:</strong> Only then can messages be read</li>
+                    <li>🌐 <strong>Server seized:</strong> Encrypted blobs are useless (no keys stored)</li>
+                </ul>
+            </div>
+
+            <!-- Call to Action -->
+            <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                <a onclick="navTo('download',document.getElementById('nav-download'))" class="btn-primary">Download Now</a>
+                <a href="/docs.html" class="btn-primary" style="background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);">Read Full Docs</a>
             </div>
         </div>
     </div>
