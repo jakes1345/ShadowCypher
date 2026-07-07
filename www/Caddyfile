@@ -1,6 +1,11 @@
 :8080 {
     root * /srv
 
+    # Reverse proxy for chat API to backend (uses Fly internal DNS for inter-app communication)
+    reverse_proxy /api/chat/* http://shadowcypher-chat.internal:8000 {
+        uri strip_prefix /api/chat
+    }
+
     # SPA routing - serve index.html for all routes except static assets
     try_files {path} {path}/ /index.html
 

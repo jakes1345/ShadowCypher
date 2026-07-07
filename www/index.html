@@ -3388,7 +3388,7 @@
         });
 
         // ─── CHAT API FUNCTIONS ────────────────────────────────────────────────────
-        const CHAT_API = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '/api/chat';
+        const CHAT_API = '/api/chat';
         let currentRoom = null;
         let chatPolling = null;
         let presenceInterval = null;

@@ -1,0 +1,29 @@
+# fly.toml for ShadowCypher chat backend
+app = "shadowcypher-chat"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "./Dockerfile.chat"
+
+[env]
+  ENVIRONMENT = "production"
+
+[[services]]
+  internal_port = 8000
+  processes = ["app"]
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.http_checks]]
+    interval = 10000
+    timeout = 2000
+    grace_period = "5s"
+    method = "GET"
+    path = "/docs"
