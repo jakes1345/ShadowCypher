@@ -54,40 +54,50 @@ def get_current_user(authorization: str = Header(None)):
 @app.post("/v1/auth/register")
 async def register(req: RegisterRequest):
     """Register a new user."""
-    user = register_user(req.email, req.username, req.password)
-    if not user:
-        raise HTTPException(status_code=400, detail="User already exists")
+    try:
+        user = register_user(req.email, req.username, req.password)
+        if not user:
+            raise HTTPException(status_code=400, detail="User already exists")
 
-    # Store encryption key derived from password
-    store_user_key(user.id, req.password)
+        # Store encryption key derived from password
+        store_user_key(user.id, req.password)
 
-    # Create JWT token
-    token, expires_in = create_jwt_token(user.id, user.email, user.username)
+        # Create JWT token
+        token, expires_in = create_jwt_token(user.id, user.email, user.username)
 
-    return LoginResponse(
-        access_token=token,
-        token_type="bearer",
-        user_id=user.id,
-        username=user.username,
-        expires_in=expires_in
-    )
+        return LoginResponse(
+            access_token=token,
+            token_type="bearer",
+            user_id=user.id,
+            username=user.username,
+            expires_in=expires_in
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Registration error: {str(e)}")
 
 @app.post("/v1/auth/login")
 async def login(req: LoginRequest):
     """Authenticate user and return JWT token."""
-    user = authenticate_user(req.email, req.password)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    try:
+        user = authenticate_user(req.email, req.password)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token, expires_in = create_jwt_token(user.id, user.email, user.username)
+        token, expires_in = create_jwt_token(user.id, user.email, user.username)
 
-    return LoginResponse(
-        access_token=token,
-        token_type="bearer",
-        user_id=user.id,
-        username=user.username,
-        expires_in=expires_in
-    )
+        return LoginResponse(
+            access_token=token,
+            token_type="bearer",
+            user_id=user.id,
+            username=user.username,
+            expires_in=expires_in
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Login error: {str(e)}")
 
 # Chat endpoints (protected)
 @app.get("/v1/chat/rooms")
