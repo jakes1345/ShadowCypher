@@ -9,26 +9,26 @@ Version: 3.0.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Mon, 06 Jul 2026 23:21:38 +0000
+Date: Tue, 07 Jul 2026 01:59:50 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- 06e5ed818cf8fc6135a54f787cacd03d 29 main/binary-amd64/Packages.gz
+ 48d87a433a8a34265d66db843a05e424 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- 8e8cd411fa8672ee67ca12ddb2126e1b99473da867cdb5fd6c00a14548be1c20 29 main/binary-amd64/Packages.gz
+ fe4baa1fc7d42fcb85d7acc447d83a7f4d968e324dd0c7bf9fa8633aefd599fa 29 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpMOIIACgkQ2fHRjxMT
-8IP7/BAAnqLaorYqSYwZ4Oc2BYui4m5mxB4DH3Nb5iC2BgOrvGB4csthmDnQ9USt
-TCYpYnhbyPnGxU5xohoCmq4c+L/37YuIt54R7xKZZSyXiPX+5RXDYEMagVZReWej
-TzWDzMte9s8jl+rV4UlUtjsFtoyZ3FoY5YeBMXkPkbTzvOF87gCeOBxP6KeCRLOv
-zFVK9VLB1lrxkMZP1aixTA3+elqNVsH/fGxF7fvR5qkav1NtwpR7Uw7S8WcX9/1M
-P6qjfixD5wf6aWjNd166KgHwIeYgJGmHslBDNlIXBSnnzG3PjR3MWNcwhfyIejuD
-zMtwRKtiJZlxyD8rhP0q3UEDrH5tENAXJc/6dgUSUb796V0MGmHkg8N149tgUN3e
-ijGg6EkqbVCiO5t1wnlxgs/epnfk7qsZ+7DC5AyEda3Iuqc2PIgYY/iMx3hB9vV6
-t8QMCR/OVO2IKC/oDoopaFJe23g6n96aRoBzWgu6aQZGcAOpi0CpbXSC5Xxzmaza
-iihc7Rk/himHxPO1GN5qWsnykUorxTiNDoRtBVJlhL5tJdMp5O2Gdpasb7CJYiRo
-wMfM4JQ2D6G2JuzYXDdsP9+Z+fYWt2NkAnb6CPdjJEMCZOfx/lq7MSSX4Qhw4Ql7
-gQ4EAPTSuiKR9zLzEoeJ7r5ljUc5oV5ndB4b1naL4eT6dT9Ky5Q=
-=mu7O
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpMXZYACgkQ2fHRjxMT
+8IPjKBAAtrPpWz8A7yQIVl6cCwnhfKHtZeLqkKQRa5CKiWrlDUbC8JtKI39fuBEq
+/+SDPq+Xqsx64epAbO3A5QGLQsOJ2dlYAe5voP+2fuaMH4SCKuQrCHhrCkEjWARt
+2Q+jYvbiIGC3vnC6cHY0QfIpXyv/RdsAeCvYIPowLn/EkB4AACcjql+bM82B8GCN
+M9kq3NIHsWSijq7lww0U1kC4WoXBP6K6Ik7zpKgBTOYbtt2MjghNzxfuIgPqN9sd
+LfBSGmoJIIgxVNL4eaSoOLOdyUbXAEFVb2KqTfg6GDHtFjmJi3gItrsjDc6gy3ih
+Xg7Vsg5pzF4a/I+ub1TguO0SoBPE3frQGbZa7tnwcXJavqxLvzsi7ixfWksvcYTp
+K8HMxn+IYEHRuEO+1ehoOotYXXI5/znCHbRhk3k/iQr2FE6We/TxcdgdQUSRH+VA
+L7GNTceeH/Q5RyPiRSx5Auk59p77cJbt8bVLptaj0iON2H087Zj/Njlc6QePpUj1
+hWlPSp6wUEPFsHTha8zRr/cd+HNfruteVJRUXxvekrg3SVO3S7ZZLbceeR7lTV1q
+ANmvme3QUGBoRlCF99bzPlv2hRZorkJlqvGnrZCs/8fT1MuoptO5AyAFLLB7Bnsb
+A6JdbTBg98sboPU9/1utWgEIGFhw2fUrKyF4ysJrmMdsBFMNgTo=
+=h5WU
 -----END PGP SIGNATURE-----
