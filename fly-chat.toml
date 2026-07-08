@@ -7,7 +7,7 @@ app = 'shadowcypher-chat'
 primary_region = 'sjc'
 
 [build]
-  dockerfile = './Dockerfile.backend'
+  dockerfile = './Dockerfile.simple'
 
 [env]
   ENVIRONMENT = 'production'
