@@ -1,6 +1,8 @@
 """FastAPI chat backend with authentication and AES-256-GCM encryption."""
-from fastapi import FastAPI, Header, HTTPException, status
+from fastapi import FastAPI, Header, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from datetime import datetime
 import secrets
@@ -16,6 +18,14 @@ from shadowcypher.crypto_backend import (
 )
 
 app = FastAPI(title="ShadowCypher Chat")
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle Pydantic validation errors with proper JSON serialization."""
+    return JSONResponse(
+        status_code=400,
+        content={"detail": exc.errors()},
+    )
 
 app.add_middleware(
     CORSMiddleware,
