@@ -9,26 +9,26 @@ Version: 3.0.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Tue, 07 Jul 2026 01:59:50 +0000
+Date: Sat, 11 Jul 2026 19:57:12 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- 48d87a433a8a34265d66db843a05e424 29 main/binary-amd64/Packages.gz
+ 04008ede479bbac33f74dd2e48843602 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- fe4baa1fc7d42fcb85d7acc447d83a7f4d968e324dd0c7bf9fa8633aefd599fa 29 main/binary-amd64/Packages.gz
+ a4ac66fd99c4df83962d53b86f4e7ea23623ab104352a5b4325344001571ad92 29 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpMXZYACgkQ2fHRjxMT
-8IPjKBAAtrPpWz8A7yQIVl6cCwnhfKHtZeLqkKQRa5CKiWrlDUbC8JtKI39fuBEq
-/+SDPq+Xqsx64epAbO3A5QGLQsOJ2dlYAe5voP+2fuaMH4SCKuQrCHhrCkEjWARt
-2Q+jYvbiIGC3vnC6cHY0QfIpXyv/RdsAeCvYIPowLn/EkB4AACcjql+bM82B8GCN
-M9kq3NIHsWSijq7lww0U1kC4WoXBP6K6Ik7zpKgBTOYbtt2MjghNzxfuIgPqN9sd
-LfBSGmoJIIgxVNL4eaSoOLOdyUbXAEFVb2KqTfg6GDHtFjmJi3gItrsjDc6gy3ih
-Xg7Vsg5pzF4a/I+ub1TguO0SoBPE3frQGbZa7tnwcXJavqxLvzsi7ixfWksvcYTp
-K8HMxn+IYEHRuEO+1ehoOotYXXI5/znCHbRhk3k/iQr2FE6We/TxcdgdQUSRH+VA
-L7GNTceeH/Q5RyPiRSx5Auk59p77cJbt8bVLptaj0iON2H087Zj/Njlc6QePpUj1
-hWlPSp6wUEPFsHTha8zRr/cd+HNfruteVJRUXxvekrg3SVO3S7ZZLbceeR7lTV1q
-ANmvme3QUGBoRlCF99bzPlv2hRZorkJlqvGnrZCs/8fT1MuoptO5AyAFLLB7Bnsb
-A6JdbTBg98sboPU9/1utWgEIGFhw2fUrKyF4ysJrmMdsBFMNgTo=
-=h5WU
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpSoBgACgkQ2fHRjxMT
+8IMjdg//QdZ8OOryLH1pAPB4TL0AYBsC6qkYPYquP50kHRAl2G0NXf7vm3Q/IuHk
+88cJCmdOOmRHgcZaOyWVQf/HYP4pjhhL/3lGhih2eBatUDUvsuuQamPBIPQa1q8K
+RsKiAzLlzM8Cg03r40n0jy6/rhoilRe7iYzuZCiBCDbLciNvuQ+rTLwwv4mrRuPE
+atQ9Lf/9Fi0vGmLm7JnLKgtP4fNpDML4/Gq6rOUrkbqeH0l5C1YB7URP26pO7NgF
+ItMHMKo8/lYcsyEVU6xHn9n2eVJIAI60yM3rNLlLG465CCWsGhgeyEBVkCLbcyNk
+mkYGjWnyNEAJfreJF1qcilZsvCwRG+fN4TSxfvL0jYoMs8H9KqQFhjhSUeiWymf1
+ElKHiLkLAxtfrfwp6AqiKg6JLFEiQWxWz8h+p8cgZ7hw82GeMjrfMzA4YiIrEPbO
+pKHvPX1QLybawXVdqHC5DoxPvdmtRG1wwIn6XghkFMBX3xJbfz5qZ4MqAbKNKeeB
+bmSk9sJoiv86c8A6tttrNzSs0I2uhH50hs2WvKIzH8MsplXysx5MVaAXiMsF9hBg
+F38yWhmBnKJU889DqBGg+Vbc2VPtsbPbx5dHXwoSo3/ewr43CSBCtWTaK9SUH7Oe
+FXWEQhy7Io2Qz018gUy0w45tY2fqdRsQHkH6x/BPVu9UkBcO0ao=
+=jmBw
 -----END PGP SIGNATURE-----
