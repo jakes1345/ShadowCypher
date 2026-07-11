@@ -405,11 +405,18 @@ async def trigger_scan(subnet: Optional[str] = None, token: str = Depends(verify
 async def create_mission(
 	agent_id: str, req: CreateMissionRequest, token: str = Depends(verify_token)
 ):
-	"""Create a mission on an agent."""
+	"""Create and immediately queue a mission on the local agent executor."""
+	from shadowcypher.core.mission_executor import get_mission_executor
+	executor = get_mission_executor()
 	mission_id = str(uuid.uuid4())
-	logger.info("local_api", f"Mission {mission_id} created for agent {agent_id}")
-	# TODO: Route to actual agent executor
-	return CreateMissionResponse(mission_id=mission_id, status="pending")
+	logger.info("local_api", f"Mission {mission_id} queued for agent {agent_id}: type={req.type} target={req.target}")
+	try:
+		executor.submit(mission_id=mission_id, mission_type=req.type, target=req.target, params=req.params or {})
+		status = "queued"
+	except Exception as e:
+		logger.error("local_api", f"Mission executor submission failed: {e}")
+		status = "pending"  # Fall back — executor will pick it up on next poll
+	return CreateMissionResponse(mission_id=mission_id, status=status)
 
 
 @app.get("/v1/missions/{mission_id}", response_model=dict)

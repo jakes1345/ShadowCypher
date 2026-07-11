@@ -296,28 +296,85 @@ class IncidentResponseEngine:
         logger.warning("incident_response", f"Incident escalated: {details.get('title', 'Unknown')}")
 
     def _action_isolate(self, details: Dict):
-        """Isolate affected device."""
-        device_ip = details.get("device_ip")
-        logger.warning("incident_response", f"Would isolate device: {device_ip}")
-        # TODO: Implement actual isolation (disable network, etc)
+        """Isolate affected device by dropping its traffic via iptables."""
+        import subprocess
+        device_ip = details.get("device_ip") or details.get("source_ip")
+        if not device_ip:
+            logger.warning("incident_response", "Isolate called with no device_ip")
+            return
+        logger.warning("incident_response", f"Isolating device: {device_ip}")
+        try:
+            # Block all inbound + outbound traffic for the device IP
+            subprocess.run(["iptables", "-I", "INPUT", "-s", device_ip, "-j", "DROP"], check=True, timeout=10)
+            subprocess.run(["iptables", "-I", "OUTPUT", "-d", device_ip, "-j", "DROP"], check=True, timeout=10)
+            subprocess.run(["iptables", "-I", "FORWARD", "-s", device_ip, "-j", "DROP"], check=True, timeout=10)
+            logger.info("incident_response", f"Device {device_ip} isolated via iptables")
+        except Exception as e:
+            logger.error("incident_response", f"Isolation failed for {device_ip}: {e}")
 
     def _action_block(self, details: Dict):
-        """Block IP or port."""
-        target = details.get("source_ip") or details.get("port")
-        logger.warning("incident_response", f"Would block: {target}")
-        # TODO: Implement actual blocking (firewall rules, etc)
+        """Block IP or port via iptables."""
+        import subprocess
+        source_ip = details.get("source_ip")
+        port = details.get("port")
+        proto = details.get("proto", "tcp")
+        if source_ip:
+            logger.warning("incident_response", f"Blocking IP: {source_ip}")
+            try:
+                subprocess.run(["iptables", "-I", "INPUT", "-s", source_ip, "-j", "DROP"], check=True, timeout=10)
+                logger.info("incident_response", f"Blocked IP {source_ip}")
+            except Exception as e:
+                logger.error("incident_response", f"IP block failed for {source_ip}: {e}")
+        if port:
+            logger.warning("incident_response", f"Blocking port: {port}/{proto}")
+            try:
+                subprocess.run(["iptables", "-I", "INPUT", "-p", proto, "--dport", str(port), "-j", "DROP"], check=True, timeout=10)
+                logger.info("incident_response", f"Blocked port {port}/{proto}")
+            except Exception as e:
+                logger.error("incident_response", f"Port block failed for {port}: {e}")
 
     def _action_quarantine(self, details: Dict):
-        """Quarantine suspicious files."""
+        """Quarantine suspicious file by moving it to /var/quarantine and locking permissions."""
+        import subprocess
+        import shutil
         file_path = details.get("file_path")
-        logger.warning("incident_response", f"Would quarantine file: {file_path}")
-        # TODO: Implement actual quarantine (move to safe location, etc)
+        if not file_path or not os.path.exists(file_path):
+            logger.warning("incident_response", f"Quarantine: file not found: {file_path}")
+            return
+        q_dir = "/var/quarantine/shadowcypher"
+        os.makedirs(q_dir, mode=0o700, exist_ok=True)
+        q_dest = os.path.join(q_dir, os.path.basename(file_path) + ".quarantined")
+        try:
+            shutil.move(file_path, q_dest)
+            os.chmod(q_dest, 0o000)  # No one can read/exec
+            logger.warning("incident_response", f"Quarantined {file_path} → {q_dest}")
+        except Exception as e:
+            logger.error("incident_response", f"Quarantine failed for {file_path}: {e}")
 
     def _action_patch(self, details: Dict):
-        """Suggest or apply patch."""
-        cve_id = details.get("cve_id")
-        logger.info("incident_response", f"Patch available for: {cve_id}")
-        # TODO: Implement patch management
+        """Apply available system patch for a CVE via package manager."""
+        import subprocess
+        import shutil
+        cve_id = details.get("cve_id", "unknown")
+        package = details.get("package")  # Optional specific package to update
+        logger.info("incident_response", f"Attempting patch for: {cve_id} (package={package})")
+        try:
+            if shutil.which("pacman"):
+                cmd = ["pacman", "-Syu", "--noconfirm"]
+                if package:
+                    cmd = ["pacman", "-S", "--noconfirm", package]
+            elif shutil.which("apt-get"):
+                cmd = ["apt-get", "install", "-y", "--only-upgrade", package] if package else ["apt-get", "upgrade", "-y"]
+            else:
+                logger.warning("incident_response", f"No supported package manager found for patching {cve_id}")
+                return
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            if result.returncode == 0:
+                logger.info("incident_response", f"Patch applied for {cve_id}: {result.stdout[-200:]}")
+            else:
+                logger.error("incident_response", f"Patch failed for {cve_id}: {result.stderr[-200:]}")
+        except Exception as e:
+            logger.error("incident_response", f"Patch exception for {cve_id}: {e}")
 
     def _matches_condition(self, condition: str, incident_type: str, details: Dict) -> bool:
         """Check if incident matches rule condition."""
