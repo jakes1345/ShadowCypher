@@ -4,6 +4,7 @@ from typing import Optional
 class RegisterRequest(BaseModel):
     username: str
     public_key: str  # Hex-encoded 32 bytes
+    password: Optional[str] = None  # Optional bcrypt-hashed password for login auth
 
 class RegisterResponse(BaseModel):
     user_id: int
@@ -12,7 +13,8 @@ class RegisterResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     username: str
-    device_id: str
+    password: str  # Plain-text password to be verified against bcrypt hash
+    device_id: Optional[str] = "web"
 
 class LoginResponse(BaseModel):
     token: str

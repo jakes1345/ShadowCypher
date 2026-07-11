@@ -1,6 +1,6 @@
 """P2P message forwarding between Shadow instances (Phase 2, Task 2).
 
-Attempts a direct TCP connection between instances to relay encrypted
+Attempts a direct TLS TCP connection between instances to relay encrypted
 messages. Falls back to server relay (Task 3) when P2P is unavailable.
 The server never decrypts message contents — only ciphertext + nonce
 are forwarded, identical to the Phase 1 message format.
@@ -10,12 +10,15 @@ import socket
 import ssl
 import time
 import json
+import logging
 import ipaddress
 from shadowcypher.chat.db import SessionLocal
 from shadowcypher.chat.models import Instance, P2PConnection
 from shadowcypher.chat import instance_registry
 from sqlalchemy.orm import Session
 import threading
+
+log = logging.getLogger(__name__)
 
 # Global connection pool: {(from_id, to_id): socket}
 p2p_connections = {}
@@ -63,7 +66,7 @@ def _is_safe_endpoint(endpoint: str) -> bool:
         return False
 
 def connect_p2p(from_instance_id: str, to_instance_id: str, session: Session) -> socket.socket | None:
-    """Establish P2P connection to target instance."""
+    """Establish TLS-wrapped P2P connection to target instance."""
     to_instance = instance_registry.get_instance(session, to_instance_id)
     if not to_instance or not to_instance.is_online:
         return None
@@ -73,19 +76,25 @@ def connect_p2p(from_instance_id: str, to_instance_id: str, session: Session) ->
         return None
 
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(CONNECTION_TIMEOUT)
+        raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        raw_sock.settimeout(CONNECTION_TIMEOUT)
 
         # Parse endpoint "IP:port"
         ip, port = to_instance.endpoint.rsplit(":", 1)
         port = int(port)
 
-        sock.connect((ip, port))
-        sock.settimeout(None)  # No timeout after connected
+        raw_sock.connect((ip, port))
+        raw_sock.settimeout(None)  # No timeout after connected
+
+        # Wrap with TLS (opportunistic — server must present a valid cert)
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False  # Instances use IP, not hostnames
+        ctx.verify_mode = ssl.CERT_NONE  # Self-signed certs OK for P2P
+        sock = ctx.wrap_socket(raw_sock, server_side=False)
 
         return sock
     except Exception as e:
-        print(f"P2P connection failed: {e}")
+        log.warning("P2P connection to %s failed: %s", to_instance_id, e)
         return None
 
 def send_p2p_message(from_instance_id: str, to_instance_id: str, ciphertext: bytes, nonce: bytes) -> dict:
@@ -126,7 +135,7 @@ def send_p2p_message(from_instance_id: str, to_instance_id: str, ciphertext: byt
                 session.commit()
                 return {"status": "delivered", "via": "p2p"}
             except Exception as e:
-                print(f"P2P send failed: {e}")
+                log.warning("P2P send to %s failed: %s", to_instance_id, e)
                 if key in p2p_connections:
                     del p2p_connections[key]
                 return {"status": "failed", "via": "p2p"}

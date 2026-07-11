@@ -24,7 +24,8 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
   });
 
 function randomId(prefix: string): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return `${prefix}_${Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
 async function getProfile(env: Env, userId: string): Promise<ProfileForPlan | null> {
@@ -119,15 +120,20 @@ export async function getPendingMissions(
     limit: 5,
   });
 
-  // Mark them running so they aren't picked up twice
+  // Mark them running — include status filter as optimistic lock so a concurrent
+  // poll that already grabbed a mission (and set it to 'running') won't match.
   for (const m of missions) {
-    await dbUpdate(env, "missions", { id: `eq.${m.id}` }, {
+    await dbUpdate(env, "missions", { id: `eq.${m.id}`, status: `eq.pending` }, {
       status: "running",
       started_at: new Date().toISOString(),
     });
   }
-
-  return json({ missions }, {}, cors);
+  // Re-fetch only the missions we actually grabbed (status=running, started in last 5s)
+  const started = await dbSelect<Pick<MissionRow, "id" | "script_content" | "created_at">>(env, "missions", {
+    select: "id,script_content,created_at",
+    filters: { agent_id: `eq.${agentId}`, status: `eq.running`, started_at: `gt.${new Date(Date.now() - 5000).toISOString()}` },
+  });
+  return json({ missions: started }, {}, cors);
 }
 
 /** POST /v1/missions/:mission_id/result — desktop agent posts execution output */

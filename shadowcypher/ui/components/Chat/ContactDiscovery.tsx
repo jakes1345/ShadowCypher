@@ -21,6 +21,12 @@ export function ContactDiscovery({ onAddContact }: ContactDiscoveryProps) {
                     <p>Ask them to share their fingerprint:</p>
                     <input
                         type="text"
+                        placeholder="Their username"
+                        value={contactInfo.username}
+                        onChange={(e) => setContactInfo({ ...contactInfo, username: e.target.value })}
+                    />
+                    <input
+                        type="text"
                         placeholder="8-char fingerprint"
                         value={contactInfo.fingerprint}
                         onChange={(e) => setContactInfo({ ...contactInfo, fingerprint: e.target.value })}
@@ -28,6 +34,20 @@ export function ContactDiscovery({ onAddContact }: ContactDiscoveryProps) {
                     <button onClick={() => onAddContact(contactInfo.username, contactInfo.pubkey, contactInfo.fingerprint)}>
                         Verify & Add Contact
                     </button>
+                </div>
+            )}
+            {mode === 'qr' && (
+                <div className="feature-coming-soon">
+                    <span style={{ fontSize: '2rem' }}>📱</span>
+                    <p><strong>QR Code sharing coming soon</strong></p>
+                    <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Your contact will scan your QR code to add you securely. Tap "Verify Fingerprint" for now.</p>
+                </div>
+            )}
+            {mode === 'link' && (
+                <div className="feature-coming-soon">
+                    <span style={{ fontSize: '2rem' }}>🔗</span>
+                    <p><strong>Link sharing coming soon</strong></p>
+                    <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Generate a one-time share link. Tap "Verify Fingerprint" for now.</p>
                 </div>
             )}
         </div>

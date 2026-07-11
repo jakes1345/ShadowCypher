@@ -154,18 +154,19 @@ export async function getThreatStats(
   _user: { id: string; email: string }
 ): Promise<Response> {
   try {
-    const [cCount, hCount, mCount] = await Promise.all([
+    const [cCount, hCount, mCount, lCount] = await Promise.all([
       fetchCount("CRITICAL"),
       fetchCount("HIGH"),
       fetchCount("MEDIUM"),
+      fetchCount("LOW"),
     ]);
 
     const stats: ThreatStats = {
       critical: cCount,
       high: hCount,
       medium: mCount,
-      low: 0,
-      total: cCount + hCount + mCount,
+      low: lCount,
+      total: cCount + hCount + mCount + lCount,
       as_of: new Date().toISOString(),
     };
 

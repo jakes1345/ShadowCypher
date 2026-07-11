@@ -1,5 +1,5 @@
 import * as TweetNaCl from 'tweetnacl';
-import { decodeUTF8, encodeUTF8, encodeBase64, decodeBase64 } from 'tweetnacl-util';
+import { encodeBase64, decodeBase64 } from 'tweetnacl-util';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Legacy Keypair Functions (X25519 + TweetNaCl) — for 1-to-1 conversations
@@ -26,10 +26,8 @@ export function deriveSharedSecret(privateKey: string, peerPublicKey: string): U
 
 export function encryptMessage(plaintext: string, sessionKey: string): {ciphertext: string, nonce: string} {
     const nonce = TweetNaCl.randomBytes(24);
-    // @ts-ignore - tweetnacl-util types are loose
-    const message = encodeUTF8(plaintext);
-    const key = new Uint8Array(decodeBase64(sessionKey) as any);
-    // @ts-ignore - tweetnacl types accept Uint8Array
+    const message = new TextEncoder().encode(plaintext);
+    const key = decodeBase64(sessionKey);
     const ciphertext = TweetNaCl.secretbox(message, nonce, key);
     return {
         ciphertext: encodeBase64(ciphertext),
@@ -43,8 +41,8 @@ export function decryptMessage(ciphertext: string, nonce: string, sessionKey: st
         decodeBase64(nonce),
         decodeBase64(sessionKey)
     );
-    if (!plaintext) throw new Error("Decryption failed");
-    return encodeUTF8(plaintext);
+    if (!plaintext) throw new Error('Decryption failed');
+    return new TextDecoder().decode(plaintext);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -150,7 +148,7 @@ export async function decryptGroupMessage(
 
 export async function fingerprint(publicKey: string): Promise<string> {
     // SHA256(pubkey)[:8] using Web Crypto API
-    const publicKeyBytes = new Uint8Array(decodeBase64(publicKey) as any);
+    const publicKeyBytes = new Uint8Array(decodeBase64(publicKey));
     const hashBuffer = await crypto.subtle.digest('SHA-256', publicKeyBytes);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');

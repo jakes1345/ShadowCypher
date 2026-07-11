@@ -9,6 +9,7 @@ interface Instance {
 }
 
 export function useInstanceDiscovery() {
+  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
   const [instances, setInstances] = useState<Instance[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export function useInstanceDiscovery() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('/api/chat/instances/register', {
+        const response = await fetch(`${API_BASE}/chat/instances/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ public_key: pubkey, endpoint }),
@@ -40,7 +41,7 @@ export function useInstanceDiscovery() {
   const listInstances = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/chat/instances');
+      const response = await fetch(`${API_BASE}/chat/instances`);
       if (!response.ok) throw new Error(await response.text());
       setInstances(await response.json());
     } catch (err) {
@@ -51,7 +52,7 @@ export function useInstanceDiscovery() {
   }, []);
 
   const getInstanceStatus = useCallback(async (instance_id: string) => {
-    const response = await fetch(`/api/chat/instances/${instance_id}`);
+    const response = await fetch(`${API_BASE}/chat/instances/${instance_id}`);
     if (!response.ok) throw new Error(await response.text());
     return await response.json();
   }, []);

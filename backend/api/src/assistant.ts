@@ -114,14 +114,31 @@ async function rolloverIfNeeded(env: Env, profile: ProfileFull): Promise<{ count
 }
 
 async function incrementUsage(env: Env, userId: string, by = 1): Promise<void> {
-  // Fetch current then write — small race window acceptable for usage metering
-  const rows = await dbSelect<{ ai_query_count: number }>(env, "profiles", {
-    select: "ai_query_count",
+  // Use PostgREST RPC for atomic increment to avoid read-modify-write race
+  // Falls back to read-modify-write if RPC not available
+  try {
+    const resp = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/rpc/increment_ai_query_count`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ p_user_id: userId, p_by: by }),
+      }
+    );
+    if (resp.ok) return; // RPC handled it atomically
+  } catch { /* fall through */ }
+  // Fallback: read-modify-write (race window acceptable for metering)
+  const rows = await dbSelect<{ ai_query_count: number }>(env, 'profiles', {
+    select: 'ai_query_count',
     filters: { user_id: `eq.${userId}` },
     limit: 1,
   });
   const next = (rows[0]?.ai_query_count ?? 0) + by;
-  await dbUpdate(env, "profiles", { user_id: `eq.${userId}` }, { ai_query_count: next });
+  await dbUpdate(env, 'profiles', { user_id: `eq.${userId}` }, { ai_query_count: next });
 }
 
 // ─── Endpoints ──────────────────────────────────────────────────────────────
@@ -279,7 +296,8 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
     let modelLabel: string;
 
     if (profile.ai_provider === "ollama" && profile.ai_ollama_url) {
-      ({ answer, modelLabel } = await queryOllama(profile.ai_ollama_url, messages, effectiveSystemPrompt));
+      const ollamaModel = env.OLLAMA_DEFAULT_MODEL || 'llama3.1:8b';
+      ({ answer, modelLabel } = await queryOllama(profile.ai_ollama_url, messages, effectiveSystemPrompt, ollamaModel));
     } else if (profile.ai_provider === "byok" && profile.ai_byok_key_encrypted) {
       if (!env.BYOK_ENCRYPTION_SECRET) {
         return json({ error: "byok_decryption_unavailable" }, { status: 503 }, cors);
@@ -341,13 +359,14 @@ async function queryOllama(
   baseUrl: string,
   messages: HistoryMessage[],
   systemPrompt: string,
+  model = 'llama3.1:8b',
 ): Promise<{ answer: string; modelLabel: string }> {
   const url = baseUrl.replace(/\/$/, "") + "/api/chat";
   const resp = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      model: "llama3.1:8b",
+      model,
       stream: false,
       messages: [
         { role: "system", content: systemPrompt },

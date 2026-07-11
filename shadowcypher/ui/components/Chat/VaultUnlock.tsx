@@ -20,9 +20,11 @@ export function VaultUnlock({ onUnlock, token }: VaultUnlockProps) {
         setLoading(true);
         setError('');
 
+        const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
         try {
             // Validate vault password with backend
-            const response = await fetch('http://localhost:8000/chat/vault/unlock', {
+            const response = await fetch(`${API_BASE}/chat/vault/unlock`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

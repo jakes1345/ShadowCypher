@@ -131,7 +131,7 @@ export function useGroupChat(token: string | null) {
         }
     }, [token]);
 
-    const sendMessage = useCallback(async (groupId: string, encryptedMessage: string, nonce: string) => {
+    const sendMessage = useCallback(async (groupId: string, encryptedMessage: string, nonce: string, keyVersion: number) => {
         if (!token) return null;
         try {
             const res = await fetch(`${API_BASE}/chat/groups/${groupId}/messages`, {
@@ -140,7 +140,11 @@ export function useGroupChat(token: string | null) {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify({ encrypted_message: encryptedMessage, nonce })
+                body: JSON.stringify({
+                    encrypted_message: encryptedMessage,
+                    nonce,
+                    key_version: keyVersion,  // Tell server which key version was used
+                })
             });
             if (!res.ok) throw new Error('Failed to send message');
             return await res.json();
@@ -197,7 +201,6 @@ export function useGroupChat(token: string | null) {
 
             return Promise.all(
                 messages.map(async (msg) => {
-                    // Only decrypt if key version matches (supports key rotation)
                     if (msg.key_version === keyVersion) {
                         try {
                             const plaintext = await decryptGroupMessage(
@@ -211,8 +214,12 @@ export function useGroupChat(token: string | null) {
                             return { ...msg, plaintext: '[Decryption failed]' };
                         }
                     }
-                    // Different key version — skip decryption
-                    return msg;
+                    // Different key version — key was rotated after this message was sent
+                    // We no longer have the old key in memory; show a clear placeholder
+                    return {
+                        ...msg,
+                        plaintext: `[Message encrypted with key v${msg.key_version} — key rotated, cannot decrypt]`,
+                    };
                 })
             );
         },

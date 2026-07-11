@@ -84,9 +84,19 @@ async function getOrCreateCustomer(env: Env, user: AuthedUser): Promise<string> 
 // ─── Handlers ───────────────────────────────────────────────────────────────
 
 export async function createCheckout(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
-  const body = (await req.json().catch(() => ({}))) as { plan?: "guardian_pro" | "operator" };
-  const priceId =
-    body.plan === "operator" ? env.STRIPE_PRICE_OPERATOR : env.STRIPE_PRICE_GUARDIAN_PRO;
+  const body = (await req.json().catch(() => ({}))) as {
+    plan?: "guardian_pro" | "operator";
+    interval?: "monthly" | "annual";
+  };
+  const annual = body.interval === "annual";
+
+  // Select price: prefer annual variants when interval=annual and env var is set
+  let priceId: string | undefined;
+  if (body.plan === "operator") {
+    priceId = (annual && env.STRIPE_PRICE_OPERATOR_ANNUAL) || env.STRIPE_PRICE_OPERATOR;
+  } else {
+    priceId = (annual && env.STRIPE_PRICE_GUARDIAN_PRO_ANNUAL) || env.STRIPE_PRICE_GUARDIAN_PRO;
+  }
   if (!priceId) return json({ error: "price_not_configured" }, { status: 500 }, cors);
 
   const customerId = await getOrCreateCustomer(env, user);
@@ -225,7 +235,13 @@ export async function handleWebhook(req: Request, env: Env, cors: HeadersInit): 
         const patch: Record<string, unknown> = {
           plan,
           billing_interval: interval,
-          subscription_status: status,
+          // For checkout.session.completed, obj.status is the checkout session status
+          // ("complete"), NOT the subscription status ("active"/"trialing").
+          // Use "active" as the canonical status for completed checkouts; the
+          // customer.subscription.created event that fires next will overwrite with
+          // the real subscription status from the subscription object.
+          subscription_status:
+            event.type === "checkout.session.completed" ? "active" : status,
           cancel_at_period_end: cancelAtEnd,
           updated_at: new Date().toISOString(),
         };
@@ -258,6 +274,26 @@ export async function handleWebhook(req: Request, env: Env, cors: HeadersInit): 
           subscription_status: "canceled",
           stripe_subscription_id: null,
           cancel_at_period_end: false,
+          updated_at: new Date().toISOString(),
+        });
+        break;
+      }
+
+      case "invoice.payment_failed":
+      case "invoice.payment_action_required": {
+        // Payment failed — mark subscription as past_due immediately.
+        // plans.ts only allows access for "active" and "trialing" statuses,
+        // so this will correctly block Pro features until payment is resolved.
+        const customerId = (obj.customer as string) || null;
+        if (!customerId) break;
+        const profiles = await dbSelect<Profile>(env, "profiles", {
+          select: "user_id",
+          filters: { stripe_customer_id: `eq.${customerId}` },
+          limit: 1,
+        });
+        if (!profiles[0]) break;
+        await dbUpdate(env, "profiles", { user_id: `eq.${profiles[0].user_id}` }, {
+          subscription_status: "past_due",
           updated_at: new Date().toISOString(),
         });
         break;

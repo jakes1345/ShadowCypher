@@ -13,6 +13,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(255), unique=True, nullable=False)
     public_key = Column(LargeBinary(32), nullable=False)  # X25519 pubkey
+    password_hash = Column(String(255), nullable=True)  # bcrypt hash; NULL for key-only registrations
     created_date = Column(DateTime, default=datetime.utcnow)
 
     contacts = relationship("Contact", back_populates="user")

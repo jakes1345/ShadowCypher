@@ -88,14 +88,11 @@ export async function listRooms(
   let teamRooms: ChatRoom[] = [];
   if (memberships.length) {
     const teamIds = memberships.map(m => m.team_id);
-    // Fetch rooms for each team (simple approach)
-    for (const tid of teamIds) {
-      const rows = await dbSelect<ChatRoom>(env, "chat_rooms", {
-        select: "id,name,display_name,room_type,team_id,created_at",
-        filters: { team_id: `eq.${tid}` },
-      });
-      teamRooms = teamRooms.concat(rows);
-    }
+    // Single IN query — avoids N+1 (one query per team)
+    teamRooms = await dbSelect<ChatRoom>(env, "chat_rooms", {
+      select: "id,name,display_name,room_type,team_id,created_at",
+      filters: { team_id: `in.(${teamIds.join(",")})` },
+    });
   }
 
   return json({ rooms: [...globalRoom, ...teamRooms] }, {}, cors);

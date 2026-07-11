@@ -1,13 +1,22 @@
 """Authentication backend with JWT and password hashing."""
 from datetime import datetime, timedelta
 from typing import Optional
+import os
 import secrets
 import bcrypt
 import jwt
 from pydantic import BaseModel
 
-# Secret key for JWT (in production, load from environment)
-JWT_SECRET = "your-secret-key-change-in-production"
+# Secret key for JWT — MUST be set via SC_JWT_SECRET env var in production
+JWT_SECRET = os.environ.get("SC_JWT_SECRET") or os.environ.get("JWT_SECRET")
+if not JWT_SECRET:
+    import warnings
+    JWT_SECRET = secrets.token_hex(32)  # Random per-process fallback — tokens won't survive restart
+    warnings.warn(
+        "SC_JWT_SECRET not set — using ephemeral random secret. Set SC_JWT_SECRET in production!",
+        RuntimeWarning,
+        stacklevel=1,
+    )
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
 
@@ -41,16 +50,10 @@ class TokenPayload(BaseModel):
     iat: int
     exp: int
 
-# In-memory user store (replace with database)
-USERS_DB = {
-    "user1": User(
-        id="user1",
-        email="test@example.com",
-        username="tester",
-        password_hash=bcrypt.hashpw(b"password123", bcrypt.gensalt()).decode(),
-        created_at=datetime.utcnow().isoformat()
-    )
-}
+# In-memory user store (replace with database) — intentionally empty on startup.
+# Users registered here exist only for the lifetime of the process.
+# For production, migrate to a persistent DB backend.
+USERS_DB: dict[str, "User"] = {}
 
 def hash_password(password: str) -> str:
     """Hash password with bcrypt."""

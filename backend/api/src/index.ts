@@ -114,6 +114,7 @@ export interface Env {
   ABUSEIPDB_KEY?: string;
   HIBP_KEY?: string;
   BRAVE_SEARCH_KEY?: string;
+  OLLAMA_DEFAULT_MODEL?: string;
 }
 
 interface SupabaseUser {
@@ -152,7 +153,7 @@ function corsHeaders(origin: string | null, allowed: string): HeadersInit {
   const allowOrigin = origin && allowList.includes(origin) ? origin : allowList[0];
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Authorization,Content-Type",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
@@ -324,11 +325,19 @@ async function handleMe(req: Request, env: Env, cors: HeadersInit): Promise<Resp
 }
 
 async function handleRotate(req: Request, env: Env, cors: HeadersInit): Promise<Response> {
+  const ip = req.headers.get("CF-Connecting-IP") ?? req.headers.get("X-Forwarded-For") ?? "unknown";
   const key = extractKey(req);
   if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
 
   const user = await findUserByKey(env, key);
   if (!user) return json({ error: "key_not_found" }, { status: 401 }, cors);
+
+  // Tighter rate limit: 5 rotations per hour per user
+  if (!rateLimit(`rotate:${user.id}`, 5, 3_600_000))
+    return json({ error: "rate_limited" }, { status: 429 }, cors);
+  // Per-IP gate
+  if (!rateLimit(`rotate_ip:${ip}`, 10, 3_600_000))
+    return json({ error: "rate_limited" }, { status: 429 }, cors);
 
   const newKey = generateApiKey();
   const [ok] = await Promise.all([
@@ -444,7 +453,7 @@ export default {
                 "POST /v1/teams/invite",
                 "GET /v1/teams/invites",
                 "POST /v1/teams/accept",
-                "POST /v1/teams/leave",
+                "DELETE /v1/teams/leave",
               ],
               chat: [
                 "GET /v1/chat/rooms",
@@ -546,7 +555,7 @@ export default {
         "POST /v1/teams/invite":              inviteMember,
         "GET /v1/teams/invites":              listInvites,
         "POST /v1/teams/accept":              acceptInvite,
-        "POST /v1/teams/leave":               leaveTeam,
+        "DELETE /v1/teams/leave":             leaveTeam,
         "GET /v1/threats":                    getThreats,
         "GET /v1/threats/stats":              getThreatStats,
         // Shadow structured APIs (no LLM)
@@ -589,8 +598,7 @@ export default {
         const user = await findUserByKey(env, key);
         if (!user) return json({ error: "key_not_found" }, { status: 401 }, cors);
         // Tighter per-user limits on expensive/sensitive operations
-        if (routeKey === "POST /v1/keys/rotate" && !rateLimit(`rotate:${user.id}`, 5, 3_600_000))
-          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        // Note: POST /v1/keys/rotate is handled directly above (has its own auth+rate-limit inside handleRotate)
         if (routeKey === "POST /v1/assistant/query" && !rateLimit(`ai:${user.id}`, 20, 60_000))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         if (routeKey === "POST /v1/scans" && !rateLimit(`scan:${user.id}`, 30, 60_000))

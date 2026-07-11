@@ -18,19 +18,28 @@ import './GroupChat.css';
 
 interface ChatProps {
     token: string | null;
-    currentUser: { username: string };
+    currentUser: { username: string; id?: string };
+}
+
+async function deriveSessionKey(vaultKey: string, conversationId: number): Promise<string> {
+    // HKDF-like: SHA-256(vaultKey + ':session:' + conversationId) — deterministic per vault+convo
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${vaultKey}:session:${conversationId}`);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export default function Chat({ token, currentUser }: ChatProps) {
     const [vaultUnlocked, setVaultUnlocked] = useState(false);
+    const [vaultKey, setVaultKey] = useState<string | null>(null);
     const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
     const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-    const [sessionKey, setSessionKey] = useState<string | null>(null);
+    const [sessionKeys, setSessionKeys] = useState<Record<string, string>>({});
     const [groupSessionKey, setGroupSessionKey] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'messages' | 'instances' | 'groups'>('messages');
     const [showGroupForm, setShowGroupForm] = useState(false);
     const [showGroupAdmin, setShowGroupAdmin] = useState(false);
-    const { conversations, messages, fetchConversations, fetchMessages, sendMessage } = useChat(token);
+    const { conversations, messages, fetchConversations, fetchMessages, sendMessage, addContact } = useChat(token);
     const { groups, fetchGroups } = useGroupChat(token);
 
     useEffect(() => {
@@ -43,23 +52,36 @@ export default function Chat({ token, currentUser }: ChatProps) {
     useEffect(() => {
         if (selectedConversation && token) {
             fetchMessages(selectedConversation);
-            // In a real app, fetch or derive the session key for this conversation
-            // For now, use a placeholder that would be set via context or state management
-            setSessionKey(localStorage.getItem(`sessionKey_${selectedConversation}`) || null);
         }
     }, [selectedConversation, token, fetchMessages]);
 
     useEffect(() => {
+        if (vaultKey && selectedConversation) {
+            deriveSessionKey(vaultKey, selectedConversation).then(key => {
+                setSessionKeys(prev => ({ ...prev, [selectedConversation]: key }));
+            });
+        }
+    }, [vaultKey, selectedConversation]);
+
+    useEffect(() => {
         if (selectedGroup && token) {
-            // In a real app, fetch or derive the session key for this group
-            // For now, use a placeholder that would be set via context or state management
             setGroupSessionKey(localStorage.getItem(`groupSessionKey_${selectedGroup}`) || null);
         }
     }, [selectedGroup, token]);
 
     if (!vaultUnlocked) {
-        return <VaultUnlock onUnlock={() => setVaultUnlocked(true)} />;
+        return (
+            <VaultUnlock
+                token={token}
+                onUnlock={(key: string) => {
+                    setVaultKey(key);
+                    setVaultUnlocked(true);
+                }}
+            />
+        );
     }
+
+    const sessionKey = selectedConversation ? (sessionKeys[selectedConversation] ?? null) : null;
 
     const handleSendMessage = async (plaintext: string) => {
         if (!selectedConversation || !sessionKey) return;
@@ -124,11 +146,14 @@ export default function Chat({ token, currentUser }: ChatProps) {
                     <>
                         {selectedConversation ? (
                             <>
-                                <ConversationWindow messages={messages} currentUser={currentUser.username} />
+                                <ConversationWindow messages={messages} currentUser={currentUser.username} sessionKey={sessionKey} />
                                 <MessageInput onSend={handleSendMessage} />
                             </>
                         ) : (
-                            <div className="no-conversation">Select a conversation or <ContactDiscovery onAddContact={() => {}} /></div>
+                            <div className="no-conversation">Select a conversation or <ContactDiscovery onAddContact={async (username: string, pubkey: string, fingerprint: string) => {
+                                await addContact(username, pubkey, fingerprint);
+                                await fetchConversations();
+                            }} /></div>
                         )}
                     </>
                 ) : activeTab === 'instances' ? (
@@ -157,6 +182,7 @@ export default function Chat({ token, currentUser }: ChatProps) {
                                         <GroupAdminPanel
                                             groupId={selectedGroup}
                                             creatorId={getGroupData()!.creator_id}
+                                            creatorUserId={getGroupData()!.creator_id}
                                             currentUser={currentUser}
                                             token={token}
                                         />

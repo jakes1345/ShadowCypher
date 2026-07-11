@@ -75,6 +75,12 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid public key (must be 64 hex chars)")
 
     user = User(username=request.username, public_key=public_key)
+
+    # Hash password if provided; key-only registrations leave password_hash as NULL
+    if request.password:
+        import bcrypt as _bcrypt
+        user.password_hash = _bcrypt.hashpw(request.password.encode(), _bcrypt.gensalt()).decode()
+
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -91,10 +97,24 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     """Login user and return JWT token"""
     user = db.query(User).filter(User.username == request.username).first()
+    # Return same 401 for both unknown user and wrong password to prevent username enumeration
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid username")
+        raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    token = create_jwt_token(user.id, user.username, request.device_id)
+    # Verify password — user must have a stored hash (set during registration)
+    if not user.password_hash:
+        raise HTTPException(status_code=401, detail="Account has no password set. Use device authentication.")
+
+    import bcrypt as _bcrypt
+    try:
+        password_ok = _bcrypt.checkpw(request.password.encode(), user.password_hash.encode())
+    except Exception:
+        password_ok = False
+
+    if not password_ok:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token = create_jwt_token(user.id, user.username, getattr(request, 'device_id', 'web'))
     return LoginResponse(token=token)
 
 @router.post("/add-contact", response_model=AddContactResponse, status_code=201)
@@ -111,10 +131,27 @@ def add_contact(
     except (ValueError, binascii.Error):
         raise HTTPException(status_code=400, detail="Invalid public key")
 
+    # Server-verify fingerprint = SHA256(pubkey)[:8]
+    import hashlib
+    expected_fingerprint = hashlib.sha256(contact_pubkey).hexdigest()[:8]
+    if request.fingerprint != expected_fingerprint:
+        raise HTTPException(status_code=400, detail="Fingerprint does not match public key")
+
     # Find the contact user by username
     contact_user = db.query(User).filter(User.username == request.contact_username).first()
     if not contact_user:
         raise HTTPException(status_code=404, detail="Contact user not found")
+
+    # Duplicate check — prevent adding same contact twice
+    existing = db.query(Contact).filter(
+        Contact.user_id == current_user.id,
+        Contact.contact_username == request.contact_username
+    ).first()
+    if existing:
+        return AddContactResponse(
+            contact_id=existing.id,
+            contact_username=existing.contact_username
+        )
 
     contact = Contact(
         user_id=current_user.id,
@@ -147,6 +184,24 @@ def add_contact(
         contact_id=contact.id,
         contact_username=contact.contact_username
     )
+
+
+@router.patch("/contacts/{contact_id}/trust")
+def trust_contact(
+    contact_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Mark a contact as trusted (enables P2P message sending)."""
+    contact = db.query(Contact).filter(
+        Contact.id == contact_id,
+        Contact.user_id == current_user.id  # Only own contacts
+    ).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    contact.is_trusted = True
+    db.commit()
+    return {"contact_id": contact_id, "is_trusted": True}
 
 @router.post("/send-message", response_model=SendMessageResponse, status_code=201)
 def send_message_hybrid(
@@ -243,6 +298,10 @@ def get_messages(
 
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Authorization: only participants can read their conversation
+    if conversation.user_id_1 != current_user.id and conversation.user_id_2 != current_user.id:
+        raise HTTPException(status_code=403, detail="Not a participant in this conversation")
 
     messages = db.query(Message).filter(
         Message.conversation_id == conversation_id

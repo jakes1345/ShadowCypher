@@ -130,19 +130,21 @@ export async function inviteMember(req: Request, env: Env, user: AuthedUser, cor
     limit: 1,
   });
 
-  await dbUpsert(
-    env,
-    "team_members",
-    {
-      team_id: body.team_id,
-      user_id: existing[0]?.user_id ?? null,
-      invited_email: email,
-      role: "member",
-      status: "pending",
-      invited_at: new Date().toISOString(),
-    },
-    "team_id,user_id,invited_email"
-  );
+  if (existing[0]) {
+    await dbUpsert(
+      env,
+      "team_members",
+      { team_id: body.team_id, user_id: existing[0].user_id, invited_email: email, role: "member", status: "pending", invited_at: new Date().toISOString() },
+      "team_id,user_id"
+    );
+  } else {
+    await dbUpsert(
+      env,
+      "team_members",
+      { team_id: body.team_id, user_id: null, invited_email: email, role: "member", status: "pending", invited_at: new Date().toISOString() },
+      "team_id,invited_email"
+    );
+  }
 
   return json({ invited: true, email, resolved_user: !!existing[0] }, {}, cors);
 }

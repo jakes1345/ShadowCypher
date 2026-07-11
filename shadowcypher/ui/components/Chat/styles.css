@@ -34,7 +34,7 @@
     50% { opacity: 0.5; }
 }
 
-.vault-unlock-dialog h2 {
+.vault-unlock-dialog h1 {
     color: #00ff41;
     margin-bottom: 10px;
     text-shadow: 0 0 10px #00ff41;

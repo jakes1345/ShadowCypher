@@ -52,8 +52,9 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, currentUser, toke
         setSending(true);
         try {
             const groupKey = currentGroup.new_group_key_hex || currentGroup.group_key;
+            const keyVersion = currentGroup.key_version;
             const { ciphertext, nonce } = await encryptGroupMessage(input, groupKey);
-            await sendMessage(groupId, ciphertext, nonce);
+            await sendMessage(groupId, ciphertext, nonce, keyVersion);
             setInput('');
             // Refresh messages
             await fetchGroupMessages(groupId);

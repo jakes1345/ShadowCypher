@@ -485,10 +485,18 @@ async function deliverCveOne(
     }
   }
 
+  // All platform-specific bodies built above — now compute HMAC and deliver
+  const signature = await hmacSha256(wh.signing_secret, body);
   try {
     const resp = await fetch(wh.url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "User-Agent": "ShadowCypher-Webhook/1.0" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "ShadowCypher-Webhook/1.0",
+        // Include signature on ALL platform deliveries so customers can verify
+        "X-ShadowCypher-Signature": `sha256=${signature}`,
+        "X-ShadowCypher-Event": "cve.matched",
+      },
       body,
       signal: AbortSignal.timeout(8000),
     });

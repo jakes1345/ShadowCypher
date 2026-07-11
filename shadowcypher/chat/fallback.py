@@ -1,16 +1,19 @@
 # shadowcypher/chat/fallback.py
 
 import time
+import logging
 from shadowcypher.chat.db import SessionLocal
 from shadowcypher.chat import p2p_relay
 from shadowcypher.chat.models import Message
 from sqlalchemy.orm import Session
 
+log = logging.getLogger(__name__)
 MAX_P2P_RETRIES = 3
 RETRY_DELAY = 0.5  # seconds
 
 def send_with_fallback(to_user_id: str, encrypted_message: bytes, nonce: bytes,
                        conversation_id: str = None, from_instance_id: str = None,
+                       sender_username: str = "unknown",
                        session: Session = None) -> dict:
     """
     Send message with P2P preference, fall back to server relay if P2P fails.
@@ -42,21 +45,20 @@ def send_with_fallback(to_user_id: str, encrypted_message: bytes, nonce: bytes,
                     time.sleep(RETRY_DELAY)
 
         # Fall back to server relay (Phase 1 mechanism)
-        return _relay_via_server(to_user_id, encrypted_message, nonce, conversation_id, session)
+        return _relay_via_server(to_user_id, encrypted_message, nonce, conversation_id, sender_username, session)
     finally:
         if close_session:
             session.close()
 
 def _relay_via_server(to_user_id: str, encrypted_message: bytes, nonce: bytes,
-                      conversation_id: str, session: Session) -> dict:
+                      conversation_id: str, sender_username: str, session: Session) -> dict:
     """Fall back to Phase 1 server relay (store message for recipient)."""
     try:
-        # Store message in server queue (Phase 1 mechanism)
         message = Message(
             conversation_id=conversation_id,
             encrypted_message=encrypted_message,
             nonce=nonce,
-            sender="system",  # Could be from token in real implementation
+            sender=sender_username,  # Use actual username from JWT claims
             delivery_status="queued"
         )
         session.add(message)
@@ -64,5 +66,5 @@ def _relay_via_server(to_user_id: str, encrypted_message: bytes, nonce: bytes,
 
         return {"status": "delivered", "via": "relay", "attempts": 1}
     except Exception as e:
-        print(f"Relay fallback failed: {e}")
+        log.error("Relay fallback failed: %s", e, exc_info=True)
         return {"status": "failed", "via": "relay", "error": str(e), "attempts": 1}

@@ -1,14 +1,23 @@
 import jwt
 import os
+import secrets
+import warnings
 from datetime import datetime, timedelta
 from typing import Dict
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.argon2 import Argon2id
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY") or os.getenv("SC_JWT_SECRET")
+if not SECRET_KEY:
+    SECRET_KEY = secrets.token_hex(32)
+    warnings.warn(
+        "JWT_SECRET_KEY not set — using ephemeral random secret. Tokens won't survive restart!",
+        RuntimeWarning,
+        stacklevel=1,
+    )
 ALGORITHM = "HS256"
-TOKEN_EXPIRY_MINUTES = 30
+TOKEN_EXPIRY_HOURS = 24  # Match auth_backend.py
 
 def create_jwt_token(user_id: int, username: str, device_id: str) -> str:
     """Create JWT token with user claims"""
@@ -16,7 +25,7 @@ def create_jwt_token(user_id: int, username: str, device_id: str) -> str:
         "user_id": user_id,
         "username": username,
         "device_id": device_id,
-        "exp": datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRY_MINUTES),
+        "exp": datetime.utcnow() + timedelta(hours=TOKEN_EXPIRY_HOURS),
         "iat": datetime.utcnow(),
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)

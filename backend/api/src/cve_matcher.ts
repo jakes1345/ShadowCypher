@@ -75,56 +75,66 @@ function twoHoursAgoIso(): string {
 
 async function fetchRecentCves(env: Env): Promise<NvdCve[]> {
   const pubStartDate = twoHoursAgoIso();
-  const qs = new URLSearchParams({ pubStartDate, cvssV3Severity: "HIGH" }).toString();
-  const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?${qs}`;
+  // NVD cvssV3Severity is exact-match — "HIGH" does NOT include "CRITICAL".
+  // Fetch both severities and merge deduplicated results.
+  const severities = ["CRITICAL", "HIGH"] as const;
+  const allCves = new Map<string, NvdCve>();
 
-  let resp: Response;
-  try {
-    resp = await fetch(url, {
-      headers: { "User-Agent": "ShadowCypher/1.0 (security dashboard; contact: hello@shadowcypher.site)" },
-      cf: { cacheTtl: 3600, cacheEverything: true } as RequestInitCfProperties,
-    });
-  } catch {
-    return [];
-  }
+  await Promise.all(severities.map(async (severity) => {
+    const qs = new URLSearchParams({ pubStartDate, cvssV3Severity: severity }).toString();
+    const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?${qs}`;
 
-  if (!resp.ok) return [];
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        headers: { "User-Agent": "ShadowCypher/1.0 (security dashboard; contact: hello@shadowcypher.site)" },
+        cf: { cacheTtl: 3600, cacheEverything: true } as RequestInitCfProperties,
+      });
+    } catch {
+      return;
+    }
 
-  const data = (await resp.json()) as {
-    vulnerabilities?: Array<{
-      cve: {
-        id: string;
-        descriptions: Array<{ lang: string; value: string }>;
-        metrics?: {
-          cvssMetricV31?: Array<{ cvssData: { baseScore: number } }>;
-          cvssMetricV30?: Array<{ cvssData: { baseScore: number } }>;
-          cvssMetricV2?: Array<{ cvssData: { baseScore: number } }>;
+    if (!resp.ok) return;
+
+    const data = (await resp.json()) as {
+      vulnerabilities?: Array<{
+        cve: {
+          id: string;
+          descriptions: Array<{ lang: string; value: string }>;
+          metrics?: {
+            cvssMetricV31?: Array<{ cvssData: { baseScore: number } }>;
+            cvssMetricV30?: Array<{ cvssData: { baseScore: number } }>;
+            cvssMetricV2?: Array<{ cvssData: { baseScore: number } }>;
+          };
         };
-      };
-    }>;
-  };
-
-  return (data.vulnerabilities || []).map((v) => {
-    const cve = v.cve;
-    const desc = cve.descriptions.find((d) => d.lang === "en")?.value || "";
-    const score =
-      cve.metrics?.cvssMetricV31?.[0]?.cvssData.baseScore ??
-      cve.metrics?.cvssMetricV30?.[0]?.cvssData.baseScore ??
-      cve.metrics?.cvssMetricV2?.[0]?.cvssData.baseScore ??
-      null;
-    const severity: NvdCve["severity"] =
-      score === null ? "NONE" :
-      score >= 9.0   ? "CRITICAL" :
-      score >= 7.0   ? "HIGH" :
-      score >= 4.0   ? "MEDIUM" : "LOW";
-    return {
-      id: cve.id,
-      description: desc.length > 300 ? desc.slice(0, 297) + "..." : desc,
-      severity,
-      cvss: score,
-      url: `https://nvd.nist.gov/vuln/detail/${cve.id}`,
+      }>;
     };
-  });
+
+    for (const v of data.vulnerabilities || []) {
+      if (allCves.has(v.cve.id)) continue; // deduplicate
+      const cve = v.cve;
+      const desc = cve.descriptions.find((d) => d.lang === "en")?.value || "";
+      const score =
+        cve.metrics?.cvssMetricV31?.[0]?.cvssData.baseScore ??
+        cve.metrics?.cvssMetricV30?.[0]?.cvssData.baseScore ??
+        cve.metrics?.cvssMetricV2?.[0]?.cvssData.baseScore ??
+        null;
+      const sev: NvdCve["severity"] =
+        score === null ? "NONE" :
+        score >= 9.0   ? "CRITICAL" :
+        score >= 7.0   ? "HIGH" :
+        score >= 4.0   ? "MEDIUM" : "LOW";
+      allCves.set(cve.id, {
+        id: cve.id,
+        description: desc.length > 300 ? desc.slice(0, 297) + "..." : desc,
+        severity: sev,
+        cvss: score,
+        url: `https://nvd.nist.gov/vuln/detail/${cve.id}`,
+      });
+    }
+  }));
+
+  return [...allCves.values()];
 }
 
 function matchCveToDevice(cve: NvdCve, device: DeviceRow): string[] | null {
