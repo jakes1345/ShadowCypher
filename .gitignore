@@ -168,3 +168,5 @@ shadowos/test-disk.qcow2
 # Aider
 .aider*
 .aider.conf.yml
+node_modules/
+shadowcypher/ui/node_modules/
