@@ -30,7 +30,7 @@
     <link rel="canonical" href="https://shadowcypher.site/">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <!-- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <canvas id="bg-canvas"></canvas>
@@ -62,70 +62,6 @@
             <a onclick="signOut()" id="nav-signout" class="nav-tab" style="display:none;color:var(--accent-secondary);">Sign out</a>
         </div>
     </nav>
-
-    <!-- LOGIN -->
-    <div id="page-login" class="page">
-        <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
-            <div style="width:100%;max-width:400px;padding:40px;">
-                <div style="text-align:center;margin-bottom:40px;">
-                    <h1 style="font-size:2rem;color:#fff;margin:0;margin-bottom:8px;">ShadowCypher</h1>
-                    <p style="color:var(--text-secondary);margin:0;">Encrypted Chat</p>
-                </div>
-
-                <div id="login-form" style="display:block;">
-                    <div style="margin-bottom:20px;">
-                        <label style="display:block;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Email</label>
-                        <input id="login-email" type="email" placeholder="your@email.com" style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
-                    </div>
-                    <div style="margin-bottom:24px;">
-                        <label style="display:block;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Password</label>
-                        <input id="login-password" type="password" placeholder="••••••••" style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
-                    </div>
-                    <button onclick="authLogin()" style="width:100%;padding:12px;background:var(--accent-primary);color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.9rem;margin-bottom:16px;">Sign In</button>
-                    <div style="text-align:center;">
-                        <span style="color:var(--text-secondary);font-size:0.85rem;">Don't have an account? </span>
-                        <a onclick="navTo('register')" style="color:var(--accent-primary);cursor:pointer;text-decoration:none;font-weight:600;">Sign Up</a>
-                    </div>
-                </div>
-
-                <div id="login-error" style="display:none;margin-top:16px;padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#fca5a5;font-size:0.85rem;"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- REGISTER -->
-    <div id="page-register" class="page">
-        <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
-            <div style="width:100%;max-width:400px;padding:40px;">
-                <div style="text-align:center;margin-bottom:40px;">
-                    <h1 style="font-size:2rem;color:#fff;margin:0;margin-bottom:8px;">Create Account</h1>
-                    <p style="color:var(--text-secondary);margin:0;">Join ShadowCypher Chat</p>
-                </div>
-
-                <div id="register-form" style="display:block;">
-                    <div style="margin-bottom:20px;">
-                        <label style="display:block;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Username</label>
-                        <input id="register-username" type="text" placeholder="username" style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
-                    </div>
-                    <div style="margin-bottom:20px;">
-                        <label style="display:block;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Email</label>
-                        <input id="register-email" type="email" placeholder="your@email.com" style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
-                    </div>
-                    <div style="margin-bottom:24px;">
-                        <label style="display:block;font-size:0.9rem;color:var(--text-secondary);margin-bottom:8px;">Password</label>
-                        <input id="register-password" type="password" placeholder="••••••••" style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;">
-                    </div>
-                    <button onclick="authRegister()" style="width:100%;padding:12px;background:var(--accent-primary);color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.9rem;margin-bottom:16px;">Create Account</button>
-                    <div style="text-align:center;">
-                        <span style="color:var(--text-secondary);font-size:0.85rem;">Already have an account? </span>
-                        <a onclick="navTo('login')" style="color:var(--accent-primary);cursor:pointer;text-decoration:none;font-weight:600;">Sign In</a>
-                    </div>
-                </div>
-
-                <div id="register-error" style="display:none;margin-top:16px;padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#fca5a5;font-size:0.85rem;"></div>
-            </div>
-        </div>
-    </div>
 
     <!-- HOME -->
     <div id="page-home" class="page active">
@@ -1972,15 +1908,15 @@
             });
         }
 
-        // Supabase Initialization (Disabled for Phase 3 - using JWT auth instead)
+        // Supabase Initialization
         let supabaseClient = null;
-        // try {
-        //     const SUPABASE_URL = 'https://umruqwvyipylfslwwozj.supabase.co';
-        //     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcnVxd3Z5aXB5bGZzbHd3b3pqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyNDY1NzYsImV4cCI6MjA5MjgyMjU3Nn0.KSjgi54wIOZ_6LSp6Bs_plmtyeOKpul8FXwQhHqwtm4';
-        //     if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && typeof supabase !== 'undefined') {
-        //         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        //     }
-        // } catch (e) { console.error("Supabase Init Error:", e); }
+        try {
+            const SUPABASE_URL = 'https://umruqwvyipylfslwwozj.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtcnVxd3Z5aXB5bGZzbHd3b3pqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyNDY1NzYsImV4cCI6MjA5MjgyMjU3Nn0.KSjgi54wIOZ_6LSp6Bs_plmtyeOKpul8FXwQhHqwtm4';
+            if (typeof supabase !== 'undefined') {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) { console.error("Supabase Init Error:", e); }
 
         // Toast helper for auth + status messages
         function cliPrint(msg, color) {
@@ -3283,16 +3219,12 @@
             });
         }
 
-        // One-shot bootstrap — checks active session on page load (onAuthStateChange covers everything after)
+        // One-shot bootstrap — checks active Supabase session on page load
         async function checkSession() {
-            // Check JWT auth (Phase 3)
-            if (authToken && currentUser) {
-                // Update UI for authenticated user
-                try {
-                    if (document.getElementById('auth-banner')) {
-                        document.getElementById('auth-banner').remove();
-                    }
-                } catch (e) {}
+            if (!supabaseClient) return;
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                updateUIForUser(session.user);
             }
         }
 
@@ -3458,257 +3390,215 @@
             }
         });
 
-        // ─── AUTHENTICATION FUNCTIONS ──────────────────────────────────────────────
-        const AUTH_API = '/api/chat';
-        let authToken = localStorage.getItem('chat_token');
-        let currentUser = null;
+        // ─── CHAT FUNCTIONS ────────────────────────────────────────────────────────
+        // Auth: uses _sessionApiKey (set by Supabase login flow above).
+        // Encryption: AES-256-GCM, key derived via PBKDF2 from a single vault
+        // password entered once per session — stored in memory, never persisted.
 
-        async function authLogin() {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const errorDiv = document.getElementById('login-error');
+        let _vaultKey = null;      // CryptoKey in memory only
+        let _chatPolling = null;
+        let _presenceInterval = null;
+        let _currentRoom = null;
 
-            if (!email || !password) {
-                errorDiv.textContent = 'Email and password required';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            try {
-                const resp = await fetch(AUTH_API + '/v1/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-
-                if (!resp.ok) {
-                    errorDiv.textContent = 'Invalid credentials';
-                    errorDiv.style.display = 'block';
-                    return;
-                }
-
-                const data = await resp.json();
-                authToken = data.access_token;
-                currentUser = { id: data.user_id, username: data.username };
-                localStorage.setItem('chat_token', authToken);
-                localStorage.setItem('chat_user', JSON.stringify(currentUser));
-
-                // Navigate to chat
-                navTo('chat', document.getElementById('nav-chat'));
-            } catch (e) {
-                errorDiv.textContent = 'Login failed: ' + e.message;
-                errorDiv.style.display = 'block';
-            }
-        }
-
-        async function authRegister() {
-            const username = document.getElementById('register-username').value;
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const errorDiv = document.getElementById('register-error');
-
-            if (!username || !email || !password) {
-                errorDiv.textContent = 'All fields required';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            try {
-                const resp = await fetch(AUTH_API + '/v1/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
-                });
-
-                if (!resp.ok) {
-                    errorDiv.textContent = 'Registration failed (email or username taken)';
-                    errorDiv.style.display = 'block';
-                    return;
-                }
-
-                const data = await resp.json();
-                authToken = data.access_token;
-                currentUser = { id: data.user_id, username: data.username };
-                localStorage.setItem('chat_token', authToken);
-                localStorage.setItem('chat_user', JSON.stringify(currentUser));
-
-                // Navigate to chat
-                navTo('chat', document.getElementById('nav-chat'));
-            } catch (e) {
-                errorDiv.textContent = 'Registration failed: ' + e.message;
-                errorDiv.style.display = 'block';
-            }
-        }
-
-        function authLogout() {
-            authToken = null;
-            currentUser = null;
-            localStorage.removeItem('chat_token');
-            localStorage.removeItem('chat_user');
-            navTo('login', document.getElementById('nav-home'));
-        }
-
-        function ensureAuth() {
-            if (!authToken) {
-                navTo('login', document.getElementById('nav-home'));
+        function chatRequireAuth() {
+            if (!_sessionApiKey) {
+                navTo('account', document.getElementById('nav-account'));
+                cliPrint('Sign in to use encrypted chat.', 'var(--warning)');
                 return false;
             }
             return true;
         }
 
-        // Load auth state on page load
-        if (authToken) {
-            const userJson = localStorage.getItem('chat_user');
-            if (userJson) {
-                try {
-                    currentUser = JSON.parse(userJson);
-                } catch (e) {
-                    authLogout();
-                }
-            }
-        }
-
-        // ─── CHAT API FUNCTIONS ────────────────────────────────────────────────────
-        const CHAT_API = '/api/chat';
-        let currentRoom = null;
-        let chatPolling = null;
-        let presenceInterval = null;
-
-        async function chatAPI(endpoint, method = 'GET', body = null) {
-            if (!ensureAuth()) return null;
+        async function chatApi(path, method = 'GET', body = null) {
             const opts = {
                 method,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
+                    'Authorization': `Bearer ${_sessionApiKey}`
                 }
             };
             if (body) opts.body = JSON.stringify(body);
+            const resp = await fetch(`https://api.shadowcypher.site${path}`, opts);
+            if (resp.status === 401) {
+                cliPrint('Chat session expired — sign in again.', 'var(--warning)');
+                return null;
+            }
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.error || `HTTP ${resp.status}`);
+            }
+            return resp.json();
+        }
+
+        // ─── Vault unlock dialog ──────────────────────────────────────────────────
+
+        function chatShowVaultUnlock() {
+            document.getElementById('chat-vault-dialog').style.display = 'flex';
+            document.getElementById('chat-vault-password').value = '';
+            document.getElementById('chat-vault-error').style.display = 'none';
+            setTimeout(() => document.getElementById('chat-vault-password').focus(), 50);
+        }
+
+        function chatHideVaultUnlock() {
+            document.getElementById('chat-vault-dialog').style.display = 'none';
+        }
+
+        async function chatUnlockVault() {
+            const pw = document.getElementById('chat-vault-password').value;
+            const errEl = document.getElementById('chat-vault-error');
+            if (!pw) { errEl.textContent = 'Password required'; errEl.style.display = 'block'; return; }
+            const btn = document.getElementById('chat-vault-unlock-btn');
+            btn.disabled = true;
+            btn.textContent = 'DERIVING KEY…';
             try {
-                const resp = await fetch(CHAT_API + endpoint, opts);
-                if (resp.status === 401) {
-                    authLogout();
-                    return null;
-                }
-                if (!resp.ok) throw new Error(`${resp.status}: ${resp.statusText}`);
-                return await resp.json();
+                const enc = new TextEncoder();
+                const raw = await crypto.subtle.importKey('raw', enc.encode(pw), { name: 'PBKDF2' }, false, ['deriveBits']);
+                // Fixed app-wide salt so all users with the same room password can read each other's messages
+                const salt = enc.encode('shadowcypher-chat-v1');
+                const bits = await crypto.subtle.deriveBits(
+                    { name: 'PBKDF2', salt, hash: 'SHA-256', iterations: 150000 },
+                    raw, 256
+                );
+                _vaultKey = await crypto.subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+                chatHideVaultUnlock();
+                await chatLoadRooms();
             } catch (e) {
-                console.error('Chat API error:', e);
-                throw e;
+                errEl.textContent = 'Key derivation failed: ' + e.message;
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'UNLOCK';
             }
         }
 
-        async function chatLoadRooms() {
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && document.getElementById('chat-vault-dialog')?.style.display === 'flex') {
+                chatUnlockVault();
+            }
+        });
+
+        // ─── Encryption / Decryption ──────────────────────────────────────────────
+
+        async function chatEncrypt(plaintext) {
+            const nonce = crypto.getRandomValues(new Uint8Array(12));
+            const enc = new TextEncoder();
+            const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, _vaultKey, enc.encode(plaintext));
+            const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+            // Store nonce + ciphertext+tag together so we always have what we need to decrypt
+            return JSON.stringify({ v: 1, ct: b64(ct), nonce: b64(nonce) });
+        }
+
+        async function chatDecrypt(content) {
             try {
-                const data = await chatAPI('/v1/chat/rooms');
+                const { ct, nonce } = JSON.parse(content);
+                const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+                const plain = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: b64d(nonce) },
+                    _vaultKey,
+                    b64d(ct)
+                );
+                return new TextDecoder().decode(plain);
+            } catch {
+                return '[encrypted — wrong vault password or corrupted]';
+            }
+        }
+
+        function chatIsEncrypted(content) {
+            try { const o = JSON.parse(content); return o.v === 1 && !!o.ct; } catch { return false; }
+        }
+
+        // ─── Room loading + messaging ─────────────────────────────────────────────
+
+        async function chatLoadRooms() {
+            if (!chatRequireAuth()) return;
+            try {
+                const data = await chatApi('/v1/chat/rooms');
+                if (!data) return;
                 const roomsDiv = document.getElementById('chat-rooms');
                 roomsDiv.innerHTML = '';
-                if (!data || !data.rooms || !data.rooms.length) {
-                    roomsDiv.innerHTML = '<div style="padding:12px;font-size:0.75rem;color:var(--text-secondary);">No rooms available</div>';
+                if (!data.rooms?.length) {
+                    roomsDiv.innerHTML = '<div style="padding:12px;font-size:0.75rem;color:var(--text-secondary);">No rooms yet</div>';
                     return;
                 }
-                data.rooms.forEach(room => {
+                for (const room of data.rooms) {
                     const btn = document.createElement('button');
                     btn.style.cssText = 'width:100%;text-align:left;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:4px;margin-bottom:8px;cursor:pointer;font-size:0.85rem;';
                     btn.innerHTML = `<div style="font-weight:600;">${escapeHtml(room.display_name || room.name)}</div><div style="font-size:0.65rem;color:var(--text-secondary);margin-top:2px;">#${escapeHtml(room.name)}</div>`;
                     btn.onclick = () => chatSelectRoom(room);
                     roomsDiv.appendChild(btn);
-                });
+                }
             } catch (e) {
-                console.error('Load rooms error:', e);
+                console.error('chatLoadRooms:', e);
                 document.getElementById('chat-rooms').innerHTML = '<div style="padding:12px;font-size:0.75rem;color:var(--accent-secondary);">Error loading rooms</div>';
             }
         }
 
         async function chatSelectRoom(room) {
-            currentRoom = room;
-            clearInterval(chatPolling);
-            clearInterval(presenceInterval);
+            _currentRoom = room;
+            clearInterval(_chatPolling);
+            clearInterval(_presenceInterval);
             document.getElementById('chat-room-name').innerText = room.display_name || room.name;
             document.getElementById('chat-room-desc').innerText = `#${room.name}`;
-            document.getElementById('chat-messages').innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:20px;">Loading messages...</div>';
+            document.getElementById('chat-messages').innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:20px;">Loading…</div>';
             document.getElementById('chat-input').disabled = false;
             document.getElementById('chat-send').disabled = false;
             await chatLoadMessages();
             await chatUpdatePresence();
-            chatPolling = setInterval(() => chatLoadMessages(), 3000);
-            presenceInterval = setInterval(() => chatUpdatePresence(), 20000);
+            _chatPolling = setInterval(chatLoadMessages, 3000);
+            _presenceInterval = setInterval(chatUpdatePresence, 20000);
         }
 
         async function chatLoadMessages() {
-            if (!currentRoom) return;
+            if (!_currentRoom) return;
             try {
-                const data = await chatAPI(`/v1/chat/messages?room=${encodeURIComponent(currentRoom.name)}&limit=50`);
+                const data = await chatApi(`/v1/chat/messages?room=${encodeURIComponent(_currentRoom.name)}&limit=50`);
+                if (!data) return;
                 const msgDiv = document.getElementById('chat-messages');
                 msgDiv.innerHTML = '';
-                if (!data.messages || !data.messages.length) {
+                if (!data.messages?.length) {
                     msgDiv.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:20px;">No messages yet. Start the conversation!</div>';
                     return;
                 }
                 for (const msg of data.messages) {
+                    let content = msg.content;
+                    if (chatIsEncrypted(content)) {
+                        content = _vaultKey
+                            ? await chatDecrypt(content)
+                            : '[vault locked — click the lock icon to unlock]';
+                    }
+                    const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const el = document.createElement('div');
                     el.style.cssText = 'display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(180,74,255,0.1);';
-                    const time = new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-
-                    // Decrypt if encrypted
-                    let content = msg.content;
-                    if (msg.ciphertext && msg.nonce && msg.tag) {
-                        const password = prompt('Enter vault password to decrypt:');
-                        if (password) {
-                            content = await decryptMessage({
-                                ciphertext: msg.ciphertext,
-                                nonce: msg.nonce,
-                                tag: msg.tag
-                            }, password);
-                        } else {
-                            content = '[Encrypted message - password required]';
-                        }
-                    }
-
                     el.innerHTML = `
                         <div style="flex-shrink:0;">
-                            <div style="width:28px;height:28px;background:var(--accent-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#000;">${escapeHtml((msg.username || msg.nick)[0].toUpperCase())}</div>
+                            <div style="width:28px;height:28px;background:var(--accent-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#000;">${escapeHtml((msg.nick || '?')[0].toUpperCase())}</div>
                         </div>
                         <div style="flex:1;min-width:0;">
                             <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:4px;">
-                                <div style="font-weight:600;color:#fff;font-size:0.85rem;">${escapeHtml(msg.username || msg.nick)}</div>
+                                <div style="font-weight:600;color:#fff;font-size:0.85rem;">${escapeHtml(msg.nick || 'unknown')}</div>
                                 <div style="font-size:0.65rem;color:var(--text-secondary);">${time}</div>
                             </div>
                             <div style="color:var(--text-secondary);word-wrap:break-word;white-space:pre-wrap;">${escapeHtml(content)}</div>
-                        </div>
-                    `;
+                        </div>`;
                     msgDiv.appendChild(el);
                 }
                 msgDiv.scrollTop = msgDiv.scrollHeight;
             } catch (e) {
-                console.error('Load messages error:', e);
+                console.error('chatLoadMessages:', e);
             }
         }
 
         async function chatSendMessage() {
-            if (!currentRoom) return;
+            if (!_currentRoom || !chatRequireAuth()) return;
             const input = document.getElementById('chat-input');
-            const content = input.value.trim();
-            if (!content) return;
+            const text = input.value.trim();
+            if (!text) return;
             const btn = document.getElementById('chat-send');
             btn.disabled = true;
-            btn.innerText = 'ENCRYPTING...';
+            btn.innerText = _vaultKey ? 'ENCRYPTING…' : 'SENDING…';
             try {
-                // Prompt for vault password
-                const password = prompt('Enter vault password to encrypt message:');
-                if (!password) {
-                    btn.innerText = 'SEND';
-                    return;
-                }
-
-                // Encrypt message
-                const encrypted = await encryptMessage(content, password);
-
-                // Send encrypted
-                await chatAPI('/v1/chat/send', 'POST', {
-                    room: currentRoom.name,
-                    ...encrypted
-                });
+                const content = _vaultKey ? await chatEncrypt(text) : text;
+                await chatApi('/v1/chat/send', 'POST', { room: _currentRoom.name, content });
                 input.value = '';
                 await chatLoadMessages();
             } catch (e) {
@@ -3720,113 +3610,66 @@
             }
         }
 
+        // Send on Enter key
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('chat-input')?.addEventListener('keydown', e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatSendMessage(); }
+            });
+        });
+
         async function chatUpdatePresence() {
-            if (!currentRoom) return;
+            if (!_currentRoom) return;
             try {
-                await chatAPI('/v1/chat/presence', 'POST', { room: currentRoom.name });
-                const data = await chatAPI(`/v1/chat/online?room=${encodeURIComponent(currentRoom.name)}`);
-                document.getElementById('chat-online-count').innerText = (data.online || []).length;
-            } catch (e) {
-                console.error('Presence error:', e);
-            }
+                await chatApi('/v1/chat/presence', 'POST', { room: _currentRoom.name });
+                const data = await chatApi(`/v1/chat/online?room=${encodeURIComponent(_currentRoom.name)}`);
+                if (data) document.getElementById('chat-online-count').innerText = (data.online || []).length;
+            } catch {}
         }
 
         async function chatCreateRoom() {
-            const name = prompt('Enter room name (lowercase, no spaces):');
+            const name = prompt('Enter room name (lowercase, hyphens ok):');
             if (!name) return;
-            if (!/^[a-z0-9-]+$/.test(name)) {
-                alert('Room name must be lowercase letters, numbers, and hyphens only');
-                return;
-            }
-            alert('Room creation requires backend configuration. Contact admin.');
+            if (!/^[a-z0-9-]+$/.test(name)) { alert('Lowercase letters, numbers, and hyphens only'); return; }
+            alert('Room creation requires admin setup. Contact an admin to add the room to the database.');
         }
 
-        // ─── ENCRYPTION FUNCTIONS ──────────────────────────────────────────────────
-        async function deriveKey(password, salt) {
-            // PBKDF2 key derivation (100k iterations)
-            const enc = new TextEncoder();
-            const keyMaterial = await crypto.subtle.importKey(
-                'raw',
-                enc.encode(password),
-                { name: 'PBKDF2' },
-                false,
-                ['deriveBits']
-            );
-            const bits = await crypto.subtle.deriveBits(
-                { name: 'PBKDF2', salt, hash: 'SHA-256', iterations: 100000 },
-                keyMaterial,
-                256
-            );
-            return crypto.subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-        }
+        // ─── Chat page nav init ───────────────────────────────────────────────────
 
-        async function encryptMessage(plaintext, password) {
-            // Generate random salt and nonce
-            const salt = crypto.getRandomValues(new Uint8Array(16));
-            const nonce = crypto.getRandomValues(new Uint8Array(12));
-
-            // Derive key from password
-            const key = await deriveKey(password, salt);
-
-            // Encrypt
-            const enc = new TextEncoder();
-            const ciphertext = await crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv: nonce },
-                key,
-                enc.encode(plaintext)
-            );
-
-            // Extract tag (last 16 bytes)
-            const tag = ciphertext.slice(-16);
-            const data = ciphertext.slice(0, -16);
-
-            return {
-                ciphertext: btoa(String.fromCharCode(...new Uint8Array(data))),
-                nonce: btoa(String.fromCharCode(...nonce)),
-                tag: btoa(String.fromCharCode(...tag))
-            };
-        }
-
-        async function decryptMessage(encrypted, password) {
-            try {
-                // Decode from base64
-                const ciphertext = Uint8Array.from(atob(encrypted.ciphertext), c => c.charCodeAt(0));
-                const nonce = Uint8Array.from(atob(encrypted.nonce), c => c.charCodeAt(0));
-                const tag = Uint8Array.from(atob(encrypted.tag), c => c.charCodeAt(0));
-
-                // Note: In production, salt would be stored with the message
-                // For now, use a fixed salt (NOT SECURE - for demo only)
-                const salt = new Uint8Array(16);
-
-                // Derive key
-                const key = await deriveKey(password, salt);
-
-                // Combine ciphertext + tag for decryption
-                const data = new Uint8Array([...ciphertext, ...tag]);
-
-                // Decrypt
-                const plaintext = await crypto.subtle.decrypt(
-                    { name: 'AES-GCM', iv: nonce },
-                    key,
-                    data
-                );
-
-                return new TextDecoder().decode(plaintext);
-            } catch (e) {
-                console.error('Decryption failed:', e);
-                return '[Decryption failed]';
-            }
-        }
-
-        // Load rooms when chat page becomes visible
-        const origNavTo = navTo;
+        const _origNavTo = navTo;
         window.navTo = async function(pageId, el) {
-            await origNavTo.call(this, pageId, el);
+            await _origNavTo.call(this, pageId, el);
             if (pageId === 'chat') {
-                chatLoadRooms();
+                if (!_sessionApiKey) {
+                    cliPrint('Sign in to use encrypted chat.', 'var(--warning)');
+                    await _origNavTo.call(this, 'account', document.getElementById('nav-account'));
+                    return;
+                }
+                if (!_vaultKey) {
+                    chatShowVaultUnlock();
+                } else {
+                    chatLoadRooms();
+                }
             }
         };
     </script>
+
+    <!-- Vault unlock dialog (chat) -->
+    <div id="chat-vault-dialog" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:10000;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#0d0d0d;border:1px solid rgba(180,74,255,0.35);border-radius:8px;width:100%;max-width:380px;padding:32px;position:relative;">
+            <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:20px;">// VAULT_UNLOCK</div>
+            <h2 style="font-size:1.1rem;color:#fff;margin:0 0 8px 0;">Chat encryption</h2>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 24px 0;line-height:1.6;">Enter the shared room password to encrypt and decrypt messages. Everyone in the room uses the same password.</p>
+            <input id="chat-vault-password" type="password" placeholder="Room password"
+                   style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;margin-bottom:8px;">
+            <div id="chat-vault-error" style="display:none;font-size:0.78rem;color:#fca5a5;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button id="chat-vault-unlock-btn" onclick="chatUnlockVault()"
+                        style="flex:1;padding:12px;background:var(--accent-primary);color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-family:var(--font-mono);font-size:0.75rem;letter-spacing:1px;">UNLOCK</button>
+                <button onclick="chatHideVaultUnlock();chatLoadRooms();"
+                        style="padding:12px 16px;background:transparent;border:1px solid #333;color:#888;border-radius:6px;cursor:pointer;font-size:0.8rem;">Skip (no encryption)</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Device detail modal -->
     <div id="device-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:20px;">
