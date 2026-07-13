@@ -5,6 +5,8 @@ All endpoints require Bearer token auth (from operator config).
 
 from __future__ import annotations
 
+import os
+import secrets
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -15,6 +17,29 @@ import uvicorn
 from shadowcypher.core.logger import logger
 from shadowcypher.core.config import config
 from shadowcypher.api.websocket_server import subscribe_to_mission
+
+
+def _get_or_create_api_token() -> str:
+    """Return the Guardian API bearer token.
+
+    Resolution order:
+      1. config identity.handle (set by user via settings UI)
+      2. ~/.config/shadowcypher/guardian_api.token (written by settings UI on first save)
+      3. "operator" — default for fresh installs; change via Settings → Identity → Handle
+    """
+    configured = config.get("identity", "handle")
+    if configured:
+        return configured
+    xdg = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
+    token_path = os.path.join(xdg, "shadowcypher", "guardian_api.token")
+    if os.path.exists(token_path):
+        try:
+            tok = open(token_path).read().strip()
+            if tok:
+                return tok
+        except Exception:
+            pass
+    return "operator"
 
 
 # ── Data Models ──────────────────────────────────────────────────────────
@@ -246,8 +271,7 @@ def verify_token(authorization: str = Header(None)) -> str:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Authorization header format")
 
 	token = parts[1]
-	# Get the operator handle from config; fall back to "operator" when unconfigured (empty)
-	expected_token = config.get("identity", "handle") or "operator"
+	expected_token = _get_or_create_api_token()
 
 	if token != expected_token:
 		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API token")
@@ -260,10 +284,14 @@ def verify_token(authorization: str = Header(None)) -> str:
 @app.get("/v1/me", response_model=Me)
 async def get_me(token: str = Depends(verify_token)):
 	"""Get operator profile."""
+	handle = config.get("identity", "handle") or "operator"
+	role = config.get("identity", "role") or "operator"
+	email = f"{handle}@shadowcypher.local"
+	plan = "personal" if role == "operator" else role
 	return Me(
-		email="operator@shadowcypher.site",
-		plan="personal",
-		effective_plan="personal",
+		email=email,
+		plan=plan,
+		effective_plan=plan,
 		in_trial=False,
 		trial_days_remaining=None,
 	)

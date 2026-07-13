@@ -23,7 +23,8 @@
 
 set -uo pipefail
 
-ISO="${1:-$(ls -t /home/jack/ShadowCypher/shadowos/out/shadowos-*.iso 2>/dev/null | head -1)}"
+HERE_REDTEAM="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ISO="${1:-$(ls -t "${HERE_REDTEAM}/out/shadowos-"*.iso 2>/dev/null | head -1)}"
 [[ -f "$ISO" ]] || { echo "ISO not found: $ISO" >&2; exit 1; }
 
 HERE="$(cd "$(dirname "$0")" && pwd)"

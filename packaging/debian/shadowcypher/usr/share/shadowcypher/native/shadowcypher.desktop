@@ -2,8 +2,8 @@
 [Desktop Entry]
 Name=ShadowCypher
 Comment=Network Admin Panel
-Exec=bash -c "cd /home/jack/ShadowCypher && python3 desktop/main.py"
-Path=/home/jack/ShadowCypher
+Exec=bash -c 'REPO="${SHADOWCYPHER_ROOT:-/opt/shadowcypher}"; cd "$REPO" && python3 desktop/main.py'
+Path=/opt/shadowcypher
 Icon=network-workgroup
 Terminal=false
 Type=Application

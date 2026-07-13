@@ -7,6 +7,10 @@
 
 set -euo pipefail
 
+# Resolve repo root from script location — works regardless of install path
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
 # --- Typography & Colors ---
 CYAN='\033[1;36m'
 GREEN='\033[1;32m'
@@ -28,7 +32,7 @@ echo -e "=======================================================================
 
 # 1. Wipe Application Logs
 log_info "Sanitizing application log directory..."
-rm -rf /home/jack/ShadowCypher/logs/*.log 2>/dev/null || true
+rm -rf "${REPO_DIR}/logs/"*.log 2>/dev/null || true
 rm -rf /tmp/shadowcypher_* 2>/dev/null || true
 log_succ "Application logs cleared."
 
@@ -39,7 +43,7 @@ log_succ "Kernel caches flushed."
 
 # 3. Application State Cleared
 log_info "Clearing local peer connectivity state..."
-rm -f /home/jack/ShadowCypher/shadowcypher/native/relay/peers.json 2>/dev/null || true
+rm -f "${REPO_DIR}/shadowcypher/native/relay/peers.json" 2>/dev/null || true
 log_succ "Peer states cleared."
 
 # 4. Clear Shell History
