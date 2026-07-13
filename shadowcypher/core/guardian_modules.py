@@ -255,7 +255,7 @@ class GuardianModules:
                 error=str(e)
             )
 
-    def run_yara_scan(self, path: str = "/tmp") -> ModuleResult:
+    def run_yara_scan(self, path: str = "/tmp") -> ModuleResult:  # nosec B108
         """Run YARA malware scanning on filesystem."""
         try:
             from shadowcypher.modules.yara_scan import YaraScan

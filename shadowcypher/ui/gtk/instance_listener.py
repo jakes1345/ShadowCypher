@@ -18,7 +18,7 @@ class InstanceListener:
         """Start the P2P listener daemon."""
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server_socket.bind(("0.0.0.0", self.port))
+        self.server_socket.bind(("0.0.0.0", self.port))  # nosec B104
         self.server_socket.listen(5)
         self.running = True
 

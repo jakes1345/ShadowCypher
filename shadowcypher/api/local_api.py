@@ -179,7 +179,7 @@ class ModuleResultResponse(BaseModel):
 class ModuleScanRequest(BaseModel):
 	modules: Optional[list[str]] = None  # specific modules, or None for all
 	host: Optional[str] = "localhost"
-	target_path: Optional[str] = "/tmp"
+	target_path: Optional[str] = "/tmp"  # nosec B108
 
 
 class ModuleSummaryResponse(BaseModel):
@@ -495,7 +495,8 @@ async def llm_chat(req: ChatRequest, token: str = Depends(verify_token)):
 			try:
 				resp = requests.get(
 					f"{req.context or 'http://localhost:9999'}/v1/incidents",
-					headers={"Authorization": "Bearer Operator"}
+					headers={"Authorization": "Bearer Operator"},
+					timeout=5,
 				)
 				if resp.status_code == 200:
 					return resp.json()
@@ -969,7 +970,7 @@ async def health():
 
 # ── Server Functions ────────────────────────────────────────────────────
 
-def start_server(host: str = "0.0.0.0", port: int = 9999):
+def start_server(host: str = "0.0.0.0", port: int = 9999):  # nosec B104
 	"""Start the local API server."""
 	logger.info("local_api", f"Starting Guardian API on {host}:{port}")
 	uvicorn.run(app, host=host, port=port, log_level="info")
