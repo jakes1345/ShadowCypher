@@ -19,3 +19,7 @@ huggingface-hub<1.0
 
 treequest>=0.3.2
 ulid-py>=1.1.0
+fastapi>=0.100.0
+sqlalchemy>=2.0.0
+uvicorn>=0.20.0
+httpx>=0.24.0
