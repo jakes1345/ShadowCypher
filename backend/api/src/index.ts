@@ -84,6 +84,15 @@ import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 import { sendWelcomeEmail, sendKeyRotatedEmail, sendRecoveryKitEmail } from "./emails";
+import {
+  storeInboundMail,
+  getInbox,
+  getMailCount,
+  getMail,
+  markRead,
+  deleteMail,
+  sendOutbound,
+} from "./mail";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -671,6 +680,10 @@ export default {
         "POST /v1/chat/send":                 sendMessage,
         "POST /v1/chat/presence":             updatePresence,
         "GET /v1/chat/online":                getOnlineUsers,
+        // Shadow Mail
+        "GET /v1/mail/inbox":                 getInbox,
+        "GET /v1/mail/count":                 getMailCount,
+        "POST /v1/mail/send":                 sendOutbound,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];
@@ -686,8 +699,12 @@ export default {
       const missionResult       = req.method === "POST" && /^\/v1\/missions\/[^/]+\/result$/.test(path);
       const missionGet          = req.method === "GET"  && /^\/v1\/missions\/[^/]+$/.test(path) && path !== "/v1/missions";
       const missionList         = req.method === "GET"  && path === "/v1/missions";
+      // Shadow Mail parameterized routes
+      const mailGet    = req.method === "GET"    && /^\/v1\/mail\/[^/]+$/.test(path) && path !== "/v1/mail/inbox" && path !== "/v1/mail/count";
+      const mailRead   = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/read$/.test(path);
+      const mailDelete = req.method === "DELETE" && /^\/v1\/mail\/[^/]+$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailDelete;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -715,6 +732,10 @@ export default {
         if (missionResult)       return reportMissionResult(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (missionGet)          return getMission(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (missionList)         return listMissions(req, env, { id: user.id, email: user.email }, cors);
+        // Shadow Mail
+        if (mailGet)    return getMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        if (mailRead)   return markRead(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        if (mailDelete) return deleteMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
       }
 
       return json({ error: "not_found", path }, { status: 404 }, cors);
@@ -727,5 +748,25 @@ export default {
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(runCveMatchingCron(env));
+  },
+
+  async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
+    // Read raw email body (cap at 10 MB to guard against oversized messages)
+    const MAX_BYTES = 10 * 1024 * 1024;
+    const reader = message.raw.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      total += value.byteLength;
+      if (total > MAX_BYTES) { message.setReject("Message too large"); return; }
+      chunks.push(value);
+    }
+    const merged = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
+    const rawBody = new TextDecoder("utf-8").decode(merged);
+    ctx.waitUntil(storeInboundMail(env, message, rawBody));
   },
 };
