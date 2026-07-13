@@ -286,7 +286,7 @@ async def get_me(token: str = Depends(verify_token)):
 	"""Get operator profile."""
 	handle = config.get("identity", "handle") or "operator"
 	role = config.get("identity", "role") or "operator"
-	email = f"{handle}@shadowcypher.local"
+	email = f"{handle}@shadowcypher.site"
 	plan = "personal" if role == "operator" else role
 	return Me(
 		email=email,
