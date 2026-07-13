@@ -178,7 +178,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.show_all()
 
         # Auto-start tour on first launch (after UI is visible and welcome is done)
-        from shadowcypher.ui.tour import tour_completed
         from shadowcypher.ui.welcome_dialog import needs_onboarding
         if not tour_completed():
             # Delay slightly so the window fully renders before tour slides up

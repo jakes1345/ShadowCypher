@@ -347,10 +347,10 @@ def cmd_hysteria():
     if not hysteria_transport.available:
         print(f"  {C['R']}[-]{C['N']} hysteria2 binary not found.")
         print(f"  {C['Y']}Install:{C['N']}")
-        print(f"    # Arch / ShadowOS:")
-        print(f"    yay -S hysteria")
-        print(f"    # Direct download (all platforms):")
-        print(f"    https://github.com/apernet/hysteria/releases")
+        print("    # Arch / ShadowOS:")
+        print("    yay -S hysteria")
+        print("    # Direct download (all platforms):")
+        print("    https://github.com/apernet/hysteria/releases")
         return
 
     print(f"  {C['G']}✓{C['N']} hysteria2 binary found")
@@ -359,7 +359,7 @@ def cmd_hysteria():
     profiles = hysteria_transport.list_profiles()
     if profiles:
         print(f"\n  Saved profiles: {', '.join(profiles)}")
-        name = input(f"  Load profile (or press Enter to configure new): ").strip()
+        name = input("  Load profile (or press Enter to configure new): ").strip()
         if name and name in profiles:
             d = hysteria_transport.load_profile(name)
             if d:
@@ -367,7 +367,7 @@ def cmd_hysteria():
                 _start_hysteria(hysteria_transport)
                 return
 
-    print(f"\n  Configure a new Hysteria2 server:")
+    print("\n  Configure a new Hysteria2 server:")
     server = input("  Server (host:port, e.g. vpn.example.com:443): ").strip()
     if not server:
         print(f"  {C['R']}Aborted.{C['N']}")
