@@ -271,7 +271,7 @@ def engage():
     print(f"\n  {C['C']}[Layer 9]{C['N']} Hysteria2 QUIC Transport (auto)")
     try:
         from shadowcypher.core.hysteria import ghost_engage_hook
-        ghost_engage_hook(on_output=lambda l: print(f"  {C['D']}{l.rstrip()}{C['N']}"))
+        ghost_engage_hook(on_output=lambda ln: print(f"  {C['D']}{ln.rstrip()}{C['N']}"))
         from shadowcypher.core.hysteria import hysteria_transport
         if hysteria_transport.connected:
             print(f"  {C['G']}●{C['N']} Hysteria2 QUIC tunnel active — SOCKS5:{_SOCKS5_PORT}")

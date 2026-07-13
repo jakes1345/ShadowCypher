@@ -499,7 +499,7 @@ async def llm_chat(req: ChatRequest, token: str = Depends(verify_token)):
 				)
 				if resp.status_code == 200:
 					return resp.json()
-			except:
+			except Exception:
 				pass
 			return []
 
@@ -954,9 +954,9 @@ async def websocket_mission_updates(mission_id: str, websocket: WebSocket):
 
 	Clients connect and receive updates as mission status changes.
 	Message types:
-	  - initial_state: Current mission status on connect
-	  - mission_update: Status change (mission status changed)
-	  - mission_status: Response to get_status query
+	- initial_state: Current mission status on connect
+	- mission_update: Status change (mission status changed)
+	- mission_status: Response to get_status query
 	"""
 	await subscribe_to_mission(mission_id, websocket)
 

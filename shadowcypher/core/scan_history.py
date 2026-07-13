@@ -24,7 +24,7 @@ def _resolve_db_path() -> str:
         project_root = config.project_root
         db_path = os.path.join(project_root, ".shadowcypher", "scan_history.db")
         candidates.append(db_path)
-    except:
+    except Exception:
         pass
 
     # XDG data home

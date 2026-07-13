@@ -205,7 +205,9 @@ class AutoScan:
         result = ScanResult(target=target)
         t0 = time.time()
 
-        emit = lambda msg: on_output(msg) if on_output else None
+        def emit(msg):
+            if on_output:
+                on_output(msg)
 
         # ShinkaEvolver: use evolved scan configuration
         _evolved_config: dict = {}
@@ -247,7 +249,7 @@ class AutoScan:
         has_web    = bool(web_ports) or bool(result.web_urls)
         has_db     = bool(db_ports)
 
-        emit(f"\n[AUTOSCAN] Decision matrix:\n")
+        emit("\n[AUTOSCAN] Decision matrix:\n")
         emit(f"  Web surface: {'YES (' + ', '.join(p.url(target) for p in web_ports[:3]) + ')' if has_web else 'none'}\n")
         emit(f"  DB exposure: {'YES (' + ', '.join(str(p.port) for p in db_ports) + ')' if has_db else 'none'}\n")
         emit(f"  Domain target: {'YES' if _is_domain(target) else 'no'}\n\n")
@@ -257,7 +259,7 @@ class AutoScan:
             emit("[AUTOSCAN] Phase 2/7 — Subdomain Enumeration\n")
             sub_out = self._collect(lambda cb: self._recon.subdomain_enum(target, on_output=cb))
             result.tool_outputs["subdomain_enum"] = sub_out
-            subs = [l.strip() for l in sub_out.splitlines() if l.strip() and not l.startswith("[")]
+            subs = [line.strip() for line in sub_out.splitlines() if line.strip() and not line.startswith("[")]
             result.subdomains = subs
             if subs:
                 emit(f"[AUTOSCAN] Discovered {len(subs)} subdomain(s)\n")
@@ -311,9 +313,9 @@ class AutoScan:
                 if confirm_fn is not None:
                     run_sqli = confirm_fn("sqlmap", sqli_target)
                     if not run_sqli:
-                        emit(f"[AUTOSCAN] Phase 5/7 — SQLi: operator declined\n")
+                        emit("[AUTOSCAN] Phase 5/7 — SQLi: operator declined\n")
                 else:
-                    emit(f"[AUTOSCAN] Phase 5/7 — SQLi: SKIPPED (no confirm_fn provided — call run() with confirm_fn to enable)\n")
+                    emit("[AUTOSCAN] Phase 5/7 — SQLi: SKIPPED (no confirm_fn provided — call run() with confirm_fn to enable)\n")
 
                 if run_sqli:
                     emit(f"[AUTOSCAN] Phase 5/7 — SQLmap → {sqli_target}\n")
@@ -346,7 +348,7 @@ class AutoScan:
 
         # ── Phase 7: Assess + report ──────────────────────────────────────────
         if "assess" in phases:
-            emit(f"\n[AUTOSCAN] Phase 7/7 — Security Assessment\n")
+            emit("\n[AUTOSCAN] Phase 7/7 — Security Assessment\n")
             try:
                 from shadowcypher.core.assessor import assessor
                 result.assessment = assessor.assess_findings(
@@ -514,11 +516,16 @@ class AutoScan:
             )
             # ATT&CK coverage
             tool_keys = []
-            if "nmap" in result.tool_outputs:        tool_keys.append("nmap_service")
-            if "nuclei" in result.tool_outputs:      tool_keys.append("nuclei")
-            if "nikto" in result.tool_outputs:       tool_keys.append("nikto")
-            if "sqlmap" in result.tool_outputs:      tool_keys.append("sqlmap")
-            if "cve" in result.tool_outputs:         tool_keys.append("cve_intel")
+            if "nmap" in result.tool_outputs:
+                tool_keys.append("nmap_service")
+            if "nuclei" in result.tool_outputs:
+                tool_keys.append("nuclei")
+            if "nikto" in result.tool_outputs:
+                tool_keys.append("nikto")
+            if "sqlmap" in result.tool_outputs:
+                tool_keys.append("sqlmap")
+            if "cve" in result.tool_outputs:
+                tool_keys.append("cve_intel")
             attack_coverage = mitre.coverage_section(tool_keys) if tool_keys else ""
 
             prompt = f"""You are writing a professional security assessment report.

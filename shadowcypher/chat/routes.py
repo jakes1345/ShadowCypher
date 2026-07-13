@@ -416,7 +416,7 @@ def send_p2p(
         contact = session.query(Contact).filter(
             Contact.user_id == current_user.id,
             Contact.contact_username == target_owner.username,
-            Contact.is_trusted == True
+            Contact.is_trusted.is_(True)
         ).first()
         if not contact:
             raise HTTPException(status_code=403, detail="Target instance owner is not a trusted contact")

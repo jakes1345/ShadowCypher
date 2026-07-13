@@ -361,7 +361,6 @@ class HysteriaTransport:
 
             with self._lock:
                 pool = list(self._pool)
-                dead = self._active_profile
 
             pool.sort(key=lambda p: (p.failures, -p.last_ok))
             reconnected = False

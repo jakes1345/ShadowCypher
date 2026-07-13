@@ -31,8 +31,6 @@ class GuardianService:
     def get_recent_devices(self, limit_hours: int = 24) -> List[Dict[str, Any]]:
         """Return devices from recent Guardian scans and database history."""
         devices = []
-        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=limit_hours)
-
         # Look for scan result files in findings directory
         findings_path = Path(self.findings_dir)
         if findings_path.exists():

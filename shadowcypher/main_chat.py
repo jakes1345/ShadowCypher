@@ -113,13 +113,13 @@ async def login(req: LoginRequest):
 @app.get("/v1/chat/rooms")
 async def list_rooms(authorization: str = Header(None)):
     """List available chat rooms."""
-    user = get_current_user(authorization)
+    get_current_user(authorization)
     return {"rooms": ROOMS}
 
 @app.get("/v1/chat/messages")
 async def get_messages(room: str = "global", limit: int = 50, before: str = None, authorization: str = Header(None)):
     """Get encrypted message history for a room."""
-    user = get_current_user(authorization)
+    get_current_user(authorization)
     room_msgs = [m for m in MESSAGES if m["room_id"] == room]
     if before:
         room_msgs = [m for m in room_msgs if m["created_at"] < before]
@@ -154,7 +154,7 @@ async def update_presence(body: dict, authorization: str = Header(None)):
 @app.get("/v1/chat/online")
 async def get_online_users(room: str = "global", authorization: str = Header(None)):
     """Get online users in a room."""
-    user = get_current_user(authorization)
+    get_current_user(authorization)
     online_users = [p for p in PRESENCE.values() if p.get("seen_at")]
     return {"room": room, "online": online_users}
 
@@ -164,7 +164,7 @@ async def create_group(body: dict, authorization: str = Header(None)):
     """Create an encrypted group chat."""
     user = get_current_user(authorization)
     group_id = secrets.token_hex(8)
-    group_key = create_group_key(group_id)
+    create_group_key(group_id)
 
     group = {
         "id": group_id,
@@ -180,7 +180,7 @@ async def create_group(body: dict, authorization: str = Header(None)):
 @app.post("/v1/chat/groups/{group_id}/rotate-key")
 async def rotate_group_key(group_id: str, authorization: str = Header(None)):
     """Rotate encryption key when member is removed."""
-    user = get_current_user(authorization)
+    get_current_user(authorization)
     rotate_and_store_group_key(group_id)
     return {"ok": True, "message": "Key rotated"}
 

@@ -146,7 +146,6 @@ def cleanup_idle_connections():
     """Periodically close idle P2P connections."""
     while True:
         time.sleep(60)  # Check every minute
-        current_time = int(time.time())
         with connection_lock:
             to_remove = []
             for key, sock in p2p_connections.items():

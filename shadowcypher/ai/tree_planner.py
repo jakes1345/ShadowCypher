@@ -214,9 +214,6 @@ class AttackChainPlanner:
                 )
                 return new_state, score
 
-            # Build generate_fn mapping: one function per action
-            generate_fns = {action: lambda s, a=action: _generate(a, s) for action in available}
-
             # Run tree search
             state = algo.init_tree()
             for step in range(self.budget):
