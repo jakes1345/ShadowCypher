@@ -80,8 +80,8 @@ def test_send_group_message_by_member(setup_users_and_group):
     assert data["sender_id"] == setup["member_id"]
     assert data["encrypted_message"] == encrypted_msg
     assert data["nonce"] == nonce
-    assert data["timestamp"] > 0
-    assert data["group_key_version"] == 1
+    assert data["created_at"] > 0
+    assert data["key_version"] == 1
 
 
 def test_send_group_message_by_creator(setup_users_and_group):
@@ -243,11 +243,11 @@ def test_group_messages_preserve_group_key_version(setup_users_and_group):
         json={"encrypted_message": encrypted_msg, "nonce": nonce},
         headers=setup["member_headers"]
     )
-    assert response.json()["group_key_version"] == 1
+    assert response.json()["key_version"] == 1
 
     # Fetch message
     get_response = client.get(
         f"/chat/groups/{setup['group_id']}/messages",
         headers=setup["member_headers"]
     )
-    assert get_response.json()[0]["group_key_version"] == 1
+    assert get_response.json()[0]["key_version"] == 1

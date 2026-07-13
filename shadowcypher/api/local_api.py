@@ -246,8 +246,8 @@ def verify_token(authorization: str = Header(None)) -> str:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Authorization header format")
 
 	token = parts[1]
-	# Get the operator handle from config
-	expected_token = config.get("identity", "handle", default="operator")
+	# Get the operator handle from config; fall back to "operator" when unconfigured (empty)
+	expected_token = config.get("identity", "handle") or "operator"
 
 	if token != expected_token:
 		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API token")
