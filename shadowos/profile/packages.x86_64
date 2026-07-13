@@ -398,12 +398,12 @@ krb5
 openldap
 
 # Encryption & Hardware Security
-cryptsetup
+# (dedup) cryptsetup
 tpm2-tools
 tpm2-abrmd
 tpm2-tss
 tpm2-pkcs11
-efibootmgr
+# (dedup) efibootmgr
 shim-signed
 
 # SELinux & Mandatory Access Control
@@ -417,7 +417,7 @@ libgcrypt
 libsodium
 
 # Audit & Compliance
-audit
+# (dedup) audit
 systemd-journal-remote
 aide
 

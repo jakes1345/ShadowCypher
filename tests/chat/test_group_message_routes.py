@@ -35,20 +35,13 @@ def setup_users_and_group():
     non_member_token = non_member_response.json()["token"]
     non_member_headers = {"Authorization": f"Bearer {non_member_token}"}
 
-    # Create group
+    # Create group (creator is auto-added as member on creation)
     group_response = client.post(
         "/chat/groups",
         json={"name": "Message Test Group"},
         headers=creator_headers
     )
     group_id = group_response.json()["id"]
-
-    # Add creator as member (creator should be in their own group)
-    client.post(
-        f"/chat/groups/{group_id}/members",
-        json={"user_id": creator_id},
-        headers=creator_headers
-    )
 
     # Add member to group
     client.post(

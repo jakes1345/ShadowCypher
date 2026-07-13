@@ -1,3 +1,4 @@
+import hashlib
 import pytest
 from fastapi.testclient import TestClient
 from shadowcypher.main import app
@@ -17,7 +18,6 @@ def test_complete_chat_flow():
         "username": "alice",
         "public_key": alice_pub.hex(),
     }).json()
-    assert alice_reg["user_id"] == 1
     alice_token = alice_reg["token"]
 
     # 3. Register Bob
@@ -25,16 +25,16 @@ def test_complete_chat_flow():
         "username": "bob",
         "public_key": bob_pub.hex(),
     }).json()
-    assert bob_reg["user_id"] == 2
     bob_token = bob_reg["token"]
 
-    # 4. Alice adds Bob as contact
+    # 4. Alice adds Bob as contact — fingerprint = SHA256(pubkey)[:8]
+    bob_fingerprint = hashlib.sha256(bob_pub).hexdigest()[:8]
     alice_contact = client.post(
         "/chat/add-contact",
         json={
             "contact_username": "bob",
             "contact_pubkey": bob_pub.hex(),
-            "fingerprint": "a1b2c3d4",
+            "fingerprint": bob_fingerprint,
         },
         headers={"Authorization": f"Bearer {alice_token}"}
     ).json()

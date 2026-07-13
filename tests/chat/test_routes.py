@@ -15,15 +15,17 @@ def test_register_endpoint(client):
 
 def test_login_endpoint(client):
     """POST /chat/login validates user and returns token"""
-    # First register
+    # First register with a password
     client.post("/chat/register", json={
         "username": "bob",
         "public_key": "11"*32,
+        "password": "s3cr3tPass!",
     })
 
-    # Then login
+    # Then login with the same password
     response = client.post("/chat/login", json={
         "username": "bob",
+        "password": "s3cr3tPass!",
         "device_id": "desktop-001",
     })
 
@@ -33,6 +35,8 @@ def test_login_endpoint(client):
 
 def test_add_contact_endpoint(client):
     """POST /chat/add-contact adds contact to user"""
+    import hashlib
+
     # Register two users
     alice = client.post("/chat/register", json={
         "username": "alice",
@@ -44,13 +48,17 @@ def test_add_contact_endpoint(client):
         "public_key": "bb"*32,
     }).json()
 
+    # Compute the correct fingerprint: SHA256(pubkey_bytes)[:8]
+    bob_pubkey_bytes = bytes.fromhex("bb"*32)
+    bob_fingerprint = hashlib.sha256(bob_pubkey_bytes).hexdigest()[:8]
+
     # Alice adds Bob as contact
     response = client.post(
         "/chat/add-contact",
         json={
             "contact_username": "bob",
             "contact_pubkey": "bb"*32,
-            "fingerprint": "b1b2b3b4",
+            "fingerprint": bob_fingerprint,
         },
         headers={"Authorization": f"Bearer {alice['token']}"}
     )
