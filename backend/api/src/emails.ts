@@ -172,3 +172,44 @@ export async function sendKeyRotatedEmail(
     baseTemplate("API key rotated.", body, "https://shadowcypher.site/?nav=account", "VIEW DASHBOARD")
   );
 }
+
+// ─── Recovery kit (sent to disposal email, address discarded after) ──────────
+
+export async function sendRecoveryKitEmail(
+  env: Env,
+  disposalEmail: string,
+  handle: string,
+  codes: string[]
+): Promise<boolean> {
+  const safeHandle = escapeHtml(handle);
+  const codeRows = codes.map((c, i) =>
+    `<div style="display:flex;align-items:center;gap:12px;background:#0e0e1e;padding:10px 14px;margin-bottom:6px;">
+       <span style="color:#555;font-size:11px;width:20px;">${i + 1}</span>
+       <code style="font-family:monospace;letter-spacing:3px;color:#fff;font-size:13px;">${escapeHtml(c)}</code>
+     </div>`
+  ).join('');
+
+  const body = `
+    <p style="color:${TEXT};font-size:15px;line-height:1.7;margin:0 0 16px;">
+      Hey <strong>${safeHandle}</strong> — here are your ShadowCypher recovery codes.
+    </p>
+    <p style="color:${TEXT};font-size:14px;line-height:1.7;margin:0 0 20px;">
+      Each code works once. Store them somewhere safe — a password manager, printed paper, anything offline.
+      We'll never send these again and we've already forgotten this email address.
+    </p>
+    ${codeRows}
+    <p style="color:#ff3b6b;font-size:13px;font-weight:700;margin:20px 0 4px;">
+      Don't share these with anyone.
+    </p>
+    <p style="color:${MUTED};font-size:12px;line-height:1.6;margin:0;">
+      This is a one-time delivery. This email address has been discarded from our systems.
+      Your ShadowCypher account has no email on file — your handle and password are your identity.
+    </p>`;
+
+  return send(
+    env,
+    disposalEmail,
+    `@${handle} — your ShadowCypher recovery kit`,
+    baseTemplate("Recovery kit.", body, "https://shadowcypher.site", "OPEN SHADOWCYPHER")
+  );
+}

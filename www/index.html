@@ -1393,31 +1393,35 @@
                 <div id="auth-login">
                     <h2 style="font-size: 2rem; margin-bottom: 30px;">Sign in</h2>
                     <div style="margin-bottom: 20px;">
-                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Email</label>
-                        <input type="text" class="cli-input" placeholder="you@company.com" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Handle</label>
+                        <input type="text" id="login-handle" class="cli-input" placeholder="@wraith" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;" autocomplete="username">
                     </div>
                     <div style="margin-bottom: 30px;">
                         <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Password</label>
-                        <input type="password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                        <input type="password" id="login-password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;" autocomplete="current-password">
                     </div>
                     <button onclick="handleAuth('login')" class="btn-primary" style="width: 100%;">Sign in</button>
                     <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
                         New here? <a onclick="toggleAuth('signup')" style="color: var(--accent-primary); cursor: pointer;">Create account</a>
                         &nbsp;·&nbsp;
-                        <a onclick="toggleAuth('forgot')" style="color: var(--accent-primary); cursor: pointer;">Forgot password?</a>
+                        <a onclick="toggleAuth('forgot')" style="color: var(--accent-primary); cursor: pointer;">Use recovery code</a>
                     </p>
                 </div>
 
                 <div id="auth-forgot" style="display: none;">
-                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Reset password</h2>
+                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Account recovery</h2>
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">
-                        Enter your email. We'll send you a link to set a new password.
+                        Enter your handle and one of your recovery codes. You'll be signed in and can set a new password.
                     </p>
-                    <div style="margin-bottom: 30px;">
-                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Email</label>
-                        <input type="email" id="forgot-email" class="cli-input" placeholder="you@company.com" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                    <div style="margin-bottom: 20px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Handle</label>
+                        <input type="text" id="forgot-handle" class="cli-input" placeholder="@wraith" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
                     </div>
-                    <button onclick="handleForgotPassword()" class="btn-primary" style="width: 100%;">Send reset link</button>
+                    <div style="margin-bottom: 30px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Recovery code</label>
+                        <input type="text" id="forgot-code" class="cli-input" placeholder="xx-xxxx-xx" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000; font-family: var(--font-mono); letter-spacing: 2px;">
+                    </div>
+                    <button onclick="handleRecovery()" class="btn-primary" style="width: 100%;">Recover account</button>
                     <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
                         <a onclick="toggleAuth('login')" style="color: var(--accent-primary); cursor: pointer;">Back to sign in</a>
                     </p>
@@ -1437,23 +1441,45 @@
                 </div>
 
                 <div id="auth-signup" style="display: none;">
-                    <h2 style="font-size: 2rem; margin-bottom: 30px;">Create your account</h2>
+                    <h2 style="font-size: 2rem; margin-bottom: 8px;">Create your account</h2>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 28px;">No email required. Your handle is your identity.</p>
                     <div style="margin-bottom: 20px;">
-                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Display name</label>
-                        <input type="text" class="cli-input" placeholder="Jane Doe" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 6px;">Handle</label>
+                        <p style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px;">This becomes your address: <span id="handle-preview" style="color:var(--accent-primary);">handle</span>@shadowcypher.site</p>
+                        <input type="text" id="signup-handle" class="cli-input" placeholder="wraith" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;" autocomplete="username" oninput="document.getElementById('handle-preview').textContent=this.value||'handle'">
                     </div>
                     <div style="margin-bottom: 20px;">
-                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Email</label>
-                        <input type="email" class="cli-input" placeholder="you@company.com" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Password</label>
+                        <input type="password" id="signup-password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;" autocomplete="new-password">
                     </div>
                     <div style="margin-bottom: 30px;">
-                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Password</label>
-                        <input type="password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 6px;">Recovery email <span style="color:var(--text-secondary); font-weight:400;">(optional — disposable ok)</span></label>
+                        <p style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px;">We'll send your recovery codes here once, then forget this address.</p>
+                        <input type="email" id="signup-disposal-email" class="cli-input" placeholder="throwaway@proton.me" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;" autocomplete="off">
                     </div>
                     <button onclick="handleAuth('signup')" class="btn-primary" style="width: 100%;">Create account</button>
                     <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: var(--text-secondary);">
                         Already have an account? <a onclick="toggleAuth('login')" style="color: var(--accent-primary); cursor: pointer;">Sign in</a>
                     </p>
+                </div>
+
+                <!-- Recovery kit modal — shown once at signup -->
+                <div id="recovery-kit-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
+                    <div style="background:#0a0a14; border:1px solid var(--accent-primary); padding:40px; max-width:520px; width:90%; position:relative;">
+                        <div class="mono" style="font-size:0.65rem; letter-spacing:3px; color:var(--accent-primary); margin-bottom:16px;">RECOVERY KIT</div>
+                        <h3 style="font-size:1.3rem; color:#fff; margin-bottom:12px;">Save these codes. We won't show them again.</h3>
+                        <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:24px;">If you lose your password, any one of these codes recovers your account. Each code works once.</p>
+                        <div id="recovery-codes-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:24px; font-family:var(--font-mono); font-size:0.85rem;"></div>
+                        <div style="display:flex; gap:12px; margin-bottom:24px;">
+                            <button onclick="copyRecoveryCodes()" style="flex:1; padding:10px; background:transparent; border:1px solid var(--accent-primary); color:var(--accent-primary); font-family:var(--font-mono); font-size:0.7rem; cursor:pointer; letter-spacing:1px;">COPY ALL</button>
+                            <button onclick="downloadRecoveryCodes()" style="flex:1; padding:10px; background:transparent; border:1px solid #444; color:#999; font-family:var(--font-mono); font-size:0.7rem; cursor:pointer; letter-spacing:1px;">DOWNLOAD</button>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:10px; font-size:0.8rem; color:var(--text-secondary); cursor:pointer; margin-bottom:20px;">
+                            <input type="checkbox" id="recovery-confirm-check" style="accent-color:var(--accent-primary);">
+                            I've saved these codes somewhere safe
+                        </label>
+                        <button onclick="closeRecoveryKit()" id="recovery-done-btn" class="btn-primary" style="width:100%; opacity:0.4; cursor:not-allowed;" disabled>Done — take me to my account</button>
+                    </div>
                 </div>
             </div>
 
@@ -1957,45 +1983,201 @@
             return apiKey;
         }
 
-        async function handleAuth(mode) {
-            if (!supabaseClient) {
-                cliPrint("Auth offline — try again in a moment.", "var(--warning)");
-                return;
-            }
-            const email = document.querySelector(mode === 'login' ? '#auth-login input[type="text"]' : '#auth-signup input[type="email"]').value.trim();
-            const password = document.querySelector(mode === 'login' ? '#auth-login input[type="password"]' : '#auth-signup input[type="password"]').value;
-            const handle = mode === 'signup' ? document.querySelector('#auth-signup input[type="text"]').value.trim() : null;
-            if (!email || !password) { cliPrint('Email and password required.', 'var(--warning)'); return; }
+        // ── Vault: PBKDF2 device key + AES-GCM session encryption ─────────────
+        // Mirrors the Argon2id + AES-256-GCM pattern from shadowcypher/chat/auth.py
+        // Browser SubtleCrypto doesn't support Argon2id natively; PBKDF2-SHA256
+        // with 600k iterations is the standard browser equivalent.
 
+        function getDeviceId() {
+            let id = localStorage.getItem('sc_device_id');
+            if (!id) { id = crypto.randomUUID(); localStorage.setItem('sc_device_id', id); }
+            return id;
+        }
+
+        async function deriveDeviceKey(password) {
+            const enc = new TextEncoder();
+            const keyMat = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+            const salt = enc.encode(getDeviceId());
+            const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 600000 }, keyMat, 256);
+            return crypto.subtle.importKey('raw', bits, 'AES-GCM', false, ['encrypt', 'decrypt']);
+        }
+
+        async function vaultStore(password, token) {
             try {
-                if (mode === 'login') {
+                const key = await deriveDeviceKey(password);
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(token));
+                localStorage.setItem('sc_vault', JSON.stringify({ iv: Array.from(iv), ct: Array.from(new Uint8Array(ct)) }));
+            } catch { /* non-fatal — session still works, just not vault-locked */ }
+        }
+
+        async function vaultLoad(password) {
+            try {
+                const raw = localStorage.getItem('sc_vault');
+                if (!raw) return null;
+                const { iv, ct } = JSON.parse(raw);
+                const key = await deriveDeviceKey(password);
+                const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(iv) }, key, new Uint8Array(ct));
+                return new TextDecoder().decode(plain);
+            } catch { return null; }
+        }
+
+        // ── Recovery codes ───────────────────────────────────────────────────────
+
+        let _plainRecoveryCodes = [];
+
+        function generateRecoveryCodes() {
+            const codes = [];
+            for (let i = 0; i < 8; i++) {
+                const b = crypto.getRandomValues(new Uint8Array(6));
+                codes.push(Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('').replace(/(.{4})/g, '$1-').replace(/-$/, ''));
+            }
+            return codes;
+        }
+
+        async function hashRecoveryCode(code) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function showRecoveryKit(codes) {
+            _plainRecoveryCodes = codes;
+            const grid = document.getElementById('recovery-codes-grid');
+            grid.innerHTML = codes.map(c =>
+                `<div style="background:#0e0e1e; border:1px solid #222; padding:10px 14px; letter-spacing:2px; color:#fff;">${c}</div>`
+            ).join('');
+            const modal = document.getElementById('recovery-kit-modal');
+            modal.style.display = 'flex';
+            const check = document.getElementById('recovery-confirm-check');
+            const btn = document.getElementById('recovery-done-btn');
+            check.checked = false;
+            btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed';
+            check.onchange = () => {
+                btn.disabled = !check.checked;
+                btn.style.opacity = check.checked ? '1' : '0.4';
+                btn.style.cursor = check.checked ? 'pointer' : 'not-allowed';
+            };
+        }
+
+        function closeRecoveryKit() {
+            document.getElementById('recovery-kit-modal').style.display = 'none';
+            _plainRecoveryCodes = [];
+        }
+
+        function copyRecoveryCodes() {
+            navigator.clipboard.writeText(_plainRecoveryCodes.join('\n')).then(() =>
+                cliPrint('Recovery codes copied.', 'var(--success)')
+            );
+        }
+
+        function downloadRecoveryCodes() {
+            const blob = new Blob([
+                'ShadowCypher Recovery Kit\n' +
+                'Generated: ' + new Date().toISOString() + '\n\n' +
+                'Keep these codes secret. Each works once.\n\n' +
+                _plainRecoveryCodes.join('\n')
+            ], { type: 'text/plain' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = 'shadowcypher-recovery-kit.txt'; a.click();
+        }
+
+        // ── Auth ─────────────────────────────────────────────────────────────────
+
+        async function handleAuth(mode) {
+            if (!supabaseClient) { cliPrint("Auth offline — try again in a moment.", "var(--warning)"); return; }
+
+            if (mode === 'login') {
+                const rawHandle = document.getElementById('login-handle').value.trim().replace(/^@/, '');
+                const password = document.getElementById('login-password').value;
+                if (!rawHandle || !password) { showAuthBanner('Handle and password required.', 'error'); return; }
+                const email = `${rawHandle}@shadowcypher.site`;
+                try {
                     const result = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (result.error) throw result.error;
-                    cliPrint(`Signed in: ${result.data.user.email}`, 'var(--success)');
-                    // onAuthStateChange will pick up the SIGNED_IN event and call updateUIForUser
-                } else {
-                    const result = await supabaseClient.auth.signUp({
-                        email,
-                        password,
-                        options: { data: { handle: handle || email.split('@')[0], api_key: generateApiKey(), api_key_created_at: new Date().toISOString() } }
-                    });
-                    if (result.error) throw result.error;
-                    if (result.data.session) {
-                        // Email confirmation disabled — user logged in immediately
-                        cliPrint(`Account created: ${email}`, 'var(--success)');
-                    } else {
-                        // Email confirmation required — show banner
-                        cliPrint(`Account created. Check ${email} for a confirmation link.`, 'var(--success)');
-                        showAuthBanner(`We sent a confirmation link to <strong>${escapeHtml(email)}</strong>. Click it, then come back here and sign in.`, 'info');
+                    await vaultStore(password, result.data.session.access_token);
+                    cliPrint(`Signed in as @${rawHandle}`, 'var(--success)');
+                    // onAuthStateChange picks up SIGNED_IN
+                } catch (err) {
+                    cliPrint(`Sign in failed: ${err.message}`, 'var(--critical)');
+                    showAuthBanner(err.message || 'Sign in failed.', 'error');
+                }
+                return;
+            }
+
+            // Signup
+            const rawHandle = document.getElementById('signup-handle').value.trim().replace(/^@/, '').toLowerCase();
+            const password = document.getElementById('signup-password').value;
+            const disposalEmail = document.getElementById('signup-disposal-email').value.trim();
+
+            if (!rawHandle) { showAuthBanner('Handle is required.', 'error'); return; }
+            if (!/^[a-z0-9_]{2,32}$/.test(rawHandle)) {
+                showAuthBanner('Handle must be 2–32 characters: lowercase letters, numbers, underscores only.', 'error'); return;
+            }
+            if (!password || password.length < 10) { showAuthBanner('Password must be at least 10 characters.', 'error'); return; }
+
+            const email = `${rawHandle}@shadowcypher.site`;
+            const codes = generateRecoveryCodes();
+            const codeHashes = await Promise.all(codes.map(hashRecoveryCode));
+
+            try {
+                const result = await supabaseClient.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            handle: rawHandle,
+                            recovery_codes: codeHashes,
+                            api_key: generateApiKey(),
+                            api_key_created_at: new Date().toISOString(),
+                        }
                     }
+                });
+                if (result.error) throw result.error;
+
+                if (result.data.session) {
+                    await vaultStore(password, result.data.session.access_token);
                 }
+
+                // Send recovery kit to disposal email if provided — backend discards the address after sending
+                if (disposalEmail) {
+                    callApi('/v1/auth/send-recovery-kit', {
+                        method: 'POST',
+                        body: JSON.stringify({ disposal_email: disposalEmail, codes, handle: rawHandle }),
+                    }).catch(() => null);
+                }
+
+                cliPrint(`Account created: @${rawHandle}`, 'var(--success)');
+                showRecoveryKit(codes);
+
             } catch (err) {
-                let msg = err.message || 'unknown';
-                if (msg.toLowerCase().includes('email not confirmed')) {
-                    msg = 'Email not confirmed yet — click the link we sent you, then try again.';
-                }
-                cliPrint(`Auth: ${msg}`, 'var(--critical)');
+                let msg = err.message || 'Signup failed.';
+                if (msg.includes('already registered')) msg = `The handle @${rawHandle} is taken. Choose a different one.`;
+                cliPrint(`Signup: ${msg}`, 'var(--critical)');
                 showAuthBanner(msg, 'error');
+            }
+        }
+
+        async function handleRecovery() {
+            if (!supabaseClient) { cliPrint('Auth offline.', 'var(--warning)'); return; }
+            const rawHandle = document.getElementById('forgot-handle').value.trim().replace(/^@/, '').toLowerCase();
+            const code = document.getElementById('forgot-code').value.trim().toLowerCase();
+            if (!rawHandle || !code) { showAuthBanner('Handle and recovery code required.', 'error'); return; }
+            try {
+                const resp = await callApi('/v1/auth/recover', {
+                    method: 'POST',
+                    body: JSON.stringify({ handle: rawHandle, code }),
+                });
+                if (!resp.ok) {
+                    const body = await resp.json().catch(() => ({}));
+                    throw new Error(body.error || 'Recovery failed.');
+                }
+                const { access_token, refresh_token } = await resp.json();
+                await supabaseClient.auth.setSession({ access_token, refresh_token });
+                toggleAuth('reset');
+                showAuthBanner('Recovery successful. Set a new password below.', 'info');
+            } catch (err) {
+                cliPrint(`Recovery failed: ${err.message}`, 'var(--critical)');
+                showAuthBanner(err.message, 'error');
             }
         }
 
@@ -3235,35 +3417,8 @@
             });
         }
 
-        async function handleForgotPassword() {
-            if (!supabaseClient) { cliPrint('Auth offline.', 'var(--warning)'); return; }
-            const raw = document.getElementById('forgot-email').value;
-            const email = raw.trim().toLowerCase();
-            if (!email) {
-                showAuthBanner('Email required.', 'error'); return;
-            }
-            // Strict client-side validation so we surface bad input clearly before Supabase rejects it
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                showAuthBanner(`That doesn't look like a valid email address. You typed: <code>${escapeHtml(raw)}</code>`, 'error');
-                return;
-            }
-            try {
-                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                    redirectTo: `${window.location.origin}/?reset=1`
-                });
-                if (error) throw error;
-                showAuthBanner(`Reset link sent to <strong>${escapeHtml(email)}</strong>. Click it from your inbox (also check spam).`, 'info');
-                cliPrint(`Password reset email sent to ${email}.`, 'var(--success)');
-            } catch (err) {
-                let msg = err.message || 'unknown';
-                if (msg.toLowerCase().includes('invalid format')) {
-                    msg = `Supabase rejected the email format. Make sure it's exactly the address you signed up with — no extra characters or spaces. (You typed: ${email})`;
-                }
-                cliPrint(`Reset failed: ${msg}`, 'var(--critical)');
-                showAuthBanner(msg, 'error');
-            }
-        }
+        // Legacy alias — kept so any existing references don't break
+        async function handleForgotPassword() { toggleAuth('forgot'); }
 
         async function handlePasswordReset() {
             if (!supabaseClient) { cliPrint('Auth offline.', 'var(--warning)'); return; }

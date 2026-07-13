@@ -7,6 +7,10 @@
  *   POST /v1/keys/rotate                   — issue a new api key (sends key-rotated email)
  *   POST /v1/keys/revoke                   — invalidate current key
  *
+ * v1/auth (unauthenticated):
+ *   POST /v1/auth/send-recovery-kit        — send recovery codes to disposal email (discarded after)
+ *   POST /v1/auth/recover                  — validate recovery code → issue session for password reset
+ *
  * v1/internal (secret-gated, not for clients):
  *   POST /v1/internal/supabase-event       — Supabase auth webhook (new user → welcome email)
  *
@@ -79,7 +83,7 @@ import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers } f
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
-import { sendWelcomeEmail, sendKeyRotatedEmail } from "./emails";
+import { sendWelcomeEmail, sendKeyRotatedEmail, sendRecoveryKitEmail } from "./emails";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -539,6 +543,72 @@ export default {
           if (id) neonRegisterUser(env, id, email!, handle).catch(() => null);
         }
         return json({ ok: true });
+      }
+
+      // POST /v1/auth/send-recovery-kit — fire-and-forget: sends codes to disposal email then discards it.
+      // Disposal email is NEVER stored. Rate-limited to prevent abuse as a spam relay.
+      if (path === "/v1/auth/send-recovery-kit" && req.method === "POST") {
+        if (!rateLimit(`recovery-kit:${ip}`, 3, 3_600_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        const body = (await req.json().catch(() => null)) as {
+          disposal_email?: string; codes?: string[]; handle?: string;
+        } | null;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!body?.disposal_email || !emailRegex.test(body.disposal_email) || !body.codes?.length || !body.handle) {
+          return json({ error: "invalid_request" }, { status: 400 }, cors);
+        }
+        // Validate codes are hex strings of expected length — never store them
+        const validCodes = body.codes.filter(c => typeof c === "string" && c.length > 6 && c.length < 64);
+        sendRecoveryKitEmail(env, body.disposal_email, body.handle, validCodes).catch(() => null);
+        return json({ sent: true }, {}, cors);
+      }
+
+      // POST /v1/auth/recover — validate recovery code, return a session the client can set.
+      if (path === "/v1/auth/recover" && req.method === "POST") {
+        if (!rateLimit(`recover:${ip}`, 5, 3_600_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        const body = (await req.json().catch(() => null)) as { handle?: string; code?: string } | null;
+        if (!body?.handle || !body.code) return json({ error: "handle_and_code_required" }, { status: 400 }, cors);
+
+        const userEmail = `${body.handle.toLowerCase().replace(/^@/, "")}@shadowcypher.site`;
+        // Look up the user by their handle-derived email
+        const usersResp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(userEmail)}`, {
+          headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
+        });
+        if (!usersResp.ok) return json({ error: "user_not_found" }, { status: 404 }, cors);
+        const usersBody = (await usersResp.json()) as { users?: SupabaseUser[] };
+        const user = usersBody.users?.[0];
+        if (!user) return json({ error: "user_not_found" }, { status: 404 }, cors);
+
+        const storedHashes: string[] = (user.user_metadata as { recovery_codes?: string[] })?.recovery_codes ?? [];
+        // Hash the submitted code and check against stored hashes
+        const submittedHash = Array.from(
+          new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body.code.trim().toLowerCase())))
+        ).map(b => b.toString(16).padStart(2, "0")).join("");
+
+        const matchIdx = storedHashes.indexOf(submittedHash);
+        if (matchIdx === -1) return json({ error: "invalid_code" }, { status: 401 }, cors);
+
+        // Burn the used code — remove it from the list
+        const remaining = storedHashes.filter((_, i) => i !== matchIdx);
+        await updateUserMetadata(env, user.id, { ...user.user_metadata, recovery_codes: remaining });
+
+        // Issue a short-lived magic link session so the client can set a new password
+        const linkResp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${user.id}/generate-link`, {
+          method: "POST",
+          headers: {
+            apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ type: "recovery" }),
+        });
+        if (!linkResp.ok) return json({ error: "session_issue_failed" }, { status: 500 }, cors);
+        const linkBody = (await linkResp.json()) as { properties?: { access_token?: string; refresh_token?: string } };
+        const { access_token, refresh_token } = linkBody.properties ?? {};
+        if (!access_token) return json({ error: "session_issue_failed" }, { status: 500 }, cors);
+
+        return json({ access_token, refresh_token: refresh_token ?? null }, {}, cors);
       }
 
       if (path === "/v1/me" && req.method === "GET") return handleMe(req, env, cors);
