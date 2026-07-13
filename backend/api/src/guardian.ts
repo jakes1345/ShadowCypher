@@ -16,6 +16,7 @@ import {
 } from "./plans";
 import { dispatchIncidentNotification } from "./notifications";
 import { dispatchIncidentWebhook } from "./webhooks";
+import { sendAgentOnboardEmail } from "./emails";
 
 interface AuthedUser {
   id: string;
@@ -86,6 +87,7 @@ export async function registerAgent(req: Request, env: Env, user: AuthedUser, co
     filters: { user_id: `eq.${user.id}`, hostname: `eq.${body.hostname}` },
     limit: 1,
   });
+  let isFirstAgent = false;
   if (existingByHost.length === 0) {
     const allAgents = await dbSelect<{ id: string }>(env, "agents", {
       select: "id",
@@ -100,6 +102,7 @@ export async function registerAgent(req: Request, env: Env, user: AuthedUser, co
         cors
       );
     }
+    isFirstAgent = allAgents.length === 0;
   }
 
   const agent = await dbUpsert<{ id: string }>(
@@ -114,6 +117,12 @@ export async function registerAgent(req: Request, env: Env, user: AuthedUser, co
     },
     "user_id,hostname"
   );
+
+  if (isFirstAgent) {
+    const handle = user.email.split("@")[0];
+    sendAgentOnboardEmail(env, user.email, handle, body.hostname).catch(() => null);
+  }
+
   return json({ agent_id: agent.id }, {}, cors);
 }
 

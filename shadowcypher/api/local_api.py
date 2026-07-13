@@ -281,12 +281,33 @@ def verify_token(authorization: str = Header(None)) -> str:
 
 # ── Endpoints ────────────────────────────────────────────────────────────
 
+def _get_operator_email(handle: str) -> str:
+	"""Return the operator's real email from env, config, DB, or derived fallback."""
+	env_email = os.environ.get("SHADOW_ADMIN_EMAIL", "").strip()
+	if env_email:
+		return env_email
+
+	cfg_email = (config.get("identity", "email") or "").strip()
+	if cfg_email:
+		return cfg_email
+
+	try:
+		from shadowcypher.core.database import db
+		row = db.get_operator(f"{handle}@shadowcypher.site")
+		if row and row.get("email") and "@" in row["email"]:
+			return row["email"]
+	except Exception:
+		pass
+
+	return f"{handle}@shadowcypher.site"
+
+
 @app.get("/v1/me", response_model=Me)
 async def get_me(token: str = Depends(verify_token)):
 	"""Get operator profile."""
 	handle = config.get("identity", "handle") or "operator"
 	role = config.get("identity", "role") or "operator"
-	email = f"{handle}@shadowcypher.site"
+	email = _get_operator_email(handle)
 	plan = "personal" if role == "operator" else role
 	return Me(
 		email=email,

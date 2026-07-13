@@ -8,6 +8,10 @@ workers_dev = true
 routes = [{ pattern = "api.shadowcypher.site", custom_domain = true }]
 
 # Public-safe vars (committed to git). Secrets go via `wrangler secret put`.
+#
+# Secrets to configure (run once):
+#   wrangler secret put RESEND_API_KEY          # re_... from resend.com/api-keys
+#   wrangler secret put SUPABASE_WEBHOOK_SECRET # any random string; set same in Supabase webhook header
 [vars]
 ENVIRONMENT = "production"
 ALLOWED_ORIGINS = "https://shadowcypher.site,https://www.shadowcypher.site,https://dev.shadowcypher.site,http://localhost:8081"

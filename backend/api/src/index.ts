@@ -2,10 +2,13 @@
  * ShadowCypher Backend API — Cloudflare Worker entry point.
  *
  * v1/auth:
- *   GET  /v1/health             — liveness probe (no auth)
- *   GET  /v1/me                 — current user profile
- *   POST /v1/keys/rotate        — issue a new api key
- *   POST /v1/keys/revoke        — invalidate current key
+ *   GET  /v1/health                        — liveness probe (no auth)
+ *   GET  /v1/me                            — current user profile
+ *   POST /v1/keys/rotate                   — issue a new api key (sends key-rotated email)
+ *   POST /v1/keys/revoke                   — invalidate current key
+ *
+ * v1/internal (secret-gated, not for clients):
+ *   POST /v1/internal/supabase-event       — Supabase auth webhook (new user → welcome email)
  *
  * v1/guardian:
  *   POST /v1/agents/register    — register an agent install
@@ -76,12 +79,15 @@ import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers } f
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
+import { sendWelcomeEmail, sendKeyRotatedEmail } from "./emails";
 
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   ENVIRONMENT: string;
   ALLOWED_ORIGINS: string;
+  // Supabase webhook secret (wrangler secret put SUPABASE_WEBHOOK_SECRET)
+  SUPABASE_WEBHOOK_SECRET: string;
   // Billing (set via wrangler secret put)
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
@@ -352,6 +358,8 @@ async function handleRotate(req: Request, env: Env, cors: HeadersInit): Promise<
   if (!ok) return json({ error: "rotate_failed" }, { status: 500 }, cors);
 
   audit(env, user.id, "key_rotated", clientHints(req));
+  const rotatedHandle = (user.user_metadata as { handle?: string }).handle ?? user.email.split("@")[0];
+  sendKeyRotatedEmail(env, user.email, rotatedHandle).catch(() => null);
   return json({ api_key: newKey }, {}, cors);
 }
 
@@ -511,6 +519,27 @@ export default {
       // OTA manifest — GET is public, POST is admin-key gated
       if (path === "/v1/shadow/ota" && req.method === "GET") return getOtaManifest(env);
       if (path === "/v1/shadow/ota" && req.method === "POST") return updateOtaManifest(req, env);
+
+      // Supabase auth webhook — fires on new user INSERT (configure in Supabase dashboard:
+      //   Database Webhooks → auth.users INSERT → POST https://api.shadowcypher.site/v1/internal/supabase-event
+      //   Add header: x-webhook-secret: <SUPABASE_WEBHOOK_SECRET>)
+      if (path === "/v1/internal/supabase-event" && req.method === "POST") {
+        const secret = req.headers.get("x-webhook-secret") ?? "";
+        if (!env.SUPABASE_WEBHOOK_SECRET || secret !== env.SUPABASE_WEBHOOK_SECRET)
+          return json({ error: "forbidden" }, { status: 403 });
+        const payload = (await req.json().catch(() => null)) as {
+          type?: string;
+          record?: { id?: string; email?: string; raw_user_meta_data?: { handle?: string } };
+        } | null;
+        if (payload?.type === "INSERT" && payload.record?.email) {
+          const { id, email, raw_user_meta_data } = payload.record;
+          const handle = raw_user_meta_data?.handle ?? email!.split("@")[0];
+          sendWelcomeEmail(env, email!, handle).catch(() => null);
+          // Also register the user in Neon if they don't exist yet
+          if (id) neonRegisterUser(env, id, email!, handle).catch(() => null);
+        }
+        return json({ ok: true });
+      }
 
       if (path === "/v1/me" && req.method === "GET") return handleMe(req, env, cors);
       if (path === "/v1/keys/rotate" && req.method === "POST") return handleRotate(req, env, cors);
