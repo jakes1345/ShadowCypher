@@ -80,6 +80,7 @@ import { getAgentVersion } from "./agent_version";
 import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup, webSearch, wikiSummary, ddgInstant } from "./shadow_apis";
 import { getOtaManifest, updateOtaManifest } from "./ota";
 import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers } from "./chat";
+export { ChatRoom } from "./chat_do";
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
@@ -134,6 +135,8 @@ export interface Env {
   HIBP_KEY?: string;
   BRAVE_SEARCH_KEY?: string;
   OLLAMA_DEFAULT_MODEL?: string;
+  // Durable Objects
+  CHAT_ROOM: DurableObjectNamespace;
 }
 
 interface SupabaseUser {
@@ -195,8 +198,7 @@ function json(body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
 function extractKey(req: Request): string | null {
   const auth = req.headers.get("Authorization") || "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
-  const key = m[1].trim();
+  const key = m ? m[1].trim() : new URL(req.url).searchParams.get("key") ?? "";
   return KEY_PATTERN.test(key) ? key : null;
 }
 
@@ -736,6 +738,43 @@ export default {
         if (mailGet)    return getMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (mailRead)   return markRead(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (mailDelete) return deleteMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+      }
+
+      // ── WebSocket upgrade: GET /v1/chat/ws?room=<name> ─────────────────────
+      if (req.method === "GET" && path === "/v1/chat/ws" && req.headers.get("Upgrade") === "websocket") {
+        const key = extractKey(req);
+        if (!key) return new Response("missing_or_invalid_key", { status: 401 });
+        const user = await findUserByKey(env, key);
+        if (!user) return new Response("key_not_found", { status: 401 });
+
+        const url = new URL(req.url);
+        const roomName = (url.searchParams.get("room") ?? "global").slice(0, 64);
+
+        // Resolve room to get its ID
+        const rooms = await dbSelect<{ id: string; name: string; room_type: string; team_id: string | null }>(
+          env, "chat_rooms", { filters: { name: `eq.${roomName}` }, limit: 1 }
+        );
+        if (!rooms.length) return new Response("room_not_found", { status: 404 });
+        const room = rooms[0];
+
+        // Team room access check
+        if (room.room_type === "team" && room.team_id) {
+          const members = await dbSelect(env, "team_members", {
+            filters: { team_id: `eq.${room.team_id}`, user_id: `eq.${user.id}` }, limit: 1,
+          });
+          if (!members.length) return new Response("forbidden", { status: 403 });
+        }
+
+        const nick = user.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+        const doId = env.CHAT_ROOM.idFromName(roomName);
+        const stub = env.CHAT_ROOM.get(doId);
+
+        const doUrl = new URL(req.url);
+        doUrl.searchParams.set("user_id", user.id);
+        doUrl.searchParams.set("nick", nick);
+        doUrl.searchParams.set("room_id", room.id);
+        doUrl.searchParams.set("room", roomName);
+        return stub.fetch(new Request(doUrl.toString(), req));
       }
 
       return json({ error: "not_found", path }, { status: 404 }, cors);

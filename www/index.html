@@ -3551,9 +3551,9 @@
         // password entered once per session — stored in memory, never persisted.
 
         let _vaultKey = null;      // CryptoKey in memory only
-        let _chatPolling = null;
-        let _presenceInterval = null;
+        let _chatWs = null;
         let _currentRoom = null;
+        let _onlineCount = 0;
 
         function chatRequireAuth() {
             if (!_sessionApiKey) {
@@ -3688,22 +3688,95 @@
             }
         }
 
-        async function chatSelectRoom(room) {
-            _currentRoom = room;
-            clearInterval(_chatPolling);
-            clearInterval(_presenceInterval);
-            document.getElementById('chat-room-name').innerText = room.display_name || room.name;
-            document.getElementById('chat-room-desc').innerText = `#${room.name}`;
-            document.getElementById('chat-messages').innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:20px;">Loading…</div>';
-            document.getElementById('chat-input').disabled = false;
-            document.getElementById('chat-send').disabled = false;
-            await chatLoadMessages();
-            await chatUpdatePresence();
-            _chatPolling = setInterval(chatLoadMessages, 3000);
-            _presenceInterval = setInterval(chatUpdatePresence, 20000);
+        function chatRenderMessage(msg, prepend = false) {
+            const msgDiv = document.getElementById('chat-messages');
+            const empty = msgDiv.querySelector('[data-empty]');
+            if (empty) empty.remove();
+            let content = msg.content;
+            // Decrypt inline — if vault locked, show placeholder
+            if (chatIsEncrypted(content)) {
+                content = _vaultKey ? null : '[vault locked]'; // async decrypt handled below
+            }
+            const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const el = document.createElement('div');
+            el.dataset.msgId = msg.id;
+            el.style.cssText = 'display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(180,74,255,0.1);';
+            el.innerHTML = `
+                <div style="flex-shrink:0;">
+                    <div style="width:28px;height:28px;background:var(--accent-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#000;">${escapeHtml((msg.nick||'?')[0].toUpperCase())}</div>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:4px;">
+                        <div style="font-weight:600;color:#fff;font-size:0.85rem;">${escapeHtml(msg.nick||'unknown')}</div>
+                        <div style="font-size:0.65rem;color:var(--text-secondary);">${time}</div>
+                    </div>
+                    <div class="msg-body" style="color:var(--text-secondary);word-wrap:break-word;white-space:pre-wrap;">${content !== null ? escapeHtml(content) : '…'}</div>
+                </div>`;
+            if (chatIsEncrypted(msg.content) && _vaultKey) {
+                chatDecrypt(msg.content).then(plain => {
+                    const body = el.querySelector('.msg-body');
+                    if (body) body.textContent = plain;
+                });
+            }
+            if (prepend) msgDiv.prepend(el); else msgDiv.appendChild(el);
+            if (!prepend) msgDiv.scrollTop = msgDiv.scrollHeight;
         }
 
-        async function chatLoadMessages() {
+        function chatConnectWs(room) {
+            if (_chatWs) { try { _chatWs.close(); } catch {} }
+            const wsUrl = `wss://api.shadowcypher.site/v1/chat/ws?room=${encodeURIComponent(room.name)}&key=${encodeURIComponent(_sessionApiKey)}`;
+            const ws = new WebSocket(wsUrl);
+            _chatWs = ws;
+
+            ws.onopen = () => {
+                document.getElementById('chat-input').disabled = false;
+                document.getElementById('chat-send').disabled = false;
+            };
+
+            ws.onmessage = async (evt) => {
+                let data;
+                try { data = JSON.parse(evt.data); } catch { return; }
+
+                if (data.type === 'history') {
+                    const msgDiv = document.getElementById('chat-messages');
+                    msgDiv.innerHTML = '';
+                    if (!data.messages?.length) {
+                        const el = document.createElement('div');
+                        el.dataset.empty = '1';
+                        el.style.cssText = 'text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:20px;';
+                        el.textContent = 'No messages yet. Start the conversation!';
+                        msgDiv.appendChild(el);
+                    } else {
+                        for (const msg of data.messages) chatRenderMessage(msg);
+                    }
+                } else if (data.type === 'message') {
+                    chatRenderMessage(data);
+                } else if (data.type === 'presence') {
+                    if (data.online) _onlineCount++; else _onlineCount = Math.max(0, _onlineCount - 1);
+                    document.getElementById('chat-online-count').innerText = _onlineCount;
+                }
+            };
+
+            ws.onerror = () => {
+                // Fallback to REST polling if WebSocket fails
+                chatLoadMessagesPoll();
+            };
+
+            ws.onclose = () => {
+                if (_chatWs === ws && _currentRoom) {
+                    // Reconnect after 3s
+                    setTimeout(() => { if (_currentRoom) chatConnectWs(_currentRoom); }, 3000);
+                }
+            };
+
+            // Keep-alive ping every 25s
+            const ping = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+                else clearInterval(ping);
+            }, 25000);
+        }
+
+        async function chatLoadMessagesPoll() {
             if (!_currentRoom) return;
             try {
                 const data = await chatApi(`/v1/chat/messages?room=${encodeURIComponent(_currentRoom.name)}&limit=50`);
@@ -3711,36 +3784,27 @@
                 const msgDiv = document.getElementById('chat-messages');
                 msgDiv.innerHTML = '';
                 if (!data.messages?.length) {
-                    msgDiv.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:20px;">No messages yet. Start the conversation!</div>';
-                    return;
-                }
-                for (const msg of data.messages) {
-                    let content = msg.content;
-                    if (chatIsEncrypted(content)) {
-                        content = _vaultKey
-                            ? await chatDecrypt(content)
-                            : '[vault locked — click the lock icon to unlock]';
-                    }
-                    const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const el = document.createElement('div');
-                    el.style.cssText = 'display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(180,74,255,0.1);';
-                    el.innerHTML = `
-                        <div style="flex-shrink:0;">
-                            <div style="width:28px;height:28px;background:var(--accent-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#000;">${escapeHtml((msg.nick || '?')[0].toUpperCase())}</div>
-                        </div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:4px;">
-                                <div style="font-weight:600;color:#fff;font-size:0.85rem;">${escapeHtml(msg.nick || 'unknown')}</div>
-                                <div style="font-size:0.65rem;color:var(--text-secondary);">${time}</div>
-                            </div>
-                            <div style="color:var(--text-secondary);word-wrap:break-word;white-space:pre-wrap;">${escapeHtml(content)}</div>
-                        </div>`;
+                    el.dataset.empty = '1';
+                    el.style.cssText = 'text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:20px;';
+                    el.textContent = 'No messages yet. Start the conversation!';
                     msgDiv.appendChild(el);
+                } else {
+                    for (const msg of data.messages) chatRenderMessage(msg);
                 }
-                msgDiv.scrollTop = msgDiv.scrollHeight;
-            } catch (e) {
-                console.error('chatLoadMessages:', e);
-            }
+            } catch (e) { console.error('chatLoadMessagesPoll:', e); }
+        }
+
+        async function chatSelectRoom(room) {
+            _currentRoom = room;
+            _onlineCount = 0;
+            document.getElementById('chat-room-name').innerText = room.display_name || room.name;
+            document.getElementById('chat-room-desc').innerText = `#${room.name}`;
+            document.getElementById('chat-messages').innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:20px;">Connecting…</div>';
+            document.getElementById('chat-input').disabled = true;
+            document.getElementById('chat-send').disabled = true;
+            document.getElementById('chat-online-count').innerText = '0';
+            chatConnectWs(room);
         }
 
         async function chatSendMessage() {
@@ -3753,9 +3817,13 @@
             btn.innerText = _vaultKey ? 'ENCRYPTING…' : 'SENDING…';
             try {
                 const content = _vaultKey ? await chatEncrypt(text) : text;
-                await chatApi('/v1/chat/send', 'POST', { room: _currentRoom.name, content });
+                if (_chatWs?.readyState === WebSocket.OPEN) {
+                    _chatWs.send(JSON.stringify({ type: 'message', content }));
+                } else {
+                    await chatApi('/v1/chat/send', 'POST', { room: _currentRoom.name, content });
+                    await chatLoadMessagesPoll();
+                }
                 input.value = '';
-                await chatLoadMessages();
             } catch (e) {
                 alert('Error sending message: ' + e.message);
             } finally {
@@ -3771,15 +3839,6 @@
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatSendMessage(); }
             });
         });
-
-        async function chatUpdatePresence() {
-            if (!_currentRoom) return;
-            try {
-                await chatApi('/v1/chat/presence', 'POST', { room: _currentRoom.name });
-                const data = await chatApi(`/v1/chat/online?room=${encodeURIComponent(_currentRoom.name)}`);
-                if (data) document.getElementById('chat-online-count').innerText = (data.online || []).length;
-            } catch {}
-        }
 
         async function chatCreateRoom() {
             const name = prompt('Enter room name (lowercase, hyphens ok):');
