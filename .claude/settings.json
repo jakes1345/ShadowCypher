@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "shadow-cypher-intel": {
+      "command": "python3",
+      "args": ["shadowcypher/mcp_server_intel.py"],
+      "env": {}
+    },
+    "shadow-cypher-offensive": {
+      "command": "python3",
+      "args": ["shadowcypher/mcp_server_offensive.py"],
+      "env": {}
+    },
+    "shadow-cypher-campaign": {
+      "command": "python3",
+      "args": ["shadowcypher/mcp_server_campaign.py"],
+      "env": {}
+    }
+  }
+}
