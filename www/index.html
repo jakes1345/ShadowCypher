@@ -1604,8 +1604,24 @@
 
                 <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 20px;">// Webhooks <span style="font-size:0.6rem; color:var(--text-secondary);">(Pro)</span></h3>
-                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Forward incident events to Slack, Discord, PagerDuty, or any HTTPS URL. HMAC-SHA256 signed via per-webhook secret.</p>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Forward security incidents and Shadow Mail notifications to Slack, Discord, Teams, Zoom, PagerDuty, or any HTTPS URL. HMAC-SHA256 signed per delivery.</p>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px; margin-bottom:14px;">
+                        <button onclick="fillWebhookTemplate('https://your-org.webhook.office.com/webhookb2/YOUR_TEAMS_URL','MS Teams','warning',['incident.created','mail.received'])" style="background:rgba(88,101,242,0.08); border:1px solid rgba(88,101,242,0.3); color:#7289da; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
+                            <div style="font-weight:600; margin-bottom:4px;">🟦 MS Teams</div>
+                            <div style="color:var(--text-secondary); font-size:0.65rem;">Adaptive Card · all events</div>
+                        </button>
+                        <button onclick="fillWebhookTemplate('https://hooks.zoom.us/v2/chat/YOUR_ZOOM_HOOK','Zoom Chat','warning',['incident.created','mail.received'])" style="background:rgba(43,175,236,0.08); border:1px solid rgba(43,175,236,0.3); color:#2bafec; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
+                            <div style="font-weight:600; margin-bottom:4px;">🎥 Zoom Chat</div>
+                            <div style="color:var(--text-secondary); font-size:0.65rem;">Incoming webhook · all events</div>
+                        </button>
+                        <button onclick="fillWebhookTemplate('https://hooks.slack.com/services/YOUR_SLACK_HOOK','Slack','warning',['incident.created','mail.received'])" style="background:rgba(74,21,75,0.08); border:1px solid rgba(74,21,75,0.3); color:#e01e5a; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
+                            <div style="font-weight:600; margin-bottom:4px;">💬 Slack</div>
+                            <div style="color:var(--text-secondary); font-size:0.65rem;">Incoming webhook · all events</div>
+                        </button>
+                        <button onclick="fillWebhookTemplate('https://discord.com/api/webhooks/YOUR_DISCORD_HOOK','Discord','warning',['incident.created','mail.received'])" style="background:rgba(88,101,242,0.08); border:1px solid rgba(88,101,242,0.2); color:#5865f2; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
+                            <div style="font-weight:600; margin-bottom:4px;">💬 Discord</div>
+                            <div style="color:var(--text-secondary); font-size:0.65rem;">Webhook embed · all events</div>
+                        </button>
                         <button onclick="fillWebhookTemplate('https://your-splunk:8088/services/collector?token=YOUR_HEC_TOKEN','Splunk SIEM','critical')" style="background:rgba(255,128,0,0.08); border:1px solid rgba(255,128,0,0.25); color:#ff8000; padding:10px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem; text-align:left;">
                             <div style="font-weight:600; margin-bottom:4px;">&#9632; Splunk</div>
                             <div style="color:var(--text-secondary); font-size:0.65rem;">HEC endpoint · critical+</div>
@@ -1632,8 +1648,13 @@
                         <summary style="cursor:pointer; color:var(--accent-primary); font-family:var(--font-mono); font-size:0.75rem;">+ Add webhook</summary>
                         <div style="margin-top:14px; display:grid; gap:10px;">
                             <input type="url" id="wh-url" placeholder="https://hooks.slack.com/services/..." style="padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.85rem;">
+                            <div style="font-size:0.75rem; color:var(--text-secondary); display:flex; gap:16px; flex-wrap:wrap;">
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="wh-ev-incident" checked style="accent-color:var(--accent-primary);"> Incidents</label>
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="wh-ev-mail" style="accent-color:var(--accent-primary);"> Shadow Mail</label>
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="wh-ev-cve" style="accent-color:var(--accent-primary);"> CVE matches</label>
+                            </div>
                             <div style="display:flex; gap:10px;">
-                                <input type="text" id="wh-label" placeholder="Label (optional, e.g. 'Slack #ops')" style="flex:1; padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.8rem;">
+                                <input type="text" id="wh-label" placeholder="Label (optional, e.g. 'Teams #ops')" style="flex:1; padding:10px 12px; border:1px solid #333; background:#000; color:#fff; font-size:0.8rem;">
                                 <select id="wh-severity" style="background:#000; border:1px solid #333; color:#fff; padding:6px 10px; font-size:0.75rem;">
                                     <option value="info">all (info+)</option>
                                     <option value="warning" selected>warning+</option>
@@ -3064,13 +3085,21 @@
             }).join('');
         }
 
-        function fillWebhookTemplate(urlPlaceholder, label, severity) {
+        function fillWebhookTemplate(urlPlaceholder, label, severity, events) {
             const urlEl = document.getElementById('wh-url');
             const labelEl = document.getElementById('wh-label');
             const severityEl = document.getElementById('wh-severity');
             if (urlEl) urlEl.placeholder = urlPlaceholder;
             if (labelEl && !labelEl.value) labelEl.value = label;
             if (severityEl) severityEl.value = severity;
+            if (events) {
+                const incEl = document.getElementById('wh-ev-incident');
+                const mailEl = document.getElementById('wh-ev-mail');
+                const cveEl  = document.getElementById('wh-ev-cve');
+                if (incEl)  incEl.checked  = events.includes('incident.created');
+                if (mailEl) mailEl.checked = events.includes('mail.received');
+                if (cveEl)  cveEl.checked  = events.includes('cve.matched');
+            }
             const details = urlEl?.closest('details');
             if (details) details.open = true;
             if (urlEl) urlEl.focus();
@@ -3081,8 +3110,13 @@
             const label = document.getElementById('wh-label').value.trim();
             const min_severity = document.getElementById('wh-severity').value;
             if (!url) { cliPrint('URL required.', 'var(--warning)'); return; }
+            const events = [];
+            if (document.getElementById('wh-ev-incident')?.checked) events.push('incident.created');
+            if (document.getElementById('wh-ev-mail')?.checked)     events.push('mail.received');
+            if (document.getElementById('wh-ev-cve')?.checked)      events.push('cve.matched');
+            if (!events.length) events.push('incident.created');
             try {
-                const r = await callApi('/v1/webhooks', { method: 'POST', body: JSON.stringify({ url, label, min_severity }) });
+                const r = await callApi('/v1/webhooks', { method: 'POST', body: JSON.stringify({ url, label, min_severity, events }) });
                 document.getElementById('wh-url').value = '';
                 document.getElementById('wh-label').value = '';
                 cliPrint(`Webhook added. Signing secret: ${r.signing_secret.slice(0, 16)}…`, 'var(--success)');

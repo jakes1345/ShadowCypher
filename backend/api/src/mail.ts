@@ -15,6 +15,7 @@
 
 import type { Env } from "./index";
 import { dbSelect, dbInsert, dbUpdate } from "./supabase";
+import { dispatchMailWebhook } from "./webhooks";
 
 interface MailRow {
   id: string;
@@ -181,6 +182,8 @@ export async function storeInboundMail(
 
   const { text, html } = extractBodies(rawBody);
 
+  const receivedAt = new Date(dateStr).toISOString();
+
   await dbInsert(env, "mail_messages", {
     user_id: user.id,
     message_id: messageId,
@@ -191,8 +194,19 @@ export async function storeInboundMail(
     body_html: html,
     direction: "inbound",
     is_read: false,
-    received_at: new Date(dateStr).toISOString(),
+    received_at: receivedAt,
   });
+
+  // Notify any mail.received webhooks (Slack, Teams, Zoom, Discord, custom)
+  const preview = (text ?? "").trim().slice(0, 280).replace(/\s+/g, " ");
+  dispatchMailWebhook(env, {
+    from: message.from,
+    to: message.to,
+    subject,
+    preview,
+    received_at: receivedAt,
+    user_id: user.id,
+  }).catch(() => null);
 }
 
 // ── REST handlers ─────────────────────────────────────────────────────────────

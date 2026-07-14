@@ -37,7 +37,7 @@ interface WebhookRow {
 }
 
 const SEVERITY_RANK: Record<string, number> = { info: 1, warning: 2, critical: 3 };
-const ALLOWED_EVENTS = new Set(["incident.created", "incident.acknowledged", "scan.completed", "cve.matched"]);
+const ALLOWED_EVENTS = new Set(["incident.created", "incident.acknowledged", "scan.completed", "cve.matched", "mail.received"]);
 
 const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): Response =>
   new Response(JSON.stringify(body), {
@@ -182,11 +182,47 @@ async function deliverOne(env: Env, wh: WebhookRow, incident: IncidentForWebhook
   const isConnectWise = /connectwise/i.test(wh.url);
   const isPagerDuty   = /events\.pagerduty\.com/.test(wh.url);
   const isOpsGenie    = /api\.opsgenie\.com/.test(wh.url);
+  const isTeams       = /webhook\.office\.com\//.test(wh.url);
+  const isZoom        = /hooks\.zoom\.us\//.test(wh.url);
 
   let body: string;
   let contentType = "application/json";
 
-  if (isSlack) {
+  if (isTeams) {
+    body = JSON.stringify({
+      "@type": "MessageCard",
+      "@context": "https://schema.org/extensions",
+      "themeColor": incident.severity === "critical" ? "FF3B6B" : incident.severity === "warning" ? "FFB84D" : "7EB6FF",
+      "summary": `[${incident.severity.toUpperCase()}] ${incident.title}`,
+      "sections": [{
+        "activityTitle": `**[${incident.severity.toUpperCase()}]** ${incident.title}`,
+        "activitySubtitle": `Category: ${incident.category}`,
+        "activityText": incident.detail || incident.category,
+        "markdown": true,
+      }],
+      "potentialAction": [{
+        "@type": "OpenUri",
+        "name": "Open ShadowCypher",
+        "targets": [{ "os": "default", "uri": "https://shadowcypher.site" }],
+      }],
+    });
+  } else if (isZoom) {
+    body = JSON.stringify({
+      content: {
+        head: {
+          text: `[${incident.severity.toUpperCase()}] ${incident.title}`,
+          style: {
+            bold: true,
+            color: incident.severity === "critical" ? "#FF3B6B" : "#FFB84D",
+          },
+        },
+        body: [
+          { type: "message", text: incident.detail || incident.category },
+          { type: "message", text: `Category: ${incident.category} · Source: ShadowCypher` },
+        ],
+      },
+    });
+  } else if (isSlack) {
     body = JSON.stringify({
       text: `*[${incident.severity.toUpperCase()}]* ${incident.title}`,
       attachments: [{
@@ -509,5 +545,118 @@ async function deliverCveOne(
     return { ok, status: resp.status };
   } catch {
     return { ok: false, status: 0 };
+  }
+}
+
+// ─── Shadow Mail notification dispatch ───────────────────────────────────────
+
+export interface MailWebhookPayload {
+  from: string;
+  to: string;
+  subject: string;
+  preview: string;
+  received_at: string;
+  user_id: string;
+}
+
+export async function dispatchMailWebhook(env: Env, mail: MailWebhookPayload): Promise<void> {
+  const rows = await dbSelect<WebhookRow>(env, "webhooks", {
+    select: "*",
+    filters: { user_id: `eq.${mail.user_id}`, is_active: `eq.true` },
+    limit: 20,
+  });
+
+  for (const wh of rows) {
+    if (!wh.events.includes("mail.received")) continue;
+    deliverMailOne(env, wh, mail).catch(() => null);
+  }
+}
+
+async function deliverMailOne(env: Env, wh: WebhookRow, mail: MailWebhookPayload): Promise<void> {
+  const isTeams   = /webhook\.office\.com\//.test(wh.url);
+  const isZoom    = /hooks\.zoom\.us\//.test(wh.url);
+  const isSlack   = /hooks\.slack\.com\//.test(wh.url);
+  const isDiscord = /discord(?:app)?\.com\/api\/webhooks\//.test(wh.url);
+
+  const summary = `📧 New email from ${mail.from}`;
+  let body: string;
+
+  if (isTeams) {
+    body = JSON.stringify({
+      "@type": "MessageCard",
+      "@context": "https://schema.org/extensions",
+      "themeColor": "00F2FF",
+      "summary": summary,
+      "sections": [{
+        "activityTitle": `📧 **${mail.subject}**`,
+        "activitySubtitle": `From: ${mail.from}`,
+        "activityText": mail.preview || "(no preview)",
+        "markdown": true,
+      }],
+      "potentialAction": [{
+        "@type": "OpenUri",
+        "name": "Open Shadow Mail",
+        "targets": [{ "os": "default", "uri": "https://shadowcypher.site" }],
+      }],
+    });
+  } else if (isZoom) {
+    body = JSON.stringify({
+      content: {
+        head: { text: `📧 ${mail.subject}`, style: { bold: true } },
+        body: [
+          { type: "message", text: `From: ${mail.from}` },
+          { type: "message", text: mail.preview || "(no preview)" },
+        ],
+      },
+    });
+  } else if (isSlack) {
+    body = JSON.stringify({
+      text: `📧 *${mail.subject}*`,
+      attachments: [{
+        color: "#00F2FF",
+        text: `From: ${mail.from}\n${mail.preview || ""}`,
+        footer: "Shadow Mail",
+        ts: Math.floor(new Date(mail.received_at).getTime() / 1000),
+      }],
+    });
+  } else if (isDiscord) {
+    body = JSON.stringify({
+      embeds: [{
+        title: `📧 ${mail.subject}`,
+        description: `**From:** ${mail.from}\n${mail.preview || ""}`,
+        color: 0x00f2ff,
+        footer: { text: "Shadow Mail" },
+        timestamp: mail.received_at,
+      }],
+    });
+  } else {
+    body = JSON.stringify({
+      event: "mail.received",
+      fired_at: new Date().toISOString(),
+      data: { from: mail.from, to: mail.to, subject: mail.subject, preview: mail.preview },
+    });
+  }
+
+  const signature = await hmacSha256(wh.signing_secret, body);
+  try {
+    const resp = await fetch(wh.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "ShadowCypher-Webhook/1.0",
+        "X-ShadowCypher-Signature": `sha256=${signature}`,
+        "X-ShadowCypher-Event": "mail.received",
+      },
+      body,
+      signal: AbortSignal.timeout(8000),
+    });
+    const ok = resp.ok || resp.status === 204;
+    dbUpdate(env, "webhooks", { id: `eq.${wh.id}` }, {
+      last_called_at: new Date().toISOString(),
+      last_status: resp.status,
+      failure_count: ok ? 0 : (wh.failure_count ?? 0) + 1,
+    }).catch(() => null);
+  } catch {
+    // fire-and-forget; caller uses .catch(() => null)
   }
 }
