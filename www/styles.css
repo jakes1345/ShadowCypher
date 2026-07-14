@@ -366,3 +366,20 @@ footer a:hover { text-decoration: underline; }
     font-family: var(--font-mono);
     color: var(--text-secondary);
 }
+
+/* ── Shadow Office ─────────────────────────────────────────────────────── */
+
+#doc-editor h1 { font-size: 2rem; font-weight: 700; color: #fff; margin: 24px 0 12px; }
+#doc-editor h2 { font-size: 1.5rem; font-weight: 600; color: #e0e0e0; margin: 20px 0 10px; }
+#doc-editor h3 { font-size: 1.15rem; font-weight: 600; color: #d0d0d0; margin: 16px 0 8px; }
+#doc-editor p  { margin: 0 0 12px; }
+#doc-editor pre { background: #0a0a16; border: 1px solid rgba(180,74,255,0.2); border-radius: 4px; padding: 16px; font-family: var(--font-mono); font-size: 0.85rem; color: #9cdcfe; overflow-x: auto; margin: 12px 0; }
+#doc-editor blockquote { border-left: 3px solid var(--accent-primary); margin: 12px 0; padding: 8px 16px; color: var(--text-secondary); font-style: italic; }
+#doc-editor ul, #doc-editor ol { padding-left: 28px; margin: 8px 0; }
+#doc-editor li { margin: 4px 0; }
+#doc-editor a  { color: var(--accent-primary); }
+
+#sheet-grid td:focus,
+#sheet-grid td:hover { background: rgba(180,74,255,0.05) !important; }
+
+.slide-thumb-active { border-color: var(--accent-primary) !important; }

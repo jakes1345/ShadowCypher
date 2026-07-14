@@ -55,6 +55,7 @@
             <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
             <a onclick="navTo('chat',this)" id="nav-chat" class="nav-tab">💬 Chat</a>
             <a onclick="navTo('mail',this)" id="nav-mail" class="nav-tab">📧 Mail <span id="mail-unread-badge" style="display:none;background:var(--accent-primary);color:#000;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle;"></span></a>
+            <a onclick="navTo('office',this)" id="nav-office" class="nav-tab">📄 Office</a>
             <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Download</a>
             <a onclick="navTo('shadowos',this)" id="nav-shadowos" class="nav-tab">ShadowOS</a>
             <a href="/shadow.html" class="nav-tab" style="color:#b44aff;">Shadow</a>
@@ -1437,6 +1438,158 @@
             <div style="margin-top:40px;padding:24px;border:1px dashed rgba(180,74,255,0.2);border-radius:6px;text-align:center;">
                 <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Full source, build scripts, branding renderer, and profile config are all open source.</p>
                 <a href="https://github.com/jakes1345/ShadowCypher/tree/main/shadowos" target="_blank" rel="noopener" style="color:var(--accent-primary);font-size:0.82rem;text-decoration:none;">View shadowos/ on GitHub →</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Shadow Office page ────────────────────────────────────────────── -->
+    <div id="page-office" class="page" style="display:none;">
+        <div style="display:flex;height:calc(100vh - 60px);overflow:hidden;flex-direction:column;">
+            <!-- Sub-nav -->
+            <div style="display:flex;gap:0;border-bottom:1px solid rgba(180,74,255,0.15);background:rgba(180,74,255,0.02);flex-shrink:0;">
+                <button id="office-tab-docs"   onclick="officeShowTab('docs')"   style="padding:12px 24px;background:var(--accent-primary);color:#000;border:none;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);letter-spacing:2px;font-weight:700;">📄 DOCS</button>
+                <button id="office-tab-sheets" onclick="officeShowTab('sheets')" style="padding:12px 24px;background:transparent;border:none;border-right:1px solid rgba(180,74,255,0.15);cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);letter-spacing:2px;color:#888;">📊 SHEETS</button>
+                <button id="office-tab-slides" onclick="officeShowTab('slides')" style="padding:12px 24px;background:transparent;border:none;border-right:1px solid rgba(180,74,255,0.15);cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);letter-spacing:2px;color:#888;">🎞 SLIDES</button>
+                <div style="flex:1;"></div>
+                <div id="office-save-status" style="padding:12px 20px;font-size:0.68rem;font-family:var(--font-mono);color:#555;align-self:center;letter-spacing:1px;">AUTO-SAVE OFF</div>
+            </div>
+
+            <!-- ─── DOCS ─── -->
+            <div id="office-docs" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+                <!-- Toolbar -->
+                <div id="doc-toolbar" style="display:flex;flex-wrap:wrap;gap:2px;padding:6px 12px;border-bottom:1px solid rgba(180,74,255,0.1);background:rgba(0,0,0,0.3);flex-shrink:0;align-items:center;">
+                    <!-- File ops -->
+                    <button onclick="docNew()" title="New" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">NEW</button>
+                    <button onclick="docSave()" title="Save" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">SAVE</button>
+                    <button onclick="docLoad()" title="Open" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">OPEN</button>
+                    <button onclick="docExport('html')" title="Export HTML" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">EXPORT</button>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Text format -->
+                    <button id="doc-btn-bold"   onclick="docCmd('bold')"   title="Bold"          style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-weight:bold;font-size:0.85rem;">B</button>
+                    <button id="doc-btn-italic" onclick="docCmd('italic')" title="Italic"         style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-style:italic;font-size:0.85rem;">I</button>
+                    <button id="doc-btn-underline" onclick="docCmd('underline')" title="Underline" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;text-decoration:underline;font-size:0.85rem;">U</button>
+                    <button onclick="docCmd('strikeThrough')" title="Strikethrough" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;text-decoration:line-through;font-size:0.85rem;">S</button>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Block format -->
+                    <select onchange="docFormatBlock(this.value);this.value=''" style="padding:4px 6px;background:#111;border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;font-size:0.72rem;font-family:var(--font-mono);cursor:pointer;">
+                        <option value="">Format…</option>
+                        <option value="p">Paragraph</option>
+                        <option value="h1">Heading 1</option>
+                        <option value="h2">Heading 2</option>
+                        <option value="h3">Heading 3</option>
+                        <option value="blockquote">Quote</option>
+                        <option value="pre">Code</option>
+                    </select>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Lists -->
+                    <button onclick="docCmd('insertUnorderedList')" title="Bullet list" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.85rem;">≡</button>
+                    <button onclick="docCmd('insertOrderedList')"   title="Numbered list" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.85rem;">#</button>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Align -->
+                    <button onclick="docCmd('justifyLeft')"   title="Left"   style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.8rem;">⫷</button>
+                    <button onclick="docCmd('justifyCenter')" title="Center" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.8rem;">≡</button>
+                    <button onclick="docCmd('justifyRight')"  title="Right"  style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.8rem;">⫸</button>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Color -->
+                    <input type="color" id="doc-fgcolor" value="#ffffff" onchange="docCmd('foreColor',this.value)" title="Text color" style="width:28px;height:28px;padding:0;border:1px solid rgba(180,74,255,0.2);background:none;cursor:pointer;border-radius:3px;">
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Undo/redo -->
+                    <button onclick="docCmd('undo')" title="Undo" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.85rem;">↩</button>
+                    <button onclick="docCmd('redo')" title="Redo" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.85rem;">↪</button>
+                    <!-- Doc name -->
+                    <div style="flex:1;"></div>
+                    <input id="doc-name" type="text" value="Untitled Document" style="padding:4px 10px;background:rgba(0,0,0,0.4);border:1px solid rgba(180,74,255,0.15);color:#fff;border-radius:3px;font-size:0.78rem;width:200px;">
+                </div>
+                <!-- Editor area -->
+                <div style="flex:1;overflow-y:auto;display:flex;justify-content:center;padding:40px 20px;background:rgba(0,0,0,0.2);">
+                    <div id="doc-editor"
+                         contenteditable="true" spellcheck="true"
+                         oninput="docOnInput()"
+                         style="width:100%;max-width:760px;min-height:100%;background:#0c0c14;border:1px solid rgba(180,74,255,0.1);border-radius:4px;padding:60px 72px;color:#e0e0e0;font-size:1rem;line-height:1.8;outline:none;box-sizing:border-box;font-family:'Georgia',serif;">
+                        <p>Start writing…</p>
+                    </div>
+                </div>
+                <!-- Status bar -->
+                <div id="doc-status" style="padding:4px 16px;background:rgba(0,0,0,0.4);border-top:1px solid rgba(180,74,255,0.08);font-size:0.65rem;color:#555;font-family:var(--font-mono);letter-spacing:1px;">
+                    0 words · 0 chars
+                </div>
+            </div>
+
+            <!-- ─── SHEETS ─── -->
+            <div id="office-sheets" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+                <!-- Sheet toolbar -->
+                <div style="display:flex;gap:6px;padding:6px 12px;border-bottom:1px solid rgba(180,74,255,0.1);background:rgba(0,0,0,0.3);flex-shrink:0;align-items:center;">
+                    <button onclick="sheetNew()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">NEW</button>
+                    <button onclick="sheetExportCsv()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">EXPORT CSV</button>
+                    <button onclick="sheetImportCsv()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">IMPORT CSV</button>
+                    <input type="file" id="sheet-csv-input" accept=".csv" style="display:none;" onchange="sheetLoadCsv(this)">
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <span style="font-size:0.7rem;color:#555;font-family:var(--font-mono);">CELL:</span>
+                    <input id="sheet-cell-ref" type="text" value="A1" readonly style="width:48px;padding:3px 6px;background:#111;border:1px solid rgba(180,74,255,0.2);color:var(--accent-primary);font-family:var(--font-mono);font-size:0.72rem;border-radius:3px;">
+                    <input id="sheet-formula-bar" type="text" placeholder="Value or =formula" oninput="sheetFormulaBarInput()" onkeydown="sheetFormulaKeydown(event)" style="flex:1;padding:3px 8px;background:#111;border:1px solid rgba(180,74,255,0.2);color:#e0e0e0;font-family:var(--font-mono);font-size:0.8rem;border-radius:3px;">
+                </div>
+                <!-- Grid container -->
+                <div style="flex:1;overflow:auto;position:relative;">
+                    <table id="sheet-grid" style="border-collapse:collapse;font-size:0.78rem;font-family:var(--font-mono);white-space:nowrap;min-width:100%;"></table>
+                </div>
+            </div>
+
+            <!-- ─── SLIDES ─── -->
+            <div id="office-slides" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+                <!-- Slides toolbar -->
+                <div style="display:flex;gap:6px;padding:6px 12px;border-bottom:1px solid rgba(180,74,255,0.1);background:rgba(0,0,0,0.3);flex-shrink:0;align-items:center;flex-wrap:wrap;">
+                    <button onclick="slideAddSlide()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">+ SLIDE</button>
+                    <button onclick="slideDuplicateCurrent()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">DUPLICATE</button>
+                    <button onclick="slideDeleteCurrent()" style="padding:4px 10px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);color:#ff4d6d;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">DELETE</button>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <span style="font-size:0.7rem;color:#555;font-family:var(--font-mono);">THEME:</span>
+                    <select id="slide-theme-picker" onchange="slideSetTheme(this.value)" style="padding:4px 6px;background:#111;border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;font-size:0.72rem;font-family:var(--font-mono);">
+                        <option value="dark">Shadow Dark</option>
+                        <option value="purple">Purple Haze</option>
+                        <option value="matrix">Matrix</option>
+                        <option value="light">Clean Light</option>
+                        <option value="ocean">Deep Ocean</option>
+                    </select>
+                    <div style="flex:1;"></div>
+                    <button onclick="slideExportJson()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">EXPORT</button>
+                    <button onclick="slidePresent()" style="padding:4px 14px;background:var(--accent-primary);border:none;color:#000;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);font-weight:700;">▶ PRESENT</button>
+                </div>
+                <div style="flex:1;display:flex;overflow:hidden;">
+                    <!-- Slide panel -->
+                    <div id="slide-panel" style="width:160px;min-width:140px;border-right:1px solid rgba(180,74,255,0.12);overflow-y:auto;background:rgba(0,0,0,0.2);flex-shrink:0;padding:8px;display:flex;flex-direction:column;gap:6px;">
+                    </div>
+                    <!-- Slide canvas -->
+                    <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:20px;background:rgba(0,0,0,0.15);">
+                        <div id="slide-canvas" style="width:640px;height:360px;position:relative;box-shadow:0 8px 40px rgba(0,0,0,0.6);flex-shrink:0;overflow:hidden;">
+                            <div id="slide-bg" style="position:absolute;inset:0;"></div>
+                            <div id="slide-content" style="position:absolute;inset:0;padding:48px 56px;display:flex;flex-direction:column;justify-content:center;">
+                                <div id="slide-title-el" contenteditable="true" spellcheck="false"
+                                     oninput="slideSyncCurrent()"
+                                     style="font-size:2rem;font-weight:700;margin-bottom:18px;outline:none;min-height:1.2em;"></div>
+                                <div id="slide-body-el" contenteditable="true" spellcheck="false"
+                                     oninput="slideSyncCurrent()"
+                                     style="font-size:1rem;line-height:1.7;outline:none;flex:1;overflow:hidden;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Present mode overlay -->
+        <div id="slide-present-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;align-items:center;justify-content:center;flex-direction:column;">
+            <div id="present-canvas" style="width:100%;max-width:calc(100vh * 16/9);aspect-ratio:16/9;position:relative;overflow:hidden;">
+                <div id="present-bg" style="position:absolute;inset:0;"></div>
+                <div id="present-content" style="position:absolute;inset:0;padding:8vh 10vw;display:flex;flex-direction:column;justify-content:center;">
+                    <div id="present-title" style="font-size:clamp(1.5rem,4vw,3.5rem);font-weight:700;margin-bottom:3vh;"></div>
+                    <div id="present-body" style="font-size:clamp(0.9rem,2vw,1.8rem);line-height:1.7;"></div>
+                </div>
+            </div>
+            <div style="position:fixed;bottom:24px;display:flex;gap:16px;align-items:center;">
+                <button onclick="presentNav(-1)" style="padding:10px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:4px;cursor:pointer;font-size:1rem;">◀</button>
+                <span id="present-counter" style="color:#555;font-family:var(--font-mono);font-size:0.8rem;"></span>
+                <button onclick="presentNav(1)"  style="padding:10px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:4px;cursor:pointer;font-size:1rem;">▶</button>
+                <button onclick="slideEndPresent()" style="padding:10px 20px;background:rgba(255,77,109,0.15);border:1px solid rgba(255,77,109,0.3);color:#ff4d6d;border-radius:4px;cursor:pointer;font-size:0.8rem;margin-left:20px;">✕ EXIT</button>
             </div>
         </div>
     </div>
@@ -4709,6 +4862,469 @@
                 mailLoadList();
             }
         };
+    </script>
+
+    <!-- ── Shadow Office JavaScript ────────────────────────────────────────── -->
+    <script>
+    // ─── Office tab switcher ──────────────────────────────────────────────────
+
+    const _OFFICE_TABS = ['docs', 'sheets', 'slides'];
+
+    function officeShowTab(name) {
+        for (const t of _OFFICE_TABS) {
+            document.getElementById(`office-${t}`).style.display = 'none';
+            const btn = document.getElementById(`office-tab-${t}`);
+            btn.style.background = 'transparent';
+            btn.style.color = '#888';
+        }
+        document.getElementById(`office-${name}`).style.display = 'flex';
+        const active = document.getElementById(`office-tab-${name}`);
+        active.style.background = 'var(--accent-primary)';
+        active.style.color = '#000';
+        if (name === 'sheets' && !_sheetInited) sheetInit();
+        if (name === 'slides' && !_slideInited) slideInit();
+    }
+
+    // ─── DOCUMENT EDITOR ─────────────────────────────────────────────────────
+
+    let _docDirty = false;
+    let _docAutoSaveTimer = null;
+
+    function docCmd(cmd, val) {
+        document.getElementById('doc-editor').focus();
+        document.execCommand(cmd, false, val ?? null);
+        docUpdateToolbar();
+    }
+
+    function docFormatBlock(tag) {
+        if (!tag) return;
+        document.getElementById('doc-editor').focus();
+        document.execCommand('formatBlock', false, tag);
+    }
+
+    function docUpdateToolbar() {
+        const cmds = ['bold','italic','underline'];
+        const ids  = ['doc-btn-bold','doc-btn-italic','doc-btn-underline'];
+        for (let i = 0; i < cmds.length; i++) {
+            const active = document.queryCommandState(cmds[i]);
+            document.getElementById(ids[i]).style.background = active
+                ? 'rgba(180,74,255,0.4)' : 'rgba(180,74,255,0.06)';
+            document.getElementById(ids[i]).style.color = active ? '#fff' : '#ccc';
+        }
+    }
+
+    function docOnInput() {
+        _docDirty = true;
+        const editor = document.getElementById('doc-editor');
+        const text = editor.innerText || '';
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        document.getElementById('doc-status').textContent =
+            `${words} word${words !== 1 ? 's' : ''} · ${text.length} chars · Unsaved`;
+        clearTimeout(_docAutoSaveTimer);
+        _docAutoSaveTimer = setTimeout(docAutoSave, 30_000);
+    }
+
+    function docAutoSave() {
+        const name = document.getElementById('doc-name').value.trim() || 'Untitled Document';
+        const html = document.getElementById('doc-editor').innerHTML;
+        try {
+            const docs = JSON.parse(localStorage.getItem('sc_office_docs') || '{}');
+            docs[name] = { html, saved: new Date().toISOString() };
+            localStorage.setItem('sc_office_docs', JSON.stringify(docs));
+            _docDirty = false;
+            const text = document.getElementById('doc-editor').innerText || '';
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            document.getElementById('doc-status').textContent =
+                `${words} word${words !== 1 ? 's' : ''} · ${text.length} chars · Saved locally`;
+            document.getElementById('office-save-status').textContent = 'SAVED ' + new Date().toLocaleTimeString();
+        } catch {}
+    }
+
+    function docNew() {
+        if (_docDirty && !confirm('Discard unsaved changes?')) return;
+        document.getElementById('doc-editor').innerHTML = '<p>Start writing…</p>';
+        document.getElementById('doc-name').value = 'Untitled Document';
+        document.getElementById('doc-status').textContent = '0 words · 0 chars';
+        _docDirty = false;
+    }
+
+    function docSave() {
+        docAutoSave();
+        showToast('Document saved locally', 'success');
+    }
+
+    function docLoad() {
+        try {
+            const docs = JSON.parse(localStorage.getItem('sc_office_docs') || '{}');
+            const names = Object.keys(docs);
+            if (!names.length) { showToast('No saved documents', 'info'); return; }
+            const choice = prompt(`Open which document?\n${names.map((n,i) => `${i+1}. ${n}`).join('\n')}\n\nEnter number or name:`);
+            if (!choice) return;
+            const idx = parseInt(choice) - 1;
+            const name = !isNaN(idx) && idx >= 0 ? names[idx] : choice.trim();
+            if (!docs[name]) { showToast('Document not found', 'error'); return; }
+            document.getElementById('doc-editor').innerHTML = docs[name].html;
+            document.getElementById('doc-name').value = name;
+            _docDirty = false;
+            docOnInput();
+        } catch (e) { showToast('Failed to load: ' + e.message, 'error'); }
+    }
+
+    function docExport(fmt) {
+        const name = document.getElementById('doc-name').value.trim() || 'document';
+        const html = document.getElementById('doc-editor').innerHTML;
+        const text = document.getElementById('doc-editor').innerText;
+        let content, mime, ext;
+        if (fmt === 'html') {
+            content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(name)}</title><style>body{max-width:760px;margin:60px auto;font-family:Georgia,serif;font-size:1rem;line-height:1.8;color:#222;}h1,h2,h3{color:#000;}pre{background:#f4f4f4;padding:16px;overflow-x:auto;}</style></head><body>${html}</body></html>`;
+            mime = 'text/html'; ext = 'html';
+        } else {
+            content = text; mime = 'text/plain'; ext = 'txt';
+        }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+        a.download = `${name}.${ext}`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+
+    document.addEventListener('selectionchange', () => {
+        if (document.getElementById('office-docs')?.style.display !== 'none') {
+            docUpdateToolbar();
+        }
+    });
+
+    // ─── SPREADSHEET ─────────────────────────────────────────────────────────
+
+    const SHEET_COLS = 26;
+    const SHEET_ROWS = 100;
+    let _sheetData = {};       // { 'A1': '=SUM(A2:A5)', ... }
+    let _sheetSelected = 'A1';
+    let _sheetInited = false;
+
+    function sheetColLetter(i) { return String.fromCharCode(65 + i); }
+
+    function sheetCellId(col, row) { return `${sheetColLetter(col)}${row + 1}`; }
+
+    function sheetInit() {
+        _sheetInited = true;
+        _sheetData = {};
+        sheetRender();
+    }
+
+    function sheetNew() {
+        if (Object.keys(_sheetData).length && !confirm('Clear the sheet?')) return;
+        _sheetData = {};
+        sheetRender();
+    }
+
+    function sheetRender() {
+        const grid = document.getElementById('sheet-grid');
+        let html = '<thead><tr><th style="width:40px;background:#111;border:1px solid #1a1a1a;"></th>';
+        for (let c = 0; c < SHEET_COLS; c++) {
+            html += `<th style="min-width:80px;max-width:160px;padding:3px 6px;background:#111;border:1px solid #1a1a1a;color:var(--accent-primary);font-size:0.68rem;letter-spacing:1px;font-weight:500;text-align:center;">${sheetColLetter(c)}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+        for (let r = 0; r < SHEET_ROWS; r++) {
+            html += `<tr><td style="padding:3px 8px;background:#0a0a12;border:1px solid #141420;color:#444;font-size:0.65rem;text-align:right;user-select:none;">${r + 1}</td>`;
+            for (let c = 0; c < SHEET_COLS; c++) {
+                const id = sheetCellId(c, r);
+                const val = sheetDisplayValue(id);
+                const isSel = id === _sheetSelected;
+                html += `<td id="sc-${id}"
+                    onclick="sheetSelectCell('${id}')"
+                    ondblclick="sheetStartEdit('${id}')"
+                    style="padding:2px 6px;border:1px solid ${isSel ? 'rgba(180,74,255,0.5)' : '#141420'};background:${isSel ? 'rgba(180,74,255,0.08)' : 'transparent'};color:#ddd;font-size:0.78rem;white-space:nowrap;overflow:hidden;max-width:160px;cursor:default;"
+                    title="${escapeHtml(String(val))}">${escapeHtml(String(val))}</td>`;
+            }
+            html += '</tr>';
+        }
+        html += '</tbody>';
+        grid.innerHTML = html;
+    }
+
+    function sheetRefreshCell(id) {
+        const el = document.getElementById(`sc-${id}`);
+        if (!el) return;
+        const val = sheetDisplayValue(id);
+        el.textContent = String(val);
+        el.title = String(val);
+    }
+
+    function sheetSelectCell(id) {
+        const prev = _sheetSelected;
+        _sheetSelected = id;
+        const prevEl = document.getElementById(`sc-${prev}`);
+        if (prevEl) { prevEl.style.border = '1px solid #141420'; prevEl.style.background = 'transparent'; }
+        const el = document.getElementById(`sc-${id}`);
+        if (el) { el.style.border = '1px solid rgba(180,74,255,0.5)'; el.style.background = 'rgba(180,74,255,0.08)'; }
+        document.getElementById('sheet-cell-ref').value = id;
+        document.getElementById('sheet-formula-bar').value = _sheetData[id] ?? '';
+        document.getElementById('sheet-formula-bar').focus();
+    }
+
+    function sheetStartEdit(id) {
+        sheetSelectCell(id);
+        const bar = document.getElementById('sheet-formula-bar');
+        bar.focus();
+        bar.select();
+    }
+
+    function sheetFormulaBarInput() {
+        const val = document.getElementById('sheet-formula-bar').value;
+        _sheetData[_sheetSelected] = val;
+        sheetRefreshCell(_sheetSelected);
+    }
+
+    function sheetFormulaKeydown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // Move down one row
+            const [col, ...rowParts] = _sheetSelected.split('');
+            const row = parseInt(rowParts.join(''));
+            const nextId = `${col}${Math.min(row + 1, SHEET_ROWS)}`;
+            sheetSelectCell(nextId);
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            const col = _sheetSelected.charCodeAt(0) - 65;
+            const row = parseInt(_sheetSelected.slice(1)) - 1;
+            const nextCol = (col + 1) % SHEET_COLS;
+            sheetSelectCell(`${sheetColLetter(nextCol)}${row + 1}`);
+        }
+    }
+
+    function sheetDisplayValue(id) {
+        const raw = _sheetData[id] ?? '';
+        if (!raw || !String(raw).startsWith('=')) return raw;
+        try { return sheetEval(String(raw).slice(1)); }
+        catch { return '#ERR'; }
+    }
+
+    function sheetGetNum(id) {
+        const v = sheetDisplayValue(id);
+        return isNaN(parseFloat(v)) ? 0 : parseFloat(v);
+    }
+
+    function sheetRange(startId, endId) {
+        const startCol = startId.charCodeAt(0) - 65;
+        const startRow = parseInt(startId.slice(1)) - 1;
+        const endCol   = endId.charCodeAt(0) - 65;
+        const endRow   = parseInt(endId.slice(1)) - 1;
+        const cells = [];
+        for (let r = Math.min(startRow, endRow); r <= Math.max(startRow, endRow); r++) {
+            for (let c = Math.min(startCol, endCol); c <= Math.max(startCol, endCol); c++) {
+                cells.push(sheetCellId(c, r));
+            }
+        }
+        return cells;
+    }
+
+    function sheetEval(expr) {
+        const upper = expr.toUpperCase();
+        // Range function: SUM(A1:A5)
+        const fnMatch = upper.match(/^(SUM|AVG|COUNT|MIN|MAX|COUNTA)\(([A-Z]+\d+):([A-Z]+\d+)\)$/);
+        if (fnMatch) {
+            const [, fn, a, b] = fnMatch;
+            const nums = sheetRange(a, b).map(id => sheetGetNum(id));
+            if (fn === 'SUM')   return nums.reduce((a, b) => a + b, 0);
+            if (fn === 'MIN')   return Math.min(...nums);
+            if (fn === 'MAX')   return Math.max(...nums);
+            if (fn === 'COUNT') return nums.filter(n => n !== 0).length;
+            if (fn === 'COUNTA') return sheetRange(a, b).filter(id => (_sheetData[id] ?? '') !== '').length;
+            if (fn === 'AVG')   return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+        }
+        // Substitute cell refs then eval arithmetic
+        const subst = upper.replace(/([A-Z]+)(\d+)/g, (_, col, row) => {
+            const num = sheetGetNum(`${col}${row}`);
+            return String(num);
+        });
+        // Safe eval: only digits, operators, parens, spaces, dots
+        if (!/^[\d\s+\-*/().%,^]+$/.test(subst)) return '#INVALID';
+        // eslint-disable-next-line no-new-func
+        return Function('"use strict";return(' + subst + ')')();
+    }
+
+    function sheetExportCsv() {
+        let csv = '';
+        for (let r = 0; r < SHEET_ROWS; r++) {
+            const row = [];
+            for (let c = 0; c < SHEET_COLS; c++) {
+                const v = sheetDisplayValue(sheetCellId(c, r));
+                row.push(String(v).includes(',') ? `"${String(v).replace(/"/g,'""')}"` : String(v));
+            }
+            // Trim trailing empty cells
+            while (row.length && !row[row.length - 1]) row.pop();
+            csv += row.join(',') + '\n';
+        }
+        // Trim trailing empty rows
+        const lines = csv.trimEnd().split('\n');
+        while (lines.length && !lines[lines.length-1].trim()) lines.pop();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+        a.download = 'sheet.csv';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+
+    function sheetImportCsv() { document.getElementById('sheet-csv-input').click(); }
+
+    function sheetLoadCsv(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            _sheetData = {};
+            const lines = e.target.result.split(/\r?\n/);
+            for (let r = 0; r < Math.min(lines.length, SHEET_ROWS); r++) {
+                const cells = lines[r].split(',');
+                for (let c = 0; c < Math.min(cells.length, SHEET_COLS); c++) {
+                    const v = cells[c].replace(/^"(.*)"$/, '$1').replace(/""/g, '"');
+                    if (v) _sheetData[sheetCellId(c, r)] = v;
+                }
+            }
+            sheetRender();
+        };
+        reader.readAsText(file);
+        input.value = '';
+    }
+
+    // ─── PRESENTATIONS ───────────────────────────────────────────────────────
+
+    const SLIDE_THEMES = {
+        dark:   { bg: '#0d0d1a', titleColor: '#ffffff', bodyColor: '#a0a0c0', accent: '#b44aff' },
+        purple: { bg: '#1a0a2e', titleColor: '#e0c0ff', bodyColor: '#c0a0e0', accent: '#c060ff' },
+        matrix: { bg: '#001100', titleColor: '#00ff41', bodyColor: '#00cc33', accent: '#00ff00' },
+        light:  { bg: '#ffffff', titleColor: '#1a1a1a', bodyColor: '#444444', accent: '#6600cc' },
+        ocean:  { bg: '#020b18', titleColor: '#90d0ff', bodyColor: '#6090b0', accent: '#00aaff' },
+    };
+
+    let _slides = [];
+    let _currentSlide = 0;
+    let _slideTheme = 'dark';
+    let _slideInited = false;
+    let _presentIdx = 0;
+
+    function slideInit() {
+        _slideInited = true;
+        _slides = [
+            { title: 'Shadow Office', body: 'Click to edit this slide\nUse the toolbar to add slides and change themes' },
+        ];
+        _currentSlide = 0;
+        slidePanelRender();
+        slideShowCurrent();
+    }
+
+    function slidePanelRender() {
+        const panel = document.getElementById('slide-panel');
+        panel.innerHTML = '';
+        const theme = SLIDE_THEMES[_slideTheme];
+        _slides.forEach((s, i) => {
+            const div = document.createElement('div');
+            div.style.cssText = `background:${theme.bg};border:2px solid ${i === _currentSlide ? 'var(--accent-primary)' : 'rgba(180,74,255,0.1)'};border-radius:4px;padding:6px;cursor:pointer;position:relative;aspect-ratio:16/9;overflow:hidden;flex-shrink:0;`;
+            div.innerHTML = `
+                <div style="font-size:0.55rem;font-weight:700;color:${theme.titleColor};overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${escapeHtml(s.title||'')}</div>
+                <div style="font-size:0.4rem;color:${theme.bodyColor};margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;">${escapeHtml(s.body||'')}</div>
+                <div style="position:absolute;bottom:3px;right:4px;font-size:0.45rem;color:rgba(255,255,255,0.25);">${i+1}</div>`;
+            div.onclick = () => { _currentSlide = i; slidePanelRender(); slideShowCurrent(); };
+            panel.appendChild(div);
+        });
+    }
+
+    function slideShowCurrent() {
+        const s = _slides[_currentSlide];
+        if (!s) return;
+        const theme = SLIDE_THEMES[_slideTheme];
+        document.getElementById('slide-bg').style.background = theme.bg;
+        const titleEl = document.getElementById('slide-title-el');
+        const bodyEl  = document.getElementById('slide-body-el');
+        titleEl.style.color = theme.titleColor;
+        bodyEl.style.color  = theme.bodyColor;
+        titleEl.innerText = s.title || '';
+        bodyEl.innerText  = s.body  || '';
+    }
+
+    function slideSyncCurrent() {
+        if (!_slides[_currentSlide]) return;
+        _slides[_currentSlide].title = document.getElementById('slide-title-el').innerText;
+        _slides[_currentSlide].body  = document.getElementById('slide-body-el').innerText;
+        // Refresh thumbnail
+        slidePanelRender();
+    }
+
+    function slideAddSlide() {
+        _slides.splice(_currentSlide + 1, 0, { title: 'New Slide', body: '' });
+        _currentSlide++;
+        slidePanelRender();
+        slideShowCurrent();
+    }
+
+    function slideDuplicateCurrent() {
+        const s = _slides[_currentSlide];
+        _slides.splice(_currentSlide + 1, 0, { ...s });
+        _currentSlide++;
+        slidePanelRender();
+        slideShowCurrent();
+    }
+
+    function slideDeleteCurrent() {
+        if (_slides.length <= 1) { showToast('Cannot delete the only slide', 'warning'); return; }
+        _slides.splice(_currentSlide, 1);
+        _currentSlide = Math.max(0, _currentSlide - 1);
+        slidePanelRender();
+        slideShowCurrent();
+    }
+
+    function slideSetTheme(name) {
+        _slideTheme = name;
+        slidePanelRender();
+        slideShowCurrent();
+    }
+
+    function slidePresent() {
+        _presentIdx = _currentSlide;
+        presentShowSlide(_presentIdx);
+        document.getElementById('slide-present-overlay').style.display = 'flex';
+    }
+
+    function slideEndPresent() {
+        document.getElementById('slide-present-overlay').style.display = 'none';
+    }
+
+    function presentShowSlide(idx) {
+        const s = _slides[idx];
+        if (!s) return;
+        const theme = SLIDE_THEMES[_slideTheme];
+        document.getElementById('present-bg').style.background = theme.bg;
+        document.getElementById('present-title').style.color = theme.titleColor;
+        document.getElementById('present-body').style.color  = theme.bodyColor;
+        document.getElementById('present-title').innerText = s.title || '';
+        document.getElementById('present-body').innerText  = s.body  || '';
+        document.getElementById('present-counter').textContent = `${idx + 1} / ${_slides.length}`;
+    }
+
+    function presentNav(dir) {
+        _presentIdx = Math.max(0, Math.min(_slides.length - 1, _presentIdx + dir));
+        presentShowSlide(_presentIdx);
+    }
+
+    document.addEventListener('keydown', e => {
+        const overlay = document.getElementById('slide-present-overlay');
+        if (overlay?.style.display === 'flex') {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); presentNav(1); }
+            if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  { e.preventDefault(); presentNav(-1); }
+            if (e.key === 'Escape') slideEndPresent();
+        }
+    });
+
+    function slideExportJson() {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify({ theme: _slideTheme, slides: _slides }, null, 2)], { type: 'application/json' }));
+        a.download = 'presentation.json';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+
+    // Initialize office when nav tab is first clicked
     </script>
 
     <!-- Vault unlock dialog (chat) -->
