@@ -1061,7 +1061,13 @@
                     </div>
                 </div>
                 <!-- Input Area -->
-                <div style="padding:20px;border-top:1px solid rgba(180,74,255,0.1);display:flex;gap:12px;">
+                <div style="padding:20px;border-top:1px solid rgba(180,74,255,0.1);display:flex;gap:8px;align-items:center;">
+                    <input id="chat-file-input" type="file" style="display:none;" onchange="chatHandleFileSelect(this)">
+                    <button id="chat-attach-btn" onclick="document.getElementById('chat-file-input').click()"
+                            title="Attach file (max 10 MB)"
+                            style="padding:10px 12px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.2);color:var(--accent-primary);border-radius:6px;cursor:pointer;font-size:1rem;line-height:1;" disabled>
+                        📎
+                    </button>
                     <input id="chat-input" type="text" placeholder="Type message (max 2000 chars)..."
                            style="flex:1;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;padding:12px;border-radius:6px;font-family:var(--font-main);font-size:0.9rem;"
                            maxlength="2000" disabled>
@@ -3754,6 +3760,15 @@
             }
         }
 
+        function chatFormatContent(content) {
+            // Render [attachment:key:filename] tokens as download links
+            return content.replace(/\[attachment:([^\]:]+):([^\]]*)\]/g, (_, key, name) => {
+                const url = `https://api.shadowcypher.site/v1/files/${encodeURIComponent(key)}?key=${encodeURIComponent(_sessionApiKey)}`;
+                const safeName = escapeHtml(name || 'file');
+                return `<a href="${url}" target="_blank" rel="noopener" download="${safeName}" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(180,74,255,0.12);border:1px solid rgba(180,74,255,0.3);border-radius:4px;color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">📎 ${safeName}</a>`;
+            });
+        }
+
         function chatRenderMessage(msg, prepend = false) {
             const msgDiv = document.getElementById('chat-messages');
             const empty = msgDiv.querySelector('[data-empty]');
@@ -3767,6 +3782,7 @@
             const el = document.createElement('div');
             el.dataset.msgId = msg.id;
             el.style.cssText = 'display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(180,74,255,0.1);';
+            const bodyHtml = content !== null ? chatFormatContent(escapeHtml(content)) : '…';
             el.innerHTML = `
                 <div style="flex-shrink:0;">
                     <div style="width:28px;height:28px;background:var(--accent-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#000;">${escapeHtml((msg.nick||'?')[0].toUpperCase())}</div>
@@ -3776,12 +3792,12 @@
                         <div style="font-weight:600;color:#fff;font-size:0.85rem;">${escapeHtml(msg.nick||'unknown')}</div>
                         <div style="font-size:0.65rem;color:var(--text-secondary);">${time}</div>
                     </div>
-                    <div class="msg-body" style="color:var(--text-secondary);word-wrap:break-word;white-space:pre-wrap;">${content !== null ? escapeHtml(content) : '…'}</div>
+                    <div class="msg-body" style="color:var(--text-secondary);word-wrap:break-word;white-space:pre-wrap;">${bodyHtml}</div>
                 </div>`;
             if (chatIsEncrypted(msg.content) && _vaultKey) {
                 chatDecrypt(msg.content).then(plain => {
                     const body = el.querySelector('.msg-body');
-                    if (body) body.textContent = plain;
+                    if (body) body.innerHTML = chatFormatContent(escapeHtml(plain));
                 });
             }
             if (prepend) msgDiv.prepend(el); else msgDiv.appendChild(el);
@@ -3797,6 +3813,7 @@
             ws.onopen = () => {
                 document.getElementById('chat-input').disabled = false;
                 document.getElementById('chat-send').disabled = false;
+                document.getElementById('chat-attach-btn').disabled = false;
             };
 
             ws.onmessage = async (evt) => {
@@ -3829,6 +3846,7 @@
             };
 
             ws.onclose = () => {
+                document.getElementById('chat-attach-btn').disabled = true;
                 if (_chatWs === ws && _currentRoom) {
                     // Reconnect after 3s
                     setTimeout(() => { if (_currentRoom) chatConnectWs(_currentRoom); }, 3000);
@@ -3950,6 +3968,46 @@
                 chatSelectRoom({ name: data.room, display_name: data.display, room_type: 'dm' });
             } catch (e) {
                 alert('Error: ' + e.message);
+            }
+        }
+
+        async function chatHandleFileSelect(input) {
+            const file = input.files?.[0];
+            if (!file) return;
+            input.value = '';  // reset so same file can be re-selected
+            if (file.size > 10 * 1024 * 1024) { alert('File too large (max 10 MB)'); return; }
+            if (!_currentRoom || !chatRequireAuth()) return;
+
+            const btn = document.getElementById('chat-attach-btn');
+            const origText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '⏳';
+
+            try {
+                const form = new FormData();
+                form.append('file', file);
+                const res = await fetch('https://api.shadowcypher.site/v1/files/upload', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${_sessionApiKey}` },
+                    body: form,
+                });
+                const data = await res.json();
+                if (!data.ok) { alert('Upload failed: ' + (data.error || 'unknown error')); return; }
+
+                // Send attachment token as a chat message
+                const token = `[attachment:${data.key}:${data.name}]`;
+                const content = _vaultKey ? await chatEncrypt(token) : token;
+                if (_chatWs?.readyState === WebSocket.OPEN) {
+                    _chatWs.send(JSON.stringify({ type: 'message', content }));
+                } else {
+                    await chatApi('/v1/chat/send', 'POST', { room: _currentRoom.name, content });
+                    await chatLoadMessagesPoll();
+                }
+            } catch (e) {
+                alert('Upload error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origText;
             }
         }
 

@@ -80,6 +80,7 @@ import { getAgentVersion } from "./agent_version";
 import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup, webSearch, wikiSummary, ddgInstant } from "./shadow_apis";
 import { getOtaManifest, updateOtaManifest } from "./ota";
 import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, openDm, listDms } from "./chat";
+import { uploadFile, downloadFile, deleteFile } from "./files";
 export { ChatRoom } from "./chat_do";
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
@@ -138,6 +139,8 @@ export interface Env {
   OLLAMA_DEFAULT_MODEL?: string;
   // Durable Objects
   CHAT_ROOM: DurableObjectNamespace;
+  // R2 file storage
+  SHADOW_FILES: R2Bucket;
 }
 
 interface SupabaseUser {
@@ -685,6 +688,8 @@ export default {
         "GET /v1/chat/online":                getOnlineUsers,
         "GET /v1/chat/dm":                    listDms,
         "POST /v1/chat/dm/open":              openDm,
+        // File storage
+        "POST /v1/files/upload":              uploadFile,
         // Shadow Mail
         "GET /v1/mail/inbox":                 getInbox,
         "GET /v1/mail/count":                 getMailCount,
@@ -709,8 +714,11 @@ export default {
       const mailRead   = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/read$/.test(path);
       const mailReply  = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/reply$/.test(path);
       const mailDelete = req.method === "DELETE" && /^\/v1\/mail\/[^/]+$/.test(path);
+      // File storage
+      const fileGet    = req.method === "GET"    && /^\/v1\/files\/.+/.test(path);
+      const fileDelete = req.method === "DELETE" && /^\/v1\/files\/.+/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailReply || mailDelete;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailReply || mailDelete || fileGet || fileDelete;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -743,6 +751,10 @@ export default {
         if (mailRead)   return markRead(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (mailReply)  return replyMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (mailDelete) return deleteMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        // File storage — key is everything after /v1/files/
+        const fileKey = path.slice("/v1/files/".length);
+        if (fileGet)    return downloadFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
+        if (fileDelete) return deleteFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
       }
 
       // ── WebSocket upgrade: GET /v1/chat/ws?room=<name> ─────────────────────

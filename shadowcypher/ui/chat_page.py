@@ -4,6 +4,9 @@ from gi.repository import Gtk, GLib, Gdk, Pango
 import threading
 import time
 import json
+import re
+import mimetypes
+import uuid as _uuid_mod
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -24,6 +27,33 @@ def _api_get(path: str, api_key: str) -> dict:
     url = f"{base}{path}"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {api_key}"})
     with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
+        return json.loads(r.read())
+
+
+_ATTACH_RE = re.compile(r'\[attachment:([^\]:]+):([^\]]*)\]')
+
+
+def _api_upload(path: str, api_key: str, file_path: str, file_name: str) -> dict:
+    base = getattr(config, "api_base_url", "https://api.shadowcypher.site")
+    url = f"{base}{path}"
+    boundary = f"----FormBoundary{_uuid_mod.uuid4().hex}"
+    with open(file_path, "rb") as f:
+        file_data = f.read()
+    mime_type = mimetypes.guess_type(file_name)[0] or "application/octet-stream"
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="file"; filename="{file_name}"\r\n'
+        f"Content-Type: {mime_type}\r\n\r\n"
+    ).encode() + file_data + f"\r\n--{boundary}--\r\n".encode()
+    req = urllib.request.Request(
+        url, data=body,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as r:  # nosec B310
         return json.loads(r.read())
 
 
@@ -394,6 +424,11 @@ class ChatPage(Gtk.Box):
         input_bar.set_margin_top(8)
         input_bar.set_margin_bottom(12)
 
+        attach_btn = Gtk.Button(label="📎")
+        attach_btn.set_tooltip_text("Attach file (max 10 MB)")
+        attach_btn.connect("clicked", self._on_attach)
+        self._attach_btn = attach_btn
+
         self._entry = Gtk.Entry()
         self._entry.set_placeholder_text("Message #global…")
         self._entry.set_hexpand(True)
@@ -403,6 +438,7 @@ class ChatPage(Gtk.Box):
         send_btn.get_style_context().add_class("suggested-action")
         send_btn.connect("clicked", self._on_send)
 
+        input_bar.pack_start(attach_btn, False, False, 0)
         input_bar.pack_start(self._entry, True, True, 0)
         input_bar.pack_start(send_btn, False, False, 0)
         center.pack_start(input_bar, False, False, 0)
@@ -528,12 +564,21 @@ class ChatPage(Gtk.Box):
         )
         header.set_halign(Gtk.Align.START)
 
-        body = Gtk.Label(label=content)
-        body.set_halign(Gtk.Align.START)
-        body.set_line_wrap(True)
-        body.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
-        body.set_selectable(True)
-        body.set_xalign(0)
+        m = _ATTACH_RE.fullmatch(content.strip()) if content else None
+        if m:
+            key, fname = m.group(1), m.group(2) or "file"
+            base = getattr(config, "api_base_url", "https://api.shadowcypher.site")
+            dl_url = (f"{base}/v1/files/{urllib.parse.quote(key, safe='')}"
+                      f"?key={urllib.parse.quote(self._api_key, safe='')}")
+            body = Gtk.LinkButton.new_with_label(dl_url, f"📎 {fname}")
+            body.set_halign(Gtk.Align.START)
+        else:
+            body = Gtk.Label(label=content)
+            body.set_halign(Gtk.Align.START)
+            body.set_line_wrap(True)
+            body.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            body.set_selectable(True)
+            body.set_xalign(0)
 
         content_box.pack_start(header, False, False, 0)
         content_box.pack_start(body, False, False, 0)
@@ -661,6 +706,54 @@ class ChatPage(Gtk.Box):
         if room_name not in existing:
             self._add_dm_row(room_name, display, display.lstrip("@"))
         self._select_room(room_name)
+
+    # ── File attach ───────────────────────────────────────────────────────────
+
+    def _on_attach(self, *_):
+        if not self._api_key:
+            self._show_error("No API key configured.")
+            return
+        dialog = Gtk.FileChooserDialog(
+            title="Choose a file to attach",
+            parent=self.get_toplevel(),
+            action=Gtk.FileChooserAction.OPEN,
+        )
+        dialog.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                           Gtk.STOCK_OPEN, Gtk.ResponseType.OK)
+        response = dialog.run()
+        file_path = dialog.get_filename()
+        dialog.destroy()
+
+        if response != Gtk.ResponseType.OK or not file_path:
+            return
+
+        import os
+        if os.path.getsize(file_path) > 10 * 1024 * 1024:
+            self._show_error("File too large (max 10 MB)")
+            return
+
+        file_name = os.path.basename(file_path)
+        self._attach_btn.set_sensitive(False)
+        self._attach_btn.set_label("⏳")
+        threading.Thread(target=self._upload_file_async,
+                         args=(file_path, file_name), daemon=True).start()
+
+    def _upload_file_async(self, file_path: str, file_name: str):
+        try:
+            data = _api_upload("/v1/files/upload", self._api_key, file_path, file_name)
+            if not data.get("ok"):
+                GLib.idle_add(self._show_error, data.get("error", "Upload failed"))
+                return
+            token = f"[attachment:{data['key']}:{data['name']}]"
+            sent = self._ws_send({"type": "message", "content": token})
+            if not sent:
+                _api_post("/v1/chat/send", self._api_key,
+                          {"room": self._current_room, "content": token})
+        except Exception as e:
+            GLib.idle_add(self._show_error, f"Upload error: {e}")
+        finally:
+            GLib.idle_add(self._attach_btn.set_sensitive, True)
+            GLib.idle_add(self._attach_btn.set_label, "📎")
 
     # ── Send ──────────────────────────────────────────────────────────────────
 
