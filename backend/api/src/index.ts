@@ -737,6 +737,12 @@ export default {
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         if ((agentMissionCreate || agentMissionPending) && !rateLimit(`msn:${user.id}`, 10, 60_000))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/files/upload" && !rateLimit(`upload:${user.id}`, 10, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/chat/dm/open" && !rateLimit(`dm-open:${user.id}`, 20, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/mail/send" && !rateLimit(`mail-send:${user.id}`, 10, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
 
         if (handler) return handler(req, env, { id: user.id, email: user.email }, cors);
 
