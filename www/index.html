@@ -1048,10 +1048,15 @@
                         <h2 id="chat-room-name" style="font-size:1.2rem;margin:0;color:#fff;">Select a room</h2>
                         <p id="chat-room-desc" style="font-size:0.75rem;color:var(--text-secondary);margin:4px 0 0 0;">No room selected</p>
                     </div>
-                    <div style="display:flex;gap:8px;">
+                    <div style="display:flex;gap:8px;align-items:center;">
                         <div style="font-size:0.75rem;color:var(--text-secondary);">
                             <span id="chat-online-count">0</span> online
                         </div>
+                        <button id="chat-room-settings-btn" onclick="chatShowRoomSettings()"
+                                title="Room settings"
+                                style="display:none;padding:5px 9px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.25);color:var(--accent-primary);border-radius:4px;cursor:pointer;font-size:0.8rem;line-height:1;">
+                            ⚙
+                        </button>
                     </div>
                 </div>
                 <!-- Reconnect banner -->
@@ -1128,6 +1133,50 @@
                 </div>
             </div>
         </div>
+        <!-- Create Room modal -->
+        <div id="chat-create-room-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9000;align-items:center;justify-content:center;padding:20px;">
+            <div style="background:#0d0d14;border:1px solid rgba(180,74,255,0.3);border-radius:8px;padding:28px;width:100%;max-width:420px;box-shadow:0 0 40px rgba(180,74,255,0.15);">
+                <h3 style="margin:0 0 20px 0;font-size:1rem;color:#fff;font-family:var(--font-mono);letter-spacing:1px;">CREATE NEW ROOM</h3>
+                <label style="font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;font-family:var(--font-mono);">ROOM ID (slug)</label>
+                <input id="cr-name" type="text" placeholder="e.g. gaming-talk" maxlength="30"
+                       oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')"
+                       style="width:100%;margin:6px 0 14px 0;padding:9px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:4px;font-size:0.85rem;box-sizing:border-box;font-family:var(--font-mono);">
+                <label style="font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;font-family:var(--font-mono);">DISPLAY NAME</label>
+                <input id="cr-display" type="text" placeholder="e.g. #Gaming Talk" maxlength="50"
+                       style="width:100%;margin:6px 0 14px 0;padding:9px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:4px;font-size:0.85rem;box-sizing:border-box;">
+                <label style="font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;font-family:var(--font-mono);">TOPIC (optional)</label>
+                <input id="cr-topic" type="text" placeholder="What's this room about?" maxlength="200"
+                       style="width:100%;margin:6px 0 20px 0;padding:9px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:4px;font-size:0.85rem;box-sizing:border-box;">
+                <p id="cr-error" style="display:none;color:#ff4d6d;font-size:0.78rem;margin:0 0 14px 0;"></p>
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button onclick="chatHideCreateRoom()" style="padding:8px 18px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;border-radius:4px;cursor:pointer;font-size:0.8rem;">Cancel</button>
+                    <button id="cr-submit-btn" onclick="chatSubmitCreateRoom()" style="padding:8px 20px;background:var(--accent-primary);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;font-weight:700;font-family:var(--font-mono);">CREATE</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Room Settings modal -->
+        <div id="chat-room-settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9000;align-items:center;justify-content:center;padding:20px;">
+            <div style="background:#0d0d14;border:1px solid rgba(180,74,255,0.3);border-radius:8px;padding:28px;width:100%;max-width:420px;box-shadow:0 0 40px rgba(180,74,255,0.15);">
+                <h3 style="margin:0 0 4px 0;font-size:1rem;color:#fff;font-family:var(--font-mono);letter-spacing:1px;">ROOM SETTINGS</h3>
+                <p id="rs-room-slug" style="font-size:0.72rem;color:var(--text-secondary);margin:0 0 20px 0;font-family:var(--font-mono);"></p>
+                <label style="font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;font-family:var(--font-mono);">DISPLAY NAME</label>
+                <input id="rs-display" type="text" maxlength="50"
+                       style="width:100%;margin:6px 0 14px 0;padding:9px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:4px;font-size:0.85rem;box-sizing:border-box;">
+                <label style="font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;font-family:var(--font-mono);">TOPIC</label>
+                <input id="rs-topic" type="text" maxlength="200"
+                       style="width:100%;margin:6px 0 20px 0;padding:9px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:4px;font-size:0.85rem;box-sizing:border-box;">
+                <p id="rs-error" style="display:none;color:#ff4d6d;font-size:0.78rem;margin:0 0 14px 0;"></p>
+                <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;">
+                    <button onclick="chatDeleteRoom()" style="padding:8px 16px;background:rgba(255,77,109,0.12);border:1px solid rgba(255,77,109,0.3);color:#ff4d6d;border-radius:4px;cursor:pointer;font-size:0.78rem;font-family:var(--font-mono);">DELETE ROOM</button>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="chatHideRoomSettings()" style="padding:8px 18px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;border-radius:4px;cursor:pointer;font-size:0.8rem;">Cancel</button>
+                        <button id="rs-submit-btn" onclick="chatSubmitRoomSettings()" style="padding:8px 20px;background:var(--accent-primary);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;font-weight:700;font-family:var(--font-mono);">SAVE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Compose modal -->
         <div id="mail-compose-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9000;align-items:center;justify-content:center;padding:20px;">
             <div style="background:#0d0d0d;border:1px solid #222;width:100%;max-width:580px;border-radius:6px;overflow:hidden;">
@@ -2393,6 +2442,7 @@
             if (signoutLink) signoutLink.style.display = '';
             // Derive nick the same way the server does (email handle, sanitized)
             _myNick = user.email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20) || 'user';
+            _currentUserId = user.id || null;
             const name = user.user_metadata?.handle || user.email.split('@')[0];
             const h2 = document.querySelector('#account-dashboard h2');
             if (h2) h2.innerText = `Welcome, ${name}`;
@@ -3795,6 +3845,7 @@
         let _vaultKey = null;      // CryptoKey in memory only
         let _chatWs = null;
         let _currentRoom = null;
+        let _currentUserId = null;
         let _onlineCount = 0;
         let _wsReconnectAttempts = 0;
         let _myNick = null;
@@ -3890,6 +3941,10 @@
             if (e.key === 'Enter' && document.getElementById('chat-vault-dialog')?.style.display === 'flex') {
                 chatUnlockVault();
             }
+            if (e.key === 'Escape') {
+                chatHideCreateRoom();
+                chatHideRoomSettings();
+            }
         });
 
         // ─── Encryption / Decryption ──────────────────────────────────────────────
@@ -3938,7 +3993,8 @@
                 for (const room of data.rooms) {
                     const btn = document.createElement('button');
                     btn.style.cssText = 'width:100%;text-align:left;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:4px;margin-bottom:8px;cursor:pointer;font-size:0.85rem;';
-                    btn.innerHTML = `<div style="font-weight:600;">${escapeHtml(room.display_name || room.name)}</div><div style="font-size:0.65rem;color:var(--text-secondary);margin-top:2px;">#${escapeHtml(room.name)}</div>`;
+                    const topicHtml = room.topic ? `<div style="font-size:0.62rem;color:var(--text-secondary);margin-top:2px;opacity:0.8;">${escapeHtml(room.topic)}</div>` : '';
+                    btn.innerHTML = `<div style="font-weight:600;">${escapeHtml(room.display_name || room.name)}</div><div style="font-size:0.65rem;color:var(--text-secondary);margin-top:2px;">#${escapeHtml(room.name)}</div>${topicHtml}`;
                     btn.onclick = () => chatSelectRoom(room);
                     roomsDiv.appendChild(btn);
                 }
@@ -4176,11 +4232,16 @@
             _dmPartnerReadAt = null;
             _onlineCount = 0;
             document.getElementById('chat-room-name').innerText = room.display_name || room.name;
-            document.getElementById('chat-room-desc').innerText = `#${room.name}`;
+            const desc = room.topic ? room.topic : `#${room.name}`;
+            document.getElementById('chat-room-desc').innerText = desc;
             document.getElementById('chat-messages').innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:20px;">Connecting…</div>';
             document.getElementById('chat-input').disabled = true;
             document.getElementById('chat-send').disabled = true;
             document.getElementById('chat-online-count').innerText = '0';
+            // Show settings gear only for rooms the current user owns
+            const settingsBtn = document.getElementById('chat-room-settings-btn');
+            const isOwner = room.room_type === 'public' && room.created_by && _currentUserId && room.created_by === _currentUserId;
+            settingsBtn.style.display = isOwner ? 'block' : 'none';
             chatConnectWs(room);
         }
 
@@ -4224,11 +4285,117 @@
             }
         });
 
-        async function chatCreateRoom() {
-            const name = prompt('Enter room name (lowercase, hyphens ok):');
-            if (!name) return;
-            if (!/^[a-z0-9-]+$/.test(name)) { showToast('Lowercase letters, numbers, and hyphens only', 'warning'); return; }
-            showToast('Room creation requires admin setup. Contact an admin to add the room to the database.', 'info');
+        // ── Room creation ─────────────────────────────────────────────────────────
+
+        function chatCreateRoom() {
+            if (!chatRequireAuth()) return;
+            document.getElementById('cr-name').value = '';
+            document.getElementById('cr-display').value = '';
+            document.getElementById('cr-topic').value = '';
+            document.getElementById('cr-error').style.display = 'none';
+            document.getElementById('cr-submit-btn').disabled = false;
+            document.getElementById('cr-submit-btn').textContent = 'CREATE';
+            const modal = document.getElementById('chat-create-room-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('cr-name').focus(), 50);
+        }
+
+        function chatHideCreateRoom() {
+            document.getElementById('chat-create-room-modal').style.display = 'none';
+        }
+
+        async function chatSubmitCreateRoom() {
+            const name    = document.getElementById('cr-name').value.trim();
+            const display = document.getElementById('cr-display').value.trim();
+            const topic   = document.getElementById('cr-topic').value.trim();
+            const errEl   = document.getElementById('cr-error');
+            const btn     = document.getElementById('cr-submit-btn');
+
+            if (!name || name.length < 2) { errEl.textContent = 'Room ID must be at least 2 characters'; errEl.style.display = 'block'; return; }
+            if (/^(global|dm|team-)/.test(name)) { errEl.textContent = 'That name is reserved'; errEl.style.display = 'block'; return; }
+
+            btn.disabled = true; btn.textContent = 'CREATING…';
+            errEl.style.display = 'none';
+            try {
+                const data = await chatApi('/v1/chat/rooms', 'POST', {
+                    name,
+                    display_name: display || `#${name}`,
+                    topic: topic || undefined,
+                });
+                if (!data) return;
+                chatHideCreateRoom();
+                showToast(`Room #${name} created!`, 'success');
+                await chatLoadRooms();
+                if (data.room) chatSelectRoom({ ...data.room, display_name: data.room.display_name || `#${name}` });
+            } catch (e) {
+                const msg = e?.message || 'Failed to create room';
+                errEl.textContent = msg === 'room_exists' ? 'A room with that name already exists' : msg;
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false; btn.textContent = 'CREATE';
+            }
+        }
+
+        // ── Room settings (owner only) ────────────────────────────────────────────
+
+        function chatShowRoomSettings() {
+            if (!_currentRoom) return;
+            document.getElementById('rs-room-slug').textContent = `#${_currentRoom.name}`;
+            document.getElementById('rs-display').value = _currentRoom.display_name || '';
+            document.getElementById('rs-topic').value = _currentRoom.topic || '';
+            document.getElementById('rs-error').style.display = 'none';
+            document.getElementById('rs-submit-btn').disabled = false;
+            document.getElementById('rs-submit-btn').textContent = 'SAVE';
+            document.getElementById('chat-room-settings-modal').style.display = 'flex';
+        }
+
+        function chatHideRoomSettings() {
+            document.getElementById('chat-room-settings-modal').style.display = 'none';
+        }
+
+        async function chatSubmitRoomSettings() {
+            if (!_currentRoom) return;
+            const display = document.getElementById('rs-display').value.trim();
+            const topic   = document.getElementById('rs-topic').value.trim();
+            const errEl   = document.getElementById('rs-error');
+            const btn     = document.getElementById('rs-submit-btn');
+
+            btn.disabled = true; btn.textContent = 'SAVING…';
+            errEl.style.display = 'none';
+            try {
+                const data = await chatApi(`/v1/chat/rooms/${encodeURIComponent(_currentRoom.name)}`, 'PATCH', { display_name: display, topic });
+                if (!data) return;
+                chatHideRoomSettings();
+                _currentRoom.display_name = display;
+                _currentRoom.topic = topic;
+                document.getElementById('chat-room-name').innerText = display || _currentRoom.name;
+                document.getElementById('chat-room-desc').innerText = topic ? `${topic}` : `#${_currentRoom.name}`;
+                showToast('Room updated', 'success');
+                chatLoadRooms();
+            } catch (e) {
+                errEl.textContent = e?.message || 'Update failed';
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false; btn.textContent = 'SAVE';
+            }
+        }
+
+        async function chatDeleteRoom() {
+            if (!_currentRoom) return;
+            if (!confirm(`Delete #${_currentRoom.name}? This cannot be undone.`)) return;
+            chatHideRoomSettings();
+            try {
+                await chatApi(`/v1/chat/rooms/${encodeURIComponent(_currentRoom.name)}`, 'DELETE');
+                showToast(`#${_currentRoom.name} deleted`, 'success');
+                _currentRoom = null;
+                document.getElementById('chat-room-name').innerText = 'Select a room';
+                document.getElementById('chat-room-desc').innerText = 'No room selected';
+                document.getElementById('chat-room-settings-btn').style.display = 'none';
+                if (_chatWs) { _chatWs.close(); _chatWs = null; }
+                chatLoadRooms();
+            } catch (e) {
+                showToast(e?.message || 'Delete failed', 'error');
+            }
         }
 
         async function chatLoadDms() {
