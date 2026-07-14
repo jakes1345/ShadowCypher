@@ -74,12 +74,39 @@ PACMAN
         flatpak remote-add --if-not-exists flathub \
             https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
 
-        echo "[*] Installing Flathub apps (Heroic, Bottles, ProtonUp-Qt)..."
+        echo "[*] Installing Flathub apps (Heroic, Bottles, ProtonUp-Qt, Sunshine, EmulationStation-DE)..."
         flatpak install -y --noninteractive flathub \
             com.heroicgameslauncher.hgl \
             com.usebottles.bottles \
             net.davidotek.pupgui2 \
+            dev.lizardbyte.app.Sunshine \
+            io.github.es_de.emulationstation-de \
             2>&1 | tail -10 || echo "    flatpak install failed (will retry next boot)"
+    fi
+
+    # ── 2b. AD attack chain via pipx (no AUR helper needed) ─────────────────
+    # Gives every pentest tool its own isolated venv — no dependency hell.
+    if command -v pipx >/dev/null 2>&1; then
+        echo "[*] Installing AD attack chain via pipx..."
+        export PIPX_HOME=/opt/pipx
+        export PIPX_BIN_DIR=/usr/local/bin
+
+        # Core AD / protocol suite
+        pipx install impacket            2>&1 | tail -3 || echo "    impacket failed"
+        pipx install netexec             2>&1 | tail -3 || echo "    netexec failed"
+        pipx install certipy-ad          2>&1 | tail -3 || echo "    certipy-ad failed"
+        pipx install bloodhound          2>&1 | tail -3 || echo "    bloodhound failed"
+        # Web / recon additions
+        pipx install dirsearch           2>&1 | tail -3 || echo "    dirsearch failed"
+        pipx install git+https://github.com/Tib3rius/AutoRecon.git \
+                                         2>&1 | tail -3 || echo "    AutoRecon failed"
+        echo "    AD toolchain installed → /usr/local/bin/{impacket-*,netexec,certipy,bloodhound,...}"
+    fi
+
+    # ── 2c. Responder (AUR / Chaotic-AUR) ───────────────────────────────────
+    if grep -q "\[chaotic-aur\]" /etc/pacman.conf 2>/dev/null; then
+        pacman -S --noconfirm --needed python-responder 2>&1 | tail -5 \
+            || echo "    responder not in chaotic-aur yet — install manually: pipx install responder"
     fi
 
     # ── 2b. AUR-only goodies installed without an AUR helper ────────────────

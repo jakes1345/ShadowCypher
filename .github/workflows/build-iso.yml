@@ -49,8 +49,9 @@ jobs:
             --volume "/tmp/iso-out:/iso-out" \
             archlinux:latest \
             bash -ex -c '
-              # Disable signature checking — safe inside an ephemeral CI container
-              sed -i "s/^SigLevel.*/SigLevel = Never/" /etc/pacman.conf
+              # Keep signature checking enabled — Required DatabaseOptional is the Arch default
+              # and verifies package signatures while tolerating missing optional DB sigs.
+              sed -i "s/^SigLevel.*/SigLevel = Required DatabaseOptional/" /etc/pacman.conf
 
               # Refresh DB and install build deps
               pacman -Sy --noconfirm archiso rsync
@@ -72,6 +73,27 @@ jobs:
           echo "=== SHA256SUMS ==="
           cat SHA256SUMS
 
+      - name: Sign ISO with GPG
+        if: secrets.SHADOWOS_SIGNING_KEY != ''
+        env:
+          SHADOWOS_SIGNING_KEY: ${{ secrets.SHADOWOS_SIGNING_KEY }}
+          SHADOWOS_SIGNING_KEY_ID: ${{ secrets.SHADOWOS_SIGNING_KEY_ID }}
+        run: |
+          echo "$SHADOWOS_SIGNING_KEY" | gpg --batch --import
+          cd /tmp/iso-out
+          for iso in *.iso; do
+            gpg --batch --yes --armor --detach-sign \
+              --local-user "$SHADOWOS_SIGNING_KEY_ID" \
+              "$iso"
+            echo "Signed: ${iso}.asc"
+          done
+          # Sign the SHA256SUMS file too so users can verify the whole manifest
+          gpg --batch --yes --armor --detach-sign \
+            --local-user "$SHADOWOS_SIGNING_KEY_ID" \
+            SHA256SUMS
+          echo "=== Signatures ==="
+          ls -lh *.asc
+
       - name: Rename ISO to include version tag
         run: |
           TAG="${{ steps.version.outputs.tag }}"
@@ -90,6 +112,7 @@ jobs:
           name: shadowos-${{ steps.version.outputs.tag }}
           path: |
             /tmp/iso-out/*.iso
+            /tmp/iso-out/*.asc
             /tmp/iso-out/SHA256SUMS
           retention-days: 30
 
@@ -101,7 +124,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.version.outputs.tag }}"
-          for f in /tmp/iso-out/*.iso /tmp/iso-out/SHA256SUMS; do
+          for f in /tmp/iso-out/*.iso /tmp/iso-out/*.asc /tmp/iso-out/SHA256SUMS; do
             [[ -f "$f" ]] || continue
             echo "Uploading $(basename "$f") → release $TAG"
             gh release upload "$TAG" "$f" --clobber
