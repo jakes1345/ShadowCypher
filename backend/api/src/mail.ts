@@ -206,10 +206,18 @@ export async function getInbox(
   const url = new URL(req.url);
   const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50"), 100);
   const offset = parseInt(url.searchParams.get("offset") ?? "0");
+  const q = url.searchParams.get("q")?.trim().slice(0, 100) ?? "";
+
+  const filters: Record<string, string> = { user_id: `eq.${user.id}` };
+  if (q) {
+    // Escape ILIKE wildcards in the user query, then wrap with %
+    const safe = q.replace(/[%_\\]/g, (c) => `\\${c}`);
+    filters.or = `(subject.ilike.%${safe}%,from_addr.ilike.%${safe}%)`;
+  }
 
   const rows = await dbSelect<MailRow>(env, "mail_messages", {
     select: "id,from_addr,to_addr,subject,direction,is_read,received_at",
-    filters: { user_id: `eq.${user.id}` },
+    filters,
     order: "received_at.desc",
     limit,
   });
@@ -331,6 +339,70 @@ export async function sendOutbound(
     subject: body.subject.trim(),
     body_text: body.text ?? null,
     body_html: body.html ?? null,
+    direction: "outbound",
+    is_read: true,
+    received_at: new Date().toISOString(),
+  }).catch(() => null);
+
+  return json({ ok: true, id: sendData.id }, {}, cors);
+}
+
+export async function replyMail(
+  req: Request,
+  env: Env,
+  user: { id: string; email: string },
+  cors: HeadersInit,
+  messageId: string
+): Promise<Response> {
+  if (!env.RESEND_API_KEY) return json({ error: "mail_not_configured" }, { status: 503 }, cors);
+
+  const orig = await dbSelect<MailRow>(env, "mail_messages", {
+    select: "id,user_id,message_id,from_addr,subject",
+    filters: { id: `eq.${messageId}`, user_id: `eq.${user.id}` },
+    limit: 1,
+  }).then((r) => r[0] ?? null);
+  if (!orig) return json({ error: "not_found" }, { status: 404 }, cors);
+
+  const body = (await req.json().catch(() => null)) as { text?: string } | null;
+  const replyText = body?.text?.trim() ?? "";
+  if (!replyText) return json({ error: "text_required" }, { status: 400 }, cors);
+
+  const replyTo = orig.from_addr;
+  const replySubject = /^re:/i.test(orig.subject) ? orig.subject : `Re: ${orig.subject}`;
+  const fromAddr = user.email;
+
+  const extraHeaders: Record<string, string> = {};
+  if (orig.message_id) {
+    extraHeaders["In-Reply-To"] = orig.message_id;
+    extraHeaders["References"] = orig.message_id;
+  }
+
+  const sendResp = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: fromAddr,
+      to: replyTo,
+      subject: replySubject,
+      text: replyText,
+      ...(Object.keys(extraHeaders).length ? { headers: extraHeaders } : {}),
+    }),
+  });
+
+  if (!sendResp.ok) return json({ error: "send_failed" }, { status: 502 }, cors);
+  const sendData = (await sendResp.json()) as { id?: string };
+
+  await dbInsert(env, "mail_messages", {
+    user_id: user.id,
+    message_id: sendData.id ?? null,
+    from_addr: fromAddr,
+    to_addr: replyTo,
+    subject: replySubject,
+    body_text: replyText,
+    body_html: null,
     direction: "outbound",
     is_read: true,
     received_at: new Date().toISOString(),

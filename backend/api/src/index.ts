@@ -91,6 +91,7 @@ import {
   getMailCount,
   getMail,
   markRead,
+  replyMail,
   deleteMail,
   sendOutbound,
 } from "./mail";
@@ -704,9 +705,10 @@ export default {
       // Shadow Mail parameterized routes
       const mailGet    = req.method === "GET"    && /^\/v1\/mail\/[^/]+$/.test(path) && path !== "/v1/mail/inbox" && path !== "/v1/mail/count";
       const mailRead   = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/read$/.test(path);
+      const mailReply  = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/reply$/.test(path);
       const mailDelete = req.method === "DELETE" && /^\/v1\/mail\/[^/]+$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailDelete;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailReply || mailDelete;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -737,6 +739,7 @@ export default {
         // Shadow Mail
         if (mailGet)    return getMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (mailRead)   return markRead(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        if (mailReply)  return replyMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (mailDelete) return deleteMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
       }
 
