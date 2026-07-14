@@ -2,10 +2,17 @@
  * ShadowCypher Backend API — Cloudflare Worker entry point.
  *
  * v1/auth:
- *   GET  /v1/health             — liveness probe (no auth)
- *   GET  /v1/me                 — current user profile
- *   POST /v1/keys/rotate        — issue a new api key
- *   POST /v1/keys/revoke        — invalidate current key
+ *   GET  /v1/health                        — liveness probe (no auth)
+ *   GET  /v1/me                            — current user profile
+ *   POST /v1/keys/rotate                   — issue a new api key (sends key-rotated email)
+ *   POST /v1/keys/revoke                   — invalidate current key
+ *
+ * v1/auth (unauthenticated):
+ *   POST /v1/auth/send-recovery-kit        — send recovery codes to disposal email (discarded after)
+ *   POST /v1/auth/recover                  — validate recovery code → issue session for password reset
+ *
+ * v1/internal (secret-gated, not for clients):
+ *   POST /v1/internal/supabase-event       — Supabase auth webhook (new user → welcome email)
  *
  * v1/guardian:
  *   POST /v1/agents/register    — register an agent install
@@ -73,15 +80,28 @@ import { getAgentVersion } from "./agent_version";
 import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup, webSearch, wikiSummary, ddgInstant } from "./shadow_apis";
 import { getOtaManifest, updateOtaManifest } from "./ota";
 import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers } from "./chat";
+export { ChatRoom } from "./chat_do";
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
+import { sendWelcomeEmail, sendKeyRotatedEmail, sendRecoveryKitEmail } from "./emails";
+import {
+  storeInboundMail,
+  getInbox,
+  getMailCount,
+  getMail,
+  markRead,
+  deleteMail,
+  sendOutbound,
+} from "./mail";
 
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   ENVIRONMENT: string;
   ALLOWED_ORIGINS: string;
+  // Supabase webhook secret (wrangler secret put SUPABASE_WEBHOOK_SECRET)
+  SUPABASE_WEBHOOK_SECRET: string;
   // Billing (set via wrangler secret put)
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
@@ -115,6 +135,8 @@ export interface Env {
   HIBP_KEY?: string;
   BRAVE_SEARCH_KEY?: string;
   OLLAMA_DEFAULT_MODEL?: string;
+  // Durable Objects
+  CHAT_ROOM: DurableObjectNamespace;
 }
 
 interface SupabaseUser {
@@ -176,8 +198,7 @@ function json(body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
 function extractKey(req: Request): string | null {
   const auth = req.headers.get("Authorization") || "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
-  const key = m[1].trim();
+  const key = m ? m[1].trim() : new URL(req.url).searchParams.get("key") ?? "";
   return KEY_PATTERN.test(key) ? key : null;
 }
 
@@ -352,6 +373,8 @@ async function handleRotate(req: Request, env: Env, cors: HeadersInit): Promise<
   if (!ok) return json({ error: "rotate_failed" }, { status: 500 }, cors);
 
   audit(env, user.id, "key_rotated", clientHints(req));
+  const rotatedHandle = (user.user_metadata as { handle?: string }).handle ?? user.email.split("@")[0];
+  sendKeyRotatedEmail(env, user.email, rotatedHandle).catch(() => null);
   return json({ api_key: newKey }, {}, cors);
 }
 
@@ -512,6 +535,93 @@ export default {
       if (path === "/v1/shadow/ota" && req.method === "GET") return getOtaManifest(env);
       if (path === "/v1/shadow/ota" && req.method === "POST") return updateOtaManifest(req, env);
 
+      // Supabase auth webhook — fires on new user INSERT (configure in Supabase dashboard:
+      //   Database Webhooks → auth.users INSERT → POST https://api.shadowcypher.site/v1/internal/supabase-event
+      //   Add header: x-webhook-secret: <SUPABASE_WEBHOOK_SECRET>)
+      if (path === "/v1/internal/supabase-event" && req.method === "POST") {
+        const secret = req.headers.get("x-webhook-secret") ?? "";
+        if (!env.SUPABASE_WEBHOOK_SECRET || secret !== env.SUPABASE_WEBHOOK_SECRET)
+          return json({ error: "forbidden" }, { status: 403 });
+        const payload = (await req.json().catch(() => null)) as {
+          type?: string;
+          record?: { id?: string; email?: string; raw_user_meta_data?: { handle?: string } };
+        } | null;
+        if (payload?.type === "INSERT" && payload.record?.email) {
+          const { id, email, raw_user_meta_data } = payload.record;
+          const handle = raw_user_meta_data?.handle ?? email!.split("@")[0];
+          sendWelcomeEmail(env, email!, handle).catch(() => null);
+          // Also register the user in Neon if they don't exist yet
+          if (id) neonRegisterUser(env, id, email!, handle).catch(() => null);
+        }
+        return json({ ok: true });
+      }
+
+      // POST /v1/auth/send-recovery-kit — fire-and-forget: sends codes to disposal email then discards it.
+      // Disposal email is NEVER stored. Rate-limited to prevent abuse as a spam relay.
+      if (path === "/v1/auth/send-recovery-kit" && req.method === "POST") {
+        if (!rateLimit(`recovery-kit:${ip}`, 3, 3_600_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        const body = (await req.json().catch(() => null)) as {
+          disposal_email?: string; codes?: string[]; handle?: string;
+        } | null;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!body?.disposal_email || !emailRegex.test(body.disposal_email) || !body.codes?.length || !body.handle) {
+          return json({ error: "invalid_request" }, { status: 400 }, cors);
+        }
+        // Validate codes are hex strings of expected length — never store them
+        const validCodes = body.codes.filter(c => typeof c === "string" && c.length > 6 && c.length < 64);
+        sendRecoveryKitEmail(env, body.disposal_email, body.handle, validCodes).catch(() => null);
+        return json({ sent: true }, {}, cors);
+      }
+
+      // POST /v1/auth/recover — validate recovery code, return a session the client can set.
+      if (path === "/v1/auth/recover" && req.method === "POST") {
+        if (!rateLimit(`recover:${ip}`, 5, 3_600_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        const body = (await req.json().catch(() => null)) as { handle?: string; code?: string } | null;
+        if (!body?.handle || !body.code) return json({ error: "handle_and_code_required" }, { status: 400 }, cors);
+
+        const userEmail = `${body.handle.toLowerCase().replace(/^@/, "")}@shadowcypher.site`;
+        // Look up the user by their handle-derived email
+        const usersResp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(userEmail)}`, {
+          headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
+        });
+        if (!usersResp.ok) return json({ error: "user_not_found" }, { status: 404 }, cors);
+        const usersBody = (await usersResp.json()) as { users?: SupabaseUser[] };
+        const user = usersBody.users?.[0];
+        if (!user) return json({ error: "user_not_found" }, { status: 404 }, cors);
+
+        const storedHashes: string[] = (user.user_metadata as { recovery_codes?: string[] })?.recovery_codes ?? [];
+        // Hash the submitted code and check against stored hashes
+        const submittedHash = Array.from(
+          new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body.code.trim().toLowerCase())))
+        ).map(b => b.toString(16).padStart(2, "0")).join("");
+
+        const matchIdx = storedHashes.indexOf(submittedHash);
+        if (matchIdx === -1) return json({ error: "invalid_code" }, { status: 401 }, cors);
+
+        // Burn the used code — remove it from the list
+        const remaining = storedHashes.filter((_, i) => i !== matchIdx);
+        await updateUserMetadata(env, user.id, { ...user.user_metadata, recovery_codes: remaining });
+
+        // Issue a short-lived magic link session so the client can set a new password
+        const linkResp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${user.id}/generate-link`, {
+          method: "POST",
+          headers: {
+            apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ type: "recovery" }),
+        });
+        if (!linkResp.ok) return json({ error: "session_issue_failed" }, { status: 500 }, cors);
+        const linkBody = (await linkResp.json()) as { properties?: { access_token?: string; refresh_token?: string } };
+        const { access_token, refresh_token } = linkBody.properties ?? {};
+        if (!access_token) return json({ error: "session_issue_failed" }, { status: 500 }, cors);
+
+        return json({ access_token, refresh_token: refresh_token ?? null }, {}, cors);
+      }
+
       if (path === "/v1/me" && req.method === "GET") return handleMe(req, env, cors);
       if (path === "/v1/keys/rotate" && req.method === "POST") return handleRotate(req, env, cors);
       if (path === "/v1/keys/revoke" && req.method === "POST") return handleRevoke(req, env, cors);
@@ -572,6 +682,10 @@ export default {
         "POST /v1/chat/send":                 sendMessage,
         "POST /v1/chat/presence":             updatePresence,
         "GET /v1/chat/online":                getOnlineUsers,
+        // Shadow Mail
+        "GET /v1/mail/inbox":                 getInbox,
+        "GET /v1/mail/count":                 getMailCount,
+        "POST /v1/mail/send":                 sendOutbound,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];
@@ -587,8 +701,12 @@ export default {
       const missionResult       = req.method === "POST" && /^\/v1\/missions\/[^/]+\/result$/.test(path);
       const missionGet          = req.method === "GET"  && /^\/v1\/missions\/[^/]+$/.test(path) && path !== "/v1/missions";
       const missionList         = req.method === "GET"  && path === "/v1/missions";
+      // Shadow Mail parameterized routes
+      const mailGet    = req.method === "GET"    && /^\/v1\/mail\/[^/]+$/.test(path) && path !== "/v1/mail/inbox" && path !== "/v1/mail/count";
+      const mailRead   = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/read$/.test(path);
+      const mailDelete = req.method === "DELETE" && /^\/v1\/mail\/[^/]+$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailDelete;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -616,6 +734,47 @@ export default {
         if (missionResult)       return reportMissionResult(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (missionGet)          return getMission(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (missionList)         return listMissions(req, env, { id: user.id, email: user.email }, cors);
+        // Shadow Mail
+        if (mailGet)    return getMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        if (mailRead)   return markRead(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        if (mailDelete) return deleteMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+      }
+
+      // ── WebSocket upgrade: GET /v1/chat/ws?room=<name> ─────────────────────
+      if (req.method === "GET" && path === "/v1/chat/ws" && req.headers.get("Upgrade") === "websocket") {
+        const key = extractKey(req);
+        if (!key) return new Response("missing_or_invalid_key", { status: 401 });
+        const user = await findUserByKey(env, key);
+        if (!user) return new Response("key_not_found", { status: 401 });
+
+        const url = new URL(req.url);
+        const roomName = (url.searchParams.get("room") ?? "global").slice(0, 64);
+
+        // Resolve room to get its ID
+        const rooms = await dbSelect<{ id: string; name: string; room_type: string; team_id: string | null }>(
+          env, "chat_rooms", { filters: { name: `eq.${roomName}` }, limit: 1 }
+        );
+        if (!rooms.length) return new Response("room_not_found", { status: 404 });
+        const room = rooms[0];
+
+        // Team room access check
+        if (room.room_type === "team" && room.team_id) {
+          const members = await dbSelect(env, "team_members", {
+            filters: { team_id: `eq.${room.team_id}`, user_id: `eq.${user.id}` }, limit: 1,
+          });
+          if (!members.length) return new Response("forbidden", { status: 403 });
+        }
+
+        const nick = user.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+        const doId = env.CHAT_ROOM.idFromName(roomName);
+        const stub = env.CHAT_ROOM.get(doId);
+
+        const doUrl = new URL(req.url);
+        doUrl.searchParams.set("user_id", user.id);
+        doUrl.searchParams.set("nick", nick);
+        doUrl.searchParams.set("room_id", room.id);
+        doUrl.searchParams.set("room", roomName);
+        return stub.fetch(new Request(doUrl.toString(), req));
       }
 
       return json({ error: "not_found", path }, { status: 404 }, cors);
@@ -628,5 +787,25 @@ export default {
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(runCveMatchingCron(env));
+  },
+
+  async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
+    // Read raw email body (cap at 10 MB to guard against oversized messages)
+    const MAX_BYTES = 10 * 1024 * 1024;
+    const reader = message.raw.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      total += value.byteLength;
+      if (total > MAX_BYTES) { message.setReject("Message too large"); return; }
+      chunks.push(value);
+    }
+    const merged = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
+    const rawBody = new TextDecoder("utf-8").decode(merged);
+    ctx.waitUntil(storeInboundMail(env, message, rawBody));
   },
 };

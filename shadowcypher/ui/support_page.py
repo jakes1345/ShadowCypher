@@ -110,7 +110,7 @@ class SupportPage(BasePage):
             import socket
             try:
                 import urllib.request
-                urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)
+                urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)  # nosec B310
                 checks.append(("Ollama API", "✓ online"))
             except Exception:
                 checks.append(("Ollama API", "✗ offline"))

@@ -15,13 +15,11 @@
 #   shadow-cli -p "check if I'm anonymous"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLI_DIR="/home/jack/dev-full-claude"
-CLI_BIN="${CLI_DIR}/cli"
+CLI_BIN="${SHADOWCYPHER_CLI_BIN:-$(command -v claude 2>/dev/null || command -v claude-code 2>/dev/null || echo "")}"
 
-# Check if free-code binary exists
-if [ ! -x "$CLI_BIN" ]; then
-    echo "Error: free-code binary not found at $CLI_BIN"
-    echo "Build it: cd $CLI_DIR && bun run build"
+# Check if claude/claude-code binary is available
+if [ -z "$CLI_BIN" ] || [ ! -x "$CLI_BIN" ]; then
+    echo "Error: claude binary not found. Install Claude Code (https://claude.ai/code) or set SHADOWCYPHER_CLI_BIN."
     exit 1
 fi
 

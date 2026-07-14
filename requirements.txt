@@ -7,7 +7,8 @@ aiohttp>=3.9.0
 pydantic>=2.0.0,<3.0.0
 pydantic-settings>=2.0.0,<3.0.0
 beautifulsoup4>=4.12.0
-cryptography>=41.0.0
+cryptography>=42.0.0
+argon2-cffi>=23.0.0
 websockets>=12.0
 numpy>=1.24.0
 scipy>=1.10.0
@@ -19,3 +20,12 @@ huggingface-hub<1.0
 
 treequest>=0.3.2
 ulid-py>=1.1.0
+fastapi>=0.100.0
+sqlalchemy>=2.0.0
+uvicorn>=0.20.0
+httpx>=0.24.0
+PyJWT>=2.0.0
+bcrypt>=4.0.0
+
+# Optional AI subsystems (install for full capability)
+# pip install -r requirements-optional.txt

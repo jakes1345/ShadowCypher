@@ -79,7 +79,7 @@ class ActionExecutor:
                     action="block_ip",
                     target=ip,
                     success=True,
-                    message=f"IP already blocked"
+                    message="IP already blocked"
                 )
 
             # Try iptables (Linux firewall)
@@ -167,7 +167,7 @@ class ActionExecutor:
                     action="quarantine_file",
                     target=file_path,
                     success=False,
-                    message=f"File not found"
+                    message="File not found"
                 )
 
             # Create quarantine directory

@@ -8,6 +8,10 @@ workers_dev = true
 routes = [{ pattern = "api.shadowcypher.site", custom_domain = true }]
 
 # Public-safe vars (committed to git). Secrets go via `wrangler secret put`.
+#
+# Secrets to configure (run once):
+#   wrangler secret put RESEND_API_KEY          # re_... from resend.com/api-keys
+#   wrangler secret put SUPABASE_WEBHOOK_SECRET # any random string; set same in Supabase webhook header
 [vars]
 ENVIRONMENT = "production"
 ALLOWED_ORIGINS = "https://shadowcypher.site,https://www.shadowcypher.site,https://dev.shadowcypher.site,http://localhost:8081"
@@ -21,5 +25,20 @@ binding = "SHADOW_OTA"
 id = "d16349c7f8194a6f9247a20a962f60d1"
 preview_id = "806c715c0dbd4e8aadd072a75e87bbc6"
 
+[[durable_objects.bindings]]
+name = "CHAT_ROOM"
+class_name = "ChatRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ChatRoom"]
+
 [triggers]
 crons = ["0 * * * *"]
+
+# Shadow Mail — inbound email setup (one-time, in Cloudflare dashboard):
+#   1. Cloudflare Dashboard → Email → Email Routing → Enable on shadowcypher.site
+#   2. Add MX records as instructed (route1.mx.cloudflare.net / route2.mx.cloudflare.net)
+#   3. Create a catch-all rule: "*@shadowcypher.site" → Send to Worker → shadowcypher-api
+#   4. Optionally add DMARC: _dmarc.shadowcypher.site TXT "v=DMARC1; p=quarantine; rua=mailto:dmarc@shadowcypher.site"
+# No wrangler.toml changes needed — the email() handler in index.ts receives all routed mail.

@@ -8,14 +8,36 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.argon2 import Argon2id
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY") or os.getenv("SC_JWT_SECRET")
-if not SECRET_KEY:
-    SECRET_KEY = secrets.token_hex(32)
-    warnings.warn(
-        "JWT_SECRET_KEY not set — using ephemeral random secret. Tokens won't survive restart!",
-        RuntimeWarning,
-        stacklevel=1,
-    )
+def _load_or_create_chat_secret() -> str:
+    """Load JWT secret from env, then from file, else generate and persist."""
+    val = os.getenv("JWT_SECRET_KEY") or os.getenv("SC_JWT_SECRET")
+    if val:
+        return val
+    xdg = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
+    secret_path = os.path.join(xdg, "shadowcypher", "chat_jwt.secret")
+    if os.path.exists(secret_path):
+        try:
+            with open(secret_path) as f:
+                stored = f.read().strip()
+            if stored:
+                return stored
+        except Exception:
+            pass
+    new_secret = secrets.token_hex(32)
+    try:
+        os.makedirs(os.path.dirname(secret_path), exist_ok=True)
+        with open(secret_path, "w") as f:
+            f.write(new_secret)
+        os.chmod(secret_path, 0o600)
+    except Exception:
+        warnings.warn(
+            "JWT_SECRET_KEY not set and could not persist secret — tokens won't survive restart.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+    return new_secret
+
+SECRET_KEY = _load_or_create_chat_secret()
 ALGORITHM = "HS256"
 TOKEN_EXPIRY_HOURS = 24  # Match auth_backend.py
 

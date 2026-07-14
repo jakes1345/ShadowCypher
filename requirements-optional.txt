@@ -1,0 +1,27 @@
+# ShadowCypher Optional Dependencies
+# These enable additional AI and knowledge-base capabilities.
+# Install with: pip install -r requirements-optional.txt
+#
+# Without these the app still runs; affected subsystems degrade gracefully
+# and log startup warnings listing which capabilities are offline.
+
+# RAG knowledge base (local vector search over security docs)
+chromadb>=0.4.0
+sentence-transformers>=2.0.0
+
+# Persistent AI tactical memory
+mem0ai>=0.0.20
+
+# Local LLM fallback (llama.cpp, used when Ollama is unavailable)
+# Note: may require C++ build tools. See https://github.com/abetlen/llama-cpp-python
+# llama-cpp-python>=0.2.0
+
+# Multi-agent MetaChain orchestration
+# autoagent>=0.1.0
+
+# Fine-tuning / LoRA training pipeline
+# Requires CUDA-capable GPU. Significant disk space for model weights.
+# torch>=2.0.0
+# trl>=0.7.0
+# datasets>=2.14.0
+# unsloth>=2024.1

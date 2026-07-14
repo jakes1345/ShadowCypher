@@ -178,7 +178,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.show_all()
 
         # Auto-start tour on first launch (after UI is visible and welcome is done)
-        from shadowcypher.ui.tour import tour_completed
         from shadowcypher.ui.welcome_dialog import needs_onboarding
         if not tour_completed():
             # Delay slightly so the window fully renders before tour slides up
@@ -313,6 +312,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("---", "Sovereign", None),
             ("\U0001f5a5", "Terminal", None),
             ("\U0001f4ac", "Community Chat", None),
+            ("\U0001f4e8", "Shadow Mail", None),
             ("\U0001f47b", "Shadow Nodes", "APEX"),
             ("\U0001f47a", "Ghost Mode", "APEX"),
             ("\U0001f50d", "Forensic Audit", None),
@@ -391,6 +391,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "ShadowScript": "shadowscript_page.ShadowScriptPage",
                 "Terminal": "terminal_widget.TerminalPage",
                 "Community Chat": "chat_page.ChatPage",
+                "Shadow Mail": "mail_page.MailPage",
                 "Shadow Nodes": "ghost_page.ShadowNodesPage",
                 "Ghost Mode": "ghost_mode_page.GhostModePage",
                 "Forensic Audit": "forensics_page.ForensicsPage",

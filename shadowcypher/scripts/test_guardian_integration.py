@@ -102,7 +102,7 @@ def test_module_imports():
             parts = module_path.rsplit(".", 1)
             module = __import__(parts[0], fromlist=[parts[1]])
             cls = getattr(module, class_name)
-            instance = cls()
+            cls()
             print(f"  ✅ {class_name}: imported and instantiated")
         except Exception as e:
             print(f"  ❌ {class_name}: {e}")

@@ -9,7 +9,7 @@ import time
 from typing import Dict, Any
 
 BASE_URL = "http://localhost:9999"
-TOKEN = "Operator"
+TOKEN = "operator"
 HEADERS = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 
 

@@ -135,7 +135,6 @@ class SpectralIntelligencePage(BasePage):
         if not target:
             return
         import threading
-        from gi.repository import GLib
         threading.Thread(
             target=lambda: GLib.idle_add(self.log, OSINT.subnet_info(target), "INTEL"),
             daemon=True

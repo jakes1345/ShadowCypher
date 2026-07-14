@@ -8,13 +8,14 @@ any destructive action taken on a target.
 
 import uuid
 import threading
+from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
 from shadowcypher.ai.orchestrator import orchestrator
 
 
-class GhostMission:
+class GhostMission(ABC):
     """Base class for AI-driven multi-phase security missions."""
 
     def __init__(self, target: str):
@@ -41,8 +42,9 @@ class GhostMission:
     def _emergency_sever(self):
         self.report("ABORT", "Mission severed — unrecoverable error.", 1.0)
 
+    @abstractmethod
     def execute(self):
-        raise NotImplementedError
+        """Execute the mission. Must be implemented by subclasses."""
 
 
 class SovereignGhostMission(GhostMission):

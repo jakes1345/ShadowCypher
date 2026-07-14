@@ -557,7 +557,7 @@ Examples:
   shadowos-update schedule --when daily    # Schedule automatic updates
   shadowos-update info --history           # Show update history
 
-For more information, see: /home/jack/ShadowCypher/UPDATES.md
+For more information, see: https://shadowcypher.site/docs or UPDATES.md in your install directory.
 EOF
     return 0
 }

@@ -97,7 +97,11 @@ def rotate_group_key(old_key: bytes, old_salt: bytes) -> Tuple[bytes, bytes]:
 # Persistent Key Store — SQLite-backed with in-process memory cache
 # ──────────────────────────────────────────────────────────────────────────────
 
-_KEY_DB_PATH = os.environ.get("SC_KEY_DB", "/opt/shadowcypher/keys.db")
+def _default_key_db_path() -> str:
+    xdg_data = os.environ.get("XDG_DATA_HOME") or os.path.join(os.path.expanduser("~"), ".local", "share")
+    return os.path.join(xdg_data, "shadowcypher", "keys.db")
+
+_KEY_DB_PATH = os.environ.get("SC_KEY_DB") or _default_key_db_path()
 _db_lock = threading.Lock()
 
 def _open_key_db() -> sqlite3.Connection:

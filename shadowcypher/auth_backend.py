@@ -7,16 +7,38 @@ import bcrypt
 import jwt
 from pydantic import BaseModel
 
-# Secret key for JWT — MUST be set via SC_JWT_SECRET env var in production
-JWT_SECRET = os.environ.get("SC_JWT_SECRET") or os.environ.get("JWT_SECRET")
-if not JWT_SECRET:
-    import warnings
-    JWT_SECRET = secrets.token_hex(32)  # Random per-process fallback — tokens won't survive restart
-    warnings.warn(
-        "SC_JWT_SECRET not set — using ephemeral random secret. Set SC_JWT_SECRET in production!",
-        RuntimeWarning,
-        stacklevel=1,
-    )
+def _load_or_create_jwt_secret() -> str:
+    """Load JWT secret from env, then from file, else generate and persist."""
+    val = os.environ.get("SC_JWT_SECRET") or os.environ.get("JWT_SECRET")
+    if val:
+        return val
+    xdg = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
+    secret_path = os.path.join(xdg, "shadowcypher", "jwt.secret")
+    if os.path.exists(secret_path):
+        try:
+            with open(secret_path) as f:
+                stored = f.read().strip()
+            if stored:
+                return stored
+        except Exception:
+            pass
+    new_secret = secrets.token_hex(32)
+    try:
+        os.makedirs(os.path.dirname(secret_path), exist_ok=True)
+        with open(secret_path, "w") as f:
+            f.write(new_secret)
+        os.chmod(secret_path, 0o600)
+    except Exception:
+        import warnings
+        warnings.warn(
+            "SC_JWT_SECRET not set and could not persist secret to disk — tokens won't survive restart.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+    return new_secret
+
+# Secret key for JWT — set SC_JWT_SECRET env var or it persists to ~/.config/shadowcypher/jwt.secret
+JWT_SECRET = _load_or_create_jwt_secret()
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
 

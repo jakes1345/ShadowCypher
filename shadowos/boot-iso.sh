@@ -17,7 +17,8 @@ for arg in "$@"; do
     esac
 done
 
-ISO="${ISO:-$(ls -t /home/jack/ShadowCypher/shadowos/out/shadowos-*.iso 2>/dev/null | head -1)}"
+BOOT_ISO_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ISO="${ISO:-$(ls -t "${BOOT_ISO_HERE}/out/shadowos-"*.iso 2>/dev/null | head -1)}"
 [[ -f "$ISO" ]] || { echo "No ISO found. Pass path or build first." >&2; exit 1; }
 
 pkill -f 'qemu-system-x86_64.*shadowos-' 2>/dev/null || true
