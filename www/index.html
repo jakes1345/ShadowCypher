@@ -3964,8 +3964,9 @@
             }
             const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const el = document.createElement('div');
+            el.className = 'chat-msg-wrap';
             el.dataset.msgId = msg.id;
-            el.style.cssText = 'display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(180,74,255,0.1);';
+            el.style.cssText = 'display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(180,74,255,0.1);position:relative;';
             const bodyHtml = content !== null ? chatFormatContent(escapeHtml(content)) : '…';
             el.innerHTML = `
                 <div style="flex-shrink:0;">
@@ -3977,15 +3978,68 @@
                         <div style="font-size:0.65rem;color:var(--text-secondary);">${time}</div>
                     </div>
                     <div class="msg-body" style="color:var(--text-secondary);word-wrap:break-word;white-space:pre-wrap;">${bodyHtml}</div>
-                </div>`;
+                    <div class="msg-reactions" data-msg-id="${msg.id}"></div>
+                </div>
+                <button class="msg-react-btn" title="React" onclick="chatToggleEmojiPicker(event,'${msg.id}')">+😀</button>`;
             if (chatIsEncrypted(msg.content) && _vaultKey) {
                 chatDecrypt(msg.content).then(plain => {
                     const body = el.querySelector('.msg-body');
                     if (body) body.innerHTML = chatFormatContent(escapeHtml(plain));
                 });
             }
+            if (msg.reactions && Object.keys(msg.reactions).length) {
+                chatRenderReactions(msg.id, msg.reactions, el);
+            }
             if (prepend) msgDiv.prepend(el); else msgDiv.appendChild(el);
             if (!prepend) msgDiv.scrollTop = msgDiv.scrollHeight;
+        }
+
+        const _REACTION_EMOJIS = ['👍','❤️','😂','🔥','💀','👀'];
+
+        function chatToggleEmojiPicker(evt, msgId) {
+            evt.stopPropagation();
+            // Close any existing picker
+            document.querySelectorAll('.emoji-picker-panel').forEach(p => p.remove());
+            const btn = evt.currentTarget;
+            const panel = document.createElement('div');
+            panel.className = 'emoji-picker-panel';
+            for (const emoji of _REACTION_EMOJIS) {
+                const eb = document.createElement('button');
+                eb.textContent = emoji;
+                eb.title = emoji;
+                eb.onclick = (e) => {
+                    e.stopPropagation();
+                    chatSendReaction(msgId, emoji);
+                    panel.remove();
+                };
+                panel.appendChild(eb);
+            }
+            btn.parentElement.appendChild(panel);
+            const close = () => { panel.remove(); document.removeEventListener('click', close); };
+            setTimeout(() => document.addEventListener('click', close), 0);
+        }
+
+        function chatSendReaction(msgId, emoji) {
+            if (_chatWs?.readyState === WebSocket.OPEN) {
+                _chatWs.send(JSON.stringify({ type: 'react', message_id: msgId, emoji }));
+            }
+        }
+
+        function chatRenderReactions(msgId, reactions, container) {
+            const root = container || document.querySelector(`[data-msg-id="${msgId}"]`);
+            if (!root) return;
+            const bar = root.querySelector(`.msg-reactions[data-msg-id="${msgId}"]`);
+            if (!bar) return;
+            bar.innerHTML = '';
+            for (const [emoji, count] of Object.entries(reactions)) {
+                if (!count) continue;
+                const pill = document.createElement('button');
+                pill.className = 'reaction-pill';
+                pill.title = `React with ${emoji}`;
+                pill.innerHTML = `${emoji} <span class="r-count">${count}</span>`;
+                pill.onclick = () => chatSendReaction(msgId, emoji);
+                bar.appendChild(pill);
+            }
         }
 
         function chatConnectWs(room) {
@@ -4020,6 +4074,8 @@
                     }
                 } else if (data.type === 'message') {
                     chatRenderMessage(data);
+                } else if (data.type === 'reactions') {
+                    chatRenderReactions(data.message_id, data.reactions || {});
                 } else if (data.type === 'presence') {
                     if (data.online) _onlineCount++; else _onlineCount = Math.max(0, _onlineCount - 1);
                     document.getElementById('chat-online-count').innerText = _onlineCount;

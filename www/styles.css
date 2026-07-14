@@ -272,3 +272,97 @@ footer a:hover { text-decoration: underline; }
     .nav-tab { font-size: 0.7rem; padding: 6px 10px; }
     .stat-grid { grid-template-columns: 1fr !important; }
 }
+
+/* ── Chat reactions ─────────────────────────────────────────────────────────── */
+
+.chat-msg-wrap {
+    position: relative;
+}
+
+.chat-msg-wrap:hover .msg-react-btn {
+    opacity: 1;
+}
+
+.msg-react-btn {
+    opacity: 0;
+    position: absolute;
+    top: 6px;
+    right: 0;
+    background: rgba(180,74,255,0.1);
+    border: 1px solid rgba(180,74,255,0.25);
+    border-radius: 6px;
+    color: var(--accent-primary);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px 7px;
+    line-height: 1.6;
+    transition: opacity 0.15s;
+}
+
+.msg-react-btn:hover {
+    background: rgba(180,74,255,0.22);
+}
+
+.emoji-picker-panel {
+    position: absolute;
+    top: 28px;
+    right: 0;
+    background: #111;
+    border: 1px solid rgba(180,74,255,0.35);
+    border-radius: 8px;
+    padding: 6px 8px;
+    display: flex;
+    gap: 4px;
+    z-index: 200;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.emoji-picker-panel button {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    border-radius: 5px;
+    padding: 2px 4px;
+    transition: background 0.12s;
+    line-height: 1.4;
+}
+
+.emoji-picker-panel button:hover {
+    background: rgba(180,74,255,0.2);
+}
+
+.msg-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 5px;
+    min-height: 0;
+}
+
+.reaction-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(180,74,255,0.08);
+    border: 1px solid rgba(180,74,255,0.22);
+    border-radius: 12px;
+    padding: 1px 8px 1px 6px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+.reaction-pill:hover {
+    background: rgba(180,74,255,0.18);
+    border-color: rgba(180,74,255,0.45);
+    color: #fff;
+}
+
+.reaction-pill .r-count {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+}

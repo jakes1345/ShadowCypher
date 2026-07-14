@@ -30,6 +30,13 @@ interface ChatMessage {
   nick: string;
   content: string;
   created_at: string;
+  reactions?: Record<string, number>;
+}
+
+interface ChatReaction {
+  message_id: string;
+  user_id: string;
+  emoji: string;
 }
 
 export class ChatRoom implements DurableObject {
@@ -67,7 +74,27 @@ export class ChatRoom implements DurableObject {
         order: "created_at.desc",
         limit: 50,
       });
-      server.send(JSON.stringify({ type: "history", messages: history.reverse() }));
+      history.reverse();
+
+      // Attach reactions to history messages
+      if (history.length > 0) {
+        const ids = history.map((m) => m.id);
+        const reactionRows = await dbSelect<ChatReaction>(this.env, "chat_reactions", {
+          select: "message_id,emoji",
+          filters: { message_id: `in.(${ids.join(",")})` },
+        }).catch(() => [] as ChatReaction[]);
+
+        const byMsg: Record<string, Record<string, number>> = {};
+        for (const r of reactionRows) {
+          if (!byMsg[r.message_id]) byMsg[r.message_id] = {};
+          byMsg[r.message_id][r.emoji] = (byMsg[r.message_id][r.emoji] ?? 0) + 1;
+        }
+        for (const m of history) {
+          if (byMsg[m.id]) m.reactions = byMsg[m.id];
+        }
+      }
+
+      server.send(JSON.stringify({ type: "history", messages: history }));
     } catch {
       // Non-fatal — client will load history via REST fallback
     }
@@ -83,12 +110,60 @@ export class ChatRoom implements DurableObject {
     const meta = ws.deserializeAttachment() as SessionMeta | null;
     if (!meta) return;
 
-    let data: { type?: string; content?: string };
+    let data: { type?: string; content?: string; message_id?: string; emoji?: string };
     try { data = JSON.parse(raw); }
     catch { ws.send(JSON.stringify({ type: "error", message: "invalid_json" })); return; }
 
     if (data.type === "ping") {
       ws.send(JSON.stringify({ type: "pong" }));
+      return;
+    }
+
+    if (data.type === "react") {
+      const messageId = (data.message_id ?? "").trim();
+      const emoji = (data.emoji ?? "").trim().slice(0, 8);
+      if (!messageId || !emoji) return;
+
+      // Check existing reaction
+      const existing = await dbSelect<ChatReaction>(this.env, "chat_reactions", {
+        filters: {
+          message_id: `eq.${messageId}`,
+          user_id: `eq.${meta.userId}`,
+          emoji: `eq.${emoji}`,
+        },
+        limit: 1,
+      }).catch(() => [] as ChatReaction[]);
+
+      if (existing.length > 0) {
+        // Toggle off
+        const url = `${this.env.SUPABASE_URL}/rest/v1/chat_reactions?message_id=eq.${messageId}&user_id=eq.${meta.userId}&emoji=eq.${encodeURIComponent(emoji)}`;
+        await fetch(url, {
+          method: "DELETE",
+          headers: {
+            apikey: this.env.SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${this.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+        }).catch(() => null);
+      } else {
+        // Toggle on
+        await dbInsert<ChatReaction>(this.env, "chat_reactions", {
+          message_id: messageId,
+          user_id: meta.userId,
+          emoji,
+        }).catch(() => null);
+      }
+
+      // Aggregate and broadcast updated counts
+      const allReactions = await dbSelect<ChatReaction>(this.env, "chat_reactions", {
+        select: "emoji",
+        filters: { message_id: `eq.${messageId}` },
+      }).catch(() => [] as ChatReaction[]);
+
+      const counts: Record<string, number> = {};
+      for (const r of allReactions) {
+        counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
+      }
+      this.broadcast({ type: "reactions", message_id: messageId, reactions: counts }, null);
       return;
     }
 
