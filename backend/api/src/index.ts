@@ -804,6 +804,7 @@ export default {
         doUrl.searchParams.set("nick", nick);
         doUrl.searchParams.set("room_id", room.id);
         doUrl.searchParams.set("room", roomName);
+        doUrl.searchParams.set("room_type", room.room_type);
         return stub.fetch(new Request(doUrl.toString(), req));
       }
 

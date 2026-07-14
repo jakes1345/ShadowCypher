@@ -2391,6 +2391,8 @@
             document.getElementById('account-dashboard').style.display = 'block';
             const signoutLink = document.getElementById('nav-signout');
             if (signoutLink) signoutLink.style.display = '';
+            // Derive nick the same way the server does (email handle, sanitized)
+            _myNick = user.email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20) || 'user';
             const name = user.user_metadata?.handle || user.email.split('@')[0];
             const h2 = document.querySelector('#account-dashboard h2');
             if (h2) h2.innerText = `Welcome, ${name}`;
@@ -3795,6 +3797,8 @@
         let _currentRoom = null;
         let _onlineCount = 0;
         let _wsReconnectAttempts = 0;
+        let _myNick = null;
+        let _dmPartnerReadAt = null;
 
         function chatShowReconnectBanner(delayMs) {
             const banner = document.getElementById('chat-reconnect-banner');
@@ -3966,6 +3970,8 @@
             const el = document.createElement('div');
             el.className = 'chat-msg-wrap';
             el.dataset.msgId = msg.id;
+            el.dataset.msgTs = String(new Date(msg.created_at).getTime());
+            el.dataset.msgNick = msg.nick || '';
             el.style.cssText = 'display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(180,74,255,0.1);position:relative;';
             const bodyHtml = content !== null ? chatFormatContent(escapeHtml(content)) : '…';
             el.innerHTML = `
@@ -4025,6 +4031,27 @@
             }
         }
 
+        function chatUpdateReadMarker() {
+            if (!_myNick || !_dmPartnerReadAt) return;
+            const partnerTime = new Date(_dmPartnerReadAt).getTime();
+            const msgDiv = document.getElementById('chat-messages');
+            if (!msgDiv) return;
+            // Remove existing markers
+            msgDiv.querySelectorAll('.dm-read-marker').forEach(m => m.remove());
+            // Find last message I sent that partner has seen
+            let lastRead = null;
+            for (const el of msgDiv.querySelectorAll('.chat-msg-wrap')) {
+                const ts = parseInt(el.dataset.msgTs || '0', 10);
+                if (el.dataset.msgNick === _myNick && ts <= partnerTime) lastRead = el;
+            }
+            if (!lastRead) return;
+            const marker = document.createElement('div');
+            marker.className = 'dm-read-marker';
+            marker.textContent = '✓✓ Read';
+            marker.style.cssText = 'font-size:0.62rem;color:var(--accent-primary);text-align:right;padding:1px 0 3px;opacity:0.75;font-family:var(--font-mono);letter-spacing:0.5px;';
+            lastRead.appendChild(marker);
+        }
+
         function chatRenderReactions(msgId, reactions, container) {
             const root = container || document.querySelector(`[data-msg-id="${msgId}"]`);
             if (!root) return;
@@ -4054,6 +4081,10 @@
                 document.getElementById('chat-input').disabled = false;
                 document.getElementById('chat-send').disabled = false;
                 document.getElementById('chat-attach-btn').disabled = false;
+                // Mark DM as read immediately on connect
+                if (_currentRoom?.room_type === 'dm') {
+                    ws.send(JSON.stringify({ type: 'read' }));
+                }
             };
 
             ws.onmessage = async (evt) => {
@@ -4076,6 +4107,18 @@
                     chatRenderMessage(data);
                 } else if (data.type === 'reactions') {
                     chatRenderReactions(data.message_id, data.reactions || {});
+                } else if (data.type === 'read_receipt') {
+                    if (_myNick && data.nick && data.nick !== _myNick) {
+                        _dmPartnerReadAt = data.last_read_at;
+                        chatUpdateReadMarker();
+                    }
+                } else if (data.type === 'read_receipts') {
+                    for (const r of (data.receipts || [])) {
+                        if (_myNick && r.nick && r.nick !== _myNick) {
+                            _dmPartnerReadAt = r.last_read_at;
+                        }
+                    }
+                    chatUpdateReadMarker();
                 } else if (data.type === 'presence') {
                     if (data.online) _onlineCount++; else _onlineCount = Math.max(0, _onlineCount - 1);
                     document.getElementById('chat-online-count').innerText = _onlineCount;
@@ -4130,6 +4173,7 @@
             _wsReconnectAttempts = 0;
             chatHideReconnectBanner();
             _currentRoom = room;
+            _dmPartnerReadAt = null;
             _onlineCount = 0;
             document.getElementById('chat-room-name').innerText = room.display_name || room.name;
             document.getElementById('chat-room-desc').innerText = `#${room.name}`;
@@ -4171,6 +4215,13 @@
             document.getElementById('chat-input')?.addEventListener('keydown', e => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); chatSendMessage(); }
             });
+        });
+
+        // Mark DM as read when user comes back to the tab
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && _currentRoom?.room_type === 'dm' && _chatWs?.readyState === WebSocket.OPEN) {
+                _chatWs.send(JSON.stringify({ type: 'read' }));
+            }
         });
 
         async function chatCreateRoom() {

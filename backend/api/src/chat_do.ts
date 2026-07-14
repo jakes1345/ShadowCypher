@@ -4,17 +4,22 @@
  * Protocol (client → server):
  *   { type: "message", content: "..." }
  *   { type: "ping" }
+ *   { type: "react", message_id: "...", emoji: "..." }
+ *   { type: "read" }   — DM rooms only: mark messages as read
  *
  * Protocol (server → client):
  *   { type: "message", id, user_id, nick, content, created_at }
  *   { type: "presence", user_id, nick, online: true|false }
  *   { type: "history", messages: [...] }   — sent on connect
+ *   { type: "read_receipts", receipts: [{user_id, nick, last_read_at}] }  — DM connect
+ *   { type: "read_receipt", user_id, nick, last_read_at }                 — DM live update
+ *   { type: "reactions", message_id, reactions: {emoji: count} }
  *   { type: "pong" }
  *   { type: "error", message: "..." }
  */
 
 import type { Env } from "./index";
-import { dbInsert, dbSelect } from "./supabase";
+import { dbInsert, dbSelect, dbUpsert } from "./supabase";
 import { dispatchMentionPushNotification } from "./notifications";
 
 interface SessionMeta {
@@ -22,6 +27,7 @@ interface SessionMeta {
   nick: string;
   roomId: string;
   roomName: string;
+  roomType: string;
 }
 
 interface ChatMessage {
@@ -58,11 +64,12 @@ export class ChatRoom implements DurableObject {
     const nick = url.searchParams.get("nick") ?? "user";
     const roomId = url.searchParams.get("room_id") ?? "";
     const roomName = url.searchParams.get("room") ?? "global";
+    const roomType = url.searchParams.get("room_type") ?? "public";
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
 
-    const meta: SessionMeta = { userId, nick, roomId, roomName };
+    const meta: SessionMeta = { userId, nick, roomId, roomName, roomType };
     this.state.acceptWebSocket(server, ["chat"]);
     server.serializeAttachment(meta);
 
@@ -95,6 +102,18 @@ export class ChatRoom implements DurableObject {
       }
 
       server.send(JSON.stringify({ type: "history", messages: history }));
+
+      // For DM rooms: upsert this user's read receipt and send all receipts to client
+      if (roomType === "dm" && userId) {
+        await this.upsertReadReceipt(roomName, userId, nick);
+        const receipts = await dbSelect<{ user_id: string; nick: string; last_read_at: string }>(
+          this.env, "dm_read_receipts", {
+            select: "user_id,nick,last_read_at",
+            filters: { room_id: `eq.${roomName}` },
+          }
+        ).catch(() => []);
+        server.send(JSON.stringify({ type: "read_receipts", receipts }));
+      }
     } catch {
       // Non-fatal — client will load history via REST fallback
     }
@@ -116,6 +135,13 @@ export class ChatRoom implements DurableObject {
 
     if (data.type === "ping") {
       ws.send(JSON.stringify({ type: "pong" }));
+      return;
+    }
+
+    if (data.type === "read") {
+      if (meta.roomType === "dm" && meta.userId) {
+        await this.upsertReadReceipt(meta.roomName, meta.userId, meta.nick);
+      }
       return;
     }
 
@@ -236,6 +262,12 @@ export class ChatRoom implements DurableObject {
     if (meta) {
       this.broadcast({ type: "presence", user_id: meta.userId, nick: meta.nick, online: false }, null);
     }
+  }
+
+  private async upsertReadReceipt(roomName: string, userId: string, nick: string): Promise<void> {
+    const last_read_at = new Date().toISOString();
+    await dbUpsert(this.env, "dm_read_receipts", { room_id: roomName, user_id: userId, nick, last_read_at }, "room_id,user_id").catch(() => null);
+    this.broadcast({ type: "read_receipt", user_id: userId, nick, last_read_at }, null);
   }
 
   private broadcast(data: unknown, exclude: WebSocket | null): void {
