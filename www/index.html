@@ -1053,6 +1053,10 @@
                         </div>
                     </div>
                 </div>
+                <!-- Reconnect banner -->
+                <div id="chat-reconnect-banner" style="display:none;padding:7px 20px;background:rgba(255,184,77,0.07);border-bottom:1px solid rgba(255,184,77,0.2);color:#ffb84d;font-size:0.72rem;font-family:var(--font-mono);letter-spacing:1px;">
+                    <span id="chat-reconnect-text">⟳ RECONNECTING…</span>
+                </div>
                 <!-- Messages Area -->
                 <div id="chat-messages" style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;">
                     <div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;">
@@ -2017,6 +2021,24 @@
             } else {
                 console.log('[shadowcypher]', msg);
             }
+        }
+
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) { console.log('[toast]', type, msg); return; }
+            const palette = {
+                success: ['rgba(0,200,100,0.12)', 'rgba(0,200,100,0.3)', '#00c864'],
+                warning: ['rgba(255,184,77,0.12)', 'rgba(255,184,77,0.3)', '#ffb84d'],
+                error:   ['rgba(255,59,107,0.12)', 'rgba(255,59,107,0.3)', '#ff3b6b'],
+                info:    ['rgba(180,74,255,0.12)', 'rgba(180,74,255,0.3)', '#b44aff'],
+            };
+            const [bg, border, color] = palette[type] || palette.info;
+            const el = document.createElement('div');
+            el.style.cssText = `background:${bg};border:1px solid ${border};color:${color};padding:10px 14px;font-size:0.76rem;font-family:var(--font-mono,monospace);letter-spacing:0.5px;pointer-events:auto;cursor:pointer;word-break:break-word;opacity:1;transition:opacity 0.3s;`;
+            el.textContent = msg;
+            el.onclick = () => el.remove();
+            container.appendChild(el);
+            setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4500);
         }
 
         // Generate cryptographically random per-user API key
@@ -3681,6 +3703,21 @@
         let _chatWs = null;
         let _currentRoom = null;
         let _onlineCount = 0;
+        let _wsReconnectAttempts = 0;
+
+        function chatShowReconnectBanner(delayMs) {
+            const banner = document.getElementById('chat-reconnect-banner');
+            if (!banner) return;
+            banner.style.display = 'block';
+            const secs = Math.round(delayMs / 1000);
+            const text = document.getElementById('chat-reconnect-text');
+            if (text) text.textContent = secs > 1 ? `⟳ DISCONNECTED — retrying in ${secs}s…` : '⟳ RECONNECTING…';
+        }
+
+        function chatHideReconnectBanner() {
+            const el = document.getElementById('chat-reconnect-banner');
+            if (el) el.style.display = 'none';
+        }
 
         function chatRequireAuth() {
             if (!_sessionApiKey) {
@@ -3867,6 +3904,8 @@
             _chatWs = ws;
 
             ws.onopen = () => {
+                _wsReconnectAttempts = 0;
+                chatHideReconnectBanner();
                 document.getElementById('chat-input').disabled = false;
                 document.getElementById('chat-send').disabled = false;
                 document.getElementById('chat-attach-btn').disabled = false;
@@ -3897,15 +3936,20 @@
             };
 
             ws.onerror = () => {
-                // Fallback to REST polling if WebSocket fails
-                chatLoadMessagesPoll();
+                chatLoadMessagesPoll(); // one-shot REST load while waiting for reconnect
             };
 
             ws.onclose = () => {
+                document.getElementById('chat-input').disabled = true;
+                document.getElementById('chat-send').disabled = true;
                 document.getElementById('chat-attach-btn').disabled = true;
                 if (_chatWs === ws && _currentRoom) {
-                    // Reconnect after 3s
-                    setTimeout(() => { if (_currentRoom) chatConnectWs(_currentRoom); }, 3000);
+                    const delay = Math.min(1000 * Math.pow(2, _wsReconnectAttempts), 30000);
+                    _wsReconnectAttempts++;
+                    chatShowReconnectBanner(delay);
+                    setTimeout(() => {
+                        if (_currentRoom && _chatWs === ws) chatConnectWs(_currentRoom);
+                    }, delay);
                 }
             };
 
@@ -3936,6 +3980,8 @@
         }
 
         async function chatSelectRoom(room) {
+            _wsReconnectAttempts = 0;
+            chatHideReconnectBanner();
             _currentRoom = room;
             _onlineCount = 0;
             document.getElementById('chat-room-name').innerText = room.display_name || room.name;
@@ -3965,7 +4011,7 @@
                 }
                 input.value = '';
             } catch (e) {
-                alert('Error sending message: ' + e.message);
+                showToast('Send failed: ' + e.message, 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'SEND';
@@ -3983,8 +4029,8 @@
         async function chatCreateRoom() {
             const name = prompt('Enter room name (lowercase, hyphens ok):');
             if (!name) return;
-            if (!/^[a-z0-9-]+$/.test(name)) { alert('Lowercase letters, numbers, and hyphens only'); return; }
-            alert('Room creation requires admin setup. Contact an admin to add the room to the database.');
+            if (!/^[a-z0-9-]+$/.test(name)) { showToast('Lowercase letters, numbers, and hyphens only', 'warning'); return; }
+            showToast('Room creation requires admin setup. Contact an admin to add the room to the database.', 'info');
         }
 
         async function chatLoadDms() {
@@ -4015,15 +4061,15 @@
             const handle = prompt('Enter the handle of the user to message (without @):');
             if (!handle) return;
             const cleaned = handle.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
-            if (!cleaned) { alert('Invalid handle.'); return; }
+            if (!cleaned) { showToast('Invalid handle.', 'warning'); return; }
             try {
                 const data = await chatApi('/v1/chat/dm/open', 'POST', { handle: cleaned });
-                if (!data?.ok) { alert(data?.error || 'Could not open DM.'); return; }
+                if (!data?.ok) { showToast(data?.error || 'Could not open DM.', 'error'); return; }
                 await chatLoadDms();
                 // Auto-select the newly opened DM
                 chatSelectRoom({ name: data.room, display_name: data.display, room_type: 'dm' });
             } catch (e) {
-                alert('Error: ' + e.message);
+                showToast('Error: ' + e.message, 'error');
             }
         }
 
@@ -4031,7 +4077,7 @@
             const file = input.files?.[0];
             if (!file) return;
             input.value = '';  // reset so same file can be re-selected
-            if (file.size > 10 * 1024 * 1024) { alert('File too large (max 10 MB)'); return; }
+            if (file.size > 10 * 1024 * 1024) { showToast('File too large (max 10 MB)', 'warning'); return; }
             if (!_currentRoom || !chatRequireAuth()) return;
 
             const btn = document.getElementById('chat-attach-btn');
@@ -4048,7 +4094,7 @@
                     body: form,
                 });
                 const data = await res.json();
-                if (!data.ok) { alert('Upload failed: ' + (data.error || 'unknown error')); return; }
+                if (!data.ok) { showToast('Upload failed: ' + (data.error || 'unknown error'), 'error'); return; }
 
                 // Send attachment token as a chat message
                 const token = `[attachment:${data.key}:${data.name}]`;
@@ -4060,7 +4106,7 @@
                     await chatLoadMessagesPoll();
                 }
             } catch (e) {
-                alert('Upload error: ' + e.message);
+                showToast('Upload error: ' + e.message, 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = origText;
@@ -4116,6 +4162,9 @@
             <div id="device-modal-body"></div>
         </div>
     </div>
+
+    <!-- Global toast container -->
+    <div id="toast-container" style="position:fixed;bottom:20px;right:20px;z-index:99999;display:flex;flex-direction:column-reverse;gap:8px;pointer-events:none;max-width:320px;"></div>
 
     <!-- Incident detail modal -->
     <div id="incident-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:20px;">
