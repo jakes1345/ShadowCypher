@@ -6,7 +6,14 @@ import time
 import json
 import urllib.request
 import urllib.error
+import urllib.parse
 from datetime import datetime, timezone
+
+try:
+    import websocket
+    _HAS_WS = True
+except ImportError:
+    _HAS_WS = False
 
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
@@ -55,20 +62,25 @@ class ChatPage(Gtk.Box):
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
 
-        self._api_key: str = ""
-        self._rooms: list = []
-        self._current_room: str = "global"
-        self._messages: list = []
-        self._online: list = []
-        self._last_msg_id: str = ""
-        self._polling = False
-        self._poll_thread = None
+        self._api_key = ""
+        self._nick = "user"
+        self._rooms = []
+        self._current_room = "global"
+        self._messages = []
+        self._online = []
+
+        # WebSocket state
+        self._ws = None
+        self._ws_lock = threading.Lock()
+        self._ws_stop = threading.Event()  # set to terminate run loop
 
         self._load_api_key()
         self._build_ui()
-        self._start_polling()
+        self._resolve_nick_async()
+        self._fetch_rooms_async()
+        self._ws_start("global")
 
-    # ── API key ──────────────────────────────────────────────────────────────
+    # ── API key ───────────────────────────────────────────────────────────────
 
     def _load_api_key(self):
         try:
@@ -83,17 +95,221 @@ class ChatPage(Gtk.Box):
         except Exception:
             self._api_key = ""
 
-    # ── UI ───────────────────────────────────────────────────────────────────
+    def _resolve_nick_async(self):
+        if not self._api_key:
+            return
+        def _do():
+            try:
+                data = _api_get("/v1/auth/me", self._api_key)
+                email = data.get("email", "")
+                if "@" in email:
+                    self._nick = email.split("@")[0]
+            except Exception:
+                pass
+        threading.Thread(target=_do, daemon=True).start()
+
+    # ── WebSocket ─────────────────────────────────────────────────────────────
+
+    def _ws_start(self, room: str):
+        if not self._api_key:
+            return
+        if not _HAS_WS:
+            self._poll_start()
+            return
+        self._ws_stop.clear()
+        threading.Thread(target=self._ws_run_loop, args=(room,), daemon=True).start()
+
+    def _ws_run_loop(self, _room: str):
+        base = getattr(config, "api_base_url", "https://api.shadowcypher.site")
+        ws_base = base.replace("https://", "wss://").replace("http://", "ws://")
+
+        while not self._ws_stop.is_set():
+            nick = urllib.parse.quote(self._nick, safe="")
+            url = (f"{ws_base}/v1/chat/ws"
+                   f"?room={self._current_room}&key={self._api_key}&nick={nick}")
+            try:
+                ws = websocket.WebSocketApp(
+                    url,
+                    on_open=self._ws_on_open,
+                    on_message=self._ws_on_message,
+                    on_error=self._ws_on_error,
+                    on_close=self._ws_on_close,
+                )
+                with self._ws_lock:
+                    self._ws = ws
+                ws.run_forever()
+            except Exception as e:
+                logger.warning("chat", f"ws: {e}")
+            finally:
+                with self._ws_lock:
+                    if self._ws is ws:
+                        self._ws = None
+
+            if not self._ws_stop.is_set():
+                # 3s back-off on error; immediate if we closed for a room switch
+                self._ws_stop.wait(timeout=3)
+
+    def _ws_on_open(self, ws):
+        logger.info("chat", "WebSocket connected")
+        threading.Thread(target=self._ws_ping_loop, args=(ws,), daemon=True).start()
+
+    def _ws_on_close(self, ws, code, msg):
+        logger.info("chat", f"WebSocket closed {code}")
+
+    def _ws_on_error(self, ws, err):
+        logger.warning("chat", f"WebSocket error: {err}")
+
+    def _ws_on_message(self, ws, raw: str):
+        try:
+            frame = json.loads(raw)
+        except Exception:
+            return
+        t = frame.get("type")
+        if t == "history":
+            GLib.idle_add(self._handle_history, frame.get("messages", []))
+        elif t == "message":
+            GLib.idle_add(self._handle_incoming, frame)
+        elif t == "presence":
+            GLib.idle_add(self._handle_presence, frame)
+
+    def _ws_ping_loop(self, ws):
+        while True:
+            time.sleep(25)
+            try:
+                ws.send(json.dumps({"type": "ping"}))
+            except Exception:
+                break
+
+    def _ws_send(self, payload: dict) -> bool:
+        with self._ws_lock:
+            ws = self._ws
+        if ws is None:
+            return False
+        try:
+            ws.send(json.dumps(payload))
+            return True
+        except Exception:
+            return False
+
+    def _ws_switch_room(self):
+        # Close current socket; run loop reconnects immediately to _current_room
+        with self._ws_lock:
+            ws = self._ws
+        if ws:
+            try:
+                ws.close()
+            except Exception:
+                pass
+
+    # ── Fallback polling (when websocket-client is not installed) ─────────────
+
+    def _poll_start(self):
+        threading.Thread(target=self._poll_loop, daemon=True).start()
+
+    def _poll_loop(self):
+        while not self._ws_stop.is_set():
+            try:
+                self._poll_rooms()
+                self._poll_messages()
+                self._poll_online()
+                self._poll_presence()
+            except Exception as e:
+                logger.warning("chat", f"poll: {e}")
+            self._ws_stop.wait(timeout=2)
+
+    def _poll_rooms(self):
+        try:
+            data = _api_get("/v1/chat/rooms", self._api_key)
+            rooms = data.get("rooms", [])
+            if rooms != self._rooms:
+                self._rooms = rooms
+                GLib.idle_add(self._refresh_room_list)
+        except Exception:
+            pass
+
+    def _poll_messages(self):
+        try:
+            data = _api_get(
+                f"/v1/chat/messages?room={self._current_room}&limit=50", self._api_key
+            )
+            msgs = data.get("messages", [])
+            ids = {m.get("id") for m in self._messages}
+            new = [m for m in msgs if m.get("id") not in ids]
+            if new:
+                self._messages.extend(new)
+                self._messages.sort(key=lambda m: m.get("created_at", ""))
+                GLib.idle_add(self._render_new_messages, new)
+        except Exception:
+            pass
+
+    def _poll_online(self):
+        try:
+            data = _api_get(f"/v1/chat/online?room={self._current_room}", self._api_key)
+            online = data.get("online", [])
+            if online != self._online:
+                self._online = online
+                GLib.idle_add(self._refresh_online)
+        except Exception:
+            pass
+
+    def _poll_presence(self):
+        try:
+            _api_post("/v1/chat/presence", self._api_key, {"room": self._current_room})
+        except Exception:
+            pass
+
+    # ── Rooms fetch ───────────────────────────────────────────────────────────
+
+    def _fetch_rooms_async(self):
+        if not self._api_key:
+            return
+        def _do():
+            try:
+                data = _api_get("/v1/chat/rooms", self._api_key)
+                rooms = data.get("rooms", [])
+                if rooms != self._rooms:
+                    self._rooms = rooms
+                    GLib.idle_add(self._refresh_room_list)
+            except Exception:
+                pass
+        threading.Thread(target=_do, daemon=True).start()
+
+    # ── WS frame handlers (GTK main thread) ──────────────────────────────────
+
+    def _handle_history(self, msgs: list):
+        self._messages = list(msgs)
+        self._clear_messages()
+        for msg in msgs:
+            self._append_message_row(msg)
+        self._scroll_to_bottom()
+
+    def _handle_incoming(self, frame: dict):
+        if frame.get("id") in {m.get("id") for m in self._messages}:
+            return
+        self._messages.append(frame)
+        self._append_message_row(frame)
+        self._scroll_to_bottom()
+
+    def _handle_presence(self, frame: dict):
+        nick = frame.get("nick", "")
+        if frame.get("online"):
+            if not any(u.get("nick") == nick for u in self._online):
+                self._online.append({"nick": nick, "user_id": frame.get("user_id", "")})
+        else:
+            self._online = [u for u in self._online if u.get("nick") != nick]
+        self._refresh_online()
+
+    # ── UI build ──────────────────────────────────────────────────────────────
 
     def _build_ui(self):
-        # Left: room list sidebar
         sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         sidebar.set_size_request(200, -1)
         sidebar.get_style_context().add_class("chat-sidebar")
 
-        # Encrypted Groups Section
         groups_header = Gtk.Label()
-        groups_header.set_markup("<span weight='bold' color='#00f2ff' size='small'>🔒 ENCRYPTED GROUPS</span>")
+        groups_header.set_markup(
+            "<span weight='bold' color='#00f2ff' size='small'>🔒 ENCRYPTED GROUPS</span>"
+        )
         groups_header.set_halign(Gtk.Align.START)
         groups_header.set_margin_start(12)
         groups_header.set_margin_top(12)
@@ -104,7 +320,6 @@ class ChatPage(Gtk.Box):
         self._group_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         sidebar.pack_start(self._group_list, False, False, 0)
 
-        # Create New Group Button
         create_btn = Gtk.Button(label="+ Create Group")
         create_btn.set_margin_start(12)
         create_btn.set_margin_end(12)
@@ -112,9 +327,10 @@ class ChatPage(Gtk.Box):
         create_btn.connect("clicked", self._on_create_group)
         sidebar.pack_start(create_btn, False, False, 0)
 
-        # Public Channels Section
         sidebar_header = Gtk.Label()
-        sidebar_header.set_markup("<span weight='bold' color='#94a3b8' size='small'>PUBLIC CHANNELS</span>")
+        sidebar_header.set_markup(
+            "<span weight='bold' color='#94a3b8' size='small'>PUBLIC CHANNELS</span>"
+        )
         sidebar_header.set_halign(Gtk.Align.START)
         sidebar_header.set_margin_start(12)
         sidebar_header.set_margin_top(12)
@@ -132,16 +348,12 @@ class ChatPage(Gtk.Box):
         sidebar.pack_start(scroller, True, True, 0)
 
         self.pack_start(sidebar, False, False, 0)
-
-        # Separator
-        sep = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
-        self.pack_start(sep, False, False, 0)
+        self.pack_start(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL), False, False, 0)
 
         # Center: message area
         center = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         center.set_hexpand(True)
 
-        # Room title bar
         self._room_title = Gtk.Label()
         self._room_title.set_markup("<span weight='bold' color='#e2e8f0'>#global</span>")
         self._room_title.set_halign(Gtk.Align.START)
@@ -149,11 +361,8 @@ class ChatPage(Gtk.Box):
         self._room_title.set_margin_top(10)
         self._room_title.set_margin_bottom(10)
         center.pack_start(self._room_title, False, False, 0)
+        center.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
 
-        sep2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-        center.pack_start(sep2, False, False, 0)
-
-        # Message feed
         msg_scroller = Gtk.ScrolledWindow()
         msg_scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         msg_scroller.set_vexpand(True)
@@ -171,7 +380,6 @@ class ChatPage(Gtk.Box):
         center.pack_start(msg_scroller, True, True, 0)
         self._msg_scroller = msg_scroller
 
-        # Input bar
         input_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         input_bar.set_margin_start(12)
         input_bar.set_margin_end(12)
@@ -192,10 +400,7 @@ class ChatPage(Gtk.Box):
         center.pack_start(input_bar, False, False, 0)
 
         self.pack_start(center, True, True, 0)
-
-        # Separator
-        sep3 = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL)
-        self.pack_start(sep3, False, False, 0)
+        self.pack_start(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL), False, False, 0)
 
         # Right: online users
         right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -221,19 +426,14 @@ class ChatPage(Gtk.Box):
 
         self.pack_start(right, False, False, 0)
 
-        # CSS
-        css = b"""
-        .chat-sidebar { background-color: #1e293b; }
-        """
+        css = b".chat-sidebar { background-color: #1e293b; }"
         provider = Gtk.CssProvider()
         provider.load_from_data(css)
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
-        # Seed global room immediately
         self._add_room_row("global", "#global")
-        self._select_room("global")
 
     def _add_room_row(self, name: str, display: str):
         row = Gtk.ListBoxRow()
@@ -258,7 +458,7 @@ class ChatPage(Gtk.Box):
     def _select_room(self, name: str):
         self._current_room = name
         self._messages = []
-        self._last_msg_id = ""
+        self._online = []
 
         display = f"#{name}"
         for r in self._rooms:
@@ -266,87 +466,20 @@ class ChatPage(Gtk.Box):
                 display = r.get("display_name", display)
                 break
 
-        GLib.idle_add(self._room_title.set_markup,
-                      f"<span weight='bold' color='#e2e8f0'>{display}</span>")
-        GLib.idle_add(self._entry.set_placeholder_text, f"Message {display}…")
-        GLib.idle_add(self._clear_messages)
-        self._fetch_messages()
+        self._room_title.set_markup(f"<span weight='bold' color='#e2e8f0'>{display}</span>")
+        self._entry.set_placeholder_text(f"Message {display}…")
+        self._clear_messages()
+        self._refresh_online()
 
-    # ── Polling ───────────────────────────────────────────────────────────────
+        if _HAS_WS and self._api_key:
+            # Closing the socket causes the run loop to immediately reconnect
+            # to the updated _current_room.
+            self._ws_switch_room()
 
-    def _start_polling(self):
-        self._polling = True
-        self._poll_thread = threading.Thread(target=self._poll_loop, daemon=True)
-        self._poll_thread.start()
-
-    def _poll_loop(self):
-        while self._polling:
-            try:
-                self._fetch_rooms()
-                self._fetch_messages()
-                self._fetch_online()
-                self._send_presence()
-            except Exception as e:
-                logger.warning("chat", f"poll error: {e}")
-            time.sleep(2)
-
-    def _fetch_rooms(self):
-        if not self._api_key:
-            return
-        try:
-            data = _api_get("/v1/chat/rooms", self._api_key)
-            rooms = data.get("rooms", [])
-            if rooms != self._rooms:
-                self._rooms = rooms
-                GLib.idle_add(self._refresh_room_list)
-        except Exception as e:
-            logger.warning("chat_page", f"Failed to fetch rooms: {e}")
-
-    def _fetch_messages(self):
-        if not self._api_key:
-            return
-        try:
-            data = _api_get(f"/v1/chat/messages?room={self._current_room}&limit=50", self._api_key)
-            msgs = data.get("messages", [])
-            if not msgs:
-                return
-            new_msgs = [m for m in msgs if m["id"] not in {x["id"] for x in self._messages}]
-            if new_msgs:
-                self._messages.extend(new_msgs)
-                self._messages.sort(key=lambda m: m["created_at"])
-                GLib.idle_add(self._render_new_messages, new_msgs)
-        except Exception as e:
-            logger.warning("chat_page", f"Failed to fetch messages: {e}")
-
-    def _fetch_online(self):
-        if not self._api_key:
-            return
-        try:
-            data = _api_get(f"/v1/chat/online?room={self._current_room}", self._api_key)
-            online = data.get("online", [])
-            if online != self._online:
-                self._online = online
-                GLib.idle_add(self._refresh_online)
-        except Exception as e:
-            logger.warning("chat_page", f"Failed to fetch online status: {e}")
-
-    def _send_presence(self):
-        if not self._api_key:
-            return
-        try:
-            _api_post("/v1/chat/presence", self._api_key, {"room": self._current_room})
-        except Exception as e:
-            logger.warning("chat_page", f"Failed to send presence: {e}")
-
-    # ── Render ────────────────────────────────────────────────────────────────
+    # ── Render helpers ────────────────────────────────────────────────────────
 
     def _refresh_room_list(self):
-        existing = set()
-        for row in self._room_list.get_children():
-            name = getattr(row, "_room_name", None)
-            if name:
-                existing.add(name)
-
+        existing = {getattr(r, "_room_name", None) for r in self._room_list.get_children()}
         for room in self._rooms:
             name = room.get("name", "")
             if name and name not in existing:
@@ -372,14 +505,12 @@ class ChatPage(Gtk.Box):
         row.set_margin_top(2)
         row.set_margin_bottom(2)
 
-        # Avatar circle (colored label)
         avatar = Gtk.Label(label=nick[0].upper())
         avatar.set_size_request(32, 32)
         avatar.set_markup(
             f"<span background='{color}' color='#0f172a' weight='bold'> {nick[0].upper()} </span>"
         )
 
-        # Content
         content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
         header = Gtk.Label()
@@ -395,7 +526,6 @@ class ChatPage(Gtk.Box):
         body.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
         body.set_selectable(True)
         body.set_xalign(0)
-        body.get_style_context().add_class("dim-label") if not content.strip() else None
 
         content_box.pack_start(header, False, False, 0)
         content_box.pack_start(body, False, False, 0)
@@ -407,10 +537,10 @@ class ChatPage(Gtk.Box):
         row.show_all()
 
     def _scroll_to_bottom(self):
-        def _do_scroll():
+        def _do():
             adj = self._msg_scroller.get_vadjustment()
             adj.set_value(adj.get_upper())
-        GLib.idle_add(_do_scroll)
+        GLib.idle_add(_do)
 
     def _refresh_online(self):
         for child in self._online_box.get_children():
@@ -435,7 +565,7 @@ class ChatPage(Gtk.Box):
             self._online_box.pack_start(empty, False, False, 0)
             empty.show()
 
-    # ── Group Chat ───────────────────────────────────────────────────────────
+    # ── Group chat ────────────────────────────────────────────────────────────
 
     def _on_create_group(self, *_):
         dialog = Gtk.Dialog(
@@ -444,7 +574,7 @@ class ChatPage(Gtk.Box):
             modal=True,
         )
         dialog.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-                          Gtk.STOCK_OK, Gtk.ResponseType.OK)
+                           Gtk.STOCK_OK, Gtk.ResponseType.OK)
 
         content = dialog.get_content_area()
         content.set_margin_top(12)
@@ -474,34 +604,24 @@ class ChatPage(Gtk.Box):
             self._show_error("No API key configured.")
             return
 
-        def _do_create():
+        def _do():
             try:
-                data = _api_post(
-                    "/chat/groups", self._api_key,
-                    {"name": group_name}
-                )
+                data = _api_post("/chat/groups", self._api_key, {"name": group_name})
                 GLib.idle_add(self._on_group_created, data)
             except Exception as e:
                 GLib.idle_add(self._show_error, f"Failed to create group: {e}")
 
-        threading.Thread(target=_do_create, daemon=True).start()
+        threading.Thread(target=_do, daemon=True).start()
 
     def _on_group_created(self, group: dict):
         row = Gtk.ListBoxRow()
-        label = Gtk.Label(label=f"🔒 {group['name']}")
-        label.set_halign(Gtk.Align.START)
-        row.add(label)
+        lbl = Gtk.Label(label=f"🔒 {group['name']}")
+        lbl.set_halign(Gtk.Align.START)
+        row.add(lbl)
         row.show_all()
         self._group_list.add(row)
 
-    def _on_room_selected(self, listbox, row):
-        if row:
-            self._current_room = row.get_index()
-            self._messages = []
-            self._msg_box.foreach(lambda w: w.destroy(), None)
-            self._fetch_messages()
-
-    # ── Send ─────────────────────────────────────────────────────────────────
+    # ── Send ──────────────────────────────────────────────────────────────────
 
     def _on_send(self, *_):
         content = self._entry.get_text().strip()
@@ -512,30 +632,29 @@ class ChatPage(Gtk.Box):
             return
 
         self._entry.set_text("")
+
+        if _HAS_WS and self._ws_send({"type": "message", "content": content}):
+            return  # server echoes the message back as a frame
+
+        # REST fallback (no WebSocket connection yet or not installed)
         self._entry.set_sensitive(False)
 
-        def _do_send():
+        def _do():
             try:
                 data = _api_post(
                     "/v1/chat/send", self._api_key,
-                    {"room": self._current_room, "content": content}
+                    {"room": self._current_room, "content": content},
                 )
                 msg = data.get("message")
                 if msg:
-                    GLib.idle_add(self._on_sent, msg)
+                    GLib.idle_add(self._handle_incoming, msg)
             except Exception as e:
                 GLib.idle_add(self._show_error, str(e))
             finally:
                 GLib.idle_add(self._entry.set_sensitive, True)
                 GLib.idle_add(self._entry.grab_focus)
 
-        threading.Thread(target=_do_send, daemon=True).start()
-
-    def _on_sent(self, msg: dict):
-        if msg["id"] not in {m["id"] for m in self._messages}:
-            self._messages.append(msg)
-            self._append_message_row(msg)
-            self._scroll_to_bottom()
+        threading.Thread(target=_do, daemon=True).start()
 
     def _show_error(self, text: str):
         dialog = Gtk.MessageDialog(
@@ -549,5 +668,12 @@ class ChatPage(Gtk.Box):
         dialog.destroy()
 
     def do_unrealize(self):
-        self._polling = False
+        self._ws_stop.set()
+        with self._ws_lock:
+            ws = self._ws
+        if ws:
+            try:
+                ws.close()
+            except Exception:
+                pass
         Gtk.Box.do_unrealize(self)
