@@ -27,6 +27,36 @@ function json(body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
   });
 }
 
+export async function listFiles(
+  req: Request,
+  env: Env,
+  user: { id: string; email: string },
+  cors: HeadersInit
+): Promise<Response> {
+  if (!env.SHADOW_FILES) return json({ error: "storage_not_configured" }, { status: 503 }, cors);
+
+  const url = new URL(req.url);
+  const cursor = url.searchParams.get("cursor") ?? undefined;
+
+  const result = await env.SHADOW_FILES.list({
+    prefix: `${user.id}/`,
+    limit: 200,
+    cursor,
+  });
+
+  const files = result.objects.map(obj => ({
+    key: obj.key,
+    name: (obj.customMetadata?.original_name ?? obj.key.split("/").pop() ?? obj.key),
+    size: obj.size,
+    type: obj.httpMetadata?.contentType ?? "application/octet-stream",
+    uploaded_at: obj.customMetadata?.uploaded_at ?? obj.uploaded?.toISOString() ?? null,
+  }));
+
+  const totalBytes = result.objects.reduce((s, o) => s + o.size, 0);
+  const cursor2 = result.truncated ? (result as unknown as { cursor?: string }).cursor ?? null : null;
+  return json({ files, total_bytes: totalBytes, truncated: result.truncated, cursor: cursor2 }, {}, cors);
+}
+
 export async function uploadFile(
   req: Request,
   env: Env,

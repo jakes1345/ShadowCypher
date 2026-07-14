@@ -9,7 +9,7 @@
  */
 
 import type { Env } from "./index";
-import { dbSelect, dbInsert, dbUpsert } from "./supabase";
+import { dbSelect, dbInsert, dbUpsert, dbUpdate } from "./supabase";
 
 interface AuthedUser { id: string; email: string }
 
@@ -19,8 +19,12 @@ interface ChatRoom {
   display_name: string;
   room_type: string;
   team_id: string | null;
+  created_by: string | null;
+  topic: string | null;
   created_at: string;
 }
+
+const ROOM_SELECT = "id,name,display_name,room_type,team_id,created_by,topic,created_at";
 
 interface ChatMessage {
   id: string;
@@ -50,7 +54,7 @@ function nickFromEmail(email: string): string {
 
 async function resolveRoom(env: Env, roomName: string, userId: string): Promise<ChatRoom | null> {
   const rows = await dbSelect<ChatRoom>(env, "chat_rooms", {
-    select: "id,name,display_name,room_type,team_id",
+    select: ROOM_SELECT,
     filters: { name: `eq.${roomName}` },
     limit: 1,
   });
@@ -73,11 +77,19 @@ async function resolveRoom(env: Env, roomName: string, userId: string): Promise<
 export async function listRooms(
   _req: Request, env: Env, user: AuthedUser, cors: HeadersInit
 ): Promise<Response> {
-  // Always include global room
-  const globalRoom = await dbSelect<ChatRoom>(env, "chat_rooms", {
-    select: "id,name,display_name,room_type,team_id,created_at",
-    filters: { room_type: "eq.global" },
-  });
+  // Global rooms + public rooms in parallel
+  const [globalRooms, publicRooms] = await Promise.all([
+    dbSelect<ChatRoom>(env, "chat_rooms", {
+      select: ROOM_SELECT,
+      filters: { room_type: "eq.global" },
+    }),
+    dbSelect<ChatRoom>(env, "chat_rooms", {
+      select: ROOM_SELECT,
+      filters: { room_type: "eq.public" },
+      order: "created_at.asc",
+      limit: 100,
+    }),
+  ]);
 
   // Include team rooms where user is a member
   const memberships = await dbSelect<{ team_id: string }>(env, "team_members", {
@@ -88,14 +100,99 @@ export async function listRooms(
   let teamRooms: ChatRoom[] = [];
   if (memberships.length) {
     const teamIds = memberships.map(m => m.team_id);
-    // Single IN query — avoids N+1 (one query per team)
     teamRooms = await dbSelect<ChatRoom>(env, "chat_rooms", {
-      select: "id,name,display_name,room_type,team_id,created_at",
+      select: ROOM_SELECT,
       filters: { team_id: `in.(${teamIds.join(",")})` },
     });
   }
 
-  return json({ rooms: [...globalRoom, ...teamRooms] }, {}, cors);
+  return json({ rooms: [...globalRooms, ...publicRooms, ...teamRooms] }, {}, cors);
+}
+
+// ── POST /v1/chat/rooms ───────────────────────────────────────────────────────
+
+export async function createRoom(
+  req: Request, env: Env, user: AuthedUser, cors: HeadersInit
+): Promise<Response> {
+  const body = (await req.json().catch(() => null)) as {
+    name?: string; display_name?: string; topic?: string;
+  } | null;
+
+  const name = (body?.name ?? "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30);
+  if (name.length < 2) return json({ error: "name_too_short" }, { status: 400 }, cors);
+  if (/^global$|^dm|^team-/.test(name)) return json({ error: "name_reserved" }, { status: 400 }, cors);
+
+  const displayName = (body?.display_name ?? name).trim().slice(0, 60) || name;
+  const topic = (body?.topic ?? "").trim().slice(0, 200) || null;
+
+  // Collision check
+  const existing = await dbSelect(env, "chat_rooms", {
+    filters: { name: `eq.${name}` }, limit: 1,
+  });
+  if (existing.length) return json({ error: "name_taken" }, { status: 409 }, cors);
+
+  const room = await dbInsert<ChatRoom>(env, "chat_rooms", {
+    name,
+    display_name: displayName,
+    room_type: "public",
+    team_id: null,
+    created_by: user.id,
+    topic,
+  });
+
+  return json({ ok: true, room }, { status: 201 }, cors);
+}
+
+// ── DELETE /v1/chat/rooms/:name ───────────────────────────────────────────────
+
+export async function deleteRoom(
+  _req: Request, env: Env, user: AuthedUser, cors: HeadersInit, roomName: string
+): Promise<Response> {
+  const rows = await dbSelect<ChatRoom>(env, "chat_rooms", {
+    select: ROOM_SELECT, filters: { name: `eq.${roomName}` }, limit: 1,
+  });
+  const room = rows[0];
+  if (!room) return json({ error: "not_found" }, { status: 404 }, cors);
+  if (room.room_type !== "public") return json({ error: "forbidden" }, { status: 403 }, cors);
+  if (room.created_by !== user.id) return json({ error: "forbidden" }, { status: 403 }, cors);
+
+  const url = `${env.SUPABASE_URL}/rest/v1/chat_rooms?id=eq.${room.id}`;
+  await fetch(url, {
+    method: "DELETE",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      Prefer: "return=minimal",
+    },
+  });
+
+  return json({ ok: true }, {}, cors);
+}
+
+// ── PATCH /v1/chat/rooms/:name ────────────────────────────────────────────────
+
+export async function updateRoom(
+  req: Request, env: Env, user: AuthedUser, cors: HeadersInit, roomName: string
+): Promise<Response> {
+  const rows = await dbSelect<ChatRoom>(env, "chat_rooms", {
+    select: ROOM_SELECT, filters: { name: `eq.${roomName}` }, limit: 1,
+  });
+  const room = rows[0];
+  if (!room) return json({ error: "not_found" }, { status: 404 }, cors);
+  if (room.room_type !== "public") return json({ error: "forbidden" }, { status: 403 }, cors);
+  if (room.created_by !== user.id) return json({ error: "forbidden" }, { status: 403 }, cors);
+
+  const body = (await req.json().catch(() => null)) as {
+    display_name?: string; topic?: string;
+  } | null;
+
+  const patch: Record<string, unknown> = {};
+  if (body?.display_name !== undefined) patch.display_name = body.display_name.trim().slice(0, 60);
+  if (body?.topic !== undefined) patch.topic = body.topic.trim().slice(0, 200) || null;
+  if (!Object.keys(patch).length) return json({ error: "nothing_to_update" }, { status: 400 }, cors);
+
+  const updated = await dbUpdate<ChatRoom>(env, "chat_rooms", { id: `eq.${room.id}` }, patch);
+  return json({ ok: true, room: updated[0] }, {}, cors);
 }
 
 // ── GET /v1/chat/messages ─────────────────────────────────────────────────────

@@ -366,3 +366,19 @@ footer a:hover { text-decoration: underline; }
     font-family: var(--font-mono);
     color: var(--text-secondary);
 }
+
+/* ── Document editor typography ── */
+#doc-editor h1 { font-size: 2rem; font-weight: 700; color: #fff; margin: 24px 0 12px; }
+#doc-editor h2 { font-size: 1.5rem; font-weight: 700; color: #e0e0e0; margin: 20px 0 10px; }
+#doc-editor h3 { font-size: 1.15rem; font-weight: 600; color: #ccc; margin: 16px 0 8px; }
+#doc-editor p  { margin: 0 0 12px; color: #c0c0c0; }
+#doc-editor pre { background: rgba(180,74,255,0.08); border: 1px solid rgba(180,74,255,0.2); border-radius: 4px; padding: 12px 16px; font-family: var(--font-mono); font-size: 0.85rem; overflow-x: auto; }
+#doc-editor blockquote { border-left: 3px solid var(--accent-primary); margin: 0 0 12px; padding: 4px 16px; color: var(--text-secondary); }
+#doc-editor ul, #doc-editor ol { padding-left: 24px; margin: 0 0 12px; color: #c0c0c0; }
+#doc-editor a { color: var(--accent-primary); }
+
+/* ── Spreadsheet ── */
+#sheet-container table td:focus { background: rgba(180,74,255,0.12) !important; outline: 2px solid var(--accent-primary); outline-offset: -1px; }
+
+/* ── Slide thumb active ── */
+.slide-thumb-active { border-color: var(--accent-primary) !important; }

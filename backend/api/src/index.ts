@@ -79,8 +79,8 @@ import { runCveMatchingCron } from "./cve_matcher";
 import { getAgentVersion } from "./agent_version";
 import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup, webSearch, wikiSummary, ddgInstant } from "./shadow_apis";
 import { getOtaManifest, updateOtaManifest } from "./ota";
-import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, openDm, listDms } from "./chat";
-import { uploadFile, downloadFile, deleteFile } from "./files";
+import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, openDm, listDms, createRoom, deleteRoom, updateRoom } from "./chat";
+import { listFiles, uploadFile, downloadFile, deleteFile } from "./files";
 export { ChatRoom } from "./chat_do";
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
@@ -179,7 +179,7 @@ function corsHeaders(origin: string | null, allowed: string): HeadersInit {
   const allowOrigin = origin && allowList.includes(origin) ? origin : allowList[0];
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Authorization,Content-Type",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
@@ -682,6 +682,7 @@ export default {
         "GET /v1/shadow/search":              webSearch,
         // Chat
         "GET /v1/chat/rooms":                 listRooms,
+        "POST /v1/chat/rooms":                createRoom,
         "GET /v1/chat/messages":              getMessages,
         "POST /v1/chat/send":                 sendMessage,
         "POST /v1/chat/presence":             updatePresence,
@@ -689,6 +690,7 @@ export default {
         "GET /v1/chat/dm":                    listDms,
         "POST /v1/chat/dm/open":              openDm,
         // File storage
+        "GET /v1/files":                      listFiles,
         "POST /v1/files/upload":              uploadFile,
         // Shadow Mail
         "GET /v1/mail/inbox":                 getInbox,
@@ -717,8 +719,11 @@ export default {
       // File storage
       const fileGet    = req.method === "GET"    && /^\/v1\/files\/.+/.test(path);
       const fileDelete = req.method === "DELETE" && /^\/v1\/files\/.+/.test(path);
+      // Chat room management
+      const chatRoomDelete = req.method === "DELETE" && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
+      const chatRoomPatch  = req.method === "PATCH"  && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailReply || mailDelete || fileGet || fileDelete;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailReply || mailDelete || fileGet || fileDelete || chatRoomDelete || chatRoomPatch;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -741,6 +746,8 @@ export default {
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         if (routeKey === "POST /v1/chat/dm/open" && !rateLimit(`dm-open:${user.id}`, 20, 60_000))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/chat/rooms" && !rateLimit(`room-create:${user.id}`, 5, 3_600_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
         if (routeKey === "POST /v1/mail/send" && !rateLimit(`mail-send:${user.id}`, 10, 60_000))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
 
@@ -761,6 +768,10 @@ export default {
         const fileKey = path.slice("/v1/files/".length);
         if (fileGet)    return downloadFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
         if (fileDelete) return deleteFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
+        // Chat room management
+        const roomName = path.split("/").pop()!;
+        if (chatRoomDelete) return deleteRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
+        if (chatRoomPatch)  return updateRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
       }
 
       // ── WebSocket upgrade: GET /v1/chat/ws?room=<name> ─────────────────────
@@ -804,6 +815,7 @@ export default {
         doUrl.searchParams.set("nick", nick);
         doUrl.searchParams.set("room_id", room.id);
         doUrl.searchParams.set("room", roomName);
+        doUrl.searchParams.set("room_type", room.room_type);
         return stub.fetch(new Request(doUrl.toString(), req));
       }
 
