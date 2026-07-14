@@ -484,6 +484,9 @@ export default {
               ],
               chat: [
                 "GET /v1/chat/rooms",
+                "POST /v1/chat/rooms",
+                "DELETE /v1/chat/rooms/:name",
+                "PATCH /v1/chat/rooms/:name",
                 "GET /v1/chat/messages?room=global&limit=50&before=<iso>",
                 "POST /v1/chat/send",
                 "POST /v1/chat/presence",
@@ -719,7 +722,7 @@ export default {
       // File storage
       const fileGet    = req.method === "GET"    && /^\/v1\/files\/.+/.test(path);
       const fileDelete = req.method === "DELETE" && /^\/v1\/files\/.+/.test(path);
-      // Chat room management
+      // Chat room management (parameterized)
       const chatRoomDelete = req.method === "DELETE" && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
       const chatRoomPatch  = req.method === "PATCH"  && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
 
@@ -746,9 +749,9 @@ export default {
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         if (routeKey === "POST /v1/chat/dm/open" && !rateLimit(`dm-open:${user.id}`, 20, 60_000))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/chat/rooms" && !rateLimit(`room-create:${user.id}`, 5, 3_600_000))
-          return json({ error: "rate_limited" }, { status: 429 }, cors);
         if (routeKey === "POST /v1/mail/send" && !rateLimit(`mail-send:${user.id}`, 10, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/chat/rooms" && !rateLimit(`room-create:${user.id}`, 5, 3_600_000))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
 
         if (handler) return handler(req, env, { id: user.id, email: user.email }, cors);
@@ -764,14 +767,16 @@ export default {
         if (mailRead)   return markRead(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (mailReply)  return replyMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (mailDelete) return deleteMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        // Chat room management — room name is last path segment
+        if (chatRoomDelete || chatRoomPatch) {
+          const roomName = path.split("/").pop()!;
+          if (chatRoomDelete) return deleteRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
+          if (chatRoomPatch)  return updateRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
+        }
         // File storage — key is everything after /v1/files/
         const fileKey = path.slice("/v1/files/".length);
         if (fileGet)    return downloadFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
         if (fileDelete) return deleteFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
-        // Chat room management
-        const roomName = path.split("/").pop()!;
-        if (chatRoomDelete) return deleteRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
-        if (chatRoomPatch)  return updateRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
       }
 
       // ── WebSocket upgrade: GET /v1/chat/ws?room=<name> ─────────────────────

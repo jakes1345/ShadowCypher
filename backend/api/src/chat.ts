@@ -1,11 +1,14 @@
 /**
  * Chat endpoints — global room + team rooms.
  *
- * GET  /v1/chat/rooms                    list rooms user has access to
- * GET  /v1/chat/messages?room=<name>&limit=50&before=<iso>  paginated history
- * POST /v1/chat/send   { room, content } send a message
- * POST /v1/chat/presence { room }        heartbeat — mark user online in room
- * GET  /v1/chat/online?room=<name>       users seen in last 90s
+ * GET    /v1/chat/rooms                    list rooms user has access to
+ * POST   /v1/chat/rooms                    create a new public room (self-service)
+ * DELETE /v1/chat/rooms/:name              delete room (owner only)
+ * PATCH  /v1/chat/rooms/:name              update room display_name/topic (owner only)
+ * GET    /v1/chat/messages?room=<name>&limit=50&before=<iso>  paginated history
+ * POST   /v1/chat/send   { room, content } send a message
+ * POST   /v1/chat/presence { room }        heartbeat — mark user online in room
+ * GET    /v1/chat/online?room=<name>       users seen in last 90s
  */
 
 import type { Env } from "./index";
@@ -23,8 +26,6 @@ interface ChatRoom {
   topic: string | null;
   created_at: string;
 }
-
-const ROOM_SELECT = "id,name,display_name,room_type,team_id,created_by,topic,created_at";
 
 interface ChatMessage {
   id: string;
@@ -54,7 +55,7 @@ function nickFromEmail(email: string): string {
 
 async function resolveRoom(env: Env, roomName: string, userId: string): Promise<ChatRoom | null> {
   const rows = await dbSelect<ChatRoom>(env, "chat_rooms", {
-    select: ROOM_SELECT,
+    select: "id,name,display_name,room_type,team_id",
     filters: { name: `eq.${roomName}` },
     limit: 1,
   });
@@ -74,10 +75,12 @@ async function resolveRoom(env: Env, roomName: string, userId: string): Promise<
 
 // ── GET /v1/chat/rooms ────────────────────────────────────────────────────────
 
+const ROOM_SELECT = "id,name,display_name,room_type,team_id,created_by,topic,created_at";
+
 export async function listRooms(
   _req: Request, env: Env, user: AuthedUser, cors: HeadersInit
 ): Promise<Response> {
-  // Global rooms + public rooms in parallel
+  // Global room + self-service public rooms visible to all
   const [globalRooms, publicRooms] = await Promise.all([
     dbSelect<ChatRoom>(env, "chat_rooms", {
       select: ROOM_SELECT,
@@ -107,92 +110,6 @@ export async function listRooms(
   }
 
   return json({ rooms: [...globalRooms, ...publicRooms, ...teamRooms] }, {}, cors);
-}
-
-// ── POST /v1/chat/rooms ───────────────────────────────────────────────────────
-
-export async function createRoom(
-  req: Request, env: Env, user: AuthedUser, cors: HeadersInit
-): Promise<Response> {
-  const body = (await req.json().catch(() => null)) as {
-    name?: string; display_name?: string; topic?: string;
-  } | null;
-
-  const name = (body?.name ?? "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30);
-  if (name.length < 2) return json({ error: "name_too_short" }, { status: 400 }, cors);
-  if (/^global$|^dm|^team-/.test(name)) return json({ error: "name_reserved" }, { status: 400 }, cors);
-
-  const displayName = (body?.display_name ?? name).trim().slice(0, 60) || name;
-  const topic = (body?.topic ?? "").trim().slice(0, 200) || null;
-
-  // Collision check
-  const existing = await dbSelect(env, "chat_rooms", {
-    filters: { name: `eq.${name}` }, limit: 1,
-  });
-  if (existing.length) return json({ error: "name_taken" }, { status: 409 }, cors);
-
-  const room = await dbInsert<ChatRoom>(env, "chat_rooms", {
-    name,
-    display_name: displayName,
-    room_type: "public",
-    team_id: null,
-    created_by: user.id,
-    topic,
-  });
-
-  return json({ ok: true, room }, { status: 201 }, cors);
-}
-
-// ── DELETE /v1/chat/rooms/:name ───────────────────────────────────────────────
-
-export async function deleteRoom(
-  _req: Request, env: Env, user: AuthedUser, cors: HeadersInit, roomName: string
-): Promise<Response> {
-  const rows = await dbSelect<ChatRoom>(env, "chat_rooms", {
-    select: ROOM_SELECT, filters: { name: `eq.${roomName}` }, limit: 1,
-  });
-  const room = rows[0];
-  if (!room) return json({ error: "not_found" }, { status: 404 }, cors);
-  if (room.room_type !== "public") return json({ error: "forbidden" }, { status: 403 }, cors);
-  if (room.created_by !== user.id) return json({ error: "forbidden" }, { status: 403 }, cors);
-
-  const url = `${env.SUPABASE_URL}/rest/v1/chat_rooms?id=eq.${room.id}`;
-  await fetch(url, {
-    method: "DELETE",
-    headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      Prefer: "return=minimal",
-    },
-  });
-
-  return json({ ok: true }, {}, cors);
-}
-
-// ── PATCH /v1/chat/rooms/:name ────────────────────────────────────────────────
-
-export async function updateRoom(
-  req: Request, env: Env, user: AuthedUser, cors: HeadersInit, roomName: string
-): Promise<Response> {
-  const rows = await dbSelect<ChatRoom>(env, "chat_rooms", {
-    select: ROOM_SELECT, filters: { name: `eq.${roomName}` }, limit: 1,
-  });
-  const room = rows[0];
-  if (!room) return json({ error: "not_found" }, { status: 404 }, cors);
-  if (room.room_type !== "public") return json({ error: "forbidden" }, { status: 403 }, cors);
-  if (room.created_by !== user.id) return json({ error: "forbidden" }, { status: 403 }, cors);
-
-  const body = (await req.json().catch(() => null)) as {
-    display_name?: string; topic?: string;
-  } | null;
-
-  const patch: Record<string, unknown> = {};
-  if (body?.display_name !== undefined) patch.display_name = body.display_name.trim().slice(0, 60);
-  if (body?.topic !== undefined) patch.topic = body.topic.trim().slice(0, 200) || null;
-  if (!Object.keys(patch).length) return json({ error: "nothing_to_update" }, { status: 400 }, cors);
-
-  const updated = await dbUpdate<ChatRoom>(env, "chat_rooms", { id: `eq.${room.id}` }, patch);
-  return json({ ok: true, room: updated[0] }, {}, cors);
 }
 
 // ── GET /v1/chat/messages ─────────────────────────────────────────────────────
@@ -386,6 +303,98 @@ export async function listDms(
   });
 
   return json({ dms }, {}, cors);
+}
+
+// ── POST /v1/chat/rooms ───────────────────────────────────────────────────────
+
+export async function createRoom(
+  req: Request, env: Env, user: AuthedUser, cors: HeadersInit
+): Promise<Response> {
+  let body: { name?: string; display_name?: string; topic?: string };
+  try { body = await req.json() as typeof body; }
+  catch { return json({ error: "invalid_json" }, { status: 400 }, cors); }
+
+  const name = (body.name ?? "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+  if (!name || name.length < 2 || name.length > 30)
+    return json({ error: "name_invalid", detail: "2–30 lowercase chars/hyphens" }, { status: 400 }, cors);
+  // Reserved prefixes
+  if (name === "global" || name.startsWith("dm") || name.startsWith("team-"))
+    return json({ error: "name_reserved" }, { status: 400 }, cors);
+
+  const displayName = (body.display_name ?? `#${name}`).trim().slice(0, 50);
+  const topic = (body.topic ?? "").trim().slice(0, 200) || null;
+
+  const existing = await dbSelect<ChatRoom>(env, "chat_rooms", {
+    filters: { name: `eq.${name}` }, limit: 1,
+  });
+  if (existing.length) return json({ error: "room_exists" }, { status: 409 }, cors);
+
+  const room = await dbInsert<ChatRoom>(env, "chat_rooms", {
+    name,
+    display_name: displayName,
+    room_type: "public",
+    team_id: null,
+    created_by: user.id,
+    topic,
+  });
+
+  return json({ ok: true, room }, { status: 201 }, cors);
+}
+
+// ── DELETE /v1/chat/rooms/:name ───────────────────────────────────────────────
+
+export async function deleteRoom(
+  _req: Request, env: Env, user: AuthedUser, cors: HeadersInit, roomName: string
+): Promise<Response> {
+  const rooms = await dbSelect<ChatRoom>(env, "chat_rooms", {
+    select: "id,name,room_type,created_by",
+    filters: { name: `eq.${roomName}` },
+    limit: 1,
+  });
+  const room = rooms[0];
+  if (!room) return json({ error: "room_not_found" }, { status: 404 }, cors);
+  if (room.room_type !== "public") return json({ error: "cannot_delete_system_room" }, { status: 403 }, cors);
+  if (room.created_by !== user.id) return json({ error: "forbidden" }, { status: 403 }, cors);
+
+  const url = new URL(`${env.SUPABASE_URL}/rest/v1/chat_rooms`);
+  url.searchParams.set("id", `eq.${room.id}`);
+  const resp = await fetch(url.toString(), {
+    method: "DELETE",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+  if (!resp.ok) return json({ error: "delete_failed" }, { status: 500 }, cors);
+  return json({ ok: true }, {}, cors);
+}
+
+// ── PATCH /v1/chat/rooms/:name ────────────────────────────────────────────────
+
+export async function updateRoom(
+  req: Request, env: Env, user: AuthedUser, cors: HeadersInit, roomName: string
+): Promise<Response> {
+  let body: { display_name?: string; topic?: string };
+  try { body = await req.json() as typeof body; }
+  catch { return json({ error: "invalid_json" }, { status: 400 }, cors); }
+
+  const rooms = await dbSelect<ChatRoom>(env, "chat_rooms", {
+    select: "id,name,room_type,created_by",
+    filters: { name: `eq.${roomName}` },
+    limit: 1,
+  });
+  const room = rooms[0];
+  if (!room) return json({ error: "room_not_found" }, { status: 404 }, cors);
+  if (room.room_type !== "public") return json({ error: "cannot_update_system_room" }, { status: 403 }, cors);
+  if (room.created_by !== user.id) return json({ error: "forbidden" }, { status: 403 }, cors);
+
+  const patch: Record<string, unknown> = {};
+  if (body.display_name !== undefined) patch.display_name = body.display_name.trim().slice(0, 50);
+  if (body.topic !== undefined) patch.topic = body.topic.trim().slice(0, 200) || null;
+  if (!Object.keys(patch).length) return json({ error: "nothing_to_update" }, { status: 400 }, cors);
+
+  const updated = await dbUpdate<ChatRoom>(env, "chat_rooms", { id: `eq.${room.id}` }, patch);
+  return json({ ok: true, room: updated[0] ?? null }, {}, cors);
 }
 
 // ── Ensure team chat room exists (called on team creation) ────────────────────

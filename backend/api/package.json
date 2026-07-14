@@ -8,11 +8,16 @@
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
     "secrets:set": "echo 'Run: wrangler secret put SUPABASE_URL && wrangler secret put SUPABASE_SERVICE_ROLE_KEY'",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260101.0",
+    "@vitest/ui": "^4.1.10",
+    "happy-dom": "^20.10.6",
     "typescript": "^5.6.0",
+    "vitest": "^4.1.10",
     "wrangler": "^3.95.0"
   },
   "dependencies": {
