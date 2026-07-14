@@ -16,6 +16,7 @@
 import type { Env } from "./index";
 import { dbSelect, dbInsert, dbUpdate } from "./supabase";
 import { dispatchMailWebhook } from "./webhooks";
+import { dispatchMailPushNotification } from "./notifications";
 
 interface MailRow {
   id: string;
@@ -206,6 +207,13 @@ export async function storeInboundMail(
     preview,
     received_at: receivedAt,
     user_id: user.id,
+  }).catch(() => null);
+
+  // Web push notification for new inbound mail
+  dispatchMailPushNotification(env, user.id, {
+    from: message.from,
+    subject,
+    preview,
   }).catch(() => null);
 }
 

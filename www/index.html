@@ -1685,6 +1685,20 @@
                             <input type="checkbox" id="notif-push" style="accent-color:var(--accent-primary);">
                             <span>Browser push notifications (this device)</span>
                         </label>
+                        <div id="push-events-panel" style="margin-left:32px; display:grid; gap:8px; font-size:0.78rem; color:var(--text-secondary);">
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="checkbox" id="notif-push-incidents" checked style="accent-color:var(--accent-primary);">
+                                <span>Security incidents</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="checkbox" id="notif-push-mail" checked style="accent-color:var(--accent-primary);">
+                                <span>New Shadow Mail</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="checkbox" id="notif-push-mention" checked style="accent-color:var(--accent-primary);">
+                                <span>Chat @mentions</span>
+                            </label>
+                        </div>
                         <div style="display:flex; gap:10px; margin-top:6px;">
                             <button onclick="saveNotifPrefs()" class="btn-primary" style="padding:8px 18px; font-size:0.7rem;">Save</button>
                             <button onclick="testNotif()" style="padding:8px 18px; font-size:0.7rem; background:transparent; border:1px solid var(--accent-primary); color:var(--accent-primary); cursor:pointer;">Send test</button>
@@ -2806,9 +2820,13 @@
                 const emailEl = document.getElementById('notif-email');
                 const sevEl = document.getElementById('notif-severity');
                 const pushEl = document.getElementById('notif-push');
+                const mailPushEl = document.getElementById('notif-push-mail');
+                const mentionPushEl = document.getElementById('notif-push-mention');
                 if (emailEl) emailEl.checked = preferences.email_enabled !== false;
                 if (sevEl) sevEl.value = preferences.email_severity || 'warning';
                 if (pushEl) pushEl.checked = !!preferences.push_enabled;
+                if (mailPushEl) mailPushEl.checked = preferences.mail_push_enabled !== false;
+                if (mentionPushEl) mentionPushEl.checked = preferences.mention_push_enabled !== false;
             } catch (err) { console.warn('[notif] load failed', err.message); }
         }
 
@@ -2816,10 +2834,14 @@
             const emailEl = document.getElementById('notif-email');
             const sevEl = document.getElementById('notif-severity');
             const pushEl = document.getElementById('notif-push');
+            const mailPushEl = document.getElementById('notif-push-mail');
+            const mentionPushEl = document.getElementById('notif-push-mention');
             const body = {
                 email_enabled: emailEl?.checked ?? false,
                 email_severity: sevEl?.value || 'warning',
                 push_enabled: pushEl?.checked ?? false,
+                mail_push_enabled: mailPushEl?.checked ?? true,
+                mention_push_enabled: mentionPushEl?.checked ?? true,
             };
             // If push enabled, request permission + subscribe via PushManager
             if (body.push_enabled && 'serviceWorker' in navigator && 'PushManager' in window) {

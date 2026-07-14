@@ -15,6 +15,7 @@
 
 import type { Env } from "./index";
 import { dbInsert, dbSelect } from "./supabase";
+import { dispatchMentionPushNotification } from "./notifications";
 
 interface SessionMeta {
   userId: string;
@@ -109,7 +110,43 @@ export class ChatRoom implements DurableObject {
       }
 
       this.broadcast({ type: "message", ...msg }, null);
+
+      // @mention push notifications — fire-and-forget
+      const mentioned = [...new Set((content.match(/\B@([a-zA-Z0-9_-]{1,32})\b/g) ?? [])
+        .map((m) => m.slice(1).toLowerCase())
+        .filter((nick) => nick !== meta.nick.toLowerCase())
+      )];
+      for (const nick of mentioned) {
+        this.sendMentionPush(nick, meta.nick, content, meta.roomName).catch(() => null);
+      }
     }
+  }
+
+  private async sendMentionPush(
+    mentionedNick: string,
+    senderNick: string,
+    content: string,
+    roomName: string
+  ): Promise<void> {
+    const targetEmail = `${mentionedNick}@shadowcypher.site`;
+    const resp = await fetch(
+      `${this.env.SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(targetEmail)}`,
+      {
+        headers: {
+          apikey: this.env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${this.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+      }
+    );
+    if (!resp.ok) return;
+    const body = (await resp.json()) as { users?: { id: string }[] };
+    const userId = body.users?.[0]?.id;
+    if (!userId) return;
+    await dispatchMentionPushNotification(this.env, userId, {
+      senderNick,
+      preview: content,
+      roomName,
+    });
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
