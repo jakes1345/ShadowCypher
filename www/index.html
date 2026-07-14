@@ -1748,7 +1748,10 @@
                 <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 14px;">// Your data</h3>
                     <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Export everything ShadowCypher has on you as a single JSON file (GDPR portability).</p>
-                    <button onclick="exportData()" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;">EXPORT MY DATA</button>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                        <button onclick="exportData()" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;">EXPORT MY DATA</button>
+                        <button onclick="restartOnboarding()" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid #444;color:#aaa;cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;">↺ RELAUNCH TOUR</button>
+                    </div>
                 </div>
 
                 <div style="margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--glass-border);">
@@ -1757,18 +1760,21 @@
                     <button onclick="deleteAccount()" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid var(--accent-secondary);color:var(--accent-secondary);cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;">DELETE MY ACCOUNT</button>
                 </div>
 
-                <!-- Onboarding wizard overlay -->
+                <!-- Onboarding tour overlay -->
                 <div id="onboarding-overlay" style="display:none; position:fixed; inset:0; background:rgba(2,2,2,0.92); z-index:5000; backdrop-filter:blur(8px); padding:40px 20px; overflow-y:auto;">
-                    <div style="max-width:520px; margin:80px auto; background:var(--bg-surface); border:1px solid var(--accent-primary); padding:36px 32px;">
-                        <div class="mono" style="font-size:0.65rem; color:var(--accent-primary); letter-spacing:3px; margin-bottom:8px;">// 3-STEP SETUP</div>
-                        <h2 style="font-size:1.6rem; color:#fff; margin:0 0 8px;" id="onboard-title">Welcome to ShadowCypher</h2>
-                        <p id="onboard-desc" style="color:var(--text-secondary); font-size:0.9rem; line-height:1.7;"></p>
-                        <pre id="onboard-code" style="background:#000; border:1px solid var(--glass-border); padding:14px 16px; font-size:0.75rem; color:var(--accent-primary); overflow-x:auto; margin:16px 0; display:none;"></pre>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px;">
-                            <span class="mono" id="onboard-pos" style="font-size:0.65rem; color:var(--text-secondary); letter-spacing:2px;">1 / 3</span>
+                    <div style="max-width:540px; margin:80px auto; background:var(--bg-surface); border:1px solid var(--accent-primary); padding:40px 36px; position:relative;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                            <div class="mono" style="font-size:0.6rem; color:var(--accent-primary); letter-spacing:3px;">// PLATFORM TOUR</div>
+                            <span class="mono" id="onboard-pos" style="font-size:0.6rem; color:var(--text-secondary); letter-spacing:2px;"></span>
+                        </div>
+                        <h2 style="font-size:1.5rem; color:#fff; margin:0 0 12px; font-weight:700;" id="onboard-title"></h2>
+                        <p id="onboard-desc" style="color:var(--text-secondary); font-size:0.88rem; line-height:1.75; margin:0;"></p>
+                        <pre id="onboard-code" style="background:#000; border:1px solid var(--glass-border); padding:14px 16px; font-size:0.72rem; color:var(--accent-primary); overflow-x:auto; margin:20px 0 0; display:none; white-space:pre-wrap; word-break:break-all;"></pre>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:32px;">
+                            <button onclick="dismissOnboarding()" style="padding:8px 14px; background:transparent; border:none; color:#555; font-size:0.7rem; cursor:pointer; font-family:var(--font-mono);">SKIP</button>
                             <div style="display:flex; gap:10px;">
-                                <button onclick="dismissOnboarding()" style="padding:8px 14px; background:transparent; border:1px solid #444; color:#aaa; font-size:0.7rem; cursor:pointer;">Skip</button>
-                                <button id="onboard-next" onclick="nextOnboarding()" class="btn-primary" style="padding:8px 18px; font-size:0.7rem;">Next →</button>
+                                <button id="onboard-back" onclick="prevOnboarding()" style="padding:8px 16px; background:transparent; border:1px solid #333; color:#aaa; font-size:0.7rem; cursor:pointer; display:none;">← Back</button>
+                                <button id="onboard-next" onclick="nextOnboarding()" class="btn-primary" style="padding:8px 22px; font-size:0.7rem; font-family:var(--font-mono);">NEXT →</button>
                             </div>
                         </div>
                     </div>
@@ -3267,23 +3273,51 @@
         const ONBOARD_STEPS = [
             {
                 title: "Welcome to ShadowCypher",
-                desc: "You're set up with a 14-day Guardian Pro trial. Three quick steps to get value out of the platform — let's go.",
+                desc: "Your sovereign security and communications platform — no big tech, no telemetry, no nonsense. This tour walks you through every feature. Takes about 2 minutes.",
                 code: null,
+                page: null,
             },
             {
-                title: "Step 1: Install the agent",
-                desc: "The Guardian agent runs on a machine on your network and reports devices/incidents back to your dashboard. Free tier supports 1 agent.",
-                code: "# On any Linux/macOS machine:\ncd ~ && git clone https://github.com/jakes1345/ShadowCypher.git\ncd ShadowCypher/agent\n./setup.sh\n./shadow-agent init   # paste your API key from this dashboard\n./shadow-agent run",
+                title: "Shadow Mail — your real email address",
+                desc: "You own handle@shadowcypher.site. Every email sent there is routed directly to your inbox, stored encrypted under your account. No one else can read it — not us, not anyone. Access it from the desktop app or via the API.",
+                code: null,
+                page: null,
             },
             {
-                title: "Step 2: Watch it work",
-                desc: "Within ~10 seconds the agent registers, scans your LAN, and posts results. Refresh the dashboard — your devices, recent scans, and any new-device incidents will appear.",
+                title: "Encrypted Chat",
+                desc: "Create rooms, set a shared password, and talk. Messages are encrypted with AES-256-GCM before they ever leave your browser. The vault key lives only in memory — never written to disk, never sent to our servers.",
                 code: null,
+                page: 'chat',
             },
             {
-                title: "Step 3: Stay protected",
-                desc: "Wire up notifications below (email + Slack/Discord webhooks) so you hear about threats in real time. Your trial includes everything Pro — see what you'll keep when you subscribe.",
+                title: "Guardian — Network Monitor",
+                desc: "Drop the lightweight agent on any Linux/macOS machine on your LAN. It scans for devices every 10 minutes, detects new arrivals, and fires real-time alerts when something unexpected shows up.",
+                code: "# One-liner install (run on the target machine):\ncurl -sSL https://shadowcypher.site/agent/install.sh | bash\n# Then init with your API key from Account → API Key",
+                page: 'guardian',
+            },
+            {
+                title: "Privacy — Ghost Mode",
+                desc: "Scan what data brokers, people-search sites, and public databases have on you, then request removals. Reduce your digital footprint so you're harder to target, track, or dox.",
                 code: null,
+                page: 'ghost',
+            },
+            {
+                title: "Arsenal — Security Toolkit",
+                desc: "Port scanner, CVE threat feed, OSINT lookup, password auditor, network recon tools, and more. Built for red team recon, blue team defense, and everything in between.",
+                code: null,
+                page: 'arsenal',
+            },
+            {
+                title: "Your Account & API Key",
+                desc: "Your sc_live_… API key authenticates the desktop app, the Guardian agent, and any direct API calls. Copy it from Account → API Key. Rotate it any time. Your plan controls rate limits and feature access.",
+                code: null,
+                page: 'account',
+            },
+            {
+                title: "You're all set.",
+                desc: "Start by dropping a Guardian agent on your LAN, opening an encrypted chat room, or checking your Shadow Mail inbox from the desktop app. You can relaunch this tour any time from Account → Relaunch Tour.",
+                code: null,
+                page: null,
             },
         ];
         let onboardIdx = 0;
@@ -3295,20 +3329,39 @@
             document.getElementById('onboarding-overlay').style.display = 'block';
         }
 
+        function restartOnboarding() {
+            localStorage.removeItem('sc_onboard_done');
+            onboardIdx = 0;
+            renderOnboardingStep();
+            document.getElementById('onboarding-overlay').style.display = 'block';
+        }
+
         function renderOnboardingStep() {
             const s = ONBOARD_STEPS[onboardIdx];
+            const total = ONBOARD_STEPS.length;
             document.getElementById('onboard-title').textContent = s.title;
             document.getElementById('onboard-desc').textContent = s.desc;
             const codeEl = document.getElementById('onboard-code');
             if (s.code) { codeEl.style.display = 'block'; codeEl.textContent = s.code; }
             else { codeEl.style.display = 'none'; }
-            document.getElementById('onboard-pos').textContent = `${onboardIdx + 1} / ${ONBOARD_STEPS.length}`;
-            document.getElementById('onboard-next').textContent = onboardIdx === ONBOARD_STEPS.length - 1 ? 'Done' : 'Next →';
+            document.getElementById('onboard-pos').textContent = `${onboardIdx + 1} / ${total}`;
+            document.getElementById('onboard-next').textContent = onboardIdx === total - 1 ? 'DONE ✓' : 'NEXT →';
+            document.getElementById('onboard-back').style.display = onboardIdx === 0 ? 'none' : 'inline-block';
+            if (s.page) {
+                const navEl = document.getElementById('nav-' + s.page);
+                navTo(s.page, navEl);
+            }
         }
 
         function nextOnboarding() {
             onboardIdx++;
             if (onboardIdx >= ONBOARD_STEPS.length) { dismissOnboarding(); return; }
+            renderOnboardingStep();
+        }
+
+        function prevOnboarding() {
+            if (onboardIdx <= 0) return;
+            onboardIdx--;
             renderOnboardingStep();
         }
 
