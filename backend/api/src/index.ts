@@ -79,7 +79,7 @@ import { runCveMatchingCron } from "./cve_matcher";
 import { getAgentVersion } from "./agent_version";
 import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup, webSearch, wikiSummary, ddgInstant } from "./shadow_apis";
 import { getOtaManifest, updateOtaManifest } from "./ota";
-import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers } from "./chat";
+import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, openDm, listDms } from "./chat";
 export { ChatRoom } from "./chat_do";
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
@@ -683,6 +683,8 @@ export default {
         "POST /v1/chat/send":                 sendMessage,
         "POST /v1/chat/presence":             updatePresence,
         "GET /v1/chat/online":                getOnlineUsers,
+        "GET /v1/chat/dm":                    listDms,
+        "POST /v1/chat/dm/open":              openDm,
         // Shadow Mail
         "GET /v1/mail/inbox":                 getInbox,
         "GET /v1/mail/count":                 getMailCount,
@@ -754,8 +756,8 @@ export default {
         const roomName = (url.searchParams.get("room") ?? "global").slice(0, 64);
 
         // Resolve room to get its ID
-        const rooms = await dbSelect<{ id: string; name: string; room_type: string; team_id: string | null }>(
-          env, "chat_rooms", { filters: { name: `eq.${roomName}` }, limit: 1 }
+        const rooms = await dbSelect<{ id: string; name: string; display_name: string; room_type: string; team_id: string | null }>(
+          env, "chat_rooms", { select: "id,name,display_name,room_type,team_id", filters: { name: `eq.${roomName}` }, limit: 1 }
         );
         if (!rooms.length) return new Response("room_not_found", { status: 404 });
         const room = rooms[0];
@@ -766,6 +768,13 @@ export default {
             filters: { team_id: `eq.${room.team_id}`, user_id: `eq.${user.id}` }, limit: 1,
           });
           if (!members.length) return new Response("forbidden", { status: 403 });
+        }
+
+        // DM room access check (display_name format: nick1:nick2:uid1:uid2)
+        if (room.room_type === "dm") {
+          const parts = room.display_name.split(":");
+          const [uid1, uid2] = [parts[2], parts[3]]; // UIDs are 3rd and 4th colon-delimited fields
+          if (uid1 !== user.id && uid2 !== user.id) return new Response("forbidden", { status: 403 });
         }
 
         const nick = user.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";

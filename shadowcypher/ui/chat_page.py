@@ -78,6 +78,7 @@ class ChatPage(Gtk.Box):
         self._build_ui()
         self._resolve_nick_async()
         self._fetch_rooms_async()
+        self._fetch_dms_async()
         self._ws_start("global")
 
     # ── API key ───────────────────────────────────────────────────────────────
@@ -100,7 +101,7 @@ class ChatPage(Gtk.Box):
             return
         def _do():
             try:
-                data = _api_get("/v1/auth/me", self._api_key)
+                data = _api_get("/v1/me", self._api_key)
                 email = data.get("email", "")
                 if "@" in email:
                     self._nick = email.split("@")[0]
@@ -306,26 +307,33 @@ class ChatPage(Gtk.Box):
         sidebar.set_size_request(200, -1)
         sidebar.get_style_context().add_class("chat-sidebar")
 
-        groups_header = Gtk.Label()
-        groups_header.set_markup(
-            "<span weight='bold' color='#00f2ff' size='small'>🔒 ENCRYPTED GROUPS</span>"
+        dm_header = Gtk.Label()
+        dm_header.set_markup(
+            "<span weight='bold' color='#00f2ff' size='small'>DIRECT MESSAGES</span>"
         )
-        groups_header.set_halign(Gtk.Align.START)
-        groups_header.set_margin_start(12)
-        groups_header.set_margin_top(12)
-        groups_header.set_margin_bottom(6)
-        sidebar.pack_start(groups_header, False, False, 0)
+        dm_header.set_halign(Gtk.Align.START)
+        dm_header.set_margin_start(12)
+        dm_header.set_margin_top(12)
+        dm_header.set_margin_bottom(4)
+        sidebar.pack_start(dm_header, False, False, 0)
 
-        self._group_list = Gtk.ListBox()
-        self._group_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        sidebar.pack_start(self._group_list, False, False, 0)
+        dm_scroller = Gtk.ScrolledWindow()
+        dm_scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        dm_scroller.set_size_request(-1, 140)
 
-        create_btn = Gtk.Button(label="+ Create Group")
-        create_btn.set_margin_start(12)
-        create_btn.set_margin_end(12)
-        create_btn.set_margin_bottom(12)
-        create_btn.connect("clicked", self._on_create_group)
-        sidebar.pack_start(create_btn, False, False, 0)
+        self._dm_list = Gtk.ListBox()
+        self._dm_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self._dm_list.connect("row-selected", self._on_room_selected)
+        dm_scroller.add(self._dm_list)
+        sidebar.pack_start(dm_scroller, False, False, 0)
+
+        new_dm_btn = Gtk.Button(label="✉ New DM")
+        new_dm_btn.set_margin_start(12)
+        new_dm_btn.set_margin_end(12)
+        new_dm_btn.set_margin_top(4)
+        new_dm_btn.set_margin_bottom(8)
+        new_dm_btn.connect("clicked", self._on_new_dm)
+        sidebar.pack_start(new_dm_btn, False, False, 0)
 
         sidebar_header = Gtk.Label()
         sidebar_header.set_markup(
@@ -565,11 +573,41 @@ class ChatPage(Gtk.Box):
             self._online_box.pack_start(empty, False, False, 0)
             empty.show()
 
-    # ── Group chat ────────────────────────────────────────────────────────────
+    # ── Direct Messages ───────────────────────────────────────────────────────
 
-    def _on_create_group(self, *_):
+    def _fetch_dms_async(self):
+        if not self._api_key:
+            return
+        def _do():
+            try:
+                data = _api_get("/v1/chat/dm", self._api_key)
+                dms = data.get("dms", [])
+                GLib.idle_add(self._refresh_dm_list, dms)
+            except Exception:
+                pass
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _refresh_dm_list(self, dms: list):
+        for row in self._dm_list.get_children():
+            self._dm_list.remove(row)
+        for dm in dms:
+            self._add_dm_row(dm.get("name", ""), dm.get("display_name", "?"), dm.get("other_nick", ""))
+
+    def _add_dm_row(self, room_name: str, display: str, other_nick: str):
+        row = Gtk.ListBoxRow()
+        row._room_name = room_name
+        lbl = Gtk.Label(label=display, xalign=0)
+        lbl.set_markup(f"<span color='#00f2ff'>{GLib.markup_escape_text(display)}</span>")
+        lbl.set_margin_start(12)
+        lbl.set_margin_top(5)
+        lbl.set_margin_bottom(5)
+        row.add(lbl)
+        self._dm_list.add(row)
+        row.show_all()
+
+    def _on_new_dm(self, *_):
         dialog = Gtk.Dialog(
-            title="Create Encrypted Group",
+            title="New Direct Message",
             transient_for=self.get_toplevel(),
             modal=True,
         )
@@ -582,44 +620,47 @@ class ChatPage(Gtk.Box):
         content.set_margin_end(12)
         content.set_margin_bottom(12)
 
-        label = Gtk.Label(label="Group Name:")
+        label = Gtk.Label(label="Enter handle (without @):")
         label.set_halign(Gtk.Align.START)
         content.pack_start(label, False, False, 0)
 
         entry = Gtk.Entry()
-        entry.set_placeholder_text("e.g., Team Alpha")
+        entry.set_placeholder_text("e.g., alice")
         content.pack_start(entry, False, False, 6)
-
         content.show_all()
 
         response = dialog.run()
-        group_name = entry.get_text().strip()
+        handle = entry.get_text().strip().lower()
         dialog.destroy()
 
-        if response == Gtk.ResponseType.OK and group_name:
-            self._create_group_api(group_name)
+        if response == Gtk.ResponseType.OK and handle:
+            self._open_dm_api(handle)
 
-    def _create_group_api(self, group_name: str):
+    def _open_dm_api(self, handle: str):
         if not self._api_key:
             self._show_error("No API key configured.")
             return
 
         def _do():
             try:
-                data = _api_post("/chat/groups", self._api_key, {"name": group_name})
-                GLib.idle_add(self._on_group_created, data)
+                data = _api_post("/v1/chat/dm/open", self._api_key, {"handle": handle})
+                if data.get("ok"):
+                    room = data.get("room", "")
+                    display = data.get("display", f"@{handle}")
+                    GLib.idle_add(self._on_dm_opened, room, display)
+                else:
+                    GLib.idle_add(self._show_error, data.get("error", "Could not open DM"))
             except Exception as e:
-                GLib.idle_add(self._show_error, f"Failed to create group: {e}")
+                GLib.idle_add(self._show_error, str(e))
 
         threading.Thread(target=_do, daemon=True).start()
 
-    def _on_group_created(self, group: dict):
-        row = Gtk.ListBoxRow()
-        lbl = Gtk.Label(label=f"🔒 {group['name']}")
-        lbl.set_halign(Gtk.Align.START)
-        row.add(lbl)
-        row.show_all()
-        self._group_list.add(row)
+    def _on_dm_opened(self, room_name: str, display: str):
+        # Add to DM list if not already there
+        existing = {getattr(r, "_room_name", None) for r in self._dm_list.get_children()}
+        if room_name not in existing:
+            self._add_dm_row(room_name, display, display.lstrip("@"))
+        self._select_room(room_name)
 
     # ── Send ──────────────────────────────────────────────────────────────────
 

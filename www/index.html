@@ -1026,11 +1026,17 @@
                 <div style="padding:16px;border-bottom:1px solid rgba(180,74,255,0.1);">
                     <h3 style="font-size:0.9rem;color:#fff;margin:0;font-weight:600;">Rooms</h3>
                 </div>
-                <div id="chat-rooms" style="flex:1;overflow:auto;padding:8px;">
+                <div style="padding:8px 12px 4px;font-size:0.65rem;color:var(--text-secondary);letter-spacing:2px;font-family:var(--font-mono);">CHANNELS</div>
+                <div id="chat-rooms" style="overflow:auto;padding:4px 8px;max-height:40%;border-bottom:1px solid rgba(180,74,255,0.1);">
                     <div style="padding:12px;font-size:0.75rem;color:var(--text-secondary);">Loading rooms...</div>
                 </div>
-                <div style="padding:12px;border-top:1px solid rgba(180,74,255,0.1);">
-                    <button onclick="chatCreateRoom()" style="width:100%;padding:8px;background:var(--accent-primary);color:#000;border:none;border-radius:4px;font-size:0.75rem;font-weight:600;cursor:pointer;">+ New Room</button>
+                <div style="padding:8px 12px 4px;font-size:0.65rem;color:var(--text-secondary);letter-spacing:2px;font-family:var(--font-mono);">DIRECT MESSAGES</div>
+                <div id="chat-dms" style="flex:1;overflow:auto;padding:4px 8px;">
+                    <div style="padding:12px;font-size:0.75rem;color:var(--text-secondary);">No DMs yet</div>
+                </div>
+                <div style="padding:12px;border-top:1px solid rgba(180,74,255,0.1);display:flex;flex-direction:column;gap:6px;">
+                    <button onclick="chatCreateRoom()" style="width:100%;padding:7px;background:rgba(180,74,255,0.12);color:var(--accent-primary);border:1px solid rgba(180,74,255,0.3);border-radius:4px;font-size:0.7rem;font-weight:600;cursor:pointer;font-family:var(--font-mono);">+ NEW ROOM</button>
+                    <button onclick="chatOpenDm()" style="width:100%;padding:7px;background:rgba(0,242,255,0.08);color:#00f2ff;border:1px solid rgba(0,242,255,0.25);border-radius:4px;font-size:0.7rem;font-weight:600;cursor:pointer;font-family:var(--font-mono);">✉ NEW DM</button>
                 </div>
             </div>
             <!-- Main Chat Area -->
@@ -3676,6 +3682,7 @@
                 _vaultKey = await crypto.subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
                 chatHideVaultUnlock();
                 await chatLoadRooms();
+                chatLoadDms();
             } catch (e) {
                 errEl.textContent = 'Key derivation failed: ' + e.message;
                 errEl.style.display = 'block';
@@ -3906,6 +3913,46 @@
             alert('Room creation requires admin setup. Contact an admin to add the room to the database.');
         }
 
+        async function chatLoadDms() {
+            if (!_sessionApiKey) return;
+            try {
+                const data = await chatApi('/v1/chat/dm');
+                if (!data) return;
+                const dmsDiv = document.getElementById('chat-dms');
+                if (!data.dms?.length) {
+                    dmsDiv.innerHTML = '<div style="padding:12px;font-size:0.75rem;color:var(--text-secondary);">No DMs yet</div>';
+                    return;
+                }
+                dmsDiv.innerHTML = '';
+                for (const dm of data.dms) {
+                    const btn = document.createElement('button');
+                    btn.style.cssText = 'width:100%;text-align:left;padding:10px 12px;background:rgba(0,242,255,0.04);border:1px solid rgba(0,242,255,0.15);color:#fff;border-radius:4px;margin-bottom:6px;cursor:pointer;font-size:0.82rem;';
+                    btn.innerHTML = `<div style="font-weight:600;color:#00f2ff;">${escapeHtml(dm.display_name)}</div>`;
+                    btn.onclick = () => chatSelectRoom(dm);
+                    dmsDiv.appendChild(btn);
+                }
+            } catch (e) {
+                console.error('chatLoadDms:', e);
+            }
+        }
+
+        async function chatOpenDm() {
+            if (!chatRequireAuth()) return;
+            const handle = prompt('Enter the handle of the user to message (without @):');
+            if (!handle) return;
+            const cleaned = handle.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            if (!cleaned) { alert('Invalid handle.'); return; }
+            try {
+                const data = await chatApi('/v1/chat/dm/open', 'POST', { handle: cleaned });
+                if (!data?.ok) { alert(data?.error || 'Could not open DM.'); return; }
+                await chatLoadDms();
+                // Auto-select the newly opened DM
+                chatSelectRoom({ name: data.room, display_name: data.display, room_type: 'dm' });
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
         // ─── Chat page nav init ───────────────────────────────────────────────────
 
         const _origNavTo = navTo;
@@ -3921,6 +3968,7 @@
                     chatShowVaultUnlock();
                 } else {
                     chatLoadRooms();
+                    chatLoadDms();
                 }
             }
         };
@@ -3939,7 +3987,7 @@
             <div style="display:flex;gap:10px;margin-top:16px;">
                 <button id="chat-vault-unlock-btn" type="submit"
                         style="flex:1;padding:12px;background:var(--accent-primary);color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-family:var(--font-mono);font-size:0.75rem;letter-spacing:1px;">UNLOCK</button>
-                <button type="button" onclick="chatHideVaultUnlock();chatLoadRooms();"
+                <button type="button" onclick="chatHideVaultUnlock();chatLoadRooms();chatLoadDms();"
                         style="padding:12px 16px;background:transparent;border:1px solid #333;color:#888;border-radius:6px;cursor:pointer;font-size:0.8rem;">Skip (no encryption)</button>
             </div>
             </form>

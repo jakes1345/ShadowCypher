@@ -206,6 +206,91 @@ export async function getOnlineUsers(
   return json({ room: room.name, online: present }, {}, cors);
 }
 
+// ── POST /v1/chat/dm/open ─────────────────────────────────────────────────────
+
+export async function openDm(
+  req: Request, env: Env, user: AuthedUser, cors: HeadersInit
+): Promise<Response> {
+  const body = (await req.json().catch(() => null)) as { handle?: string } | null;
+  const handle = body?.handle?.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+  if (!handle) return json({ error: "handle_required" }, { status: 400 }, cors);
+
+  const myNick = nickFromEmail(user.email);
+  if (handle === myNick) return json({ error: "cannot_dm_self" }, { status: 400 }, cors);
+
+  // Verify target user exists
+  const targetEmail = `${handle}@shadowcypher.site`;
+  const usersResp = await fetch(
+    `${env.SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(targetEmail)}`,
+    { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }
+  );
+  if (!usersResp.ok) return json({ error: "user_lookup_failed" }, { status: 500 }, cors);
+  const usersBody = (await usersResp.json()) as { users?: { id: string }[] };
+  const targetUser = usersBody.users?.[0];
+  if (!targetUser) return json({ error: "user_not_found" }, { status: 404 }, cors);
+
+  // Sort by user ID for a consistent room identity regardless of who initiates
+  const [first, second] = [
+    { id: user.id, nick: myNick },
+    { id: targetUser.id, nick: handle },
+  ].sort((a, b) => a.id < b.id ? -1 : 1);
+
+  // Short stable room name (first 12 hex chars of each UUID, no separator ambiguity)
+  const h1 = first.id.replace(/-/g, "").slice(0, 12);
+  const h2 = second.id.replace(/-/g, "").slice(0, 12);
+  const roomName = `dm${h1}${h2}`;
+
+  // display_name encodes both nicks and UIDs for access-check + display: nick1:nick2:uid1:uid2
+  const displayName = `${first.nick}:${second.nick}:${first.id}:${second.id}`;
+
+  const existing = await dbSelect<ChatRoom>(env, "chat_rooms", {
+    filters: { name: `eq.${roomName}` }, limit: 1,
+  });
+
+  if (!existing.length) {
+    await dbInsert(env, "chat_rooms", {
+      name: roomName,
+      display_name: displayName,
+      room_type: "dm",
+      team_id: null,
+    });
+  }
+
+  return json({ ok: true, room: roomName, display: `@${handle}` }, {}, cors);
+}
+
+// ── GET /v1/chat/dm ───────────────────────────────────────────────────────────
+
+export async function listDms(
+  _req: Request, env: Env, user: AuthedUser, cors: HeadersInit
+): Promise<Response> {
+  // Find rooms where user.id appears in display_name (format: nick1:nick2:uid1:uid2)
+  const rooms = await dbSelect<ChatRoom>(env, "chat_rooms", {
+    select: "id,name,display_name,room_type,created_at",
+    filters: {
+      room_type: "eq.dm",
+      display_name: `ilike.%${user.id}%`,
+    },
+    order: "created_at.desc",
+    limit: 50,
+  });
+
+  const dms = rooms.map(r => {
+    const parts = r.display_name.split(":");
+    // parts: [nick1, nick2, uid1, uid2]  (uid may contain hyphens — split gives more parts)
+    // Since UIDs look like "abc-def-ghi", splitting "n1:n2:uid1:uid2" by ":" yields [n1, n2, uidPart1, uidPart2, ...]
+    // Reassemble: nicks are first two parts, UIDs are the remaining joined back with ":"
+    const nick1 = parts[0];
+    const nick2 = parts[1];
+    // uid1 and uid2 are the 3rd and 4th original fields, but UUIDs don't have ":" so parts[2] = uid1, parts[3] = uid2
+    const uid1 = parts[2];
+    const otherNick = uid1 === user.id ? nick2 : nick1;
+    return { ...r, display_name: `@${otherNick}`, other_nick: otherNick };
+  });
+
+  return json({ dms }, {}, cors);
+}
+
 // ── Ensure team chat room exists (called on team creation) ────────────────────
 
 export async function ensureTeamRoom(env: Env, teamId: string, teamName: string): Promise<void> {
