@@ -4,6 +4,7 @@ Professional-grade shellcode generation with multi-stage encoding and XOR stubs.
 """
 
 import os
+import subprocess  # noqa: F401 — required for test patching via @patch("...craft_factory.subprocess.*")
 
 from shadowcypher.core.logger import logger
 from shadowcypher.core.platform import platform_engine

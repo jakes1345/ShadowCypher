@@ -4,6 +4,7 @@ Handles Aircrack-ng suite integration, WPA/WPA2 audits, and deauth attacks.
 """
 
 import shutil
+import subprocess  # noqa: F401 — required for test patching via @patch("...wireless.subprocess.*")
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
