@@ -53,7 +53,7 @@ jobs:
         "
 
     - name: Static Analysis (Ruff)
-      run: ruff check shadowcypher/ --select=E,F --ignore=E402,E501,F401
+      run: ruff check shadowcypher/ --config=pyproject.toml
 
     - name: Type Check (Mypy) — Core only
       run: |

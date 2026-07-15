@@ -62,15 +62,15 @@ jobs:
           VERSION=${{ github.ref_name }}
           RELEASE_DIR="releases/v${VERSION#v}"
 
-          # Create remote directory
+          # Load SSH key into agent
           mkdir -p $HOME/.ssh
+          eval $(ssh-agent -s)
+          echo "${{ secrets.RELEASE_SERVER_SSH_KEY }}" | ssh-add -
           ssh-keyscan -H ${{ secrets.RELEASE_SERVER_HOST }} >> $HOME/.ssh/known_hosts 2>/dev/null
 
-          # Upload artifacts via SFTP/SCP
+          # Upload artifacts via SCP
           scp -r ./release-artifacts/* \
             ${{ secrets.RELEASE_SERVER_USER }}@${{ secrets.RELEASE_SERVER_HOST }}:$RELEASE_DIR/
 
           echo "✓ Artifacts uploaded to releases.shadowcypher.site/v${VERSION#v}/"
-        env:
-          SSH_KEY: ${{ secrets.RELEASE_SERVER_SSH_KEY }}
         if: success()
