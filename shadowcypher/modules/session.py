@@ -1,8 +1,7 @@
 """ShadowCypher Control (Session) Engine — High-Fidelity Sync (V23.2)."""
 
 import subprocess
-import shlex
-from shadowcypher.core.logger import logger
+
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_filepath
 
@@ -35,9 +34,9 @@ class Session:
     @staticmethod
     def interact_session(sid, on_output=None, on_complete=None):
         """Interact with a specific session via GNOME Terminal bridge."""
-        if on_output: 
+        if on_output:
             on_output(f"[SESSION] ATTEMPTING_INTERACTIVE_BRIDGE: {sid}...\n")
-        
+
         # Professional Depth: Spawn a real terminal window for the interactive shell
         # We use netcat to bridge to the session port (if detected) or just a manual command.
         cmd = ["gnome-terminal", "--", "bash", "-c",

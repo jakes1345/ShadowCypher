@@ -6,11 +6,13 @@ Implements the 'Read-Execute-Reflect' cycle for autonomous tool refinement.
 import os
 from pathlib import Path
 from typing import Optional
+
 from shadowcypher.core.logger import logger
+
 
 class MementoEngine:
     """Manages the lifecycle of evolving agentic skills."""
-    
+
     def __init__(self, skills_dir: str = "shadow_skills"):
         self.skills_dir = Path(os.getcwd()) / skills_dir
         self.skills_dir.mkdir(exist_ok=True)
@@ -41,7 +43,7 @@ class MementoEngine:
         """
         path = self.skills_dir / f"{name}.md"
         logger.info("memento", f"SKILL_REFINEMENT_LOGGED: {name} (Telemetry: {feedback[:32]}...)")
-        
+
         if not path.exists():
             with open(path, "w") as f:
                 header = f"# SKILL_ARTIFACT: {name.upper()}\n\n"
@@ -49,7 +51,7 @@ class MementoEngine:
         else:
             with open(path, "a") as f:
                 f.write(f"\n### REFINEMENT_{int(os.path.getmtime(path))}\n- {feedback}\n")
-        
+
         self._load_registry()
 
 memento_engine = MementoEngine()

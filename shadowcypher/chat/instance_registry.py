@@ -1,9 +1,10 @@
 """Instance registry and heartbeat service for P2P Shadow instance discovery."""
 
-from shadowcypher.chat.db import SessionLocal
-from shadowcypher.chat.models import Instance, User
-from sqlalchemy.orm import Session
 import time
+
+from sqlalchemy.orm import Session
+
+from shadowcypher.chat.models import Instance
 
 INSTANCE_TIMEOUT = 5 * 60  # Mark offline if no heartbeat for 5 minutes
 

@@ -3,15 +3,16 @@ Local Gateway Diagnostics Module — Enterprise Telemetry.
 Specialized in identifying local gateway exposure and TR-069 management protocols.
 """
 
+import re
 import socket
 import subprocess
+from typing import Dict, Optional
+
 import requests
-import re
-import os
-from typing import Optional, Dict
-from shadowcypher.core.module import BaseModule
+
 from shadowcypher.core.logger import logger
-from shadowcypher.core.runner import runner
+from shadowcypher.core.module import BaseModule
+
 
 class GatewayDiagnostics(BaseModule):
     def __init__(self):
@@ -31,13 +32,13 @@ class GatewayDiagnostics(BaseModule):
     def fingerprint_router(self, ip: str) -> Dict[str, str]:
         """Perform HTTP header analysis to identify gateway hardware vendor."""
         info = {"ip": ip, "manufacturer": "UNKNOWN", "model": "UNKNOWN", "headers": {}}
-        
+
         try:
             resp = requests.get(f"http://{ip}/", timeout=3, allow_redirects=True, verify=False)  # nosec B501
             info["headers"] = dict(resp.headers)
             server = resp.headers.get("Server", "").lower()
             auth_header = resp.headers.get("WWW-Authenticate", "").lower()
-            
+
             if "tplink" in server or "tplink" in auth_header:
                 info["manufacturer"] = "TP-Link"
             elif "asus" in server or "asus" in auth_header:
@@ -50,7 +51,7 @@ class GatewayDiagnostics(BaseModule):
                 info["manufacturer"] = "Generic (BusyBox/micro_httpd)"
         except Exception:
             pass
-            
+
         return info
 
     def audit_management_ports(self, ip: str, on_output=None):
@@ -58,7 +59,7 @@ class GatewayDiagnostics(BaseModule):
         common_ports = [80, 443, 22, 23, 7547, 8080, 53, 5353]
         if on_output:
             on_output(f"[*] AUDITING_EXPOSURES: {ip}...")
-        
+
         open_ports = []
         for port in common_ports:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -67,11 +68,11 @@ class GatewayDiagnostics(BaseModule):
                     open_ports.append(port)
                     if on_output:
                         on_output(f"    [!] EXPOSED_PORT: {port} ({self._port_desc(port)})")
-        
+
         if 7547 in open_ports:
             if on_output:
                 on_output("\033[1;31m[CRITICAL] TR-069 (CWMP) DETECTED. Remote ISP management is active.\033[0m")
-        
+
         return open_ports
 
     def discover_upnp(self, on_output=None):
@@ -122,16 +123,16 @@ class GatewayDiagnostics(BaseModule):
     def suggest_unmanagement_tactics(self, info: Dict):
         """Provide local network hygiene and hardening recommendations."""
         logger.warning("gateway", f"HARDENING_REQUIRED: Recommendations for {info.get('manufacturer')}")
-        
+
         tactics = []
         if info.get("manufacturer") == "TP-Link":
             tactics.append("Disable 'Remote Management' in Web GUI.")
-        
+
         # General hardening
         tactics.append("Filter inbound traffic on port 7547 to disable TR-069 remote provisioning.")
         tactics.append("Configure upstream DNS to utilize DNS-over-HTTPS (DoH) via local Unbound resolver.")
         tactics.append("Implement layer-2 MAC rotation for localized operational security.")
-        
+
         return tactics
 
 # Maintain legacy naming for internal module imports

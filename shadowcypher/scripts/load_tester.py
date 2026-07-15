@@ -5,19 +5,19 @@
 # Professional CLI utility for measuring network latency and throughput capacity
 # against specified endpoints.
 
-import sys
-import time
 import argparse
+import logging
 import socket
 import statistics
-import logging
+import sys
+import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | [%(levelname)s] | %(message)s', datefmt='%H:%M:%S')
 
 def tcp_latency_test(target, port, iterations=10):
     logging.info(f"Initiating TCP latency benchmark against {target}:{port}")
     latencies = []
-    
+
     for i in range(iterations):
         try:
             start_time = time.time()
@@ -31,7 +31,7 @@ def tcp_latency_test(target, port, iterations=10):
         except Exception as e:
             sys.stdout.write(f"\r  -> Probe {i+1}/{iterations} | FAILED ({e})")
             sys.stdout.flush()
-    
+
     print()
     if latencies:
         avg = statistics.mean(latencies)
@@ -46,11 +46,11 @@ def main():
     parser.add_argument("-c", "--count", type=int, default=20, help="Number of probes (default: 20)")
 
     args = parser.parse_args()
-    
+
     print("\n==============================================================================")
     print(" SHADOWCYPHER // NETWORK BENCHMARK")
     print("==============================================================================\n")
-    
+
     tcp_latency_test(args.target, args.port, iterations=args.count)
 
 if __name__ == "__main__":

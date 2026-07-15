@@ -2545,7 +2545,7 @@
             }
         }
 
-        function showAuthBanner(html, kind) {
+        function showAuthBanner(msg, kind) {
             let banner = document.getElementById('auth-banner');
             if (!banner) {
                 banner = document.createElement('div');
@@ -2556,7 +2556,7 @@
             banner.style.background = kind === 'error' ? 'rgba(255,0,60,0.08)' : 'rgba(180,74,255,0.08)';
             banner.style.borderLeft = `3px solid ${kind === 'error' ? 'var(--accent-secondary)' : 'var(--accent-primary)'}`;
             banner.style.color = kind === 'error' ? 'var(--accent-secondary)' : '#ddd';
-            banner.innerHTML = html;
+            banner.textContent = msg;
         }
 
         async function signOut() {

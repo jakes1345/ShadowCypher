@@ -4,15 +4,13 @@ Sources: MITRE ATT&CK, PayloadsAllTheThings, GTFOBins, HackTricks, CVE data.
 Runs 100% locally via ChromaDB + sentence-transformers.
 """
 
-import os
+import hashlib
 import json
 import threading
-import hashlib
 from pathlib import Path
-from typing import Optional
 
-from shadowcypher.core.logger import logger
 from shadowcypher.core.config import config
+from shadowcypher.core.logger import logger
 
 _KB_DIR = Path(str(config.project_root)) / ".shadowcypher" / "knowledge"
 _CHROMA_DIR = _KB_DIR / "chroma"

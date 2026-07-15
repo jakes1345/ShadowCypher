@@ -30,7 +30,7 @@ except ImportError:
     sys.exit(2)
 
 try:
-    from bs4 import BeautifulSoup
+    from bs4 import BeautifulSoup  # noqa: F401
     HAS_BS4 = True
 except ImportError:
     HAS_BS4 = False

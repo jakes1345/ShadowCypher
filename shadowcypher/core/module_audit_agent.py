@@ -5,9 +5,8 @@ Periodically runs Guardian modules, converts findings to incidents, and triggers
 
 import threading
 import time
-from datetime import datetime, timezone
-from typing import Optional, List, Dict
 from dataclasses import dataclass
+from typing import Dict, Optional
 
 from shadowcypher.core.logger import logger
 
@@ -161,8 +160,9 @@ class ModuleAuditAgent:
     def _process_findings(self, result):
         """Convert module findings to incidents and trigger responses."""
         try:
-            from shadowcypher.core.incident_response import get_incident_response_engine
             import uuid
+
+            from shadowcypher.core.incident_response import get_incident_response_engine
 
             engine = get_incident_response_engine()
 

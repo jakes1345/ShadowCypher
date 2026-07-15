@@ -8,12 +8,11 @@ Output: chunks.json  (used by assistant.js BM25 search and build_index.py embedd
 Usage:  python3 build_chunks.py
 """
 
+import hashlib
 import json
 import re
-import hashlib
 import time
 from pathlib import Path
-from collections import Counter
 
 KNOWLEDGE_DIR = Path(__file__).parent
 CHUNKS_FILE = KNOWLEDGE_DIR / "chunks.json"

@@ -3,18 +3,19 @@ Shadow Vault — Encrypted Artifact Storage & Intelligence Crypt.
 AES-256-GCM encryption for mission artifacts with integrity verification.
 """
 
-import os
-import time
 import hashlib
 import json
+import os
+import time
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Gdk, Pango
 
-from shadowcypher.ui.base_page import BasePage
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
+
 from shadowcypher.core.hub import hub
 from shadowcypher.core.logger import logger
+from shadowcypher.ui.base_page import BasePage
 
 try:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -128,7 +129,7 @@ class ShadowVaultPage(BasePage):
             os.makedirs(findings_dir, exist_ok=True)
             self.terminal.log(f"VAULT: Created findings directory: {findings_dir}", "WARN")
 
-        for root, dirs, files in os.walk(findings_dir):
+        for root, _, files in os.walk(findings_dir):
             for f in sorted(files):
                 path = os.path.join(root, f)
                 try:

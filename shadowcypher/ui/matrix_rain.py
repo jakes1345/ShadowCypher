@@ -1,13 +1,13 @@
 """Matrix digital rain — real animated falling characters using Cairo rendering."""
 
-import random
 import math
+import random
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Gdk
-import cairo
 
+gi.require_version("Gtk", "3.0")
+import cairo
+from gi.repository import GLib, Gtk
 
 # Characters used in the rain (katakana + latin + digits + symbols)
 MATRIX_CHARS = (

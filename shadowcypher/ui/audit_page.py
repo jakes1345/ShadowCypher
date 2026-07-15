@@ -1,18 +1,20 @@
 """ShadowCypher Audit Page — Real-time platform verification."""
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 
-from shadowcypher.ui.base_page import BasePage
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk
+
 from shadowcypher.core.severity import audit_engine
+from shadowcypher.ui.base_page import BasePage
+
 
 class ShadowCypherAuditPage(BasePage):
     """Platform verification HUD."""
 
     def __init__(self):
         super().__init__("\U0001f3af ShadowCypher Audit (Platform Verification)")
-        
+
         info = Gtk.Label()
         info.set_markup("<span color='#94a3b8'>Run a full audit of the platform core and installed runtimes.</span>")
         self.workspace.pack_start(info, False, False, 10)
@@ -36,7 +38,7 @@ class ShadowCypherAuditPage(BasePage):
     def _on_audit(self, btn):
         self.audit_btn.set_sensitive(False)
         self.clear_output("Running platform audit...\n\n")
-        
+
         # Clear previous grid rows
         for child in self.grid.get_children():
             self.grid.remove(child)
@@ -53,7 +55,7 @@ class ShadowCypherAuditPage(BasePage):
         for name, status in results.items():
             lbl_name = Gtk.Label(label=name, xalign=0)
             lbl_status = Gtk.Label(label=status, xalign=0)
-            
+
             if "FAIL" in status or "WARNING" in status:
                 lbl_status.get_style_context().add_class("danger-text")
             else:
@@ -62,7 +64,7 @@ class ShadowCypherAuditPage(BasePage):
             self.grid.attach(lbl_name, 0, self._row_count, 1, 1)
             self.grid.attach(lbl_status, 1, self._row_count, 1, 1)
             self._row_count += 1
-        
+
         self.grid.show_all()
         self.on_output("\nAudit complete.\n")
         self.audit_btn.set_sensitive(True)

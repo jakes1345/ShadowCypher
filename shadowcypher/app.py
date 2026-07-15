@@ -2,11 +2,10 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gtk, GLib, Gdk, GdkPixbuf
-import sys
 import os
-import time
 import threading
+
+from gi.repository import Gdk, GLib, Gtk
 
 # Wire custom askpass so sudo prompts use the ShadowCypher elevation gate
 _askpass = os.path.join(os.path.dirname(__file__), "..", "..", "native", "shadowcypher-askpass")
@@ -14,11 +13,11 @@ _askpass = os.path.abspath(_askpass)
 if os.path.exists(_askpass):
     os.environ["SUDO_ASKPASS"] = _askpass
 
-from shadowcypher.core.config import config
-from shadowcypher.ui.themes import get_theme
-from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
 from shadowcypher.core.platform import platform_engine
+from shadowcypher.ui.themes import get_theme
+
 
 class ShadowCypherWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
@@ -30,7 +29,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
 
         self.set_wmclass("ShadowCypher", "org.shadowcypher.ShadowCypher")
         GLib.set_prgname("ShadowCypher")
-        
+
         # Early-bind sidebar list to prevent initialization race conditions
         self.sidebar_list = Gtk.ListBox()
         self.sidebar_list.get_style_context().add_class("sidebar")
@@ -63,29 +62,29 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         # 2. Apex Layout
         vbox_master = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.add(vbox_master)
-        
+
         self.nav_box = self._build_sidebar()
-        
+
         # 3. Main Operational Stack (ShadowCypher HUD)
         self._page_container = Gtk.Stack()
         self._page_container.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         self._page_container.set_transition_duration(100)
-        
+
         # 4. Telemetry sidebar (live stats)
         self.pulse_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.pulse_box.get_style_context().add_class("citadel-pulse")
         self.pulse_box.set_size_request(260, -1)
-        
+
         # Section Header: Telemetry
         tel_header = Gtk.Label()
         tel_header.set_markup("<span size='small' weight='bold' color='#94a3b8'>// REAL-TIME_TELEMETRY</span>")
         tel_header.set_halign(Gtk.Align.START)
         self.pulse_box.pack_start(tel_header, False, False, 10)
-        
+
         # Real-time telemetry widgets
         self.cpu_label = Gtk.Label(label="CPU_LOAD: [||||||||||] 0%")
         self.mem_label = Gtk.Label(label="MEM_PRESSURE: [||||||||||] 0%")
-        
+
         for lbl in [self.cpu_label, self.mem_label]:
             lbl.set_halign(Gtk.Align.START)
             self.pulse_box.pack_start(lbl, False, False, 5)
@@ -95,7 +94,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         net_header.set_markup("<span size='small' weight='bold' color='#94a3b8'>// NETWORK_ENTROPY</span>")
         net_header.set_halign(Gtk.Align.START)
         self.pulse_box.pack_start(net_header, False, False, 10)
-        
+
         self.net_label = Gtk.Label(label="NET_ENTROPY: 0.00bps")
         self.irc_label = Gtk.Label(label="COORDINATION: NOMINAL")
         self.ghost_label = Gtk.Label()
@@ -108,24 +107,24 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         # Assemble Full Layout
         self.layout_grid = Gtk.Grid()
         self.layout_grid.set_column_spacing(0)
-        
+
         # Ensure children expand to fill the void
         self.nav_box.set_vexpand(True)
         self._page_container.set_hexpand(True)
         self._page_container.set_vexpand(True)
         self.pulse_box.set_vexpand(True)
-        
+
         # Wrap page container in a ScrolledWindow to prevent horizontal overflow
         self.page_scroller = Gtk.ScrolledWindow()
         self.page_scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.page_scroller.set_propagate_natural_width(True)
         self.page_scroller.set_propagate_natural_height(True)
         self.page_scroller.add(self._page_container)
-        
+
         self.layout_grid.attach(self.nav_box, 0, 0, 1, 1)
         self.layout_grid.attach(self.page_scroller, 1, 0, 1, 1)
         self.layout_grid.attach(self.pulse_box, 2, 0, 1, 1)
-        
+
         vbox_master.pack_start(self.layout_grid, True, True, 0)
 
         # Tour panel — slides up from between layout and footer
@@ -157,17 +156,17 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self._page_registry = {}
 
         self._switch_to_page("Central Command HUD")
-        
+
         # Ensure sidebar selection reflects the initial page
         first_row = self.sidebar_list.get_row_at_index(1)
         if first_row is None:
             first_row = self.sidebar_list.get_row_at_index(0)
         if first_row:
             self.sidebar_list.select_row(first_row)
-        
+
         # Subscribe to Autonomous Ticket Events
         bus.subscribe("new_ticket", self._on_new_ticket)
-        
+
         # Tor probe runs off-thread every 10s; cached result read on main thread
         self._tor_up = False
         threading.Thread(target=self._tor_probe_worker, daemon=True).start()
@@ -178,14 +177,13 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self.show_all()
 
         # Auto-start tour on first launch (after UI is visible and welcome is done)
-        from shadowcypher.ui.welcome_dialog import needs_onboarding
         if not tour_completed():
             # Delay slightly so the window fully renders before tour slides up
             GLib.timeout_add(800, self._maybe_start_tour)
 
     def _maybe_start_tour(self) -> bool:
-        from shadowcypher.ui.welcome_dialog import needs_onboarding, show_welcome
         from shadowcypher.ui.tour import tour_completed
+        from shadowcypher.ui.welcome_dialog import needs_onboarding, show_welcome
         if needs_onboarding():
             show_welcome(self)
         if not tour_completed():
@@ -279,7 +277,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroller.set_propagate_natural_width(False)
         scroller.set_size_request(220, -1)
-        
+
         # self.sidebar_list is now pre-initialized in __init__
 
         # (icon, label, badge)  badge=None means no badge
@@ -423,7 +421,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 err_box.add(Gtk.Label(label=f"Load Error: {name}"))
                 self._page_registry[name] = err_box
                 self._page_container.add_named(err_box, name)
-        
+
         # Switch instantly if requested
         if make_visible:
             self._page_container.set_visible_child_name(name)
@@ -462,10 +460,11 @@ def main():
         import sys
         print(f"DEBUG: Failed to adjust process priority: {e}", file=sys.stderr)
 
-    from shadowcypher.core.hub import hub
+    import threading
+
     from shadowcypher.ai.sisyphus import sisyphus
     from shadowcypher.api import start_server
-    import threading
+    from shadowcypher.core.hub import hub
 
     logger.info("hub", "BOOTING_APEX_PREDATOR_CORE...")
 

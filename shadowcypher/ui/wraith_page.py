@@ -4,15 +4,14 @@ Dedicated page for flash-wipe, tunnel termination, and evidence purge.
 """
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
-import os
-import threading
 
-from shadowcypher.ui.base_page import BasePage
+gi.require_version("Gtk", "3.0")
+import os
+
+from gi.repository import Gtk
+
 from shadowcypher.core.config import config
-from shadowcypher.core.bus import bus
-from shadowcypher.core.logger import logger
+from shadowcypher.ui.base_page import BasePage
 
 
 class WraithProtocol(BasePage):

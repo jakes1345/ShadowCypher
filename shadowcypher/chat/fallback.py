@@ -1,11 +1,13 @@
 # shadowcypher/chat/fallback.py
 
-import time
 import logging
-from shadowcypher.chat.db import SessionLocal
-from shadowcypher.chat import p2p_relay
-from shadowcypher.chat.models import Message
+import time
+
 from sqlalchemy.orm import Session
+
+from shadowcypher.chat import p2p_relay
+from shadowcypher.chat.db import SessionLocal
+from shadowcypher.chat.models import Message
 
 log = logging.getLogger(__name__)
 MAX_P2P_RETRIES = 3

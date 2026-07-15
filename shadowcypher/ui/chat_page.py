@@ -1,16 +1,18 @@
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Gdk, Pango
+import json
+import mimetypes
+import re
 import threading
 import time
-import json
-import re
-import mimetypes
-import uuid as _uuid_mod
-import urllib.request
 import urllib.error
 import urllib.parse
-from datetime import datetime, timezone
+import urllib.request
+import uuid as _uuid_mod
+from datetime import datetime
+
+from gi.repository import Gdk, GLib, Gtk, Pango
 
 try:
     import websocket

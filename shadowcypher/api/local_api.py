@@ -6,17 +6,18 @@ All endpoints require Bearer token auth (from operator config).
 from __future__ import annotations
 
 import os
-import secrets
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import FastAPI, Depends, HTTPException, status, Header, WebSocket, WebSocketDisconnect
+
+import uvicorn
+from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import uvicorn
-from shadowcypher.core.logger import logger
-from shadowcypher.core.config import config
+
 from shadowcypher.api.websocket_server import subscribe_to_mission
+from shadowcypher.core.config import config
+from shadowcypher.core.logger import logger
 
 
 def _get_or_create_api_token() -> str:
@@ -818,8 +819,9 @@ async def delete_incident_rule(rule_id: str, token: str = Depends(verify_token))
 @app.post("/v1/modules/scan", response_model=list[ModuleResultResponse])
 async def scan_modules(req: ModuleScanRequest, token: str = Depends(verify_token)):
 	"""Run Guardian security modules (fail2ban, host_audit, tls_audit, yara_scan)."""
-	from shadowcypher.core.guardian_modules import get_guardian_modules
 	from dataclasses import asdict
+
+	from shadowcypher.core.guardian_modules import get_guardian_modules
 
 	modules = get_guardian_modules()
 
@@ -978,8 +980,9 @@ async def get_shadow_ai_history(limit: int = 20, token: str = Depends(verify_tok
 @app.post("/v1/incidents/process")
 async def process_incident(req: ProcessIncidentRequest, token: str = Depends(verify_token)):
 	"""Process an incident and trigger automated responses."""
-	from shadowcypher.core.incident_response import get_incident_response_engine
 	import uuid
+
+	from shadowcypher.core.incident_response import get_incident_response_engine
 
 	engine = get_incident_response_engine()
 	incident_id = f"incident-{uuid.uuid4().hex[:8]}"

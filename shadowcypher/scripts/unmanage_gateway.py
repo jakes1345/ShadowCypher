@@ -2,12 +2,12 @@
 # ==============================================================================
 # SHADOWCYPHER // LOCAL GATEWAY SECURITY AUDIT
 # ==============================================================================
-# Audits the local default gateway for known remote management exposures 
+# Audits the local default gateway for known remote management exposures
 # (e.g., TR-069/CWMP) and validates local DNS routing hygiene.
 
-import sys
-import os
 import logging
+import os
+import sys
 
 # 1. Environment Sync
 sys.path.insert(0, os.getcwd())
@@ -28,7 +28,7 @@ def main():
     if not gateway_ip:
         logging.error("Failed to identify default gateway route. Audit aborted.")
         sys.exit(1)
-    
+
     logging.info(f"Target Gateway Identified: {gateway_ip}")
 
     # Step 2: Device Fingerprinting
@@ -38,7 +38,7 @@ def main():
     # Step 3: Remote Management Exposure Audit
     logging.info("Initiating Management Interface Exposure Audit...")
     open_ports = []
-    
+
     def capture_port(output):
         print(f"    -> {output.strip()}")
         if "OPEN" in output:
@@ -53,7 +53,7 @@ def main():
     print("\n==============================================================================")
     print(" AUDIT FINDINGS & RECOMMENDATIONS")
     print("==============================================================================\n")
-    
+
     if 7547 in open_ports or 8089 in open_ports:
         print("[!] CRITICAL FINDING: TR-069 / CWMP Exposure Detected.")
         print("    -> The gateway is exposing ISP remote management ports (7547/8089).")

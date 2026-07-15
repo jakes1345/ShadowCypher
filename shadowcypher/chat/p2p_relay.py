@@ -6,17 +6,19 @@ The server never decrypts message contents — only ciphertext + nonce
 are forwarded, identical to the Phase 1 message format.
 """
 
-import socket
-import ssl
-import time
+import ipaddress
 import json
 import logging
-import ipaddress
-from shadowcypher.chat.db import SessionLocal
-from shadowcypher.chat.models import Instance, P2PConnection
-from shadowcypher.chat import instance_registry
-from sqlalchemy.orm import Session
+import socket
+import ssl
 import threading
+import time
+
+from sqlalchemy.orm import Session
+
+from shadowcypher.chat import instance_registry
+from shadowcypher.chat.db import SessionLocal
+from shadowcypher.chat.models import P2PConnection
 
 log = logging.getLogger(__name__)
 

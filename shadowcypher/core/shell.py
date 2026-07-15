@@ -3,14 +3,13 @@ ShadowShell — Enterprise-Grade Execution Engine.
 Google-grade tactical command orchestration with security hardening and performance metrics.
 """
 
-import subprocess
 import os
-import re
-import time
-import threading
 import shlex
+import subprocess
+import threading
+import time
 from datetime import datetime
-from typing import Dict, Any, Optional, Callable, Union
+from typing import Any, Callable, Dict, Union
 
 from shadowcypher.core.logger import logger
 
@@ -49,7 +48,7 @@ class ShadowShell:
         env = os.environ.copy()
         if env_updates:
             env.update(env_updates)
-            
+
         # 2. Performance Linker Optimization (Enterprise Compilation)
         if any(tool in cmd_str for tool in ["cargo", "gcc", "g++", "make"]):
             env["RUSTFLAGS"] = "-C linker=mold"
@@ -64,7 +63,7 @@ class ShadowShell:
             if pulse.throttle_active:
                 logger.info("shell", "TACTICAL_THROTTLE_ACTIVE: Injecting stealth delay...")
                 time.sleep(1.5) # Adaptive footprint reduction
-                
+
             # 4. Execution without shell expansion (prevents injection)
             result = subprocess.run(
                 args,
@@ -75,14 +74,14 @@ class ShadowShell:
                 timeout=timeout,
                 check=False
             )
-            
+
             duration = time.time() - start_time
             status = "SUCCESS" if result.returncode == 0 else "ERROR"
-            
+
             # 5. Pulse Ingestion (Execution Latency Anomaly Detection)
             from shadowcypher.core.pulse import pulse
             pulse.ingest("execution_telemetry", duration)
-            
+
             # 6. Structured Telemetry
             telemetry = {
                 "status": status,
@@ -91,12 +90,12 @@ class ShadowShell:
                 "output": result.stdout if result.returncode == 0 else result.stderr,
                 "timestamp": datetime.now().isoformat()
             }
-            
+
             if result.returncode == 0:
                 logger.info("shell", f"COMMAND_COMPLETE: {cmd_str[:64]}... [{duration:.2f}s]")
             else:
                 logger.warning("shell", f"COMMAND_FAILED: {cmd_str[:64]}... (Exit: {result.returncode})")
-                
+
             return telemetry
 
         except subprocess.TimeoutExpired:
@@ -128,17 +127,17 @@ class ShadowShell:
                     bufsize=1,
                     universal_newlines=True
                 )
-                
+
                 for line in iter(process.stdout.readline, ""):
                     if line:
                         on_output(line.strip())
-                
+
                 process.stdout.close()
                 return_code = process.wait()
-                
+
                 if on_complete:
                     on_complete(return_code)
-                    
+
             except Exception as e:
                 logger.error("shell", f"STREAM_EXCEPTION: {str(e)}")
                 if on_output:

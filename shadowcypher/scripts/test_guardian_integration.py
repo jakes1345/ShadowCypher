@@ -5,7 +5,6 @@ Tests API endpoints, scan history, module imports, and data flow.
 """
 
 import sys
-import json
 import time
 from pathlib import Path
 
@@ -15,7 +14,6 @@ sys.path.insert(0, str(project_root))
 
 from shadowcypher.core.guardian_service import get_guardian_service
 from shadowcypher.core.scan_history import get_scan_history
-from shadowcypher.core.logger import logger
 
 
 def test_guardian_service():

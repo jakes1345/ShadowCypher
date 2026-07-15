@@ -1,11 +1,13 @@
 """Support page — system info, diagnostics, documentation links."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 import platform
 import shutil
 import threading
+
+from gi.repository import GLib, Gtk
 
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod

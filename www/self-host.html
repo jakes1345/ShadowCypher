@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Self-Host ShadowCypher — Docker & Kubernetes Deployment Guide</title>
+<meta name="description" content="Run ShadowCypher on your own infrastructure. Docker Compose, Kubernetes, and bare-metal deployment guides for the open-source security platform."/>
+<link rel="icon" href="/icon-192.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+:root{--accent-primary:#b44aff;--accent-secondary:#00ff41;--bg-base:#020202;--glass-border:rgba(180,74,255,0.15);--text-secondary:#777;--font-mono:'JetBrains Mono',monospace;--font-main:'Outfit',sans-serif;--success:#00ff41;--warning:#ffb84d;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg-base);color:#e0e0e0;font-family:var(--font-main);line-height:1.75;}
+nav{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid var(--glass-border);}
+.logo{font-family:var(--font-mono);font-size:1.1rem;font-weight:700;letter-spacing:4px;color:#fff;text-decoration:none;}
+nav a{color:var(--accent-primary);text-decoration:none;font-family:var(--font-mono);font-size:0.8rem;}
+main{max-width:860px;margin:0 auto;padding:80px 24px 120px;}
+h1{font-size:2.8rem;font-weight:900;line-height:1.1;margin-bottom:16px;}
+h1 span{color:var(--accent-primary);}
+.subtitle{color:var(--text-secondary);font-size:1rem;max-width:600px;margin-bottom:60px;}
+h2{font-family:var(--font-mono);font-size:0.85rem;letter-spacing:3px;color:var(--accent-primary);margin:50px 0 20px;padding-top:30px;border-top:1px solid var(--glass-border);}
+h3{font-size:1.1rem;font-weight:700;margin:30px 0 10px;}
+p{color:#bbb;margin-bottom:16px;font-size:0.95rem;}
+a{color:var(--accent-primary);}
+pre{background:#000;border:1px solid #222;border-radius:6px;padding:20px;font-family:var(--font-mono);font-size:0.8rem;color:#0f0;overflow-x:auto;margin:16px 0;position:relative;}
+pre .comment{color:#555;}
+code{font-family:var(--font-mono);font-size:0.85rem;background:rgba(180,74,255,0.08);padding:2px 6px;border-radius:3px;color:var(--accent-primary);}
+.copy-btn{position:absolute;top:10px;right:10px;background:transparent;border:1px solid #333;color:#666;font-family:var(--font-mono);font-size:0.65rem;padding:4px 10px;cursor:pointer;border-radius:3px;}
+.copy-btn:hover{border-color:var(--accent-primary);color:var(--accent-primary);}
+.step{display:flex;gap:16px;margin-bottom:24px;}
+.step-num{font-family:var(--font-mono);font-size:0.7rem;color:var(--accent-primary);background:rgba(180,74,255,0.1);border:1px solid var(--glass-border);width:32px;height:32px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:4px;}
+.step-body{flex:1;}
+.warn{background:rgba(255,184,77,0.06);border:1px solid rgba(255,184,77,0.2);padding:14px 18px;border-radius:4px;font-size:0.85rem;color:var(--warning);margin:16px 0;}
+.info{background:rgba(180,74,255,0.05);border:1px solid var(--glass-border);padding:14px 18px;border-radius:4px;font-size:0.85rem;color:#bbb;margin:16px 0;}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:0.85rem;}
+th{font-family:var(--font-mono);font-size:0.65rem;letter-spacing:2px;color:var(--accent-primary);padding:10px 14px;border-bottom:1px solid var(--glass-border);text-align:left;}
+td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:#bbb;}
+td code{font-size:0.78rem;}
+.tag{font-family:var(--font-mono);font-size:0.6rem;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;margin-left:8px;}
+.tag.easy{background:rgba(0,255,65,0.08);color:var(--success);}
+.tag.med{background:rgba(255,184,77,0.08);color:var(--warning);}
+footer{text-align:center;padding:40px;border-top:1px solid var(--glass-border);color:var(--text-secondary);font-size:0.75rem;}
+footer a{color:var(--accent-primary);text-decoration:none;margin:0 12px;}
+</style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="/">SHADOWCYPHER</a>
+  <div style="display:flex;gap:24px;">
+    <a href="/docs.html">API Docs</a>
+    <a href="/blog/">Blog</a>
+    <a href="https://github.com/jakes1345/ShadowCypher">GitHub</a>
+  </div>
+</nav>
+
+<main>
+  <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:16px;">// SELF-HOST GUIDE</div>
+  <h1>Run ShadowCypher on <span>Your Infrastructure</span></h1>
+  <p class="subtitle">Three paths to full sovereignty: Docker Compose for a single machine, Kubernetes for scale, or bare metal if you want maximum control. No cloud dependency required.</p>
+
+  <h2>// PREREQUISITES</h2>
+  <table>
+    <tr><th>Requirement</th><th>Version</th><th>Notes</th></tr>
+    <tr><td>Docker</td><td>24+</td><td>Docker Desktop or Docker Engine</td></tr>
+    <tr><td>Docker Compose</td><td>v2+</td><td>Bundled with Docker Desktop</td></tr>
+    <tr><td>RAM</td><td>4 GB min</td><td>8 GB recommended if running Ollama AI</td></tr>
+    <tr><td>Disk</td><td>10 GB</td><td>More if downloading AI models</td></tr>
+    <tr><td>OS</td><td>Linux / macOS / Windows WSL2</td><td>ARM64 supported (Apple Silicon, Pi 5)</td></tr>
+  </table>
+
+  <h2>// OPTION 1 — DOCKER COMPOSE <span class="tag easy">RECOMMENDED</span></h2>
+  <p>The fastest path. Runs the Guardian agent, a local web UI, and optionally Ollama for AI — all in isolated containers.</p>
+
+  <div class="step">
+    <div class="step-num">01</div>
+    <div class="step-body">
+      <h3>Clone the repository</h3>
+      <pre><button class="copy-btn" onclick="copyPre(this)">copy</button>git clone https://github.com/jakes1345/ShadowCypher.git
+cd ShadowCypher</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">02</div>
+    <div class="step-body">
+      <h3>Configure environment</h3>
+      <pre><button class="copy-btn" onclick="copyPre(this)">copy</button>cp config.example.json config.json
+<span class="comment"># Edit config.json — set your API key from shadowcypher.site/account</span>
+nano config.json</pre>
+      <p>The only required field is <code>api_key</code>. Everything else has sensible defaults.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">03</div>
+    <div class="step-body">
+      <h3>Start the stack</h3>
+      <pre><button class="copy-btn" onclick="copyPre(this)">copy</button>docker compose up -d</pre>
+      <p>This starts the Guardian agent in the background. It will begin scanning your network within 30 seconds and reporting to your dashboard.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">04</div>
+    <div class="step-body">
+      <h3>Verify it's running</h3>
+      <pre><button class="copy-btn" onclick="copyPre(this)">copy</button>docker compose logs -f shadowcypher-ui</pre>
+      <p>You should see <code>Guardian agent active — scanning network</code> within a minute. Your devices will appear at <a href="https://shadowcypher.site" target="_blank">shadowcypher.site → Guardian</a>.</p>
+    </div>
+  </div>
+
+  <h2>// WITH LOCAL AI (OLLAMA) <span class="tag med">OPTIONAL</span></h2>
+  <p>Add AI capabilities without sending any data to the cloud. Requires a GPU or Apple Silicon for reasonable speed.</p>
+
+  <pre><button class="copy-btn" onclick="copyPre(this)">copy</button><span class="comment"># docker-compose.override.yml — add this file to enable Ollama</span>
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: shadowcypher_ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]   <span class="comment"># remove if no GPU</span>
+
+  shadowcypher-ui:
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+
+volumes:
+  ollama_data:</pre>
+
+  <pre><button class="copy-btn" onclick="copyPre(this)">copy</button><span class="comment"># Pull and start</span>
+docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+
+<span class="comment"># Pull the default Shadow AI model (1.75 GB)</span>
+docker exec shadowcypher_ollama ollama pull hf.co/NousResearch/Hermes-3-Llama-3.2-3B-GGUF:Q4_K_M</pre>
+
+  <h2>// OPTION 2 — KUBERNETES <span class="tag med">ADVANCED</span></h2>
+  <p>For running ShadowCypher across a cluster or on a homelab with k3s/k8s.</p>
+
+  <pre><button class="copy-btn" onclick="copyPre(this)">copy</button><span class="comment"># namespace</span>
+kubectl create namespace shadowcypher
+
+<span class="comment"># secret — your API key from shadowcypher.site</span>
+kubectl create secret generic shadowcypher-config \
+  --from-literal=api_key=sc_live_YOUR_KEY_HERE \
+  -n shadowcypher
+
+<span class="comment"># deploy guardian agent</span>
+kubectl apply -f https://shadowcypher.site/k8s/guardian.yaml -n shadowcypher
+
+<span class="comment"># check status</span>
+kubectl get pods -n shadowcypher</pre>
+
+  <div class="info">The Kubernetes manifest runs the Guardian agent as a DaemonSet so it monitors every node in your cluster. It reports device discovery and security incidents back to your dashboard in real time.</div>
+
+  <h2>// OPTION 3 — BARE METAL</h2>
+  <p>No Docker. Just Python 3.11+ on Linux or macOS.</p>
+
+  <pre><button class="copy-btn" onclick="copyPre(this)">copy</button><span class="comment"># Install</span>
+git clone https://github.com/jakes1345/ShadowCypher.git
+cd ShadowCypher
+pip3 install -r requirements.txt
+
+<span class="comment"># Configure</span>
+cp config.example.json config.json
+nano config.json   <span class="comment"># add your api_key</span>
+
+<span class="comment"># Run Guardian agent</span>
+python3 shadowcypher/scripts/guardian.py run
+
+<span class="comment"># Or as a systemd service (Linux)</span>
+sudo cp shadowcypher.service /etc/systemd/system/
+sudo systemctl enable --now shadowcypher</pre>
+
+  <h2>// ENVIRONMENT VARIABLES</h2>
+  <table>
+    <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>SC_API_KEY</code></td><td>—</td><td>Your shadowcypher.site API key (required)</td></tr>
+    <tr><td><code>SC_API_BASE</code></td><td><code>https://shadowcypher-api.shadowcypher.workers.dev</code></td><td>Override for self-hosted backend</td></tr>
+    <tr><td><code>SC_SCAN_INTERVAL</code></td><td><code>600</code></td><td>Seconds between network scans</td></tr>
+    <tr><td><code>OLLAMA_HOST</code></td><td><code>http://127.0.0.1:11434</code></td><td>Ollama endpoint for local AI</td></tr>
+    <tr><td><code>SC_LOG_LEVEL</code></td><td><code>INFO</code></td><td>DEBUG | INFO | WARNING | ERROR</td></tr>
+  </table>
+
+  <h2>// SELF-HOST THE BACKEND (OPTIONAL)</h2>
+  <p>The backend API is a Cloudflare Worker. You can fork it and deploy your own instance in under 5 minutes.</p>
+
+  <pre><button class="copy-btn" onclick="copyPre(this)">copy</button">cd backend/api
+npm install
+
+<span class="comment"># Set secrets</span>
+npx wrangler secret put SUPABASE_URL
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+npx wrangler secret put STRIPE_SECRET_KEY
+npx wrangler secret put ANTHROPIC_API_KEY
+npx wrangler secret put RESEND_API_KEY
+
+<span class="comment"># Deploy</span>
+npx wrangler deploy</pre>
+
+  <div class="warn">Self-hosting the backend requires your own Supabase project, Stripe account, and optionally Resend for email. See <a href="/docs.html">API Docs</a> for the full database schema.</div>
+
+  <h2>// UPDATES</h2>
+  <pre><button class="copy-btn" onclick="copyPre(this)">copy</button"><span class="comment"># Docker Compose</span>
+docker compose pull && docker compose up -d
+
+<span class="comment"># Bare metal</span>
+git pull && pip3 install -r requirements.txt</pre>
+
+  <h2>// GETTING HELP</h2>
+  <p>Open an issue on <a href="https://github.com/jakes1345/ShadowCypher/issues">GitHub</a> or email <a href="mailto:hello@shadowcypher.site">hello@shadowcypher.site</a>. Check the <a href="/status.html">status page</a> if the cloud API seems down.</p>
+</main>
+
+<footer>
+  <p style="margin-bottom:16px;font-family:var(--font-mono);letter-spacing:3px;">SHADOWCYPHER</p>
+  <div>
+    <a href="/">Dashboard</a>
+    <a href="/docs.html">API Docs</a>
+    <a href="/blog/">Blog</a>
+    <a href="/roadmap.html">Roadmap</a>
+    <a href="https://github.com/jakes1345/ShadowCypher">GitHub</a>
+    <a href="mailto:hello@shadowcypher.site">Contact</a>
+  </div>
+</footer>
+
+<script>
+function copyPre(btn) {
+  const pre = btn.parentElement;
+  const text = pre.innerText.replace('copy\n','').replace(/copy$/,'').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'copied';
+    setTimeout(() => btn.textContent = 'copy', 2000);
+  });
+}
+</script>
+</body>
+</html>

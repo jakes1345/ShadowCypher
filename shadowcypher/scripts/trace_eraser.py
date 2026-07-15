@@ -10,12 +10,11 @@ Usage:
 """
 
 import argparse
-import os
-import sys
-import subprocess
 import glob
-import time
+import os
 import re
+import subprocess
+import time
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m","N":"\033[0m","B":"\033[1m"}
 
@@ -209,7 +208,7 @@ def main():
         print(f"\n  {C['C']}[Phase 5]{C['N']} Timestamp Obfuscation")
         import random
         count = 0
-        for root, dirs, files in os.walk("."):
+        for root, _, files in os.walk("."):
             if ".git" in root:
                 continue
             for f in files:

@@ -2,13 +2,15 @@
 
 import threading
 import time
-import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Pango
 
+import gi
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk, Pango
+
+from shadowcypher.modules.agent_relay import AgentRelay
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod
-from shadowcypher.modules.agent_relay import AgentRelay
 
 c2 = AgentRelay()
 

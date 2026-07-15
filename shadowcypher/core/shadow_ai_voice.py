@@ -4,9 +4,9 @@ Converts natural language requests into Guardian API calls and responses.
 """
 
 import re
-from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
+from typing import Dict, List, Optional, Tuple
 
 from shadowcypher.core.logger import logger
 

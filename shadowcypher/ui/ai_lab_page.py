@@ -1,9 +1,11 @@
 """AI Lab — EvoMemory browser, Transformer² expert stats, LoRA training, model merging."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 import threading
+
+from gi.repository import GLib, Gtk
 
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod
@@ -173,7 +175,7 @@ class AILabPage(BasePage):
 
     def _load_t2_stats(self):
         try:
-            from shadowcypher.ai.transformer2 import transformer2, EXPERTS
+            from shadowcypher.ai.transformer2 import EXPERTS, transformer2
             for child in self._t2_grid.get_children():
                 self._t2_grid.remove(child)
             header_labels = ["Expert", "Avg Fitness", "Samples", "Keywords"]
@@ -467,7 +469,7 @@ class AILabPage(BasePage):
         strategy = self._merge_strategy.get_active_id() or "ensemble"
 
         try:
-            from shadowcypher.ai.model_merger import model_merger, MergeConfig
+            from shadowcypher.ai.model_merger import MergeConfig, model_merger
             cfg = MergeConfig(
                 models=selected,
                 strategy=strategy,

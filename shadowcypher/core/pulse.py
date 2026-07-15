@@ -1,9 +1,9 @@
 import threading
 import time
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, Optional
 
-from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
 
 try:
     import numpy as np
@@ -25,7 +25,7 @@ class ShadowPulse:
         self._samples: Dict[str, list] = {}
         self._max_history = 1024
         self._lock = threading.Lock()
-        
+
         # Anomaly status
         self.last_anomaly_score = 0.0
         self.is_nominal = True
@@ -58,37 +58,37 @@ class ShadowPulse:
                 return {"status": "INSUFFICIENT_DATA"}
 
         # --- DSP CORE: Scale-Space Analysis using Gaussian Derivatives ---
-        
+
         # 1. Define Scales (Sigma)
         # We analyze features across multiple scales (sigma) to capture multi-resolution information.
         # Ensure we have enough data points for a valid logspace
         num_scales = max(4, int(np.ceil(np.log2(len(data)))))
         sigmas = np.logspace(np.log10(0.5), np.log10(10.0), num=num_scales)
-        
+
         scale_energies = []
-        
+
         # 2. Calculate Scale-Space Coefficients
         for sigma in sigmas:
             # Apply Gaussian Laplacian to capture local curvature/transients
             laplacian_filtered = gaussian_laplace(data, sigma=sigma)
-            
+
             # The energy at this scale is the L2 norm of the filtered signal
             energy = np.linalg.norm(laplacian_filtered)
             scale_energies.append(energy)
 
         scale_energies = np.array(scale_energies)
-        
+
         # 3. Anomaly Scoring (Non-Stationarity Metric)
         mean_energy = np.mean(scale_energies)
         max_energy = np.max(scale_energies)
-        
+
         # Score calculation: High ratio indicates non-stationarity/transient event.
         score = (max_energy / (mean_energy + 1e-9))
-        
+
         self.last_anomaly_score = score
         # Threshold calibrated for high-fidelity detection
-        is_safe = score < 2.8 
-        
+        is_safe = score < 2.8
+
         if not is_safe and self.is_nominal:
             self.is_nominal = False
             self.throttle_active = True

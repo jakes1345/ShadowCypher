@@ -4,9 +4,10 @@ Grouped, high-performance GTK components for the Apex Predator HUD.
 """
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, GLib, Pango
-import math
+from gi.repository import GLib, Gtk, Pango
+
 
 class TacticalTerminal(Gtk.Box):
     """A glass-styled terminal with smooth scrolling and high-fidelity output."""
@@ -58,13 +59,13 @@ class TacticalTerminal(Gtk.Box):
             tag_table = buf.get_tag_table()
             ts = GLib.DateTime.new_now_local().format("%H:%M:%S")
             it = buf.get_end_iter()
-            
+
             # Defensive check for timestamp tag
             if not tag_table.lookup("timestamp"):
                 buf.create_tag("timestamp", foreground="#64748b")
 
             buf.insert_with_tags_by_name(it, f"[{ts}] ", "timestamp")
-            
+
             it = buf.get_end_iter()
             color_tag = tag.lower()
             # Register specific status tags if missing
@@ -72,12 +73,12 @@ class TacticalTerminal(Gtk.Box):
                 colors = {"error": "#f87171", "success": "#34d399", "quantum": "#00ff9d", "ai": "#a78bfa"}
                 fg = colors.get(color_tag, "#00d4ff")
                 buf.create_tag(color_tag, foreground=fg, weight=700)
-                
+
             buf.insert_with_tags_by_name(it, f"[{tag.upper()}] ", color_tag)
-            
+
             it = buf.get_end_iter()
             buf.insert(it, f"{text}\n")
-            
+
             adj = self.scroll.get_vadjustment()
             GLib.idle_add(lambda: adj.set_value(adj.get_upper() - adj.get_page_size()))
         GLib.idle_add(_insert)
@@ -87,11 +88,11 @@ class DataPod(Gtk.Box):
     def __init__(self, title: str, initial_value: str = "---", accent: str = "cyan"):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         self.get_style_context().add_class("card")
-        
+
         self.lbl_title = Gtk.Label(label=title.upper())
         self.lbl_title.get_style_context().add_class("dim-label")
         self.pack_start(self.lbl_title, False, False, 0)
-        
+
         self.lbl_value = Gtk.Label(label=initial_value)
         self.lbl_value.set_ellipsize(Pango.EllipsizeMode.END)
         self.lbl_value.set_max_width_chars(15)
@@ -100,7 +101,7 @@ class DataPod(Gtk.Box):
 
     def set_value(self, value: str):
         GLib.idle_add(self.lbl_value.set_text, str(value))
-    
+
     def update_value(self, value: str):
         self.set_value(value)
 
@@ -109,20 +110,20 @@ class TacticalHeader(Gtk.Box):
     def __init__(self, title: str, subtitle: str = None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.set_margin_bottom(20)
-        
+
         main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        
+
         lbl = Gtk.Label(label=title.upper())
         lbl.get_style_context().add_class("app-title")
         main_box.pack_start(lbl, False, False, 0)
-        
+
         # Spacer
         main_box.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), True, True, 20)
-        
+
         # Activity Spinner (Apex Sentry)
         self.spinner = Gtk.Spinner()
         main_box.pack_end(self.spinner, False, False, 0)
-        
+
         self.pack_start(main_box, False, False, 0)
 
         if subtitle:

@@ -3,15 +3,13 @@ Mission Executor — Runs Guardian scanning missions and tracks results.
 Orchestrates nmap, host audits, router scans with real-time status updates.
 """
 
-import os
-import json
-import uuid
 import subprocess
 import threading
+import uuid
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass, asdict
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 from shadowcypher.core.logger import logger
 from shadowcypher.core.scan_history import get_scan_history

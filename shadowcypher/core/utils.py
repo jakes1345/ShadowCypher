@@ -2,14 +2,16 @@
 Cross-platform: uses fcntl on Unix, msvcrt on Windows.
 """
 
-import os
 import contextlib
-import time
-from shadowcypher.core.logger import logger
+import os
 
 # ── Cross-platform file locking ──
 # fcntl is Unix-only, msvcrt is Windows-only
 import sys
+import time
+
+from shadowcypher.core.logger import logger
+
 if sys.platform == "win32":
     import msvcrt
 
@@ -24,11 +26,11 @@ if sys.platform == "win32":
             try:
                 msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
                 break
-            except (IOError, OSError):
+            except (IOError, OSError) as e:
                 if time.time() - start_time > timeout:
                     logger.error("utils", f"LOCK_TIMEOUT: Failed to acquire lock for {file_path}")
                     f.close()
-                    raise TimeoutError(f"Could not acquire lock for {file_path}")
+                    raise TimeoutError(f"Could not acquire lock for {file_path}") from e
                 time.sleep(0.1)
 
         try:
@@ -57,11 +59,11 @@ else:
             try:
                 fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 break
-            except OSError:
+            except OSError as e:
                 if time.time() - start_time > timeout:
                     logger.error("utils", f"LOCK_TIMEOUT: Failed to acquire lock for {file_path}")
                     f.close()
-                    raise TimeoutError(f"Could not acquire lock for {file_path}")
+                    raise TimeoutError(f"Could not acquire lock for {file_path}") from e
                 time.sleep(0.1)
 
         try:

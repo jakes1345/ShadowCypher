@@ -1,7 +1,9 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from shadowcypher.chat.routes import router as chat_router
-from pathlib import Path
 
 app = FastAPI(title="ShadowCypher Chat")
 

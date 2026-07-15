@@ -24,7 +24,6 @@ from __future__ import annotations
 import re
 import threading
 from dataclasses import dataclass
-from typing import Optional
 
 from shadowcypher.core.logger import logger
 

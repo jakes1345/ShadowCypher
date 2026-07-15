@@ -2,9 +2,10 @@
 Enforces AES-256 DRM encryption over all offensive payload generation logic.
 """
 
-from cryptography.fernet import Fernet
-import json
 import os
+
+from cryptography.fernet import Fernet
+
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 

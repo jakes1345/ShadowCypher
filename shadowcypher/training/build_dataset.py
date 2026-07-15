@@ -16,8 +16,8 @@ Usage:
 """
 
 import json
-import re
 import random
+import re
 from pathlib import Path
 
 SYSTEM_PROMPT = (

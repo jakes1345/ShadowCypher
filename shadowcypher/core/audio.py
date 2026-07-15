@@ -6,7 +6,6 @@ Opt-in; off by default. Throttled so tight event loops can't stack beeps.
 import os
 import subprocess
 import time
-from shadowcypher.core.logger import logger
 
 # Off by default. Flip with env SHADOWCYPHER_AUDIO=1 or audio.enabled = True.
 _DEFAULT_ENABLED = os.environ.get("SHADOWCYPHER_AUDIO", "0") == "1"

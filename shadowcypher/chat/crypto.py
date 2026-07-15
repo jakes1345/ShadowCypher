@@ -1,10 +1,11 @@
+import hashlib
 import os
+
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import x25519
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-import hashlib
-import json
+
 
 def generate_keypair() -> tuple[bytes, bytes]:
     """Generate X25519 keypair"""

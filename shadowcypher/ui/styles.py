@@ -2,6 +2,7 @@
 
 import os
 
+
 def get_css() -> str:
     css_path = os.path.join(os.path.dirname(__file__), "index.css")
     if os.path.exists(css_path):
@@ -10,7 +11,7 @@ def get_css() -> str:
                 return f.read()
         except Exception:
             pass
-    
+
     # High-Fidelity Fallback (Absolute Obsidian)
     return """
     * { color: #f8fafc; }

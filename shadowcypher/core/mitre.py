@@ -11,6 +11,7 @@ Usage:
     tags = mitre.from_finding("sql injection") # → technique list
 """
 from __future__ import annotations
+
 import re
 from typing import Optional
 

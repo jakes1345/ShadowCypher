@@ -9,9 +9,10 @@ in-memory only.
 import shutil
 import subprocess
 from typing import List
+
 from shadowcypher.core.logger import logger
-from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.platform import platform_engine
+from shadowcypher.core.sanitize import validate_target
 
 
 class FirewallBridge:

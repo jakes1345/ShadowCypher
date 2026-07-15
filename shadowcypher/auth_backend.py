@@ -1,11 +1,13 @@
 """Authentication backend with JWT and password hashing."""
-from datetime import datetime, timedelta
-from typing import Optional
 import os
 import secrets
+from datetime import datetime, timedelta
+from typing import Optional
+
 import bcrypt
 import jwt
 from pydantic import BaseModel
+
 
 def _load_or_create_jwt_secret() -> str:
     """Load JWT secret from env, then from file, else generate and persist."""

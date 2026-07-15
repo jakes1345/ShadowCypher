@@ -4,14 +4,14 @@ Key persistence: uses SQLite (via the main chat DB session) to store
 encrypted key material. Falls back to in-memory cache for the current
 process if DB is unavailable.
 """
-import os
 import base64
-import json
+import os
 import sqlite3
 import threading
-from typing import Tuple, Optional
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from typing import Optional, Tuple
+
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf import pbkdf2
 from pydantic import BaseModel
 

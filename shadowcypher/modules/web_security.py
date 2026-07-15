@@ -1,12 +1,12 @@
 """Web Attacks Module — Ffuf fuzzing and Nuclei template scanning."""
 
+import os
+import shutil
+
+from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_target
-from shadowcypher.core.logger import logger
 from shadowcypher.core.stealth import require_stealth
-import shlex
-import shutil
-import os
 
 
 class WebSecurity:
@@ -166,7 +166,7 @@ class WebSecurity:
         project_root = str(config.project_root)
         path = os.path.join(project_root, "tools", "elite", "MHDDoS", "start.py")
         proxies = os.path.join(project_root, "tools", "elite", "MHDDoS", "files", "proxies", "proxies.txt")
-        
+
         if not os.path.exists(path):
             if on_output:
                 on_output("[ERROR] MHDDoS_ENGINE_NOT_STAGED. Run elite tool acquisition.")
@@ -180,12 +180,11 @@ class WebSecurity:
     def bypass_403_test(url, path, on_output=None):
         """Execute the advanced Bypass 403 sequence."""
         require_stealth(on_output=on_output)
-        from shadowcypher.core.config import config
         logger.info("web", f"BYPASS_403_SEQUENCE_INITIATED: {url}{path}")
-        
+
         # Integration logic for the AI-generated tool
         tool = Bypass403Tool(base_url=url)
-        
+
         def _run():
             results = tool.test_bypass(target_path=path, rate_limit=0.1)
             for res in results:
@@ -210,8 +209,9 @@ class Bypass403Tool:
     def __init__(self, base_url: str, headers: dict = None):
         self.base_url = base_url.rstrip('/')
         self.base_headers = headers if headers else {}
-        import requests
         import random
+
+        import requests
         self.session = requests.Session()
         self.user_agents = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
@@ -250,12 +250,12 @@ class Bypass403Tool:
 
     def test_bypass(self, target_path: str, method: str = 'GET', rate_limit: float = 0.1):
         import time
-        import requests
         from urllib.parse import urljoin
+
         results = []
         path_variations = self._generate_path_variations(target_path)
         header_payloads = self._generate_header_payloads()
-        
+
         for p_var in path_variations:
             for h_pay in header_payloads:
                 full_url = urljoin(self.base_url, p_var)

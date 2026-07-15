@@ -1,15 +1,15 @@
 """Admin identity verification — cryptographic proof that THIS machine is the admin node."""
 
-import os
 import hashlib
+import os
 from pathlib import Path
 from typing import Optional
-from cryptography.hazmat.primitives import serialization
+
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import hashes
+
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
-
 
 _ADMIN_PUBKEY_PATH = (
     Path(config.project_root) / "shadowcypher" / "core" / "admin_public.pem"
@@ -62,9 +62,9 @@ def verify_admin(irc_nick: Optional[str] = None) -> bool:
       Only authorized nicks (e.g. 'shadow_operator', 'ShadowSentinel') get admin.
     """
     from shadowcypher.core.config import config
-    
+
     admin_list = config.get("identity", "admin_list", default=[])
-    
+
     # ── IRC Authorization Mode ──
     if irc_nick is not None:
         if irc_nick in admin_list:
@@ -74,7 +74,7 @@ def verify_admin(irc_nick: Optional[str] = None) -> bool:
         if current_handle and irc_nick == current_handle:
             return True
         return False
-    
+
     # ── Local Machine Authorization Mode ──
     # 1. Primary: Admin List Delegation
     try:
@@ -133,12 +133,12 @@ class Identity:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            
+
             # 1. Automatic Recognition: Check Master Hardware Fingerprint
             from shadowcypher.core.security import hardener
             master_fp = config.get("identity", "master_fp", default="")
             current_fp = hardener.get_hardware_footprint()
-            
+
             if not master_fp:
                 # First run initialization: Lock to THIS machine
                 config.set("identity", "master_fp", current_fp)
@@ -146,10 +146,10 @@ class Identity:
                 logger.info("identity", "SOVEREIGN_INITIALIZATION: Machine bound as MASTER_NODE")
 
             is_admin = (current_fp == master_fp) or verify_admin()
-            
+
             cls._instance._is_admin = is_admin
             cls._instance._role = _ADMIN_ROLE if is_admin else _USER_ROLE
-            
+
             if is_admin:
                 logger.info("identity", "IDENTITY_VERIFIED: MASTER_ACCESS_GRANTED")
         return cls._instance

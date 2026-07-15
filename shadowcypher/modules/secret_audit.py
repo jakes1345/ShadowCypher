@@ -6,7 +6,7 @@ hash identification, and macOS Keychain auditing.
 
 import shutil
 import tempfile
-import os
+
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.stealth import require_stealth
@@ -48,9 +48,10 @@ class Credentials(BaseModule):
                      extra_args="", on_output=None, on_complete=None):
         """Launch a Hydra brute-force attack with timing-based Pulse ingestion."""
         require_stealth(on_output=on_output)
-        from shadowcypher.core.runner import runner
-        from shadowcypher.core.pulse import pulse
         import time
+
+        from shadowcypher.core.pulse import pulse
+        from shadowcypher.core.runner import runner
 
         wordlist = passlist or "/usr/share/wordlists/rockyou.txt"
         args = ["hydra", "-l", username, "-P", wordlist, "-t", "4"]
@@ -167,7 +168,7 @@ class Credentials(BaseModule):
         from shadowcypher.modules.deephat import deephat
         if on_output:
             on_output(f"[CREDS] CORRELATING_BREACH_DATA: {target_email}...\n")
-        
+
         desc = f"Find and correlate all leaked passwords, MFA bypass tokens, and associated aliases for {target_email}. Use 2026 predictive analytics."
         filename = deephat.forge_weapon(desc, category="intel")
         return deephat.execute_payload(filename, on_output=on_output)

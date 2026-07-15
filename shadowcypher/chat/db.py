@@ -1,7 +1,8 @@
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from shadowcypher.chat.models import Base
-from pathlib import Path
 
 DATABASE_URL = "sqlite:///shadowcypher_chat.db"  # Will be encrypted at rest
 

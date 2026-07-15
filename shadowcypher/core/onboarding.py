@@ -7,11 +7,8 @@ launch. Idempotent — safe to call every startup.
 from __future__ import annotations
 
 import json
-import os
 import secrets
-import shutil
 from pathlib import Path
-
 
 RESERVED_NAMES = {"shadow", "shadowcypher"}
 

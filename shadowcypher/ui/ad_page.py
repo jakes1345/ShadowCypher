@@ -1,9 +1,11 @@
 """Active Directory pivot and lateral movement page."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 import threading
+
+from gi.repository import Gtk
 
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod

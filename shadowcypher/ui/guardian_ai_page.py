@@ -13,17 +13,17 @@ Hard limit displayed in the UI:
 """
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 import threading
 
-from shadowcypher.ui.base_page import BasePage
-from shadowcypher.ui.components import DataPod, TacticalTerminal, TacticalHeader
-from shadowcypher.ai.providers import provider_registry, PROVIDERS
-from shadowcypher.ai.privacy_proxy import privacy_gateway
-from shadowcypher.core.config import config
-from shadowcypher.core.logger import logger
+from gi.repository import GLib, Gtk
 
+from shadowcypher.ai.privacy_proxy import privacy_gateway
+from shadowcypher.ai.providers import PROVIDERS, provider_registry
+from shadowcypher.core.config import config
+from shadowcypher.ui.base_page import BasePage
+from shadowcypher.ui.components import DataPod, TacticalTerminal
 
 _CLOUD_PROVIDERS = [pid for pid, pd in PROVIDERS.items() if pid != "ollama"]
 

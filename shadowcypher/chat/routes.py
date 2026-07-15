@@ -1,29 +1,44 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header
-from sqlalchemy.orm import Session
-import json
-from shadowcypher.chat.models import User, Contact, Conversation, Message, Instance, Group, GroupMember, GroupMessage
-from shadowcypher.chat.auth import create_jwt_token, validate_jwt_token
-from shadowcypher.chat.crypto import fingerprint
-from shadowcypher.chat.schemas import (
-    RegisterRequest, RegisterResponse, LoginRequest, LoginResponse,
-    AddContactRequest, AddContactResponse, SendMessageRequest, SendMessageResponse,
-    ConversationSummary, MessageResponse, InstanceRegisterRequest, InstanceResponse,
-    P2PSendRequest, P2PSendResponse, GroupCreate, GroupAddMember, GroupResponse, GroupMemberResponse,
-    GroupMessageRequest, GroupMessageResponse, GroupMemberRemovalResponse,
-    VaultUnlockRequest, VaultUnlockResponse
-)
-from shadowcypher.chat.db import SessionLocal
-from shadowcypher.chat import instance_registry
-from shadowcypher.chat import p2p_relay
-from shadowcypher.chat import fallback
-from datetime import datetime
 import binascii
+import hashlib
+import json
 import os
 from typing import Optional
-import hashlib
+
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.backends import default_backend
+from fastapi import APIRouter, Depends, Header, HTTPException
+from sqlalchemy.orm import Session
+
+from shadowcypher.chat import fallback, instance_registry, p2p_relay
+from shadowcypher.chat.auth import create_jwt_token, validate_jwt_token
+from shadowcypher.chat.db import SessionLocal
+from shadowcypher.chat.models import Contact, Conversation, Group, GroupMember, GroupMessage, Message, User
+from shadowcypher.chat.schemas import (
+    AddContactRequest,
+    AddContactResponse,
+    ConversationSummary,
+    GroupAddMember,
+    GroupCreate,
+    GroupMemberRemovalResponse,
+    GroupMemberResponse,
+    GroupMessageRequest,
+    GroupMessageResponse,
+    GroupResponse,
+    InstanceRegisterRequest,
+    InstanceResponse,
+    LoginRequest,
+    LoginResponse,
+    MessageResponse,
+    P2PSendRequest,
+    P2PSendResponse,
+    RegisterRequest,
+    RegisterResponse,
+    SendMessageRequest,
+    SendMessageResponse,
+    VaultUnlockRequest,
+    VaultUnlockResponse,
+)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -53,7 +68,7 @@ def get_current_user(authorization: Optional[str] = Header(None), db: Session = 
     try:
         claims = validate_jwt_token(token)
     except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=str(e)) from e
 
     user = db.query(User).filter(User.id == claims["user_id"]).first()
     if not user:
@@ -71,8 +86,8 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         public_key = binascii.unhexlify(request.public_key)
         if len(public_key) != 32:
             raise ValueError()
-    except (ValueError, binascii.Error):
-        raise HTTPException(status_code=400, detail="Invalid public key (must be 64 hex chars)")
+    except (ValueError, binascii.Error) as e:
+        raise HTTPException(status_code=400, detail="Invalid public key (must be 64 hex chars)") from e
 
     user = User(username=request.username, public_key=public_key)
 
@@ -128,8 +143,8 @@ def add_contact(
         contact_pubkey = binascii.unhexlify(request.contact_pubkey)
         if len(contact_pubkey) != 32:
             raise ValueError()
-    except (ValueError, binascii.Error):
-        raise HTTPException(status_code=400, detail="Invalid public key")
+    except (ValueError, binascii.Error) as e:
+        raise HTTPException(status_code=400, detail="Invalid public key") from e
 
     # Server-verify fingerprint = SHA256(pubkey)[:8]
     import hashlib
@@ -222,8 +237,8 @@ def send_message_hybrid(
         try:
             ciphertext = binascii.unhexlify(request.encrypted_message)
             nonce = binascii.unhexlify(request.nonce)
-        except (ValueError, binascii.Error):
-            raise HTTPException(status_code=400, detail="Invalid message encoding")
+        except (ValueError, binascii.Error) as e:
+            raise HTTPException(status_code=400, detail="Invalid message encoding") from e
 
         # Determine recipient user ID
         recipient_id = conversation.user_id_2 if conversation.user_id_1 == user_id else conversation.user_id_1
@@ -338,7 +353,7 @@ def register_instance(
             last_heartbeat=instance.last_heartbeat
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/instances/{instance_id}/heartbeat")
@@ -431,8 +446,8 @@ def send_p2p(
         try:
             ciphertext = binascii.unhexlify(req.encrypted_message)
             nonce = binascii.unhexlify(req.nonce)
-        except (ValueError, binascii.Error):
-            raise HTTPException(status_code=400, detail="Invalid message encoding")
+        except (ValueError, binascii.Error) as e:
+            raise HTTPException(status_code=400, detail="Invalid message encoding") from e
 
         result = p2p_relay.send_p2p_message(from_instance_id, req.to_instance_id, ciphertext, nonce)
 
@@ -667,8 +682,8 @@ def send_group_message(
     try:
         ciphertext = binascii.unhexlify(req.encrypted_message)
         nonce = binascii.unhexlify(req.nonce)
-    except (ValueError, binascii.Error):
-        raise HTTPException(status_code=400, detail="Invalid message encoding")
+    except (ValueError, binascii.Error) as e:
+        raise HTTPException(status_code=400, detail="Invalid message encoding") from e
 
     message = GroupMessage(
         group_id=group_id,

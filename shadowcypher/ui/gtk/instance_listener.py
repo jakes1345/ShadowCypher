@@ -1,8 +1,7 @@
 """P2P connection listener daemon for GTK desktop app."""
 import socket
 import threading
-import json
-import sys
+
 from shadowcypher.chat import p2p_relay
 
 
