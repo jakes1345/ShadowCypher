@@ -28,7 +28,6 @@ jobs:
         run: |
           cd shadowos/out
           sha256sum shadowos-*.iso > SHA256SUMS
-          sha256sum shadowos-*.iso.tar.gz >> SHA256SUMS
 
       - name: Sign artifacts
         env:
