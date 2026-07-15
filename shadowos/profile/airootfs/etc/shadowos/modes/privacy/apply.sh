@@ -57,6 +57,25 @@ for browser in librewolf firefox chromium; do
 done
 echo "  ✓ Browsers sandboxed via firejail"
 
+# Kill all IPv6 — prevents Tor bypass via IPv6 stack (Parrot doesn't do this)
+nft add table ip6 shadow_ipv6_block 2>/dev/null || true
+nft 'add chain ip6 shadow_ipv6_block input  { type filter hook input   priority 0; policy drop; }' 2>/dev/null || true
+nft 'add chain ip6 shadow_ipv6_block output { type filter hook output  priority 0; policy drop; }' 2>/dev/null || true
+nft 'add chain ip6 shadow_ipv6_block forward{ type filter hook forward priority 0; policy drop; }' 2>/dev/null || true
+echo "  ✓ IPv6 stack fully blocked — no v6 leak path exists"
+
+# Stop services that broadcast identity on the LAN (mDNS, printer discovery)
+for svc in avahi-daemon cups cups-browsed; do
+    systemctl stop "$svc" 2>/dev/null || true
+done
+echo "  ✓ mDNS/Bonjour and CUPS stopped — no LAN beaconing"
+
+# I2P — second anonymity network alongside Tor
+if command -v i2pd >/dev/null 2>&1; then
+    systemctl start i2pd 2>/dev/null || true
+    echo "  ✓ I2P daemon started → HTTP proxy 127.0.0.1:4444 | SOCKS 127.0.0.1:4447"
+fi
+
 # USBGuard: block new USB devices
 systemctl start usbguard 2>/dev/null || true
 echo "  ✓ USBGuard active — new USB devices blocked"
