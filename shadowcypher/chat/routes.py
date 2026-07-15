@@ -696,10 +696,12 @@ def send_group_message(
     db.commit()
     db.refresh(message)
 
+    sender = db.query(User).filter(User.id == message.sender_id).first()
     return GroupMessageResponse(
         id=message.id,
         group_id=message.group_id,
         sender_id=message.sender_id,
+        sender_username=sender.username if sender else str(message.sender_id),
         encrypted_message=binascii.hexlify(message.encrypted_message).decode(),
         nonce=binascii.hexlify(message.nonce).decode(),
         created_at=message.timestamp,
@@ -731,11 +733,17 @@ def get_group_messages(
         GroupMessage.group_id == group_id
     ).order_by(GroupMessage.timestamp).all()
 
+    # Batch-load usernames so we don't query per message
+    sender_ids = list({m.sender_id for m in messages})
+    users = db.query(User).filter(User.id.in_(sender_ids)).all()
+    username_map = {u.id: u.username for u in users}
+
     return [
         GroupMessageResponse(
             id=m.id,
             group_id=m.group_id,
             sender_id=m.sender_id,
+            sender_username=username_map.get(m.sender_id, str(m.sender_id)),
             encrypted_message=binascii.hexlify(m.encrypted_message).decode(),
             nonce=binascii.hexlify(m.nonce).decode(),
             created_at=m.timestamp,

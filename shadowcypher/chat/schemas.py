@@ -104,6 +104,7 @@ class GroupMessageResponse(BaseModel):
     id: str
     group_id: str
     sender_id: int
+    sender_username: str
     encrypted_message: str
     nonce: str
     created_at: int
