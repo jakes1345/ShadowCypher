@@ -1,14 +1,16 @@
-import json
 import asyncio
-import threading
-from typing import Dict, List, Any, Optional, Callable
-from shadowcypher.core.logger import logger
-from shadowcypher.core.bus import bus
+import json
+import os
 
 # Import AutoAgent Core — optional; guard so missing autoagent doesn't kill app boot
 import sys
-import os
+import threading
+from typing import Callable, Dict, List, Optional
+
+from shadowcypher.core.bus import bus
 from shadowcypher.core.config import config
+from shadowcypher.core.logger import logger
+
 sys.path.append(os.path.join(str(config.project_root), "ai_engine"))
 
 _AUTOAGENT_AVAILABLE = False
@@ -17,10 +19,8 @@ Agent = None
 registry = None
 run_in_client = None
 try:
-    from autoagent import MetaChain, Agent
+    from autoagent import Agent, MetaChain
     from autoagent.registry import registry
-    import autoagent.tools  # Trigger recursive tool registration
-    from autoagent.main import run_in_client
     _AUTOAGENT_AVAILABLE = True
 except Exception as _autoagent_err:
     logger.warn("ai", f"autoagent unavailable — high-intensity mode disabled: {_autoagent_err}")
@@ -34,7 +34,7 @@ class AIOrchestrator:
         self.default_model = model
         self.registry = registry
         self._active_missions = {}
-        
+
         self._ollama_base = getattr(config.ai, 'api_base', 'http://127.0.0.1:11434')
 
         # Warm-boot the brain — only if autoagent is actually installed
@@ -108,7 +108,7 @@ class AIOrchestrator:
         from shadowcypher.ai.agents import AGENT_FLEET
 
         spec = AGENT_FLEET.get(agent_role, AGENT_FLEET["commander"])
-        
+
         print(f"[*] ORCHESTRATOR_TOOLS_AVAILABLE: {len(self.registry.tools)} core, {len(self.registry.plugin_tools)} plugins")
         aa_agent = Agent(
             name=spec.name,
@@ -130,13 +130,13 @@ class AIOrchestrator:
                     if callback:
                         callback(msg)
                     bus.publish("module_log", {
-                        "module": f"ai/{agent_role}", 
-                        "text": msg, 
+                        "module": f"ai/{agent_role}",
+                        "text": msg,
                         "level": "INFO"
                     })
 
                 log_update(f"STRATEGIZING: Mission assigned to {spec.name}...")
-                
+
                 # Execute via MetaChain
                 # Note: pass debug=True to get raw logs for diagnostic parity
                 # RAG augmentation — inject security KB context into system prompt
@@ -166,13 +166,13 @@ class AIOrchestrator:
                     user_msg["images"] = images
 
                 messages.append(user_msg)
-                
+
                 async def _task():
                     response = await self.client.run_async(aa_agent, messages, debug=True)
                     return response
 
                 response = loop.run_until_complete(_task())
-                
+
                 # Defensive extraction of final result
                 if hasattr(response, "messages") and response.messages:
                     last_msg = response.messages[-1]
@@ -185,9 +185,9 @@ class AIOrchestrator:
 
                 if on_complete:
                     on_complete(final_res)
-                
+
                 log_update("MISSION_COMPLETE: Result synthesized.")
-                
+
             except Exception as e:
                 logger.error("orchestrator", f"META_CHAIN_FAULT: {e}")
                 if on_complete:
@@ -224,7 +224,14 @@ class AIOrchestrator:
             return json.loads(text)
         except json.JSONDecodeError:
             # Simple cleanup for common LLM markdown errors
-            cleaned = text.strip().strip("```json").strip("```")
+            cleaned = text.strip()
+            if cleaned.startswith("```json"):
+                cleaned = cleaned[7:]
+            if cleaned.startswith("```"):
+                cleaned = cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
             try:
                 return json.loads(cleaned)
             except json.JSONDecodeError:

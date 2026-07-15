@@ -3,7 +3,7 @@
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk
 
 from shadowcypher.core.session import session
 from shadowcypher.ui.base_page import BasePage
@@ -16,12 +16,12 @@ class SessionPage(BasePage):
         super().__init__("\U0001f4c2 SESSION_&_ENGAGEMENTS")
 
         from shadowcypher.ui.components import DataPod
-        
+
         # 1. Populate Metrics
         self.pod_eng = DataPod("ACTIVE_ENGAGEMENT", "IDLE", "cyan")
         self.pod_drm = DataPod("SYSTEM_DRM", "LOCKED", "violet")
         self.pod_persistence = DataPod("PERSISTENCE", "STABLE", "amber")
-        
+
         self.metric_strip.pack_start(self.pod_eng, True, True, 0)
         self.metric_strip.pack_start(self.pod_drm, True, True, 0)
         self.metric_strip.pack_start(self.pod_persistence, True, True, 0)

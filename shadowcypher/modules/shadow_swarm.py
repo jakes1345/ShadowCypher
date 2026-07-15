@@ -5,19 +5,20 @@ ChaCha20-Poly1305 message encryption, peer discovery,
 heartbeat monitoring, and remote provisioning.
 """
 
+import hashlib
+import json
+import os
+import secrets
 import socket
+import struct
 import threading
 import time
-import os
-import json
-import hashlib
-import struct
-import secrets
-from typing import Dict, Any, Optional, Callable, List
 from dataclasses import dataclass, field
-from shadowcypher.core.module import BaseModule
-from shadowcypher.core.logger import logger
+from typing import Callable, Dict, List, Optional
+
 from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
+from shadowcypher.core.module import BaseModule
 
 # Protocol headers
 MAGIC_HANDSHAKE = b"\xde\xad\xbe\xef"
@@ -26,9 +27,9 @@ MAGIC_DATA      = b"\xf0\x0d\xfa\xce"
 MAGIC_COMMAND   = b"\xc0\xde\xc0\xde"
 
 try:
+    from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
     from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
-    from cryptography.hazmat.primitives import serialization
     HAS_CRYPTO = True
 except ImportError:
     HAS_CRYPTO = False

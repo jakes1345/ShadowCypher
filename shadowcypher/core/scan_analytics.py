@@ -4,8 +4,8 @@ Provides insights into device discovery patterns, threat trends, scan effectiven
 """
 
 import sqlite3
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Any, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List
 
 from shadowcypher.core.logger import logger
 from shadowcypher.core.scan_history import _resolve_db_path

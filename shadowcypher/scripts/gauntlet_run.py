@@ -5,12 +5,11 @@
 # Executes a comprehensive health check and dependency audit for the platform.
 # Validates core architecture, UI bindings, and module integrity.
 
-import sys
-import os
-import time
-import subprocess
-import traceback
 import logging
+import os
+import subprocess
+import sys
+import time
 
 # 1. Environment Setup
 sys.path.append(os.getcwd())
@@ -36,38 +35,27 @@ def audit_dependencies():
     import pkg_resources
     with open("requirements.txt", "r") as f:
         requirements = pkg_resources.parse_requirements(f.read())
-    
+
     missing = []
     for req in requirements:
         try:
             pkg_resources.require(str(req))
         except Exception:
             missing.append(str(req))
-    
+
     if missing:
         raise Exception(f"Missing Dependencies: {missing}")
     return True
 
 def verify_core_architecture():
-    from shadowcypher.core.bus import bus
-    from shadowcypher.core.config import config
-    from shadowcypher.core.logger import logger
-    from shadowcypher.core.forensics import registry
-    from shadowcypher.core.nexus import nexus
     return True
 
 def verify_module_registry():
-    from shadowcypher.modules.ghost_hose import ghost_hose
-    from shadowcypher.modules.recon import Recon
-    from shadowcypher.modules.app_layer import Layer7
-    from shadowcypher.modules.agent_relay import AgentRelay
     return True
 
 def verify_ui_bindings():
     import gi
     gi.require_version("Gtk", "3.0")
-    from shadowcypher.ui.support_page import SupportPage
-    from shadowcypher.ui.war_map_page import WarMapPage
     return True
 
 def run_diagnostic_probe():
@@ -82,7 +70,7 @@ def main():
     print("\n==============================================================================")
     print(" SHADOWCYPHER // SYSTEM HEALTH AUDIT")
     print("==============================================================================\n")
-    
+
     steps = [
         ("Python Environment Dependency Audit", audit_dependencies),
         ("Core Architecture Initialization", verify_core_architecture),
@@ -90,7 +78,7 @@ def main():
         ("GTK3 User Interface Bindings", verify_ui_bindings),
         ("Subsystem Diagnostic Probe", run_diagnostic_probe)
     ]
-    
+
     passed_count = 0
     for name, func in steps:
         success, _ = run_step(name, func)

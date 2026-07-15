@@ -3,6 +3,7 @@
 import os
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
@@ -236,7 +237,6 @@ class SecretsPage(BasePage):
     # ── Cred Sprayer tab (pure-Python, SSH/FTP/HTTP) ─────────────────────────
 
     def _build_cred_sprayer_tab(self):
-        from shadowcypher.core.stealth import require_stealth
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.set_margin_start(12)
         box.set_margin_end(12)

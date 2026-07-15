@@ -2,8 +2,6 @@
 
 import random
 import re
-from shadowcypher.core.logger import logger
-
 
 # Real browser User-Agent strings from actual browser releases (2024-2025)
 _USER_AGENTS = [

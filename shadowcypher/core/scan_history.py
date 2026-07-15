@@ -8,8 +8,7 @@ import json
 import os
 import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from shadowcypher.core.logger import logger
 

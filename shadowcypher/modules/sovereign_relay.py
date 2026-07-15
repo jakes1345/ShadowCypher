@@ -6,13 +6,15 @@ Provides the 'VPN without the VPN' experience via custom obfuscation and DNS sov
 
 import os
 import re
-import subprocess
 import socket
+import subprocess
+from typing import Dict, Optional
+
 import requests
-from typing import Optional, Dict
-from shadowcypher.core.module import BaseModule
+
 from shadowcypher.core.logger import logger
-from shadowcypher.core.runner import runner
+from shadowcypher.core.module import BaseModule
+
 
 class SovereignRelay(BaseModule):
     def __init__(self):
@@ -25,16 +27,16 @@ class SovereignRelay(BaseModule):
         """Generate private/public key pair for a node."""
         priv_file = os.path.join(self.base_dir, f"{name}_private.key")
         pub_file = os.path.join(self.base_dir, f"{name}_public.key")
-        
+
         try:
             priv = subprocess.check_output(["wg", "genkey"]).decode().strip()
             with open(priv_file, "w") as f:
                 f.write(priv)
-            
+
             pub = subprocess.check_output(["wg", "pubkey"], input=priv.encode()).decode().strip()
             with open(pub_file, "w") as f:
                 f.write(pub)
-            
+
             return {"private": priv, "public": pub}
         except Exception as e:
             logger.error("relay", f"KEY_GEN_FAILED: {e}")
@@ -45,7 +47,7 @@ class SovereignRelay(BaseModule):
         keys = self.generate_keys("server")
         if not keys:
             return False
-        
+
         # Detect primary interface
         try:
             route_out = subprocess.check_output(["ip", "route", "get", "8.8.8.8"], text=True, timeout=5)
@@ -64,7 +66,7 @@ PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING 
         conf_file = os.path.join(self.base_dir, "wg0.conf")
         with open(conf_file, "w") as f:
             f.write(config)
-            
+
         # 2. UPnP Port Forwarding (The 'Real Connection' Enabler)
         try:
             local_ip = self._get_local_ip()
@@ -97,11 +99,11 @@ PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING 
         except FileNotFoundError:
             logger.error("sovereign_relay", "server_public.key not found — run deploy_server() first")
             return None
-            
+
         keys = self.generate_keys(name)
         if not keys:
             return None
-        
+
         # Server Config Snippet
         server_snippet = f"""
 [Peer]
@@ -110,7 +112,7 @@ AllowedIPs = {client_ip}/32
 """
         with open(os.path.join(self.base_dir, "wg0.conf"), "a") as f:
             f.write(server_snippet)
-            
+
         # Client Config — refuse to generate a config with a stub endpoint.
         public_ip = self._get_public_ip()
         if not public_ip:
@@ -131,7 +133,7 @@ PersistentKeepalive = 25
         client_conf_path = os.path.join(self.base_dir, f"{name}.conf")
         with open(client_conf_path, "w") as f:
             f.write(client_config)
-            
+
         logger.info("relay", f"CLIENT_PROVISIONED: Name={name} IP={client_ip}")
         return client_conf_path
 

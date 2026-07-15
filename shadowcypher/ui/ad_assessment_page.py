@@ -16,7 +16,7 @@ class ADAssessmentPage(BasePage):
         self.pod_imp = DataPod("Impacket", "Ready", "cyan")
         self.pod_resp = DataPod("Responder", "Idle", "violet")
         self.pod_hashes = DataPod("Hashes", "0", "amber")
-        
+
         self.metric_strip.pack_start(self.pod_imp, True, True, 0)
         self.metric_strip.pack_start(self.pod_resp, True, True, 0)
         self.metric_strip.pack_start(self.pod_hashes, True, True, 0)
@@ -189,7 +189,7 @@ class ADAssessmentPage(BasePage):
         self.sid_entry = Gtk.Entry()
         self.sid_entry.set_placeholder_text("DOMAIN_SID (S-1-5-21-...)")
         box.pack_start(self.sid_entry, False, False, 0)
-        
+
         self.krbtgt_entry = Gtk.Entry()
         self.krbtgt_entry.set_placeholder_text("KRBTGT_HASH (NTLM)")
         box.pack_start(self.krbtgt_entry, False, False, 0)

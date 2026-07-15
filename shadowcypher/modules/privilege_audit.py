@@ -4,14 +4,10 @@ SUID binaries, kernel exploits, sudo misconfigs, cron abuse, capabilities,
 and automated LinPEAS integration.
 """
 
-import os
-import subprocess
-import tempfile
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
-from shadowcypher.core.platform import platform_engine
 
 
 class PrivAudit(BaseModule):

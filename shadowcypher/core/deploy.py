@@ -4,6 +4,7 @@ Generates artifacts for Fly.io and Google Cloud Run deployments.
 """
 
 import os
+
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 
@@ -53,16 +54,16 @@ class CloudDeployer:
     def generate_deploy_artifacts():
         """Generates Dockerfile and Fly.io config for 24/7 availability."""
         root = config.project_root
-        
+
         # 1. Dockerfile
         with open(os.path.join(root, "Dockerfile"), "w") as f:
             f.write(DOCKERFILE.strip())
-            
+
         # 2. Fly.toml
         node_id = os.urandom(4).hex()
         with open(os.path.join(root, "fly.toml"), "w") as f:
             f.write(FLY_TOML.format(id=node_id).strip())
-            
+
         # 3. requirements.txt (if missing)
         req_path = os.path.join(root, "requirements.txt")
         if not os.path.exists(req_path):

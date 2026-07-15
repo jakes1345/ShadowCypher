@@ -1,8 +1,9 @@
 # shadowcypher/chat/group_crypto.py
 
-from shadowcypher.chat.crypto import derive_session_key, encrypt_message, decrypt_message
 from typing import Union
-import os
+
+from shadowcypher.chat.crypto import decrypt_message, derive_session_key, encrypt_message
+
 
 def derive_group_session_key(group_key: Union[bytes, str], group_id: str, key_version: int) -> bytes:
     """Derive per-message session key from group's shared group_key.

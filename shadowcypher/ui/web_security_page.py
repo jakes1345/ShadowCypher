@@ -166,7 +166,7 @@ class WebSecurityPage(BasePage):
             duration = int(self.mh_duration.get_text().strip() or "60")
         except ValueError:
             threads, duration = 100, 60
-        
+
         self.clear_output(f"MHDDoS → {target} [{method}]\n\n")
         self.run_job(
             WebSecurity.mhddos_strike(
@@ -217,7 +217,6 @@ class WebSecurityPage(BasePage):
     # ── SQL Venom tab (pure-Python SQLi, no sqlmap) ──────────────────────────
 
     def _build_sql_venom_tab(self):
-        from shadowcypher.core.stealth import require_stealth
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.set_margin_start(12)
         box.set_margin_end(12)

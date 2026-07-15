@@ -1,13 +1,14 @@
 """Gaming Shadow-Ops — Multi-Platform Asset Discovery & Steam Intelligence."""
-import gi
-import webbrowser
 import threading
+import webbrowser
+
+import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Gdk, Pango
-from shadowcypher.ui.base_page import BasePage
-from shadowcypher.core.logger import logger
+from gi.repository import GLib, Gtk, Pango
+
 from shadowcypher.modules.gaming_osint import scraper
+from shadowcypher.ui.base_page import BasePage
 
 
 class SteamAuditPage(BasePage):
@@ -15,14 +16,14 @@ class SteamAuditPage(BasePage):
 
     def __init__(self):
         super().__init__("GAMING SHADOW-OPS")
-        
+
         from shadowcypher.ui.components import DataPod
-        
+
         # 1. Populate Metric Strip (Unified with Citadel)
         self.pod_library = DataPod("LOCAL_LIB", "—", "cyan")
         self.pod_usage = DataPod("DISK_USAGE", "—", "violet")
         self.pod_deals = DataPod("ACTIVE_DEALS", "—", "amber")
-        
+
         self.metric_strip.pack_start(self.pod_library, True, True, 0)
         self.metric_strip.pack_start(self.pod_usage, True, True, 0)
         self.metric_strip.pack_start(self.pod_deals, True, True, 0)
@@ -33,7 +34,7 @@ class SteamAuditPage(BasePage):
         # Stats are now in metric_strip, so we don't need stats_row here
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.workspace.pack_start(vbox, True, True, 0)
-        
+
         self.stat_labels = {
             "LIBRARY": self.pod_library.lbl_value,
             "STORAGE": self.pod_usage.lbl_value,

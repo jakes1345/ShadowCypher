@@ -1,9 +1,10 @@
-from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, ForeignKey, Boolean, UniqueConstraint
-from sqlalchemy.orm import declarative_base, relationship
-from datetime import datetime
 import os
 import time
 import uuid
+from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, LargeBinary, String, UniqueConstraint
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 

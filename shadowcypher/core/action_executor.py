@@ -3,12 +3,12 @@ Action Executor — Implements real security actions for incident response.
 Firewall blocking, device isolation, file quarantine, patching, etc.
 """
 
+import json
 import os
 import subprocess
-import json
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Dict, List
 
 from shadowcypher.core.logger import logger
 

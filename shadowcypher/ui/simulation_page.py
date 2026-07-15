@@ -1,8 +1,10 @@
 """Simulation page — network stress testing and web security research."""
 
 import gi
+
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib
+from gi.repository import GLib, Gtk
+
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod
 
@@ -91,8 +93,8 @@ class SimulationDeck(BasePage):
         self.workspace.pack_start(forge_frame, False, False, 0)
 
     def _on_chaos_click(self, btn):
-        from shadowcypher.modules.chaos import chaos
         from shadowcypher.core.sanitize import validate_target
+        from shadowcypher.modules.chaos import chaos
 
         target = self.target_entry.get_text().strip()
         if not target:
@@ -141,8 +143,9 @@ class SimulationDeck(BasePage):
 
     def _on_forge_click(self, btn):
         import threading
-        from shadowcypher.modules.web_forge import web_forge
+
         from shadowcypher.core.sanitize import validate_target
+        from shadowcypher.modules.web_forge import web_forge
 
         exploit_type = self.forge_combo.get_active_id()
         if not exploit_type:

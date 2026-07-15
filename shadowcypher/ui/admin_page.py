@@ -3,17 +3,17 @@
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.fernet import Fernet
 import base64
 import os
 
-from shadowcypher.ui.base_page import BasePage
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from gi.repository import GLib, Gtk
+
 from shadowcypher.core.config import config
 from shadowcypher.core.security import hardener
-from shadowcypher.core.forensics import registry
+from shadowcypher.ui.base_page import BasePage
 
 
 class AdminPage(BasePage):
@@ -23,12 +23,12 @@ class AdminPage(BasePage):
         super().__init__("\U0001f5dd ADMIN_MASTER_CONTROL")
 
         from shadowcypher.ui.components import DataPod
-        
+
         # 1. Populate Metrics (Mainframe Status)
         self.pod_uptime = DataPod("CITADEL_UPTIME", "0:00:00", "cyan")
         self.pod_crypt = DataPod("CRYPT_LINK", "ACTIVE", "violet")
         self.pod_auth = DataPod("MASTER_AUTH", "ROOT", "amber")
-        
+
         self.metric_strip.pack_start(self.pod_uptime, True, True, 0)
         self.metric_strip.pack_start(self.pod_crypt, True, True, 0)
         self.metric_strip.pack_start(self.pod_auth, True, True, 0)
@@ -70,18 +70,18 @@ class AdminPage(BasePage):
         box_nodes.set_margin_end(10)
         box_nodes.set_margin_top(10)
         box_nodes.set_margin_bottom(10)
-        
+
         self.node_list_box = Gtk.ListBox()
         self.node_list_box.get_style_context().add_class("node-list")
         scroll_nodes = Gtk.ScrolledWindow()
         scroll_nodes.set_min_content_height(250)
         scroll_nodes.add(self.node_list_box)
         box_nodes.pack_start(scroll_nodes, True, True, 0)
-        
+
         btn_refresh = Gtk.Button(label="Synchronize Node Metadata")
         btn_refresh.connect("clicked", self._on_refresh_nodes)
         box_nodes.pack_start(btn_refresh, False, False, 0)
-        
+
         frm_nodes.add(box_nodes)
         self.intel_sidebar.pack_start(frm_nodes, True, True, 0)
 
@@ -130,16 +130,16 @@ class AdminPage(BasePage):
         box_lock.set_margin_end(10)
         box_lock.set_margin_top(10)
         box_lock.set_margin_bottom(10)
-        
+
         btn_wipe = Gtk.Button(label="\u2622 EXECUTE SPECTRE FLASH-WIPE")
         btn_wipe.get_style_context().add_class("destructive-action")
         btn_wipe.connect("clicked", self._on_flash_wipe)
         box_lock.pack_start(btn_wipe, False, False, 0)
-        
+
         lbl_fp = Gtk.Label()
         lbl_fp.set_markup(f"<span size='small' color='gray'>MASTER_FP: {hardener.get_hardware_footprint()[:24]}...</span>")
         box_lock.pack_start(lbl_fp, False, False, 0)
-        
+
         frm_lock.add(box_lock)
         self.intel_sidebar.pack_start(frm_lock, False, False, 0)
 
@@ -150,11 +150,11 @@ class AdminPage(BasePage):
         box_pub.set_margin_end(10)
         box_pub.set_margin_top(10)
         box_pub.set_margin_bottom(10)
-        
+
         self.btn_pub = Gtk.Button(label="Go Public (Cloudflare Tunnel)")
         self.btn_pub.connect("clicked", self._on_go_public)
         box_pub.pack_start(self.btn_pub, False, False, 0)
-        
+
         frm_pub.add(box_pub)
         self.workspace.pack_start(frm_pub, False, False, 0)
 
@@ -165,11 +165,11 @@ class AdminPage(BasePage):
         box_cloud.set_margin_end(10)
         box_cloud.set_margin_top(10)
         box_cloud.set_margin_bottom(10)
-        
+
         self.btn_cloud = Gtk.Button(label="Generate 24/7 Deploy Artifacts")
         self.btn_cloud.connect("clicked", self._on_gen_deploy)
         box_cloud.pack_start(self.btn_cloud, False, False, 0)
-        
+
         frm_cloud.add(box_cloud)
         self.workspace.pack_start(frm_cloud, False, False, 0)
 
@@ -184,7 +184,7 @@ class AdminPage(BasePage):
         from shadowcypher.core.hub import hub
         summary = hub.get_tactical_summary()
         self.pod_uptime.set_value(summary["uptime"])
-        
+
         # Throttled node refresh
         if not hasattr(self, "_node_tick_count"):
             self._node_tick_count = 0
@@ -192,7 +192,7 @@ class AdminPage(BasePage):
         if self._node_tick_count >= 5:
             self._on_refresh_nodes(None)
             self._node_tick_count = 0
-            
+
         return True
 
     def _on_refresh_nodes(self, btn):
@@ -200,18 +200,18 @@ class AdminPage(BasePage):
         # or a local WebSocket. Here we'll simulate the dashboard view.
         for child in self.node_list_box.get_children():
             self.node_list_box.remove(child)
-            
+
         from shadowcypher.core.nexus import nexus
         if nexus:
             for node_id, data in nexus.nodes.items():
                 row = Gtk.ListBoxRow()
                 box = Gtk.Box(spacing=10)
                 box.pack_start(Gtk.Label(label=f"{node_id} ({data['host']})"), True, True, 0)
-                
+
                 # De-cloaked info
                 info = f"LOCAL_IPS: {','.join(data.get('local_ips', []))} | HW_MAC: {data.get('hw_mac', 'Unknown')}"
                 box.pack_start(Gtk.Label(label=info), False, False, 0)
-                
+
                 box.pack_start(Gtk.Label(label=f"OS: {data.get('os', 'Unknown')}"), False, False, 0)
                 row.add(box)
                 self.node_list_box.add(row)
@@ -298,7 +298,7 @@ class AdminPage(BasePage):
         if not target or ":" not in target:
             self.on_output("[ERROR] Invalid target. Format: IP:Port\n")
             return
-            
+
         if "Engage" in btn.get_label():
             ip, port = target.split(":")
             ghost_hose.engage(ip, int(port))

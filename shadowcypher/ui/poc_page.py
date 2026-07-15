@@ -1,14 +1,13 @@
 """Exploitation page — payloads, reverse shells, listeners, MSF integration."""
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk
+
+from shadowcypher.core.logger import logger
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod
-from shadowcypher.core.hub import hub
-from shadowcypher.modules.poc_engine import PocEngine
-from shadowcypher.core.logger import logger
 
 # Reverse shell templates — real, working one-liners
 _REVSHELL_TEMPLATES = {
@@ -103,7 +102,7 @@ class PocPage(BasePage):
         box.set_margin_bottom(15)
         box.set_margin_start(15)
         box.set_margin_end(15)
-        
+
         row1 = Gtk.Box(spacing=10)
         self.pl_type = Gtk.ComboBoxText()
         self.pl_type.append("hollow", "Process Hollowing (svchost.exe)")
@@ -111,7 +110,7 @@ class PocPage(BasePage):
         self.pl_type.append("smuggle", "HTML Smuggling (ISO/EXE)")
         self.pl_type.set_active(0)
         row1.pack_start(self.pl_type, True, True, 0)
-        
+
         btn = Gtk.Button(label="Generate Payload")
         btn.get_style_context().add_class("destructive-action")
         btn.connect("clicked", self._on_generate_elite)
@@ -127,7 +126,7 @@ class PocPage(BasePage):
         ptype = self.pl_type.get_active_id()
         lhost = self.rs_lhost.get_text().strip()
         lport = self.rs_lport.get_text().strip()
-        
+
         if not lhost:
             self.terminal.log("ERROR: LHOST required for payload generation.", "EXPLOIT")
             return
@@ -140,8 +139,8 @@ class PocPage(BasePage):
             filename = deephat.forge_weapon(f"Process Hollowing payload for {lhost}:{lport}", category="hollowing")
             self.terminal.log(f"Saved: {filename}", "SUCCESS")
         elif ptype == "smuggle":
-            from shadowcypher.modules.craft_factory import CraftFactory
             from shadowcypher.modules.awareness_sim import Phishing
+            from shadowcypher.modules.craft_factory import CraftFactory
 
             agent_path = CraftFactory.generate_obfuscated_python(lhost, lport)
             Phishing.generate_html_smuggling(agent_path, "agent_apex.exe.html")

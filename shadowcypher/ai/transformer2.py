@@ -15,10 +15,9 @@ no model modification needed.
 from __future__ import annotations
 
 import json
-import re
 import threading
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 from shadowcypher.core.logger import logger
 

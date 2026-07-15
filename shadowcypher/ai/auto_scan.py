@@ -28,13 +28,15 @@ Usage:
 """
 
 from __future__ import annotations
+
 import re
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Optional, Callable
-from shadowcypher.core.logger import logger
+from typing import Callable
+
 from shadowcypher.ai.intent import _TASK_ID_RE
+from shadowcypher.core.logger import logger
 
 # ── Port classification ───────────────────────────────────────────────────────
 
@@ -169,10 +171,10 @@ class AutoScan:
 
     def _lazy_load(self):
         if self._recon is None:
-            from shadowcypher.modules.recon import Recon
-            from shadowcypher.modules.vuln_scanner import VulnScanner
             from shadowcypher.modules.cve_feed import cve_feed
+            from shadowcypher.modules.recon import Recon
             from shadowcypher.modules.threat_intel import threat_intel
+            from shadowcypher.modules.vuln_scanner import VulnScanner
             self._recon    = Recon()
             self._vuln     = VulnScanner()
             self._cve_feed = cve_feed

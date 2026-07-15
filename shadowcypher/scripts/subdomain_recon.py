@@ -8,12 +8,11 @@ Usage:
 """
 
 import argparse
-import socket
-import sys
-import time
 import json
+import socket
+import time
 from concurrent.futures import ThreadPoolExecutor
-from urllib.request import urlopen, Request
+from urllib.request import Request, urlopen
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m","M":"\033[1;35m","N":"\033[0m","B":"\033[1m"}
 

@@ -20,12 +20,11 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
 import re
 import subprocess
 import threading
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 from shadowcypher.core.logger import logger
 

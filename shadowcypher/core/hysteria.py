@@ -28,11 +28,10 @@ import socket
 import subprocess
 import threading
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
-from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 
 _HYSTERIA_BIN   = "hysteria2"

@@ -20,15 +20,12 @@ Usage:
 
 import argparse
 import os
-import sys
-import subprocess
-import socket
-import time
 import random
-import threading
-import struct
 import shutil
-import json
+import socket
+import subprocess
+import sys
+import time
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}
@@ -454,7 +451,7 @@ def cmd_shape():
                     "reorder", "5%", "50%"])
     if rc == 0:
         print(f"  {C['G']}●{C['N']} Added 5% packet reordering")
-    
+
     print(f"\n  {C['Y']}To remove shaping: tc qdisc del dev {iface} root{C['N']}\n")
 
 

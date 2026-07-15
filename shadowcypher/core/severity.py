@@ -4,9 +4,10 @@ Validates mission-readiness, tool parity, and native performance metrics.
 """
 
 import time
-from typing import Dict, Any, List
+from typing import Any, Dict
+
 from shadowcypher.core.platform import platform_engine
-from shadowcypher.core.logger import logger
+
 
 class LethalityAudit:
     """The 'Inquisitor' of ShadowCypher — Verifies the 'Advanced' claim."""
@@ -18,7 +19,7 @@ class LethalityAudit:
     def run_full_audit(self, on_update=None) -> Dict[str, Any]:
         """Executes a deep-spectrum audit of the entire command plane."""
         self.results = {}
-        
+
         tests = [
             ("Core Architecture", self._audit_core),
             ("Polyglot Runtime", self._audit_polyglot),

@@ -3,10 +3,11 @@ Vulnerability Scanner Module — Enterprise Intelligence Build.
 Handles Nuclei, Sqlmap, Nikto, and automated vulnerability verification.
 """
 
+from shadowcypher.core.mitre import mitre
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.stealth import require_stealth
-from shadowcypher.core.mitre import mitre
+
 try:
     from ai_engine.autoagent.registry import register_tool
 except ImportError:
@@ -14,9 +15,10 @@ except ImportError:
         return a[0] if len(a) == 1 and callable(a[0]) else (lambda fn: fn)
 import os
 
+
 class VulnScanner(BaseModule):
     """The 'Spectre' engine for vulnerability detection."""
-    
+
     def __init__(self):
         super().__init__(module_name="vuln_scanner")
 

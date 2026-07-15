@@ -9,8 +9,8 @@ targets, no remote hosts.
 import shutil
 from typing import Callable, Optional
 
-from shadowcypher.core.module import BaseModule
 from shadowcypher.core.logger import logger
+from shadowcypher.core.module import BaseModule
 
 
 class HostAudit(BaseModule):

@@ -3,11 +3,11 @@ ShadowGuard — AI Input/Output Security Layer (Rampart-AI inspired).
 Runs 100% offline. Blocks prompt injection, jailbreaks, and credential leakage.
 """
 import re
-import os
-import time
 import threading
+import time
 from dataclasses import dataclass, field
-from typing import Optional, Callable
+from typing import Callable, Optional
+
 from shadowcypher.core.logger import logger
 
 ALLOW = "ALLOW"

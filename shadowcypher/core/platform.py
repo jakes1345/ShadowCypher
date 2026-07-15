@@ -3,15 +3,15 @@ Sovereign Platform Engine — Cross-Platform Abstraction for ShadowCypher.
 Abstracts OS-specific commands (Windows, Linux, macOS) to ensure Apex parity.
 """
 
-import sys
 import os
-import subprocess
 import platform
-from typing import Dict, List, Optional, Any
+import subprocess
+from typing import Any, Dict, List, Optional
+
 
 class ShadowPlatform:
     """The Cross-Platform brain of ShadowCypher."""
-    
+
     SYSTEM = platform.system()
     IS_LINUX = SYSTEM == "Linux"
     IS_MACOS = SYSTEM == "Darwin"
@@ -19,7 +19,7 @@ class ShadowPlatform:
 
     # --- PHASE SIGMA: Autonomous Pathing ---
     ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    
+
     COMPONENTS = {
         "core": "shadowcypher",
         "script": "shadowscript",
@@ -85,7 +85,7 @@ class ShadowPlatform:
 
         if file_path.endswith(".py"):
             return ["python3"]
-        
+
         if file_path.endswith(".sh"):
             return ["bash"]
         if os.access(file_path, os.X_OK):

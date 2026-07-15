@@ -1,11 +1,9 @@
 """Reporting engine — generates real HTML/text reports from scan results."""
 
-import os
-import json
 import html
+import json
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger

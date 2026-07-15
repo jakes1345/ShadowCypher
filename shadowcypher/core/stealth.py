@@ -8,9 +8,10 @@ Gate usage in offensive modules:
 """
 
 import os
-import socket
 import shutil
+import socket
 import subprocess
+
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 

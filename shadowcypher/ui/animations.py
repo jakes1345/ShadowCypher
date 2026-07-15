@@ -1,15 +1,15 @@
 """Animated visualizations — radar sweep, glitch effect, CRT scanlines, pulse grid."""
 
+import math
 import os
 import random
-import math
-import time
 import subprocess
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 import cairo
+from gi.repository import GLib, Gtk
 
 
 class RadarSweep(Gtk.DrawingArea):

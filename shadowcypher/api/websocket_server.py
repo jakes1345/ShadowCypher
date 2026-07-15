@@ -3,10 +3,12 @@ WebSocket Server for Guardian API — Real-time mission updates and streaming re
 Clients subscribe to mission updates, receive status changes as they occur.
 """
 
-import json
 import asyncio
-from typing import Set, Dict, Callable
+import json
+from typing import Dict, Set
+
 from fastapi import WebSocket, WebSocketDisconnect
+
 from shadowcypher.core.logger import logger
 from shadowcypher.core.mission_executor import get_mission_executor
 

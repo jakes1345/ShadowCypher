@@ -9,11 +9,11 @@ Works on: Python, JavaScript, Go, C (any language with a tree-sitter grammar).
 import os
 import re
 from typing import Callable
+
 from shadowcypher.core.logger import logger
 
 try:
-    import tree_sitter
-    from tree_sitter import Language, Parser
+    from tree_sitter import Language, Parser  # noqa: F401
     HAS_TS = True
 except ImportError:
     HAS_TS = False

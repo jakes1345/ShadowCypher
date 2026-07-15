@@ -1,11 +1,12 @@
 """Guardian page — personal device security scanner UI."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
-from shadowcypher.ui.base_page import BasePage
 from shadowcypher.core.logger import logger
+from shadowcypher.ui.base_page import BasePage
 
 
 class GuardianPage(BasePage):

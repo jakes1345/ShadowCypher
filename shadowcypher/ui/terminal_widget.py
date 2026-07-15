@@ -1,8 +1,11 @@
 import gi
+
 gi.require_version("Gtk", "3.0")
 gi.require_version("Vte", "2.91")
-from gi.repository import Gtk, Vte, GLib, Gdk
 import os
+
+from gi.repository import Gdk, GLib, Gtk, Vte
+
 
 class VteTerminal(Vte.Terminal):
     """
@@ -22,7 +25,7 @@ class VteTerminal(Vte.Terminal):
         fg_color = Gdk.RGBA()
         fg_color.parse("#4ade80") # Matrix Green
         palette = [Gdk.RGBA() for _ in range(16)]
-        
+
         # Build a custom cyber-palette
         for i, color in enumerate([
             "#0a0f14", "#ef4444", "#22c55e", "#f59e0b",
@@ -37,7 +40,7 @@ class VteTerminal(Vte.Terminal):
         self.set_cursor_blink_mode(Vte.CursorBlinkMode.ON)
         self.set_cursor_shape(Vte.CursorShape.BLOCK)
         self.set_font_scale(1.1)
-        
+
         # Transparent background support (if compositor active)
         self.set_opacity(0.95)
 
@@ -45,7 +48,7 @@ class VteTerminal(Vte.Terminal):
         """Spawn a professional interactive shell."""
         if not cmd:
             cmd = [os.environ.get("SHELL", "/bin/bash")]
-        
+
         if not cwd:
             cwd = os.getcwd()
 
@@ -68,27 +71,27 @@ class TerminalPage(Gtk.Box):
         self.set_margin_bottom(10)
         self.set_margin_start(10)
         self.set_margin_end(10)
-        
+
         # Tactical Header
         header = Gtk.Box(spacing=10)
         header.set_margin_bottom(10)
         lbl = Gtk.Label(xalign=0)
         lbl.set_markup("<span color='#38bdf8' font_weight='bold' font_size='large'>\u2328 TACTICAL_CONTROL_UNIT (OVERLORD_CLI)</span>")
         header.pack_start(lbl, True, True, 0)
-        
+
         btn_clear = Gtk.Button(label="\u232b CLEAR")
         btn_clear.connect("clicked", lambda w: self.terminal.reset(True, True))
         header.pack_end(btn_clear, False, False, 0)
-        
+
         self.pack_start(header, False, False, 0)
 
         # The Real CLI
         self.terminal = VteTerminal()
         self.terminal.spawn_shell()
-        
+
         scroll = Gtk.ScrolledWindow()
         scroll.set_propagate_natural_width(False)
         scroll.add(self.terminal)
         self.pack_start(scroll, True, True, 0)
-        
+
         self.show_all()

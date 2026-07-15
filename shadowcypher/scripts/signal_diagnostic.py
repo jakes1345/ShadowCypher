@@ -5,15 +5,14 @@ Evaluates connectivity to Sovereign and External signal planes.
 """
 
 import asyncio
-import sys
-import time
-from shadowcypher.core.sovereign import SovereignClient
+
 from shadowcypher.core.config import config
-from shadowcypher.core.logger import logger
+from shadowcypher.core.sovereign import SovereignClient
+
 
 async def run_diagnostic():
     print("\033[1;34m[SIGNAL_DIAGNOSTIC] Initializing Probe Sequence...\033[0m")
-    
+
     # 1. Sovereign Plane Probe
     print(f"[*] Probing Sovereign Hub: {config.irc.sovereign_server}:{config.irc.sovereign_port}")
     sov = SovereignClient(
@@ -21,7 +20,7 @@ async def run_diagnostic():
         port=config.irc.sovereign_port,
         nick="DiagnosticNode"
     )
-    
+
     try:
         # We wrap the connect in a timeout
         await asyncio.wait_for(sov.connect(), timeout=5.0)

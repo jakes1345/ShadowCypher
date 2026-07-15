@@ -3,12 +3,10 @@ Guardian Module Integration — Unified interface for all Guardian scanning modu
 Orchestrates fail2ban_mgr, host_audit, tls_audit, yara_scan with real results.
 """
 
-import json
-import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
-from dataclasses import dataclass, asdict
 from enum import Enum
+from typing import Dict, List, Optional
 
 from shadowcypher.core.logger import logger
 
@@ -43,9 +41,10 @@ class GuardianModules:
     def run_fail2ban_scan(self, host: str = "localhost") -> ModuleResult:
         """Run fail2ban audit and collect banned IPs."""
         try:
-            from shadowcypher.modules.fail2ban_mgr import fail2ban_manager
-            import time
             import re
+            import time
+
+            from shadowcypher.modules.fail2ban_mgr import fail2ban_manager
 
             start = time.time()
             findings = []
@@ -114,8 +113,9 @@ class GuardianModules:
     def run_host_audit(self, host: str = "localhost") -> ModuleResult:
         """Run host audit (rkhunter + lynis) and collect findings."""
         try:
-            from shadowcypher.modules.host_audit import HostAudit
             import time
+
+            from shadowcypher.modules.host_audit import HostAudit
 
             start = time.time()
             auditor = HostAudit()
@@ -186,8 +186,9 @@ class GuardianModules:
     def run_tls_audit(self, host: str = "localhost", port: int = 443) -> ModuleResult:
         """Run TLS/SSL audit and check for vulnerabilities."""
         try:
-            from shadowcypher.modules.tls_audit import TLSAudit
             import time
+
+            from shadowcypher.modules.tls_audit import TLSAudit
 
             start = time.time()
             auditor = TLSAudit()
@@ -258,8 +259,9 @@ class GuardianModules:
     def run_yara_scan(self, path: str = "/tmp") -> ModuleResult:  # nosec B108
         """Run YARA malware scanning on filesystem."""
         try:
-            from shadowcypher.modules.yara_scan import YaraScan
             import time
+
+            from shadowcypher.modules.yara_scan import YaraScan
 
             start = time.time()
             scanner = YaraScan()

@@ -1,7 +1,9 @@
 """Payload forge page — generate and obfuscate payloads for authorized testing."""
+from gi.repository import Gtk
+
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod
-from gi.repository import Gtk
+
 
 class CraftPage(BasePage):
     def __init__(self):
@@ -20,7 +22,7 @@ class CraftPage(BasePage):
     def _build_tactical_interface(self):
         # Control Deck
         deck = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
-        
+
         row1 = Gtk.Box(spacing=10)
         row1.pack_start(Gtk.Label(label="Payload Type:"), False, False, 0)
         self.payload_type = Gtk.ComboBoxText()
@@ -37,32 +39,33 @@ class CraftPage(BasePage):
         self.lhost_entry.set_placeholder_text("LHOST (e.g. 10.0.2.15)")
         self.lhost_entry.set_text("10.0.2.15") # Ideally from config
         row2.pack_start(self.lhost_entry, True, True, 0)
-        
+
         self.lport_entry = Gtk.Entry()
         self.lport_entry.set_placeholder_text("LPORT")
         self.lport_entry.set_text("4444")
         row2.pack_start(self.lport_entry, False, False, 0)
         deck.pack_start(row2, False, False, 0)
-        
+
         btn = self.make_action_btn("⚡ Generate", self._on_forge)
         deck.pack_start(btn, False, False, 0)
-        
+
         self.workspace.pack_start(deck, True, True, 0)
 
     def _on_forge(self, btn):
-        from shadowcypher.modules.craft_factory import CraftFactory
         from gi.repository import GLib
-        
+
+        from shadowcypher.modules.craft_factory import CraftFactory
+
         ptype = self.payload_type.get_active_id()
         lhost = self.lhost_entry.get_text().strip()
         lport = self.lport_entry.get_text().strip()
-        
+
         self.terminal.clear()
         self.terminal.log(f"Generating {ptype} payload → {lhost}:{lport}", "SYSTEM")
-        
+
         def _on_out(line):
             GLib.idle_add(self.terminal.log, line.strip(), "FORGE")
-        
+
         if ptype == "elf":
             CraftFactory.generate_evasive_elf(lhost, lport, on_output=_on_out)
         elif ptype == "ps1":

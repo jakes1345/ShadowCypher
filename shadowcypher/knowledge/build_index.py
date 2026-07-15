@@ -13,11 +13,11 @@ Dependencies:
 Model: BAAI/bge-small-en-v1.5 (INT8 ONNX, ~32MB)
 """
 
-import os
-import sys
-import json
-import re
 import hashlib
+import json
+import os
+import re
+import sys
 import time
 from pathlib import Path
 

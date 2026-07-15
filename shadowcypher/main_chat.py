@@ -1,21 +1,23 @@
 """FastAPI chat backend with authentication and AES-256-GCM encryption."""
-from fastapi import FastAPI, Header, HTTPException, status, Request
-from fastapi.middleware.cors import CORSMiddleware
+import secrets
+from datetime import datetime
+
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from datetime import datetime
-import secrets
 
 from shadowcypher.auth_backend import (
-    authenticate_user, register_user, create_jwt_token, verify_jwt_token,
-    LoginRequest, LoginResponse, RegisterRequest
+    LoginRequest,
+    LoginResponse,
+    RegisterRequest,
+    authenticate_user,
+    create_jwt_token,
+    register_user,
+    verify_jwt_token,
 )
-from shadowcypher.crypto_backend import (
-    encrypt_message, decrypt_message, store_user_key, get_user_key,
-    create_group_key, get_group_key, rotate_and_store_group_key,
-    EncryptedMessage
-)
+from shadowcypher.crypto_backend import create_group_key, rotate_and_store_group_key, store_user_key
 
 app = FastAPI(title="ShadowCypher Chat")
 
@@ -85,7 +87,7 @@ async def register(req: RegisterRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Registration error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Registration error: {str(e)}") from e
 
 @app.post("/v1/auth/login")
 async def login(req: LoginRequest):
@@ -107,7 +109,7 @@ async def login(req: LoginRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Login error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Login error: {str(e)}") from e
 
 # Chat endpoints (protected)
 @app.get("/v1/chat/rooms")

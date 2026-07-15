@@ -1,17 +1,17 @@
 """God Panel — real-time system control and subsystem status matrix."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
-import time
-import psutil
 import socket
 import threading
 
-from shadowcypher.ui.base_page import BasePage
+import psutil
+from gi.repository import GLib, Gtk
+
 from shadowcypher.core.config import config
-from shadowcypher.core.bus import bus
 from shadowcypher.core.logger import logger
+from shadowcypher.ui.base_page import BasePage
 
 
 class GodPanel(BasePage):
@@ -93,8 +93,8 @@ class GodPanel(BasePage):
 
     def _refresh_matrix(self):
         """Asynchronous full-spectrum subsystem matrix refresh."""
-        import urllib.request
         import time as _time
+        import urllib.request
         results = []
 
         # Port-based service checks: (label, port, http_url_or_None)

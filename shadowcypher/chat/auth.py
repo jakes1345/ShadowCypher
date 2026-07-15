@@ -1,12 +1,13 @@
-import jwt
 import os
 import secrets
 import warnings
 from datetime import datetime, timedelta
 from typing import Dict
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.argon2 import Argon2id
+
+import jwt
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.argon2 import Argon2id
+
 
 def _load_or_create_chat_secret() -> str:
     """Load JWT secret from env, then from file, else generate and persist."""
@@ -58,10 +59,10 @@ def validate_jwt_token(token: str) -> Dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except jwt.ExpiredSignatureError:
-        raise ValueError("Token has expired")
-    except jwt.InvalidTokenError:
-        raise ValueError("Invalid token")
+    except jwt.ExpiredSignatureError as e:
+        raise ValueError("Token has expired") from e
+    except jwt.InvalidTokenError as e:
+        raise ValueError("Invalid token") from e
 
 def derive_device_key(password: str, device_id: str) -> bytes:
     """Argon2id derives device key from password + device_id"""

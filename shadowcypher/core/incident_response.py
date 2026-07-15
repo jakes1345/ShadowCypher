@@ -5,11 +5,11 @@ Executes response workflows based on incident severity and type.
 
 import json
 import os
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Callable
-from dataclasses import dataclass, asdict
-from enum import Enum
 import threading
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Callable, Dict, List, Optional
 
 from shadowcypher.core.logger import logger
 
@@ -335,7 +335,6 @@ class IncidentResponseEngine:
 
     def _action_quarantine(self, details: Dict):
         """Quarantine suspicious file by moving it to /var/quarantine and locking permissions."""
-        import subprocess
         import shutil
         file_path = details.get("file_path")
         if not file_path or not os.path.exists(file_path):
@@ -353,8 +352,8 @@ class IncidentResponseEngine:
 
     def _action_patch(self, details: Dict):
         """Apply available system patch for a CVE via package manager."""
-        import subprocess
         import shutil
+        import subprocess
         cve_id = details.get("cve_id", "unknown")
         package = details.get("package")  # Optional specific package to update
         logger.info("incident_response", f"Attempting patch for: {cve_id} (package={package})")

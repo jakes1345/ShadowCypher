@@ -11,6 +11,7 @@ callers know a directive is unimplemented instead of getting a silent "ok".
 
 import re
 import threading
+
 from shadowcypher.core.logger import logger
 
 
@@ -101,8 +102,9 @@ class ShadowScript:
         if cmd == "EXPLOIT":
             if not target:
                 return {"ok": False, "msg": "EXPLOIT requires a prior TARGET directive"}
-            from shadowcypher.core.config import config
             import subprocess
+
+            from shadowcypher.core.config import config
             service = args_raw.strip("'\"") or target
             searchsploit = config.get_tool_path("searchsploit")
             if not searchsploit or searchsploit == "searchsploit" and not self._which("searchsploit"):
@@ -123,6 +125,7 @@ class ShadowScript:
 
         if cmd == "GHOST_PERSIST":
             import os
+
             from shadowcypher.modules.craft_factory import CraftFactory
             lhost, sep, lport = args_raw.partition(":")
             if not lhost or not sep:

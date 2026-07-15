@@ -9,23 +9,21 @@ Author: ShadowCypher Development Team
 License: Sovereign
 """
 
-import json
-import hmac
+import asyncio
 import hashlib
+import hmac
+import json
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Callable, Awaitable
 from pathlib import Path
-import asyncio
-import aiohttp
+from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
-import pydantic
+import aiohttp
 from pydantic import BaseModel, Field, ValidationError
-
 
 logger = logging.getLogger(__name__)
 
@@ -263,7 +261,7 @@ class PartnerAPIClient(ABC):
 
         except aiohttp.ClientError as e:
             raise PartnerAPIError(self.vendor, "NETWORK_ERROR",
-                                str(e), transient=True)
+                                str(e), transient=True) from e
 
     @abstractmethod
     async def fetch_updates(self, since: Optional[datetime] = None) -> List[Dict[str, Any]]:
@@ -452,7 +450,7 @@ class WebhookHandler:
             )
         except Exception as e:
             raise PartnerValidationError(self.vendor, "INVALID_EVENT",
-                                        f"Event validation failed: {str(e)}")
+                                        f"Event validation failed: {str(e)}") from e
 
         self._event_log.append(webhook_event)
         self.logger.info(f"Processed webhook event: {webhook_event.event_type}")

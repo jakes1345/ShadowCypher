@@ -14,6 +14,7 @@ Usage:
 """
 
 from __future__ import annotations
+
 import json
 import os
 import re
@@ -22,7 +23,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Optional, Callable
+from typing import Callable, Optional
+
 from shadowcypher.core.logger import logger
 from shadowcypher.core.module import BaseModule
 

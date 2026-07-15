@@ -9,11 +9,11 @@ Public API:
     from shadowcypher.ai import variant_gen    # AI-powered signature variant generator
 """
 
-from shadowcypher.ai.engine import ai_engine
+from shadowcypher.ai.adversary_sim import adversary
 from shadowcypher.ai.agents import agent_router
 from shadowcypher.ai.classic_brain import brain
+from shadowcypher.ai.engine import ai_engine
 from shadowcypher.ai.guard import guard
-from shadowcypher.ai.adversary_sim import adversary
 from shadowcypher.ai.variant_generator import variant_gen
 
 __all__ = ["ai_engine", "agent_router", "brain", "guard", "adversary", "variant_gen"]
