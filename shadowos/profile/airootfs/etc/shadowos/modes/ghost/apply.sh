@@ -25,6 +25,23 @@ if ! mountpoint -q /home/shadow 2>/dev/null; then
     echo "  ✓ Ephemeral home mounted (tmpfs) — session data vanishes on reboot"
 fi
 
+# Bluetooth kill — radio off at the rfkill level, daemon stopped
+rfkill block bluetooth 2>/dev/null || true
+systemctl stop bluetooth 2>/dev/null || true
+echo "  ✓ Bluetooth hardware radio blocked"
+
+# Webcam kill — unload UVC driver to prevent covert capture
+modprobe -r uvcvideo 2>/dev/null || true
+echo "  ✓ Webcam (UVC) driver unloaded"
+
+# Randomize hostname — prevent LAN-level identity correlation across sessions
+mkdir -p /var/lib/shadowos
+ORIG_HOST=$(hostnamectl hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || echo "shadowos")
+echo "$ORIG_HOST" > /var/lib/shadowos/ghost-pre-hostname
+RAND_HOST="shadow-$(tr -dc 'a-f0-9' </dev/urandom 2>/dev/null | head -c8 || date +%s | sha256sum | head -c8)"
+hostnamectl set-hostname "$RAND_HOST" 2>/dev/null || true
+echo "  ✓ Hostname randomized → $RAND_HOST (real: $ORIG_HOST)"
+
 # Register RAM wipe on shutdown
 cat > /etc/systemd/system/shadowos-ramwipe.service << 'UNIT'
 [Unit]

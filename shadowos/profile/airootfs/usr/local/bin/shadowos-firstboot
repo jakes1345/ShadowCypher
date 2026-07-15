@@ -100,6 +100,11 @@ PACMAN
         pipx install dirsearch           2>&1 | tail -3 || echo "    dirsearch failed"
         pipx install git+https://github.com/Tib3rius/AutoRecon.git \
                                          2>&1 | tail -3 || echo "    AutoRecon failed"
+        # Post-exploitation
+        pipx install pwncat-cs           2>&1 | tail -3 || echo "    pwncat-cs failed"
+        # Cloud attack frameworks
+        pipx install pacu                2>&1 | tail -3 || echo "    pacu (AWS) failed"
+        pipx install scoutsuite          2>&1 | tail -3 || echo "    ScoutSuite failed"
         echo "    AD toolchain installed → /usr/local/bin/{impacket-*,netexec,certipy,bloodhound,...}"
     fi
 
@@ -134,10 +139,36 @@ PACMAN
         fi
     fi
 
-    # Katana (ProjectDiscovery web crawler) via go install
-    if ! command -v katana >/dev/null && command -v go >/dev/null; then
-        echo "[*] Installing katana via go install..."
-        GOBIN=/usr/local/bin go install github.com/projectdiscovery/katana/cmd/katana@latest 2>&1 | tail -3 || true
+    # Go-based tools (ProjectDiscovery suite + extras)
+    if command -v go >/dev/null; then
+        echo "[*] Installing Go-based tools..."
+        GOBIN=/usr/local/bin
+
+        # ProjectDiscovery crawler
+        ! command -v katana >/dev/null && \
+            GOBIN=$GOBIN go install github.com/projectdiscovery/katana/cmd/katana@latest 2>&1 | tail -2 || true
+
+        # OOB interaction server client (blind SSRF / XXE / injection detection)
+        ! command -v interactsh-client >/dev/null && \
+            GOBIN=$GOBIN go install github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest 2>&1 | tail -2 || true
+
+        # DNS toolkit
+        ! command -v dnsx >/dev/null && \
+            GOBIN=$GOBIN go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest 2>&1 | tail -2 || true
+
+        # Git secret scanning
+        ! command -v gitleaks >/dev/null && \
+            GOBIN=$GOBIN go install github.com/gitleaks/gitleaks/v8@latest 2>&1 | tail -2 || true
+
+        # Secret scanning across code/git history
+        ! command -v trufflehog >/dev/null && \
+            GOBIN=$GOBIN go install github.com/trufflesecurity/trufflehog/v3@latest 2>&1 | tail -2 || true
+
+        # HTTP/HTTPS tunneling pivot
+        ! command -v chisel >/dev/null && \
+            GOBIN=$GOBIN go install github.com/jpillora/chisel@latest 2>&1 | tail -2 || true
+
+        echo "    Go tools installed → katana, interactsh-client, dnsx, gitleaks, trufflehog, chisel"
     fi
 
     # testssl.sh (TLS/SSL config + vuln auditor — not in any Arch repo; pure
