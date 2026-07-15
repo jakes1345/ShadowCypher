@@ -1,4 +1,4 @@
-name: Upload Releases to CDN
+name: Upload Releases to R2
 
 on:
   release:
@@ -10,67 +10,113 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get release artifacts from GitHub
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      - name: Download release artifacts from GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get release ID from tag
           RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/${{ github.ref_name }} --jq .id)
           echo "RELEASE_ID=$RELEASE_ID" >> $GITHUB_ENV
 
-          # List assets in the release
-          echo "Release assets:"
-          gh api repos/${{ github.repository }}/releases/${{ env.RELEASE_ID }}/assets --jq '.[] | .name'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Verify artifacts in release
-        run: |
-          RELEASE_ID=${{ env.RELEASE_ID }}
-          assets=$(gh api repos/${{ github.repository }}/releases/${{ env.RELEASE_ID }}/assets --jq '.[] | .name')
-
-          echo "Checking for required release files..."
-
-          # Check for critical files
-          if echo "$assets" | grep -q "shadowos.*\.iso$" && \
-             echo "$assets" | grep -q "SHA256SUMS" && \
-             echo "$assets" | grep -q "shadowos_release.pub"; then
-            echo "✓ All required release files present"
-          else
-            echo "✗ Missing required release files"
-            exit 1
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download release artifacts
-        run: |
           mkdir -p ./release-artifacts
-          RELEASE_ID=${{ env.RELEASE_ID }}
-
-          # Download all assets from the release
-          gh api repos/${{ github.repository }}/releases/${{ env.RELEASE_ID }}/assets \
-            --jq '.[] | .url' | while read asset_url; do
-            gh api "$asset_url" > ./release-artifacts/$(basename "$asset_url")
+          gh api repos/${{ github.repository }}/releases/$RELEASE_ID/assets \
+            --jq '.[] | [.url, .name] | @tsv' | while IFS=$'\t' read asset_url asset_name; do
+            echo "Downloading $asset_name..."
+            gh api "$asset_url" \
+              -H "Accept: application/octet-stream" \
+              > "./release-artifacts/$asset_name"
           done
 
-          echo "Downloaded artifacts:"
+          echo "=== Downloaded ==="
           ls -lh ./release-artifacts/
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload to releases.shadowcypher.site
+      - name: Verify required artifacts
         run: |
-          VERSION=${{ github.ref_name }}
-          RELEASE_DIR="releases/v${VERSION#v}"
+          cd ./release-artifacts
+          if ls shadowos-*.iso 1>/dev/null 2>&1 && [ -f SHA256SUMS ]; then
+            echo "✓ Required files present"
+          else
+            echo "✗ Missing shadowos-*.iso or SHA256SUMS"
+            ls -lh
+            exit 1
+          fi
 
-          # Load SSH key into agent
-          mkdir -p $HOME/.ssh
-          eval $(ssh-agent -s)
-          echo "${{ secrets.RELEASE_SERVER_SSH_KEY }}" | ssh-add -
-          ssh-keyscan -H ${{ secrets.RELEASE_SERVER_HOST }} >> $HOME/.ssh/known_hosts 2>/dev/null
+      - name: Upload artifacts to R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          VERSION="${{ github.ref_name }}"
+          BUCKET="shadowcypher-files"
 
-          # Upload artifacts via SCP
-          scp -r ./release-artifacts/* \
-            ${{ secrets.RELEASE_SERVER_USER }}@${{ secrets.RELEASE_SERVER_HOST }}:$RELEASE_DIR/
+          mime_for() {
+            case "$1" in
+              *.iso)    echo "application/x-iso9660-image" ;;
+              *.apk)    echo "application/vnd.android.package-archive" ;;
+              *.tar.gz) echo "application/gzip" ;;
+              *.deb)    echo "application/vnd.debian.binary-package" ;;
+              *.rpm)    echo "application/x-rpm" ;;
+              *.asc)    echo "text/plain" ;;
+              SHA256SUMS|*.txt) echo "text/plain" ;;
+              *)        echo "application/octet-stream" ;;
+            esac
+          }
 
-          echo "✓ Artifacts uploaded to releases.shadowcypher.site/v${VERSION#v}/"
-        if: success()
+          for f in ./release-artifacts/*; do
+            name=$(basename "$f")
+            mime=$(mime_for "$name")
+            echo "→ uploading $name ($mime)"
+
+            # Upload under versioned path
+            wrangler r2 object put "$BUCKET/releases/$VERSION/$name" \
+              --file="$f" \
+              --content-type="$mime"
+
+            # Mirror to /latest/
+            wrangler r2 object put "$BUCKET/releases/latest/$name" \
+              --file="$f" \
+              --content-type="$mime"
+          done
+
+      - name: Update release manifest
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          VERSION="${{ github.ref_name }}"
+          BUCKET="shadowcypher-files"
+          TAG="${VERSION#v}"
+
+          # Find the ISO name for the manifest URL
+          ISO_NAME=$(ls ./release-artifacts/shadowos-*.iso 2>/dev/null | head -1 | xargs basename || echo "")
+          SHA256=$(grep "$ISO_NAME" ./release-artifacts/SHA256SUMS 2>/dev/null | awk '{print $1}' || echo "")
+
+          cat > /tmp/manifest.json << EOF
+          {
+            "version": "$TAG",
+            "iso_url": "https://releases.shadowcypher.site/$VERSION/$ISO_NAME",
+            "sha256": "$SHA256",
+            "released_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+          cat /tmp/manifest.json
+          wrangler r2 object put "$BUCKET/releases/manifest.json" \
+            --file=/tmp/manifest.json \
+            --content-type="application/json"
+
+          echo "✓ Manifest updated → releases.shadowcypher.site/manifest.json"
+
+      - name: Summary
+        run: |
+          VERSION="${{ github.ref_name }}"
+          echo "### ✓ Release uploaded" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Index:** https://releases.shadowcypher.site/$VERSION/" >> $GITHUB_STEP_SUMMARY
+          echo "- **Latest:** https://releases.shadowcypher.site/latest/" >> $GITHUB_STEP_SUMMARY
+          echo "- **Manifest:** https://releases.shadowcypher.site/manifest.json" >> $GITHUB_STEP_SUMMARY
