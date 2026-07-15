@@ -138,6 +138,9 @@ distill/
 irc/
 training_lab/
 shadowai/
+# But DO track the ISO-embedded Ollama modelfiles (tiny text, not model weights)
+!shadowos/profile/airootfs/opt/shadowcypher/shadowai/
+!shadowos/profile/airootfs/opt/shadowcypher/shadowai/**
 shadowcypher/ui/assets/ai_engine/
 shadowcypher/native/relay/relay
 shadowcypher/native/relay/shadow-relay
