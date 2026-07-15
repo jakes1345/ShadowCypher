@@ -53,6 +53,17 @@ if [[ -d "$CANON" ]]; then
         cp -f "$CANON/waybar/"* "$WAYBAR_DIR/" 2>/dev/null || true
     fi
 fi
+# If undercover mode was active on last logout, restore its waybar theme before compositor starts
+MODE_STATE=/var/lib/shadowos/current-mode
+if [[ -f "$MODE_STATE" ]]; then
+    CURRENT_MODE=$(cat "$MODE_STATE" 2>/dev/null | tr -d '[:space:]')
+    if [[ "$CURRENT_MODE" == "undercover" ]]; then
+        SKEL_WAYBAR=/etc/skel/.config/waybar
+        [[ -f "$SKEL_WAYBAR/config.undercover.jsonc" ]] && cp -f "$SKEL_WAYBAR/config.undercover.jsonc" "$WAYBAR_DIR/config.jsonc"
+        [[ -f "$SKEL_WAYBAR/style.undercover.css" ]] && cp -f "$SKEL_WAYBAR/style.undercover.css" "$WAYBAR_DIR/style.css"
+    fi
+fi
+
 # Strip legacy ISO autostart lines if an old overlay config survived.
 if [[ -f "$HYPR_DIR/hyprland.conf" ]]; then
     sed -i \
