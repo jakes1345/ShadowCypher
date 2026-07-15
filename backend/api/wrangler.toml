@@ -25,6 +25,10 @@ binding = "SHADOW_OTA"
 id = "d16349c7f8194a6f9247a20a962f60d1"
 preview_id = "806c715c0dbd4e8aadd072a75e87bbc6"
 
+[[r2_buckets]]
+binding = "SHADOW_FILES"
+bucket_name = "shadowcypher-files"
+
 [[durable_objects.bindings]]
 name = "CHAT_ROOM"
 class_name = "ChatRoom"

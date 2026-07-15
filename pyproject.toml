@@ -99,4 +99,9 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "S", "B"]
-ignore = ["S603", "S607"]  # subprocess calls are intentional in a security tool
+ignore = [
+    "S603", "S607",  # subprocess calls are intentional in a security tool
+    "S310",          # urllib.request.urlopen — all calls target https:// external APIs
+    "S110",          # try-except-pass — MCP server helpers degrade gracefully by design
+    "E402",          # module-level import order — gi.require_version must precede gi.repository imports
+]

@@ -31,6 +31,16 @@ interface NotificationPrefs {
   email_severity: "info" | "warning" | "critical";
   push_enabled: boolean;
   push_subscription: PushSubscriptionJSON | null;
+  mail_push_enabled: boolean | null;
+  mention_push_enabled: boolean | null;
+}
+
+interface PushPayload {
+  title: string;
+  body: string;
+  severity?: string;
+  url?: string;
+  tag?: string;
 }
 
 interface PushSubscriptionJSON {
@@ -59,16 +69,24 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
 
 export async function getPreferences(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
   const rows = await dbSelect<NotificationPrefs>(env, "notification_prefs", {
-    select: "user_id,email_enabled,email_severity,push_enabled,push_subscription",
+    select: "user_id,email_enabled,email_severity,push_enabled,push_subscription,mail_push_enabled,mention_push_enabled",
     filters: { user_id: `eq.${user.id}` },
     limit: 1,
-  });
+  }).catch(() =>
+    dbSelect<NotificationPrefs>(env, "notification_prefs", {
+      select: "user_id,email_enabled,email_severity,push_enabled,push_subscription",
+      filters: { user_id: `eq.${user.id}` },
+      limit: 1,
+    })
+  );
   const prefs = rows[0] || {
     user_id: user.id,
     email_enabled: true,
     email_severity: "warning",
     push_enabled: false,
     push_subscription: null,
+    mail_push_enabled: true,
+    mention_push_enabled: true,
   };
   return json({ preferences: prefs }, {}, cors);
 }
@@ -85,6 +103,8 @@ export async function updatePreferences(req: Request, env: Env, user: AuthedUser
   }
   if (body.push_enabled !== undefined) patch.push_enabled = !!body.push_enabled;
   if (body.push_subscription !== undefined) patch.push_subscription = body.push_subscription;
+  if (body.mail_push_enabled !== undefined) patch.mail_push_enabled = !!body.mail_push_enabled;
+  if (body.mention_push_enabled !== undefined) patch.mention_push_enabled = !!body.mention_push_enabled;
 
   const saved = await dbUpsert<NotificationPrefs>(env, "notification_prefs", patch, "user_id");
   return json({ preferences: saved }, {}, cors);
@@ -200,42 +220,49 @@ async function sendEmail(env: Env, to: string, incident: IncidentForNotify): Pro
 
 // ─── Web Push (VAPID + RFC 8291 aes128gcm encryption, no library) ──────────
 
-async function sendWebPush(
+async function sendWebPushPayload(
   env: Env,
   sub: PushSubscriptionJSON,
-  incident: IncidentForNotify
+  payload: PushPayload
 ): Promise<boolean> {
   if (!env.PUSH_VAPID_PRIVATE_KEY || !env.PUSH_VAPID_PUBLIC_KEY) return false;
   if (!sub.keys?.p256dh || !sub.keys?.auth) return false;
   try {
     const audience = new URL(sub.endpoint).origin;
     const jwt = await mintVapidJwt(env, audience);
-    const payload = JSON.stringify({
-      title: `[${incident.severity.toUpperCase()}] ${incident.title}`,
-      body: incident.detail || incident.category,
-      severity: incident.severity,
-      url: `/?nav=account&incident=${incident.id}`,
-      tag: `sc-${incident.id}`,
-    });
-    const encrypted = await encryptWebPushPayload(sub, payload);
+    const encrypted = await encryptWebPushPayload(sub, JSON.stringify(payload));
+    const urgency = payload.severity === "critical" ? "high" : "normal";
     const pushHeaders = {
       Authorization: `vapid t=${jwt}, k=${env.PUSH_VAPID_PUBLIC_KEY}`,
       "Content-Type": "application/octet-stream",
       "Content-Encoding": "aes128gcm",
       TTL: "86400",
-      Urgency: incident.severity === "critical" ? "high" : "normal",
+      Urgency: urgency,
     };
-    // One retry on transient server errors (5xx / 429)
     for (let attempt = 0; attempt < 2; attempt++) {
       const resp = await fetch(sub.endpoint, { method: "POST", headers: pushHeaders, body: encrypted });
       if (resp.ok || resp.status === 201) return true;
-      if (resp.status >= 400 && resp.status < 500 && resp.status !== 429) break; // permanent failure
+      if (resp.status >= 400 && resp.status < 500 && resp.status !== 429) break;
       if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
     }
     return false;
   } catch {
     return false;
   }
+}
+
+async function sendWebPush(
+  env: Env,
+  sub: PushSubscriptionJSON,
+  incident: IncidentForNotify
+): Promise<boolean> {
+  return sendWebPushPayload(env, sub, {
+    title: `[${incident.severity.toUpperCase()}] ${incident.title}`,
+    body: incident.detail || incident.category,
+    severity: incident.severity,
+    url: `/?nav=account&incident=${incident.id}`,
+    tag: `sc-${incident.id}`,
+  });
 }
 
 // RFC 8291 — Message Encryption for Web Push (aes128gcm)
@@ -359,6 +386,54 @@ function b64urlEncode(b: Uint8Array): string {
   let s = "";
   for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// ─── Mail push (called from storeInboundMail) ────────────────────────────────
+
+export async function dispatchMailPushNotification(
+  env: Env,
+  userId: string,
+  mail: { from: string; subject: string; preview: string }
+): Promise<void> {
+  if (!env.PUSH_VAPID_PRIVATE_KEY) return;
+  const prefRows = await dbSelect<NotificationPrefs>(env, "notification_prefs", {
+    select: "push_enabled,push_subscription,mail_push_enabled",
+    filters: { user_id: `eq.${userId}` },
+    limit: 1,
+  }).catch(() => [] as NotificationPrefs[]);
+  const prefs = prefRows[0];
+  if (!prefs?.push_enabled || prefs.mail_push_enabled === false || !prefs.push_subscription) return;
+  const fromShort = mail.from.replace(/^[^<]*<([^>]+)>$/, "$1").slice(0, 50) || mail.from.slice(0, 50);
+  await sendWebPushPayload(env, prefs.push_subscription, {
+    title: "📧 New email",
+    body: `${fromShort}: ${mail.subject}`,
+    url: "/?nav=mail",
+    tag: `sc-mail-${userId}`,
+  }).catch(() => null);
+}
+
+// ─── Mention push (called from ChatRoom DO) ──────────────────────────────────
+
+export async function dispatchMentionPushNotification(
+  env: Env,
+  mentionedUserId: string,
+  info: { senderNick: string; preview: string; roomName: string }
+): Promise<void> {
+  if (!env.PUSH_VAPID_PRIVATE_KEY) return;
+  const prefRows = await dbSelect<NotificationPrefs>(env, "notification_prefs", {
+    select: "push_enabled,push_subscription,mention_push_enabled",
+    filters: { user_id: `eq.${mentionedUserId}` },
+    limit: 1,
+  }).catch(() => [] as NotificationPrefs[]);
+  const prefs = prefRows[0];
+  if (!prefs?.push_enabled || prefs.mention_push_enabled === false || !prefs.push_subscription) return;
+  const roomLabel = info.roomName.startsWith("dm") ? "DM" : `#${info.roomName}`;
+  await sendWebPushPayload(env, prefs.push_subscription, {
+    title: `💬 Mentioned in ${roomLabel}`,
+    body: `${info.senderNick}: ${info.preview.slice(0, 100)}`,
+    url: "/?nav=chat",
+    tag: `sc-mention-${mentionedUserId}`,
+  }).catch(() => null);
 }
 
 function escapeHtml(s: string): string {

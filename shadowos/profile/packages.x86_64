@@ -48,6 +48,7 @@ fail2ban
 rkhunter
 lynis
 macchanger
+secure-delete
 gnupg
 pass
 keepassxc
@@ -183,7 +184,7 @@ python-matplotlib
 # Mozilla telemetry + recent policy changes contradict the distro's brand.
 librewolf
 mullvad-browser-bin
-firefox
+# firefox removed — contradicts brand (no Mozilla telemetry); use librewolf or mullvad-browser
 chaotic-keyring
 chaotic-mirrorlist
 mpv
@@ -236,10 +237,14 @@ nuclei
 naabu
 mitmproxy
 exploitdb
-# impacket — chaotic-aur version pulls mingw-w64 toolchain (breaks chroot build); install at runtime: pip install impacket
-# responder — AUR; install at runtime: yay -S responder
-# netexec — chaotic-aur; install at runtime: yay -S netexec
-# evil-winrm — AUR; install at runtime: yay -S evil-winrm
+python-pipx
+# AD attack chain — installed via pipx at first-boot (no AUR helper needed):
+#   pipx install impacket         → full AD protocol suite (SMB/Kerberos/LDAP/DCE-RPC)
+#   pipx install netexec          → network exec / lateral movement
+#   pipx install certipy-ad       → AD certificate services attacks
+#   pipx install evil-winrm       → (needs ruby) WinRM shell
+#   pipx install bloodhound       → AD path analysis
+# responder — AUR; install via: sudo pacman -S python-responder (chaotic-aur after first-boot)
 sshuttle
 # chisel is AUR-only — installed via go install at first-boot if needed
 seclists
@@ -267,6 +272,30 @@ winetricks
 vkd3d
 gamescope
 ttf-liberation
+
+# === Retro gaming / emulation (à la Batocera/Bazzite) ===
+retroarch
+libretro-beetle-psx-hw
+libretro-blastem
+libretro-bsnes
+libretro-desmume
+libretro-mgba
+libretro-mupen64plus-next
+libretro-ppsspp
+libretro-sameboy
+libretro-scummvm
+# EmulationStation-DE (flatpak) installed at first-boot: io.github.es_de.emulationstation-de
+
+# === Game streaming (Sunshine/Moonlight — Bazzite style) ===
+# sunshine is AUR-only; installed via Flatpak at first-boot: dev.lizardbyte.app.Sunshine
+# moonlight-qt is in extra
+moonlight-qt
+
+# === Controller support ===
+# xpadneo-dkms — AUR; Xbox One S/X wireless via Bluetooth (install via: yay -S xpadneo-dkms)
+# xone-dkms    — AUR; Xbox One dongle driver             (install via: yay -S xone-dkms)
+# Both need DKMS so they're post-boot installs. Steam handles most controllers natively via udev.
+# steam-devices — already listed in gaming section; udev rules for 300+ controllers included there
 
 # === Universal launchers / app management ===
 flatpak

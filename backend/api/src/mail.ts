@@ -15,6 +15,10 @@
 
 import type { Env } from "./index";
 import { dbSelect, dbInsert, dbUpdate } from "./supabase";
+import { dispatchMailWebhook } from "./webhooks";
+import { dispatchMailPushNotification } from "./notifications";
+import { decodeMimeWords, decodeQuotedPrintable, decodeBase64Body, parseHeaders, parseMimeParts, escapeRegex, extractBodies } from "./mime";
+import type { MimePart } from "./mime";
 
 interface MailRow {
   id: string;
@@ -35,115 +39,6 @@ function json(body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
     ...init,
     headers: { "Content-Type": "application/json", ...cors, ...(init.headers || {}) },
   });
-}
-
-// ── MIME helpers ─────────────────────────────────────────────────────────────
-
-function decodeMimeWords(s: string): string {
-  // Decode RFC2047 encoded-words: =?charset?encoding?text?=
-  return s.replace(/=\?([^?]+)\?([BQbq])\?([^?]*)\?=/g, (_m, _cs, enc, txt: string) => {
-    try {
-      if (enc.toUpperCase() === "B") return atob(txt);
-      // Q-encoding: underscore → space, =XX → hex byte
-      const bytes = txt
-        .replace(/_/g, " ")
-        .replace(/=([0-9A-Fa-f]{2})/g, (_: string, h: string) => String.fromCharCode(parseInt(h, 16)));
-      return bytes;
-    } catch {
-      return txt;
-    }
-  });
-}
-
-function decodeQuotedPrintable(s: string): string {
-  return s
-    .replace(/=\r?\n/g, "")
-    .replace(/=([0-9A-Fa-f]{2})/g, (_: string, h: string) => String.fromCharCode(parseInt(h, 16)));
-}
-
-function decodeBase64Body(s: string): string {
-  try {
-    return atob(s.replace(/\s/g, ""));
-  } catch {
-    return s;
-  }
-}
-
-interface MimePart {
-  headers: Map<string, string>;
-  body: string;
-}
-
-function parseMimeParts(raw: string): MimePart[] {
-  const headerBodySep = raw.indexOf("\r\n\r\n") !== -1 ? "\r\n\r\n" : "\n\n";
-  const [headerSection, ...bodyParts] = raw.split(headerBodySep);
-  const body = bodyParts.join(headerBodySep);
-  const headers = parseHeaders(headerSection);
-  const ct = headers.get("content-type") ?? "";
-
-  const boundaryMatch = ct.match(/boundary="?([^";]+)"?/i);
-  if (boundaryMatch) {
-    const boundary = boundaryMatch[1];
-    const parts: MimePart[] = [];
-    const sections = body.split(new RegExp(`--${escapeRegex(boundary)}(?:--)?`));
-    for (const section of sections.slice(1)) {
-      if (section.trim() === "" || section.trim() === "--") continue;
-      const sub = parseMimeParts(section.trimStart());
-      parts.push(...sub);
-    }
-    return parts;
-  }
-
-  return [{ headers, body }];
-}
-
-function parseHeaders(raw: string): Map<string, string> {
-  const map = new Map<string, string>();
-  const lines = raw.replace(/\r\n/g, "\n").split("\n");
-  let current = "";
-  for (const line of lines) {
-    if (line.match(/^\s+/) && current) {
-      // folded header continuation
-      const [key, ...rest] = current.split(":");
-      const val = rest.join(":").trimStart() + " " + line.trim();
-      map.set(key.toLowerCase(), val);
-    } else if (line.includes(":")) {
-      if (current) {
-        const [key, ...rest] = current.split(":");
-        map.set(key.toLowerCase(), rest.join(":").trimStart());
-      }
-      current = line;
-    }
-  }
-  if (current) {
-    const [key, ...rest] = current.split(":");
-    map.set(key.toLowerCase(), rest.join(":").trimStart());
-  }
-  return map;
-}
-
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function extractBodies(raw: string): { text: string | null; html: string | null } {
-  let text: string | null = null;
-  let html: string | null = null;
-
-  const parts = parseMimeParts(raw);
-  for (const part of parts) {
-    const ct = (part.headers.get("content-type") ?? "text/plain").toLowerCase();
-    const enc = (part.headers.get("content-transfer-encoding") ?? "7bit").toLowerCase();
-
-    let decoded = part.body;
-    if (enc === "quoted-printable") decoded = decodeQuotedPrintable(decoded);
-    else if (enc === "base64") decoded = decodeBase64Body(decoded);
-
-    if (ct.startsWith("text/html") && !html) html = decoded.trim();
-    else if (ct.startsWith("text/plain") && !text) text = decoded.trim();
-  }
-
-  return { text, html };
 }
 
 // ── Inbound mail storage (called from email event handler) ───────────────────
@@ -181,6 +76,8 @@ export async function storeInboundMail(
 
   const { text, html } = extractBodies(rawBody);
 
+  const receivedAt = new Date(dateStr).toISOString();
+
   await dbInsert(env, "mail_messages", {
     user_id: user.id,
     message_id: messageId,
@@ -191,8 +88,26 @@ export async function storeInboundMail(
     body_html: html,
     direction: "inbound",
     is_read: false,
-    received_at: new Date(dateStr).toISOString(),
+    received_at: receivedAt,
   });
+
+  // Notify any mail.received webhooks (Slack, Teams, Zoom, Discord, custom)
+  const preview = (text ?? "").trim().slice(0, 280).replace(/\s+/g, " ");
+  dispatchMailWebhook(env, {
+    from: message.from,
+    to: message.to,
+    subject,
+    preview,
+    received_at: receivedAt,
+    user_id: user.id,
+  }).catch(() => null);
+
+  // Web push notification for new inbound mail
+  dispatchMailPushNotification(env, user.id, {
+    from: message.from,
+    subject,
+    preview,
+  }).catch(() => null);
 }
 
 // ── REST handlers ─────────────────────────────────────────────────────────────
@@ -206,10 +121,18 @@ export async function getInbox(
   const url = new URL(req.url);
   const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50"), 100);
   const offset = parseInt(url.searchParams.get("offset") ?? "0");
+  const q = url.searchParams.get("q")?.trim().slice(0, 100) ?? "";
+
+  const filters: Record<string, string> = { user_id: `eq.${user.id}` };
+  if (q) {
+    // Escape ILIKE wildcards in the user query, then wrap with %
+    const safe = q.replace(/[%_\\]/g, (c) => `\\${c}`);
+    filters.or = `(subject.ilike.%${safe}%,from_addr.ilike.%${safe}%)`;
+  }
 
   const rows = await dbSelect<MailRow>(env, "mail_messages", {
     select: "id,from_addr,to_addr,subject,direction,is_read,received_at",
-    filters: { user_id: `eq.${user.id}` },
+    filters,
     order: "received_at.desc",
     limit,
   });
@@ -331,6 +254,70 @@ export async function sendOutbound(
     subject: body.subject.trim(),
     body_text: body.text ?? null,
     body_html: body.html ?? null,
+    direction: "outbound",
+    is_read: true,
+    received_at: new Date().toISOString(),
+  }).catch(() => null);
+
+  return json({ ok: true, id: sendData.id }, {}, cors);
+}
+
+export async function replyMail(
+  req: Request,
+  env: Env,
+  user: { id: string; email: string },
+  cors: HeadersInit,
+  messageId: string
+): Promise<Response> {
+  if (!env.RESEND_API_KEY) return json({ error: "mail_not_configured" }, { status: 503 }, cors);
+
+  const orig = await dbSelect<MailRow>(env, "mail_messages", {
+    select: "id,user_id,message_id,from_addr,subject",
+    filters: { id: `eq.${messageId}`, user_id: `eq.${user.id}` },
+    limit: 1,
+  }).then((r) => r[0] ?? null);
+  if (!orig) return json({ error: "not_found" }, { status: 404 }, cors);
+
+  const body = (await req.json().catch(() => null)) as { text?: string } | null;
+  const replyText = body?.text?.trim() ?? "";
+  if (!replyText) return json({ error: "text_required" }, { status: 400 }, cors);
+
+  const replyTo = orig.from_addr;
+  const replySubject = /^re:/i.test(orig.subject) ? orig.subject : `Re: ${orig.subject}`;
+  const fromAddr = user.email;
+
+  const extraHeaders: Record<string, string> = {};
+  if (orig.message_id) {
+    extraHeaders["In-Reply-To"] = orig.message_id;
+    extraHeaders["References"] = orig.message_id;
+  }
+
+  const sendResp = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: fromAddr,
+      to: replyTo,
+      subject: replySubject,
+      text: replyText,
+      ...(Object.keys(extraHeaders).length ? { headers: extraHeaders } : {}),
+    }),
+  });
+
+  if (!sendResp.ok) return json({ error: "send_failed" }, { status: 502 }, cors);
+  const sendData = (await sendResp.json()) as { id?: string };
+
+  await dbInsert(env, "mail_messages", {
+    user_id: user.id,
+    message_id: sendData.id ?? null,
+    from_addr: fromAddr,
+    to_addr: replyTo,
+    subject: replySubject,
+    body_text: replyText,
+    body_html: null,
     direction: "outbound",
     is_read: true,
     received_at: new Date().toISOString(),

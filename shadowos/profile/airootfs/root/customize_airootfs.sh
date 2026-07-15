@@ -37,15 +37,17 @@ systemctl --global enable shadowos-welcome.service 2>/dev/null || true
 systemctl enable shadowos-live-login-fix.service
 systemctl enable sshd.service
 mkdir -p /etc/ssh/sshd_config.d
-# Live ISO: allow password auth so SSH debugging works without a key
-# Installed system: shadowos-firstboot hardens this after install
+# SSH hardened: password auth off, key-only, root login disabled.
+# Live ISO users who need SSH access must add their pubkey to /home/shadow/.ssh/authorized_keys.
 cat > /etc/ssh/sshd_config.d/99-shadowos-hardening.conf <<'SSHCONF'
-PasswordAuthentication yes
-PermitRootLogin prohibit-password
+PasswordAuthentication no
+PermitRootLogin no
 PubkeyAuthentication yes
 X11Forwarding no
 AllowTcpForwarding no
 PrintMotd yes
+MaxAuthTries 3
+LoginGraceTime 30
 SSHCONF
 # Tier-1 essentials
 systemctl enable udisks2.service 2>/dev/null || true
@@ -60,10 +62,13 @@ systemctl set-default graphical.target
 systemctl enable dnscrypt-proxy.service 2>/dev/null || true
 systemctl disable tor.service 2>/dev/null || true
 
-# Firewall: open SSH for live debug access (locked down in installed system)
+# Firewall: deny all inbound by default; SSH only from LAN (RFC1918).
+# Even with key-only auth, no reason to expose SSH to the entire internet on a live ISO.
 ufw default deny incoming
 ufw default allow outgoing
-ufw allow 22/tcp comment 'ShadowOS live SSH'
+ufw allow from 192.168.0.0/16 to any port 22 proto tcp comment 'ShadowOS live SSH (LAN only)'
+ufw allow from 10.0.0.0/8    to any port 22 proto tcp comment 'ShadowOS live SSH (LAN only)'
+ufw allow from 172.16.0.0/12 to any port 22 proto tcp comment 'ShadowOS live SSH (LAN only)'
 ufw --force enable
 
 # Re-stamp OS identity files (upstream `filesystem` package owns these and
@@ -113,14 +118,20 @@ fi
 
 # Live user — docker group excluded (grants root-equivalent container access)
 useradd -m -G wheel,audio,video,storage,network -s /usr/bin/zsh shadow || true
-echo "shadow:shadow" | chpasswd
-echo "root:shadow"   | chpasswd
-# Live demo user: SDDM has no "change expired password" UI — never force expiry here.
-# Installed systems set their own password via shadowos-install / archinstall.
+
+# Generate a random live-session password instead of a hardcoded one.
+# The password is written to /etc/shadowos/live-password (root-readable only)
+# and displayed in the MOTD so it's visible at the TTY. It's different on every build.
+LIVE_PASS=$(cat /proc/sys/kernel/random/uuid | tr -d '-' | head -c 16)
+echo "shadow:${LIVE_PASS}" | chpasswd
+# Root login disabled via SSH; local root requires sudo from the shadow account.
+passwd -l root
+mkdir -p /etc/shadowos
+echo "$LIVE_PASS" > /etc/shadowos/live-password
+chmod 600 /etc/shadowos/live-password
+
+# Never force password expiry on a live ISO — SDDM has no change-password UI.
 chage -M 99999 -E -1 -I -1 shadow 2>/dev/null || true
-chage -d "$(date +%F)" shadow 2>/dev/null || true
-# Root may still be changed at first TTY login on installed media.
-chage -d 0 root 2>/dev/null || true
 echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/wheel
 
 # Skel → live user (including .ssh/authorized_keys)
@@ -175,19 +186,25 @@ date -Iseconds > /etc/shadowos/live-iso
 sed -i 's/Arch Linux/ShadowOS/g' /etc/issue || true
 echo "ShadowOS \\r (\\l)" > /etc/issue
 
-# MOTD shown over SSH and at login TTYs
-cat > /etc/motd <<'EOF'
+# MOTD: show live password and quick-reference.
+# The password is embedded at build time from /etc/shadowos/live-password.
+LIVE_PASS_SHOW=$(cat /etc/shadowos/live-password 2>/dev/null || echo "(see /etc/shadowos/live-password)")
+cat > /etc/motd <<MOTD
 
-  ShadowOS  ·  command quick-reference
+  ShadowOS 3.0.0 — LIVE SESSION
   ─────────────────────────────────────────────
-   shadow-mode <name>    personality switcher (pentest/privacy/dev/ghost/normal)
-   shadow-help-me [min]  expose SSH over a Tor .onion for remote debugging
+   User: shadow   Password: ${LIVE_PASS_SHOW}
+   SSH: key-only (LAN), add pubkey → ~/.ssh/authorized_keys
+
+  Quick reference:
+   shadow-mode <name>    switch mode: pentest | privacy | ghost | gaming | dev | normal
+   shadow-help-me [min]  expose SSH over Tor .onion for remote access
    shadow-leak-test      verify nothing's leaking your real identity
-   shadow-update         smart updater that respects current mode
-   shadowos-diag         bundle journal + hyprland + system into a tarball
+   shadow-update         smart updater (respects current mode)
+   shadowos-diag         bundle system logs into a tarball for debugging
    shadowos-install      install ShadowOS to disk
 
-EOF
+MOTD
 
 # Flatpak / Flathub bootstrap — handles AUR-only apps without an AUR helper
 # These get installed at first-boot via systemd because the live ISO has no network

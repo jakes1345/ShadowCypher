@@ -1,11 +1,14 @@
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Gdk, Pango
-import threading
 import json
-import urllib.request
+import re
+import threading
 import urllib.error
+import urllib.request
 from datetime import datetime, timezone
+
+from gi.repository import Gdk, GLib, Gtk, Pango
 
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
@@ -62,10 +65,12 @@ class MailPage(Gtk.Box):
 
         self._api_key: str = ""
         self._messages: list = []
+        self._selected_msg: dict | None = None
         self._selected_id: str | None = None
         self._polling = False
         self._poll_thread = None
         self._unread_badge: int = 0
+        self._search_query: str = ""
 
         style_provider = Gtk.CssProvider()
         style_provider.load_from_data(SHADOW_CSS)
@@ -122,6 +127,19 @@ class MailPage(Gtk.Box):
         toolbar.pack_end(self._unread_lbl, False, False, 0)
         left.pack_start(toolbar, False, False, 0)
 
+        # Search bar
+        search_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        search_bar.set_margin_start(8)
+        search_bar.set_margin_end(8)
+        search_bar.set_margin_top(4)
+        search_bar.set_margin_bottom(4)
+        self._search_entry = Gtk.SearchEntry()
+        self._search_entry.set_placeholder_text("Search…")
+        self._search_entry.set_hexpand(True)
+        self._search_entry.connect("search-changed", self._on_search_changed)
+        search_bar.pack_start(self._search_entry, True, True, 0)
+        left.pack_start(search_bar, False, False, 0)
+
         sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
         left.pack_start(sep, False, False, 0)
 
@@ -147,11 +165,16 @@ class MailPage(Gtk.Box):
         msg_toolbar.set_margin_top(8)
         msg_toolbar.set_margin_bottom(8)
 
+        self._reply_btn = Gtk.Button(label="↩ Reply")
+        self._reply_btn.set_sensitive(False)
+        self._reply_btn.connect("clicked", self._on_reply)
+
         self._delete_btn = Gtk.Button(label="🗑 Delete")
         self._delete_btn.set_sensitive(False)
         self._delete_btn.connect("clicked", self._on_delete)
 
         msg_toolbar.pack_end(self._delete_btn, False, False, 0)
+        msg_toolbar.pack_end(self._reply_btn, False, False, 0)
         right.pack_start(msg_toolbar, False, False, 0)
 
         sep2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
@@ -274,10 +297,16 @@ class MailPage(Gtk.Box):
 
     def _update_inbox(self, messages: list):
         self._messages = messages
+        q = self._search_query
+        visible = [
+            m for m in messages
+            if not q or q in (m.get("subject") or "").lower() or q in (m.get("from_addr") or "").lower()
+        ] if q else messages
+
         for child in self._inbox_list.get_children():
             self._inbox_list.remove(child)
 
-        if not messages:
+        if not visible:
             self._show_placeholder()
             self._unread_lbl.set_text("")
             return
@@ -286,7 +315,7 @@ class MailPage(Gtk.Box):
         self._unread_badge = unread
         self._unread_lbl.set_text(f"{unread} unread" if unread else "")
 
-        for msg in messages:
+        for msg in visible:
             row = Gtk.ListBoxRow()
             row.message_id = msg["id"]
 
@@ -329,6 +358,7 @@ class MailPage(Gtk.Box):
             return
         self._selected_id = mid
         self._delete_btn.set_sensitive(True)
+        self._reply_btn.set_sensitive(True)
         threading.Thread(target=self._load_message, args=(mid,), daemon=True).start()
 
     def _load_message(self, mid: str):
@@ -339,6 +369,7 @@ class MailPage(Gtk.Box):
             logger.warning("mail", f"load message failed: {e}")
 
     def _display_message(self, msg: dict):
+        self._selected_msg = msg
         self._msg_subject.set_text(msg.get("subject") or "(no subject)")
         self._msg_from.set_markup(f"<b>From:</b>  {msg.get('from_addr', '')}")
         self._msg_to.set_markup(f"<b>To:</b>    {msg.get('to_addr', '')}")
@@ -388,10 +419,36 @@ class MailPage(Gtk.Box):
 
     def _after_delete(self, mid: str):
         self._selected_id = None
+        self._selected_msg = None
         self._delete_btn.set_sensitive(False)
+        self._reply_btn.set_sensitive(False)
         self._right_stack.set_visible_child_name("empty")
         self._refresh()
         return False
+
+    # ── Reply ─────────────────────────────────────────────────────────────────
+
+    def _on_reply(self, _btn):
+        if not self._selected_msg or not self._selected_id:
+            return
+        orig = self._selected_msg
+        dialog = ReplyDialog(
+            parent=self.get_toplevel(),
+            api_key=self._api_key,
+            message_id=self._selected_id,
+            orig_from=orig.get("from_addr", ""),
+            orig_subject=orig.get("subject", ""),
+            orig_body=orig.get("body_text") or _html_to_text(orig.get("body_html") or ""),
+        )
+        dialog.run()
+        dialog.destroy()
+        self._refresh()
+
+    # ── Search ────────────────────────────────────────────────────────────────
+
+    def _on_search_changed(self, entry):
+        self._search_query = entry.get_text().strip().lower()
+        self._update_inbox(self._messages)
 
     # ── Compose ──────────────────────────────────────────────────────────────
 
@@ -491,6 +548,93 @@ class ComposeDialog(Gtk.Dialog):
         return False
 
 
+class ReplyDialog(Gtk.Dialog):
+    def __init__(self, parent, api_key: str, message_id: str, orig_from: str, orig_subject: str, orig_body: str):
+        subject = orig_subject if re.match(r"^re:", orig_subject, re.IGNORECASE) else f"Re: {orig_subject}"
+        super().__init__(title=subject, transient_for=parent, modal=True)
+        self._api_key = api_key
+        self._message_id = message_id
+        self.set_default_size(560, 440)
+        self.get_style_context().add_class("compose-dialog")
+
+        self.add_button("Send Reply", Gtk.ResponseType.OK)
+        self.add_button("Cancel", Gtk.ResponseType.CANCEL)
+
+        box = self.get_content_area()
+        box.set_spacing(8)
+        box.set_margin_start(16)
+        box.set_margin_end(16)
+        box.set_margin_top(12)
+        box.set_margin_bottom(8)
+
+        to_lbl = Gtk.Label(label=f"To: {orig_from}", xalign=0)
+        to_lbl.get_style_context().add_class("mail-header-field")
+        box.pack_start(to_lbl, False, False, 0)
+
+        sub_lbl = Gtk.Label(label=f"Subject: {subject}", xalign=0)
+        sub_lbl.get_style_context().add_class("mail-header-field")
+        box.pack_start(sub_lbl, False, False, 0)
+
+        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        box.pack_start(sep, False, False, 4)
+
+        body_scroller = Gtk.ScrolledWindow()
+        body_scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        body_scroller.set_vexpand(True)
+
+        self._body_view = Gtk.TextView()
+        self._body_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self._body_view.set_left_margin(8)
+        self._body_view.set_right_margin(8)
+        self._body_view.set_top_margin(8)
+        self._body_buffer = self._body_view.get_buffer()
+        # Pre-fill with quoted original
+        if orig_body:
+            quoted = "\n\n\n— Original message —\n" + "\n".join(f"> {ln}" for ln in orig_body.splitlines()[:30])
+            self._body_buffer.set_text(quoted)
+            # Place cursor at top so user types above the quote
+            self._body_buffer.place_cursor(self._body_buffer.get_start_iter())
+        body_scroller.add(self._body_view)
+        box.pack_start(body_scroller, True, True, 0)
+
+        self._status_lbl = Gtk.Label(label="")
+        self._status_lbl.set_halign(Gtk.Align.START)
+        box.pack_start(self._status_lbl, False, False, 0)
+
+        box.show_all()
+
+        ok_btn = self.get_widget_for_response(Gtk.ResponseType.OK)
+        ok_btn.connect("clicked", self._on_send)
+
+        self._to = orig_from
+        self._subject = subject
+
+    def _on_send(self, _btn):
+        start = self._body_buffer.get_start_iter()
+        end = self._body_buffer.get_end_iter()
+        text = self._body_buffer.get_text(start, end, False).strip()
+        if not text:
+            self._status_lbl.set_markup("<span color='#f87171'>Reply body is empty.</span>")
+            return
+        self._status_lbl.set_markup("<span color='#888'>Sending…</span>")
+        threading.Thread(target=self._do_send, args=(text,), daemon=True).start()
+
+    def _do_send(self, text: str):
+        try:
+            _api("POST", f"/v1/mail/{self._message_id}/reply", self._api_key, {"text": text})
+            GLib.idle_add(self._send_done, True, "")
+        except Exception as e:
+            GLib.idle_add(self._send_done, False, str(e))
+
+    def _send_done(self, ok: bool, err: str):
+        if ok:
+            self._status_lbl.set_markup("<span color='#34d399'>Sent.</span>")
+            GLib.timeout_add(1000, self.response, Gtk.ResponseType.OK)
+        else:
+            self._status_lbl.set_markup(f"<span color='#f87171'>Failed: {err[:80]}</span>")
+        return False
+
+
 # ── Utilities ─────────────────────────────────────────────────────────────────
 
 def _html_to_text(html: str) -> str:
@@ -498,5 +642,7 @@ def _html_to_text(html: str) -> str:
     text = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
     text = re.sub(r"</p>", "\n\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", "", text)
-    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&#39;", "'").replace("&nbsp;", " ")
+    for ent, ch in [("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"),
+                    ("&quot;", '"'), ("&#39;", "'"), ("&nbsp;", " ")]:
+        text = text.replace(ent, ch)
     return re.sub(r"\n{3,}", "\n\n", text).strip()

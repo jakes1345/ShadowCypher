@@ -79,7 +79,8 @@ import { runCveMatchingCron } from "./cve_matcher";
 import { getAgentVersion } from "./agent_version";
 import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLookup, webSearch, wikiSummary, ddgInstant } from "./shadow_apis";
 import { getOtaManifest, updateOtaManifest } from "./ota";
-import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers } from "./chat";
+import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, openDm, listDms, createRoom, deleteRoom, updateRoom } from "./chat";
+import { listFiles, uploadFile, downloadFile, deleteFile } from "./files";
 export { ChatRoom } from "./chat_do";
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
@@ -91,6 +92,7 @@ import {
   getMailCount,
   getMail,
   markRead,
+  replyMail,
   deleteMail,
   sendOutbound,
 } from "./mail";
@@ -137,6 +139,8 @@ export interface Env {
   OLLAMA_DEFAULT_MODEL?: string;
   // Durable Objects
   CHAT_ROOM: DurableObjectNamespace;
+  // R2 file storage
+  SHADOW_FILES: R2Bucket;
 }
 
 interface SupabaseUser {
@@ -175,7 +179,7 @@ function corsHeaders(origin: string | null, allowed: string): HeadersInit {
   const allowOrigin = origin && allowList.includes(origin) ? origin : allowList[0];
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Authorization,Content-Type",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
@@ -480,6 +484,9 @@ export default {
               ],
               chat: [
                 "GET /v1/chat/rooms",
+                "POST /v1/chat/rooms",
+                "DELETE /v1/chat/rooms/:name",
+                "PATCH /v1/chat/rooms/:name",
                 "GET /v1/chat/messages?room=global&limit=50&before=<iso>",
                 "POST /v1/chat/send",
                 "POST /v1/chat/presence",
@@ -678,10 +685,16 @@ export default {
         "GET /v1/shadow/search":              webSearch,
         // Chat
         "GET /v1/chat/rooms":                 listRooms,
+        "POST /v1/chat/rooms":                createRoom,
         "GET /v1/chat/messages":              getMessages,
         "POST /v1/chat/send":                 sendMessage,
         "POST /v1/chat/presence":             updatePresence,
         "GET /v1/chat/online":                getOnlineUsers,
+        "GET /v1/chat/dm":                    listDms,
+        "POST /v1/chat/dm/open":              openDm,
+        // File storage
+        "GET /v1/files":                      listFiles,
+        "POST /v1/files/upload":              uploadFile,
         // Shadow Mail
         "GET /v1/mail/inbox":                 getInbox,
         "GET /v1/mail/count":                 getMailCount,
@@ -704,9 +717,16 @@ export default {
       // Shadow Mail parameterized routes
       const mailGet    = req.method === "GET"    && /^\/v1\/mail\/[^/]+$/.test(path) && path !== "/v1/mail/inbox" && path !== "/v1/mail/count";
       const mailRead   = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/read$/.test(path);
+      const mailReply  = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/reply$/.test(path);
       const mailDelete = req.method === "DELETE" && /^\/v1\/mail\/[^/]+$/.test(path);
+      // File storage
+      const fileGet    = req.method === "GET"    && /^\/v1\/files\/.+/.test(path);
+      const fileDelete = req.method === "DELETE" && /^\/v1\/files\/.+/.test(path);
+      // Chat room management (parameterized)
+      const chatRoomDelete = req.method === "DELETE" && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
+      const chatRoomPatch  = req.method === "PATCH"  && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailDelete;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailReply || mailDelete || fileGet || fileDelete || chatRoomDelete || chatRoomPatch;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -725,6 +745,14 @@ export default {
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         if ((agentMissionCreate || agentMissionPending) && !rateLimit(`msn:${user.id}`, 10, 60_000))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/files/upload" && !rateLimit(`upload:${user.id}`, 10, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/chat/dm/open" && !rateLimit(`dm-open:${user.id}`, 20, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/mail/send" && !rateLimit(`mail-send:${user.id}`, 10, 60_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/chat/rooms" && !rateLimit(`room-create:${user.id}`, 5, 3_600_000))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
 
         if (handler) return handler(req, env, { id: user.id, email: user.email }, cors);
 
@@ -737,7 +765,18 @@ export default {
         // Shadow Mail
         if (mailGet)    return getMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (mailRead)   return markRead(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        if (mailReply)  return replyMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (mailDelete) return deleteMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        // Chat room management — room name is last path segment
+        if (chatRoomDelete || chatRoomPatch) {
+          const roomName = path.split("/").pop()!;
+          if (chatRoomDelete) return deleteRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
+          if (chatRoomPatch)  return updateRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
+        }
+        // File storage — key is everything after /v1/files/
+        const fileKey = path.slice("/v1/files/".length);
+        if (fileGet)    return downloadFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
+        if (fileDelete) return deleteFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
       }
 
       // ── WebSocket upgrade: GET /v1/chat/ws?room=<name> ─────────────────────
@@ -751,8 +790,8 @@ export default {
         const roomName = (url.searchParams.get("room") ?? "global").slice(0, 64);
 
         // Resolve room to get its ID
-        const rooms = await dbSelect<{ id: string; name: string; room_type: string; team_id: string | null }>(
-          env, "chat_rooms", { filters: { name: `eq.${roomName}` }, limit: 1 }
+        const rooms = await dbSelect<{ id: string; name: string; display_name: string; room_type: string; team_id: string | null }>(
+          env, "chat_rooms", { select: "id,name,display_name,room_type,team_id", filters: { name: `eq.${roomName}` }, limit: 1 }
         );
         if (!rooms.length) return new Response("room_not_found", { status: 404 });
         const room = rooms[0];
@@ -765,6 +804,13 @@ export default {
           if (!members.length) return new Response("forbidden", { status: 403 });
         }
 
+        // DM room access check (display_name format: nick1:nick2:uid1:uid2)
+        if (room.room_type === "dm") {
+          const parts = room.display_name.split(":");
+          const [uid1, uid2] = [parts[2], parts[3]]; // UIDs are 3rd and 4th colon-delimited fields
+          if (uid1 !== user.id && uid2 !== user.id) return new Response("forbidden", { status: 403 });
+        }
+
         const nick = user.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
         const doId = env.CHAT_ROOM.idFromName(roomName);
         const stub = env.CHAT_ROOM.get(doId);
@@ -774,6 +820,7 @@ export default {
         doUrl.searchParams.set("nick", nick);
         doUrl.searchParams.set("room_id", room.id);
         doUrl.searchParams.set("room", roomName);
+        doUrl.searchParams.set("room_type", room.room_type);
         return stub.fetch(new Request(doUrl.toString(), req));
       }
 

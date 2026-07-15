@@ -1,0 +1,132 @@
+name: ShadowOS ISO Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+
+permissions:
+  contents: write   # needed to upload release assets
+
+jobs:
+  build-iso:
+    name: Build ShadowOS ISO
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Cache pacman packages so repeated builds don't re-download all 400+ packages
+      - name: Cache pacman packages
+        uses: actions/cache@v4
+        with:
+          path: /tmp/pacman-cache
+          key: shadowos-pkgs-${{ hashFiles('shadowos/profile/packages.x86_64') }}
+          restore-keys: shadowos-pkgs-
+
+      - name: Prepare host directories
+        run: mkdir -p /tmp/pacman-cache /tmp/iso-out
+
+      - name: Resolve ISO version tag
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=dev-$(date +%Y.%m.%d)-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build ISO inside Arch Linux container
+        run: |
+          docker run --rm --privileged \
+            --volume "${{ github.workspace }}:/build" \
+            --volume "/tmp/pacman-cache:/var/cache/pacman/pkg" \
+            --volume "/tmp/iso-out:/iso-out" \
+            archlinux:latest \
+            bash -ex -c '
+              # Keep signature checking enabled — Required DatabaseOptional is the Arch default
+              # and verifies package signatures while tolerating missing optional DB sigs.
+              sed -i "s/^SigLevel.*/SigLevel = Required DatabaseOptional/" /etc/pacman.conf
+
+              # Refresh DB and install build deps
+              pacman -Sy --noconfirm archiso rsync
+
+              # Run the ShadowOS build script (already handles its own mkarchiso call)
+              cd /build/shadowos
+              bash build.sh
+
+              # Export the ISO to the shared output directory
+              cp out/*.iso /iso-out/
+            '
+
+      - name: Generate checksums
+        run: |
+          cd /tmp/iso-out
+          sha256sum *.iso > SHA256SUMS
+          echo "=== Build output ==="
+          ls -lh
+          echo "=== SHA256SUMS ==="
+          cat SHA256SUMS
+
+      - name: Sign ISO with GPG
+        if: secrets.SHADOWOS_SIGNING_KEY != ''
+        env:
+          SHADOWOS_SIGNING_KEY: ${{ secrets.SHADOWOS_SIGNING_KEY }}
+          SHADOWOS_SIGNING_KEY_ID: ${{ secrets.SHADOWOS_SIGNING_KEY_ID }}
+        run: |
+          echo "$SHADOWOS_SIGNING_KEY" | gpg --batch --import
+          cd /tmp/iso-out
+          for iso in *.iso; do
+            gpg --batch --yes --armor --detach-sign \
+              --local-user "$SHADOWOS_SIGNING_KEY_ID" \
+              "$iso"
+            echo "Signed: ${iso}.asc"
+          done
+          # Sign the SHA256SUMS file too so users can verify the whole manifest
+          gpg --batch --yes --armor --detach-sign \
+            --local-user "$SHADOWOS_SIGNING_KEY_ID" \
+            SHA256SUMS
+          echo "=== Signatures ==="
+          ls -lh *.asc
+
+      - name: Rename ISO to include version tag
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          cd /tmp/iso-out
+          for f in shadowos-*.iso; do
+            base="${f%.iso}"
+            mv "$f" "${base}-${TAG}.iso"
+          done
+          # Re-generate checksums with final filenames
+          sha256sum *.iso > SHA256SUMS
+          ls -lh
+
+      - name: Upload ISO as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadowos-${{ steps.version.outputs.tag }}
+          path: |
+            /tmp/iso-out/*.iso
+            /tmp/iso-out/*.asc
+            /tmp/iso-out/SHA256SUMS
+          retention-days: 30
+
+      - name: Attach ISO to GitHub release
+        if: >
+          github.event_name == 'release' ||
+          (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          for f in /tmp/iso-out/*.iso /tmp/iso-out/*.asc /tmp/iso-out/SHA256SUMS; do
+            [[ -f "$f" ]] || continue
+            echo "Uploading $(basename "$f") → release $TAG"
+            gh release upload "$TAG" "$f" --clobber
+          done
+          echo "✓ ISO attached to release $TAG"
