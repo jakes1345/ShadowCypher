@@ -295,7 +295,7 @@ moonlight-qt
 # xpadneo-dkms — AUR; Xbox One S/X wireless via Bluetooth (install via: yay -S xpadneo-dkms)
 # xone-dkms    — AUR; Xbox One dongle driver             (install via: yay -S xone-dkms)
 # Both need DKMS so they're post-boot installs. Steam handles most controllers natively via udev.
-steam-devices   # already above but contains the udev rules for 300+ controllers
+# steam-devices — already listed in gaming section; udev rules for 300+ controllers included there
 
 # === Universal launchers / app management ===
 flatpak
