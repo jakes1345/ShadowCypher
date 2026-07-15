@@ -18,7 +18,12 @@ Start:  python3 shadowcypher/mcp_server_campaign.py
 Config: add 'shadow-cypher-campaign' to mcpServers in .claude/settings.json
 """
 
-import sys, os, json, re, time, uuid, datetime
+import datetime
+import json
+import os
+import re
+import sys
+import uuid
 
 JSONRPC_VERSION     = "2.0"
 MCP_PROTOCOL_VERSION = "2024-11-05"
@@ -258,16 +263,16 @@ def tool_campaign_report(campaign_id: str) -> dict:
 
     lines = [
         f"# {c['name']} — Engagement Report",
-        f"",
+        "",
         f"**Type:** {c.get('engagement_type', 'pentest')}  ",
         f"**Status:** {c['status']}  ",
         f"**Created:** {c.get('created_at', '')}  ",
         f"**Generated:** {_now()}",
-        f"",
-        f"## Scope",
+        "",
+        "## Scope",
         c.get("scope") or "_Not defined_",
-        f"",
-        f"## Target Summary",
+        "",
+        "## Target Summary",
     ]
     if targets:
         for t in targets:
@@ -277,11 +282,11 @@ def tool_campaign_report(campaign_id: str) -> dict:
         lines.append("_No targets recorded_")
 
     lines += [
-        f"",
-        f"## Finding Summary",
-        f"",
-        f"| Severity | Count |",
-        f"|----------|-------|",
+        "",
+        "## Finding Summary",
+        "",
+        "| Severity | Count |",
+        "|----------|-------|",
     ]
     for sev in ("critical", "high", "medium", "low", "info"):
         n = sev_counts.get(sev, 0)
@@ -302,15 +307,15 @@ def tool_campaign_report(campaign_id: str) -> dict:
                 name = _TECHNIQUES.get(tid, (tid,))[0]
                 labels.append(f"`{tid}` {name}")
             lines.append(f"**ATT&CK:** {', '.join(labels)}  ")
-        lines.append(f"")
+        lines.append("")
         lines.append(f"**Description:** {f['description']}")
         if f.get("proof"):
-            lines.append(f"")
+            lines.append("")
             lines.append(f"**Proof:** {f['proof']}")
         if f.get("recommendation"):
-            lines.append(f"")
+            lines.append("")
             lines.append(f"**Recommendation:** {f['recommendation']}")
-        lines.append(f"")
+        lines.append("")
 
     lines += ["## MITRE ATT&CK Coverage", ""]
     if tactic_groups:

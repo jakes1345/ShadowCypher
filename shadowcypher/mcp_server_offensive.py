@@ -17,7 +17,14 @@ NOTE: All tools are for authorized engagements only. Ensure written permission
       before scanning targets you do not own.
 """
 
-import sys, os, json, re, socket, subprocess, shutil, time, urllib.request, urllib.parse
+import json
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import urllib.parse
+import urllib.request
 
 JSONRPC_VERSION     = "2.0"
 MCP_PROTOCOL_VERSION = "2024-11-05"
@@ -272,7 +279,7 @@ def tool_web_recon(target: str) -> dict:
         location = re.findall(r"^Location:\s*(.+)", out, re.MULTILINE | re.IGNORECASE)
         result["server"] = server.group(1).strip() if server else None
         result["powered_by"] = powered.group(1).strip() if powered else None
-        result["redirects"] = [l.strip() for l in location]
+        result["redirects"] = [loc.strip() for loc in location]
 
         # Security headers
         security_headers = [

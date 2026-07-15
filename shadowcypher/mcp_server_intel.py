@@ -13,7 +13,17 @@ Start:  python3 shadowcypher/mcp_server_intel.py
 Config: add 'shadow-cypher-intel' to mcpServers in .claude/settings.json
 """
 
-import sys, os, json, re, socket, subprocess, shutil, time, urllib.request, urllib.parse, urllib.error
+import json
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 JSONRPC_VERSION    = "2.0"
 MCP_PROTOCOL_VERSION = "2024-11-05"
@@ -333,7 +343,7 @@ def tool_osint(target: str, check_type: str = "all") -> dict:
     if checks in ("all", "whois"):
         out, rc = run(["whois", target], timeout=15)
         if rc == 0 and out:
-            lines = [l for l in out.splitlines() if l.strip() and not l.startswith("%")][:30]
+            lines = [ln for ln in out.splitlines() if ln.strip() and not ln.startswith("%")][:30]
             result["whois"] = "\n".join(lines)
 
     if checks in ("all", "dns"):
@@ -349,7 +359,6 @@ def tool_osint(target: str, check_type: str = "all") -> dict:
                        f"{target}:443", "-showcerts", "</dev/null"], timeout=15)
         if rc == 0 and out:
             cert_lines = []
-            in_cert = False
             for line in out.splitlines():
                 if "subject=" in line or "issuer=" in line or "Not Before" in line or "Not After" in line:
                     cert_lines.append(line.strip())

@@ -1,12 +1,14 @@
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Gdk, Pango
+import json
 import re
 import threading
-import json
-import urllib.request
 import urllib.error
+import urllib.request
 from datetime import datetime, timezone
+
+from gi.repository import Gdk, GLib, Gtk, Pango
 
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
@@ -588,7 +590,7 @@ class ReplyDialog(Gtk.Dialog):
         self._body_buffer = self._body_view.get_buffer()
         # Pre-fill with quoted original
         if orig_body:
-            quoted = "\n\n\n— Original message —\n" + "\n".join(f"> {l}" for l in orig_body.splitlines()[:30])
+            quoted = "\n\n\n— Original message —\n" + "\n".join(f"> {ln}" for ln in orig_body.splitlines()[:30])
             self._body_buffer.set_text(quoted)
             # Place cursor at top so user types above the quote
             self._body_buffer.place_cursor(self._body_buffer.get_start_iter())
@@ -640,5 +642,7 @@ def _html_to_text(html: str) -> str:
     text = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
     text = re.sub(r"</p>", "\n\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", "", text)
-    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&#39;", "'").replace("&nbsp;", " ")
+    for ent, ch in [("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"),
+                    ("&quot;", '"'), ("&#39;", "'"), ("&nbsp;", " ")]:
+        text = text.replace(ent, ch)
     return re.sub(r"\n{3,}", "\n\n", text).strip()
