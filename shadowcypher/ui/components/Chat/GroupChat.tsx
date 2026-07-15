@@ -101,9 +101,9 @@ export const GroupChat: React.FC<GroupChatProps> = ({ groupId, currentUser, toke
                             decryptedMessages.map(msg => (
                                 <div
                                     key={msg.id}
-                                    className={`message ${msg.sender_id === currentUser.username ? 'sent' : 'received'}`}
+                                    className={`message ${msg.sender_username === currentUser.username ? 'sent' : 'received'}`}
                                 >
-                                    <div className="message-sender">{msg.sender_id}</div>
+                                    <div className="message-sender">{msg.sender_username}</div>
                                     <div className="message-content">{msg.plaintext || msg.encrypted_message}</div>
                                     <div className="message-time">{new Date(msg.created_at * 1000).toLocaleTimeString()}</div>
                                 </div>

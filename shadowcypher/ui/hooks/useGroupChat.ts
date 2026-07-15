@@ -28,7 +28,8 @@ export interface Group {
 export interface GroupMessage {
     id: string;
     group_id: string;
-    sender_id: string;  // User ID (string) who sent message
+    sender_id: number;
+    sender_username: string;
     encrypted_message: string;  // Hex-encoded ciphertext + auth tag
     nonce: string;  // Hex-encoded 12-byte nonce
     key_version: number;  // Which group key version was used to encrypt
