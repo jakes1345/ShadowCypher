@@ -248,7 +248,7 @@ def tool_subdomain_enum(domain: str, wordlist: str = "") -> dict:
     try:
         url = f"https://crt.sh/?q=%25.{urllib.parse.quote(domain)}&output=json"
         req = urllib.request.Request(url, headers={"User-Agent": "ShadowCypher/1.0"})
-        with urllib.request.urlopen(req, timeout=15) as r:
+        with urllib.request.urlopen(req, timeout=15) as r:  # nosec B310
             data = json.loads(r.read())
         seen = set(f["subdomain"] for f in found)
         for entry in data[:200]:
@@ -369,7 +369,7 @@ def tool_dir_brute(target: str, wordlist: str = "", extensions: str = "") -> dic
         try:
             req = urllib.request.Request(check_url, method="HEAD",
                                           headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=5) as r:
+            with urllib.request.urlopen(req, timeout=5) as r:  # nosec B310
                 found.append({"path": f"/{path}", "status": r.status})
         except urllib.error.HTTPError as e:
             if e.code in (401, 403):

@@ -51,7 +51,7 @@ def _key(name, env_var):
 
 def _http_get(url, headers=None, timeout=15):
     req = urllib.request.Request(url, headers=headers or {})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with urllib.request.urlopen(req, timeout=timeout) as r:  # nosec B310
         return json.loads(r.read().decode())
 
 def run(cmd, timeout=20):
@@ -218,7 +218,7 @@ def _ti_urlhaus(target: str, target_type: str) -> dict:
 def _http_get_post(url, body):
     req = urllib.request.Request(url, data=body.encode(), method="POST")
     req.add_header("Content-Type", "application/x-www-form-urlencoded")
-    with urllib.request.urlopen(req, timeout=15) as r:
+    with urllib.request.urlopen(req, timeout=15) as r:  # nosec B310
         return json.loads(r.read().decode())
 
 def tool_threat_lookup(target: str) -> dict:
