@@ -41,6 +41,9 @@ jobs:
             echo "tag=dev-$(date +%Y.%m.%d)-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Validate ShadowOS configuration
+        run: bash shadowos/validate.sh
+
       - name: Build ISO inside Arch Linux container
         run: |
           docker run --rm --privileged \
@@ -74,11 +77,11 @@ jobs:
           cat SHA256SUMS
 
       - name: Sign ISO with GPG
-        if: secrets.SHADOWOS_SIGNING_KEY != ''
         env:
           SHADOWOS_SIGNING_KEY: ${{ secrets.SHADOWOS_SIGNING_KEY }}
           SHADOWOS_SIGNING_KEY_ID: ${{ secrets.SHADOWOS_SIGNING_KEY_ID }}
         run: |
+          [[ -z "$SHADOWOS_SIGNING_KEY" ]] && { echo "No signing key configured — skipping GPG sign"; exit 0; }
           echo "$SHADOWOS_SIGNING_KEY" | gpg --batch --import
           cd /tmp/iso-out
           for iso in *.iso; do
