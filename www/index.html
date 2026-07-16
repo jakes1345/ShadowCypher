@@ -2527,15 +2527,12 @@
             const code = document.getElementById('forgot-code').value.trim().toLowerCase();
             if (!rawHandle || !code) { showAuthBanner('Handle and recovery code required.', 'error'); return; }
             try {
-                const resp = await callApi('/v1/auth/recover', {
+                const data = await callApi('/v1/auth/recover', {
                     method: 'POST',
                     body: JSON.stringify({ handle: rawHandle, code }),
                 });
-                if (!resp.ok) {
-                    const body = await resp.json().catch(() => ({}));
-                    throw new Error(body.error || 'Recovery failed.');
-                }
-                const { access_token, refresh_token } = await resp.json();
+                const { access_token, refresh_token } = data;
+                if (!access_token || !refresh_token) throw new Error('Recovery failed — no session returned.');
                 await supabaseClient.auth.setSession({ access_token, refresh_token });
                 toggleAuth('reset');
                 showAuthBanner('Recovery successful. Set a new password below.', 'info');
