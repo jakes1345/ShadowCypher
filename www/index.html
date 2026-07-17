@@ -2735,6 +2735,7 @@
         }
 
         async function refreshGuardian() {
+            if (!_sessionApiKey) return;
             const indicator = document.getElementById('guardian-refresh-indicator');
             if (indicator) indicator.style.opacity = '1';
             try {

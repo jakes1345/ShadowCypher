@@ -3,7 +3,7 @@
 // - Handles web-push events (delivers Guardian incident notifications)
 // - Click-through navigates the user to the relevant dashboard page
 
-const CACHE = "shadowcypher-v3";
+const CACHE = "shadowcypher-v4";
 const SHELL = ["/", "/index.html", "/styles.css", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
