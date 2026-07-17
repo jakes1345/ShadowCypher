@@ -73,7 +73,7 @@ extracted_creds.txt
 /tmp/shadowcypher-*
 .shortest/
 .cursor/
-.claude/
+.claude/*
 !.claude/settings.json
 .sisyphus/
 payloads/
