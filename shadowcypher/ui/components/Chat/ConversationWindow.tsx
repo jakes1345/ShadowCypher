@@ -1,30 +1,12 @@
 import React from 'react';
-import { decryptMessage } from '../../crypto/chatCrypto';
-
-interface Message {
-    id: number;
-    sender: string;
-    timestamp: number;
-    encrypted_message: string;
-    nonce: string;
-}
+import type { ChatMessage } from '../../hooks/useChat';
 
 interface ConversationWindowProps {
-    messages: Message[];
-    currentUser: string;
-    sessionKey: string | null;
+    messages: ChatMessage[];
+    currentNick: string;
 }
 
-export function ConversationWindow({ messages, currentUser, sessionKey }: ConversationWindowProps) {
-    function decryptText(msg: Message): string {
-        if (!sessionKey) return '[Vault locked — unlock to read messages]';
-        try {
-            return decryptMessage(msg.encrypted_message, msg.nonce, sessionKey);
-        } catch {
-            return '[Decryption failed]';
-        }
-    }
-
+export function ConversationWindow({ messages, currentNick }: ConversationWindowProps) {
     return (
         <div className="conversation-window">
             <div className="messages-container">
@@ -33,11 +15,13 @@ export function ConversationWindow({ messages, currentUser, sessionKey }: Conver
                         No messages yet. Send the first one!
                     </div>
                 )}
-                {messages.map((msg) => (
-                    <div key={msg.id} className={`message ${msg.sender === currentUser ? 'sent' : 'received'}`}>
-                        <div className="message-sender">{msg.sender}</div>
-                        <div className="message-text">{decryptText(msg)}</div>
-                        <div className="message-time">{new Date(msg.timestamp * 1000).toLocaleTimeString()}</div>
+                {messages.map(msg => (
+                    <div key={msg.id} className={`message ${msg.nick === currentNick ? 'sent' : 'received'}`}>
+                        <div className="message-sender">{msg.nick}</div>
+                        <div className="message-text">{msg.content}</div>
+                        <div className="message-time">
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
                     </div>
                 ))}
             </div>

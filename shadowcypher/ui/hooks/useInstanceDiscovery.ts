@@ -1,61 +1,65 @@
 import { useState, useCallback } from 'react';
 
-interface Instance {
-  instance_id: string;
-  public_key: string;
-  endpoint: string | null;
-  is_online: boolean;
-  last_heartbeat: number;
+const API_BASE = 'https://api.shadowcypher.site';
+
+// Repurposed: shows users online in the global room instead of P2P instances
+export interface OnlineUser {
+    instance_id: string;
+    public_key: string;
+    endpoint: string | null;
+    is_online: boolean;
+    last_heartbeat: number;
 }
 
-export function useInstanceDiscovery() {
-  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-  const [instances, setInstances] = useState<Instance[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface PresenceRow {
+    user_id: string;
+    nick: string;
+    seen_at: string;
+}
 
-  const registerInstance = useCallback(
-    async (instance_id: string, pubkey: string, endpoint?: string) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${API_BASE}/chat/instances/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ public_key: pubkey, endpoint }),
-        });
-        if (!response.ok) throw new Error(await response.text());
-        const instance = await response.json();
-        setInstances(prev => [...prev, instance]);
-        return instance;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+export function useInstanceDiscovery(apiKey?: string | null) {
+    const [instances, setInstances] = useState<OnlineUser[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-  const listInstances = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/chat/instances`);
-      if (!response.ok) throw new Error(await response.text());
-      setInstances(await response.json());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
+    function authHeader() {
+        return apiKey ? { Authorization: `Bearer ${apiKey}` } : {} as Record<string, string>;
     }
-  }, []);
 
-  const getInstanceStatus = useCallback(async (instance_id: string) => {
-    const response = await fetch(`${API_BASE}/chat/instances/${instance_id}`);
-    if (!response.ok) throw new Error(await response.text());
-    return await response.json();
-  }, []);
+    // Lists users online in the global room — mapped to the old Instance shape
+    const listInstances = useCallback(async (room = 'global') => {
+        if (!apiKey) return;
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch(
+                `${API_BASE}/v1/chat/online?room=${encodeURIComponent(room)}`,
+                { headers: authHeader() }
+            );
+            if (!res.ok) throw new Error(`${res.status}`);
+            const data = await res.json() as { online: PresenceRow[] };
+            setInstances((data.online ?? []).map(u => ({
+                instance_id: u.user_id,
+                public_key: '',
+                endpoint: null,
+                is_online: true,
+                last_heartbeat: Math.floor(new Date(u.seen_at).getTime() / 1000),
+            })));
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to fetch online users');
+        } finally {
+            setLoading(false);
+        }
+    }, [apiKey]);
 
-  return { instances, loading, error, registerInstance, listInstances, getInstanceStatus };
+    // Not applicable to the Worker model — no-op
+    const registerInstance = useCallback(async (_instanceId: string, _pubkey: string, _endpoint?: string) => {
+        return null;
+    }, []);
+
+    const getInstanceStatus = useCallback(async (_instanceId: string) => {
+        return null;
+    }, []);
+
+    return { instances, loading, error, listInstances, registerInstance, getInstanceStatus };
 }

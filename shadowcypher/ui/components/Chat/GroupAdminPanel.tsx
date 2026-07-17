@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useGroupChat } from '../../hooks/useGroupChat';
 
 interface GroupAdminPanelProps {
@@ -10,110 +10,55 @@ interface GroupAdminPanelProps {
 }
 
 export const GroupAdminPanel: React.FC<GroupAdminPanelProps> = ({
-    groupId,
-    creatorId,
-    creatorUserId,
-    currentUser,
-    token
+    groupId, creatorId, creatorUserId, currentUser, token
 }) => {
-    const [newMemberId, setNewMemberId] = useState('');
+    const [inviteEmail, setInviteEmail] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    const { currentGroupMembers, fetchGroupMembers, addMember, removeMember, error } = useGroupChat(token);
+    const { addMember, error } = useGroupChat(token);
 
-    useEffect(() => {
-        if (groupId) {
-            fetchGroupMembers(groupId);
-        }
-    }, [groupId, fetchGroupMembers]);
+    const isOwner = creatorUserId
+        ? currentUser.id === creatorUserId
+        : currentUser.username === creatorId;
 
-    // Only creator can manage
-    const isCreator = creatorUserId
-        ? currentUser.id === creatorUserId  // compare user IDs
-        : currentUser.username === creatorId; // fallback (legacy)
-
-    const handleAddMember = async (e: React.FormEvent) => {
+    const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMemberId.trim()) return;
-
+        if (!inviteEmail.trim()) return;
         setSubmitting(true);
         try {
-            const success = await addMember(groupId, newMemberId);
-            if (success) {
-                setNewMemberId('');
-            }
+            await addMember(groupId, inviteEmail.trim());
+            setInviteEmail('');
         } finally {
             setSubmitting(false);
         }
     };
 
-    const handleRemoveMember = async (memberId: string, userId: string) => {
-        if (!window.confirm(`Remove ${userId} from group?`)) return;
-
-        setSubmitting(true);
-        try {
-            await removeMember(groupId, memberId);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    if (!isCreator) {
-        return (
-            <div className="admin-panel">
-                <p className="not-creator">Only the group creator can manage members</p>
-            </div>
-        );
+    if (!isOwner) {
+        return <div className="admin-panel"><p className="not-creator">Only the group owner can manage members</p></div>;
     }
 
     return (
         <div className="admin-panel">
-            <h3>👨‍💼 Admin Panel</h3>
-
+            <h3>Admin Panel</h3>
             {error && <div className="error-message">{error}</div>}
-
-            <form onSubmit={handleAddMember} className="add-member-form">
+            <form onSubmit={handleInvite} className="add-member-form">
                 <div className="form-group">
-                    <label htmlFor="member-id">Add Member by ID</label>
+                    <label htmlFor="invite-email">Invite by email</label>
                     <input
-                        id="member-id"
-                        type="text"
-                        value={newMemberId}
-                        onChange={(e) => setNewMemberId(e.target.value)}
-                        placeholder="Enter user ID..."
+                        id="invite-email"
+                        type="email"
+                        value={inviteEmail}
+                        onChange={e => setInviteEmail(e.target.value)}
+                        placeholder="user@example.com"
                         disabled={submitting}
                     />
                 </div>
-                <button type="submit" disabled={!newMemberId.trim() || submitting}>
-                    {submitting ? 'Adding...' : 'Add Member'}
+                <button type="submit" disabled={!inviteEmail.trim() || submitting}>
+                    {submitting ? 'Inviting...' : 'Send Invite'}
                 </button>
             </form>
-
-            <div className="members-management">
-                <h4>Current Members</h4>
-                {currentGroupMembers.length === 0 ? (
-                    <p>No members in this group</p>
-                ) : (
-                    <div className="members-list">
-                        {currentGroupMembers.map(member => (
-                            <div key={member.id} className="member-row">
-                                <span className="member-id">
-                                    {member.user_id}
-                                    {member.user_id === creatorId && <span className="creator-badge">👑</span>}
-                                </span>
-                                {member.user_id !== creatorId && (
-                                    <button
-                                        className="remove-button"
-                                        onClick={() => handleRemoveMember(member.id, member.user_id)}
-                                        disabled={submitting}
-                                    >
-                                        Remove
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: 12 }}>
+                Invited users accept via the Teams tab. Member listing requires the Operator plan.
+            </p>
         </div>
     );
 };

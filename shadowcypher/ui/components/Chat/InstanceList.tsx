@@ -2,8 +2,8 @@ import React, { useEffect } from 'react';
 import { useInstanceDiscovery } from '../../hooks/useInstanceDiscovery';
 import './InstanceList.css';
 
-export const InstanceList = () => {
-  const { instances, loading, error, listInstances } = useInstanceDiscovery();
+export const InstanceList = ({ token }: { token?: string | null }) => {
+  const { instances, loading, error, listInstances } = useInstanceDiscovery(token);
 
   useEffect(() => {
     listInstances();

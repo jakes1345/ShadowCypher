@@ -1,245 +1,164 @@
 import { useState, useCallback } from 'react';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE = 'https://api.shadowcypher.site';
 
-/**
- * Group — team chat container
- * group_key: hex-encoded 32-byte AES-256 key (current)
- * new_group_key_hex: rotated key (if null, use group_key)
- * key_version: incremented on key rotation
- * created_at: unix timestamp in seconds
- */
+// Groups map to Worker teams + team rooms (room_type: "team", name: "team-{id}")
 export interface Group {
     id: string;
     name: string;
-    creator_id: string;  // User ID (string) who created group
-    group_key: string;   // Hex-encoded 32-byte key
-    new_group_key_hex: string | null;  // Rotated key (null = no rotation pending)
-    key_version: number;  // Incremented on key rotation
-    created_at: number;  // Unix timestamp (seconds)
+    role: 'owner' | 'member';
+    is_owner: boolean;
+    created_at: string;
 }
 
-/**
- * GroupMessage — encrypted message in group
- * encrypted_message: hex-encoded ciphertext (includes 16-byte auth tag)
- * nonce: hex-encoded 12-byte nonce
- * created_at: unix timestamp in seconds
- */
 export interface GroupMessage {
     id: string;
-    group_id: string;
-    sender_id: number;
-    sender_username: string;
-    encrypted_message: string;  // Hex-encoded ciphertext + auth tag
-    nonce: string;  // Hex-encoded 12-byte nonce
-    key_version: number;  // Which group key version was used to encrypt
-    created_at: number;  // Unix timestamp (seconds)
+    user_id: string;
+    nick: string;
+    content: string;
+    created_at: string;
 }
 
-/**
- * GroupMember — user membership record
- * joined_at: unix timestamp in seconds
- */
+// Worker has no team-members listing endpoint; this is a stub shape
 export interface GroupMember {
-    id: string;  // Member record UUID
-    user_id: string;  // User ID (string)
-    joined_at: number;  // Unix timestamp (seconds)
+    id: string;
+    user_id: string;
+    joined_at: string;
 }
 
-interface DecryptedMessage extends GroupMessage {
-    plaintext?: string;
-}
-
-export function useGroupChat(token: string | null) {
+export function useGroupChat(apiKey: string | null) {
     const [groups, setGroups] = useState<Group[]>([]);
     const [currentGroupMessages, setCurrentGroupMessages] = useState<GroupMessage[]>([]);
     const [currentGroupMembers, setCurrentGroupMembers] = useState<GroupMember[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    function authHeader() {
+        return apiKey ? { Authorization: `Bearer ${apiKey}` } : {} as Record<string, string>;
+    }
+
     const fetchGroups = useCallback(async () => {
-        if (!token) return;
+        if (!apiKey) return;
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`${API_BASE}/chat/groups`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (!res.ok) throw new Error('Failed to fetch groups');
-            const data = await res.json();
-            setGroups(data);
+            const res = await fetch(`${API_BASE}/v1/teams`, { headers: authHeader() });
+            if (!res.ok) throw new Error(`${res.status}`);
+            const data = await res.json() as { teams: Group[] };
+            setGroups(data.teams ?? []);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            setError(err instanceof Error ? err.message : 'Failed to fetch groups');
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, [apiKey]);
 
-    const createGroup = useCallback(async (name: string) => {
-        if (!token) return null;
+    const createGroup = useCallback(async (name: string): Promise<Group | null> => {
+        if (!apiKey) return null;
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`${API_BASE}/chat/groups`, {
+            const res = await fetch(`${API_BASE}/v1/teams`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({ name })
+                headers: { ...authHeader(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name }),
             });
-            if (!res.ok) throw new Error('Failed to create group');
-            const group = await res.json();
-            setGroups(prev => [...prev, group]);
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({})) as { error?: string };
+                throw new Error(body.error ?? `${res.status}`);
+            }
+            const data = await res.json() as { team_id: string; name: string; created_at: string };
+            const group: Group = { id: data.team_id, name: data.name, role: 'owner', is_owner: true, created_at: data.created_at };
+            setGroups(prev => [group, ...prev]);
             return group;
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            setError(err instanceof Error ? err.message : 'Failed to create group');
             return null;
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, [apiKey]);
 
-    const fetchGroupMessages = useCallback(async (groupId: string) => {
-        if (!token) return;
+    const fetchGroupMessages = useCallback(async (teamId: string) => {
+        if (!apiKey) return;
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`${API_BASE}/chat/groups/${groupId}/messages`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (!res.ok) throw new Error('Failed to fetch messages');
-            const data = await res.json();
-            setCurrentGroupMessages(data);
+            const room = `team-${teamId}`;
+            const res = await fetch(
+                `${API_BASE}/v1/chat/messages?room=${encodeURIComponent(room)}&limit=50`,
+                { headers: authHeader() }
+            );
+            if (!res.ok) throw new Error(`${res.status}`);
+            const data = await res.json() as { messages: GroupMessage[] };
+            setCurrentGroupMessages(data.messages ?? []);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            setError(err instanceof Error ? err.message : 'Failed to fetch messages');
         } finally {
             setLoading(false);
         }
-    }, [token]);
+    }, [apiKey]);
 
-    const fetchGroupMembers = useCallback(async (groupId: string) => {
-        if (!token) return;
-        try {
-            const res = await fetch(`${API_BASE}/chat/groups/${groupId}/members`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (!res.ok) throw new Error('Failed to fetch members');
-            const data = await res.json();
-            setCurrentGroupMembers(data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
-        }
-    }, [token]);
+    // Worker has no team-members listing endpoint — returns empty list
+    const fetchGroupMembers = useCallback(async (_teamId: string) => {
+        setCurrentGroupMembers([]);
+    }, []);
 
-    const sendMessage = useCallback(async (groupId: string, encryptedMessage: string, nonce: string, keyVersion: number) => {
-        if (!token) return null;
+    const sendMessage = useCallback(async (teamId: string, content: string): Promise<GroupMessage | null> => {
+        if (!apiKey) return null;
         try {
-            const res = await fetch(`${API_BASE}/chat/groups/${groupId}/messages`, {
+            const res = await fetch(`${API_BASE}/v1/chat/send`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    encrypted_message: encryptedMessage,
-                    nonce,
-                    key_version: keyVersion,  // Tell server which key version was used
-                })
+                headers: { ...authHeader(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ room: `team-${teamId}`, content }),
             });
-            if (!res.ok) throw new Error('Failed to send message');
-            return await res.json();
+            if (!res.ok) throw new Error(`${res.status}`);
+            const data = await res.json() as { message?: GroupMessage };
+            return data.message ?? null;
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            setError(err instanceof Error ? err.message : 'Failed to send message');
             return null;
         }
-    }, [token]);
+    }, [apiKey]);
 
-    const addMember = useCallback(async (groupId: string, userId: string) => {
-        if (!token) return false;
+    // Invite by email — Operator plan required on the team owner's side
+    const addMember = useCallback(async (teamId: string, email: string): Promise<boolean> => {
+        if (!apiKey) return false;
         try {
-            const res = await fetch(`${API_BASE}/chat/groups/${groupId}/members`, {
+            const res = await fetch(`${API_BASE}/v1/teams/invite`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({ user_id: userId })
+                headers: { ...authHeader(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ team_id: teamId, email }),
             });
-            if (!res.ok) throw new Error('Failed to add member');
-            const member = await res.json();
-            setCurrentGroupMembers(prev => [...prev, member]);
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({})) as { error?: string };
+                throw new Error(body.error ?? `${res.status}`);
+            }
             return true;
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            setError(err instanceof Error ? err.message : 'Failed to invite member');
             return false;
         }
-    }, [token]);
+    }, [apiKey]);
 
-    const removeMember = useCallback(async (groupId: string, memberId: string) => {
-        if (!token) return false;
+    // Worker only supports leaving — can't kick other members
+    const removeMember = useCallback(async (teamId: string, _memberId: string): Promise<boolean> => {
+        if (!apiKey) return false;
         try {
-            const res = await fetch(`${API_BASE}/chat/groups/${groupId}/members/${memberId}`, {
+            const res = await fetch(`${API_BASE}/v1/teams/leave`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { ...authHeader(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ team_id: teamId }),
             });
-            if (!res.ok) throw new Error('Failed to remove member');
-            setCurrentGroupMembers(prev => prev.filter(m => m.id !== memberId));
-            return true;
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            return res.ok;
+        } catch {
             return false;
         }
-    }, [token]);
-
-    /**
-     * Decrypt messages using the current group key
-     * Handles key version mismatches gracefully
-     */
-    const decryptMessages = useCallback(
-        async (messages: GroupMessage[], groupKey: string, keyVersion: number): Promise<DecryptedMessage[]> => {
-            const { decryptGroupMessage } = await import('../crypto/chatCrypto');
-
-            return Promise.all(
-                messages.map(async (msg) => {
-                    if (msg.key_version === keyVersion) {
-                        try {
-                            const plaintext = await decryptGroupMessage(
-                                msg.encrypted_message,
-                                msg.nonce,
-                                groupKey
-                            );
-                            return { ...msg, plaintext };
-                        } catch (err) {
-                            console.warn(`Failed to decrypt message ${msg.id}:`, err);
-                            return { ...msg, plaintext: '[Decryption failed]' };
-                        }
-                    }
-                    // Different key version — key was rotated after this message was sent
-                    // We no longer have the old key in memory; show a clear placeholder
-                    return {
-                        ...msg,
-                        plaintext: `[Message encrypted with key v${msg.key_version} — key rotated, cannot decrypt]`,
-                    };
-                })
-            );
-        },
-        []
-    );
+    }, [apiKey]);
 
     return {
-        groups,
-        currentGroupMessages,
-        currentGroupMembers,
-        loading,
-        error,
-        fetchGroups,
-        createGroup,
-        fetchGroupMessages,
-        fetchGroupMembers,
-        sendMessage,
-        addMember,
-        removeMember,
-        decryptMessages
+        groups, currentGroupMessages, currentGroupMembers, loading, error,
+        fetchGroups, createGroup, fetchGroupMessages, fetchGroupMembers,
+        sendMessage, addMember, removeMember,
     };
 }

@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { VaultUnlock } from './VaultUnlock';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ConversationList } from './ConversationList';
 import { ConversationWindow } from './ConversationWindow';
 import { MessageInput } from './MessageInput';
@@ -12,128 +11,102 @@ import { GroupForm } from './GroupForm';
 import { GroupAdminPanel } from './GroupAdminPanel';
 import { useChat } from '../../hooks/useChat';
 import { useGroupChat } from '../../hooks/useGroupChat';
-import { encryptMessage } from '../../crypto/chatCrypto';
 import './styles.css';
 import './GroupChat.css';
 
+// token = sc_live_* API key (from user.user_metadata.api_key in Supabase)
 interface ChatProps {
     token: string | null;
     currentUser: { username: string; id?: string };
 }
 
-async function deriveSessionKey(vaultKey: string, conversationId: number): Promise<string> {
-    // HKDF-like: SHA-256(vaultKey + ':session:' + conversationId) — deterministic per vault+convo
-    const encoder = new TextEncoder();
-    const data = encoder.encode(`${vaultKey}:session:${conversationId}`);
-    const hash = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 export default function Chat({ token, currentUser }: ChatProps) {
-    const [vaultUnlocked, setVaultUnlocked] = useState(false);
-    const [vaultKey, setVaultKey] = useState<string | null>(null);
-    const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
+    const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
     const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-    const [sessionKeys, setSessionKeys] = useState<Record<string, string>>({});
-    const [groupSessionKey, setGroupSessionKey] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'messages' | 'instances' | 'groups'>('messages');
     const [showGroupForm, setShowGroupForm] = useState(false);
     const [showGroupAdmin, setShowGroupAdmin] = useState(false);
-    const { conversations, messages, fetchConversations, fetchMessages, sendMessage, addContact } = useChat(token);
+
+    const {
+        rooms, dms, messages, loading,
+        fetchRooms, fetchDms, fetchMessages, sendMessage, openDm,
+    } = useChat(token);
+
     const { groups, fetchGroups } = useGroupChat(token);
 
     useEffect(() => {
-        if (vaultUnlocked && token) {
-            fetchConversations();
-            fetchGroups();
+        if (!token) return;
+        fetchRooms();
+        fetchDms();
+        fetchGroups();
+    }, [token, fetchRooms, fetchDms, fetchGroups]);
+
+    // Auto-select global room
+    useEffect(() => {
+        if (!selectedRoom && rooms.length > 0) {
+            const global = rooms.find(r => r.name === 'global');
+            setSelectedRoom(global?.name ?? rooms[0].name);
         }
-    }, [vaultUnlocked, token, fetchConversations, fetchGroups]);
+    }, [rooms, selectedRoom]);
 
     useEffect(() => {
-        if (selectedConversation && token) {
-            fetchMessages(selectedConversation);
-        }
-    }, [selectedConversation, token, fetchMessages]);
+        if (selectedRoom) fetchMessages(selectedRoom);
+    }, [selectedRoom, fetchMessages]);
 
-    useEffect(() => {
-        if (vaultKey && selectedConversation) {
-            deriveSessionKey(vaultKey, selectedConversation).then(key => {
-                setSessionKeys(prev => ({ ...prev, [selectedConversation]: key }));
-            });
-        }
-    }, [vaultKey, selectedConversation]);
+    const handleSend = async (content: string) => {
+        if (!selectedRoom) return;
+        await sendMessage(selectedRoom, content);
+        await fetchMessages(selectedRoom);
+    };
 
-    useEffect(() => {
-        if (selectedGroup && token) {
-            setGroupSessionKey(localStorage.getItem(`groupSessionKey_${selectedGroup}`) || null);
+    const handleOpenDm = useCallback(async (handle: string) => {
+        const roomName = await openDm(handle);
+        if (roomName) {
+            await fetchDms();
+            setSelectedRoom(roomName);
         }
-    }, [selectedGroup, token]);
+    }, [openDm, fetchDms]);
 
-    if (!vaultUnlocked) {
+    const currentGroup = groups.find(g => g.id === selectedGroup);
+
+    if (!token) {
         return (
-            <VaultUnlock
-                token={token}
-                onUnlock={(key: string) => {
-                    setVaultKey(key);
-                    setVaultUnlocked(true);
-                }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>
+                Sign in to use chat.
+            </div>
         );
     }
 
-    const sessionKey = selectedConversation ? (sessionKeys[selectedConversation] ?? null) : null;
-
-    const handleSendMessage = async (plaintext: string) => {
-        if (!selectedConversation || !sessionKey) return;
-        try {
-            const { ciphertext, nonce } = encryptMessage(plaintext, sessionKey);
-            await sendMessage(selectedConversation, ciphertext, nonce);
-            // Optionally refresh messages after sending
-            await fetchMessages(selectedConversation);
-        } catch (error) {
-            console.error('Failed to send message:', error);
-        }
-    };
-
-    const getGroupData = () => {
-        return groups.find(g => g.id === selectedGroup);
-    };
-
     return (
         <div className="chat-container">
-            {activeTab === 'groups' && (
+            {activeTab === 'groups' ? (
                 <GroupList
                     token={token}
                     onSelectGroup={setSelectedGroup}
-                    selectedGroupId={selectedGroup || undefined}
+                    selectedGroupId={selectedGroup ?? undefined}
                 />
-            )}
-            {activeTab !== 'groups' && (
+            ) : (
                 <ConversationList
-                    conversations={conversations}
-                    selectedId={selectedConversation}
-                    onSelect={setSelectedConversation}
+                    rooms={rooms}
+                    dms={dms}
+                    selectedName={selectedRoom}
+                    onSelect={name => { setSelectedRoom(name); setActiveTab('messages'); }}
                 />
             )}
+
             <div className="chat-main">
                 <div className="chat-tabs">
                     <button
                         className={`tab-button ${activeTab === 'messages' ? 'active' : ''}`}
-                        onClick={() => {
-                            setActiveTab('messages');
-                            setSelectedGroup(null);
-                        }}
+                        onClick={() => { setActiveTab('messages'); setSelectedGroup(null); }}
                     >
                         Messages
                     </button>
                     <button
                         className={`tab-button ${activeTab === 'instances' ? 'active' : ''}`}
-                        onClick={() => {
-                            setActiveTab('instances');
-                            setSelectedGroup(null);
-                        }}
+                        onClick={() => { setActiveTab('instances'); setSelectedGroup(null); }}
                     >
-                        Instances
+                        Online
                     </button>
                     <button
                         className={`tab-button ${activeTab === 'groups' ? 'active' : ''}`}
@@ -142,47 +115,50 @@ export default function Chat({ token, currentUser }: ChatProps) {
                         Groups
                     </button>
                 </div>
-                {activeTab === 'messages' ? (
+
+                {activeTab === 'messages' && (
                     <>
-                        {selectedConversation ? (
+                        {selectedRoom ? (
                             <>
-                                <ConversationWindow messages={messages} currentUser={currentUser.username} sessionKey={sessionKey} />
-                                <MessageInput onSend={handleSendMessage} />
+                                <ConversationWindow messages={messages} currentNick={currentUser.username} />
+                                <MessageInput onSend={handleSend} />
                             </>
                         ) : (
-                            <div className="no-conversation">Select a conversation or <ContactDiscovery onAddContact={async (username: string, pubkey: string, fingerprint: string) => {
-                                await addContact(username, pubkey, fingerprint);
-                                await fetchConversations();
-                            }} /></div>
+                            <div className="no-conversation">
+                                {loading ? 'Loading...' : (
+                                    <>Select a room or <ContactDiscovery onOpenDm={handleOpenDm} /></>
+                                )}
+                            </div>
                         )}
                     </>
-                ) : activeTab === 'instances' ? (
+                )}
+
+                {activeTab === 'instances' && (
                     <div className="instances-panel">
-                        <InstanceDiscovery onInstanceAdded={() => {}} />
-                        <InstanceList />
+                        <InstanceDiscovery onInstanceAdded={() => {}} token={token} />
+                        <InstanceList token={token} />
                     </div>
-                ) : (
+                )}
+
+                {activeTab === 'groups' && (
                     <div className="groups-panel">
-                        {selectedGroup && getGroupData() ? (
+                        {selectedGroup && currentGroup ? (
                             <div className="group-chat-view">
                                 <GroupChat
                                     groupId={selectedGroup}
                                     currentUser={currentUser}
                                     token={token}
-                                    currentGroup={getGroupData()}
+                                    currentGroup={currentGroup}
                                 />
                                 <div className="group-sidebar">
-                                    <button
-                                        className="admin-toggle"
-                                        onClick={() => setShowGroupAdmin(!showGroupAdmin)}
-                                    >
+                                    <button className="admin-toggle" onClick={() => setShowGroupAdmin(!showGroupAdmin)}>
                                         {showGroupAdmin ? 'Hide Admin' : 'Show Admin'}
                                     </button>
-                                    {showGroupAdmin && getGroupData() && (
+                                    {showGroupAdmin && (
                                         <GroupAdminPanel
                                             groupId={selectedGroup}
-                                            creatorId={getGroupData()!.creator_id}
-                                            creatorUserId={getGroupData()!.creator_id}
+                                            creatorId={currentGroup.is_owner ? currentUser.username : ''}
+                                            creatorUserId={currentGroup.is_owner ? currentUser.id : undefined}
                                             currentUser={currentUser}
                                             token={token}
                                         />
@@ -192,16 +168,13 @@ export default function Chat({ token, currentUser }: ChatProps) {
                         ) : (
                             <div className="groups-empty">
                                 <p>Select a group or create a new one</p>
-                                <button
-                                    className="create-group-button"
-                                    onClick={() => setShowGroupForm(!showGroupForm)}
-                                >
+                                <button className="create-group-button" onClick={() => setShowGroupForm(!showGroupForm)}>
                                     {showGroupForm ? 'Cancel' : '+ Create Group'}
                                 </button>
                                 {showGroupForm && (
                                     <GroupForm
                                         token={token}
-                                        onGroupCreated={(id) => {
+                                        onGroupCreated={id => {
                                             setSelectedGroup(id);
                                             setShowGroupForm(false);
                                             fetchGroups();

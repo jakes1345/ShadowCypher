@@ -4,10 +4,11 @@ import './InstanceDiscovery.css';
 
 interface InstanceDiscoveryProps {
   onInstanceAdded: () => void;
+  token?: string | null;
 }
 
-export const InstanceDiscovery = ({ onInstanceAdded }: InstanceDiscoveryProps) => {
-  const { registerInstance, error, loading } = useInstanceDiscovery();
+export const InstanceDiscovery = ({ onInstanceAdded, token }: InstanceDiscoveryProps) => {
+  const { registerInstance, error, loading } = useInstanceDiscovery(token);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [instanceId, setInstanceId] = useState('');
   const [pubkey, setPubkey] = useState('');
