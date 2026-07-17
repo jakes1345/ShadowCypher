@@ -29,6 +29,8 @@ jobs:
           mkdir -p _site
           # Web assets at repo root
           rsync -a \
+            --exclude='.venv/' --exclude='venv/' --exclude='__pycache__/' \
+            --exclude='node_modules/' --exclude='*.pyc' \
             --include='*.html' --include='*.css' --include='*.js' \
             --include='*.json' --include='*.png' --include='*.jpg' \
             --include='*.jpeg' --include='*.gif' --include='*.svg' \
@@ -58,4 +60,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
