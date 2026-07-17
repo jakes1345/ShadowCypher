@@ -556,9 +556,9 @@ export default {
         if (payload?.type === "INSERT" && payload.record?.email) {
           const { id, email, raw_user_meta_data } = payload.record;
           const handle = raw_user_meta_data?.handle ?? email!.split("@")[0];
-          const apiKey = raw_user_meta_data?.api_key;
+          const apiKey = raw_user_meta_data?.api_key ?? "";
           sendWelcomeEmail(env, email!, handle).catch(() => null);
-          // Register the user in Neon with their api_key (generated client-side during signUp)
+          // Register the user in Neon with their actual api_key (not the handle)
           if (id && apiKey) neonRegisterUser(env, id, email!, apiKey).catch(() => null);
         }
         return json({ ok: true });

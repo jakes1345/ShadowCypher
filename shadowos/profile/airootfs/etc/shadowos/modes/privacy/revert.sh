@@ -2,14 +2,20 @@
 # privacy revert — restore normal networking, stop Tor proxy, restore browsers
 set -e
 
-# Flush transparent Tor proxy rules
+# Flush transparent Tor proxy rules (also clears ip6 shadow_ipv6_block table)
 nft flush ruleset 2>/dev/null || true
-echo "  ✓ nftables: Tor proxy rules flushed"
+echo "  ✓ nftables: all privacy rules flushed"
 
 # Stop privacy services
 systemctl stop tor 2>/dev/null || true
 systemctl stop dnscrypt-proxy 2>/dev/null || true
 systemctl stop usbguard 2>/dev/null || true
+systemctl stop i2pd 2>/dev/null || true
+
+# Restore services that were stopped to prevent LAN beaconing
+for svc in avahi-daemon cups; do
+    systemctl start "$svc" 2>/dev/null || true
+done
 
 # Restore real browser binaries (remove firejail symlinks)
 for browser in librewolf firefox chromium; do

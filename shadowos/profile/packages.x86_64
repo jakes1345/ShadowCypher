@@ -253,6 +253,36 @@ whatweb
 wfuzz
 zaproxy
 
+# === OSINT arsenal (crushing Parrot) ===
+theharvester
+recon-ng
+sherlock
+netdiscover
+
+# === Web app attack additions ===
+commix
+wpscan
+
+# === Wireless attacks (beyond Kali/Parrot) ===
+hostapd-wpe
+airgeddon
+wifiphisher
+
+# === Post-exploitation / tunneling ===
+chisel
+evil-winrm
+ligolo-ng
+
+# === Reverse engineering ===
+ghidra
+
+# === Memory forensics ===
+python-volatility3
+
+# === Anonymity++ (beats Parrot's AnonSurf cold) ===
+i2pd
+obfs4proxy
+
 # === Gaming + multimedia ===
 steam
 steam-devices

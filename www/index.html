@@ -1054,6 +1054,11 @@
                         <div style="font-size:0.75rem;color:var(--text-secondary);">
                             <span id="chat-online-count">0</span> online
                         </div>
+                        <button id="chat-vault-btn" onclick="chatShowVaultUnlock()"
+                                title="Enable end-to-end encryption"
+                                style="padding:5px 9px;background:transparent;border:1px solid #333;color:#555;border-radius:4px;cursor:pointer;font-size:0.75rem;line-height:1;font-family:var(--font-mono);letter-spacing:0.5px;transition:all 0.2s;">
+                            🔓 E2E
+                        </button>
                         <button id="chat-room-settings-btn" onclick="chatShowRoomSettings()"
                                 title="Room settings"
                                 style="display:none;padding:5px 9px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.25);color:var(--accent-primary);border-radius:4px;cursor:pointer;font-size:0.8rem;line-height:1;">
@@ -2459,6 +2464,7 @@
                     const result = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (result.error) throw result.error;
                     await vaultStore(password, result.data.session.access_token);
+                    chatDeriveVaultKey(password).catch(() => null);
                     cliPrint(`Signed in as @${rawHandle}`, 'var(--success)');
                     // onAuthStateChange picks up SIGNED_IN
                 } catch (err) {
@@ -2500,6 +2506,7 @@
 
                 if (result.data.session) {
                     await vaultStore(password, result.data.session.access_token);
+                    chatDeriveVaultKey(password).catch(() => null);
                 }
 
                 // Send recovery kit to disposal email if provided — backend discards the address after sending
@@ -2527,15 +2534,12 @@
             const code = document.getElementById('forgot-code').value.trim().toLowerCase();
             if (!rawHandle || !code) { showAuthBanner('Handle and recovery code required.', 'error'); return; }
             try {
-                const resp = await callApi('/v1/auth/recover', {
+                const data = await callApi('/v1/auth/recover', {
                     method: 'POST',
                     body: JSON.stringify({ handle: rawHandle, code }),
                 });
-                if (!resp.ok) {
-                    const body = await resp.json().catch(() => ({}));
-                    throw new Error(body.error || 'Recovery failed.');
-                }
-                const { access_token, refresh_token } = await resp.json();
+                const { access_token, refresh_token } = data;
+                if (!access_token || !refresh_token) throw new Error('Recovery failed — no session returned.');
                 await supabaseClient.auth.setSession({ access_token, refresh_token });
                 toggleAuth('reset');
                 showAuthBanner('Recovery successful. Set a new password below.', 'info');
@@ -4063,6 +4067,34 @@
             document.getElementById('chat-vault-dialog').style.display = 'none';
         }
 
+        function chatUpdateVaultBtn() {
+            const btn = document.getElementById('chat-vault-btn');
+            if (!btn) return;
+            if (_vaultKey) {
+                btn.textContent = '🔒 E2E';
+                btn.title = 'End-to-end encryption active — click to change key';
+                btn.style.borderColor = 'rgba(74,222,128,0.4)';
+                btn.style.color = '#4ade80';
+            } else {
+                btn.textContent = '🔓 E2E';
+                btn.title = 'Enable end-to-end encryption';
+                btn.style.borderColor = '#333';
+                btn.style.color = '#555';
+            }
+        }
+
+        async function chatDeriveVaultKey(password) {
+            const enc = new TextEncoder();
+            const raw = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']);
+            const salt = enc.encode('shadowcypher-chat-v1');
+            const bits = await crypto.subtle.deriveBits(
+                { name: 'PBKDF2', salt, hash: 'SHA-256', iterations: 150000 },
+                raw, 256
+            );
+            _vaultKey = await crypto.subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+            chatUpdateVaultBtn();
+        }
+
         async function chatUnlockVault() {
             const pw = document.getElementById('chat-vault-password').value;
             const errEl = document.getElementById('chat-vault-error');
@@ -4071,15 +4103,7 @@
             btn.disabled = true;
             btn.textContent = 'DERIVING KEY…';
             try {
-                const enc = new TextEncoder();
-                const raw = await crypto.subtle.importKey('raw', enc.encode(pw), { name: 'PBKDF2' }, false, ['deriveBits']);
-                // Fixed app-wide salt so all users with the same room password can read each other's messages
-                const salt = enc.encode('shadowcypher-chat-v1');
-                const bits = await crypto.subtle.deriveBits(
-                    { name: 'PBKDF2', salt, hash: 'SHA-256', iterations: 150000 },
-                    raw, 256
-                );
-                _vaultKey = await crypto.subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+                await chatDeriveVaultKey(pw);
                 chatHideVaultUnlock();
                 await chatLoadRooms();
                 chatLoadDms();
@@ -4848,12 +4872,8 @@
                     await _origNavTo.call(this, 'account', document.getElementById('nav-account'));
                     return;
                 }
-                if (!_vaultKey) {
-                    chatShowVaultUnlock();
-                } else {
-                    chatLoadRooms();
-                    chatLoadDms();
-                }
+                chatLoadRooms();
+                chatLoadDms();
             }
             if (pageId === 'mail') {
                 if (!_sessionApiKey) {
@@ -5340,9 +5360,9 @@
     <!-- Vault unlock dialog (chat) -->
     <div id="chat-vault-dialog" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:10000;align-items:center;justify-content:center;padding:20px;">
         <div style="background:#0d0d0d;border:1px solid rgba(180,74,255,0.35);border-radius:8px;width:100%;max-width:380px;padding:32px;position:relative;">
-            <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:20px;">// VAULT_UNLOCK</div>
-            <h2 style="font-size:1.1rem;color:#fff;margin:0 0 8px 0;">Chat encryption</h2>
-            <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 24px 0;line-height:1.6;">Enter the shared room password to encrypt and decrypt messages. Everyone in the room uses the same password.</p>
+            <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:20px;">// E2E_ENCRYPTION</div>
+            <h2 style="font-size:1.1rem;color:#fff;margin:0 0 8px 0;">Override encryption key <span style="font-size:0.7rem;color:#4ade80;font-family:var(--font-mono);font-weight:400;">[optional]</span></h2>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 24px 0;line-height:1.6;">Your account password already unlocks E2E encryption automatically. Enter a shared room password here if you want a group room where everyone can read each other's messages — everyone must use the same key.</p>
             <form onsubmit="chatUnlockVault(); return false;">
             <input id="chat-vault-password" type="password" placeholder="Room password"
                    style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;margin-bottom:8px;" autocomplete="new-password">
@@ -5350,7 +5370,7 @@
             <div style="display:flex;gap:10px;margin-top:16px;">
                 <button id="chat-vault-unlock-btn" type="submit"
                         style="flex:1;padding:12px;background:var(--accent-primary);color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-family:var(--font-mono);font-size:0.75rem;letter-spacing:1px;">UNLOCK</button>
-                <button type="button" onclick="chatHideVaultUnlock();chatLoadRooms();chatLoadDms();"
+                <button type="button" onclick="chatHideVaultUnlock();chatUpdateVaultBtn();chatLoadRooms();chatLoadDms();"
                         style="padding:12px 16px;background:transparent;border:1px solid #333;color:#888;border-radius:6px;cursor:pointer;font-size:0.8rem;">Skip (no encryption)</button>
             </div>
             </form>

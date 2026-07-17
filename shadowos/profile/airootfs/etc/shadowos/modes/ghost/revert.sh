@@ -34,5 +34,22 @@ echo "  ✓ RAM wipe on shutdown disarmed"
 # ── Restore USBGuard to block-only (allow insertion again) ───────────────────
 usbguard set-parameter InsertedDevicePolicy reject 2>/dev/null || true
 
+# ── Restore Bluetooth ─────────────────────────────────────────────────────────
+rfkill unblock bluetooth 2>/dev/null || true
+systemctl start bluetooth 2>/dev/null || true
+echo "  ✓ Bluetooth restored"
+
+# ── Restore webcam ────────────────────────────────────────────────────────────
+modprobe uvcvideo 2>/dev/null || true
+echo "  ✓ Webcam (UVC) restored"
+
+# ── Restore original hostname ─────────────────────────────────────────────────
+if [[ -f /var/lib/shadowos/ghost-pre-hostname ]]; then
+    ORIG_HOST=$(cat /var/lib/shadowos/ghost-pre-hostname)
+    hostnamectl set-hostname "$ORIG_HOST" 2>/dev/null || true
+    rm -f /var/lib/shadowos/ghost-pre-hostname
+    echo "  ✓ Hostname restored → $ORIG_HOST"
+fi
+
 # ── Inherit privacy revert ────────────────────────────────────────────────────
 /etc/shadowos/modes/privacy/revert.sh

@@ -7,58 +7,108 @@ LOG=/var/log/shadowos-ai-setup.log
 STAMP=/var/lib/shadowos/ai-setup.stamp
 MODELS_DIR=/opt/shadowcypher/shadowai/models
 
-exec >> "$LOG" 2>&1
+mkdir -p "$(dirname "$STAMP")"
+
+# Log to file AND stdout (→ journald; watch with: journalctl -f -u shadowos-firstboot)
+exec > >(tee -a "$LOG") 2>&1
 
 # Never pull models on the live ISO — GB-scale downloads into RAM = OOM.
 [[ -f /etc/shadowos/live-iso ]] && exit 0
-
 [[ -f "$STAMP" ]] && exit 0
 
-echo "═══ ShadowOS AI Setup — $(date -Iseconds) ═══"
+# ── Desktop notification helper (works from root/service context) ─────────────
+_notify() {
+    local urgency="$1" summary="$2" body="${3:-}"
+    local user uid
+    user=$(loginctl list-sessions --no-legend 2>/dev/null | awk '{print $3}' | head -1)
+    [[ -z "$user" ]] && return 0
+    uid=$(id -u "$user" 2>/dev/null) || return 0
+    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+        sudo -u "$user" notify-send -u "$urgency" -a "ShadowOS AI" \
+        -i dialog-information "$summary" "$body" 2>/dev/null || true
+}
 
-# Start Ollama daemon if not running
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+echo "══════════════════════════════════════════════════════════════════"
+echo "  ShadowOS AI Setup  —  $(date -Iseconds)"
+echo "  Models: deepseek-r1:8b (~5.0 GB)  qwen2.5-coder:7b (~4.7 GB)  mistral:7b (~4.1 GB)"
+echo "  Total:  ~13.8 GB  |  ETA: 15–30 min depending on connection"
+echo "  Log:    tail -f $LOG"
+echo "══════════════════════════════════════════════════════════════════"
+
+_notify normal \
+    "ShadowOS AI: downloading models (~14 GB)" \
+    "3 AI models are installing in the background. This takes 15–30 min.\nWatch: tail -f $LOG"
+
+# ── Start Ollama ──────────────────────────────────────────────────────────────
 if ! systemctl is-active --quiet ollama 2>/dev/null; then
+    log "Starting Ollama daemon..."
     systemctl start ollama || true
-    sleep 3
 fi
 
-# Wait for Ollama to be ready
+log "Waiting for Ollama to respond..."
 for i in $(seq 1 20); do
     curl -sf http://localhost:11434/api/tags >/dev/null 2>&1 && break
     sleep 2
 done
 
 if ! curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
-    echo "[!] Ollama not responding — skipping AI setup"
+    log "✗ Ollama not responding after 40s — aborting"
+    _notify critical "ShadowOS AI: setup failed" \
+        "Ollama did not start. Retry: sudo systemctl start ollama && sudo shadowos-ai-setup"
     exit 1
 fi
+log "✓ Ollama ready"
 
-echo "[*] Pulling DeepSeek-R1:8B (security/reasoning model)..."
-ollama pull deepseek-r1:8b && echo "    ✓ deepseek-r1:8b" || echo "    ✗ failed"
+# ── pull_model <tag> <size> ───────────────────────────────────────────────────
+PULLED=()
+FAILED=()
 
-echo "[*] Pulling Qwen2.5-Coder:7B (dev/coding model)..."
-ollama pull qwen2.5-coder:7b && echo "    ✓ qwen2.5-coder:7b" || echo "    ✗ failed"
+pull_model() {
+    local tag="$1" size="$2"
+    echo ""
+    echo "┌──────────────────────────────────────────────────────────────"
+    echo "│  Pulling $tag  (~$size)"
+    echo "│  Started: $(date '+%H:%M:%S')"
+    echo "└──────────────────────────────────────────────────────────────"
+    if ollama pull "$tag"; then
+        log "✓ $tag — done"
+        PULLED+=("$tag")
+        _notify normal "ShadowOS AI: $tag ready" "$tag downloaded successfully."
+    else
+        log "✗ $tag — FAILED"
+        FAILED+=("$tag")
+        _notify critical "ShadowOS AI: $tag failed" \
+            "Could not pull $tag. Retry: sudo shadowos-ai-setup"
+    fi
+}
 
-echo "[*] Pulling Mistral:7B (ghost/privacy model)..."
-ollama pull mistral:7b && echo "    ✓ mistral:7b" || echo "    ✗ failed"
+pull_model "deepseek-r1:8b"   "5.0 GB"
+pull_model "qwen2.5-coder:7b" "4.7 GB"
+pull_model "mistral:7b"       "4.1 GB"
 
-# Register custom Shadow modelfiles
+# ── Register Shadow personas ──────────────────────────────────────────────────
 if [[ -d "$MODELS_DIR" ]]; then
-    echo "[*] Creating Shadow personas..."
+    echo ""
+    log "Creating Shadow personas from modelfiles..."
     for mf in "$MODELS_DIR"/*.modelfile; do
-        name="shadow-$(basename "$mf" .modelfile | sed 's/shadow-//')"
-        ollama create "$name" -f "$mf" && echo "    ✓ $name" || echo "    ✗ $name failed"
+        [[ -f "$mf" ]] || continue
+        name="shadow-$(basename "$mf" .modelfile | sed 's/^shadow-//')"
+        if ollama create "$name" -f "$mf" 2>&1 | tail -3; then
+            log "  ✓ $name"
+        else
+            log "  ✗ $name failed"
+        fi
     done
 fi
 
-# Set default model based on available VRAM
+# ── VRAM detection + write AI config ─────────────────────────────────────────
 VRAM_MB=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 || echo 0)
-if (( VRAM_MB >= 12000 )); then
-    DEFAULT_MODEL="shadow-security"
-elif (( VRAM_MB >= 6000 )); then
+if (( VRAM_MB >= 6000 )); then
     DEFAULT_MODEL="shadow-security"
 else
-    DEFAULT_MODEL="shadow-ghost"   # mistral:7b — smallest, fastest
+    DEFAULT_MODEL="shadow-ghost"
 fi
 
 mkdir -p /etc/shadowcypher
@@ -78,8 +128,29 @@ cat > /etc/shadowcypher/ai.json << JSON
   "vram_mb": $VRAM_MB
 }
 JSON
-echo "[✓] AI config written → /etc/shadowcypher/ai.json"
-echo "[✓] Default model: $DEFAULT_MODEL"
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+echo ""
+echo "══════════════════════════════════════════════════════════════════"
+_status="COMPLETE"; (( ${#FAILED[@]} > 0 )) && _status="PARTIAL (${#FAILED[@]} failed)"
+echo "  ShadowOS AI Setup — $_status"
+printf "  Pulled:  %d model(s): %s\n" "${#PULLED[@]}" "${PULLED[*]:-none}"
+if (( ${#FAILED[@]} > 0 )); then
+printf "  Failed:  %s\n" "${FAILED[*]}"
+echo "  Retry:   sudo shadowos-ai-setup"
+fi
+echo "  Default: $DEFAULT_MODEL  |  VRAM: ${VRAM_MB}MB"
+echo "  Finished: $(date '+%H:%M:%S')"
+echo "══════════════════════════════════════════════════════════════════"
+
+if (( ${#FAILED[@]} == 0 )); then
+    _notify normal \
+        "ShadowOS AI: all models ready" \
+        "Pulled: ${PULLED[*]}\nDefault: $DEFAULT_MODEL"
+else
+    _notify critical \
+        "ShadowOS AI: ${#FAILED[@]} model(s) failed" \
+        "Failed: ${FAILED[*]}\nRetry: sudo shadowos-ai-setup"
+fi
 
 date -Iseconds > "$STAMP"
-echo "═══ AI setup complete ═══"
