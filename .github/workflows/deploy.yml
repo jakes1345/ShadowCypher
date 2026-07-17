@@ -27,23 +27,20 @@ jobs:
       - name: Build _site (filter out source code and large binaries)
         run: |
           mkdir -p _site
-          # Web assets at repo root
+          # Primary web assets — www/ is the authoritative frontend source
+          rsync -a \
+            --exclude='Caddyfile' --exclude='Dockerfile' --exclude='.git' \
+            www/ _site/
+          # Overlay root-level extras not in www/
           rsync -a \
             --exclude='.venv/' --exclude='venv/' --exclude='__pycache__/' \
             --exclude='node_modules/' --exclude='*.pyc' \
-            --include='*.html' --include='*.css' --include='*.js' \
-            --include='*.json' --include='*.png' --include='*.jpg' \
-            --include='*.jpeg' --include='*.gif' --include='*.svg' \
-            --include='*.ico' --include='*.webp' --include='*.woff*' \
-            --include='*.ttf' --include='*.eot' --include='*.md' --include='*.sh' \
             --include='blog/' --include='blog/**' \
-            --include='r/' --include='r/**' \
             --include='agent/' --include='agent/**' \
             --include='docs/' --include='docs/**' \
             --include='shadowos/' --include='shadowos/verify-download.sh' \
             --include='sitemap.xml' \
-            --include='_redirects' --include='CNAME' --include='.nojekyll' \
-            --include='manifest.json' --include='sw.js' \
+            --include='CNAME' --include='.nojekyll' \
             --exclude='*' \
             ./ _site/
           # Apt + arch repos (needed for one-liner installs)
