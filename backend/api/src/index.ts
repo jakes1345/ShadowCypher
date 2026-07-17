@@ -551,14 +551,15 @@ export default {
           return json({ error: "forbidden" }, { status: 403 });
         const payload = (await req.json().catch(() => null)) as {
           type?: string;
-          record?: { id?: string; email?: string; raw_user_meta_data?: { handle?: string } };
+          record?: { id?: string; email?: string; raw_user_meta_data?: { handle?: string; api_key?: string } };
         } | null;
         if (payload?.type === "INSERT" && payload.record?.email) {
           const { id, email, raw_user_meta_data } = payload.record;
           const handle = raw_user_meta_data?.handle ?? email!.split("@")[0];
+          const apiKey = raw_user_meta_data?.api_key ?? "";
           sendWelcomeEmail(env, email!, handle).catch(() => null);
-          // Also register the user in Neon if they don't exist yet
-          if (id) neonRegisterUser(env, id, email!, handle).catch(() => null);
+          // Register the user in Neon with their actual api_key (not the handle)
+          if (id && apiKey) neonRegisterUser(env, id, email!, apiKey).catch(() => null);
         }
         return json({ ok: true });
       }
