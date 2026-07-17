@@ -14,7 +14,7 @@
 import type { Env } from "./index";
 import { dbSelect, dbInsert, dbUpsert, dbUpdate } from "./supabase";
 
-interface AuthedUser { id: string; email: string }
+interface AuthedUser { id: string; email: string; handle?: string }
 
 interface ChatRoom {
   id: string;
@@ -49,8 +49,9 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
     headers: { "Content-Type": "application/json", ...cors, ...(init.headers ?? {}) },
   });
 
-function nickFromEmail(email: string): string {
-  return email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+function nickFromUser(user: AuthedUser): string {
+  if (user.handle) return user.handle.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+  return user.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
 }
 
 async function resolveRoom(env: Env, roomName: string, userId: string): Promise<ChatRoom | null> {
@@ -155,7 +156,7 @@ export async function sendMessage(
   const room = await resolveRoom(env, roomName, user.id);
   if (!room) return json({ error: "room_not_found" }, { status: 404 }, cors);
 
-  const nick = nickFromEmail(user.email);
+  const nick = nickFromUser(user);
   const msg = await dbInsert<ChatMessage>(env, "chat_messages", {
     room_id: room.id,
     user_id: user.id,
@@ -190,7 +191,7 @@ export async function updatePresence(
   await dbUpsert(env, "chat_presence", {
     user_id: user.id,
     room_id: room.id,
-    nick: nickFromEmail(user.email),
+    nick: nickFromUser(user),
     seen_at: new Date().toISOString(),
   }, "user_id,room_id");
 
@@ -229,7 +230,7 @@ export async function openDm(
   const handle = body?.handle?.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
   if (!handle) return json({ error: "handle_required" }, { status: 400 }, cors);
 
-  const myNick = nickFromEmail(user.email);
+  const myNick = nickFromUser(user);
   if (handle === myNick) return json({ error: "cannot_dm_self" }, { status: 400 }, cors);
 
   // Verify target user exists

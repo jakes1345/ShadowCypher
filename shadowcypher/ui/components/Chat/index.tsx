@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ConversationList } from './ConversationList';
 import { ConversationWindow } from './ConversationWindow';
 import { MessageInput } from './MessageInput';
@@ -66,6 +66,15 @@ export default function Chat({ token, currentUser }: ChatProps) {
             setSelectedRoom(roomName);
         }
     }, [openDm, fetchDms]);
+
+    // Poll active room every 5 seconds for new messages
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    useEffect(() => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        if (!token || !selectedRoom) return;
+        pollRef.current = setInterval(() => { fetchMessages(selectedRoom); }, 5000);
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, [token, selectedRoom, fetchMessages]);
 
     const currentGroup = groups.find(g => g.id === selectedGroup);
 

@@ -65,6 +65,7 @@ export function useGroupChat(apiKey: string | null) {
             });
             if (!res.ok) {
                 const body = await res.json().catch(() => ({})) as { error?: string };
+                if (res.status === 403) throw new Error('Groups require the Operator plan. Upgrade at shadowcypher.site/billing');
                 throw new Error(body.error ?? `${res.status}`);
             }
             const data = await res.json() as { team_id: string; name: string; created_at: string };

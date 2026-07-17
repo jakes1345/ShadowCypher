@@ -755,7 +755,8 @@ export default {
         if (routeKey === "POST /v1/chat/rooms" && !rateLimit(`room-create:${user.id}`, 5, 3_600_000))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
 
-        if (handler) return handler(req, env, { id: user.id, email: user.email }, cors);
+        const authedUser = { id: user.id, email: user.email, handle: (user.user_metadata as { handle?: string })?.handle };
+        if (handler) return handler(req, env, authedUser, cors);
 
         const parts = path.split("/");
         if (agentMissionCreate)  return createMission(req, env, { id: user.id, email: user.email }, cors, parts[3]);
@@ -771,8 +772,8 @@ export default {
         // Chat room management — room name is last path segment
         if (chatRoomDelete || chatRoomPatch) {
           const roomName = path.split("/").pop()!;
-          if (chatRoomDelete) return deleteRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
-          if (chatRoomPatch)  return updateRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
+          if (chatRoomDelete) return deleteRoom(req, env, authedUser, cors, roomName);
+          if (chatRoomPatch)  return updateRoom(req, env, authedUser, cors, roomName);
         }
         // File storage — key is everything after /v1/files/
         const fileKey = path.slice("/v1/files/".length);
@@ -812,7 +813,8 @@ export default {
           if (uid1 !== user.id && uid2 !== user.id) return new Response("forbidden", { status: 403 });
         }
 
-        const nick = user.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+        const rawNick = (user.user_metadata as { handle?: string })?.handle ?? user.email.split("@")[0];
+        const nick = rawNick.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
         const doId = env.CHAT_ROOM.idFromName(roomName);
         const stub = env.CHAT_ROOM.get(doId);
 
