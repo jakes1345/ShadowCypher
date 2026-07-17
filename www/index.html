@@ -2464,6 +2464,7 @@
                     const result = await supabaseClient.auth.signInWithPassword({ email, password });
                     if (result.error) throw result.error;
                     await vaultStore(password, result.data.session.access_token);
+                    chatDeriveVaultKey(password).catch(() => null);
                     cliPrint(`Signed in as @${rawHandle}`, 'var(--success)');
                     // onAuthStateChange picks up SIGNED_IN
                 } catch (err) {
@@ -2505,6 +2506,7 @@
 
                 if (result.data.session) {
                     await vaultStore(password, result.data.session.access_token);
+                    chatDeriveVaultKey(password).catch(() => null);
                 }
 
                 // Send recovery kit to disposal email if provided — backend discards the address after sending
@@ -4080,6 +4082,18 @@
             }
         }
 
+        async function chatDeriveVaultKey(password) {
+            const enc = new TextEncoder();
+            const raw = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']);
+            const salt = enc.encode('shadowcypher-chat-v1');
+            const bits = await crypto.subtle.deriveBits(
+                { name: 'PBKDF2', salt, hash: 'SHA-256', iterations: 150000 },
+                raw, 256
+            );
+            _vaultKey = await crypto.subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+            chatUpdateVaultBtn();
+        }
+
         async function chatUnlockVault() {
             const pw = document.getElementById('chat-vault-password').value;
             const errEl = document.getElementById('chat-vault-error');
@@ -4088,17 +4102,8 @@
             btn.disabled = true;
             btn.textContent = 'DERIVING KEY…';
             try {
-                const enc = new TextEncoder();
-                const raw = await crypto.subtle.importKey('raw', enc.encode(pw), { name: 'PBKDF2' }, false, ['deriveBits']);
-                // Fixed app-wide salt so all users with the same room password can read each other's messages
-                const salt = enc.encode('shadowcypher-chat-v1');
-                const bits = await crypto.subtle.deriveBits(
-                    { name: 'PBKDF2', salt, hash: 'SHA-256', iterations: 150000 },
-                    raw, 256
-                );
-                _vaultKey = await crypto.subtle.importKey('raw', bits, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+                await chatDeriveVaultKey(pw);
                 chatHideVaultUnlock();
-                chatUpdateVaultBtn();
                 await chatLoadRooms();
                 chatLoadDms();
             } catch (e) {
@@ -5355,8 +5360,8 @@
     <div id="chat-vault-dialog" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:10000;align-items:center;justify-content:center;padding:20px;">
         <div style="background:#0d0d0d;border:1px solid rgba(180,74,255,0.35);border-radius:8px;width:100%;max-width:380px;padding:32px;position:relative;">
             <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:20px;">// E2E_ENCRYPTION</div>
-            <h2 style="font-size:1.1rem;color:#fff;margin:0 0 8px 0;">End-to-end encryption <span style="font-size:0.7rem;color:#4ade80;font-family:var(--font-mono);font-weight:400;">[optional]</span></h2>
-            <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 24px 0;line-height:1.6;">Set a shared password to encrypt messages in your browser before they're sent. Everyone who wants to read encrypted messages must use the same password. You can skip this and chat without encryption.</p>
+            <h2 style="font-size:1.1rem;color:#fff;margin:0 0 8px 0;">Override encryption key <span style="font-size:0.7rem;color:#4ade80;font-family:var(--font-mono);font-weight:400;">[optional]</span></h2>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 24px 0;line-height:1.6;">Your account password already unlocks E2E encryption automatically. Enter a shared room password here if you want a group room where everyone can read each other's messages — everyone must use the same key.</p>
             <form onsubmit="chatUnlockVault(); return false;">
             <input id="chat-vault-password" type="password" placeholder="Room password"
                    style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;margin-bottom:8px;" autocomplete="new-password">
