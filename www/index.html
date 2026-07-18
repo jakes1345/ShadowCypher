@@ -55,6 +55,7 @@
             <a onclick="navTo('ghost',this)" id="nav-ghost" class="nav-tab">Privacy</a>
             <a onclick="navTo('mail',this)" id="nav-mail" class="nav-tab">Mail <span id="mail-unread-badge" style="display:none;background:var(--accent-primary);color:#000;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle;"></span></a>
             <a onclick="navTo('chat',this)" id="nav-chat" class="nav-tab">Chat</a>
+            <a onclick="navTo('drive',this)" id="nav-drive" class="nav-tab">Drive</a>
             <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Downloads</a>
             <a onclick="navTo('pricing',this)" id="nav-pricing" class="nav-tab">Pro</a>
             <a onclick="navTo('account',this)" id="nav-account" class="nav-tab">Account</a>
@@ -429,310 +430,120 @@
     <!-- ARSENAL -->
     <div id="page-arsenal" class="page">
         <div class="content-section">
-            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Tactical Arsenal</h2>
-            <p style="color:var(--text-secondary);margin-bottom:16px;max-width:700px;">29 purpose-built offensive and defensive modules across six mission areas. Every tool was built because it was needed in the field — no fluff, no overlap.</p>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:48px;">
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">RECON</span>
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">EXPLOIT</span>
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">GHOST</span>
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">C2</span>
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">COMMS</span>
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">DSL</span>
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Intel Tools</h2>
+            <p style="color:var(--text-secondary);margin-bottom:32px;max-width:700px;">Live OSINT and reconnaissance tools. All queries route through the ShadowCypher API — no third-party calls from your browser.</p>
+            <!-- Tool grid -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:32px;">
+
+                <!-- IP Reputation -->
+                <div class="arsenal-card">
+                    <div class="arsenal-card-header"><span class="arsenal-tag">RECON</span><span class="arsenal-title">IP Reputation</span></div>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <input id="ar-ip-input" type="text" placeholder="1.2.3.4" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
+                        <button onclick="arRunIp()" class="arsenal-run-btn">Run</button>
+                    </div>
+                    <pre id="ar-ip-out" class="arsenal-out"></pre>
+                </div>
+
+                <!-- DNS Lookup -->
+                <div class="arsenal-card">
+                    <div class="arsenal-card-header"><span class="arsenal-tag">RECON</span><span class="arsenal-title">DNS Lookup</span></div>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <input id="ar-dns-input" type="text" placeholder="example.com" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
+                        <select id="ar-dns-type" style="padding:8px 8px;background:#080810;border:1px solid #222;color:#aaa;border-radius:4px;font-size:0.75rem;font-family:var(--font-mono);">
+                            <option>A</option><option>AAAA</option><option>MX</option><option>NS</option><option>TXT</option><option>CNAME</option>
+                        </select>
+                        <button onclick="arRunDns()" class="arsenal-run-btn">Run</button>
+                    </div>
+                    <pre id="ar-dns-out" class="arsenal-out"></pre>
+                </div>
+
+                <!-- Breach Check -->
+                <div class="arsenal-card">
+                    <div class="arsenal-card-header"><span class="arsenal-tag">OSINT</span><span class="arsenal-title">Breach Check</span></div>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <input id="ar-breach-input" type="email" placeholder="user@example.com" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
+                        <button onclick="arRunBreach()" class="arsenal-run-btn">Run</button>
+                    </div>
+                    <pre id="ar-breach-out" class="arsenal-out"></pre>
+                </div>
+
+                <!-- CVE Search -->
+                <div class="arsenal-card">
+                    <div class="arsenal-card-header"><span class="arsenal-tag">INTEL</span><span class="arsenal-title">CVE Search</span></div>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <input id="ar-cve-input" type="text" placeholder="openssl 3.0" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
+                        <button onclick="arRunCve()" class="arsenal-run-btn">Run</button>
+                    </div>
+                    <pre id="ar-cve-out" class="arsenal-out"></pre>
+                </div>
+
+                <!-- Web Search -->
+                <div class="arsenal-card">
+                    <div class="arsenal-card-header"><span class="arsenal-tag">OSINT</span><span class="arsenal-title">Web Search</span></div>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <input id="ar-search-input" type="text" placeholder="search query" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
+                        <button onclick="arRunSearch()" class="arsenal-run-btn">Run</button>
+                    </div>
+                    <pre id="ar-search-out" class="arsenal-out"></pre>
+                </div>
+
+                <!-- Wiki Summary -->
+                <div class="arsenal-card">
+                    <div class="arsenal-card-header"><span class="arsenal-tag">INTEL</span><span class="arsenal-title">Wiki Summary</span></div>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <input id="ar-wiki-input" type="text" placeholder="topic or person" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
+                        <button onclick="arRunWiki()" class="arsenal-run-btn">Run</button>
+                    </div>
+                    <pre id="ar-wiki-out" class="arsenal-out"></pre>
+                </div>
+
+                <!-- Weather -->
+                <div class="arsenal-card">
+                    <div class="arsenal-card-header"><span class="arsenal-tag">SITUATIONAL</span><span class="arsenal-title">Weather</span></div>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <input id="ar-weather-input" type="text" placeholder="city name" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
+                        <button onclick="arRunWeather()" class="arsenal-run-btn">Run</button>
+                    </div>
+                    <pre id="ar-weather-out" class="arsenal-out"></pre>
+                </div>
+
+                <!-- Currency -->
+                <div class="arsenal-card">
+                    <div class="arsenal-card-header"><span class="arsenal-tag">SITUATIONAL</span><span class="arsenal-title">Currency Convert</span></div>
+                    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+                        <input id="ar-fx-amount" type="number" placeholder="100" value="100" style="width:70px;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
+                        <input id="ar-fx-from" type="text" placeholder="USD" value="USD" style="width:60px;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);text-transform:uppercase;">
+                        <span style="line-height:36px;color:#555;font-size:0.8rem;">→</span>
+                        <input id="ar-fx-to" type="text" placeholder="EUR" value="EUR" style="width:60px;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);text-transform:uppercase;">
+                        <button onclick="arRunFx()" class="arsenal-run-btn">Run</button>
+                    </div>
+                    <pre id="ar-fx-out" class="arsenal-out"></pre>
+                </div>
+
+                <!-- Instant Answer -->
+                <div class="arsenal-card">
+                    <div class="arsenal-card-header"><span class="arsenal-tag">INTEL</span><span class="arsenal-title">Instant Answer</span></div>
+                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                        <input id="ar-instant-input" type="text" placeholder="what is 42 in binary" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
+                        <button onclick="arRunInstant()" class="arsenal-run-btn">Run</button>
+                    </div>
+                    <pre id="ar-instant-out" class="arsenal-out"></pre>
+                </div>
+
             </div>
 
-            <!-- Category: Command & Control -->
-            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
-                <div style="width:3px;height:36px;background:linear-gradient(180deg,var(--accent-primary),transparent);border-radius:2px;flex-shrink:0;"></div>
-                <div>
-                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 01</div>
-                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Command &amp; Control</div>
-                </div>
-                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(180,74,255,0.15),transparent);"></div>
-            </div>
-
-            <!-- Module 1: NEXUS-COMMAND -->
-            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
-                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
-                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
-                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 01</div>
-                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">NEXUS-COMMAND</h3>
-                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">The main desktop HUD. Real-time Cairo gauges for CPU, RAM, network I/O. AI inference via local Ollama. Network topology war-map with live host discovery.</p>
-                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · GTK3 · CAIRO · OLLAMA</div>
-                    </div>
-                    <div style="padding:32px;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Capabilities</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ Live system telemetry dashboard</li>
-                                    <li>→ Quantum-Core AI deep analysis</li>
-                                    <li>→ Network war-map (Nmap + Cairo)</li>
-                                    <li>→ Admin god panel (encrypted)</li>
-                                    <li>→ Lazy-loaded page architecture</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">AI Integration</div>
-                                <div style="background:#000;border:1px solid #222;border-radius:4px;padding:12px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;line-height:2;">
-                                    <div style="color:#555;"># Natural language security ops</div>
-                                    <div>shadow &gt; scan my network</div>
-                                    <div>shadow &gt; am I anonymous?</div>
-                                    <div>shadow &gt; engage ghost mode</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Category: Intelligence -->
-            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
-                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(34,197,94),transparent);border-radius:2px;flex-shrink:0;"></div>
-                <div>
-                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 02</div>
-                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Reconnaissance &amp; Intelligence</div>
-                </div>
-                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(34,197,94,0.15),transparent);"></div>
-            </div>
-
-            <!-- Module 2: COVERT-INTEL -->
-            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
-                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
-                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
-                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 02</div>
-                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">COVERT-INTEL</h3>
-                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Reconnaissance and OSINT. Fingerprint targets, discover infrastructure, sweep for vulnerabilities, and correlate findings with ExploitDB.</p>
-                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">NMAP · SHERLOCK · NUCLEI · EXPLOITDB</div>
-                    </div>
-                    <div style="padding:32px;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Tools</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ Nmap service + OS fingerprinting</li>
-                                    <li>→ Sherlock — 300+ platform OSINT</li>
-                                    <li>→ Nuclei vulnerability sweep</li>
-                                    <li>→ Infrastructure recon (DNS, SSL)</li>
-                                    <li>→ ExploitDB CVE correlation</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Output</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ JSON + Markdown reports</li>
-                                    <li>→ Severity-ranked findings</li>
-                                    <li>→ CVE IDs with CVSS scores</li>
-                                    <li>→ Exportable to ShadowScript</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Category: Offensive -->
-            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
-                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(239,68,68),transparent);border-radius:2px;flex-shrink:0;"></div>
-                <div>
-                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 03</div>
-                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Offensive Operations</div>
-                </div>
-                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(239,68,68,0.15),transparent);"></div>
-            </div>
-
-            <!-- Module 3: OFFENSIVE-LAB -->
-            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
-                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
-                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
-                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 03</div>
-                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">OFFENSIVE-LAB</h3>
-                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Full red-team lab. AI-powered payload gen, web app attacks, wireless auditing, credential cracking, and the Phishing Forge with 35 enterprise templates.</p>
-                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">HYDRA · HASHCAT · AIRCRACK · PHP</div>
-                    </div>
-                    <div style="padding:32px;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Offensive</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ DeepHat Apex (AI payload gen)</li>
-                                    <li>→ SQL injection, XSS, SSRF, IDOR</li>
-                                    <li>→ Hydra credential brute-force</li>
-                                    <li>→ Hashcat GPU hash cracking</li>
-                                    <li>→ Aircrack-ng wireless attacks</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Phishing Forge</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ 35 enterprise phishing templates</li>
-                                    <li>→ Live PHP server on custom port</li>
-                                    <li>→ Real-time credential capture</li>
-                                    <li>→ Office365, Google, Outlook, AWS</li>
-                                    <li>→ One-click stop/start control</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Category: Cryptography -->
-            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
-                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(59,130,246),transparent);border-radius:2px;flex-shrink:0;"></div>
-                <div>
-                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 04</div>
-                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Cryptography &amp; Secure Comms</div>
-                </div>
-                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(59,130,246,0.15),transparent);"></div>
-            </div>
-
-            <!-- Module 4: SOVEREIGN-OPS -->
-            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
-                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
-                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
-                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 04</div>
-                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">SOVEREIGN-OPS</h3>
-                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Encrypted communications and integrity assurance. Zero-knowledge chat, binary integrity verification, and RSA-4096 cryptographic identity.</p>
-                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">AES-256-GCM · X25519 · RSA-4096 · GO</div>
-                    </div>
-                    <div style="padding:32px;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Cryptography</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ AES-256-GCM encrypted chat</li>
-                                    <li>→ X25519 forward secrecy</li>
-                                    <li>→ RSA-4096 admin identity keys</li>
-                                    <li>→ Go WebSocket relay node</li>
-                                    <li>→ Zero message persistence</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Integrity</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ Sisyphus integrity sentinel</li>
-                                    <li>→ Binary hash verification</li>
-                                    <li>→ Honeypot trap deployment</li>
-                                    <li>→ Canary token generator</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Category: AI & Automation -->
-            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
-                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(249,115,22),transparent);border-radius:2px;flex-shrink:0;"></div>
-                <div>
-                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 05</div>
-                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">AI Operations &amp; Automation</div>
-                </div>
-                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(249,115,22,0.15),transparent);"></div>
-            </div>
-
-            <!-- Module 5: SHADOW-CLI -->
-            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
-                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
-                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
-                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 05</div>
-                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">SHADOW-CLI</h3>
-                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Natural language AI terminal. Type what you want to do; Shadow figures out the toolchain and executes it. 9 MCP tools wired to the full arsenal.</p>
-                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · ANTHROPIC API · MCP · OAUTH2</div>
-                    </div>
-                    <div style="padding:32px;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">9 MCP Tools</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ network_scan (Nmap)</li>
-                                    <li>→ ghost_mode (toggle)</li>
-                                    <li>→ osint_lookup (Sherlock)</li>
-                                    <li>→ anonymity_check</li>
-                                    <li>→ payload_gen + vuln_scan</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Auth</div>
-                                <div style="background:#000;border:1px solid #222;border-radius:4px;padding:12px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;line-height:2;">
-                                    <div>shadow-agent init</div>
-                                    <div style="color:#555;"># OAuth2 device flow</div>
-                                    <div style="color:#555;"># no copy-paste keys</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Module 6: SHADOWSCRIPT -->
-            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
-                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
-                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
-                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 06</div>
-                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">SHADOWSCRIPT</h3>
-                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">A purpose-built tactical scripting DSL. Hand-written lexer, recursive descent parser, and tree-walking interpreter. Orchestrate multi-tool missions in a single <code style="font-size:0.75rem;color:var(--accent-primary);">.shadow</code> file.</p>
-                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · CUSTOM LEXER · CUSTOM PARSER</div>
-                    </div>
-                    <div style="padding:32px;">
-                        <div>
-                            <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:12px;">Example mission file</div>
-                            <div style="background:#000;border:1px solid #222;border-radius:4px;padding:16px 18px;font-family:var(--font-mono);font-size:0.72rem;color:#cbd5e1;line-height:2;">
-                                <div><span style="color:#b44aff;">TARGET</span> 192.168.1.0/24</div>
-                                <div><span style="color:#b44aff;">SWARM</span> recon.nmap <span style="color:#555;">→ fingerprint all live hosts</span></div>
-                                <div><span style="color:#b44aff;">STRIKE</span> exploit.nuclei <span style="color:#555;">→ sweep for CVEs</span></div>
-                                <div><span style="color:#b44aff;">AI</span> <span style="color:#0f0;">"Summarize critical findings"</span></div>
-                                <div><span style="color:#b44aff;">!echo</span> Mission complete</div>
-                            </div>
-                            <div style="margin-top:16px;font-size:0.78rem;color:var(--text-secondary);line-height:1.8;">Runs with <code style="color:var(--accent-primary);font-size:0.75rem;">python3 engine.py mission.shadow</code>. Modules bridge directly to the arsenal — no glue code needed.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Category: C2 Framework -->
-            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
-                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(168,85,247),transparent);border-radius:2px;flex-shrink:0;"></div>
-                <div>
-                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 06</div>
-                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">C2 Framework</div>
-                </div>
-                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(168,85,247,0.15),transparent);"></div>
-            </div>
-
-            <!-- C2 Command Center -->
-            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
-                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
-                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
-                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 07</div>
-                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">C2 COMMAND CENTER</h3>
-                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Multi-listener C2 controller with session management and payload generation. Start, stop, and monitor listeners across ports and protocols from a single panel.</p>
-                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · METASPLOIT BRIDGE · GTK3</div>
-                    </div>
-                    <div style="padding:32px;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Listener control</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ TCP / HTTP / HTTPS listeners</li>
-                                    <li>→ Live session table</li>
-                                    <li>→ Per-session interaction</li>
-                                    <li>→ One-click start / stop / kill</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Payloads</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ Windows / Linux / macOS / Android</li>
-                                    <li>→ Meterpreter + raw shell</li>
-                                    <li>→ Staged + stageless</li>
-                                    <li>→ Custom LHOST / LPORT</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <style>
+            .arsenal-card{border:1px solid var(--glass-border);border-radius:8px;padding:20px;background:rgba(180,74,255,0.02);}
+            .arsenal-card-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+            .arsenal-tag{font-family:var(--font-mono);font-size:0.55rem;letter-spacing:2px;color:var(--accent-primary);border:1px solid rgba(180,74,255,0.3);padding:2px 8px;border-radius:2px;}
+            .arsenal-title{font-size:0.9rem;font-weight:600;color:#fff;}
+            .arsenal-run-btn{padding:8px 14px;background:var(--accent-primary);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;font-weight:700;font-family:var(--font-mono);white-space:nowrap;}
+            .arsenal-run-btn:disabled{opacity:0.5;cursor:not-allowed;}
+            .arsenal-out{margin:0;font-size:0.72rem;font-family:var(--font-mono);color:#aaa;line-height:1.6;white-space:pre-wrap;word-break:break-all;max-height:160px;overflow-y:auto;min-height:24px;}
+            .arsenal-out.loading{color:#555;}
+            .arsenal-out.error{color:#ef4444;}
+            </style>
 
             <!-- Source note -->
             <div style="padding:24px;border:1px dashed rgba(180,74,255,0.2);border-radius:6px;text-align:center;">
@@ -1012,6 +823,48 @@
                     <span style="color:#666;font-size:0.82rem;">Loading CVE feed…</span>
                 </div>
                 <div id="threat-feed-error" style="display:none;color:#666;font-size:0.82rem;margin-top:8px;"></div>
+            </div>
+
+            <!-- Missions -->
+            <div id="missions-section" style="display:none;margin-bottom:40px;">
+                <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:6px;">// Remote Missions <span style="color:#555;font-size:0.7rem;margin-left:8px;">operator plan</span></h3>
+                <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:16px;">Dispatch ShadowScript to a Guardian agent. The agent executes it locally and posts results back here.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+                    <div>
+                        <label style="font-size:0.7rem;font-family:var(--font-mono);color:#666;letter-spacing:1px;display:block;margin-bottom:6px;">TARGET AGENT</label>
+                        <select id="mission-agent-select" style="width:100%;padding:9px 12px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.82rem;font-family:var(--font-mono);">
+                            <option value="">— select agent —</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.7rem;font-family:var(--font-mono);color:#666;letter-spacing:1px;display:block;margin-bottom:6px;">LABEL (optional)</label>
+                        <input id="mission-label" type="text" placeholder="e.g. check disk usage" style="width:100%;padding:9px 12px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.82rem;font-family:var(--font-mono);box-sizing:border-box;">
+                    </div>
+                </div>
+                <label style="font-size:0.7rem;font-family:var(--font-mono);color:#666;letter-spacing:1px;display:block;margin-bottom:6px;">SCRIPT</label>
+                <textarea id="mission-script" rows="6" placeholder="df -h&#10;uname -a&#10;whoami" style="width:100%;padding:10px 12px;background:#080810;border:1px solid #222;color:#0f0;border-radius:4px;font-size:0.78rem;font-family:var(--font-mono);box-sizing:border-box;resize:vertical;"></textarea>
+                <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+                    <button onclick="missionDispatch()" id="mission-dispatch-btn" class="btn-primary" style="padding:9px 20px;font-size:0.8rem;">Dispatch</button>
+                    <button onclick="missionLoadHistory()" style="padding:9px 16px;background:transparent;border:1px solid #333;color:#888;border-radius:4px;cursor:pointer;font-size:0.8rem;">Refresh history</button>
+                    <span id="mission-dispatch-status" style="font-size:0.78rem;color:var(--text-secondary);font-family:var(--font-mono);"></span>
+                </div>
+
+                <!-- Result viewer -->
+                <div id="mission-result-panel" style="display:none;margin-top:16px;border:1px solid var(--glass-border);border-radius:6px;overflow:hidden;">
+                    <div style="padding:10px 16px;background:rgba(180,74,255,0.06);border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;">
+                        <span id="mission-result-label" class="mono" style="font-size:0.75rem;color:var(--accent-primary);"></span>
+                        <span id="mission-result-status" class="mono" style="font-size:0.7rem;"></span>
+                    </div>
+                    <pre id="mission-result-output" style="margin:0;padding:16px;font-size:0.75rem;font-family:var(--font-mono);color:#aaa;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;"></pre>
+                </div>
+
+                <!-- History -->
+                <div style="margin-top:24px;">
+                    <div class="mono" style="font-size:0.65rem;color:#555;letter-spacing:2px;margin-bottom:10px;">MISSION HISTORY</div>
+                    <div id="mission-history" style="display:flex;flex-direction:column;gap:6px;font-size:0.8rem;color:var(--text-secondary);">
+                        <span style="color:#555;">No missions yet.</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -2144,7 +1997,7 @@
         async function navTo(pageId,el){
             // Merged pages — redirect to their new home
             if(pageId==='shadowos'){pageId='download';el=el||document.getElementById('nav-download');}
-            if(pageId==='office'||pageId==='drive'){pageId='account';el=el||document.getElementById('nav-account');}
+            if(pageId==='office'){pageId='account';el=el||document.getElementById('nav-account');}
             const target=document.getElementById('page-'+pageId);
             if(!target||target.classList.contains('active'))return;
             shutter.classList.add('active');
@@ -2642,6 +2495,10 @@
                     showApiBanner(`Your Pro trial ends in ${me.trial_days_remaining} day(s). Subscribe to keep alerts, multi-device monitoring, and history.`);
                 }
 
+                // Show missions section for operator plan
+                const missionsSection = document.getElementById('missions-section');
+                if (missionsSection) missionsSection.style.display = (effective === 'operator') ? 'block' : 'none';
+
                 // If user has a paid subscription, show "Manage subscription" button
                 if (me.plan && me.plan !== 'community') {
                     let btn = document.getElementById('manage-sub-btn');
@@ -2754,6 +2611,7 @@
                 renderDevices(devicesResp.devices || []);
                 renderIncidents(incidentsResp.incidents || []);
                 renderScans(scansResp.scans || []);
+                if (window._missionPopulateAgents) _missionPopulateAgents(agentsResp.agents || []);
                 showApiBanner(null);
             } catch (err) {
                 console.warn('[guardian] refresh failed', err.message);
@@ -4895,6 +4753,272 @@
         };
     </script>
 
+    <!-- ── Arsenal Intel Tools JavaScript ──────────────────────────────────── -->
+    <script>
+    (function() {
+        function arSet(id, text, cls) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = text;
+            el.className = 'arsenal-out' + (cls ? ' ' + cls : '');
+        }
+        function arBusy(id, btn) {
+            arSet(id, 'Running…', 'loading');
+            if (btn) btn.disabled = true;
+        }
+        function arDone(btn) { if (btn) btn.disabled = false; }
+        function arFmt(data) { return JSON.stringify(data, null, 2); }
+        async function arCall(path) {
+            if (!_sessionApiKey) { return { error: 'Sign in first.' }; }
+            const r = await fetch(API_BASE + path, { headers: { Authorization: 'Bearer ' + _sessionApiKey } });
+            return r.json();
+        }
+
+        window.arRunIp = async function() {
+            const ip = document.getElementById('ar-ip-input').value.trim();
+            const btn = document.querySelector('[onclick="arRunIp()"]');
+            if (!ip) { arSet('ar-ip-out', 'Enter an IP address.', 'error'); return; }
+            arBusy('ar-ip-out', btn);
+            const d = await arCall('/v1/shadow/ip?addr=' + encodeURIComponent(ip));
+            arDone(btn);
+            if (d.error) { arSet('ar-ip-out', d.error, 'error'); return; }
+            const lines = [];
+            if (d.ip) lines.push('IP: ' + d.ip);
+            if (d.country_code) lines.push('Country: ' + d.country_name + ' (' + d.country_code + ')');
+            if (d.isp) lines.push('ISP: ' + d.isp);
+            if (typeof d.abuse_score === 'number') lines.push('Abuse score: ' + d.abuse_score + '/100');
+            if (typeof d.total_reports === 'number') lines.push('Total reports: ' + d.total_reports);
+            if (d.usage_type) lines.push('Usage: ' + d.usage_type);
+            if (typeof d.is_tor === 'boolean') lines.push('Tor exit: ' + (d.is_tor ? 'YES' : 'no'));
+            if (typeof d.is_vpn === 'boolean') lines.push('VPN: ' + (d.is_vpn ? 'YES' : 'no'));
+            arSet('ar-ip-out', lines.length ? lines.join('\n') : arFmt(d));
+        };
+
+        window.arRunDns = async function() {
+            const q = document.getElementById('ar-dns-input').value.trim();
+            const type = document.getElementById('ar-dns-type').value;
+            const btn = document.querySelector('[onclick="arRunDns()"]');
+            if (!q) { arSet('ar-dns-out', 'Enter a domain.', 'error'); return; }
+            arBusy('ar-dns-out', btn);
+            const d = await arCall('/v1/shadow/dns?q=' + encodeURIComponent(q) + '&type=' + type);
+            arDone(btn);
+            if (d.error) { arSet('ar-dns-out', d.error, 'error'); return; }
+            if (d.records && d.records.length) {
+                arSet('ar-dns-out', d.records.map(r => type + '\t' + (r.data || r.name || JSON.stringify(r))).join('\n'));
+            } else {
+                arSet('ar-dns-out', 'No records found.');
+            }
+        };
+
+        window.arRunBreach = async function() {
+            const email = document.getElementById('ar-breach-input').value.trim();
+            const btn = document.querySelector('[onclick="arRunBreach()"]');
+            if (!email) { arSet('ar-breach-out', 'Enter an email address.', 'error'); return; }
+            arBusy('ar-breach-out', btn);
+            const d = await arCall('/v1/shadow/breach?email=' + encodeURIComponent(email));
+            arDone(btn);
+            if (d.error) { arSet('ar-breach-out', d.error, 'error'); return; }
+            if (d.breaches && d.breaches.length) {
+                arSet('ar-breach-out', d.breaches.length + ' breach(es) found:\n' + d.breaches.map(b => '• ' + (b.name || b.Name || b)).join('\n'));
+            } else {
+                arSet('ar-breach-out', 'No breaches found.');
+            }
+        };
+
+        window.arRunCve = async function() {
+            const q = document.getElementById('ar-cve-input').value.trim();
+            const btn = document.querySelector('[onclick="arRunCve()"]');
+            if (!q) { arSet('ar-cve-out', 'Enter a keyword.', 'error'); return; }
+            arBusy('ar-cve-out', btn);
+            const d = await arCall('/v1/shadow/cve?q=' + encodeURIComponent(q) + '&limit=5');
+            arDone(btn);
+            if (d.error) { arSet('ar-cve-out', d.error, 'error'); return; }
+            if (d.cves && d.cves.length) {
+                arSet('ar-cve-out', d.cves.map(c => c.id + ' [' + (c.severity||'?') + '] ' + (c.description||'').slice(0,120)).join('\n\n'));
+            } else {
+                arSet('ar-cve-out', 'No CVEs found.');
+            }
+        };
+
+        window.arRunSearch = async function() {
+            const q = document.getElementById('ar-search-input').value.trim();
+            const btn = document.querySelector('[onclick="arRunSearch()"]');
+            if (!q) { arSet('ar-search-out', 'Enter a search query.', 'error'); return; }
+            arBusy('ar-search-out', btn);
+            const d = await arCall('/v1/shadow/search?q=' + encodeURIComponent(q));
+            arDone(btn);
+            if (d.error) { arSet('ar-search-out', d.error, 'error'); return; }
+            if (d.results && d.results.length) {
+                arSet('ar-search-out', d.results.slice(0,5).map(r => (r.title||r.href||'') + '\n' + (r.body||r.snippet||'').slice(0,120)).join('\n\n'));
+            } else {
+                arSet('ar-search-out', 'No results.');
+            }
+        };
+
+        window.arRunWiki = async function() {
+            const q = document.getElementById('ar-wiki-input').value.trim();
+            const btn = document.querySelector('[onclick="arRunWiki()"]');
+            if (!q) { arSet('ar-wiki-out', 'Enter a topic.', 'error'); return; }
+            arBusy('ar-wiki-out', btn);
+            const d = await arCall('/v1/shadow/wiki?q=' + encodeURIComponent(q));
+            arDone(btn);
+            if (d.error) { arSet('ar-wiki-out', d.error, 'error'); return; }
+            arSet('ar-wiki-out', (d.title ? d.title + '\n\n' : '') + (d.summary || arFmt(d)));
+        };
+
+        window.arRunWeather = async function() {
+            const q = document.getElementById('ar-weather-input').value.trim();
+            const btn = document.querySelector('[onclick="arRunWeather()"]');
+            if (!q) { arSet('ar-weather-out', 'Enter a city.', 'error'); return; }
+            arBusy('ar-weather-out', btn);
+            const d = await arCall('/v1/shadow/weather?q=' + encodeURIComponent(q));
+            arDone(btn);
+            if (d.error) { arSet('ar-weather-out', d.error, 'error'); return; }
+            const c = d.current || {};
+            const loc = d.location || {};
+            const lines = [];
+            if (loc.name) lines.push(loc.name + ', ' + loc.country);
+            if (c.condition) lines.push(c.condition);
+            if (typeof c.temp_c === 'number') lines.push(c.temp_c + '°C / ' + c.temp_f + '°F  (feels ' + c.feels_like_c + '°C)');
+            if (typeof c.humidity_pct === 'number') lines.push('Humidity: ' + c.humidity_pct + '%');
+            if (typeof c.wind_speed_kmh === 'number') lines.push('Wind: ' + c.wind_speed_kmh + ' km/h');
+            arSet('ar-weather-out', lines.length ? lines.join('\n') : arFmt(d));
+        };
+
+        window.arRunFx = async function() {
+            const amount = document.getElementById('ar-fx-amount').value || '1';
+            const from = document.getElementById('ar-fx-from').value.trim().toUpperCase();
+            const to = document.getElementById('ar-fx-to').value.trim().toUpperCase();
+            const btn = document.querySelector('[onclick="arRunFx()"]');
+            if (!from || !to) { arSet('ar-fx-out', 'Enter both currencies.', 'error'); return; }
+            arBusy('ar-fx-out', btn);
+            const d = await arCall('/v1/shadow/currency?from=' + from + '&to=' + to + '&amount=' + amount);
+            arDone(btn);
+            if (d.error) { arSet('ar-fx-out', d.error, 'error'); return; }
+            if (d.result) {
+                arSet('ar-fx-out', amount + ' ' + from + ' = ' + d.result + ' ' + to + '\nRate: ' + d.rate + '\nDate: ' + (d.date || ''));
+            } else {
+                arSet('ar-fx-out', arFmt(d));
+            }
+        };
+
+        window.arRunInstant = async function() {
+            const q = document.getElementById('ar-instant-input').value.trim();
+            const btn = document.querySelector('[onclick="arRunInstant()"]');
+            if (!q) { arSet('ar-instant-out', 'Enter a query.', 'error'); return; }
+            arBusy('ar-instant-out', btn);
+            const d = await arCall('/v1/shadow/instant?q=' + encodeURIComponent(q));
+            arDone(btn);
+            if (d.error) { arSet('ar-instant-out', d.error, 'error'); return; }
+            arSet('ar-instant-out', (d.heading ? d.heading + '\n' : '') + (d.abstract || d.answer || arFmt(d)));
+        };
+
+        // Enter key support for all arsenal inputs
+        document.querySelectorAll('.arsenal-card input').forEach(inp => {
+            inp.addEventListener('keydown', e => { if (e.key === 'Enter') { inp.closest('.arsenal-card').querySelector('.arsenal-run-btn').click(); } });
+        });
+    })();
+    </script>
+
+    <!-- ── Missions JavaScript ──────────────────────────────────────────────── -->
+    <script>
+    (function() {
+        let _activeMissionId = null;
+        let _missionPollInterval = null;
+
+        function missionStatus(txt, color) {
+            const el = document.getElementById('mission-dispatch-status');
+            if (el) { el.textContent = txt; el.style.color = color || 'var(--text-secondary)'; }
+        }
+
+        function missionShowResult(label, status, output) {
+            const panel = document.getElementById('mission-result-panel');
+            const lbl = document.getElementById('mission-result-label');
+            const st = document.getElementById('mission-result-status');
+            const out = document.getElementById('mission-result-output');
+            if (!panel) return;
+            panel.style.display = 'block';
+            if (lbl) lbl.textContent = label || '';
+            if (st) {
+                const colorMap = { pending: '#888', running: '#f59e0b', completed: '#22c55e', failed: '#ef4444' };
+                st.textContent = status;
+                st.style.color = colorMap[status] || '#888';
+            }
+            if (out) out.textContent = output || '(no output)';
+        }
+
+        window.missionLoadHistory = async function() {
+            if (!_sessionApiKey) return;
+            const agentId = document.getElementById('mission-agent-select')?.value;
+            const qs = agentId ? '?agent_id=' + encodeURIComponent(agentId) : '';
+            const d = await fetch(API_BASE + '/v1/missions' + qs, { headers: { Authorization: 'Bearer ' + _sessionApiKey } }).then(r => r.json()).catch(() => ({}));
+            const hist = document.getElementById('mission-history');
+            if (!hist || !d.missions) return;
+            if (!d.missions.length) { hist.innerHTML = '<span style="color:#555;">No missions yet.</span>'; return; }
+            hist.innerHTML = d.missions.map(m => {
+                const colorMap = { pending: '#888', running: '#f59e0b', completed: '#22c55e', failed: '#ef4444' };
+                const t = new Date(m.created_at).toLocaleTimeString();
+                return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #1a1a1a;border-radius:4px;cursor:pointer;" onclick="missionLoadOne('${m.id}')">
+                    <span class="mono" style="font-size:0.65rem;color:#555;">${t}</span>
+                    <span class="mono" style="font-size:0.65rem;color:${colorMap[m.status]||'#888'};width:70px;">${m.status}</span>
+                    <span style="font-size:0.75rem;color:#aaa;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.id}</span>
+                    ${m.exit_code !== null ? `<span class="mono" style="font-size:0.65rem;color:#555;">exit ${m.exit_code}</span>` : ''}
+                </div>`;
+            }).join('');
+        };
+
+        window.missionLoadOne = async function(missionId) {
+            if (!_sessionApiKey) return;
+            const d = await fetch(API_BASE + '/v1/missions/' + missionId, { headers: { Authorization: 'Bearer ' + _sessionApiKey } }).then(r => r.json()).catch(() => ({}));
+            missionShowResult(missionId, d.status, d.result_output);
+        };
+
+        window.missionDispatch = async function() {
+            if (!_sessionApiKey) { missionStatus('Sign in first.', '#ef4444'); return; }
+            const agentId = document.getElementById('mission-agent-select')?.value;
+            const script = document.getElementById('mission-script')?.value.trim();
+            const label = document.getElementById('mission-label')?.value.trim();
+            const btn = document.getElementById('mission-dispatch-btn');
+            if (!agentId) { missionStatus('Select a target agent.', '#f59e0b'); return; }
+            if (!script) { missionStatus('Script is empty.', '#f59e0b'); return; }
+            if (btn) btn.disabled = true;
+            missionStatus('Dispatching…', '#888');
+            const resp = await fetch(API_BASE + '/v1/agents/' + agentId + '/missions', {
+                method: 'POST',
+                headers: { Authorization: 'Bearer ' + _sessionApiKey, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ script, label: label || undefined }),
+            }).then(r => r.json()).catch(() => ({ error: 'network error' }));
+            if (btn) btn.disabled = false;
+            if (resp.error) { missionStatus(resp.error, '#ef4444'); return; }
+            _activeMissionId = resp.mission_id;
+            missionStatus('Dispatched — polling…', '#f59e0b');
+            missionShowResult(_activeMissionId, 'pending', '');
+            missionLoadHistory();
+            // Poll for completion
+            if (_missionPollInterval) clearInterval(_missionPollInterval);
+            _missionPollInterval = setInterval(async () => {
+                const r = await fetch(API_BASE + '/v1/missions/' + _activeMissionId, { headers: { Authorization: 'Bearer ' + _sessionApiKey } }).then(x => x.json()).catch(() => ({}));
+                missionShowResult(_activeMissionId, r.status, r.result_output);
+                if (r.status === 'completed' || r.status === 'failed') {
+                    clearInterval(_missionPollInterval);
+                    missionStatus(r.status === 'completed' ? 'Completed.' : 'Failed.', r.status === 'completed' ? '#22c55e' : '#ef4444');
+                    missionLoadHistory();
+                }
+            }, 3000);
+        };
+
+        // Populate agent selector from guardian data when missions section is shown
+        window._missionPopulateAgents = function(agents) {
+            const sel = document.getElementById('mission-agent-select');
+            if (!sel || !agents) return;
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">— select agent —</option>' + agents.map(a =>
+                `<option value="${a.id}" ${a.id === cur ? 'selected' : ''}>${a.hostname || a.id} (${a.status || 'unknown'})</option>`
+            ).join('');
+        };
+    })();
+    </script>
+
     <!-- ── Shadow Office JavaScript ────────────────────────────────────────── -->
     <script>
     // ─── Office tab switcher ──────────────────────────────────────────────────
@@ -5380,7 +5504,7 @@
     </div>
 
     <!-- ── Shadow Drive page ─────────────────────────────────────────────── -->
-    <div id="page-drive" class="page" style="display:none;">
+    <div id="page-drive" class="page">
         <div style="display:flex;height:calc(100vh - 60px);overflow:hidden;flex-direction:column;">
             <!-- Drive header -->
             <div style="padding:14px 24px;border-bottom:1px solid rgba(180,74,255,0.12);display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.2);flex-shrink:0;flex-wrap:wrap;">
