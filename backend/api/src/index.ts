@@ -97,6 +97,7 @@ import {
   sendOutbound,
 } from "./mail";
 import { adminOverview, adminUsers } from "./admin";
+import { getProfile, updateProfile } from "./profile";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -635,6 +636,12 @@ export default {
         return json({ access_token, refresh_token: refresh_token ?? null }, {}, cors);
       }
 
+      // Public profile lookup — no auth required
+      if (req.method === "GET" && path.startsWith("/v1/profile/")) {
+        const handle = path.slice("/v1/profile/".length);
+        return getProfile(req, env, handle, cors);
+      }
+
       if (path === "/v1/me" && req.method === "GET") return handleMe(req, env, cors);
       if (path === "/v1/keys/rotate" && req.method === "POST") return handleRotate(req, env, cors);
       if (path === "/v1/keys/revoke" && req.method === "POST") return handleRevoke(req, env, cors);
@@ -705,6 +712,8 @@ export default {
         "GET /v1/mail/inbox":                 getInbox,
         "GET /v1/mail/count":                 getMailCount,
         "POST /v1/mail/send":                 sendOutbound,
+        // Profile
+        "PATCH /v1/me/profile":               updateProfile,
         // Admin (shadow@shadowcypher.site only — checked inside each handler)
         "GET /v1/admin/overview":             adminOverview,
         "GET /v1/admin/users":                adminUsers,

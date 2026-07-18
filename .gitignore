@@ -174,3 +174,9 @@ shadowos/test-disk.qcow2
 .aider.conf.yml
 node_modules/
 shadowcypher/ui/node_modules/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
