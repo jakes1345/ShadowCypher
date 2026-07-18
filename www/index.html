@@ -59,7 +59,7 @@
             <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Downloads</a>
             <a onclick="navTo('pricing',this)" id="nav-pricing" class="nav-tab">Pro</a>
             <a onclick="navTo('account',this)" id="nav-account" class="nav-tab">Account</a>
-            <a href="/shadow.html" id="nav-admin" class="nav-tab" style="display:none;color:var(--accent-primary);">Admin</a>
+            <a onclick="navTo('admin',this)" id="nav-admin" class="nav-tab" style="display:none;color:var(--accent-primary);">Admin</a>
         </div>
     </nav>
 
@@ -1972,6 +1972,66 @@
         </div>
     </div>
 
+    <!-- ADMIN -->
+    <div id="page-admin" class="page">
+      <div class="content-section" style="max-width:900px;">
+        <h2 style="font-family:var(--font-heading);font-size:1.6rem;font-weight:700;margin-bottom:6px;">Admin</h2>
+        <p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:28px;">Platform overview — shadow only</p>
+
+        <!-- Stat cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px;" id="admin-stats-grid">
+          <div class="module-card" style="padding:20px 24px;">
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Total Users</div>
+            <div id="admin-stat-users" style="font-size:2rem;font-weight:700;font-family:var(--font-heading);">—</div>
+          </div>
+          <div class="module-card" style="padding:20px 24px;">
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Operators</div>
+            <div id="admin-stat-operators" style="font-size:2rem;font-weight:700;font-family:var(--font-heading);color:var(--accent-primary);">—</div>
+          </div>
+          <div class="module-card" style="padding:20px 24px;">
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Agents Online</div>
+            <div id="admin-stat-agents" style="font-size:2rem;font-weight:700;font-family:var(--font-heading);">—</div>
+          </div>
+          <div class="module-card" style="padding:20px 24px;">
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Missions (7d)</div>
+            <div id="admin-stat-missions" style="font-size:2rem;font-weight:700;font-family:var(--font-heading);">—</div>
+          </div>
+          <div class="module-card" style="padding:20px 24px;">
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Total Agents</div>
+            <div id="admin-stat-agents-total" style="font-size:2rem;font-weight:700;font-family:var(--font-heading);">—</div>
+          </div>
+        </div>
+
+        <!-- User table -->
+        <div class="module-card" style="padding:0;overflow:hidden;">
+          <div style="padding:16px 24px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-weight:600;font-size:0.9rem;">Users</span>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button id="admin-users-prev" onclick="adminUsersPage(-1)" class="btn-secondary" style="padding:4px 12px;font-size:0.75rem;">← Prev</button>
+              <span id="admin-users-page-label" style="font-size:0.75rem;color:var(--text-muted);">Page 1</span>
+              <button id="admin-users-next" onclick="adminUsersPage(1)" class="btn-secondary" style="padding:4px 12px;font-size:0.75rem;">Next →</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--glass-border);">
+                  <th style="text-align:left;padding:10px 24px;color:var(--text-muted);font-weight:500;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">Handle</th>
+                  <th style="text-align:left;padding:10px 16px;color:var(--text-muted);font-weight:500;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">Email</th>
+                  <th style="text-align:left;padding:10px 16px;color:var(--text-muted);font-weight:500;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">Plan</th>
+                  <th style="text-align:left;padding:10px 16px;color:var(--text-muted);font-weight:500;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">Joined</th>
+                  <th style="text-align:left;padding:10px 16px;color:var(--text-muted);font-weight:500;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">Last Seen</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-tbody">
+                <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <footer style="text-align:center;padding:60px 20px;border-top:1px solid var(--glass-border);margin-top:60px;">
         <p style="font-family:var(--font-heading);font-size:1rem;font-weight:700;letter-spacing:0.05em;margin-bottom:8px;">ShadowCypher</p>
         <p style="color:var(--text-muted);font-size:0.78rem;">v3.0.0 · Go · Python · GTK3 · Arch Linux</p>
@@ -2010,6 +2070,7 @@
             window.scrollTo({top:0});
             await new Promise(r=>setTimeout(r,100));
             shutter.classList.remove('active');
+            if(pageId==='admin' && window._adminLoad) window._adminLoad();
         }
 
         // THREE.JS Background
@@ -5015,6 +5076,84 @@
             sel.innerHTML = '<option value="">— select agent —</option>' + agents.map(a =>
                 `<option value="${a.id}" ${a.id === cur ? 'selected' : ''}>${a.hostname || a.id} (${a.status || 'unknown'})</option>`
             ).join('');
+        };
+    })();
+    </script>
+
+    <!-- ── Admin JavaScript ──────────────────────────────────────────────── -->
+    <script>
+    (function() {
+        let _adminUsersCurrentPage = 1;
+        let _adminUsersTotal = 0;
+        const PER_PAGE = 25;
+
+        async function adminLoadOverview() {
+            if (!_sessionApiKey) return;
+            try {
+                const r = await fetch(API_BASE + '/v1/admin/overview', {
+                    headers: { Authorization: 'Bearer ' + _sessionApiKey }
+                });
+                if (!r.ok) return;
+                const d = await r.json();
+                document.getElementById('admin-stat-users').textContent = d.users?.total ?? '—';
+                document.getElementById('admin-stat-operators').textContent = d.users?.operator ?? '—';
+                document.getElementById('admin-stat-agents').textContent = d.agents?.online ?? '—';
+                document.getElementById('admin-stat-agents-total').textContent = d.agents?.total ?? '—';
+                document.getElementById('admin-stat-missions').textContent = d.missions?.last_7d ?? '—';
+            } catch (_) {}
+        }
+
+        async function adminLoadUsers(page) {
+            if (!_sessionApiKey) return;
+            _adminUsersCurrentPage = page;
+            const tbody = document.getElementById('admin-users-tbody');
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">Loading…</td></tr>';
+            try {
+                const r = await fetch(`${API_BASE}/v1/admin/users?page=${page}&per_page=${PER_PAGE}`, {
+                    headers: { Authorization: 'Bearer ' + _sessionApiKey }
+                });
+                if (!r.ok) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#f87171;">Access denied</td></tr>';
+                    return;
+                }
+                const d = await r.json();
+                _adminUsersTotal = d.total ?? 0;
+                document.getElementById('admin-users-page-label').textContent =
+                    `Page ${page} of ${Math.ceil(_adminUsersTotal / PER_PAGE) || 1} (${_adminUsersTotal} users)`;
+                document.getElementById('admin-users-prev').disabled = page <= 1;
+                document.getElementById('admin-users-next').disabled = page >= Math.ceil(_adminUsersTotal / PER_PAGE);
+
+                const PLAN_COLOR = { operator: '#00e0a4', trial: '#f59e0b', free: '#64748b' };
+                tbody.innerHTML = (d.users || []).map(u => {
+                    const planColor = PLAN_COLOR[u.plan] || PLAN_COLOR.free;
+                    const joined = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
+                    const lastSeen = u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString() : '—';
+                    return `<tr style="border-bottom:1px solid var(--glass-border);">
+                        <td style="padding:10px 24px;font-family:var(--font-mono);font-size:0.82rem;">${esc(u.handle)}</td>
+                        <td style="padding:10px 16px;color:var(--text-muted);font-size:0.78rem;">${esc(u.email)}</td>
+                        <td style="padding:10px 16px;"><span style="font-size:0.7rem;font-weight:600;color:${planColor};text-transform:uppercase;letter-spacing:0.06em;">${esc(u.plan)}</span></td>
+                        <td style="padding:10px 16px;color:var(--text-muted);font-size:0.78rem;">${joined}</td>
+                        <td style="padding:10px 16px;color:var(--text-muted);font-size:0.78rem;">${lastSeen}</td>
+                    </tr>`;
+                }).join('') || '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">No users</td></tr>';
+            } catch (_) {
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#f87171;">Failed to load</td></tr>';
+            }
+        }
+
+        function esc(s) {
+            return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        window.adminUsersPage = function(delta) {
+            const newPage = _adminUsersCurrentPage + delta;
+            if (newPage < 1) return;
+            adminLoadUsers(newPage);
+        };
+
+        window._adminLoad = function() {
+            adminLoadOverview();
+            adminLoadUsers(1);
         };
     })();
     </script>

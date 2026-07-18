@@ -96,6 +96,7 @@ import {
   deleteMail,
   sendOutbound,
 } from "./mail";
+import { adminOverview, adminUsers } from "./admin";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -492,6 +493,10 @@ export default {
                 "POST /v1/chat/presence",
                 "GET /v1/chat/online?room=global",
               ],
+              admin: [
+                "GET /v1/admin/overview (shadow only)",
+                "GET /v1/admin/users?page=1&per_page=25 (shadow only)",
+              ],
               shadow: [
                 "GET /v1/shadow/weather?q=<city>",
                 "GET /v1/shadow/currency?from=USD&to=EUR&amount=1",
@@ -700,6 +705,9 @@ export default {
         "GET /v1/mail/inbox":                 getInbox,
         "GET /v1/mail/count":                 getMailCount,
         "POST /v1/mail/send":                 sendOutbound,
+        // Admin (shadow@shadowcypher.site only — checked inside each handler)
+        "GET /v1/admin/overview":             adminOverview,
+        "GET /v1/admin/users":                adminUsers,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];
