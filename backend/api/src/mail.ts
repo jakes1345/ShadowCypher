@@ -227,7 +227,10 @@ export async function sendOutbound(
   if (!body?.to || !emailRegex.test(body.to) || !body.subject?.trim())
     return json({ error: "to_and_subject_required" }, { status: 400 }, cors);
 
-  const from = env.RESEND_FROM_EMAIL || "ShadowCypher <noreply@shadowcypher.site>";
+  const handle = user.email.split("@")[0];
+  const from = user.email.endsWith("@shadowcypher.site")
+    ? `${handle} <${user.email}>`
+    : env.RESEND_FROM_EMAIL || "ShadowCypher <noreply@shadowcypher.site>";
   const sendResp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -284,7 +287,10 @@ export async function replyMail(
 
   const replyTo = orig.from_addr;
   const replySubject = /^re:/i.test(orig.subject) ? orig.subject : `Re: ${orig.subject}`;
-  const fromAddr = user.email;
+  const handle = user.email.split("@")[0];
+  const fromAddr = user.email.endsWith("@shadowcypher.site")
+    ? `${handle} <${user.email}>`
+    : user.email;
 
   const extraHeaders: Record<string, string> = {};
   if (orig.message_id) {

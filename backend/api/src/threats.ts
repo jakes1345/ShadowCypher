@@ -115,10 +115,11 @@ function daysAgoIso(days: number): string {
 export async function getThreats(
   _req: Request,
   _env: Env,
-  _user: { id: string; email: string }
+  _user: { id: string; email: string },
+  cors: HeadersInit = {}
 ): Promise<Response> {
   const url = new URL(_req.url);
-  const severity = url.searchParams.get("severity")?.toUpperCase() || null; // CRITICAL|HIGH|MEDIUM|LOW
+  const severity = url.searchParams.get("severity")?.toUpperCase() || null;
   const days = Math.min(parseInt(url.searchParams.get("days") || "7", 10), 30);
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "25", 10), 100);
 
@@ -129,7 +130,6 @@ export async function getThreats(
       startIndex: "0",
     };
 
-    // Filter by severity via NVD cvssV3Severity param
     if (severity && ["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(severity)) {
       params.cvssV3Severity = severity;
     }
@@ -137,13 +137,13 @@ export async function getThreats(
     const cves = await fetchNvd(params);
 
     return new Response(JSON.stringify({ cves, total: cves.length, days, as_of: new Date().toISOString() }), {
-      headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=3600", ...cors },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return new Response(JSON.stringify({ error: "threat_feed_unavailable", detail: msg }), {
       status: 502,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...cors },
     });
   }
 }
@@ -151,7 +151,8 @@ export async function getThreats(
 export async function getThreatStats(
   _req: Request,
   _env: Env,
-  _user: { id: string; email: string }
+  _user: { id: string; email: string },
+  cors: HeadersInit = {}
 ): Promise<Response> {
   try {
     const [cCount, hCount, mCount, lCount] = await Promise.all([
@@ -171,13 +172,13 @@ export async function getThreatStats(
     };
 
     return new Response(JSON.stringify(stats), {
-      headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=3600", ...cors },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return new Response(JSON.stringify({ error: "stats_unavailable", detail: msg }), {
       status: 502,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...cors },
     });
   }
 }

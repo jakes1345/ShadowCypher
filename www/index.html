@@ -49,20 +49,16 @@
         </div>
         <div class="nav-tabs" id="navTabs">
             <div class="nav-indicator" id="navIndicator"></div>
-            <a onclick="navTo('home',this)" id="nav-home" class="nav-tab active">Overview</a>
+            <a onclick="navTo('home',this)" id="nav-home" class="nav-tab active">Dashboard</a>
+            <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
             <a onclick="navTo('arsenal',this)" id="nav-arsenal" class="nav-tab">Arsenal</a>
             <a onclick="navTo('ghost',this)" id="nav-ghost" class="nav-tab">Privacy</a>
-            <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
-            <a onclick="navTo('chat',this)" id="nav-chat" class="nav-tab">💬 Chat</a>
-            <a onclick="navTo('mail',this)" id="nav-mail" class="nav-tab">📧 Mail <span id="mail-unread-badge" style="display:none;background:var(--accent-primary);color:#000;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle;"></span></a>
-            <a onclick="navTo('office',this)" id="nav-office" class="nav-tab">📄 Office</a>
-            <a onclick="navTo('drive',this)" id="nav-drive" class="nav-tab">🗂 Drive</a>
-            <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Download</a>
-            <a onclick="navTo('shadowos',this)" id="nav-shadowos" class="nav-tab">ShadowOS</a>
-            <a href="/shadow.html" class="nav-tab" style="color:#b44aff;">Shadow</a>
+            <a onclick="navTo('mail',this)" id="nav-mail" class="nav-tab">Mail <span id="mail-unread-badge" style="display:none;background:var(--accent-primary);color:#000;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle;"></span></a>
+            <a onclick="navTo('chat',this)" id="nav-chat" class="nav-tab">Chat</a>
+            <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Downloads</a>
             <a onclick="navTo('pricing',this)" id="nav-pricing" class="nav-tab">Pro</a>
             <a onclick="navTo('account',this)" id="nav-account" class="nav-tab">Account</a>
-            <a onclick="signOut()" id="nav-signout" class="nav-tab" style="display:none;color:var(--accent-secondary);">Sign out</a>
+            <a href="/shadow.html" id="nav-admin" class="nav-tab" style="display:none;color:var(--accent-primary);">Admin</a>
         </div>
     </nav>
 
@@ -1738,11 +1734,11 @@
                     <h2 style="font-size: 2rem; margin-bottom: 30px;">Set new password</h2>
                     <div style="margin-bottom: 20px;">
                         <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">New password</label>
-                        <input type="password" id="reset-password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                        <input type="password" id="reset-password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;" autocomplete="new-password">
                     </div>
                     <div style="margin-bottom: 30px;">
                         <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Confirm</label>
-                        <input type="password" id="reset-password-confirm" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
+                        <input type="password" id="reset-password-confirm" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;" autocomplete="new-password">
                     </div>
                     <button type="submit" class="btn-primary" style="width: 100%;">Update password</button>
                     </form>
@@ -2038,6 +2034,7 @@
                             <div style="margin-bottom:12px;">
                                 <label class="mono" style="font-size:0.65rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Your Anthropic API key (sk-ant-…)</label>
                                 <form onsubmit="saveByok(); return false;" style="display:flex; gap:8px;">
+                                    <input type="text" autocomplete="username" style="display:none;" aria-hidden="true">
                                     <input type="password" id="byok-input" placeholder="sk-ant-…" style="flex:1;padding:8px 12px;border:1px solid #333;background:#000;color:#fff;font-size:0.8rem;" autocomplete="new-password">
                                     <button type="submit" class="btn-primary" style="padding:8px 16px;font-size:0.7rem;">Save</button>
                                     <button type="button" onclick="clearByok()" style="padding:8px 16px;font-size:0.7rem;background:transparent;border:1px solid #444;color:#aaa;cursor:pointer;">Clear</button>
@@ -2145,6 +2142,9 @@
         const indicator=document.getElementById('navIndicator');
         function updateIndicator(el){if(!el)return;indicator.style.width=el.offsetWidth+'px';indicator.style.left=el.offsetLeft+'px';}
         async function navTo(pageId,el){
+            // Merged pages — redirect to their new home
+            if(pageId==='shadowos'){pageId='download';el=el||document.getElementById('nav-download');}
+            if(pageId==='office'||pageId==='drive'){pageId='account';el=el||document.getElementById('nav-account');}
             const target=document.getElementById('page-'+pageId);
             if(!target||target.classList.contains('active'))return;
             shutter.classList.add('active');
@@ -2456,7 +2456,7 @@
             if (!supabaseClient) { cliPrint("Auth offline — try again in a moment.", "var(--warning)"); return; }
 
             if (mode === 'login') {
-                const rawHandle = document.getElementById('login-handle').value.trim().replace(/^@/, '');
+                const rawHandle = document.getElementById('login-handle').value.trim().replace(/^@/, '').toLowerCase();
                 const password = document.getElementById('login-password').value;
                 if (!rawHandle || !password) { showAuthBanner('Handle and password required.', 'error'); return; }
                 const email = `${rawHandle}@shadowcypher.site`;
@@ -2596,12 +2596,13 @@
         async function updateUIForUser(user) {
             document.getElementById('account-auth').style.display = 'none';
             document.getElementById('account-dashboard').style.display = 'block';
-            const signoutLink = document.getElementById('nav-signout');
-            if (signoutLink) signoutLink.style.display = '';
             // Derive nick the same way the server does (email handle, sanitized)
             _myNick = user.email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20) || 'user';
             _currentUserId = user.id || null;
             const name = user.user_metadata?.handle || user.email.split('@')[0];
+            // Show admin link only for the shadow handle
+            const adminLink = document.getElementById('nav-admin');
+            if (adminLink) adminLink.style.display = (name === 'shadow') ? '' : 'none';
             const h2 = document.querySelector('#account-dashboard h2');
             if (h2) h2.innerText = `Welcome, ${name}`;
 
@@ -3844,8 +3845,8 @@
                 } else {
                     document.getElementById('account-auth').style.display = 'block';
                     document.getElementById('account-dashboard').style.display = 'none';
-                    const signoutLink = document.getElementById('nav-signout');
-                    if (signoutLink) signoutLink.style.display = 'none';
+                    const adminLink2 = document.getElementById('nav-admin');
+                    if (adminLink2) adminLink2.style.display = 'none';
                     if (window._guardianTimer) { clearInterval(window._guardianTimer); window._guardianTimer = null; }
                     document.getElementById('api-banner')?.remove();
                 }
@@ -5364,6 +5365,7 @@
             <h2 style="font-size:1.1rem;color:#fff;margin:0 0 8px 0;">Override encryption key <span style="font-size:0.7rem;color:#4ade80;font-family:var(--font-mono);font-weight:400;">[optional]</span></h2>
             <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 24px 0;line-height:1.6;">Your account password already unlocks E2E encryption automatically. Enter a shared room password here if you want a group room where everyone can read each other's messages — everyone must use the same key.</p>
             <form onsubmit="chatUnlockVault(); return false;">
+            <input type="text" autocomplete="username" style="display:none;" aria-hidden="true">
             <input id="chat-vault-password" type="password" placeholder="Room password"
                    style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;margin-bottom:8px;" autocomplete="new-password">
             <div id="chat-vault-error" style="display:none;font-size:0.78rem;color:#fca5a5;margin-bottom:12px;"></div>
