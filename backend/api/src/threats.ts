@@ -137,7 +137,7 @@ export async function getThreats(
     const cves = await fetchNvd(params);
 
     return new Response(JSON.stringify({ cves, total: cves.length, days, as_of: new Date().toISOString() }), {
-      headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=3600", ...cors },
+      headers: { "Content-Type": "application/json", "Cache-Control": "private, max-age=3600", ...cors },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -172,7 +172,7 @@ export async function getThreatStats(
     };
 
     return new Response(JSON.stringify(stats), {
-      headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=3600", ...cors },
+      headers: { "Content-Type": "application/json", "Cache-Control": "private, max-age=3600", ...cors },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
