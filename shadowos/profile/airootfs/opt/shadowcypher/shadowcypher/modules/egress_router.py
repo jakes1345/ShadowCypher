@@ -1,7 +1,8 @@
-import os
 import subprocess
 import time
+
 from shadowcypher.core.logger import logger
+
 
 class EgressRouter:
     """
@@ -10,12 +11,12 @@ class EgressRouter:
     this module interfaces with Tor control ports or proxychains to rotate 
     the external egress IP address, ensuring operational footprint modification.
     """
-    
+
     def __init__(self, tor_control_port=9051, password=""):
         self.control_port = tor_control_port
         self.password = password
         self.active = False
-        
+
     def get_current_egress_ip(self):
         """Fetches the current external IP routing."""
         try:
@@ -26,7 +27,7 @@ class EgressRouter:
                        "https://api.ipify.org"]
             else:
                 cmd = ["curl", "-s", "--max-time", "5", "https://api.ipify.org"]
-                
+
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
             return result.stdout.strip()
         except Exception as e:
@@ -40,20 +41,20 @@ class EgressRouter:
             import socket
             s = socket.socket()
             s.connect(('127.0.0.1', self.control_port))
-            
+
             if self.password:
                 s.send(f'AUTHENTICATE "{self.password}"\r\n'.encode('utf-8'))
             else:
                 s.send(b'AUTHENTICATE ""\r\n')
-                
+
             response = s.recv(1024).decode('utf-8')
             if "250 OK" not in response:
                 logger.error("egress", f"Authentication failed: {response}")
                 return False
-                
+
             s.send(b'SIGNAL NEWNYM\r\n')
             response = s.recv(1024).decode('utf-8')
-            
+
             if "250 OK" in response:
                 logger.info("egress", "Signal NEWNYM accepted. Circuit rotation initiated.")
                 time.sleep(3) # Wait for circuit to establish
@@ -64,7 +65,7 @@ class EgressRouter:
             else:
                 logger.error("egress", f"Failed to rotate circuit: {response}")
                 return False
-                
+
         except Exception as e:
             logger.error("egress", f"Egress rotation failed: {e}. Is Tor running with ControlPort enabled?")
             return False

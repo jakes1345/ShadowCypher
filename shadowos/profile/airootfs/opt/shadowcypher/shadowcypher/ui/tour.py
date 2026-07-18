@@ -12,10 +12,12 @@ being described while the tour panel sits at the bottom.
 from __future__ import annotations
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Gdk, Pango
 from dataclasses import dataclass
 from typing import Callable, Optional
+
+from gi.repository import Gdk, GLib, Gtk
 
 
 @dataclass

@@ -1,13 +1,15 @@
 """Recon Engine — multi-mode service discovery and intelligence gathering."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 import threading
 
+from gi.repository import GLib, Gtk
+
+from shadowcypher.modules.recon import Recon
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod
-from shadowcypher.modules.recon import Recon
 
 
 class ReconPage(BasePage):

@@ -1,9 +1,9 @@
 """Session and Project management — track engagements, targets, and scope."""
 
-import os
 import json
 from datetime import datetime
 from pathlib import Path
+
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 from shadowcypher.core.reporting import Report
@@ -83,7 +83,7 @@ class SessionManager:
         path = self.projects_dir / f"{name}.json"
         if not path.exists():
             return False
-        
+
         from shadowcypher.core.utils import file_lock
         try:
             with file_lock(str(path)):
@@ -103,7 +103,7 @@ class SessionManager:
         if not self.current_project:
             return
         path = self.projects_dir / f"{self.current_project.name}.json"
-        
+
         from shadowcypher.core.utils import file_lock
         try:
             with file_lock(str(path)):

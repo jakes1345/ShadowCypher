@@ -1,8 +1,9 @@
 """Forensics page — file analysis, hashing, steganography UI."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
+from gi.repository import GLib, Gtk
 
 from shadowcypher.modules.forensics import Forensics
 from shadowcypher.ui.base_page import BasePage
@@ -19,7 +20,7 @@ class ForensicsPage(BasePage):
         self.pod_evidence = DataPod("Evidence", "Ready", "cyan")
         self.pod_integrity = DataPod("Host integrity", "Verified", "violet")
         self.pod_audit = DataPod("Audit", "Ready", "amber")
-        
+
         self.metric_strip.pack_start(self.pod_evidence, True, True, 0)
         self.metric_strip.pack_start(self.pod_integrity, True, True, 0)
         self.metric_strip.pack_start(self.pod_audit, True, True, 0)

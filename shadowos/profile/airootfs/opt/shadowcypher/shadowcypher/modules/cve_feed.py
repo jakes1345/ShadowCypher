@@ -13,15 +13,16 @@ Usage:
 """
 
 import json
-import time
-import threading
-import urllib.request
-import urllib.parse
-import urllib.error
 import os
 import re
-from typing import Optional, Callable
+import threading
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass, field
+from typing import Callable, Optional
+
 from shadowcypher.core.logger import logger
 from shadowcypher.core.module import BaseModule
 

@@ -14,6 +14,7 @@ Usage:
 """
 
 from __future__ import annotations
+
 import json
 import os
 import re
@@ -22,7 +23,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Optional, Callable
+from typing import Callable, Optional
+
 from shadowcypher.core.logger import logger
 from shadowcypher.core.module import BaseModule
 
@@ -326,8 +328,8 @@ class ThreatIntel(BaseModule):
                 with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
                     lines = resp.read().decode("utf-8").splitlines()
                 self._tor_exits = {
-                    l.strip() for l in lines
-                    if l.strip() and not l.startswith("#")
+                    ln.strip() for ln in lines
+                    if ln.strip() and not ln.startswith("#")
                 }
                 self._tor_exits_ts = time.time()
                 logger.info("threat_intel", f"Tor exit list: {len(self._tor_exits)} nodes")
@@ -392,7 +394,6 @@ class ThreatIntel(BaseModule):
     def _otx_file(self, file_hash: str, result: ThreatResult):
         # OTX normalizes hash size to determine type
         if len(file_hash) == 32:
-            indicator_type = "file"
             section = f"indicators/file/{file_hash}/general"
         elif len(file_hash) == 40:
             section = f"indicators/file/{file_hash}/general"

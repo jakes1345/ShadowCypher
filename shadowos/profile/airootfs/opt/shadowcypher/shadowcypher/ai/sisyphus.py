@@ -3,17 +3,18 @@ ShadowCypher Sisyphus Protocol — Enterprise-Grade Integrity & Health Engine.
 Google-grade autonomous monitoring focusing on Stability, Integrity, and Performance.
 """
 
-import os
-import time
-import threading
-import psutil
 import hashlib
-import sys
+import os
+import threading
+import time
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
-from shadowcypher.core.logger import logger
+import psutil
+
 from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
+
 
 class Sisyphus:
     """
@@ -27,16 +28,16 @@ class Sisyphus:
         self._active = False
         self._thread = None
         self._last_report = {}
-        
+
         # Enterprise Vitals Thresholds
         self.max_cpu_percent = 85.0
         self.max_ram_percent = 90.0
         self.scan_interval = 60  # Polling frequency in seconds
-        
+
         # Integrity Map (Initial verification hashes)
         self._integrity_map: Dict[str, str] = {}
         self._init_integrity_baseline()
-        
+
         # ═══════════════════════════════════════════════
         # DEEP INTEGRATION: Autonomous Governance
         # ═══════════════════════════════════════════════
@@ -47,7 +48,7 @@ class Sisyphus:
         from shadowcypher.core.firewall import firewall
         hostmask = entry.get("hostmask")
         risk = entry.get("risk_level", "LOW")
-        
+
         if hostmask and risk == "HIGH":
             logger.warning("sisyphus", f"High-risk threat: {hostmask} — blocking.")
             firewall.block_host(hostmask)
@@ -59,7 +60,7 @@ class Sisyphus:
         """
         import json
         self.integrity_file = os.path.join(str(self.project_root), "shadowcypher", "core", "integrity.json")
-        
+
         core_files = [
             "shadowcypher/app.py",
             "shadowcypher/core/hub.py",
@@ -128,7 +129,7 @@ class Sisyphus:
         """The core monitoring loop — executes tiered checks."""
         # Warm-up delay for app bootstrap
         time.sleep(5)
-        
+
         while self._active:
             try:
                 report = self._execute_audit()
@@ -162,11 +163,11 @@ class Sisyphus:
             if not os.path.exists(abs_path):
                 violations.append(f"MISSING: {rel_path}")
                 continue
-            
+
             current_hash = self._get_file_hash(abs_path)
             if current_hash != expected_hash:
                 violations.append(f"MODIFIED: {rel_path}")
-        
+
         # Year 2026: Quantum-Safe Compliance Scan
         violations.extend(self._check_quantum_readiness())
         return violations
@@ -191,7 +192,7 @@ class Sisyphus:
         """Differential syntax validation—only audits files that have mutated."""
         results = {"syntax": [], "orphans": []}
         src_dir = os.path.join(str(self.project_root), "shadowcypher")
-        
+
         if not hasattr(self, "_mtime_cache"):
             self._mtime_cache = {}
 
@@ -206,7 +207,7 @@ class Sisyphus:
                     mtime = os.path.getmtime(path)
                     if self._mtime_cache.get(path) == mtime:
                         continue
-                    
+
                     self._mtime_cache[path] = mtime
                     with open(path, "r", encoding="utf-8") as fh:
                         compile(fh.read(), path, "exec")
@@ -239,7 +240,7 @@ class Sisyphus:
         # Update Hub Telemetry
         from shadowcypher.core.hub import hub
         hub.telemetry["load_avg"] = v["cpu"]
-        
+
         # Log to system bus for UX notification
         bus.publish("sisyphus_report", report)
 
@@ -259,7 +260,7 @@ class Sisyphus:
         v = report["vitals"]
         i = report["integrity"]
         f = report["framework"]
-        
+
         summary = (
             f"System health: {'nominal' if not i and not f['syntax'] else 'degraded'}\n"
             f"Vitals: CPU={v['cpu']}% | RAM={v['ram']}% | Disk={v['disk']}%\n"
@@ -300,7 +301,7 @@ class Sisyphus:
                 h = self._get_file_hash(abs_path)
                 new_hashes[rel_path] = h
                 self._integrity_map[rel_path] = h
-        
+
         try:
             import json
             with open(self.integrity_file, "w") as f:
@@ -308,7 +309,7 @@ class Sisyphus:
             logger.info("sisyphus", "Integrity baseline saved.")
         except Exception as e:
             logger.error("sisyphus", f"Failed to save baseline: {e}")
-        
+
         # Trigger an immediate audit to clear cached 'TAMPERED' status
         self._last_report = self._execute_audit()
 

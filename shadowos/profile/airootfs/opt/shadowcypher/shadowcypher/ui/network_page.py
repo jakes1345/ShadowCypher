@@ -1,12 +1,13 @@
 """Network operations page — packet capture, ARP scan, port scanning UI."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
+from shadowcypher.core.stealth import require_stealth
 from shadowcypher.modules.network import Network
 from shadowcypher.ui.base_page import BasePage
-from shadowcypher.core.stealth import require_stealth
 
 
 class NetworkPage(BasePage):

@@ -5,9 +5,8 @@ subdomain takeover, LFI, and open redirect testing.
 """
 
 import subprocess
-import shlex
 import urllib.parse
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 import requests
 import requests.exceptions
@@ -15,7 +14,6 @@ import requests.exceptions
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_target
-
 
 # Common XSS payloads for injection testing
 _XSS_PAYLOADS = [

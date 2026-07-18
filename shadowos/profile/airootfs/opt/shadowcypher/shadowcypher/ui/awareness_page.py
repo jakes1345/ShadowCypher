@@ -1,10 +1,13 @@
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
-import json
 import threading
-from shadowcypher.core.logger import logger
+
+from gi.repository import GLib, Gtk
+
 from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
+
 
 class AwarenessPage(Gtk.Box):
     def __init__(self):
@@ -23,7 +26,7 @@ class AwarenessPage(Gtk.Box):
         title_lbl = Gtk.Label()
         title_lbl.set_markup("<span size='xx-large' weight='bold' color='#facc15'>PHISHING FORGE: BLACK-HAT RECON</span>")
         header_hbox.pack_start(title_lbl, False, False, 0)
-        
+
         self.status_lbl = Gtk.Label(label="FORGE_READY: Waiting for template ignition...")
         self.status_lbl.get_style_context().add_class("dim-text")
         header_hbox.pack_end(self.status_lbl, False, False, 0)
@@ -127,7 +130,7 @@ class AwarenessPage(Gtk.Box):
         # 2. Live Victim Area
         victim_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         victim_panel.get_style_context().add_class("terminal-box")
-        
+
         victim_header = Gtk.Label()
         victim_header.set_markup("<span weight='bold' color='#94a3b8'>// LIVE_VICTIM_HARVEST</span>")
         victim_header.set_halign(Gtk.Align.START)
@@ -140,12 +143,11 @@ class AwarenessPage(Gtk.Box):
         self.victim_list.get_style_context().add_class("victim-list")
         scroller.add(self.victim_list)
         victim_panel.pack_start(scroller, True, True, 0)
-        
+
         main_hbox.pack_end(victim_panel, True, True, 0)
 
     def _ignite_phish(self, btn):
         from shadowcypher.modules.awareness_sim import SocialEngineeringAssessment
-        from shadowcypher.core.runner import runner
 
         template = self.template_combo.get_active_id()
         use_tunnel = self.tunnel_switch.get_active()
@@ -189,7 +191,7 @@ class AwarenessPage(Gtk.Box):
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         vbox.set_margin_top(10)
         vbox.set_margin_start(10)
-        
+
         ip_lbl = Gtk.Label()
         ip_lbl.set_markup(f"<span weight='bold' color='#f87171'>VICTIM DETECTED: {data.get('ip', 'Unknown')}</span>")
         ip_lbl.set_halign(Gtk.Align.START)
@@ -199,12 +201,12 @@ class AwarenessPage(Gtk.Box):
         creds_lbl.set_markup(f"<span weight='bold' color='#4ade80'>CREDENTIALS: {data.get('username', '—')} / {data.get('password', '—')}</span>")
         creds_lbl.set_halign(Gtk.Align.START)
         vbox.pack_start(creds_lbl, False, False, 0)
-        
+
         ua_lbl = Gtk.Label()
         ua_lbl.set_markup(f"<span size='x-small' color='#94a3b8'>UA: {data.get('agent', 'Unknown')[:64]}...</span>")
         ua_lbl.set_halign(Gtk.Align.START)
         vbox.pack_start(ua_lbl, False, False, 0)
-        
+
         row.add(vbox)
         self.victim_list.add(row)
         self.victim_list.show_all()

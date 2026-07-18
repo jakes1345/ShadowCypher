@@ -2,25 +2,24 @@
 ShadowHub — Central orchestrator for missions, telemetry, and background services.
 """
 
+import asyncio
+import json
 import os
 import threading
 import uuid
-import sys
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Callable, Final
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Any, Callable, Dict, Final, List, Optional
 
-from shadowcypher.core.logger import logger
-from shadowcypher.core.bus import bus
-from shadowcypher.ai.orchestrator import AIOrchestrator
-from shadowcypher.core.platform import platform_engine
-from shadowcypher.core.nexus import nexus
-from shadowcypher.ai.sisyphus import sisyphus
-from shadowcypher.ai.guard import guard
-
-import asyncio
-import json
 import websockets
+
+from shadowcypher.ai.guard import guard
+from shadowcypher.ai.orchestrator import AIOrchestrator
+from shadowcypher.ai.sisyphus import sisyphus
+from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
+from shadowcypher.core.platform import platform_engine
+
 
 class RelayBridge:
     """Bridges the Go-based Swarm Relay to the Python Hub with robust retry logic."""
@@ -75,8 +74,8 @@ class RelayBridge:
         if self.websocket:
             try:
                 await self.websocket.send(json.dumps(data))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("hub", f"Failed to send relay signal: {e}")
 
     def _handle_signal(self, data: dict):
         typ = data.get("type")
@@ -119,7 +118,7 @@ class Mission:
     start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_update_msg: str = ""
     findings: List[Dict[str, Any]] = field(default_factory=list)
-    
+
     @property
     def duration(self) -> str:
         """Returns elapsed time since mission start."""
@@ -145,15 +144,15 @@ class ShadowHub:
     def __init__(self) -> None:
         if getattr(self, "_initialized", False):
             return
-        
+
         self.orchestrator: AIOrchestrator = AIOrchestrator()
         self.active_missions: Dict[str, Mission] = {}
         self.system_status: str = self.SYSTEM_READY
         self.start_time: datetime = datetime.now(timezone.utc)
-        
+
         self.findings_dir = platform_engine.resolve_path("findings")
         os.makedirs(self.findings_dir, exist_ok=True)
-        
+
         self.telemetry: Dict[str, Any] = {
             "missions_total": 0,
             "missions_failed": 0,
@@ -169,10 +168,10 @@ class ShadowHub:
             "guard_blocked": 0,
             "guard_scanned": 0,
         }
-        
+
         self.autonomous_enabled: bool = False
         self._initialized: bool = True
-        
+
         from shadowcypher.core.identity import identity
         if not identity.is_admin:
             logger.critical("hub", "This machine is not recognized as an admin node.")
@@ -207,8 +206,8 @@ class ShadowHub:
         threading.Thread(target=_monitor, daemon=True, name="HubHealthMonitor").start()
 
     def _start_training_range(self) -> None:
-        import subprocess
         import socket as _socket
+        import subprocess
         self._training_range_proc = None
         try:
             with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as s:
@@ -263,8 +262,8 @@ class ShadowHub:
                     stats = guard.get_stats()
                     self._update_telemetry("guard_blocked", stats.get("blocked", 0))
                     self._update_telemetry("guard_scanned", stats.get("scanned", 0))
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("hub", f"Failed to fetch guard stats: {e}")
         threading.Thread(target=_guard_telemetry, daemon=True, name="GuardTelemetry").start()
         logger.info("hub", "ShadowGuard telemetry active")
 
@@ -294,8 +293,7 @@ class ShadowHub:
     def register_arsenal(self):
         """Load the tool registry (called late to avoid circular imports)."""
         logger.info("hub", "Loading tool registry...")
-        import shadowcypher.modules.arsenal.base
-        
+
     def is_tor_available(self) -> bool:
         """Checks if Tor SOCKS5 proxy is reachable on standard port."""
         import socket
@@ -356,7 +354,7 @@ class ShadowHub:
             msg_text = data.get("text", "")
             if len(msg_text) > 512:
                 msg_text = msg_text[:512] + "..."
-                
+
             msg = {
                 "type": "chat",
                 "nick": "core",
@@ -364,11 +362,11 @@ class ShadowHub:
             }
             try:
                 asyncio.run_coroutine_threadsafe(
-                    self.relay_bridge.send(msg), 
+                    self.relay_bridge.send(msg),
                     self.relay_bridge.loop
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("hub", f"Failed to send to relay bridge: {e}")
 
     def _on_intel_discovered(self, intel: Dict[str, Any]) -> None:
         typ = intel.get("type", "unknown")
@@ -388,8 +386,8 @@ class ShadowHub:
             self._update_telemetry("kg_nodes", stats["nodes"])
             self._update_telemetry("kg_edges", stats["edges"])
             logger.info("hub", f"Red team complete: {summary}")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("hub", f"Red team summary failed: {e}")
 
     def _on_pulse_anomaly(self, event: Dict[str, Any]) -> None:
         stream = event.get("stream", "unknown")
@@ -478,14 +476,14 @@ class ShadowHub:
         mission = Mission(id=mission_id, query=goal, role="commander")
         self.active_missions[mission_id] = mission
         self.telemetry["missions_total"] += 1
-        
+
         logger.info("hub", f"Launching agentic mission {mission_id} -> Goal: {goal}")
 
         def _run():
             # Stream loop updates to the hub's mission update system
             result = shadow_loop.run(
-                target=target, 
-                goal=goal, 
+                target=target,
+                goal=goal,
                 on_step_update=lambda msg: self._update_mission(mission_id, msg)
             )
             self._finalize_mission(mission_id, result)

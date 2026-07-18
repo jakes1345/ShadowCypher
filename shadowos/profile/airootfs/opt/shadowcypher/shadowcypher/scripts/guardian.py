@@ -15,14 +15,11 @@ Usage:
 
 import argparse
 import os
-import sys
+import re
 import socket
 import subprocess
+import sys
 import time
-import json
-import re
-import struct
-import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",

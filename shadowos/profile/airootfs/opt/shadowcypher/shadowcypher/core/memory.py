@@ -7,8 +7,9 @@ writes structured markdown directly.
 
 import os
 from datetime import datetime
-from shadowcypher.core.session import session
+
 from shadowcypher.core.logger import logger
+from shadowcypher.core.session import session
 
 
 class DreamSystem:

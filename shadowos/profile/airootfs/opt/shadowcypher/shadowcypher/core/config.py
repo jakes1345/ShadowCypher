@@ -119,7 +119,9 @@ class Config(BaseSettings):
         try:
             with open(path, "r") as f:
                 data = json.load(f)
-        except Exception:
+        except Exception as e:
+            import sys
+            print(f"WARNING: Failed to load config from {path}: {e}", file=sys.stderr)
             return
 
         for k, v in data.items():
@@ -131,13 +133,15 @@ class Config(BaseSettings):
                     try:
                         if hasattr(attr, sk):
                             setattr(attr, sk, sv)
-                    except Exception:
-                        pass  # Skip fields that don't match the model
+                    except Exception as e:
+                        import sys
+                        print(f"DEBUG: Failed to set nested config {k}.{sk}: {e}", file=sys.stderr)
             else:
                 try:
                     setattr(self, k, v)
-                except Exception:
-                    pass
+                except Exception as e:
+                    import sys
+                    print(f"DEBUG: Failed to set config {k}: {e}", file=sys.stderr)
 
     def get(self, *keys: str, default: Any = None) -> Any:
         """
@@ -303,8 +307,9 @@ try:
 
     _user_cfg = ensure_user_config(config.project_root, config.writable_config_path())
     config.load_from_json(_user_cfg)
-except Exception:
-    pass
+except Exception as e:
+    import sys
+    print(f"WARNING: config startup failed: {e}", file=sys.stderr)
 
 # Import logger AFTER singleton for enterprise bootstrap
 from shadowcypher.core.logger import logger

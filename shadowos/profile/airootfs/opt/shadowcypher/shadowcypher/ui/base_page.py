@@ -1,15 +1,17 @@
 """BasePage — shared layout and helpers for all ShadowCypher pages."""
 
-import gi
-import subprocess
-import threading
-import sys
 import os
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
+import subprocess
+import sys
+import threading
 
-from shadowcypher.ui.components import TacticalTerminal, TacticalHeader
+import gi
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk
+
 from shadowcypher.core.hub import hub
+from shadowcypher.ui.components import TacticalHeader, TacticalTerminal
 
 _SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "scripts")
 
@@ -22,7 +24,7 @@ class BasePage(Gtk.Box):
         self.set_margin_bottom(0)
         self.set_margin_start(0)
         self.set_margin_end(0)
-        
+
         self.main_pod = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         self.main_pod.get_style_context().add_class("card")
         self.pack_start(self.main_pod, True, True, 0)
@@ -50,21 +52,21 @@ class BasePage(Gtk.Box):
         self.intel_sidebar.set_margin_start(10)
         self.intel_sidebar.set_margin_end(10)
         self.intel_sidebar.set_margin_top(20)
-        
+
         intel_header = Gtk.Label()
         intel_header.set_markup("<span size='small' weight='bold' color='#94a3b8'>// Intelligence</span>")
         intel_header.set_halign(Gtk.Align.START)
         self.intel_sidebar.pack_start(intel_header, False, False, 0)
-        
+
         self.mission_state_lbl = Gtk.Label(label="Analyzing...")
         self.mission_state_lbl.set_halign(Gtk.Align.START)
         self.intel_sidebar.pack_start(self.mission_state_lbl, False, False, 10)
-        
+
         self.tactical_env.pack_end(self.intel_sidebar, False, False, 0)
 
         self.terminal = TacticalTerminal(height=340)
         self.main_pod.pack_start(self.terminal, True, True, 0)
-        
+
         self._action_buttons: list[Gtk.Button] = []
 
     def log(self, text, tag="INFO"):

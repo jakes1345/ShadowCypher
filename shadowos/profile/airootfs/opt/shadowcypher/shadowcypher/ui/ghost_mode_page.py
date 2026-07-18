@@ -1,18 +1,17 @@
 """Ghost Mode page — anonymity controls wrapping ghost_mode.py and tor_cloak.py."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Pango
-import threading
 import os
 import socket
-import json
+import threading
 import time
 
-from shadowcypher.ui.base_page import BasePage
-from shadowcypher.core.logger import logger
-from shadowcypher.core.stealth import stealth
+from gi.repository import GLib, Gtk, Pango
+
 from shadowcypher.core.bus import bus
+from shadowcypher.ui.base_page import BasePage
 
 
 def _ghost_active() -> bool:
@@ -284,8 +283,8 @@ class GhostModePage(BasePage):
 
         # MAC check — first non-loopback iface, check locally-administered bit
         try:
-            import subprocess
             import re
+            import subprocess
             out = subprocess.check_output(["ip", "-o", "link", "show"], text=True, timeout=2)
             for line in out.splitlines():
                 m = re.search(r"(\w+): .+link/ether\s+([0-9a-f:]{17})", line)
@@ -317,8 +316,8 @@ class GhostModePage(BasePage):
         _set("ip",      tor,   "via Tor" if tor else "EXPOSED")
         # MAC: check locally-administered bit
         try:
-            import subprocess
             import re
+            import subprocess
             out = subprocess.check_output(["ip", "-o", "link", "show"], text=True, timeout=2)
             mac_rand = False
             for line in out.splitlines():
@@ -363,8 +362,8 @@ class GhostModePage(BasePage):
 
     def _run_script(self, args: list, label: str):
         """Run a ghost_mode.py or tor_cloak.py command in a thread, stream to console."""
-        import subprocess
         import shutil
+        import subprocess
         import sys
 
         script_dir = os.path.join(os.path.dirname(__file__), "..", "scripts")
@@ -437,10 +436,10 @@ class GhostModePage(BasePage):
 
     def _on_workspace(self, _btn):
         self._log("Opening RAM-only workspace in terminal...")
-        import subprocess
-        import shutil
-        import sys
         import os as _os
+        import shutil
+        import subprocess
+        import sys
         script = _os.path.join(_os.path.dirname(__file__), "..", "scripts", "ghost_mode.py")
         term = shutil.which("xterm") or shutil.which("gnome-terminal") or shutil.which("konsole")
         if term:

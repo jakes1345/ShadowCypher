@@ -1,22 +1,36 @@
 """
 First-run onboarding. On fresh install, generates `config.json` from the
-template with a random hub_secret and an auto-derived nickname. Idempotent —
-safe to call every startup.
+template with a random hub_secret. Operator name is set via UI dialog on first
+launch. Idempotent — safe to call every startup.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import secrets
-import shutil
 from pathlib import Path
 
+RESERVED_NAMES = {"shadow", "shadowcypher"}
 
-def _default_nick() -> str:
-    base = os.environ.get("USER") or os.environ.get("USERNAME") or "operator"
-    base = "".join(c for c in base if c.isalnum() or c in "_-")[:12] or "operator"
-    return f"{base}_{secrets.token_hex(2)}"
+def is_valid_name(name: str) -> tuple[bool, str | None]:
+    """Validate operator name. Returns (is_valid, error_message)."""
+    if not name:
+        return False, "Name cannot be empty."
+
+    if len(name) < 2:
+        return False, "Name must be at least 2 characters."
+
+    if len(name) > 32:
+        return False, "Name must be 32 characters or less."
+
+    if name.lower() in RESERVED_NAMES:
+        return False, f"'{name}' is reserved and cannot be used."
+
+    # Allow alphanumeric, spaces, hyphens, underscores
+    if not all(c.isalnum() or c in " _-" for c in name):
+        return False, "Name can only contain letters, numbers, spaces, hyphens, and underscores."
+
+    return True, None
 
 
 def ensure_user_config(project_root: Path, cfg_path: Path | None = None) -> Path:
@@ -44,8 +58,7 @@ def ensure_user_config(project_root: Path, cfg_path: Path | None = None) -> Path
     data["irc"]["bot_nick"] = data["irc"].get("bot_nick") or "ShadowSentinel"
 
     data.setdefault("identity", {})
-    if not data["identity"].get("handle"):
-        data["identity"]["handle"] = _default_nick()
+    # Name is set via UI dialog, not auto-generated
 
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(json.dumps(data, indent=2))

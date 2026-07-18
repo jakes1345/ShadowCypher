@@ -23,10 +23,9 @@ from __future__ import annotations
 import json
 import random
 import threading
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from shadowcypher.core.logger import logger
 
@@ -251,7 +250,7 @@ class ModelMerger:
         """Return names of all locally available Ollama models."""
         try:
             import urllib.request
-            with urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=3) as r:
+            with urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=3) as r:  # nosec B310
                 data = json.loads(r.read())
             return [m["name"] for m in data.get("models", [])]
         except Exception:

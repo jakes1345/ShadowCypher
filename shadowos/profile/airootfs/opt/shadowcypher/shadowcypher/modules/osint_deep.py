@@ -6,8 +6,9 @@ Integrates Sherlock, Holehe, theHarvester, and custom scrapers.
 import os
 import re
 import shutil
-from shadowcypher.core.runner import runner
+
 from shadowcypher.core.logger import logger
+from shadowcypher.core.runner import runner
 from shadowcypher.core.stealth import require_stealth
 
 try:
@@ -157,8 +158,8 @@ class DeepOSINT:
     def wayback_recon(domain, on_output=None):
         """Passive recon using Wayback Machine CDX API — surfaces subdomains and endpoints."""
         require_stealth(on_output=on_output)
-        import urllib.request
         import json
+        import urllib.request
         if on_output:
             on_output(f"[OSINT] WAYBACK_RECON: {domain}\n")
         url = (

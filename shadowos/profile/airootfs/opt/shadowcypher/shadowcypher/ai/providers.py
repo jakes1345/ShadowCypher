@@ -8,14 +8,16 @@ All cloud providers use the OpenAI-compatible /v1/chat/completions API format.
 API keys stored in config.json under "ai.providers.<name>.api_key" or via env vars.
 """
 
-import os
 import json
+import os
 import threading
-import urllib.request
 import urllib.error
-from typing import Optional, Callable
+import urllib.request
+from typing import Callable, Optional
+
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
+
 
 # Deferred import to avoid circular: privacy_proxy imports providers
 def _get_gateway():
@@ -566,7 +568,7 @@ class ProviderRegistry:
         ctx = self._get_identity_context()
         if ctx:
             system_prompt = f"{system_prompt}\n\nADMIN_IDENTITY_CONTEXT: {ctx}"
-            
+
         return provider.generate(prompt, system_prompt, max_tokens, temperature)
 
     def generate_stream(self, prompt: str, system_prompt: str = "",

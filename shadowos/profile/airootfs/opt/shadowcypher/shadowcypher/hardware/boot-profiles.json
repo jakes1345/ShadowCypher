@@ -1,0 +1,508 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "name": "ShadowCypher Boot Configuration Profiles",
+    "description": "Hardware-specific boot configurations for secure UEFI/BIOS deployment",
+    "last_updated": "2026-07-05",
+    "maintainer": "ShadowCypher Security Team"
+  },
+  "profiles": {
+    "enterprise-server": {
+      "name": "Enterprise Server",
+      "description": "High-security datacenter deployments with full TPM2.0 support",
+      "hardware_class": "server",
+      "security_level": 4,
+      "uefi": {
+        "secure_boot": {
+          "enabled": true,
+          "mode": "standard",
+          "enforce": true,
+          "signature_algorithm": "sha256"
+        },
+        "tpm": {
+          "enabled": true,
+          "version": "2.0",
+          "pcr_banking": "sha256",
+          "sealed_secrets": true
+        },
+        "memory_protection": {
+          "nx_bit_enabled": true,
+          "execute_disable": true
+        },
+        "iommu": {
+          "enabled": true,
+          "vt_d_or_amd_vi": true
+        },
+        "secure_boot_keys": {
+          "load_defaults": true,
+          "custom_keys_allowed": false,
+          "key_rotation_days": 365
+        },
+        "boot_timeout_seconds": 5,
+        "boot_next_enabled": false,
+        "allow_usb_boot": false,
+        "allow_network_boot": true,
+        "network_boot_timeout_seconds": 3
+      },
+      "bios_settings": {
+        "password_enabled": true,
+        "password_strength": "strong",
+        "boot_device_order": [
+          "internal_storage",
+          "pxe_network"
+        ],
+        "allow_runtime_changes": false
+      },
+      "firmware": {
+        "required_version_min": "2024.01",
+        "rollback_protection": true,
+        "update_strategy": "automated_with_validation",
+        "signature_verification": true
+      },
+      "kernel_parameters": [
+        "intel_iommu=on",
+        "amd_iommu=on",
+        "noexec=on",
+        "efi=runtime",
+        "efi_no_storage_paranoia",
+        "module.sig_enforce=1",
+        "apparmor=1",
+        "security=apparmor"
+      ],
+      "attestation": {
+        "tpm_quotes": true,
+        "pcr_validation": [0, 1, 2, 4, 5, 6, 7],
+        "remote_attestation": true,
+        "audit_logging": true
+      }
+    },
+    "workstation": {
+      "name": "Workstation",
+      "description": "Secure development and analyst workstations",
+      "hardware_class": "workstation",
+      "security_level": 3,
+      "uefi": {
+        "secure_boot": {
+          "enabled": true,
+          "mode": "standard",
+          "enforce": true,
+          "signature_algorithm": "sha256"
+        },
+        "tpm": {
+          "enabled": true,
+          "version": "2.0",
+          "pcr_banking": "sha256",
+          "sealed_secrets": true
+        },
+        "memory_protection": {
+          "nx_bit_enabled": true,
+          "execute_disable": true
+        },
+        "iommu": {
+          "enabled": true,
+          "vt_d_or_amd_vi": true
+        },
+        "secure_boot_keys": {
+          "load_defaults": true,
+          "custom_keys_allowed": false,
+          "key_rotation_days": 180
+        },
+        "boot_timeout_seconds": 10,
+        "boot_next_enabled": true,
+        "allow_usb_boot": false,
+        "allow_network_boot": false
+      },
+      "bios_settings": {
+        "password_enabled": true,
+        "password_strength": "strong",
+        "boot_device_order": [
+          "internal_storage"
+        ],
+        "allow_runtime_changes": false
+      },
+      "firmware": {
+        "required_version_min": "2024.01",
+        "rollback_protection": true,
+        "update_strategy": "manual_with_validation",
+        "signature_verification": true
+      },
+      "kernel_parameters": [
+        "intel_iommu=on",
+        "amd_iommu=on",
+        "noexec=on",
+        "efi=runtime",
+        "module.sig_enforce=1",
+        "apparmor=1",
+        "security=apparmor"
+      ],
+      "attestation": {
+        "tpm_quotes": true,
+        "pcr_validation": [0, 1, 2, 4, 5, 6, 7],
+        "remote_attestation": false,
+        "audit_logging": true
+      }
+    },
+    "edge-device": {
+      "name": "Edge Device",
+      "description": "Embedded and edge computing deployments with TPM1.2/2.0 support",
+      "hardware_class": "edge",
+      "security_level": 2,
+      "uefi": {
+        "secure_boot": {
+          "enabled": false,
+          "mode": "standard",
+          "enforce": false,
+          "signature_algorithm": "sha256"
+        },
+        "tpm": {
+          "enabled": true,
+          "version": "1.2",
+          "pcr_banking": "sha1",
+          "sealed_secrets": false
+        },
+        "memory_protection": {
+          "nx_bit_enabled": true,
+          "execute_disable": true
+        },
+        "iommu": {
+          "enabled": false,
+          "vt_d_or_amd_vi": false
+        },
+        "secure_boot_keys": {
+          "load_defaults": false,
+          "custom_keys_allowed": false,
+          "key_rotation_days": 365
+        },
+        "boot_timeout_seconds": 3,
+        "boot_next_enabled": false,
+        "allow_usb_boot": false,
+        "allow_network_boot": true,
+        "network_boot_timeout_seconds": 10
+      },
+      "bios_settings": {
+        "password_enabled": true,
+        "password_strength": "medium",
+        "boot_device_order": [
+          "internal_storage",
+          "network_boot"
+        ],
+        "allow_runtime_changes": true
+      },
+      "firmware": {
+        "required_version_min": "2020.01",
+        "rollback_protection": false,
+        "update_strategy": "manual",
+        "signature_verification": false
+      },
+      "kernel_parameters": [
+        "noexec=on",
+        "efi=runtime"
+      ],
+      "attestation": {
+        "tpm_quotes": false,
+        "pcr_validation": [0, 1, 2],
+        "remote_attestation": false,
+        "audit_logging": false
+      }
+    },
+    "legacy-hardware": {
+      "name": "Legacy Hardware",
+      "description": "Older systems with minimal firmware security support",
+      "hardware_class": "legacy",
+      "security_level": 1,
+      "uefi": {
+        "secure_boot": {
+          "enabled": false,
+          "mode": "legacy",
+          "enforce": false,
+          "signature_algorithm": "none"
+        },
+        "tpm": {
+          "enabled": false,
+          "version": "none",
+          "pcr_banking": "none",
+          "sealed_secrets": false
+        },
+        "memory_protection": {
+          "nx_bit_enabled": false,
+          "execute_disable": false
+        },
+        "iommu": {
+          "enabled": false,
+          "vt_d_or_amd_vi": false
+        },
+        "secure_boot_keys": {
+          "load_defaults": false,
+          "custom_keys_allowed": false,
+          "key_rotation_days": 0
+        },
+        "boot_timeout_seconds": 10,
+        "boot_next_enabled": false,
+        "allow_usb_boot": true,
+        "allow_network_boot": true,
+        "network_boot_timeout_seconds": 30
+      },
+      "bios_settings": {
+        "password_enabled": true,
+        "password_strength": "weak",
+        "boot_device_order": [
+          "internal_storage",
+          "usb_boot",
+          "network_boot"
+        ],
+        "allow_runtime_changes": true
+      },
+      "firmware": {
+        "required_version_min": "2010.01",
+        "rollback_protection": false,
+        "update_strategy": "manual",
+        "signature_verification": false
+      },
+      "kernel_parameters": [
+        "noexec=off"
+      ],
+      "attestation": {
+        "tpm_quotes": false,
+        "pcr_validation": [],
+        "remote_attestation": false,
+        "audit_logging": false
+      }
+    },
+    "air-gapped": {
+      "name": "Air-Gapped System",
+      "description": "Isolated systems with manual boot media verification",
+      "hardware_class": "isolated",
+      "security_level": 4,
+      "uefi": {
+        "secure_boot": {
+          "enabled": true,
+          "mode": "standard",
+          "enforce": true,
+          "signature_algorithm": "sha256"
+        },
+        "tpm": {
+          "enabled": true,
+          "version": "2.0",
+          "pcr_banking": "sha256",
+          "sealed_secrets": true
+        },
+        "memory_protection": {
+          "nx_bit_enabled": true,
+          "execute_disable": true
+        },
+        "iommu": {
+          "enabled": true,
+          "vt_d_or_amd_vi": true
+        },
+        "secure_boot_keys": {
+          "load_defaults": true,
+          "custom_keys_allowed": false,
+          "key_rotation_days": 365
+        },
+        "boot_timeout_seconds": 10,
+        "boot_next_enabled": false,
+        "allow_usb_boot": false,
+        "allow_network_boot": false
+      },
+      "bios_settings": {
+        "password_enabled": true,
+        "password_strength": "strong",
+        "boot_device_order": [
+          "internal_storage"
+        ],
+        "allow_runtime_changes": false
+      },
+      "firmware": {
+        "required_version_min": "2024.01",
+        "rollback_protection": true,
+        "update_strategy": "manual_with_validation",
+        "signature_verification": true
+      },
+      "kernel_parameters": [
+        "intel_iommu=on",
+        "amd_iommu=on",
+        "noexec=on",
+        "efi=runtime",
+        "module.sig_enforce=1",
+        "apparmor=1",
+        "security=apparmor"
+      ],
+      "attestation": {
+        "tpm_quotes": true,
+        "pcr_validation": [0, 1, 2, 4, 5, 6, 7],
+        "remote_attestation": false,
+        "audit_logging": true
+      }
+    }
+  },
+  "tpm_configurations": {
+    "tpm_2_0": {
+      "specification": "TCG TPM 2.0 Library Specification",
+      "algorithms": [
+        "SHA-1",
+        "SHA-256",
+        "SHA-384",
+        "SHA-512"
+      ],
+      "supported_pcr_banks": [
+        "sha1",
+        "sha256",
+        "sha384",
+        "sha512"
+      ],
+      "default_pcr_bank": "sha256",
+      "recommended_pcr_indices": [0, 1, 2, 4, 5, 6, 7],
+      "pcr_purposes": {
+        "0": "SRTM, POST-BIOS, Embedded BIOS",
+        "1": "POST memory timing",
+        "2": "Loaded BIOS option ROMs and GPDs",
+        "3": "BIOS configuration",
+        "4": "Boot Loader Code and GPDs",
+        "5": "Boot Loader Configuration and Data",
+        "6": "Host Platform Manufacturer Specific",
+        "7": "Secure Launch Control Policy",
+        "8": "Kernel and Initrd",
+        "9": "System Firmware Data",
+        "10": "Entity and Device Firmware"
+      }
+    },
+    "tpm_1_2": {
+      "specification": "TCG TPM 1.2 Rev 103",
+      "algorithms": [
+        "SHA-1"
+      ],
+      "pcr_count": 24,
+      "default_algorithm": "sha1",
+      "supported_hash_algorithm": "sha1"
+    }
+  },
+  "validation_rules": {
+    "enterprise_server_checks": [
+      {
+        "id": "secure_boot_enabled",
+        "name": "Secure Boot is enabled",
+        "severity": "critical",
+        "check": "efibootmgr -p 2>/dev/null | grep -q 'Secure Boot: enabled'"
+      },
+      {
+        "id": "tpm2_present",
+        "name": "TPM 2.0 is present and enabled",
+        "severity": "critical",
+        "check": "tpm2_getcap handles-persistent | grep -q 0x8100"
+      },
+      {
+        "id": "vt_d_enabled",
+        "name": "VT-d/IOMMU is enabled",
+        "severity": "high",
+        "check": "grep -q 'IOMMU enabled' /sys/firmware/dmi/entries/*/raw 2>/dev/null || dmesg | grep -i 'IOMMU enabled'"
+      },
+      {
+        "id": "bios_password_set",
+        "name": "BIOS password is configured",
+        "severity": "high",
+        "check": "system_status | grep 'BIOS Password' | grep -q 'enabled'"
+      },
+      {
+        "id": "nx_bit_enabled",
+        "name": "NX bit is enabled",
+        "severity": "high",
+        "check": "grep -q ' nx ' /proc/cpuinfo"
+      }
+    ],
+    "workstation_checks": [
+      {
+        "id": "secure_boot_enabled",
+        "name": "Secure Boot is enabled",
+        "severity": "high",
+        "check": "efibootmgr -p 2>/dev/null | grep -q 'Secure Boot: enabled'"
+      },
+      {
+        "id": "tpm2_present",
+        "name": "TPM 2.0 is present",
+        "severity": "high",
+        "check": "tpm2_getcap handles-persistent | grep -q 0x8100"
+      },
+      {
+        "id": "nx_bit_enabled",
+        "name": "NX bit is enabled",
+        "severity": "medium",
+        "check": "grep -q ' nx ' /proc/cpuinfo"
+      }
+    ],
+    "all_systems_checks": [
+      {
+        "id": "uefi_firmware_present",
+        "name": "UEFI firmware is present",
+        "severity": "critical",
+        "check": "[ -d /sys/firmware/efi ]"
+      },
+      {
+        "id": "efi_vars_accessible",
+        "name": "UEFI variables are accessible",
+        "severity": "high",
+        "check": "[ -d /sys/firmware/efi/efivars ] || [ -d /sys/firmware/efi/fw_platform_size ]"
+      }
+    ]
+  },
+  "boot_variables": {
+    "BootOrder": {
+      "description": "Defines the order of boot devices",
+      "type": "efi_uint16_list",
+      "access": "read_write"
+    },
+    "BootCurrent": {
+      "description": "Currently executing boot entry number",
+      "type": "efi_uint16",
+      "access": "read_only"
+    },
+    "BootNext": {
+      "description": "Next boot entry on single boot",
+      "type": "efi_uint16",
+      "access": "read_write"
+    },
+    "BootOptionSupport": {
+      "description": "Firmware capabilities and supported boot options",
+      "type": "efi_uint32",
+      "access": "read_only"
+    },
+    "SecureBootEnable": {
+      "description": "Secure Boot enable status",
+      "type": "efi_uint8",
+      "access": "read_write"
+    },
+    "SetupMode": {
+      "description": "Indicates Secure Boot setup state",
+      "type": "efi_uint8",
+      "access": "read_only"
+    },
+    "db": {
+      "description": "Signature Database (authorized signatures)",
+      "type": "efi_signature_database",
+      "access": "read_write"
+    },
+    "dbx": {
+      "description": "Exclusion Database (revoked signatures)",
+      "type": "efi_signature_database",
+      "access": "read_write"
+    },
+    "KEK": {
+      "description": "Key Exchange Key",
+      "type": "efi_signature_database",
+      "access": "read_write"
+    },
+    "PK": {
+      "description": "Platform Key",
+      "type": "efi_signature_database",
+      "access": "read_write"
+    }
+  },
+  "firmware_update_policy": {
+    "validation_required": true,
+    "signature_verification": true,
+    "rollback_check": true,
+    "backup_previous": true,
+    "recovery_strategy": "usb_recovery_media",
+    "maximum_rollback_versions": 1,
+    "update_notification_days": 7
+  }
+}

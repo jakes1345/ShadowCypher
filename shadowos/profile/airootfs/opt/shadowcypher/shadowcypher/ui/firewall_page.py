@@ -1,8 +1,9 @@
 """Firewall page — iptables/nftables management UI."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
+from gi.repository import GLib, Gtk
 
 from shadowcypher.modules.firewall import Firewall
 from shadowcypher.ui.base_page import BasePage
@@ -15,26 +16,26 @@ class FirewallPage(BasePage):
         super().__init__("\U0001f6e1\ufe0f Firewall Management")
 
         from shadowcypher.ui.components import DataPod
-        
+
         # 1. Populate Metrics
         backend = Firewall.detect_backend()
         self.pod_backend = DataPod("Backend", backend.upper(), "cyan")
         self.pod_status = DataPod("Status", "Protected", "violet")
         self.pod_uptime = DataPod("Uptime", "0:00:00", "amber")
-        
+
         self.metric_strip.pack_start(self.pod_backend, True, True, 0)
         self.metric_strip.pack_start(self.pod_status, True, True, 0)
         self.metric_strip.pack_start(self.pod_uptime, True, True, 0)
 
         # ── DEFENSIVE OPERATIONS ──
         ops_box = Gtk.Box(spacing=15)
-        
+
         lockdown_btn = self.make_action_btn("⚡ Lockdown", self._on_lockdown, "danger-btn")
         ops_box.pack_start(lockdown_btn, True, True, 0)
 
         ghost_btn = self.make_action_btn("👻 Drop All", self._on_ghost, "suggested-action")
         ops_box.pack_start(ghost_btn, True, True, 0)
-        
+
         self.workspace.pack_start(ops_box, False, False, 0)
 
         # ── CONNECTION RADAR ──
@@ -46,12 +47,12 @@ class FirewallPage(BasePage):
         self.con_store = Gtk.ListStore(str, str, str, str) # Local, Remote, State, Process
         self.con_tree = Gtk.TreeView(model=self.con_store)
         self.con_tree.get_style_context().add_class("terminal-view")
-        
+
         for i, title in enumerate(["Local", "Remote", "State", "Process"]):
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn(title, renderer, text=i)
             self.con_tree.append_column(column)
-            
+
         scroll = Gtk.ScrolledWindow()
         scroll.set_min_content_height(150)
         scroll.add(self.con_tree)
@@ -123,7 +124,7 @@ class FirewallPage(BasePage):
                 parts = line.split()
                 if len(parts) >= 4:
                     GLib.idle_add(self.con_store.append, [parts[3], parts[4], parts[1], parts[-1]])
-        
+
         self.con_store.clear()
         Firewall.get_active_connections(_on_radar_out)
         return True # Continue timer

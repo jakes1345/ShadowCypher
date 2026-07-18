@@ -5,11 +5,11 @@ Thread-safety: All public methods acquire the lock and use their own cursor
 to prevent cross-thread cursor sharing race conditions.
 """
 
-import sqlite3
 import os
+import sqlite3
 import threading
-import tempfile
 from datetime import datetime
+
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 

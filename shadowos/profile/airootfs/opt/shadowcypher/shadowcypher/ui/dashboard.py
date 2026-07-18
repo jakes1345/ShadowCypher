@@ -4,17 +4,19 @@ Arc gauges for CPU/RAM/Disk, real metrics, arsenal status, live feed.
 """
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Pango, Gdk
-import cairo
-import math
-import psutil
-import time
-import shutil
-from shadowcypher.ai.sisyphus import sisyphus
 
-from shadowcypher.core.hub import hub
+gi.require_version("Gtk", "3.0")
+import math
+import shutil
+import time
+
+import cairo
+import psutil
+from gi.repository import GLib, Gtk, Pango
+
+from shadowcypher.ai.sisyphus import sisyphus
 from shadowcypher.core.bus import bus
+from shadowcypher.core.hub import hub
 from shadowcypher.core.logger import logger
 from shadowcypher.ui.components import TacticalTerminal
 
@@ -63,7 +65,7 @@ class ArcGauge(Gtk.DrawingArea):
                 r, g, b = 0.96, 0.25, 0.37
             elif self._value > 65:
                 r, g, b = 0.96, 0.62, 0.04
-            
+
             cr.set_source_rgba(r, g, b, 0.9)
             angle = 0.75 * math.pi + (self._value / 100.0) * (1.5 * math.pi)
             cr.arc(cx, cy, radius, 0.75 * math.pi, angle)
@@ -185,10 +187,10 @@ class DashboardPage(Gtk.Box):
             self.stat_stealth, self.stat_threats, self.stat_integrity,
             self.stat_relay, self.stat_net, self.stat_pulse
         ]
-        
+
         for i, stat in enumerate(stats_list):
             stats_box.attach(stat, i % 3, i // 3, 1, 1)
-        
+
         gauge_row.pack_start(stats_box, True, True, 10)
         content.pack_start(gauge_row, False, False, 0)
 
@@ -259,7 +261,7 @@ class DashboardPage(Gtk.Box):
         self._tick_id = GLib.timeout_add(2000, self._tick)
         self.connect("unrealize", lambda _: GLib.source_remove(self._tick_id) if self._tick_id else None)
         GLib.idle_add(self._init_once)
-        
+
         # Async Arsenal Audit (Prevents UI hang on constructor)
         import threading
         threading.Thread(target=self._async_arsenal_audit, daemon=True).start()
@@ -287,8 +289,8 @@ class DashboardPage(Gtk.Box):
 
     def _init_once(self):
         """One-shot boot sequence log and initial stat population."""
-        import socket
         import platform as _plat
+        import socket
 
         self.terminal.log("─── ShadowCypher starting ───", "SYSTEM")
         self.terminal.log(f"  OS: {_plat.system()} {_plat.release()} | Arch: {_plat.machine()}", "INFO")
@@ -303,7 +305,8 @@ class DashboardPage(Gtk.Box):
             try:
                 with socket.create_connection(("127.0.0.1", port), timeout=0.4):
                     self.terminal.log(f"  ✓ {name:<14} ONLINE  :{port}", "SUCCESS")
-            except Exception:
+            except Exception as e:
+                logger.debug("dashboard", f"Service check failed for {name}:{port}: {e}")
                 self.terminal.log(f"  ✗ {name:<14} OFFLINE :{port}", "WARNING")
 
         # Ollama check
@@ -312,7 +315,8 @@ class DashboardPage(Gtk.Box):
             urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=1)  # nosec B310
             self.terminal.log("  ✓ Ollama AI     ONLINE  :11434", "SUCCESS")
             self.stat_ai.set_value("Ollama (local)")
-        except Exception:
+        except Exception as e:
+            logger.debug("dashboard", f"Ollama health check failed: {e}")
             self.terminal.log("  ✗ Ollama AI     OFFLINE :11434", "WARNING")
             self.stat_ai.set_value("OFFLINE")
 
@@ -322,7 +326,8 @@ class DashboardPage(Gtk.Box):
             caps = stealth_web.get_capabilities()
             n = sum(1 for v in caps.values() if v)
             self.stat_stealth.set_value(f"{n}/{len(caps)} Active")
-        except Exception:
+        except Exception as e:
+            logger.debug("dashboard", f"Failed to get stealth capabilities: {e}")
             self.stat_stealth.set_value("N/A")
 
         self.terminal.log("─────────────────────────────────────────", "SYSTEM")
@@ -344,7 +349,7 @@ class DashboardPage(Gtk.Box):
 
             # 2. Mission & System Stats
             summary = hub.get_tactical_summary()
-            
+
             # Map stats safely
             stat_map = {
                 self.stat_missions: str(summary.get("active_missions", 0)),
@@ -353,7 +358,7 @@ class DashboardPage(Gtk.Box):
                 self.stat_threats: str(summary.get('threat_hits', 0)),
                 self.stat_stealth: "Active" if hub.is_stealth_ready() else "Exposed"
             }
-            
+
             for widget, val in stat_map.items():
                 widget.set_value(val)
 
@@ -365,5 +370,5 @@ class DashboardPage(Gtk.Box):
 
         except Exception as e:
             logger.debug("ui", f"Dashboard tick error: {e}")
-            
+
         return True

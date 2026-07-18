@@ -5,22 +5,20 @@
 # Orchestrates automated network reconnaissance and localized load testing
 # to validate system security posture and infrastructure throughput.
 
-import sys
-import os
-import time
 import asyncio
-import aiohttp
-import socket
 import logging
+import os
+import sys
+import time
+
+import aiohttp
 
 # 1. Environment Sync
 sys.path.insert(0, os.getcwd())
 os.environ["PYTHONPATH"] = os.environ.get("PYTHONPATH", "") + ":" + os.getcwd()
 
-from shadowcypher.core.bus import bus
-from shadowcypher.modules.recon import Recon
-from shadowcypher.modules.router_pwn import router_pwn
 from shadowcypher.modules.firewall import Firewall
+from shadowcypher.modules.router_pwn import router_pwn
 
 # Enterprise Logging Setup
 logging.basicConfig(
@@ -49,23 +47,23 @@ async def load_test_worker(session, url, requests_per_worker):
 async def execute_local_load_test(target_ip="127.0.0.1", port=8080, concurrency=50, total_requests=1000):
     url = f"http://{target_ip}:{port}/"
     log.info(f"Initiating local load profile against {url} | Concurrency: {concurrency}")
-    
+
     reqs_per = total_requests // concurrency
     async with aiohttp.ClientSession() as session:
         tasks = [load_test_worker(session, url, reqs_per) for _ in range(concurrency)]
         results = await asyncio.gather(*tasks)
-    
+
     total_success = sum(r[0] for r in results)
     total_errors = sum(r[1] for r in results)
     max_time = max(r[2] for r in results)
-    
+
     rps = (total_success + total_errors) / max_time if max_time > 0 else 0
     log.info(f"Load Test Complete: {total_success} OK | {total_errors} ERR | {rps:.2f} RPS")
     return rps
 
 def run_diagnostics():
     log.info("Starting automated infrastructure diagnostics.")
-    
+
     # Phase 1: Gateway Audit
     log.info("Phase 1: Local Network Gateway Audit")
     gateway_ip = router_pwn.get_gateway_ip()

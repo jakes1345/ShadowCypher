@@ -28,11 +28,10 @@ import socket
 import subprocess
 import threading
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
-from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 
 _HYSTERIA_BIN   = "hysteria2"
@@ -84,7 +83,7 @@ class ServerProfile:
                            "salamander": {"password": self.obfs_password}}
         try:
             import yaml
-            return yaml.dump(doc, default_flow_style=False)
+            return str(yaml.dump(doc, default_flow_style=False))
         except ImportError:
             # Minimal YAML serialisation without dependency
             lines = [
@@ -143,6 +142,10 @@ class HysteriaTransport:
         return shutil.which(_HYSTERIA_BIN) or shutil.which("hysteria") or _HYSTERIA_BIN
 
     # ── Connection status ─────────────────────────────────────────────────────
+
+    @property
+    def running(self) -> bool:
+        return self._running
 
     @property
     def connected(self) -> bool:
@@ -245,7 +248,7 @@ class HysteriaTransport:
         if not self.available:
             print("  hysteria2 binary not found.")
             print("  Arch/ShadowOS:  yay -S hysteria")
-            print("  Other Linux:    https://github.com/apernet/hysteria/releases")
+            print("  Other Linux:    Visit https://hysteria.network for downloads")
             return False
 
         print("  You need a Hysteria2 server. Options:")
@@ -307,6 +310,7 @@ class HysteriaTransport:
 
         # Stream logs off-thread
         def _log():
+            assert proc.stdout is not None
             for line in iter(proc.stdout.readline, ""):
                 line = line.rstrip()
                 if line:
@@ -346,8 +350,6 @@ class HysteriaTransport:
     def _watchdog_loop(self) -> None:
         while self._running:
             time.sleep(_WATCHDOG_SECS)
-            if not self._running:
-                break
 
             if self.connected:
                 with self._lock:
@@ -361,7 +363,6 @@ class HysteriaTransport:
 
             with self._lock:
                 pool = list(self._pool)
-                dead = self._active_profile
 
             pool.sort(key=lambda p: (p.failures, -p.last_ok))
             reconnected = False

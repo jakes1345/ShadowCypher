@@ -1,9 +1,11 @@
 """Guardian page — personal device security scanner UI."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
+from shadowcypher.core.logger import logger
 from shadowcypher.ui.base_page import BasePage
 
 
@@ -27,6 +29,10 @@ class GuardianPage(BasePage):
         notebook.append_page(self._build_router_tab(), Gtk.Label(label="Router Audit"))
         notebook.append_page(self._build_monitor_tab(), Gtk.Label(label="Monitor"))
         notebook.append_page(self._build_harden_tab(), Gtk.Label(label="Harden"))
+        notebook.append_page(self._build_host_audit_tab(), Gtk.Label(label="Host Audit"))
+        notebook.append_page(self._build_fail2ban_tab(), Gtk.Label(label="Fail2Ban"))
+        notebook.append_page(self._build_tls_tab(), Gtk.Label(label="TLS Audit"))
+        notebook.append_page(self._build_yara_tab(), Gtk.Label(label="YARA Scan"))
         self.workspace.pack_start(notebook, False, False, 0)
 
     # ── Tabs ─────────────────────────────────────────────────────────────────
@@ -168,3 +174,178 @@ class GuardianPage(BasePage):
         if resp == Gtk.ResponseType.OK:
             self.pod_status.update("HARDENING")
             self.run_script("guardian.py", ["harden"], sudo=True)
+
+    def _build_host_audit_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+
+        lbl = Gtk.Label()
+        lbl.set_markup("<span size='small' color='#94a3b8'>Deep local host audit: rootkit detection (rkhunter), hardening assessment (Lynis), system misconfiguration checks. Requires root.</span>")
+        lbl.set_line_wrap(True)
+        lbl.set_xalign(0)
+        box.pack_start(lbl, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=8)
+        btn_row.pack_start(self.make_action_btn("RKHunter Scan", self._on_rkhunter), False, False, 0)
+        btn_row.pack_start(self.make_action_btn("Lynis Audit", self._on_lynis), False, False, 0)
+        box.pack_start(btn_row, False, False, 0)
+        return box
+
+    def _build_fail2ban_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+
+        lbl = Gtk.Label()
+        lbl.set_markup("<span size='small' color='#94a3b8'>Monitor and manage fail2ban jails: view banned IPs, ban/unban hosts, inspect log patterns. Requires fail2ban installed.</span>")
+        lbl.set_line_wrap(True)
+        lbl.set_xalign(0)
+        box.pack_start(lbl, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=8)
+        btn_row.pack_start(self.make_action_btn("View Status", self._on_fail2ban), False, False, 0)
+        box.pack_start(btn_row, False, False, 0)
+        return box
+
+    def _build_tls_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+
+        lbl = Gtk.Label()
+        lbl.set_markup("<span size='small' color='#94a3b8'>Audit TLS/SSL certificates and configurations: cipher strength, certificate expiry, protocol versions, HSTS headers.</span>")
+        lbl.set_line_wrap(True)
+        lbl.set_xalign(0)
+        box.pack_start(lbl, False, False, 0)
+
+        row = Gtk.Box(spacing=8)
+        row.pack_start(Gtk.Label(label="Host:port"), False, False, 0)
+        self._tls_target = Gtk.Entry()
+        self._tls_target.set_placeholder_text("example.com:443")
+        self._tls_target.set_hexpand(True)
+        row.pack_start(self._tls_target, True, True, 0)
+        box.pack_start(row, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=8)
+        btn_row.pack_start(self.make_action_btn("Scan TLS", self._on_tls), False, False, 0)
+        box.pack_start(btn_row, False, False, 0)
+        return box
+
+    def _build_yara_tab(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+
+        lbl = Gtk.Label()
+        lbl.set_markup("<span size='small' color='#94a3b8'>Scan files and processes against YARA malware signatures: detects trojans, rootkits, APTs. Rules auto-update from community repos.</span>")
+        lbl.set_line_wrap(True)
+        lbl.set_xalign(0)
+        box.pack_start(lbl, False, False, 0)
+
+        row = Gtk.Box(spacing=8)
+        row.pack_start(Gtk.Label(label="Target path:"), False, False, 0)
+        self._yara_path = Gtk.Entry()
+        self._yara_path.set_placeholder_text("/home or /usr/bin (leave empty to scan all)")
+        self._yara_path.set_hexpand(True)
+        row.pack_start(self._yara_path, True, True, 0)
+        box.pack_start(row, False, False, 0)
+
+        btn_row = Gtk.Box(spacing=8)
+        btn_row.pack_start(self.make_action_btn("Scan with YARA", self._on_yara), False, False, 0)
+        box.pack_start(btn_row, False, False, 0)
+        return box
+
+    def _on_rkhunter(self, btn):
+        self.pod_status.update("SCANNING ROOTKITS")
+        self.terminal.log("Running RKHunter scan (rootkit detection)...", "INFO")
+        try:
+            from shadowcypher.modules.host_audit import HostAudit
+            auditor = HostAudit()
+            output = auditor.rkhunter_scan(on_output=lambda msg: self.terminal.log(msg, "INFO"))
+            if output:
+                self.terminal.log(output, "SUCCESS")
+            else:
+                self.terminal.log("RKHunter not available (install: pacman -S rkhunter)", "WARN")
+        except Exception as e:
+            logger.error("guardian_page", f"RKHunter scan failed: {e}")
+            self.terminal.log(f"Error: {e}", "ERROR")
+        self.pod_status.update("idle")
+
+    def _on_lynis(self, btn):
+        self.pod_status.update("AUDITING HOST")
+        self.terminal.log("Running Lynis system hardening audit...", "INFO")
+        try:
+            from shadowcypher.modules.host_audit import HostAudit
+            auditor = HostAudit()
+            output = auditor.lynis_scan(on_output=lambda msg: self.terminal.log(msg, "INFO"))
+            if output:
+                self.terminal.log(output, "SUCCESS")
+            else:
+                self.terminal.log("Lynis not available (install: pacman -S lynis)", "WARN")
+        except Exception as e:
+            logger.error("guardian_page", f"Lynis audit failed: {e}")
+            self.terminal.log(f"Error: {e}", "ERROR")
+        self.pod_status.update("idle")
+
+    def _on_fail2ban(self, btn):
+        self.pod_status.update("CHECKING JAILS")
+        self.terminal.log("Loading Fail2Ban manager...", "INFO")
+        try:
+            from shadowcypher.modules.fail2ban_mgr import Fail2BanManager
+            mgr = Fail2BanManager()
+            output = mgr.status(on_output=lambda msg: self.terminal.log(msg, "INFO"))
+            if output:
+                self.terminal.log(output, "SUCCESS")
+            else:
+                self.terminal.log("Fail2Ban not available", "WARN")
+        except Exception as e:
+            logger.error("guardian_page", f"Fail2Ban check failed: {e}")
+            self.terminal.log(f"Error: {e}", "ERROR")
+        self.pod_status.update("idle")
+
+    def _on_tls(self, btn):
+        target = self._tls_target.get_text() or "localhost:443"
+        self.pod_status.update("SCANNING TLS")
+        self.terminal.log(f"Auditing TLS on {target}...", "INFO")
+        try:
+            from shadowcypher.modules.tls_audit import TlsAudit
+            auditor = TlsAudit()
+            output = auditor.full_audit(target, on_output=lambda msg: self.terminal.log(msg, "INFO"))
+            if output:
+                self.terminal.log(output, "SUCCESS")
+            else:
+                self.terminal.log("TLS audit completed (testssl.sh not available)", "WARN")
+        except Exception as e:
+            logger.error("guardian_page", f"TLS audit failed: {e}")
+            self.terminal.log(f"Error: {e}", "ERROR")
+        self.pod_status.update("idle")
+
+    def _on_yara(self, btn):
+        target = self._yara_path.get_text() or "/"
+        self.pod_status.update("YARA SCANNING")
+        self.terminal.log(f"Scanning {target} with YARA rules...", "INFO")
+        try:
+            from shadowcypher.modules.yara_scan import YaraScan
+            scanner = YaraScan()
+            import os
+            if os.path.isdir(target):
+                output = scanner.scan_directory(target, on_output=lambda msg: self.terminal.log(msg, "INFO"))
+            else:
+                output = scanner.scan_file(target, on_output=lambda msg: self.terminal.log(msg, "INFO"))
+            if output:
+                self.terminal.log(output, "SUCCESS")
+            else:
+                self.terminal.log("YARA scan completed (check if rules are installed)", "WARN")
+        except Exception as e:
+            logger.error("guardian_page", f"YARA scan failed: {e}")
+            self.terminal.log(f"Error: {e}", "ERROR")
+        self.pod_status.update("idle")

@@ -1,16 +1,18 @@
 """Shadow Nodes page — manage remote ghost agents."""
 
-import gi
 import os
+
+import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, GLib, Pango
-import threading
 import time
 
-from shadowcypher.ui.base_page import BasePage
-from shadowcypher.core.ghost import ghost_orchestrator
+from gi.repository import Gdk, GLib, Gtk
+
 from shadowcypher.core.bus import bus
-from shadowcypher.core.logger import logger
+from shadowcypher.core.ghost import ghost_orchestrator
+from shadowcypher.ui.base_page import BasePage
+
 
 class ShadowNodesPage(BasePage):
     def __init__(self):
@@ -20,7 +22,7 @@ class ShadowNodesPage(BasePage):
         self.pod_active = DataPod("Connected", "0", "cyan")
         self.pod_signal = DataPod("Stealth", "100%", "green")
         self.pod_fluidity = DataPod("Status", "Ready", "amber")
-        
+
         for pod in [self.pod_active, self.pod_signal, self.pod_fluidity]:
             self.metric_strip.pack_start(pod, True, True, 0)
 
@@ -34,35 +36,35 @@ class ShadowNodesPage(BasePage):
             col = Gtk.TreeViewColumn(t, Gtk.CellRendererText(), text=i)
             col.set_resizable(True)
             self.tree.append_column(col)
-            
+
         sw = Gtk.ScrolledWindow()
         sw.set_min_content_height(250)
         sw.add(self.tree)
-        
+
         self.workspace.pack_start(frm, True, True, 0)
         frm.add(sw)
 
         # 3. Tactical Console (Interactive)
         console_frame = Gtk.Frame(label="Console")
         console_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        
+
         self.console_view = Gtk.TextView()
         self.console_view.set_editable(False)
         self.console_view.set_cursor_visible(False)
         self.console_view.get_style_context().add_class("terminal-view")
-        
+
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroll.set_min_content_height(300)
         scroll.add(self.console_view)
         console_box.pack_start(scroll, True, True, 0)
-        
+
         # Command Entry
         self.cmd_entry = Gtk.Entry()
         self.cmd_entry.set_placeholder_text("Enter command...")
         self.cmd_entry.connect("activate", self._on_execute)
         console_box.pack_start(self.cmd_entry, False, False, 0)
-        
+
         console_frame.add(console_box)
         self.workspace.pack_start(console_frame, True, True, 0)
 
@@ -136,7 +138,7 @@ class ShadowNodesPage(BasePage):
         # Subscribe to bus events
         bus.subscribe("ghost_node_linked", lambda _: GLib.idle_add(self._refresh_grid))
         bus.subscribe("ghost_node_output", self._on_ghost_output)
-        
+
         self._tick_id = GLib.timeout_add(5000, self._refresh_grid)
         self.connect("unrealize", lambda _: GLib.source_remove(self._tick_id) if self._tick_id else None)
         self._refresh_grid()
@@ -146,7 +148,7 @@ class ShadowNodesPage(BasePage):
         iter = buffer.get_end_iter()
         timestamp = time.strftime("%H:%M:%S")
         buffer.insert(iter, f"[{timestamp}] [{level}] {msg}\n")
-        
+
         # Auto-scroll to bottom
         mark = buffer.get_insert()
         self.console_view.scroll_to_mark(mark, 0.0, True, 0.0, 1.0)
@@ -159,10 +161,10 @@ class ShadowNodesPage(BasePage):
         for n in nodes:
             status = "Connected" if (time.time() - n["last_seen"] < 60) else "Stale"
             self.node_store.append([
-                n["nick"], 
-                n["fp"][:12], 
-                n["os"], 
-                n["host"], 
+                n["nick"],
+                n["fp"][:12],
+                n["os"],
+                n["host"],
                 status
             ])
         self.pod_active.set_value(str(len(nodes)))
@@ -174,11 +176,11 @@ class ShadowNodesPage(BasePage):
         if treeiter is None:
             self.log("ERROR: No Shadow Node selected.", "ERROR")
             return
-            
+
         cmd = self.cmd_entry.get_text().strip()
         if not cmd:
             return
-        
+
         fp_short = model[treeiter][1]
         # Find full FP
         full_fp = None
@@ -186,7 +188,7 @@ class ShadowNodesPage(BasePage):
             if n.fp.startswith(fp_short):
                 full_fp = n.fp
                 break
-        
+
         if full_fp:
             self.log(f"→ '{cmd}' to {model[treeiter][0]}", "INFO")
             ghost_orchestrator.execute(full_fp, cmd)
@@ -200,7 +202,7 @@ class ShadowNodesPage(BasePage):
         if treeiter is None:
             self.log("ERROR: No Shadow Node selected.", "ERROR")
             return
-            
+
         fp_short = model[treeiter][1]
         # Find full FP
         full_fp = None
@@ -208,7 +210,7 @@ class ShadowNodesPage(BasePage):
             if n.fp.startswith(fp_short):
                 full_fp = n.fp
                 break
-        
+
         if full_fp:
             port = 1080
             self.log(f"Starting SOCKS5 proxy on port {port} via {model[treeiter][0]}...", "INFO")
@@ -222,7 +224,7 @@ class ShadowNodesPage(BasePage):
         if treeiter is None:
             self.log("ERROR: No Shadow Node selected.", "ERROR")
             return
-            
+
         fp_short = model[treeiter][1]
         # Find full FP
         full_fp = None
@@ -230,7 +232,7 @@ class ShadowNodesPage(BasePage):
             if n.fp.startswith(fp_short):
                 full_fp = n.fp
                 break
-        
+
         if full_fp:
             self.log(f"Scrubbing traces on {model[treeiter][0]}...", "INFO")
             ghost_orchestrator.deep_scrub(full_fp)
@@ -268,7 +270,6 @@ class ShadowNodesPage(BasePage):
                 except Exception:
                     pass
             ghost_orchestrator._instance = None
-            import threading as _t
             ghost_orchestrator.__class__._instance = None
             ghost_orchestrator.__init__()
             ghost_orchestrator.start()

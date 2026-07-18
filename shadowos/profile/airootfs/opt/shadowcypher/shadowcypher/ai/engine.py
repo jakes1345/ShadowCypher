@@ -4,19 +4,18 @@ Uses Ollama REST API at localhost:11434 for GPU-accelerated inference.
 Falls back to llama-cpp-python if Ollama is unavailable.
 """
 
-import os
 import json
+import os
 import threading
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import Optional, Callable
+from typing import Callable, Optional
 
+from shadowcypher.ai.guard import BLOCK, FLAG, guard
+from shadowcypher.ai.providers import provider_registry
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
-from shadowcypher.ai.providers import provider_registry
-from shadowcypher.ai.guard import guard, BLOCK, FLAG
-
 
 OLLAMA_BASE = getattr(config.ai, 'api_base', 'http://127.0.0.1:11434')
 

@@ -1,11 +1,13 @@
 """Support page — system info, diagnostics, documentation links."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 import platform
 import shutil
 import threading
+
+from gi.repository import GLib, Gtk
 
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod
@@ -110,7 +112,7 @@ class SupportPage(BasePage):
             import socket
             try:
                 import urllib.request
-                urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)
+                urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)  # nosec B310
                 checks.append(("Ollama API", "✓ online"))
             except Exception:
                 checks.append(("Ollama API", "✗ offline"))

@@ -13,12 +13,11 @@ Examples:
     python3 port_reaper.py scanme.nmap.org -p 22,80,443,8080 --banners
 """
 
-import asyncio
 import argparse
+import asyncio
 import socket
 import sys
 import time
-from collections import defaultdict
 
 # Well-known service names for common ports
 SERVICE_MAP = {

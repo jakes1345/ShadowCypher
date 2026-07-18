@@ -14,11 +14,11 @@
 #   97.243.145.96=MASTER_NODE_IP
 #   192.168.1.1=GATEWAY_IP
 
+import argparse
+import logging
 import os
 import re
 import sys
-import argparse
-import logging
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | [%(levelname)s] | %(message)s', datefmt='%H:%M:%S')

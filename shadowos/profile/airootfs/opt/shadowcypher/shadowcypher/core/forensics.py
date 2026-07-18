@@ -7,9 +7,11 @@ into a unified registry accessible by all offensive and defensive modules.
 import json
 import os
 import time
-from typing import Dict, List, Optional, Any
-from shadowcypher.core.logger import logger
+from typing import Any, Dict, List, Optional
+
 from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
+
 
 class ForensicRegistry:
     def __init__(self):
@@ -38,7 +40,7 @@ class ForensicRegistry:
     def register_threat(self, handle_or_data: Any, hostmask: str = "UNK", metadata: dict = None):
         """Register a new threat across the global Citadel plane."""
         ts = time.time()
-        
+
         if isinstance(handle_or_data, dict):
             entry = handle_or_data
             if "timestamp" not in entry:
@@ -60,10 +62,10 @@ class ForensicRegistry:
                 "risk_level": self._calculate_risk(metadata),
                 "status": "QUARANTINED"
             }
-        
+
         self._registry[hostmask] = entry
         self._save()
-        
+
         # Broadcast to System Bus (Triggers Firewall & UI Alerts)
         bus.publish("forensic_update", entry)
         logger.warning("forensics", f"GLOBAL_THREAT_REGISTERED: {entry.get('handle')} at {hostmask}")

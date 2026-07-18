@@ -22,21 +22,20 @@ Usage:
 
 import os
 import re
-import json
-import time
 import shutil
-import threading
 import subprocess
-from datetime import datetime
-from typing import Optional, Callable
+import threading
+import time
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Callable, Optional
 
-from shadowcypher.core.logger import logger
-from shadowcypher.core.stealth import require_stealth
-from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.bus import bus
 from shadowcypher.core.knowledge_graph import kg
+from shadowcypher.core.logger import logger
 from shadowcypher.core.mitre import mitre
+from shadowcypher.core.sanitize import validate_target
+from shadowcypher.core.stealth import require_stealth
 from shadowcypher.modules.cve_feed import cve_feed
 
 REPORTS_DIR = os.path.expanduser("~/.shadowcypher/red_team_reports")
@@ -310,8 +309,8 @@ class AutonomousAdversaryAgent:
         return output
 
     def _python_http_probe(self, url: str, cb: Callable) -> str:
-        import urllib.request
         import urllib.error
+        import urllib.request
         try:
             req = urllib.request.Request(url, headers={
                 "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"

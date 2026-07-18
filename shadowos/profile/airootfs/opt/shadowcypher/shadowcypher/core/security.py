@@ -1,16 +1,17 @@
 """ShadowCypher Custom Tactical Security Engine (Build V35)."""
 
-import os
 import base64
 import hashlib
-import shutil
+import os
+
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
+
+from shadowcypher.core.bus import bus
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
-from shadowcypher.core.bus import bus
 
 
 class ShadowCrypt:
@@ -68,7 +69,6 @@ class StealthHoneypot:
         import socket
         import threading
         from pathlib import Path
-        import datetime
 
         if self.active:
             return
@@ -112,13 +112,13 @@ class StealthHoneypot:
             if data:
                 safe_data = data[:64].decode("utf-8", errors="replace").strip()
                 entry += f" | banner_probe: {safe_data}"
-            
+
             with open(self._threat_log, "a") as f:
                 f.write(entry + "\n")
-            
+
             if on_threat:
                 on_threat(entry)
-            
+
             # Feed into Kairos
             from shadowcypher.core.kairos import kairos
             kairos.analyze(entry)
@@ -142,7 +142,7 @@ class StealthHoneypot:
 
 class IdentityHardener:
     """Manages tactical legitimacy for offensive infrastructure."""
-    
+
     @property
     def is_secure(self) -> bool:
         """Verifies machine handle and cryptographic alignment."""
@@ -152,12 +152,12 @@ class IdentityHardener:
     def execute_flash_wipe(self):
         """Emergency purge of session data and ephemeral keys."""
         logger.warning("security", "ALERT_REACTION: Executing flash-wipe sequence...")
-        
+
         # 1. Clear session memory
         from shadowcypher.core.hub import hub
         hub.telemetry["missions_total"] = 0
         hub.active_missions.clear()
-        
+
         # 2. Lock forensics (rename to hidden)
         forensic_dir = os.path.join(str(config.project_root), "forensics")
         if os.path.exists(forensic_dir):
@@ -167,14 +167,14 @@ class IdentityHardener:
                 logger.info("security", f"LOCKDOWN: Forensics vault relocated to {hidden_dir}")
             except Exception:
                 pass
-            
+
         from shadowcypher.core.runner import runner
         for task_id in list(runner.active_processes.keys()):
             try:
                 runner.stop_task(task_id)
             except Exception:
                 pass
-        
+
         bus.publish("security_lockdown", {"status": "ENCRYPTED"})
 
     def get_hardware_footprint(self) -> str:
@@ -194,8 +194,8 @@ class IdentityHardener:
         logger.info("security", f"PROVISIONING_CERTIFICATE: {domain}")
         # Standard certbot command for manual/automated DNS/Webroot validation
         cmd = [
-            "certbot", "certonly", 
-            "--manual", 
+            "certbot", "certonly",
+            "--manual",
             "--preferred-challenges", "dns",
             "-d", domain,
             "--non-interactive", "--agree-tos",

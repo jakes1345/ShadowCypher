@@ -11,8 +11,7 @@ import threading
 import urllib.request
 from pathlib import Path
 
-GITHUB_REPO = "jakes1345/ShadowCypher"
-RELEASES_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+RELEASES_API = "https://releases.shadowcypher.site/api/latest"
 CURRENT_VERSION_FILE = Path(__file__).parent.parent.parent / "VERSION"
 
 

@@ -1,15 +1,16 @@
 """Intelligence page — OSINT and network recon tabs."""
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk
+
+from shadowcypher.core.hub import hub
+from shadowcypher.modules.network import Network
+from shadowcypher.modules.osint import OSINT
 from shadowcypher.ui.base_page import BasePage
 from shadowcypher.ui.components import DataPod
-from shadowcypher.core.hub import hub
-from shadowcypher.modules.osint import OSINT
-from shadowcypher.modules.network import Network
-from shadowcypher.modules.recon import Recon
+
 
 class SpectralIntelligencePage(BasePage):
     """Intelligence hub \u2014 OSINT and network recon."""
@@ -29,18 +30,18 @@ class SpectralIntelligencePage(BasePage):
         self.notebook.append_page(self._build_osint_tab(), Gtk.Label(label="Strategic OSINT"))
         self.notebook.append_page(self._build_network_tab(), Gtk.Label(label="Network Recon"))
         self.notebook.set_current_page(start_tab)
-        
+
         self.workspace.pack_start(self.notebook, True, True, 0)
 
     def _build_osint_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
         box.set_property("margin", 15)
-        
+
         row1 = Gtk.Box(spacing=10)
         self.osint_target = Gtk.Entry()
         self.osint_target.set_placeholder_text("Target Domain, IP, or Email...")
         row1.pack_start(self.osint_target, True, True, 0)
-        
+
         btn_go = Gtk.Button(label="Run")
         btn_go.get_style_context().add_class("suggested-action")
         btn_go.connect("clicked", self._on_osint_pulse)
@@ -51,7 +52,7 @@ class SpectralIntelligencePage(BasePage):
         flow = Gtk.FlowBox()
         flow.set_max_children_per_line(4)
         flow.set_selection_mode(Gtk.SelectionMode.NONE)
-        
+
         actions = [
             ("SSL Audit", self._on_osint_ssl),
             ("HTTP Headers", self._on_osint_headers),
@@ -63,7 +64,7 @@ class SpectralIntelligencePage(BasePage):
         for label, handler in actions:
             btn = self.make_action_btn(label, handler)
             flow.add(btn)
-        
+
         box.pack_start(flow, False, False, 0)
         return box
 
@@ -75,18 +76,18 @@ class SpectralIntelligencePage(BasePage):
         self.net_target = Gtk.Entry()
         self.net_target.set_placeholder_text("Target Subnet or IP...")
         row1.pack_start(self.net_target, True, True, 0)
-        
+
         self.net_iface = Gtk.Entry()
         self.net_iface.set_placeholder_text("iface (auto)")
         self.net_iface.set_width_chars(10)
         row1.pack_start(self.net_iface, False, False, 0)
-        
+
         box.pack_start(row1, False, False, 0)
 
         btn_row = Gtk.FlowBox()
         btn_row.set_max_children_per_line(4)
         btn_row.set_selection_mode(Gtk.SelectionMode.NONE)
-        
+
         net_actions = [
             ("ARP Scan", self._on_net_arp),
             ("TCP Sweep", self._on_net_tcp),
@@ -98,7 +99,7 @@ class SpectralIntelligencePage(BasePage):
         for label, handler in net_actions:
             btn = self.make_action_btn(label, handler)
             btn_row.add(btn)
-        
+
         box.pack_start(btn_row, False, False, 0)
         return box
 
@@ -135,7 +136,6 @@ class SpectralIntelligencePage(BasePage):
         if not target:
             return
         import threading
-        from gi.repository import GLib
         threading.Thread(
             target=lambda: GLib.idle_add(self.log, OSINT.subnet_info(target), "INTEL"),
             daemon=True

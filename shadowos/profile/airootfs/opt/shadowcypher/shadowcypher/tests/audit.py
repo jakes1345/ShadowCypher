@@ -1,20 +1,21 @@
 """ShadowCypher Module Integration Audit — Validates actual API surface."""
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # ── Module Registry (matches modules/__init__.py + extras) ──
 
-from shadowcypher.modules.poc_engine import PocEngine
-from shadowcypher.modules.vuln_scanner import VulnScanner
+from shadowcypher.modules.firewall import Firewall
+from shadowcypher.modules.forensics import Forensics
 from shadowcypher.modules.network import Network
 from shadowcypher.modules.osint import OSINT
-from shadowcypher.modules.secret_audit import Credentials
-from shadowcypher.modules.forensics import Forensics
-from shadowcypher.modules.wireless import Wireless
-from shadowcypher.modules.firewall import Firewall
+from shadowcypher.modules.poc_engine import PocEngine
 from shadowcypher.modules.recon import Recon
+from shadowcypher.modules.secret_audit import Credentials
+from shadowcypher.modules.vuln_scanner import VulnScanner
+from shadowcypher.modules.wireless import Wireless
 
 modules = {
     'PocEngine': PocEngine,

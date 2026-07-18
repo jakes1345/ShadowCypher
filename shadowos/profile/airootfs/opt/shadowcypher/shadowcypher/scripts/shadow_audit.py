@@ -12,14 +12,12 @@ Usage:
 """
 
 import argparse
+import json
 import os
-import sys
+import re
 import socket
 import subprocess
 import time
-import json
-import struct
-import re
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}

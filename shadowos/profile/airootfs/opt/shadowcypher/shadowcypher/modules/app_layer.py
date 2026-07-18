@@ -5,22 +5,22 @@ via threaded operations and native subprocess orchestration.
 For authorized infrastructure resilience auditing only.
 """
 
+import random
 import socket
 import ssl
+import string
 import threading
 import time
-import random
-import string
 from typing import Dict, Optional
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
-from shadowcypher.core.sanitize import validate_target, validate_port
+from shadowcypher.core.sanitize import validate_port, validate_target
 from shadowcypher.core.stealth import require_stealth
 
 try:
-    import h2.connection
     import h2.config
+    import h2.connection
     import h2.events
     import h2.exceptions
     HAS_H2 = True

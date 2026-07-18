@@ -1,6 +1,7 @@
 """OSINT page — open source intelligence gathering UI."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
@@ -57,7 +58,7 @@ class OSINTPage(BasePage):
             btn_flow.add(btn)
 
         self.workspace.pack_start(btn_flow, False, False, 10)
-        
+
         stop_box = Gtk.Box(spacing=10)
         stop_box.pack_end(self.build_stop_button(), False, False, 0)
         self.workspace.pack_start(stop_box, False, False, 0)

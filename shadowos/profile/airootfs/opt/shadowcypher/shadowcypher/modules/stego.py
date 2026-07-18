@@ -3,10 +3,9 @@ Steganography + IPFS Dead Drop Module (T4-2).
 LSB steganography in PNG images with AES-GCM payload encryption.
 """
 import os
-import struct
 import secrets
+import struct
 from typing import Optional
-from shadowcypher.core.logger import logger
 
 try:
     from PIL import Image

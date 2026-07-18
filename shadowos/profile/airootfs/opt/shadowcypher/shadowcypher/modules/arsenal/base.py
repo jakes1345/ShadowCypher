@@ -4,10 +4,11 @@ Wraps native Go primitives into autonomous strike tools.
 """
 
 import os
-from typing import Optional
-from shadowcypher.core.platform import platform_engine
+
 from shadowcypher.core.logger import logger
+from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.runner import runner
+
 try:
     from ai_engine.autoagent.registry import register_tool
 except ImportError:

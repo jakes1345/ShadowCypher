@@ -1,16 +1,18 @@
 """AI chat page — multi-provider model switcher, autonomous mission dispatch."""
 
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 import os
 import threading
 
-from shadowcypher.ui.base_page import BasePage
-from shadowcypher.ui.components import TacticalTerminal, TacticalHeader, DataPod
+from gi.repository import GLib, Gtk
+
+from shadowcypher.ai.providers import PROVIDERS, provider_registry
 from shadowcypher.core.hub import hub
-from shadowcypher.core.logger import logger
-from shadowcypher.ai.providers import provider_registry, PROVIDERS
+from shadowcypher.ui.base_page import BasePage
+from shadowcypher.ui.components import DataPod, TacticalHeader, TacticalTerminal
+
 
 class AIPage(BasePage):
     """AI chat interface — talk to any model, launch autonomous missions."""
@@ -147,7 +149,7 @@ class AIPage(BasePage):
 
         opts_row.pack_start(Gtk.Label(label="Role:"), False, False, 0)
         self.role_combo = Gtk.ComboBoxText()
-        from shadowcypher.ai.prompts import get_team_names, get_team_display_name
+        from shadowcypher.ai.prompts import get_team_display_name, get_team_names
         for r in get_team_names():
             self.role_combo.append(r, get_team_display_name(r))
         self.role_combo.set_active_id("shadowai")
