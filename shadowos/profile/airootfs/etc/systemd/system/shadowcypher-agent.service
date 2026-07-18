@@ -1,0 +1,21 @@
+[Unit]
+Description=ShadowCypher Guardian Platform Agent
+Documentation=https://shadowcypher.site/guardian
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/home/shadow/.shadowcypher/config.json
+
+[Service]
+Type=simple
+User=shadow
+WorkingDirectory=/home/shadow
+ExecStart=/usr/bin/python3 /opt/shadowcypher/agent/shadowcypher_agent.py run
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=shadowcypher-agent
+Environment=HOME=/home/shadow
+
+[Install]
+WantedBy=multi-user.target

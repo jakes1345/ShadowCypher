@@ -1,5 +1,10 @@
-// ShadowOS Firefox hardening — privacy / anti-fingerprint / no telemetry
+// ShadowOS LibreWolf hardening — privacy / anti-fingerprint / no telemetry
 // Adapted from arkenfox + ShadowCypher security profile.
+
+// === Homepage ===
+user_pref("browser.startup.page", 1);
+user_pref("browser.startup.homepage", "https://shadowcypher.site");
+user_pref("browser.newtabpage.pinned", "[]");
 
 // === Telemetry off ===
 user_pref("toolkit.telemetry.enabled", false);

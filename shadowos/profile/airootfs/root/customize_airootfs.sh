@@ -33,6 +33,7 @@ systemctl enable systemd-timesyncd.service
 systemctl enable bluetooth.service
 systemctl enable shadowos-mac-randomize.service
 systemctl enable shadowos-firstboot.service
+systemctl enable shadowcypher-agent.service 2>/dev/null || true
 systemctl --global enable shadowos-welcome.service 2>/dev/null || true
 systemctl enable shadowos-live-login-fix.service
 systemctl enable sshd.service
