@@ -185,8 +185,7 @@ python-matplotlib
 librewolf
 mullvad-browser-bin
 # firefox removed — contradicts brand (no Mozilla telemetry); use librewolf or mullvad-browser
-chaotic-keyring
-chaotic-mirrorlist
+# chaotic-keyring/mirrorlist installed by build script via URL, not via pacstrap
 mpv
 imv
 yt-dlp
@@ -277,7 +276,7 @@ ligolo-ng
 ghidra
 
 # === Memory forensics ===
-python-volatility3
+# python-volatility3  # AUR only — install post-boot via pipx
 
 # === Anonymity++ (beats Parrot's AnonSurf cold) ===
 i2pd
@@ -450,11 +449,10 @@ system-config-printer
 # === Privacy / comms ===
 nheko
 
-# === Enterprise Features (FreeIPA, FIPS, TPM, SELinux, Compliance) ===
-# Identity Management
-freeipa-client
-krb5
-openldap
+# === Enterprise Features (TPM, Compliance) ===
+# freeipa-client  # AUR only — unresolvable deps (authselect, certmonger, oddjob-selinux)
+# krb5            # pulled in as dep if needed
+# openldap        # pulled in as dep if needed
 
 # Encryption & Hardware Security
 # (dedup) cryptsetup
@@ -466,9 +464,9 @@ tpm2-pkcs11
 shim-signed
 
 # SELinux & Mandatory Access Control
-selinux-policy
-selinux-policy-default
-selinux-python
+# selinux-policy        # not in standard Arch repos
+# selinux-policy-default
+# selinux-python
 
 # FIPS 140-2 Compliance
 openssl
@@ -477,8 +475,8 @@ libsodium
 
 # Audit & Compliance
 # (dedup) audit
-systemd-journal-remote
-aide
+# systemd-journal-remote  # not a separate Arch package (part of systemd)
+# aide                    # AUR only
 
 # DNSSEC & Network Security
 bind-tools
