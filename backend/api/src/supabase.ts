@@ -76,6 +76,20 @@ export async function dbUpsert<T = unknown>(
   return rows[0];
 }
 
+export async function dbCount(env: Env, table: string, filters: Record<string, string> = {}): Promise<number> {
+  const url = buildUrl(env, table, { filters, select: "id", limit: 1 });
+  const headers = {
+    ...authHeaders(env, "count=exact"),
+    "Range-Unit": "items",
+    "Range": "0-0",
+  } as Record<string, string>;
+  const resp = await fetch(url, { headers });
+  const range = resp.headers.get("Content-Range"); // "0-0/1234" or "*/0"
+  if (!range) return 0;
+  const total = range.split("/")[1];
+  return total && total !== "*" ? parseInt(total, 10) : 0;
+}
+
 export async function dbUpdate<T = unknown>(
   env: Env,
   table: string,

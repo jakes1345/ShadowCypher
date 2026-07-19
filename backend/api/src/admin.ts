@@ -26,6 +26,7 @@ function requireAdmin(user: { id: string; email: string }, cors: HeadersInit): R
 
 interface ProfileRow extends ProfileForPlan {
   user_id: string;
+  created_at: string;
 }
 interface AgentRow {
   user_id: string;
@@ -53,7 +54,7 @@ export async function adminOverview(
 
   const [profiles, agents, missions] = await Promise.all([
     dbSelect<ProfileRow>(env, "profiles", {
-      select: "user_id,plan,trial_ends_at,subscription_status,current_period_end",
+      select: "user_id,plan,trial_ends_at,subscription_status,current_period_end,created_at",
       limit: 5000,
     }),
     dbSelect<AgentRow>(env, "agents", { select: "user_id,online", limit: 5000 }),
@@ -82,10 +83,7 @@ export async function adminOverview(
         free: planCounts["community"] ?? 0,
         operator: planCounts["operator"] ?? 0,
         trial: trialCount,
-        new_7d: profiles.filter(p => {
-          // profiles doesn't have created_at — use agents or skip
-          return false;
-        }).length,
+        new_7d: profiles.filter(p => p.created_at && p.created_at > sevenDaysAgo()).length,
       },
       agents: {
         total: agents.length,

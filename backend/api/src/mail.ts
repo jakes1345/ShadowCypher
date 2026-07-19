@@ -14,7 +14,7 @@
  */
 
 import type { Env } from "./index";
-import { dbSelect, dbInsert, dbUpdate } from "./supabase";
+import { dbSelect, dbInsert, dbUpdate, dbCount } from "./supabase";
 import { dispatchMailWebhook } from "./webhooks";
 import { dispatchMailPushNotification } from "./notifications";
 import { decodeMimeWords, decodeQuotedPrintable, decodeBase64Body, parseHeaders, parseMimeParts, escapeRegex, extractBodies } from "./mime";
@@ -130,15 +130,18 @@ export async function getInbox(
     filters.or = `(subject.ilike.%${safe}%,from_addr.ilike.%${safe}%)`;
   }
 
-  const rows = await dbSelect<MailRow>(env, "mail_messages", {
-    select: "id,from_addr,to_addr,subject,direction,is_read,received_at",
-    filters,
-    order: "received_at.desc",
-    limit,
-    offset,
-  });
+  const [rows, total] = await Promise.all([
+    dbSelect<MailRow>(env, "mail_messages", {
+      select: "id,from_addr,to_addr,subject,direction,is_read,received_at",
+      filters,
+      order: "received_at.desc",
+      limit,
+      offset,
+    }),
+    dbCount(env, "mail_messages", filters),
+  ]);
 
-  return json({ messages: rows, total: rows.length }, {}, cors);
+  return json({ messages: rows, total }, {}, cors);
 }
 
 export async function getMailCount(
@@ -147,12 +150,10 @@ export async function getMailCount(
   user: { id: string; email: string },
   cors: HeadersInit
 ): Promise<Response> {
-  const rows = await dbSelect<{ is_read: boolean }>(env, "mail_messages", {
-    select: "is_read",
-    filters: { user_id: `eq.${user.id}` },
-  });
-  const total = rows.length;
-  const unread = rows.filter((r) => !r.is_read).length;
+  const [total, unread] = await Promise.all([
+    dbCount(env, "mail_messages", { user_id: `eq.${user.id}` }),
+    dbCount(env, "mail_messages", { user_id: `eq.${user.id}`, is_read: "eq.false" }),
+  ]);
   return json({ total, unread }, {}, cors);
 }
 
