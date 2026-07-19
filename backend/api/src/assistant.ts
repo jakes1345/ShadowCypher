@@ -313,7 +313,7 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
       let model = env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
       let quotaCost = 1;
       if (requestedTier === "deep" && plan === "operator") {
-        model = "claude-sonnet-4-6-20251001";
+        model = "claude-sonnet-4-6";
         quotaCost = 2;
       }
       ({ answer, modelLabel } = await queryAnthropic(env.ANTHROPIC_API_KEY, model, messages, effectiveSystemPrompt));

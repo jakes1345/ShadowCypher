@@ -3843,7 +3843,7 @@
 
         function copyKey() {
             const keyEl = document.getElementById('api-key');
-            const real = keyEl?.dataset?.realKey;
+            const real = _sessionApiKey;
             if (!real) { cliPrint('No API key available — sign in first.', 'var(--warning)'); return; }
             navigator.clipboard.writeText(real).then(() => {
                 const original = keyEl.innerText;
@@ -3861,7 +3861,7 @@
         }
 
         window.addEventListener('load',()=>{
-            // wireAuthState();  // Disabled: using JWT auth instead of Supabase
+            wireAuthState();
             checkSession();
             updateIndicator(document.querySelector('.nav-tab.active'));
             // Hex dump — paused when app is backgrounded
