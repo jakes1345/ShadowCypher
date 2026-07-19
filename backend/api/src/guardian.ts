@@ -40,7 +40,7 @@ interface RegisterBody {
 
 interface ScanBody {
   agent_id?: string;
-  scan_type: "network" | "port" | "router" | "arp" | "audit";
+  scan_type: "network" | "port" | "router" | "arp" | "audit" | "dns" | "firewall" | "system";
   target?: string;
   duration_ms?: number;
   devices?: Array<{
