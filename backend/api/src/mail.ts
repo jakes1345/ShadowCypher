@@ -135,9 +135,10 @@ export async function getInbox(
     filters,
     order: "received_at.desc",
     limit,
+    offset,
   });
 
-  return json({ messages: rows.slice(offset, offset + limit), total: rows.length }, {}, cors);
+  return json({ messages: rows, total: rows.length }, {}, cors);
 }
 
 export async function getMailCount(

@@ -130,7 +130,7 @@ export async function updateProfile(
   try { body = await req.json() as typeof body; }
   catch { return json({ error: "invalid_json" }, { status: 400 }, cors); }
 
-  if (body.bio !== undefined && body.bio.length > 280) {
+  if (body.bio != null && body.bio.length > 280) {
     return json({ error: "bio_too_long", max: 280 }, { status: 400 }, cors);
   }
   if (body.avatar_url !== undefined && body.avatar_url && !body.avatar_url.startsWith("https://")) {

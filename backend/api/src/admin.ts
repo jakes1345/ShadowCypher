@@ -157,7 +157,7 @@ export async function adminUsers(
     id: u.id,
     email: u.email,
     handle: u.user_metadata?.handle ?? u.email.split("@")[0],
-    plan: profileMap[u.id] ?? "free",
+    plan: profileMap[u.id] ?? "community",
     created_at: u.created_at,
     last_sign_in_at: u.last_sign_in_at,
   }));

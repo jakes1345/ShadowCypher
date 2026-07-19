@@ -95,10 +95,10 @@ export async function listRooms(
     }),
   ]);
 
-  // Include team rooms where user is a member
+  // Include team rooms where user is an active member (not pending/left)
   const memberships = await dbSelect<{ team_id: string }>(env, "team_members", {
     select: "team_id",
-    filters: { user_id: `eq.${user.id}` },
+    filters: { user_id: `eq.${user.id}`, status: "eq.active" },
   });
 
   let teamRooms: ChatRoom[] = [];

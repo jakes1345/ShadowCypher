@@ -11,6 +11,7 @@ interface QueryOptions {
   filters?: Record<string, string>; // e.g. { user_id: "eq.<uuid>" }
   order?: string;                   // e.g. "created_at.desc"
   limit?: number;
+  offset?: number;
   single?: boolean;
 }
 
@@ -19,6 +20,7 @@ function buildUrl(env: Env, table: string, opts: QueryOptions = {}): string {
   if (opts.select) url.searchParams.set("select", opts.select);
   if (opts.order) url.searchParams.set("order", opts.order);
   if (opts.limit !== undefined) url.searchParams.set("limit", String(opts.limit));
+  if (opts.offset !== undefined) url.searchParams.set("offset", String(opts.offset));
   if (opts.filters) {
     for (const [k, v] of Object.entries(opts.filters)) {
       url.searchParams.set(k, v);
