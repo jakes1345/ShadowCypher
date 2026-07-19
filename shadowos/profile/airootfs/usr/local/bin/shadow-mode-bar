@@ -5,7 +5,7 @@ set -euo pipefail
 mode="$(cat /var/lib/shadowos/current-mode 2>/dev/null || echo normal)"
 
 case "$mode" in
-    normal)     icon="󰋜"; label="daily" ;;
+    normal)     icon="󰋜"; label="normal" ;;
     dev)        icon="󰲋"; label="dev" ;;
     pentest)    icon="󰞱"; label="pentest" ;;
     privacy)    icon="󰖪"; label="privacy" ;;
