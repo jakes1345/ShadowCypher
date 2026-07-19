@@ -11,6 +11,7 @@
 import type { Env } from "./index";
 import { dbSelect, dbInsert } from "./supabase";
 import { dispatchCveWebhook, type CveMatchPayload } from "./webhooks";
+import { dispatchCvePushNotification } from "./notifications";
 
 // Port → service keywords for matching CVE descriptions
 const PORT_KEYWORDS: Record<number, string[]> = {
@@ -209,6 +210,12 @@ export async function runCveMatchingCron(env: Env): Promise<void> {
         };
 
         await dispatchCveWebhook(env, userId, payload);
+        dispatchCvePushNotification(env, userId, {
+          cve_id: cve.id,
+          severity: cve.severity,
+          device_name: payload.device_name,
+          description: cve.description,
+        }).catch(() => null);
         await markSent(env, userId, device.id, cve.id);
       }
     }

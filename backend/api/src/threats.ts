@@ -43,7 +43,7 @@ function severityFromCvss(score: number | null): CVEItem["severity"] {
   return "NONE";
 }
 
-async function fetchNvd(params: Record<string, string>): Promise<CVEItem[]> {
+async function fetchNvd(params: Record<string, string>): Promise<{ items: CVEItem[]; totalResults: number }> {
   const qs = new URLSearchParams(params).toString();
   const url = `${NVD_BASE}?${qs}`;
 
@@ -60,6 +60,7 @@ async function fetchNvd(params: Record<string, string>): Promise<CVEItem[]> {
   }
 
   const data = (await resp.json()) as {
+    totalResults?: number;
     vulnerabilities: Array<{
       cve: {
         id: string;
@@ -78,7 +79,7 @@ async function fetchNvd(params: Record<string, string>): Promise<CVEItem[]> {
     }>;
   };
 
-  return (data.vulnerabilities || []).map((v) => {
+  const items = (data.vulnerabilities || []).map((v) => {
     const cve = v.cve;
     const desc =
       cve.descriptions.find((d) => d.lang === "en")?.value || "No description available.";
@@ -104,6 +105,7 @@ async function fetchNvd(params: Record<string, string>): Promise<CVEItem[]> {
       cwe,
     };
   });
+  return { items, totalResults: data.totalResults ?? items.length };
 }
 
 function daysAgoIso(days: number): string {
@@ -122,21 +124,26 @@ export async function getThreats(
   const severity = url.searchParams.get("severity")?.toUpperCase() || null;
   const days = Math.min(parseInt(url.searchParams.get("days") || "7", 10), 30);
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "25", 10), 100);
+  const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
+  const q = url.searchParams.get("q")?.trim().slice(0, 100) || null;
 
   try {
     const params: Record<string, string> = {
       pubStartDate: daysAgoIso(days),
       resultsPerPage: String(limit),
-      startIndex: "0",
+      startIndex: String((page - 1) * limit),
     };
 
     if (severity && ["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(severity)) {
       params.cvssV3Severity = severity;
     }
+    if (q) {
+      params.keywordSearch = q;
+    }
 
-    const cves = await fetchNvd(params);
+    const { items: cves, totalResults } = await fetchNvd(params);
 
-    return new Response(JSON.stringify({ cves, total: cves.length, days, as_of: new Date().toISOString() }), {
+    return new Response(JSON.stringify({ cves, total: cves.length, total_results: totalResults, page, days, as_of: new Date().toISOString() }), {
       headers: { "Content-Type": "application/json", "Cache-Control": "private, max-age=3600", ...cors },
     });
   } catch (err) {
