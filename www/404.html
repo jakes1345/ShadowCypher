@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShadowCypher</title>
+    <style>
+        body { background: #020202; color: #aaa; font-family: monospace; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+    </style>
+    <script>
+        (function () {
+            var path = window.location.pathname;
+
+            // Referral capture: /r/<code>
+            var refMatch = path.match(/^\/r\/([a-zA-Z0-9]{4,16})\/?$/);
+            if (refMatch) {
+                var code = refMatch[1].toLowerCase();
+                try {
+                    localStorage.setItem('sc_referral_code', code);
+                    localStorage.setItem('sc_referral_seen_at', new Date().toISOString());
+                } catch (e) {}
+                document.cookie = 'sc_ref=' + code + '; path=/; max-age=2592000; samesite=lax';
+                window.location.replace('/?ref=' + encodeURIComponent(code));
+                return;
+            }
+
+            // Everything else: redirect to home (SPA handles it)
+            window.location.replace('/');
+        })();
+    </script>
+</head>
+<body>Redirecting…</body>
+</html>

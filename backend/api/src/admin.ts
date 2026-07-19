@@ -79,7 +79,7 @@ export async function adminOverview(
     {
       users: {
         total: profiles.length,
-        free: planCounts["free"] ?? 0,
+        free: planCounts["community"] ?? 0,
         operator: planCounts["operator"] ?? 0,
         trial: trialCount,
         new_7d: profiles.filter(p => {
