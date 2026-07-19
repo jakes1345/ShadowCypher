@@ -36,7 +36,7 @@ const PORT_KEYWORDS: Record<number, string[]> = {
   27017: ["mongodb", "mongo"],
 };
 
-function osKeywords(os: string | null): string[] {
+export function osKeywords(os: string | null): string[] {
   if (!os) return [];
   const lower = os.toLowerCase();
   const kws: string[] = [];
@@ -53,7 +53,7 @@ function osKeywords(os: string | null): string[] {
   return kws;
 }
 
-interface DeviceRow {
+export interface DeviceRow {
   id: string;
   user_id: string;
   hostname: string | null;
@@ -62,7 +62,7 @@ interface DeviceRow {
   os_fingerprint: string | null;
 }
 
-interface NvdCve {
+export interface NvdCve {
   id: string;
   description: string;
   severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
@@ -138,7 +138,7 @@ async function fetchRecentCves(env: Env): Promise<NvdCve[]> {
   return [...allCves.values()];
 }
 
-function matchCveToDevice(cve: NvdCve, device: DeviceRow): string[] | null {
+export function matchCveToDevice(cve: NvdCve, device: DeviceRow): string[] | null {
   const descLower = cve.description.toLowerCase();
   const keywords = new Set<string>();
 

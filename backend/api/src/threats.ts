@@ -34,7 +34,7 @@ export interface ThreatStats {
 
 const NVD_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0";
 
-function severityFromCvss(score: number | null): CVEItem["severity"] {
+export function severityFromCvss(score: number | null): CVEItem["severity"] {
   if (score === null) return "NONE";
   if (score >= 9.0) return "CRITICAL";
   if (score >= 7.0) return "HIGH";
