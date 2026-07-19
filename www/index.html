@@ -811,7 +811,8 @@
                     <div style="display:flex;gap:8px;align-items:center;">
                         <span id="threat-stat-critical" style="font-size:0.7rem;font-family:var(--font-mono);padding:3px 8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:3px;">— CRITICAL</span>
                         <span id="threat-stat-high" style="font-size:0.7rem;font-family:var(--font-mono);padding:3px 8px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);color:#f97316;border-radius:3px;">— HIGH</span>
-                        <select id="threat-severity-filter" onchange="loadThreats()" style="font-size:0.7rem;font-family:var(--font-mono);background:#111;color:#aaa;border:1px solid #333;padding:3px 8px;border-radius:3px;cursor:pointer;">
+                        <input id="threat-search" type="text" placeholder="Search CVEs…" oninput="window._threatPage=1;loadThreats();" style="font-size:0.7rem;font-family:var(--font-mono);background:#111;color:#aaa;border:1px solid #333;padding:3px 8px;border-radius:3px;width:130px;outline:none;">
+                        <select id="threat-severity-filter" onchange="window._threatPage=1;loadThreats();" style="font-size:0.7rem;font-family:var(--font-mono);background:#111;color:#aaa;border:1px solid #333;padding:3px 8px;border-radius:3px;cursor:pointer;">
                             <option value="">All severities</option>
                             <option value="CRITICAL">Critical only</option>
                             <option value="HIGH">High only</option>
@@ -823,6 +824,11 @@
                     <span style="color:#666;font-size:0.82rem;">Loading CVE feed…</span>
                 </div>
                 <div id="threat-feed-error" style="display:none;color:#666;font-size:0.82rem;margin-top:8px;"></div>
+                <div id="threat-pagination" style="display:none;align-items:center;gap:10px;margin-top:12px;font-family:var(--font-mono);font-size:0.72rem;">
+                    <button onclick="threatChangePage(-1)" style="background:#111;border:1px solid #333;color:#aaa;padding:3px 10px;border-radius:3px;cursor:pointer;">← prev</button>
+                    <span id="threat-page-label" style="color:#555;"></span>
+                    <button onclick="threatChangePage(1)" style="background:#111;border:1px solid #333;color:#aaa;padding:3px 10px;border-radius:3px;cursor:pointer;">next →</button>
+                </div>
             </div>
 
             <!-- Missions -->
@@ -3008,20 +3014,33 @@
             NONE:     'color:#555;background:rgba(255,255,255,0.02);border-color:#333',
         };
 
+        window._threatPage = window._threatPage || 1;
+        const _THREAT_LIMIT = 20;
+
+        function threatChangePage(dir) {
+            window._threatPage = Math.max(1, (window._threatPage || 1) + dir);
+            loadThreats();
+        }
+
         async function loadThreats() {
             const feed = document.getElementById('threat-feed');
             const errEl = document.getElementById('threat-feed-error');
+            const pagEl = document.getElementById('threat-pagination');
             const sev = document.getElementById('threat-severity-filter')?.value || '';
+            const q = document.getElementById('threat-search')?.value?.trim() || '';
+            const page = window._threatPage || 1;
             if (!feed) return;
             feed.innerHTML = '<span style="color:#555;font-size:0.82rem;">Fetching CVE data…</span>';
             errEl.style.display = 'none';
+            if (pagEl) pagEl.style.display = 'none';
             try {
-                const qs = sev ? `?severity=${sev}&limit=20` : '?limit=20';
+                const params = new URLSearchParams({ limit: String(_THREAT_LIMIT), page: String(page) });
+                if (sev) params.set('severity', sev);
+                if (q) params.set('q', q);
                 const [data, stats] = await Promise.all([
-                    callApi(`/v1/threats${qs}`),
+                    callApi(`/v1/threats?${params}`),
                     callApi('/v1/threats/stats'),
                 ]);
-                // Update stat badges
                 const critEl = document.getElementById('threat-stat-critical');
                 const highEl = document.getElementById('threat-stat-high');
                 const asOf = document.getElementById('threat-as-of');
@@ -3047,6 +3066,16 @@
                         <p style="font-size:0.78rem;margin:0;opacity:0.85;line-height:1.5;">${escapeHtml(cve.description)}</p>
                     </div>`;
                 }).join('');
+
+                // Pagination controls
+                const total = data.total_results || 0;
+                const totalPages = Math.max(1, Math.ceil(total / _THREAT_LIMIT));
+                if (pagEl && totalPages > 1) {
+                    pagEl.style.display = 'flex';
+                    document.getElementById('threat-page-label').textContent = `page ${page} of ${totalPages} (${total} total)`;
+                    pagEl.querySelector('button:first-child').disabled = page <= 1;
+                    pagEl.querySelector('button:last-child').disabled = page >= totalPages;
+                }
             } catch (err) {
                 feed.innerHTML = '';
                 errEl.style.display = 'block';
