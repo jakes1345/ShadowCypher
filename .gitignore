@@ -104,9 +104,17 @@ sessions/
 # Local tactical configs (contains WireGuard private keys, swarm fingerprints)
 configs/
 
-# Test artifacts
+# Test artifacts and debug output — never commit these
 test_venv/
 test_out.txt
+e2.txt
+err.txt
+*.tmp
+*.swp
+*.orig
+gauntlet.log
+tunnel_output.log
+tunnel_socks.log
 # Leaked mock filesystem artifact (mocked config writing real dirs keyed by id())
 MagicMock/
 

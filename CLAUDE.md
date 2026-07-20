@@ -92,6 +92,32 @@ POST   /v1/mail/send              send outbound email via Resend
 POST   /v1/internal/supabase-event  Supabase webhook (new user → sync to Neon)
 ```
 
+## Repo hygiene rules (non-negotiable)
+
+The product repo must look enterprise-grade at all times. Violations get reverted immediately.
+
+**Never commit:**
+- Secrets, keys, tokens, credentials of any kind (`*.pem`, `*.key`, `*.env`, `config.json`, `*.creds`) — use `.gitignore` and `wrangler secret put`
+- Debug/test output files (`e2.txt`, `err.txt`, `test_out.txt`, `gauntlet.log`, `*.log`, `*.tmp`)
+- Implementation planning docs (`PHASE_3_*.md`, `*_IMPLEMENTATION.md`) — those go in Notion/notes, not the repo
+- Partnership/certification/vendor docs unless they're real, signed, public-facing
+- IDE/tool configs (`.aider*`, `.cursor/`, `.crush/`) — already gitignored
+- Screenshots/dumps as debug artifacts (`dashboard_*.png` at root) — gitignored
+
+**Keep `main` branch clean to these product dirs:**
+```
+www/         ← entire web frontend
+backend/     ← Cloudflare Worker API
+blog/        ← SEO content
+agent/       ← Guardian Python daemon
+shadowos/    ← Arch Linux ISO
+shadowcypher/ ← open-source desktop tool (separate product)
+```
+
+**Root-level files allowed:** LICENSE, README.md, CLAUDE.md, CNAME, .gitignore, manifest.json, sitemap.xml, sw.js, icons, privacy.html, terms.html, self-host.html, docs.html, roadmap.html, shadow.html, status.html, styles.css, device.html. Everything else needs a reason.
+
+**Don't create documentation that isn't user-facing.** No `VENDOR_PARTNERSHIPS.md`, no `VIDEO_TUTORIALS.md`, no `HARDWARE_CERTIFICATION.md` unless those things actually exist and users need to read them.
+
 ## Important conventions
 
 - `callApi(path, opts)` in `www/index.html` returns **parsed JSON**, not a `Response` — don't call `.ok` or `.json()` on the result
