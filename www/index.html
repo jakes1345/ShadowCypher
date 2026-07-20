@@ -31,6 +31,46 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "ShadowCypher",
+      "url": "https://shadowcypher.site",
+      "description": "Sovereign personal security platform — network monitoring, CVE threat feed, encrypted chat, and sovereign email. Self-hostable, no telemetry, no VPN company in the middle.",
+      "applicationCategory": "SecurityApplication",
+      "operatingSystem": "Linux, Windows, macOS",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Community",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        {
+          "@type": "Offer",
+          "name": "Guardian Pro",
+          "price": "9.99",
+          "priceCurrency": "USD"
+        }
+      ],
+      "featureList": [
+        "Network monitoring and Guardian agent",
+        "CVE threat feed and vulnerability alerts",
+        "End-to-end encrypted chat",
+        "Sovereign email",
+        "Self-hostable infrastructure",
+        "Zero telemetry"
+      ],
+      "license": "https://github.com/jakes1345/ShadowCypher/blob/main/LICENSE",
+      "creator": {
+        "@type": "Organization",
+        "name": "ShadowCypher",
+        "url": "https://shadowcypher.site"
+      }
+    }
+    </script>
 </head>
 <body>
     <canvas id="bg-canvas"></canvas>

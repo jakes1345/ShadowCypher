@@ -7,4 +7,12 @@
   <url><loc>https://shadowcypher.site/privacy.html</loc><priority>0.5</priority><changefreq>yearly</changefreq></url>
   <url><loc>https://shadowcypher.site/terms.html</loc><priority>0.5</priority><changefreq>yearly</changefreq></url>
   <url><loc>https://shadowcypher.site/status.html</loc><priority>0.4</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://shadowcypher.site/shadow.html</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shadowcypher.site/device.html</loc><priority>0.6</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shadowcypher.site/blog/</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://shadowcypher.site/blog/open-source-home-network-security-monitor.html</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shadowcypher.site/blog/home-network-security-monitoring-free-tools.html</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shadowcypher.site/blog/detect-arp-spoofing.html</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shadowcypher.site/blog/replace-google-assistant-local-ai-android.html</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shadowcypher.site/blog/sovereign-ai-assistant-no-cloud-android.html</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
 </urlset>
