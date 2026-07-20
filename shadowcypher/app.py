@@ -43,8 +43,10 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         # x11 must be listed first; OpenGL fallback order matters on multi-driver systems
         Gdk.set_allowed_backends("x11,wayland,*")
 
-        # Load branding assets
-        icon_path = platform_engine.resolve_path("native", "icons", "shadowcypher-256.png")
+        # Load branding assets — prefer dark (black bg) variant for window icon
+        icon_path = platform_engine.resolve_path("native", "icons", "shadowcypher-256-dark.png")
+        if not os.path.exists(icon_path):
+            icon_path = platform_engine.resolve_path("native", "icons", "shadowcypher-256.png")
         if os.path.exists(icon_path):
             self.set_icon_from_file(icon_path)
 
