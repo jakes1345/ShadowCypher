@@ -1,6 +1,7 @@
 import gi
 
 gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 import os
 import threading
@@ -164,6 +165,9 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         if first_row:
             self.sidebar_list.select_row(first_row)
 
+        # Hide to tray on close instead of destroying the window
+        self.connect("delete-event", self._on_delete_event)
+
         # Subscribe to Autonomous Ticket Events
         bus.subscribe("new_ticket", self._on_new_ticket)
 
@@ -271,6 +275,10 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         handle = data.get("handle", "Unknown")
         self.header.set_subtitle(f"⚠️ TICKET_ALERT: {handle}")
         logger.info("ui", f"NOTIFIED: New autonomous ticket from {handle}")
+
+    def _on_delete_event(self, _widget, _event):
+        self.hide()
+        return True  # block destroy; quit only via tray menu
 
     def _build_sidebar(self):
         scroller = Gtk.ScrolledWindow()
@@ -429,12 +437,19 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
 class ShadowCypherApp(Gtk.Application):
     def __init__(self):
         super().__init__(application_id="org.shadowcypher.ShadowCypher")
+        self._tray: "Gtk.StatusIcon | None" = None
 
     def do_activate(self):
         from shadowcypher.ui.welcome_dialog import needs_onboarding, show_welcome
         if needs_onboarding():
             show_welcome(parent=None)
         self._window = ShadowCypherWindow(self)
+
+        # Keep app alive when window is hidden to tray
+        self.hold()
+
+        # System tray
+        self._setup_tray()
 
         # Background update check
         from shadowcypher.core.updater import run_background_check
@@ -451,6 +466,48 @@ class ShadowCypherApp(Gtk.Application):
         models = provider_registry.active.list_models() if provider_registry.active else []
         if "shadow-gemma4:latest" in models:
             provider_registry.switch("ollama", model="shadow-gemma4:latest")
+
+    def _setup_tray(self):
+        icon_path = platform_engine.resolve_path("native", "icons", "shadowcypher-16.png")
+        self._tray = Gtk.StatusIcon()
+        if os.path.exists(icon_path):
+            self._tray.set_from_file(icon_path)
+        else:
+            self._tray.set_from_icon_name("security-high")
+        self._tray.set_tooltip_text("ShadowCypher — Sovereign Security Platform")
+        self._tray.set_visible(True)
+        self._tray.connect("activate", self._on_tray_activate)
+        self._tray.connect("popup-menu", self._on_tray_menu)
+
+    def _on_tray_activate(self, _icon):
+        if self._window.is_visible():
+            self._window.hide()
+        else:
+            self._window.show()
+            self._window.present()
+
+    def _on_tray_menu(self, icon, button, time):
+        menu = Gtk.Menu()
+
+        label = "Hide" if self._window.is_visible() else "Show"
+        toggle = Gtk.MenuItem(label=f"{label} ShadowCypher")
+        toggle.connect("activate", lambda _: self._on_tray_activate(icon))
+        menu.append(toggle)
+
+        menu.append(Gtk.SeparatorMenuItem())
+
+        quit_item = Gtk.MenuItem(label="Quit")
+        quit_item.connect("activate", lambda _: self._do_quit())
+        menu.append(quit_item)
+
+        menu.show_all()
+        menu.popup(None, None, Gtk.StatusIcon.position_menu, icon, button, time)
+
+    def _do_quit(self):
+        if self._tray:
+            self._tray.set_visible(False)
+        self.release()
+        self.quit()
 
 def main():
     try:

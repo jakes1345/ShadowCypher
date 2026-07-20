@@ -101,6 +101,7 @@ class Config(BaseSettings):
     # Core metadata
     app_name: str = "ShadowCypher Apex"
     version: str = "3.0.0-enterprise"
+    api_base_url: str = "https://api.shadowcypher.site"
 
     # Sub-settings
     ai: AISettings = AISettings()
