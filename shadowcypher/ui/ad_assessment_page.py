@@ -27,13 +27,11 @@ class ADAssessmentPage(BasePage):
         )
         notebook.append_page(self._build_responder_tab(), Gtk.Label(label="Responder"))
         notebook.append_page(self._build_ai_forge_tab(), Gtk.Label(label="AI Forge"))
-        self.main_pod.pack_start(notebook, False, False, 0)
-
-        self.build_terminal()
+        self.workspace.pack_start(notebook, True, True, 0)
 
         stop_box = Gtk.Box()
         stop_box.pack_start(self.build_stop_button(), False, False, 0)
-        self.main_pod.pack_start(stop_box, False, False, 0)
+        self.workspace.pack_start(stop_box, False, False, 0)
 
     def _build_impacket_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)

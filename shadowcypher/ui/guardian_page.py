@@ -33,7 +33,7 @@ class GuardianPage(BasePage):
         notebook.append_page(self._build_fail2ban_tab(), Gtk.Label(label="Fail2Ban"))
         notebook.append_page(self._build_tls_tab(), Gtk.Label(label="TLS Audit"))
         notebook.append_page(self._build_yara_tab(), Gtk.Label(label="YARA Scan"))
-        self.workspace.pack_start(notebook, False, False, 0)
+        self.workspace.pack_start(notebook, True, True, 0)
 
     # ── Tabs ─────────────────────────────────────────────────────────────────
 

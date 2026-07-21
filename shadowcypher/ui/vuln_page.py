@@ -26,7 +26,7 @@ class VulnScannerPage(BasePage):
         notebook.append_page(self._build_sqlmap_tab(), Gtk.Label(label="SQLmap"))
         notebook.append_page(self._build_nse_tab(), Gtk.Label(label="Nmap NSE"))
         notebook.append_page(self._build_shadow_tab(), Gtk.Label(label="Shadow Audit"))
-        self.workspace.pack_start(notebook, False, False, 0)
+        self.workspace.pack_start(notebook, True, True, 0)
 
     def _build_nikto_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)

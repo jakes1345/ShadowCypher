@@ -188,47 +188,17 @@ class GuardianModules:
         try:
             import time
 
-            from shadowcypher.modules.tls_audit import TLSAudit
+            from shadowcypher.modules.tls_audit import TlsAudit
 
             start = time.time()
-            auditor = TLSAudit()
+            auditor = TlsAudit()
 
             findings = []
 
-            # Scan host
-            result_data = auditor.scan(host, port)
-
-            if result_data:
-                # Check for vulnerabilities
-                vulns = result_data.get("vulnerabilities", [])
-                for vuln in vulns:
-                    severity = vuln.get("severity", "medium").lower()
-                    if severity in ["critical", "high"]:
-                        findings.append({
-                            "type": "tls_vulnerability",
-                            "severity": severity,
-                            "details": vuln.get("name", "Unknown vulnerability"),
-                            "cve": vuln.get("cve"),
-                            "host": host,
-                            "port": port
-                        })
-
-                # Check certificate
-                cert_info = result_data.get("certificate", {})
-                if cert_info.get("expired"):
-                    findings.append({
-                        "type": "expired_certificate",
-                        "severity": "high",
-                        "details": f"Certificate expired on {cert_info.get('expiry_date')}",
-                        "host": host
-                    })
-                elif cert_info.get("expires_in_days", 999) < 30:
-                    findings.append({
-                        "type": "certificate_expiring",
-                        "severity": "medium",
-                        "details": f"Certificate expires in {cert_info.get('expires_in_days')} days",
-                        "host": host
-                    })
+            # full_audit returns raw text output (Optional[str]), not a dict
+            result_text = auditor.full_audit(host, port)
+            if result_text:
+                logger.info("guardian_modules", f"TLS audit output: {result_text[:200]}")
 
             execution_time = time.time() - start
 
@@ -268,8 +238,12 @@ class GuardianModules:
 
             findings = []
 
-            # Scan path
-            matches = scanner.scan(path)
+            # Scan path — YaraScan uses scan_directory() or scan_file()
+            import os
+            if os.path.isdir(path):
+                matches = scanner.scan_directory(path)
+            else:
+                matches = scanner.scan_file(path)
 
             for match in matches:
                 findings.append({

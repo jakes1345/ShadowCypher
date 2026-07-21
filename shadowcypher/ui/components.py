@@ -105,6 +105,9 @@ class DataPod(Gtk.Box):
     def update_value(self, value: str):
         self.set_value(value)
 
+    def update(self, value: str):
+        self.set_value(value)
+
 class TacticalHeader(Gtk.Box):
     """Consistent header for all suite pages."""
     def __init__(self, title: str, subtitle: str = None):

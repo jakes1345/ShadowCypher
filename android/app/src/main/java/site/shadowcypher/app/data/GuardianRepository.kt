@@ -115,6 +115,10 @@ class GuardianRepository(private val context: Context) {
         buildApi(requireKey()).listMissions(agentId)
     }
 
+    suspend fun queryAssistant(question: String, history: List<AiChatMessage>): Result<AiQueryResponse> = runCatching {
+        buildApi(requireKey()).queryAssistant(AiQueryRequest(question = question, history = history.takeLast(8)))
+    }
+
     companion object {
         @Volatile
         private var instance: GuardianRepository? = null

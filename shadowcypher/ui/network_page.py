@@ -76,7 +76,7 @@ class NetworkPage(BasePage):
         script_nb.append_page(self._build_packet_siphon_tab(), Gtk.Label(label="Packet Siphon"))
         script_nb.append_page(self._build_arp_phantom_tab(), Gtk.Label(label="ARP Phantom"))
         script_nb.append_page(self._build_apex_stress_tab(), Gtk.Label(label="Apex Stress"))
-        self.workspace.pack_start(script_nb, False, False, 0)
+        self.workspace.pack_start(script_nb, True, True, 0)
 
         # Load initial info
         info = Network.get_interfaces()

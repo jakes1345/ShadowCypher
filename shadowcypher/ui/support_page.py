@@ -97,13 +97,15 @@ class SupportPage(BasePage):
         btn_row.pack_start(self._diag_btn, False, False, 0)
         box.pack_start(btn_row, False, False, 0)
 
-        self.build_terminal()
-        box.pack_start(self.terminal, True, True, 0)
+        from shadowcypher.ui.components import TacticalTerminal
+        self._diag_terminal = TacticalTerminal(height=280)
+        box.pack_start(self._diag_terminal, True, True, 0)
         return box
 
     def _on_run_diag(self, btn):
         btn.set_sensitive(False)
-        self.clear_output("Running diagnostics...\n\n")
+        self._diag_terminal.clear()
+        self._diag_terminal.log("Running diagnostics...", "INFO")
 
         def _run():
             checks = []
@@ -160,13 +162,13 @@ class SupportPage(BasePage):
 
             for label, status in checks:
                 if not label and not status:
-                    GLib.idle_add(self.on_output, "\n")
+                    GLib.idle_add(self._diag_terminal.log, "", "INFO")
                 elif not status:
-                    GLib.idle_add(self.on_output, f"{label}\n")
+                    GLib.idle_add(self._diag_terminal.log, label, "INFO")
                 else:
-                    GLib.idle_add(self.on_output, f"  {label:<26} {status}\n")
+                    GLib.idle_add(self._diag_terminal.log, f"  {label:<26} {status}", "SUCCESS" if "✓" in status else "ERROR" if "✗" in status else "INFO")
 
-            GLib.idle_add(self.on_output, "\nDiagnostics complete.\n")
+            GLib.idle_add(self._diag_terminal.log, "Diagnostics complete.", "SUCCESS")
             GLib.idle_add(btn.set_sensitive, True)
 
         threading.Thread(target=_run, daemon=True).start()

@@ -27,7 +27,9 @@ class BasePage(Gtk.Box):
 
         self.main_pod = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         self.main_pod.get_style_context().add_class("card")
-        self.pack_start(self.main_pod, True, True, 0)
+        # NOTE: main_pod is NOT packed here. _switch_to_page in app.py handles
+        # packing — it auto-commits this pod only if the subclass didn't build
+        # its own layout (i.e., no direct children on self after __init__).
 
         self.header = TacticalHeader(title.upper())
         self.main_pod.pack_start(self.header, False, False, 0)
@@ -48,10 +50,12 @@ class BasePage(Gtk.Box):
         self.tactical_env.pack_start(self.workspace, True, True, 0)
 
         self.intel_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        self.intel_sidebar.set_size_request(300, -1)
+        self.intel_sidebar.set_size_request(280, -1)
         self.intel_sidebar.set_margin_start(10)
         self.intel_sidebar.set_margin_end(10)
         self.intel_sidebar.set_margin_top(20)
+        # Hidden by default — pages that use the sidebar call self.intel_sidebar.show_all()
+        self.intel_sidebar.set_no_show_all(True)
 
         intel_header = Gtk.Label()
         intel_header.set_markup("<span size='small' weight='bold' color='#94a3b8'>// Intelligence</span>")

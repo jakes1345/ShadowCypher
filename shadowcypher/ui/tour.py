@@ -239,7 +239,6 @@ class TourPanel(Gtk.Revealer):
             .tour-body {
                 font-size: 0.88rem;
                 color: #cbd5e1;
-                line-height: 1.6;
             }
             .tour-step-label {
                 font-family: monospace;

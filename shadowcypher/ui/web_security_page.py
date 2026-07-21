@@ -29,7 +29,7 @@ class WebSecurityPage(BasePage):
         notebook.append_page(self._build_mhddos_tab(), Gtk.Label(label="MHDDoS (Elite)"))
         notebook.append_page(self._build_sql_venom_tab(), Gtk.Label(label="SQL Venom"))
         notebook.append_page(self._build_dir_buster_tab(), Gtk.Label(label="Dir Buster"))
-        self.workspace.pack_start(notebook, False, False, 0)
+        self.workspace.pack_start(notebook, True, True, 0)
 
     def _build_nuclei_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)

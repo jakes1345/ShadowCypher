@@ -55,7 +55,8 @@ class GuardianAIPage(BasePage):
         self.workspace.pack_start(nb, True, True, 0)
 
         # Pull initial cache stats into the pod
-        GLib.timeout_add_seconds(10, self._tick_cache_stats)
+        self._cache_timer_id = GLib.timeout_add_seconds(10, self._tick_cache_stats)
+        self.connect("unrealize", lambda _: GLib.source_remove(self._cache_timer_id) if self._cache_timer_id else None)
         self._refresh_pods()
 
     # ── Config tab ────────────────────────────────────────────────────────────

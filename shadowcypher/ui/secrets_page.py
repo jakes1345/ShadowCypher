@@ -24,9 +24,7 @@ class SecretsPage(BasePage):
         notebook.append_page(self._build_identify_tab(), Gtk.Label(label="Hash Identify"))
         notebook.append_page(self._build_cred_sprayer_tab(), Gtk.Label(label="Cred Sprayer"))
         notebook.append_page(self._build_deep_breach_tab(), Gtk.Label(label="Deep Breach"))
-        self.workspace.pack_start(notebook, False, False, 0)
-
-        self.build_terminal()
+        self.workspace.pack_start(notebook, True, True, 0)
 
         # Stop button at bottom
         stop_box = Gtk.Box()

@@ -160,7 +160,7 @@ class AIPage(BasePage):
         self.quick_model_combo.connect("changed", self._on_quick_model_changed)
         opts_row.pack_start(self.quick_model_combo, True, True, 0)
 
-        GLib.timeout_add_seconds(1, self._lazy_model_discovery, 0)
+        threading.Thread(target=self._bg_model_discovery, daemon=True).start()
 
         self.intensity_toggle = Gtk.CheckButton(label="Deep analysis")
         self.intensity_toggle.set_tooltip_text("Routes queries through the AutoAgent engine with full planning mode.")
@@ -281,29 +281,26 @@ class AIPage(BasePage):
             self.model_combo.append(default_model, default_model)
             self.model_combo.set_active_id(default_model)
 
-    def _lazy_model_discovery(self, attempt):
-        """Try to populate the model list, retrying up to 5 times."""
+    def _bg_model_discovery(self):
+        """Background thread: discover models without blocking the GTK main thread."""
+        import time
         active = provider_registry.active
         if not active:
-            return False
-
-        models = active.list_models()
-        if models:
-            self.terminal.log(f"Found {len(models)} models for {active.name}.", "SUCCESS")
-            self._update_quick_model_list()
-            self._update_settings_list(active.id)
-            self.pod_status.set_value("Ready")
-            return False
-
-        if attempt < 5:
-            self.pod_status.set_value(f"Connecting ({attempt+1}/5)")
-            return True
-
-        self.pod_status.set_value("No models found")
-        self.quick_model_combo.append("err", "No models found")
-        self.quick_model_combo.set_active_id("err")
-        self.terminal.log(f"{active.name} returned no models — check that the local service is running.", "ERROR")
-        return False
+            return
+        for attempt in range(6):
+            if attempt > 0:
+                GLib.idle_add(self.pod_status.set_value, f"Connecting ({attempt}/5)")
+                time.sleep(2)
+            models = active.list_models()
+            if models:
+                GLib.idle_add(self.terminal.log, f"Found {len(models)} models for {active.name}.", "SUCCESS")
+                GLib.idle_add(self._update_quick_model_list)
+                GLib.idle_add(self._update_settings_list, active.id)
+                GLib.idle_add(self.pod_status.set_value, "Ready")
+                return
+        GLib.idle_add(self.pod_status.set_value, "No models found")
+        GLib.idle_add(self.terminal.log,
+                      f"{active.name} returned no models — check that the local service is running.", "ERROR")
 
     def _update_env_hint(self):
         pid = self.provider_combo.get_active_id()

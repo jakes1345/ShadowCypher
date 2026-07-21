@@ -122,7 +122,7 @@ class ForensicsPage(BasePage):
         ops_nb = Gtk.Notebook()
         ops_nb.append_page(self._build_trace_eraser_tab(), Gtk.Label(label="Trace Eraser"))
         ops_nb.append_page(self._build_dead_drop_tab(), Gtk.Label(label="Dead Drop"))
-        self.workspace.pack_start(ops_nb, False, False, 0)
+        self.workspace.pack_start(ops_nb, True, True, 0)
 
     def _build_trace_eraser_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)

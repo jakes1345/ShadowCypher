@@ -173,6 +173,10 @@ class AdminPage(BasePage):
         frm_cloud.add(box_cloud)
         self.workspace.pack_start(frm_cloud, False, False, 0)
 
+        # Reveal the intel_sidebar (hidden by default in BasePage)
+        self.intel_sidebar.set_no_show_all(False)
+        self.intel_sidebar.show_all()
+
         # ── Timers ──
         self._tick_id = GLib.timeout_add(1000, self._tick)
         self.connect("unrealize", lambda _: GLib.source_remove(self._tick_id) if self._tick_id else None)

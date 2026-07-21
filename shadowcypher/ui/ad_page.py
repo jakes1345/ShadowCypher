@@ -69,8 +69,9 @@ class AdPage(BasePage):
         save_btn.connect("clicked", self._on_save_target)
         box.pack_start(save_btn, False, False, 0)
 
-        self.build_terminal()
-        box.pack_start(self.terminal, True, True, 0)
+        from shadowcypher.ui.components import TacticalTerminal
+        self._ad_terminal = TacticalTerminal(height=180)
+        box.pack_start(self._ad_terminal, True, True, 0)
         return box
 
     def _get(self, key, default=""):

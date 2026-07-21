@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import site.shadowcypher.app.data.Agent
+import site.shadowcypher.app.data.AiChatMessage
 import site.shadowcypher.app.data.CveAlert
 import site.shadowcypher.app.data.GuardianRepository
 import site.shadowcypher.app.data.GuardianSummary
@@ -211,5 +212,46 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
 
     fun clearMissionStatus() {
         _missionStatus.value = null
+    }
+
+    // ── Shadow AI chat ────────────────────────────────────────────────────────
+
+    private val _chatMessages = MutableStateFlow<List<AiChatMessage>>(emptyList())
+    val chatMessages: StateFlow<List<AiChatMessage>> = _chatMessages.asStateFlow()
+
+    private val _isAiLoading = MutableStateFlow(false)
+    val isAiLoading: StateFlow<Boolean> = _isAiLoading.asStateFlow()
+
+    private val _aiError = MutableStateFlow<String?>(null)
+    val aiError: StateFlow<String?> = _aiError.asStateFlow()
+
+    fun sendAiMessage(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isBlank() || _isAiLoading.value) return
+        val history = _chatMessages.value
+        _chatMessages.value = history + AiChatMessage("user", trimmed)
+        viewModelScope.launch {
+            _isAiLoading.value = true
+            _aiError.value = null
+            repo.queryAssistant(trimmed, history)
+                .onSuccess { resp ->
+                    val answer = resp.answer?.takeIf { it.isNotBlank() } ?: "(no response)"
+                    _chatMessages.value = _chatMessages.value + AiChatMessage("assistant", answer)
+                }
+                .onFailure { e ->
+                    _aiError.value = e.message ?: "AI request failed"
+                    _chatMessages.value = _chatMessages.value.dropLast(1)
+                }
+            _isAiLoading.value = false
+        }
+    }
+
+    fun clearAiChat() {
+        _chatMessages.value = emptyList()
+        _aiError.value = null
+    }
+
+    fun dismissAiError() {
+        _aiError.value = null
     }
 }

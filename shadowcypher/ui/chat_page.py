@@ -603,15 +603,28 @@ class ChatPage(Gtk.Box):
 
         for user in self._online:
             nick = user.get("nick", "?")
+            user_id = user.get("user_id", "")
             color = _nick_color(nick)
+
             lbl = Gtk.Label()
             lbl.set_markup(
                 f"<span color='#22c55e'>● </span>"
                 f"<span color='{color}'>{GLib.markup_escape_text(nick)}</span>"
             )
             lbl.set_halign(Gtk.Align.START)
-            self._online_box.pack_start(lbl, False, False, 0)
-            lbl.show()
+
+            evbox = Gtk.EventBox()
+            evbox.add(lbl)
+            evbox.set_tooltip_text("Click to open options")
+            evbox._sc_nick = nick
+            evbox._sc_user_id = user_id
+            evbox.connect("button-press-event", self._on_user_click)
+
+            # Hover highlight via CSS
+            evbox.get_style_context().add_class("sc-user-row")
+
+            self._online_box.pack_start(evbox, False, False, 0)
+            evbox.show_all()
 
         if not self._online:
             empty = Gtk.Label()
@@ -619,6 +632,112 @@ class ChatPage(Gtk.Box):
             empty.set_halign(Gtk.Align.START)
             self._online_box.pack_start(empty, False, False, 0)
             empty.show()
+
+    def _on_user_click(self, evbox, event):
+        if event.button not in (1, 3):
+            return
+        nick = getattr(evbox, "_sc_nick", "?")
+        user_id = getattr(evbox, "_sc_user_id", "")
+        self._show_user_popover(evbox, nick, user_id)
+
+    def _show_user_popover(self, relative_to: Gtk.Widget, nick: str, user_id: str):
+        popover = Gtk.Popover()
+        popover.set_relative_to(relative_to)
+        popover.set_position(Gtk.PositionType.RIGHT)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box.set_margin_top(8)
+        box.set_margin_bottom(8)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+
+        header = Gtk.Label()
+        color = _nick_color(nick)
+        header.set_markup(f"<span weight='bold' color='{color}'>{GLib.markup_escape_text(nick)}</span>")
+        header.set_halign(Gtk.Align.START)
+        box.pack_start(header, False, False, 0)
+
+        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        sep.set_margin_top(4)
+        sep.set_margin_bottom(4)
+        box.pack_start(sep, False, False, 0)
+
+        dm_btn = Gtk.Button(label="💬  Direct Message")
+        dm_btn.get_style_context().add_class("flat")
+        dm_btn.set_halign(Gtk.Align.FILL)
+        dm_btn.connect("clicked", lambda _: (popover.popdown(), self._open_dm_with(nick, user_id)))
+        box.pack_start(dm_btn, False, False, 0)
+
+        profile_btn = Gtk.Button(label="👤  View Profile")
+        profile_btn.get_style_context().add_class("flat")
+        profile_btn.set_halign(Gtk.Align.FILL)
+        profile_btn.connect("clicked", lambda _: (popover.popdown(), self._view_profile(nick)))
+        box.pack_start(profile_btn, False, False, 0)
+
+        popover.add(box)
+        popover.show_all()
+        popover.popup()
+
+    def _open_dm_with(self, nick: str, user_id: str):
+        def _do():
+            try:
+                data = _api_post("/v1/chat/dm/open", self._api_key, {"with_user_id": user_id})
+                room = data.get("room_name") or data.get("name")
+                if room:
+                    GLib.idle_add(self._select_room, room)
+                    GLib.idle_add(self._fetch_dms_async)
+            except Exception as e:
+                logger.error("chat", f"DM open failed: {e}")
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _view_profile(self, nick: str):
+        def _do():
+            try:
+                data = _api_get(f"/v1/profile/{urllib.parse.quote(nick)}", self._api_key)
+                GLib.idle_add(self._show_profile_dialog, data)
+            except Exception as e:
+                GLib.idle_add(self._show_profile_dialog, {"handle": nick, "error": str(e)})
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _show_profile_dialog(self, profile: dict):
+        dlg = Gtk.Dialog(title=f"@{profile.get('handle', '?')}", transient_for=None, flags=0)
+        dlg.set_default_size(320, 200)
+
+        box = dlg.get_content_area()
+        box.set_spacing(8)
+        box.set_margin_top(16)
+        box.set_margin_bottom(16)
+        box.set_margin_start(16)
+        box.set_margin_end(16)
+
+        handle = profile.get("handle", "?")
+        lbl = Gtk.Label()
+        lbl.set_markup(f"<span size='large' weight='bold'>@{GLib.markup_escape_text(handle)}</span>")
+        lbl.set_halign(Gtk.Align.START)
+        box.pack_start(lbl, False, False, 0)
+
+        if profile.get("bio"):
+            bio = Gtk.Label(label=profile["bio"])
+            bio.set_line_wrap(True)
+            bio.set_halign(Gtk.Align.START)
+            box.pack_start(bio, False, False, 0)
+
+        if profile.get("error"):
+            err = Gtk.Label()
+            err.set_markup(f"<span color='#ef4444'>{GLib.markup_escape_text(profile['error'])}</span>")
+            err.set_halign(Gtk.Align.START)
+            box.pack_start(err, False, False, 0)
+
+        dm_btn = Gtk.Button(label="Send Direct Message")
+        dm_btn.connect("clicked", lambda _: (dlg.destroy(), self._open_dm_with(handle, profile.get("user_id", ""))))
+        box.pack_start(dm_btn, False, False, 0)
+
+        close_btn = dlg.add_button("Close", Gtk.ResponseType.CLOSE)
+        close_btn.connect("clicked", lambda _: dlg.destroy())
+
+        dlg.show_all()
+        dlg.run()
+        dlg.destroy()
 
     # ── Direct Messages ───────────────────────────────────────────────────────
 

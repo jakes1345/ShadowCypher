@@ -101,6 +101,8 @@ class WraithProtocol(BasePage):
         bx_fp.pack_start(lbl_fp, False, False, 0)
         frm_fp.add(bx_fp)
         self.intel_sidebar.pack_start(frm_fp, False, False, 0)
+        self.intel_sidebar.set_no_show_all(False)
+        self.intel_sidebar.show_all()
 
     def _on_flash_wipe(self, btn):
         dialog = Gtk.MessageDialog(

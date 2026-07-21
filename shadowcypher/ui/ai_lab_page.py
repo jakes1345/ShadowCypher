@@ -31,7 +31,8 @@ class AILabPage(BasePage):
         nb.append_page(self._build_drope_tab(), Gtk.Label(label="DroPE"))
         self.workspace.pack_start(nb, True, True, 0)
 
-        GLib.timeout_add_seconds(5, self._refresh_stats)
+        self._stats_timer_id = GLib.timeout_add_seconds(5, self._refresh_stats)
+        self.connect("unrealize", lambda _: GLib.source_remove(self._stats_timer_id) if self._stats_timer_id else None)
 
     # ── EvoMemory tab ─────────────────────────────────────────────────────────
 
@@ -231,7 +232,7 @@ class AILabPage(BasePage):
 
         hdr = Gtk.Label(xalign=0)
         hdr.set_markup(
-            "<b>ShinkaEvolve</b> — Genetic algorithm for scan & prompt configs\n"
+            "<b>ShinkaEvolve</b> — Genetic algorithm for scan &amp; prompt configs\n"
             "<span color='#94a3b8' size='small'>Evolves port ranges, tool ordering, and prompt templates. "
             "Configs that find more vulnerabilities survive to the next generation.</span>"
         )
@@ -293,7 +294,7 @@ class AILabPage(BasePage):
         hdr.set_markup(
             "<b>doc-to-LoRA</b> — Fine-tune local models on security documents\n"
             "<span color='#94a3b8' size='small'>Ingest CVE advisories, tool manuals, and pentest reports. "
-            "Auto-generates Q&A training pairs and produces a LoRA adapter.</span>"
+            "Auto-generates Q&amp;A training pairs and produces a LoRA adapter.</span>"
         )
         hdr.set_line_wrap(True)
         box.pack_start(hdr, False, False, 0)
@@ -339,8 +340,9 @@ class AILabPage(BasePage):
         self._lora_status.set_markup("<span color='#64748b'>—</span>")
         box.pack_start(self._lora_status, False, False, 0)
 
-        self.build_terminal()
-        box.pack_start(self.terminal, True, True, 0)
+        from shadowcypher.ui.components import TacticalTerminal
+        self._lora_terminal = TacticalTerminal(height=180)
+        box.pack_start(self._lora_terminal, True, True, 0)
         return box
 
     def _on_lora_browse(self, btn):
@@ -356,7 +358,7 @@ class AILabPage(BasePage):
     def _on_lora_prepare(self, btn):
         src = self._lora_dir.get_text().strip()
         if not src:
-            self.log("Set a document directory first.", "ERROR")
+            self._lora_terminal.log("Set a document directory first.", "ERROR")
             return
         max_files = int(self._lora_max.get_value())
         self._lora_status.set_markup("<span color='#f59e0b'>Preparing dataset...</span>")
@@ -364,22 +366,22 @@ class AILabPage(BasePage):
             from shadowcypher.ai.doc_lora import doc_lora
             def _run():
                 try:
-                    path = doc_lora.prepare_dataset(src, on_output=lambda m: GLib.idle_add(self.on_output, m), max_files=max_files)
+                    path = doc_lora.prepare_dataset(src, on_output=lambda m: GLib.idle_add(self._lora_terminal.log, m.rstrip(), "INFO"), max_files=max_files)
                     GLib.idle_add(self._lora_status.set_markup, f"<span color='#22c55e'>Dataset ready: {path}</span>")
                 except Exception as e:
                     GLib.idle_add(self._lora_status.set_markup, f"<span color='#f87171'>{e}</span>")
             threading.Thread(target=_run, daemon=True).start()
         except Exception as e:
-            self.log(str(e), "ERROR")
+            self._lora_terminal.log(str(e), "ERROR")
 
     def _on_lora_train(self, btn):
         model = self._lora_model.get_text().strip() or "qwen3:8b"
         try:
             from shadowcypher.ai.doc_lora import doc_lora
             self._lora_status.set_markup("<span color='#f59e0b'>Training...</span>")
-            doc_lora.train(model=model, on_output=lambda m: GLib.idle_add(self.on_output, m))
+            doc_lora.train(model=model, on_output=lambda m: GLib.idle_add(self._lora_terminal.log, m.rstrip(), "INFO"))
         except Exception as e:
-            self.log(str(e), "ERROR")
+            self._lora_terminal.log(str(e), "ERROR")
 
     # ── Model Merge tab ───────────────────────────────────────────────────────
 
@@ -432,8 +434,9 @@ class AILabPage(BasePage):
         refresh_btn.connect("clicked", lambda _: self._load_merge_models())
         box.pack_start(refresh_btn, False, False, 0)
 
-        self.build_terminal()
-        box.pack_start(self.terminal, True, True, 0)
+        from shadowcypher.ui.components import TacticalTerminal
+        self._merge_terminal = TacticalTerminal(height=180)
+        box.pack_start(self._merge_terminal, True, True, 0)
 
         GLib.idle_add(self._load_merge_models)
         return box
@@ -464,7 +467,7 @@ class AILabPage(BasePage):
             return
         selected = [m for m, cb in self._merge_model_checks.items() if cb.get_active()]
         if not selected:
-            self.log("Select at least one model.", "ERROR")
+            self._merge_terminal.log("Select at least one model.", "ERROR")
             return
         strategy = self._merge_strategy.get_active_id() or "ensemble"
 
@@ -475,13 +478,13 @@ class AILabPage(BasePage):
                 strategy=strategy,
                 weights=[1.0 / len(selected)] * len(selected),
             )
-            self.log(f"Merge [{strategy}] across {selected}...", "INFO")
+            self._merge_terminal.log(f"Merge [{strategy}] across {selected}...", "INFO")
             threading.Thread(
-                target=lambda: model_merger.merge(query, config=cfg, on_output=lambda m: GLib.idle_add(self.on_output, m)),
+                target=lambda: model_merger.merge(query, config=cfg, on_output=lambda m: GLib.idle_add(self._merge_terminal.log, m.rstrip(), "INFO")),
                 daemon=True
             ).start()
         except Exception as ex:
-            self.log(str(ex), "ERROR")
+            self._merge_terminal.log(str(ex), "ERROR")
 
     # ── DroPE tab ─────────────────────────────────────────────────────────────
 

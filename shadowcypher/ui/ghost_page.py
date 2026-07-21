@@ -91,11 +91,11 @@ class ShadowNodesPage(BasePage):
         conn_box.pack_start(port_row, False, False, 0)
 
         btn_row2 = Gtk.Box(spacing=8)
-        self._ext_btn = Gtk.Button(label="\ud83c\udf10 Enable External Connections")
+        self._ext_btn = Gtk.Button(label="\U0001F310 Enable External Connections")
         self._ext_btn.connect("clicked", self._on_toggle_bind)
         btn_row2.pack_start(self._ext_btn, False, False, 0)
 
-        self._copy_cmd_btn = Gtk.Button(label="\ud83d\udccb Copy Agent Command")
+        self._copy_cmd_btn = Gtk.Button(label="\U0001F4CB Copy Agent Command")
         self._copy_cmd_btn.connect("clicked", self._on_copy_agent_cmd)
         btn_row2.pack_start(self._copy_cmd_btn, False, False, 0)
         conn_box.pack_start(btn_row2, False, False, 0)

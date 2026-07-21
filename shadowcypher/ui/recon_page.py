@@ -53,10 +53,7 @@ class ReconPage(BasePage):
         nb.append_page(self._build_sub_tab(), Gtk.Label(label="Subdomains"))
         nb.append_page(self._build_http_tab(), Gtk.Label(label="HTTP Probe"))
         nb.append_page(self._build_ai_tab(), Gtk.Label(label="AI Recon"))
-        self.workspace.pack_start(nb, False, False, 0)
-
-        self.build_terminal()
-        self.workspace.pack_start(self.terminal, True, True, 0)
+        self.workspace.pack_start(nb, True, True, 0)
 
     def _target(self):
         return self.target_entry.get_text().strip()

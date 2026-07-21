@@ -44,7 +44,7 @@ class PocPage(BasePage):
         notebook.append_page(self._build_revshell_tab(), Gtk.Label(label="Reverse Shells"))
         notebook.append_page(self._build_payload_tab(), Gtk.Label(label="Payloads"))
         notebook.append_page(self._build_msf_tab(), Gtk.Label(label="Metasploit"))
-        self.workspace.pack_start(notebook, False, False, 0)
+        self.workspace.pack_start(notebook, True, True, 0)
 
     def _build_revshell_tab(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)

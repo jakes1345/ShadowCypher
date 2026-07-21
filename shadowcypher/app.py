@@ -117,11 +117,11 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self._page_container.set_vexpand(True)
         self.pulse_box.set_vexpand(True)
 
-        # Wrap page container in a ScrolledWindow to prevent horizontal overflow
+        # Wrap page container in a ScrolledWindow for vertical overflow
         self.page_scroller = Gtk.ScrolledWindow()
         self.page_scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.page_scroller.set_propagate_natural_width(True)
-        self.page_scroller.set_propagate_natural_height(True)
+        self.page_scroller.set_hexpand(True)
+        self.page_scroller.set_vexpand(True)
         self.page_scroller.add(self._page_container)
 
         self.layout_grid.attach(self.nav_box, 0, 0, 1, 1)
@@ -421,14 +421,28 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 mod = __import__(f"shadowcypher.ui.{mod_name}", fromlist=[class_name])
                 cls = getattr(mod, class_name)
                 page = cls(**kwargs)
-                # Realize the page immediately but don't show_all() recursively yet
+                # If subclass inherits BasePage but builds its own layout (so it
+                # packed a second main_pod and left BasePage's default unpacked),
+                # auto-commit the default pod so it only appears once.
+                from shadowcypher.ui.base_page import BasePage
+                if isinstance(page, BasePage) and not page.get_children():
+                    page.pack_start(page.main_pod, True, True, 0)
                 self._page_registry[name] = page
                 self._page_container.add_named(page, name)
-                page.show_all() # Realize all child widgets once
+                page.show_all()
             except Exception as e:
-                logger.error("hub", f"PAGE_LOAD_FAILED: {name} -> {e}")
-                err_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-                err_box.add(Gtk.Label(label=f"Load Error: {name}"))
+                import traceback
+                logger.error("hub", f"PAGE_LOAD_FAILED: {name} -> {e}\n{traceback.format_exc()}")
+                err_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+                err_box.set_valign(Gtk.Align.CENTER)
+                err_box.set_halign(Gtk.Align.CENTER)
+                title = Gtk.Label()
+                title.set_markup(f"<span size='large' weight='bold' color='#ef4444'>Failed to load: {name}</span>")
+                detail = Gtk.Label(label=str(e))
+                detail.set_line_wrap(True)
+                detail.get_style_context().add_class("dim-label")
+                err_box.pack_start(title, False, False, 0)
+                err_box.pack_start(detail, False, False, 0)
                 self._page_registry[name] = err_box
                 self._page_container.add_named(err_box, name)
 
@@ -463,11 +477,13 @@ class ShadowCypherApp(Gtk.Application):
         from shadowcypher.ai.rag import build_in_background
         build_in_background()
 
-        # Default to shadow-gemma4 if available
-        from shadowcypher.ai.providers import provider_registry
-        models = provider_registry.active.list_models() if provider_registry.active else []
-        if "shadow-gemma4:latest" in models:
-            provider_registry.switch("ollama", model="shadow-gemma4:latest")
+        # Default to shadow-gemma4 if available — off main thread to avoid startup lag
+        def _pick_default_model():
+            from shadowcypher.ai.providers import provider_registry
+            models = provider_registry.active.list_models() if provider_registry.active else []
+            if "shadow-gemma4:latest" in models:
+                provider_registry.switch("ollama", model="shadow-gemma4:latest")
+        threading.Thread(target=_pick_default_model, daemon=True).start()
 
     def _setup_tray(self):
         icon_path = platform_engine.resolve_path("native", "icons", "shadowcypher-16.png")
@@ -512,11 +528,11 @@ class ShadowCypherApp(Gtk.Application):
         self.quit()
 
 def main():
+    import sys
     try:
         if os.getuid() == 0:
             os.nice(-10)
     except Exception as e:
-        import sys
         print(f"DEBUG: Failed to adjust process priority: {e}", file=sys.stderr)
 
     import threading
