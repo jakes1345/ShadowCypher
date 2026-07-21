@@ -9,26 +9,26 @@ Version: 3.0.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Fri, 17 Jul 2026 22:44:33 +0000
+Date: Tue, 21 Jul 2026 23:11:18 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- 5205a9a447bcbb6eae628fe8ba0632b9 29 main/binary-amd64/Packages.gz
+ f8019b42097026ce9ae2c4ea43321428 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- 4b35b73749cf6caf82afb5efc56536ea078d739b0a289013d535c51c29b7f7b1 29 main/binary-amd64/Packages.gz
+ 9b60562a5113e583aae1cb454a0a4027e1a9f3ba866630c0cc04e8ee457900df 29 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpasFEACgkQ2fHRjxMT
-8IPAVg//XA9H859wGvPqLMch05YEme9w0ePnV8aksu/hWUmeFXGkqJHTTfd43b/T
-ySrvxJvGAkY6PneHX/w4n3JZdse54TSjTSem9nxUVHxMk2XCQUSwn0LE8RpHWI6P
-hEHt78M80hZyQdEj1SURzIx9lygMV1C5J/SyK+ocq/xi9FnVZoalANEi7ghTtpFN
-HDmOqNzGf+pFyyQA04Si9PZcl2IZH9JVJPYgHLW4VkHIsrO8EHAf2WJ5ARxECAQf
-Hb7veGEbzIAf1sbg/5qQirpDqdODfljO/7IWDYFJ4tj2EK9rZTF1m7s5GuAmu4s4
-YGIy4MU2MDaHCDyFEVysJHY+5Lv+eFfXhb8/K36uZVdg5tci3b+6Cp/wO8kEFTVI
-wmmqlWi6zNxZqMlCoqeVmYPWA362KjKmSDIp8ssWl0naZXAt2/sBNBkIRESqY7mA
-c76SLPpd0i1SOMxIfvOgk1WvBQQS222pmmA39mO5BSj1+/69oJ9Yvbf8EjNOM58a
-o04LcM065HROxXcTrnrBecI4DrW5SXRWJlq0uKVipx0KKZgWbfzQiQng3hCRGxbg
-/KoRD71VdFfBBybOyvHCVhwRkuGQf0NHCcNJc2l+CWRlikV9yKSpLJl7sV/u4rRe
-gbcqtynLuv4eiUi8hcuUDQhHC5WoYJDedZ36MCwVhK5CdTgTUzY=
-=YF7t
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmpf/JcACgkQ2fHRjxMT
+8IO/kQ//cogO/hqcoKVQWPWftGNuvO/Cz2OGILwD2s+h8DDXSGdBTYRugB/e9zdH
+kUooMMnfYeNqvk9YFCEagMvXAqbXmxsIIyGb5FJfAS1aBk6ZVj/5dZlG9DSwZcqS
+tAug2pUxKjj0QPHMyYkxTPgKVaxM7hr40/cPV1vLjMUcPbpXwy/BcKC+1jUj09Tz
+zqO9JJEwnrjMGH76F0itdS4GZZqtMUsI05DCeSlq8HtPmk5Og3XvWX4RqkcazpwA
+C0qFuurJ41+0jqamiaeLdWZydhtEXWgitx9bU80ACun+gc9V8Oorrc84ygPHOdp8
+Ln+xKHafRVq0BRSjqlaztZ27oaizMO6X3TbyNzqyZYptY578oriVTxStWSjtPqUL
+vXw9ZoQBGWk9ZsOwIY8Ge5nRbhV8ha/2aGj2Cl88o7h1kwpvNVwBusT80fKHwZSa
+ZhBZ4bXwkBbd0/ca5RfUbmi/6FrIv0Hfhf5NwNTh0svXENKmMrDbBIAG39ihdZeu
+1M7z6hXrxnov3pxTml3VmlPymfhICCydSFoRlbkv+8wUzNKY/gNsqJnmVrzU4hGG
+ZhvbipYjhLiV5/5fen145b/Qbmib44nlIIgfrY3nrjz9LdLACb0rl+GtnD/XS9Sp
+AKRbxE+Z/17jIynWd86Larix/6I7w5Nb5Tsy7gS1EPL6k5cEu58=
+=EFJk
 -----END PGP SIGNATURE-----
