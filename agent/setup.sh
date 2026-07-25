@@ -24,6 +24,9 @@ chmod +x shadow-agent
 
 echo
 echo "Done. Run with:"
-echo "  ./shadow-agent init    # paste API key"
-echo "  ./shadow-agent run     # daemon mode"
-echo "  ./shadow-agent once    # single scan"
+echo "  ./shadow-agent init               # paste API key"
+echo "  ./shadow-agent install-service    # install as persistent daemon (systemd)"
+echo "  ./shadow-agent run                # foreground daemon mode"
+echo "  ./shadow-agent once               # single scan"
+echo "  ./shadow-agent status             # daemon status + logs"
+echo "  ./shadow-agent uninstall-service  # remove daemon"

@@ -1,76 +1,95 @@
 #!/usr/bin/env bash
-# ShadowCypher Guardian Agent Installer
+# ShadowCypher Guardian Agent — one-liner installer
 # Usage: curl -sSL https://shadowcypher.site/agent/install.sh | bash
 set -euo pipefail
 
 CYAN='\033[38;2;0;224;164m'
 BOLD='\033[1m'
+DIM='\033[2m'
 RESET='\033[0m'
+
+INSTALL_DIR="$HOME/.local/share/shadowcypher-agent"
+BIN_DIR="$HOME/.local/bin"
+AGENT_URL="https://shadowcypher.site/agent/shadowcypher_agent.py"
 
 echo -e "\n${CYAN}${BOLD}ShadowCypher Guardian Agent${RESET}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
 
-OS="$(uname -s)"
-ARCH="$(uname -m)"
-BASE="https://shadowcypher.site/releases"
-VERSION="$(curl -sSL https://api.shadowcypher.site/v1/agent/version | python3 -c 'import sys,json; print(json.load(sys.stdin).get("version","0.3.0"))' 2>/dev/null || echo '0.3.0')"
-
-echo "  OS:       $OS"
-echo "  Arch:     $ARCH"
-echo "  Version:  $VERSION"
-echo ""
-
-# Detect package manager and install Python deps if needed
-if command -v apt-get &>/dev/null; then
-    echo "[*] Installing Python deps..."
-    sudo apt-get install -y python3 python3-pip python3-requests 2>/dev/null || true
-elif command -v pacman &>/dev/null; then
-    sudo pacman -S --noconfirm python python-requests 2>/dev/null || true
+# ── 1. Python check ──────────────────────────────────────────────────────────
+if ! command -v python3 &>/dev/null; then
+    echo "[!] python3 not found"
+    if command -v apt-get &>/dev/null; then
+        echo "[*] installing python3..."
+        sudo apt-get install -y python3 python3-venv
+    elif command -v pacman &>/dev/null; then
+        sudo pacman -S --noconfirm python
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y python3
+    else
+        echo "[!] install Python 3.9+ and re-run"
+        exit 1
+    fi
 fi
 
-# Install the agent
-INSTALL_DIR="${SHADOWCYPHER_AGENT_DIR:-/opt/shadowcypher-agent}"
-sudo mkdir -p "$INSTALL_DIR"
+PY="$(command -v python3)"
+PY_VER="$("$PY" -c 'import sys; print(sys.version_info[:2] >= (3,9))')"
+if [ "$PY_VER" != "True" ]; then
+    echo "[!] Python 3.9+ required (found $("$PY" --version))"
+    exit 1
+fi
+echo "  Python:   $("$PY" --version)"
 
+# ── 2. Download agent ────────────────────────────────────────────────────────
+mkdir -p "$INSTALL_DIR" "$BIN_DIR"
 echo "[*] Downloading agent to $INSTALL_DIR..."
-sudo curl -sSL "$BASE/guardian-agent-$VERSION-linux-$ARCH.tar.gz" \
-    | sudo tar -xz -C "$INSTALL_DIR" 2>/dev/null || {
-    # Fallback: install Python-based agent
-    echo "[*] Binary not found — installing Python agent..."
-    sudo curl -sSL "$BASE/guardian-agent.py" -o "$INSTALL_DIR/guardian-agent.py"
-    sudo chmod +x "$INSTALL_DIR/guardian-agent.py"
-}
+curl -sSL "$AGENT_URL" -o "$INSTALL_DIR/shadowcypher_agent.py"
+chmod +x "$INSTALL_DIR/shadowcypher_agent.py"
 
-# Install systemd service
-if command -v systemctl &>/dev/null; then
-    sudo tee /etc/systemd/system/shadowcypher-guardian.service >/dev/null <<SERVICE
-[Unit]
-Description=ShadowCypher Guardian Agent
-After=network-online.target
-Wants=network-online.target
+# ── 3. Create venv and install deps ─────────────────────────────────────────
+echo "[*] Setting up Python environment..."
+"$PY" -m venv "$INSTALL_DIR/.venv"
+"$INSTALL_DIR/.venv/bin/pip" install --quiet --upgrade pip
+"$INSTALL_DIR/.venv/bin/pip" install --quiet requests
 
-[Service]
-Type=simple
-ExecStart=/opt/shadowcypher-agent/guardian-agent
-Restart=on-failure
-RestartSec=30
-Environment=SHADOWCYPHER_API_KEY=
-EnvironmentFile=-/etc/shadowcypher/guardian.env
+# ── 4. Write wrapper script ──────────────────────────────────────────────────
+cat > "$INSTALL_DIR/shadow-agent" <<WRAPPER
+#!/usr/bin/env bash
+exec "$INSTALL_DIR/.venv/bin/python" "$INSTALL_DIR/shadowcypher_agent.py" "\$@"
+WRAPPER
+chmod +x "$INSTALL_DIR/shadow-agent"
 
-[Install]
-WantedBy=multi-user.target
-SERVICE
-    sudo systemctl daemon-reload
-    sudo systemctl enable --now shadowcypher-guardian 2>/dev/null || true
+# Symlink to ~/. local/bin so it's in PATH
+ln -sf "$INSTALL_DIR/shadow-agent" "$BIN_DIR/shadow-agent"
+
+# Ensure ~/. local/bin is in PATH for this session
+export PATH="$BIN_DIR:$PATH"
+
+# ── 5. Configure ─────────────────────────────────────────────────────────────
+echo ""
+echo -e "${CYAN}${BOLD}Configuration${RESET}"
+echo -e "${DIM}Get your API key at: https://shadowcypher.site → Account → API Key${RESET}"
+echo ""
+"$INSTALL_DIR/shadow-agent" init
+
+# ── 6. Install systemd service (if available) ────────────────────────────────
+echo ""
+if command -v systemctl &>/dev/null && systemctl --user status &>/dev/null 2>&1; then
+    echo "[*] Installing Guardian as a persistent system service..."
+    "$INSTALL_DIR/shadow-agent" install-service
+else
+    echo "[*] systemd not available — run manually:"
+    echo "    shadow-agent run"
 fi
 
+# ── 7. Done ──────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${CYAN}${BOLD}✓ Guardian Agent installed${RESET}"
 echo ""
-echo "  Set your API key:"
-echo "  sudo mkdir -p /etc/shadowcypher"
-echo "  echo 'SHADOWCYPHER_API_KEY=sc_live_...' | sudo tee /etc/shadowcypher/guardian.env"
-echo "  sudo systemctl restart shadowcypher-guardian"
+echo "  Commands:"
+echo "    shadow-agent status            # check daemon status"
+echo "    shadow-agent once              # run a single scan"
+echo "    shadow-agent uninstall-service # remove daemon"
 echo ""
-echo "  Get your API key at: https://shadowcypher.site/?nav=account"
+echo -e "${DIM}Add $BIN_DIR to your PATH if not already there:${RESET}"
+echo "    echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
 echo ""

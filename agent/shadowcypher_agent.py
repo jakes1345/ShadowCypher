@@ -725,12 +725,100 @@ def cmd_once(cfg: dict[str, Any]) -> None:
     cycle(cfg, api, state)
 
 
+# ─── Systemd service management ──────────────────────────────────────────────
+
+SERVICE_NAME = "shadowcypher-guardian"
+
+
+def _service_file_path() -> Path:
+    return Path.home() / ".config" / "systemd" / "user" / f"{SERVICE_NAME}.service"
+
+
+def _exec_start() -> str:
+    """Return the best ExecStart string for this installation."""
+    script_dir = Path(__file__).parent.resolve()
+    wrapper = script_dir / "shadow-agent"
+    if wrapper.exists() and os.access(wrapper, os.X_OK):
+        return f"{wrapper} run"
+    return f"{sys.executable} {Path(__file__).resolve()} run"
+
+
+def cmd_install_service() -> None:
+    """Install and enable a systemd user service so Guardian runs on boot."""
+    if not CONFIG_PATH.exists():
+        sys.exit("[!] run 'init' first to set your API key")
+
+    if subprocess.run(["which", "systemctl"], capture_output=True).returncode != 0:
+        sys.exit("[!] systemd not found — see README for manual setup")
+
+    service_dir = Path.home() / ".config" / "systemd" / "user"
+    service_dir.mkdir(parents=True, exist_ok=True)
+    service_file = _service_file_path()
+
+    service_file.write_text(f"""\
+[Unit]
+Description=ShadowCypher Guardian Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart={_exec_start()}
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier={SERVICE_NAME}
+
+[Install]
+WantedBy=default.target
+""")
+    print(f"[+] service file → {service_file}")
+
+    subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
+    subprocess.run(["systemctl", "--user", "enable", "--now", SERVICE_NAME], check=True)
+
+    # Enable linger so the user service survives logout / no active session
+    user = os.environ.get("USER") or os.environ.get("LOGNAME") or ""
+    if user:
+        subprocess.run(["loginctl", "enable-linger", user], check=False)
+        print("[+] linger enabled — service persists after logout")
+
+    print(f"\n[+] Guardian daemon is running\n")
+    print(f"    Logs:     journalctl --user -u {SERVICE_NAME} -f")
+    print(f"    Stop:     systemctl --user stop {SERVICE_NAME}")
+    print(f"    Remove:   ./shadow-agent uninstall-service\n")
+
+
+def cmd_uninstall_service() -> None:
+    """Stop, disable and remove the Guardian systemd user service."""
+    subprocess.run(["systemctl", "--user", "stop",    SERVICE_NAME], check=False)
+    subprocess.run(["systemctl", "--user", "disable", SERVICE_NAME], check=False)
+    sf = _service_file_path()
+    if sf.exists():
+        sf.unlink()
+        print(f"[+] removed {sf}")
+    subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
+    print("[+] Guardian daemon uninstalled")
+
+
+def cmd_status() -> None:
+    """Show Guardian daemon status and recent log lines."""
+    r = subprocess.run(["systemctl", "--user", "status", SERVICE_NAME])
+    if r.returncode not in (0, 3):  # 3 = inactive, which is fine to show
+        print("\n[*] recent logs:")
+        subprocess.run(["journalctl", "--user", "-u", SERVICE_NAME, "-n", "20", "--no-pager"])
+
+
 # ─── main ───────────────────────────────────────────────────────────────────
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="ShadowCypher Guardian Agent")
-    parser.add_argument("command", choices=["init", "login", "run", "once"])
+    parser.add_argument("command", choices=[
+        "init", "login", "run", "once",
+        "install-service", "uninstall-service", "status",
+    ])
     args = parser.parse_args()
 
     if args.command == "init":
@@ -738,6 +826,15 @@ def main() -> None:
         return
     if args.command == "login":
         cmd_login()
+        return
+    if args.command == "install-service":
+        cmd_install_service()
+        return
+    if args.command == "uninstall-service":
+        cmd_uninstall_service()
+        return
+    if args.command == "status":
+        cmd_status()
         return
 
     cfg = load_config()
