@@ -82,6 +82,7 @@ import { getOtaManifest, updateOtaManifest } from "./ota";
 import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, openDm, listDms, createRoom, deleteRoom, updateRoom } from "./chat";
 import { listFiles, uploadFile, downloadFile, deleteFile } from "./files";
 export { ChatRoom } from "./chat_do";
+export { VideoRoom } from "./video_do";
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
@@ -142,6 +143,7 @@ export interface Env {
   OLLAMA_DEFAULT_MODEL?: string;
   // Durable Objects
   CHAT_ROOM: DurableObjectNamespace;
+  VIDEO_ROOM: DurableObjectNamespace;
   // R2 file storage
   SHADOW_FILES: R2Bucket;
 }
@@ -179,6 +181,13 @@ function json(body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
       ...(init.headers || {}),
     },
   });
+}
+
+function videoRoomCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)))
+    .map((b) => chars[b % chars.length])
+    .join("");
 }
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -687,6 +696,8 @@ export default {
         "GET /v1/chat/online":                getOnlineUsers,
         "GET /v1/chat/dm":                    listDms,
         "POST /v1/chat/dm/open":              openDm,
+        // Video calling
+        "POST /v1/video/rooms":               async (_req, _env, _user, cors) => json({ room: videoRoomCode() }, {}, cors),
         // File storage
         "GET /v1/files":                      listFiles,
         "POST /v1/files/upload":              uploadFile,
@@ -778,6 +789,28 @@ export default {
         const fileKey = path.slice("/v1/files/".length);
         if (fileGet)    return downloadFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
         if (fileDelete) return deleteFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
+      }
+
+      // ── WebSocket upgrade: GET /v1/video/ws?room=<code>&name=<display> ──────
+      if (req.method === "GET" && path === "/v1/video/ws" && req.headers.get("Upgrade") === "websocket") {
+        const key = extractKey(req);
+        if (!key) return new Response("missing_or_invalid_key", { status: 401 });
+        const user = await findUserByKey(env, key);
+        if (!user) return new Response("key_not_found", { status: 401 });
+
+        const url      = new URL(req.url);
+        const roomCode = (url.searchParams.get("room") ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+        if (!roomCode) return new Response("room_required", { status: 400 });
+
+        const handle = (user.user_metadata as { handle?: string })?.handle ?? user.email.split("@")[0];
+        const name   = (url.searchParams.get("name") ?? handle).slice(0, 32);
+
+        const doId = env.VIDEO_ROOM.idFromName(roomCode);
+        const stub = env.VIDEO_ROOM.get(doId);
+
+        const doUrl = new URL(req.url);
+        doUrl.searchParams.set("name", name);
+        return stub.fetch(new Request(doUrl.toString(), req));
       }
 
       // ── WebSocket upgrade: GET /v1/chat/ws?room=<name> ─────────────────────

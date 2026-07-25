@@ -96,6 +96,7 @@
             <a onclick="navTo('mail',this)" id="nav-mail" class="nav-tab">Mail <span id="mail-unread-badge" style="display:none;background:var(--accent-primary);color:#000;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle;"></span></a>
             <a onclick="navTo('chat',this)" id="nav-chat" class="nav-tab">Chat</a>
             <a onclick="navTo('drive',this)" id="nav-drive" class="nav-tab">Drive</a>
+            <a onclick="navTo('video',this)" id="nav-video" class="nav-tab">Video</a>
             <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Downloads</a>
             <a onclick="navTo('pricing',this)" id="nav-pricing" class="nav-tab">Pro</a>
             <a onclick="navTo('account',this)" id="nav-account" class="nav-tab">Account</a>
@@ -6176,6 +6177,360 @@
             <div id="incident-modal-body"></div>
         </div>
     </div>
+
+    <!-- ── Shadow Video page ─────────────────────────────────────────────── -->
+    <div id="page-video" class="page">
+        <div style="display:flex;flex-direction:column;height:calc(100vh - 60px);overflow:hidden;">
+
+            <!-- Header -->
+            <div style="padding:14px 24px;border-bottom:1px solid rgba(180,74,255,0.12);display:flex;align-items:center;gap:12px;background:rgba(0,0,0,0.2);flex-shrink:0;">
+                <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;">// SHADOW_VIDEO</span>
+                <span style="flex:1;"></span>
+                <span id="video-status-label" style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-secondary);"></span>
+            </div>
+
+            <!-- Lobby (shown when not in a call) -->
+            <div id="video-lobby" style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px 20px;">
+                <div style="max-width:400px;width:100%;text-align:center;">
+                    <div style="width:72px;height:72px;border-radius:50%;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.3);margin:0 auto 24px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;">▶</div>
+                    <h2 style="font-family:var(--font-heading);font-size:1.4rem;margin:0 0 8px;color:var(--text-primary);">Private Video Calls</h2>
+                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.6;margin:0 0 32px;">End-to-end encrypted peer-to-peer video. Nothing touches a third-party server — signaling runs on your own instance.</p>
+
+                    <div style="display:flex;flex-direction:column;gap:12px;">
+                        <button onclick="videoCreate()" class="btn-primary" style="width:100%;padding:12px;">
+                            Start New Call
+                        </button>
+
+                        <div style="display:flex;gap:8px;">
+                            <input id="video-join-code" type="text" maxlength="12" placeholder="Enter room code"
+                                   style="flex:1;padding:11px 14px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:4px;font-size:0.85rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:2px;"
+                                   oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+                                   onkeydown="if(event.key==='Enter')videoJoin(this.value)">
+                            <button onclick="videoJoin(document.getElementById('video-join-code').value)"
+                                    style="padding:11px 18px;background:rgba(180,74,255,0.12);border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);border-radius:4px;cursor:pointer;font-family:var(--font-mono);font-size:0.8rem;white-space:nowrap;">Join</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Call room (shown during a call) -->
+            <div id="video-room" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+
+                <!-- Room code banner -->
+                <div style="padding:8px 20px;background:rgba(180,74,255,0.06);border-bottom:1px solid rgba(180,74,255,0.1);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+                    <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-secondary);">ROOM</span>
+                    <span id="video-room-code" style="font-family:var(--font-mono);font-size:0.85rem;color:var(--accent-primary);letter-spacing:3px;font-weight:700;"></span>
+                    <button onclick="videoCopyCode()" style="padding:3px 10px;background:none;border:1px solid rgba(180,74,255,0.25);color:var(--text-secondary);border-radius:4px;cursor:pointer;font-size:0.68rem;font-family:var(--font-mono);">Copy</button>
+                    <span style="flex:1;"></span>
+                    <span id="video-peer-count" style="font-size:0.72rem;color:var(--text-secondary);font-family:var(--font-mono);"></span>
+                </div>
+
+                <!-- Video grid -->
+                <div id="video-grid" style="flex:1;overflow:hidden;padding:16px;display:grid;gap:12px;align-content:start;"></div>
+
+                <!-- Controls -->
+                <div style="padding:16px 24px;border-top:1px solid rgba(180,74,255,0.12);display:flex;align-items:center;justify-content:center;gap:12px;flex-shrink:0;background:rgba(0,0,0,0.3);">
+                    <button id="video-btn-mic" onclick="videoToggleMic()"
+                            style="width:44px;height:44px;border-radius:50%;border:1px solid rgba(180,74,255,0.35);background:rgba(180,74,255,0.1);color:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;" title="Toggle mic">🎤</button>
+                    <button id="video-btn-cam" onclick="videoToggleCam()"
+                            style="width:44px;height:44px;border-radius:50%;border:1px solid rgba(180,74,255,0.35);background:rgba(180,74,255,0.1);color:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;" title="Toggle camera">📷</button>
+                    <button onclick="videoHangUp()"
+                            style="width:52px;height:52px;border-radius:50%;border:none;background:#dc2626;color:#fff;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;" title="Hang up">✕</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Shadow Video JavaScript ───────────────────────────────────────────── -->
+    <script>
+    (function() {
+        const ICE_SERVERS = [
+            { urls: 'stun:stun.cloudflare.com:3478' },
+            { urls: 'stun:stun.l.google.com:19302' },
+        ];
+
+        let _videoWs       = null;
+        let _videoRoom     = null;
+        let _videoMyPeerId = null;
+        let _videoStream   = null;
+        let _videoPeers    = {};  // peerId → RTCPeerConnection
+        let _videoMicOn    = true;
+        let _videoCamOn    = true;
+
+        function videoSetStatus(msg) {
+            const el = document.getElementById('video-status-label');
+            if (el) el.textContent = msg;
+        }
+
+        function videoUpdatePeerCount() {
+            const n = Object.keys(_videoPeers).length + 1;
+            const el = document.getElementById('video-peer-count');
+            if (el) el.textContent = n === 1 ? '1 participant' : `${n} participants`;
+        }
+
+        // ── Room entry ──────────────────────────────────────────────────────
+
+        window.videoCreate = async function() {
+            if (!_sessionApiKey) { showToast('Sign in to use video calls', true); return; }
+            try {
+                const data = await callApi('/v1/video/rooms', { method: 'POST' });
+                videoJoin(data.room);
+            } catch (e) { showToast('Could not create room: ' + e.message, true); }
+        };
+
+        window.videoJoin = async function(code) {
+            code = (code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (!code) { showToast('Enter a room code', true); return; }
+            if (!_sessionApiKey) { showToast('Sign in to use video calls', true); return; }
+
+            videoSetStatus('Requesting camera & mic…');
+            try {
+                _videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            } catch (e) {
+                showToast('Camera/mic access denied: ' + e.message, true);
+                videoSetStatus('');
+                return;
+            }
+
+            _videoRoom = code;
+            _videoMicOn = true;
+            _videoCamOn = true;
+
+            // Show local video immediately
+            videoAddLocalVideo();
+
+            // Connect to signaling server
+            const API_BASE_WS = (window.SHADOWCYPHER_API || 'https://api.shadowcypher.site').replace(/^http/, 'ws');
+            const wsUrl = `${API_BASE_WS}/v1/video/ws?room=${code}&key=${_sessionApiKey}&name=${encodeURIComponent(_videoHandle || 'You')}`;
+
+            _videoWs = new WebSocket(wsUrl);
+            _videoWs.onopen = () => videoSetStatus('Connected · ' + code);
+            _videoWs.onclose = () => { videoSetStatus('Disconnected'); if (_videoRoom) videoHangUp(); };
+            _videoWs.onerror = () => showToast('Signaling connection lost', true);
+
+            _videoWs.onmessage = (evt) => {
+                let msg;
+                try { msg = JSON.parse(evt.data); } catch { return; }
+                videoHandleSignal(msg);
+            };
+
+            document.getElementById('video-lobby').style.display = 'none';
+            document.getElementById('video-room').style.display  = 'flex';
+            document.getElementById('video-room-code').textContent = code;
+            videoUpdatePeerCount();
+        };
+
+        // ── Signaling ───────────────────────────────────────────────────────
+
+        async function videoHandleSignal(msg) {
+            if (msg.type === 'joined') {
+                _videoMyPeerId = msg.peerId;
+                // Offer to every existing peer (we joined last)
+                for (const peer of (msg.peers || [])) {
+                    await videoMakeOffer(peer.id);
+                }
+                return;
+            }
+
+            if (msg.type === 'peer_joined') {
+                // They will send us an offer; just add a placeholder video tile
+                videoAddRemotePlaceholder(msg.peerId, msg.name);
+                return;
+            }
+
+            if (msg.type === 'peer_left') {
+                videoRemovePeer(msg.peerId);
+                return;
+            }
+
+            if (msg.type === 'offer') {
+                await videoHandleOffer(msg.from, msg.sdp);
+                return;
+            }
+
+            if (msg.type === 'answer') {
+                const pc = _videoPeers[msg.from];
+                if (pc) await pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
+                return;
+            }
+
+            if (msg.type === 'ice') {
+                const pc = _videoPeers[msg.from];
+                if (pc && msg.candidate) await pc.addIceCandidate(msg.candidate).catch(() => {});
+                return;
+            }
+        }
+
+        function videoSend(data) {
+            if (_videoWs && _videoWs.readyState === WebSocket.OPEN) {
+                _videoWs.send(JSON.stringify(data));
+            }
+        }
+
+        // ── Peer connection management ───────────────────────────────────────
+
+        function videoCreatePc(peerId) {
+            if (_videoPeers[peerId]) return _videoPeers[peerId];
+
+            const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+            _videoPeers[peerId] = pc;
+
+            // Add local tracks
+            if (_videoStream) {
+                _videoStream.getTracks().forEach(track => pc.addTrack(track, _videoStream));
+            }
+
+            pc.onicecandidate = (e) => {
+                if (e.candidate) videoSend({ type: 'ice', to: peerId, candidate: e.candidate });
+            };
+
+            pc.ontrack = (e) => {
+                videoAttachRemoteStream(peerId, e.streams[0]);
+            };
+
+            pc.onconnectionstatechange = () => {
+                if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                    videoRemovePeer(peerId);
+                }
+            };
+
+            return pc;
+        }
+
+        async function videoMakeOffer(peerId) {
+            const pc = videoCreatePc(peerId);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            videoSend({ type: 'offer', to: peerId, sdp: offer.sdp });
+        }
+
+        async function videoHandleOffer(peerId, sdp) {
+            const pc = videoCreatePc(peerId);
+            await pc.setRemoteDescription({ type: 'offer', sdp });
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            videoSend({ type: 'answer', to: peerId, sdp: answer.sdp });
+        }
+
+        function videoRemovePeer(peerId) {
+            if (_videoPeers[peerId]) {
+                _videoPeers[peerId].close();
+                delete _videoPeers[peerId];
+            }
+            const tile = document.getElementById('video-tile-' + peerId);
+            if (tile) tile.remove();
+            videoUpdatePeerCount();
+        }
+
+        // ── Video tiles ─────────────────────────────────────────────────────
+
+        function videoGrid() { return document.getElementById('video-grid'); }
+
+        function videoAddLocalVideo() {
+            const grid = videoGrid();
+            const existing = document.getElementById('video-tile-local');
+            if (existing) existing.remove();
+
+            const tile = videoMakeTile('local', 'You', _videoStream, true);
+            grid.prepend(tile);
+            videoResizeGrid();
+        }
+
+        function videoAddRemotePlaceholder(peerId, name) {
+            const grid = videoGrid();
+            if (document.getElementById('video-tile-' + peerId)) return;
+            const tile = videoMakeTile(peerId, name, null, false);
+            grid.appendChild(tile);
+            videoResizeGrid();
+            videoUpdatePeerCount();
+        }
+
+        function videoAttachRemoteStream(peerId, stream) {
+            let tile = document.getElementById('video-tile-' + peerId);
+            if (!tile) {
+                tile = videoMakeTile(peerId, 'Peer', stream, false);
+                videoGrid().appendChild(tile);
+            }
+            const vid = tile.querySelector('video');
+            if (vid) { vid.srcObject = stream; vid.play().catch(() => {}); }
+            videoResizeGrid();
+            videoUpdatePeerCount();
+        }
+
+        function videoMakeTile(id, label, stream, muted) {
+            const tile = document.createElement('div');
+            tile.id = 'video-tile-' + id;
+            tile.style.cssText = 'position:relative;background:#0a0a14;border:1px solid rgba(180,74,255,0.2);border-radius:6px;overflow:hidden;aspect-ratio:16/9;';
+
+            const vid = document.createElement('video');
+            vid.autoplay = true;
+            vid.muted = muted;
+            vid.playsInline = true;
+            vid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            if (stream) vid.srcObject = stream;
+
+            const nameTag = document.createElement('div');
+            nameTag.textContent = label;
+            nameTag.style.cssText = 'position:absolute;bottom:8px;left:10px;font-size:0.68rem;font-family:var(--font-mono);color:#fff;background:rgba(0,0,0,0.55);padding:2px 7px;border-radius:3px;';
+
+            tile.appendChild(vid);
+            tile.appendChild(nameTag);
+            return tile;
+        }
+
+        function videoResizeGrid() {
+            const grid = videoGrid();
+            const n = grid.children.length;
+            if (n <= 1) grid.style.gridTemplateColumns = '1fr';
+            else if (n <= 4) grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+            else grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        }
+
+        // ── Controls ────────────────────────────────────────────────────────
+
+        window.videoToggleMic = function() {
+            _videoMicOn = !_videoMicOn;
+            if (_videoStream) _videoStream.getAudioTracks().forEach(t => t.enabled = _videoMicOn);
+            document.getElementById('video-btn-mic').style.background = _videoMicOn
+                ? 'rgba(180,74,255,0.1)' : 'rgba(220,38,38,0.3)';
+        };
+
+        window.videoToggleCam = function() {
+            _videoCamOn = !_videoCamOn;
+            if (_videoStream) _videoStream.getVideoTracks().forEach(t => t.enabled = _videoCamOn);
+            document.getElementById('video-btn-cam').style.background = _videoCamOn
+                ? 'rgba(180,74,255,0.1)' : 'rgba(220,38,38,0.3)';
+        };
+
+        window.videoCopyCode = function() {
+            navigator.clipboard.writeText(_videoRoom || '').then(() => showToast('Room code copied'));
+        };
+
+        window.videoHangUp = function() {
+            if (_videoWs) { _videoWs.close(); _videoWs = null; }
+            Object.keys(_videoPeers).forEach(id => { _videoPeers[id].close(); });
+            _videoPeers = {};
+            if (_videoStream) { _videoStream.getTracks().forEach(t => t.stop()); _videoStream = null; }
+            _videoRoom = null;
+            _videoMyPeerId = null;
+
+            document.getElementById('video-grid').innerHTML = '';
+            document.getElementById('video-room').style.display  = 'none';
+            document.getElementById('video-lobby').style.display = '';
+            document.getElementById('video-join-code').value = '';
+            videoSetStatus('');
+        };
+
+        // Expose handle for name display
+        let _videoHandle = '';
+        document.addEventListener('DOMContentLoaded', () => {
+            // Pull handle from session once available
+            const orig = window.onShadowLogin || (() => {});
+            window.onShadowLogin = (handle) => { _videoHandle = handle || ''; orig(handle); };
+        });
+    })();
+    </script>
 
     <!-- ── Profile viewer modal ──────────────────────────────────────────── -->
     <div id="profile-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(6px);" onclick="if(event.target===this)profileHideModal()">

@@ -29,9 +29,17 @@ bucket_name = "__R2_BUCKET__"
 name = "CHAT_ROOM"
 class_name = "ChatRoom"
 
+[[durable_objects.bindings]]
+name = "VIDEO_ROOM"
+class_name = "VideoRoom"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["ChatRoom"]
+
+[[migrations]]
+tag = "v2"
+new_classes = ["VideoRoom"]
 
 [triggers]
 crons = ["0 * * * *"]
