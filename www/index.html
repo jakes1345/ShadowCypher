@@ -5835,6 +5835,27 @@
         </div>
     </div>
 
+    <!-- ── PDF Viewer Overlay ────────────────────────────────────────────────── -->
+    <div id="pdf-overlay" style="display:none;position:fixed;inset:0;z-index:10010;flex-direction:column;background:#1c1c1e;">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:#0d0d0d;border-bottom:1px solid rgba(180,74,255,0.2);flex-shrink:0;">
+            <span id="pdf-filename" style="font-size:0.8rem;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
+                <button onclick="pdfPrev()" title="Previous page" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.25);color:#c084fc;border-radius:4px;cursor:pointer;font-size:0.8rem;font-family:var(--font-mono);">←</button>
+                <span id="pdf-page-info" style="font-size:0.72rem;color:#aaa;font-family:var(--font-mono);white-space:nowrap;min-width:50px;text-align:center;">– / –</span>
+                <button onclick="pdfNext()" title="Next page" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.25);color:#c084fc;border-radius:4px;cursor:pointer;font-size:0.8rem;font-family:var(--font-mono);">→</button>
+                <button onclick="pdfZoom(-0.25)" title="Zoom out" style="padding:4px 9px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.25);color:#c084fc;border-radius:4px;cursor:pointer;font-size:1rem;font-family:var(--font-mono);line-height:1;">−</button>
+                <button onclick="pdfZoom(+0.25)" title="Zoom in"  style="padding:4px 9px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.25);color:#c084fc;border-radius:4px;cursor:pointer;font-size:1rem;font-family:var(--font-mono);line-height:1;">+</button>
+                <a id="pdf-dl" href="#" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.25);color:#c084fc;border-radius:4px;text-decoration:none;font-size:0.75rem;font-family:var(--font-mono);">↓ Save</a>
+                <button onclick="pdfDelete()" style="padding:4px 10px;background:transparent;border:1px solid #7f1d1d;color:#f87171;border-radius:4px;cursor:pointer;font-size:0.75rem;font-family:var(--font-mono);">Delete</button>
+                <button onclick="pdfClose()" style="padding:4px 9px;background:none;border:none;color:#666;font-size:1.1rem;cursor:pointer;line-height:1;margin-left:4px;">✕</button>
+            </div>
+        </div>
+        <div id="pdf-scroll" style="flex:1;overflow:auto;background:#525659;display:flex;flex-direction:column;align-items:center;padding:24px;gap:0;">
+            <div id="pdf-loading" style="color:#ddd;font-size:0.85rem;padding:60px 0;font-family:var(--font-mono);">Loading PDF…</div>
+            <canvas id="pdf-canvas" style="display:none;box-shadow:0 4px 20px rgba(0,0,0,0.6);"></canvas>
+        </div>
+    </div>
+
     <!-- ── Shadow Drive JavaScript ──────────────────────────────────────────── -->
     <script>
     let _driveFiles = [];
@@ -5990,7 +6011,9 @@
         if (file.type.startsWith('image/')) {
             body.innerHTML = `<img src="${fileUrl}" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:4px;">`;
         } else if (file.type === 'application/pdf') {
-            body.innerHTML = `<iframe src="${fileUrl}" style="width:100%;height:60vh;border:none;border-radius:4px;"></iframe>`;
+            driveClosePreview();
+            drivePdfViewer(file);
+            return;
         } else if (file.type.startsWith('audio/')) {
             body.innerHTML = `<audio controls src="${fileUrl}" style="width:100%;"></audio>`;
         } else if (file.type.startsWith('video/')) {
@@ -6026,8 +6049,95 @@
         } catch (e) { showToast('Delete failed: ' + e.message, 'error'); }
     }
 
+    // ── PDF.js viewer ────────────────────────────────────────────────────────
+    let _pdfLib = null, _pdfDoc = null, _pdfPage = 1, _pdfScale = 1.4;
+    let _pdfBlobUrl = null, _pdfRendering = false, _pdfFile = null;
+
+    async function _loadPdfJs() {
+        if (_pdfLib) return _pdfLib;
+        await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            s.crossOrigin = 'anonymous';
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+        });
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        _pdfLib = window.pdfjsLib;
+        return _pdfLib;
+    }
+
+    async function drivePdfViewer(file) {
+        _pdfFile = file;
+        const overlay = document.getElementById('pdf-overlay');
+        overlay.style.display = 'flex';
+        document.getElementById('pdf-filename').textContent = file.name;
+        document.getElementById('pdf-page-info').textContent = '– / –';
+        document.getElementById('pdf-loading').style.display = 'block';
+        document.getElementById('pdf-canvas').style.display = 'none';
+        const dlUrl = `${API_BASE}/v1/files/${encodeURIComponent(file.key)}?key=${encodeURIComponent(_sessionApiKey)}`;
+        const dl = document.getElementById('pdf-dl');
+        dl.href = dlUrl;
+        dl.download = file.name;
+        try {
+            const resp = await fetch(`${API_BASE}/v1/files/${encodeURIComponent(file.key)}`, {
+                headers: { 'Authorization': `Bearer ${_sessionApiKey}` }
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const blob = await resp.blob();
+            if (_pdfBlobUrl) URL.revokeObjectURL(_pdfBlobUrl);
+            _pdfBlobUrl = URL.createObjectURL(blob);
+            const lib = await _loadPdfJs();
+            _pdfDoc = await lib.getDocument(_pdfBlobUrl).promise;
+            _pdfPage = 1;
+            _pdfScale = 1.4;
+            await _pdfRender();
+        } catch(e) {
+            showToast('PDF load failed: ' + e.message, true);
+            pdfClose();
+        }
+    }
+
+    async function _pdfRender() {
+        if (!_pdfDoc || _pdfRendering) return;
+        _pdfRendering = true;
+        try {
+            const page = await _pdfDoc.getPage(_pdfPage);
+            const vp = page.getViewport({ scale: _pdfScale });
+            const canvas = document.getElementById('pdf-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = vp.width;
+            canvas.height = vp.height;
+            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+            document.getElementById('pdf-loading').style.display = 'none';
+            canvas.style.display = 'block';
+            document.getElementById('pdf-page-info').textContent = `${_pdfPage} / ${_pdfDoc.numPages}`;
+            document.getElementById('pdf-scroll').scrollTop = 0;
+        } finally { _pdfRendering = false; }
+    }
+
+    window.pdfPrev = async function() { if (_pdfPage > 1) { _pdfPage--; await _pdfRender(); } };
+    window.pdfNext = async function() { if (_pdfDoc && _pdfPage < _pdfDoc.numPages) { _pdfPage++; await _pdfRender(); } };
+    window.pdfZoom = async function(delta) {
+        _pdfScale = Math.max(0.5, Math.min(4, _pdfScale + delta));
+        await _pdfRender();
+    };
+    window.pdfClose = function() {
+        document.getElementById('pdf-overlay').style.display = 'none';
+        if (_pdfBlobUrl) { URL.revokeObjectURL(_pdfBlobUrl); _pdfBlobUrl = null; }
+        _pdfDoc = null; _pdfFile = null; _pdfPage = 1;
+    };
+    window.pdfDelete = async function() {
+        if (_pdfFile) { pdfClose(); await driveDeleteFile(_pdfFile); }
+    };
+
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && _drivePreviewFile) driveClosePreview();
+        if (e.key === 'Escape') {
+            if (_pdfFile) pdfClose();
+            else if (_drivePreviewFile) driveClosePreview();
+        }
     });
     </script>
 
