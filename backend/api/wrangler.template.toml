@@ -1,0 +1,37 @@
+name = "__WORKER_NAME__"
+main = "src/index.ts"
+compatibility_date = "2026-04-26"
+compatibility_flags = ["nodejs_compat"]
+
+workers_dev = true
+
+routes = [{ pattern = "api.__DOMAIN__", custom_domain = true }]
+
+[vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://__DOMAIN__,https://www.__DOMAIN__,http://localhost:8081"
+SITE_URL = "https://__DOMAIN__"
+RESEND_FROM_EMAIL = "ShadowCypher <noreply@__DOMAIN__>"
+AGENT_VERSION = "0.3.0"
+AGENT_SHA256 = "6590fee3f95e24a9a14a968feb598327eeb2daece83654fffe5e7cf974e13d4f"
+ANTHROPIC_MODEL = "claude-sonnet-4-6"
+
+[[kv_namespaces]]
+binding = "SHADOW_OTA"
+id = "__KV_ID__"
+preview_id = "__KV_PREVIEW_ID__"
+
+[[r2_buckets]]
+binding = "SHADOW_FILES"
+bucket_name = "__R2_BUCKET__"
+
+[[durable_objects.bindings]]
+name = "CHAT_ROOM"
+class_name = "ChatRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ChatRoom"]
+
+[triggers]
+crons = ["0 * * * *"]
