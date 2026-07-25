@@ -243,3 +243,20 @@ create index if not exists idx_incidents_user_id  on public.incidents(user_id);
 create index if not exists idx_mail_user_id       on public.mail_messages(user_id);
 create index if not exists idx_audit_user_id      on public.audit_log(user_id);
 create index if not exists idx_profiles_api_key   on public.profiles(api_key);
+
+-- Calendar events
+create table if not exists public.calendar_events (
+  id          uuid        primary key default gen_random_uuid(),
+  user_id     uuid        not null references auth.users(id) on delete cascade,
+  title       text        not null check (char_length(title) <= 200),
+  description text        check (char_length(description) <= 2000),
+  start_at    timestamptz not null,
+  end_at      timestamptz not null check (end_at >= start_at),
+  all_day     boolean     not null default false,
+  color       text        not null default '#b44aff',
+  location    text        check (char_length(location) <= 500),
+  created_at  timestamptz not null default now()
+);
+alter table public.calendar_events enable row level security;
+create policy "owner" on public.calendar_events using (user_id = auth.uid());
+create index if not exists idx_cal_user_range on public.calendar_events (user_id, start_at, end_at);

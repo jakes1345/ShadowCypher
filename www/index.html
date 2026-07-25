@@ -96,6 +96,7 @@
             <a onclick="navTo('mail',this)" id="nav-mail" class="nav-tab">Mail <span id="mail-unread-badge" style="display:none;background:var(--accent-primary);color:#000;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle;"></span></a>
             <a onclick="navTo('chat',this)" id="nav-chat" class="nav-tab">Chat</a>
             <a onclick="navTo('drive',this)" id="nav-drive" class="nav-tab">Drive</a>
+            <a onclick="navTo('calendar',this)" id="nav-calendar" class="nav-tab">Calendar</a>
             <a onclick="navTo('video',this)" id="nav-video" class="nav-tab">Video</a>
             <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Downloads</a>
             <a onclick="navTo('pricing',this)" id="nav-pricing" class="nav-tab">Pro</a>
@@ -4957,6 +4958,14 @@
                 }
                 driveLoad();
             }
+            if (pageId === 'calendar') {
+                if (!_sessionApiKey) {
+                    showToast('Sign in to use Calendar.', 'warning');
+                    await _origNavTo.call(this, 'account', document.getElementById('nav-account'));
+                    return;
+                }
+                if (typeof calLoad === 'function') calLoad();
+            }
         };
     </script>
 
@@ -6287,6 +6296,268 @@
             <div id="incident-modal-body"></div>
         </div>
     </div>
+
+    <!-- ── Shadow Calendar page ──────────────────────────────────────────── -->
+    <div id="page-calendar" class="page">
+        <div style="display:flex;flex-direction:column;height:calc(100vh - 60px);overflow:hidden;">
+            <!-- Header -->
+            <div style="padding:14px 24px;border-bottom:1px solid rgba(180,74,255,0.12);display:flex;align-items:center;gap:14px;background:rgba(0,0,0,0.2);flex-shrink:0;">
+                <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;">// SHADOW_CALENDAR</span>
+                <button onclick="calPrevMonth()" style="padding:5px 12px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.2);color:var(--accent-primary);border-radius:4px;cursor:pointer;font-family:var(--font-mono);font-size:0.8rem;">←</button>
+                <span id="cal-month-label" style="font-size:0.95rem;font-weight:600;color:#fff;min-width:160px;text-align:center;"></span>
+                <button onclick="calNextMonth()" style="padding:5px 12px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.2);color:var(--accent-primary);border-radius:4px;cursor:pointer;font-family:var(--font-mono);font-size:0.8rem;">→</button>
+                <button onclick="calToday()" style="padding:5px 12px;background:transparent;border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:4px;cursor:pointer;font-family:var(--font-mono);font-size:0.75rem;">Today</button>
+                <div style="flex:1;"></div>
+                <button onclick="calNewEvent()" style="padding:6px 16px;background:var(--accent-primary);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;font-weight:600;">+ New Event</button>
+            </div>
+            <!-- Day-of-week headers -->
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid rgba(180,74,255,0.1);flex-shrink:0;">
+                <div style="padding:6px 0;text-align:center;font-size:0.65rem;color:var(--text-secondary);font-family:var(--font-mono);letter-spacing:1px;">SUN</div>
+                <div style="padding:6px 0;text-align:center;font-size:0.65rem;color:var(--text-secondary);font-family:var(--font-mono);letter-spacing:1px;">MON</div>
+                <div style="padding:6px 0;text-align:center;font-size:0.65rem;color:var(--text-secondary);font-family:var(--font-mono);letter-spacing:1px;">TUE</div>
+                <div style="padding:6px 0;text-align:center;font-size:0.65rem;color:var(--text-secondary);font-family:var(--font-mono);letter-spacing:1px;">WED</div>
+                <div style="padding:6px 0;text-align:center;font-size:0.65rem;color:var(--text-secondary);font-family:var(--font-mono);letter-spacing:1px;">THU</div>
+                <div style="padding:6px 0;text-align:center;font-size:0.65rem;color:var(--text-secondary);font-family:var(--font-mono);letter-spacing:1px;">FRI</div>
+                <div style="padding:6px 0;text-align:center;font-size:0.65rem;color:var(--text-secondary);font-family:var(--font-mono);letter-spacing:1px;">SAT</div>
+            </div>
+            <!-- Calendar grid -->
+            <div id="cal-grid" style="flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;overflow:hidden;"></div>
+        </div>
+
+        <!-- Event modal -->
+        <div id="cal-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10005;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)calCloseModal()">
+            <div style="background:#0d0d0d;border:1px solid rgba(180,74,255,0.3);border-radius:8px;width:100%;max-width:440px;overflow:hidden;">
+                <div style="padding:14px 16px;border-bottom:1px solid rgba(180,74,255,0.12);display:flex;justify-content:space-between;align-items:center;">
+                    <span id="cal-modal-title" style="font-size:0.9rem;font-weight:600;color:#fff;font-family:var(--font-mono);">New Event</span>
+                    <button onclick="calCloseModal()" style="background:none;border:none;color:#555;font-size:1.1rem;cursor:pointer;">✕</button>
+                </div>
+                <div style="padding:18px 16px;display:flex;flex-direction:column;gap:12px;">
+                    <input id="cal-f-title" type="text" placeholder="Event title *" maxlength="200"
+                           style="padding:8px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:4px;font-size:0.85rem;width:100%;box-sizing:border-box;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div>
+                            <label style="font-size:0.7rem;color:var(--text-secondary);font-family:var(--font-mono);">START</label>
+                            <input id="cal-f-start" type="datetime-local"
+                                   style="width:100%;padding:7px 10px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:4px;font-size:0.8rem;box-sizing:border-box;color-scheme:dark;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.7rem;color:var(--text-secondary);font-family:var(--font-mono);">END</label>
+                            <input id="cal-f-end" type="datetime-local"
+                                   style="width:100%;padding:7px 10px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:4px;font-size:0.8rem;box-sizing:border-box;color-scheme:dark;">
+                        </div>
+                    </div>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.8rem;color:#ccc;">
+                        <input id="cal-f-allday" type="checkbox" onchange="calToggleAllDay(this.checked)"> All day
+                    </label>
+                    <!-- Color picker -->
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span style="font-size:0.7rem;color:var(--text-secondary);font-family:var(--font-mono);">COLOR</span>
+                        <div id="cal-color-picker" style="display:flex;gap:6px;"></div>
+                    </div>
+                    <input id="cal-f-location" type="text" placeholder="Location" maxlength="500"
+                           style="padding:8px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:4px;font-size:0.85rem;width:100%;box-sizing:border-box;">
+                    <textarea id="cal-f-desc" placeholder="Description" rows="2" maxlength="2000"
+                              style="padding:8px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:4px;font-size:0.85rem;width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>
+                </div>
+                <div style="padding:12px 16px;border-top:1px solid rgba(180,74,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+                    <button id="cal-delete-btn" onclick="calDeleteEvent()" style="display:none;padding:6px 14px;background:transparent;border:1px solid #7f1d1d;color:#f87171;border-radius:4px;cursor:pointer;font-size:0.78rem;font-family:var(--font-mono);">Delete</button>
+                    <div style="display:flex;gap:8px;margin-left:auto;">
+                        <button onclick="calCloseModal()" style="padding:6px 14px;background:transparent;border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:4px;cursor:pointer;font-size:0.78rem;">Cancel</button>
+                        <button onclick="calSaveEvent()" style="padding:6px 14px;background:var(--accent-primary);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;font-weight:600;">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Calendar JavaScript ─────────────────────────────────────────────── -->
+    <script>
+    const CAL_COLORS = ['#b44aff','#ef4444','#f97316','#22c55e','#3b82f6','#14b8a6'];
+    const CAL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    let _calYear, _calMonth, _calEvents = [], _calEditId = null, _calSelColor = CAL_COLORS[0];
+
+    (function initCal() {
+        const now = new Date();
+        _calYear  = now.getFullYear();
+        _calMonth = now.getMonth();
+        // Build color picker
+        const picker = document.getElementById('cal-color-picker');
+        CAL_COLORS.forEach(c => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.dataset.color = c;
+            b.style.cssText = `width:20px;height:20px;border-radius:50%;background:${c};border:2px solid transparent;cursor:pointer;transition:transform .1s;`;
+            b.onclick = () => calPickColor(c);
+            picker.appendChild(b);
+        });
+        calPickColor(CAL_COLORS[0]);
+    })();
+
+    function calPickColor(c) {
+        _calSelColor = c;
+        document.querySelectorAll('#cal-color-picker button').forEach(b => {
+            b.style.border = b.dataset.color === c ? '2px solid #fff' : '2px solid transparent';
+            b.style.transform = b.dataset.color === c ? 'scale(1.2)' : 'scale(1)';
+        });
+    }
+
+    async function calLoad() {
+        const from = new Date(_calYear, _calMonth, 1).toISOString();
+        const to   = new Date(_calYear, _calMonth + 1, 1).toISOString();
+        try {
+            const d = await callApi(`/v1/calendar/events?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+            _calEvents = d.events || [];
+        } catch(e) { _calEvents = []; }
+        calRender();
+    }
+
+    function calRender() {
+        document.getElementById('cal-month-label').textContent = `${CAL_MONTHS[_calMonth]} ${_calYear}`;
+        const grid = document.getElementById('cal-grid');
+        grid.innerHTML = '';
+        const today = new Date();
+        const firstDay = new Date(_calYear, _calMonth, 1).getDay();
+        const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+        const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+
+        for (let i = 0; i < totalCells; i++) {
+            const dayNum = i - firstDay + 1;
+            const isCurrentMonth = dayNum >= 1 && dayNum <= daysInMonth;
+            const cell = document.createElement('div');
+            const isToday = isCurrentMonth && dayNum === today.getDate() && _calMonth === today.getMonth() && _calYear === today.getFullYear();
+            cell.style.cssText = `border-right:1px solid rgba(180,74,255,0.08);border-bottom:1px solid rgba(180,74,255,0.08);padding:6px;overflow:hidden;cursor:${isCurrentMonth?'pointer':'default'};background:${isToday?'rgba(180,74,255,0.06)':'transparent'};display:flex;flex-direction:column;gap:2px;min-height:0;`;
+            if (isCurrentMonth) cell.onclick = () => calNewEvent(new Date(_calYear, _calMonth, dayNum));
+
+            const numEl = document.createElement('div');
+            numEl.textContent = isCurrentMonth ? dayNum : '';
+            numEl.style.cssText = `font-size:0.72rem;font-weight:${isToday?'700':'400'};color:${isToday?'var(--accent-primary)':isCurrentMonth?'#ccc':'#444'};font-family:var(--font-mono);flex-shrink:0;`;
+            cell.appendChild(numEl);
+
+            if (isCurrentMonth) {
+                const dayStart = new Date(_calYear, _calMonth, dayNum);
+                const dayEnd   = new Date(_calYear, _calMonth, dayNum + 1);
+                const dayEvts  = _calEvents.filter(e => new Date(e.end_at) > dayStart && new Date(e.start_at) < dayEnd);
+                dayEvts.slice(0, 3).forEach(ev => {
+                    const pill = document.createElement('div');
+                    pill.textContent = ev.title;
+                    pill.style.cssText = `background:${ev.color};color:#000;font-size:0.62rem;font-weight:600;padding:1px 5px;border-radius:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;flex-shrink:0;`;
+                    pill.onclick = (e) => { e.stopPropagation(); calEditEvent(ev); };
+                    cell.appendChild(pill);
+                });
+                if (dayEvts.length > 3) {
+                    const more = document.createElement('div');
+                    more.textContent = `+${dayEvts.length - 3} more`;
+                    more.style.cssText = 'font-size:0.58rem;color:var(--text-secondary);padding-left:4px;flex-shrink:0;';
+                    cell.appendChild(more);
+                }
+            }
+            grid.appendChild(cell);
+        }
+    }
+
+    function calPrevMonth() { if (_calMonth === 0) { _calMonth = 11; _calYear--; } else _calMonth--; calLoad(); }
+    function calNextMonth() { if (_calMonth === 11) { _calMonth = 0; _calYear++; } else _calMonth++; calLoad(); }
+    function calToday() { const n = new Date(); _calYear = n.getFullYear(); _calMonth = n.getMonth(); calLoad(); }
+
+    function calFmtLocal(dt) {
+        const pad = n => String(n).padStart(2,'0');
+        return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    }
+
+    function calNewEvent(date) {
+        _calEditId = null;
+        document.getElementById('cal-modal-title').textContent = 'New Event';
+        document.getElementById('cal-delete-btn').style.display = 'none';
+        document.getElementById('cal-f-title').value = '';
+        document.getElementById('cal-f-desc').value = '';
+        document.getElementById('cal-f-location').value = '';
+        document.getElementById('cal-f-allday').checked = false;
+        calToggleAllDay(false);
+        calPickColor(CAL_COLORS[0]);
+        const base = date || new Date();
+        const start = new Date(base); start.setHours(9,0,0,0);
+        const end   = new Date(base); end.setHours(10,0,0,0);
+        document.getElementById('cal-f-start').value = calFmtLocal(start);
+        document.getElementById('cal-f-end').value   = calFmtLocal(end);
+        document.getElementById('cal-modal').style.display = 'flex';
+        setTimeout(() => document.getElementById('cal-f-title').focus(), 50);
+    }
+
+    function calEditEvent(ev) {
+        _calEditId = ev.id;
+        document.getElementById('cal-modal-title').textContent = 'Edit Event';
+        document.getElementById('cal-delete-btn').style.display = 'block';
+        document.getElementById('cal-f-title').value    = ev.title;
+        document.getElementById('cal-f-desc').value     = ev.description || '';
+        document.getElementById('cal-f-location').value = ev.location || '';
+        const allDay = !!ev.all_day;
+        document.getElementById('cal-f-allday').checked = allDay;
+        calToggleAllDay(allDay);
+        calPickColor(ev.color || CAL_COLORS[0]);
+        document.getElementById('cal-f-start').value = calFmtLocal(new Date(ev.start_at));
+        document.getElementById('cal-f-end').value   = calFmtLocal(new Date(ev.end_at));
+        document.getElementById('cal-modal').style.display = 'flex';
+    }
+
+    function calToggleAllDay(on) {
+        const startEl = document.getElementById('cal-f-start');
+        const endEl   = document.getElementById('cal-f-end');
+        if (on) {
+            const d = startEl.value.split('T')[0] || calFmtLocal(new Date()).split('T')[0];
+            startEl.type = 'date'; startEl.value = d;
+            endEl.type   = 'date'; endEl.value   = d;
+        } else {
+            startEl.type = 'datetime-local';
+            endEl.type   = 'datetime-local';
+        }
+    }
+
+    function calCloseModal() { document.getElementById('cal-modal').style.display = 'none'; }
+
+    async function calSaveEvent() {
+        const title = document.getElementById('cal-f-title').value.trim();
+        if (!title) { showToast('Title is required', true); return; }
+        const allDay = document.getElementById('cal-f-allday').checked;
+        const startRaw = document.getElementById('cal-f-start').value;
+        const endRaw   = document.getElementById('cal-f-end').value;
+        if (!startRaw || !endRaw) { showToast('Start and end are required', true); return; }
+        const startAt = allDay ? new Date(startRaw + 'T00:00:00').toISOString() : new Date(startRaw).toISOString();
+        const endAt   = allDay ? new Date(endRaw   + 'T23:59:59').toISOString() : new Date(endRaw).toISOString();
+        if (new Date(endAt) < new Date(startAt)) { showToast('End must be after start', true); return; }
+
+        const payload = {
+            title,
+            description: document.getElementById('cal-f-desc').value || null,
+            location:    document.getElementById('cal-f-location').value || null,
+            start_at: startAt, end_at: endAt, all_day: allDay, color: _calSelColor,
+        };
+        try {
+            if (_calEditId) {
+                await callApi(`/v1/calendar/events/${_calEditId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+            } else {
+                await callApi('/v1/calendar/events', { method: 'POST', body: JSON.stringify(payload) });
+            }
+            calCloseModal();
+            await calLoad();
+            showToast(_calEditId ? 'Event updated' : 'Event created', 'success');
+        } catch(e) { showToast('Save failed: ' + e.message, true); }
+    }
+
+    async function calDeleteEvent() {
+        if (!_calEditId) return;
+        try {
+            await callApi(`/v1/calendar/events/${_calEditId}`, { method: 'DELETE' });
+            calCloseModal();
+            await calLoad();
+            showToast('Event deleted', 'success');
+        } catch(e) { showToast('Delete failed: ' + e.message, true); }
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && document.getElementById('cal-modal')?.style.display === 'flex') calCloseModal();
+    });
+    </script>
 
     <!-- ── Shadow Video page ─────────────────────────────────────────────── -->
     <div id="page-video" class="page">
