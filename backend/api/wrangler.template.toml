@@ -39,7 +39,7 @@ new_sqlite_classes = ["ChatRoom"]
 
 [[migrations]]
 tag = "v2"
-new_classes = ["VideoRoom"]
+new_sqlite_classes = ["VideoRoom"]
 
 [triggers]
 crons = ["0 * * * *"]
