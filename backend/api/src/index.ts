@@ -82,6 +82,7 @@ import { getOtaManifest, updateOtaManifest } from "./ota";
 import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, openDm, listDms, createRoom, deleteRoom, updateRoom } from "./chat";
 import { listFiles, uploadFile, downloadFile, deleteFile } from "./files";
 import { listEvents, createEvent, updateEvent, deleteEvent } from "./calendar";
+import { listDocs, createDoc, getDoc, saveDoc, deleteDoc } from "./docs";
 export { ChatRoom } from "./chat_do";
 export { VideoRoom } from "./video_do";
 import { dbSelect } from "./supabase";
@@ -697,6 +698,9 @@ export default {
         "GET /v1/chat/online":                getOnlineUsers,
         "GET /v1/chat/dm":                    listDms,
         "POST /v1/chat/dm/open":              openDm,
+        // Docs
+        "GET /v1/docs":                       listDocs,
+        "POST /v1/docs":                      createDoc,
         // Calendar
         "GET /v1/calendar/events":            listEvents,
         "POST /v1/calendar/events":           createEvent,
@@ -734,6 +738,10 @@ export default {
       const mailRead   = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/read$/.test(path);
       const mailReply  = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/reply$/.test(path);
       const mailDelete = req.method === "DELETE" && /^\/v1\/mail\/[^/]+$/.test(path);
+      // Docs (parameterized)
+      const docGet    = req.method === "GET"    && /^\/v1\/docs\/[^/]+$/.test(path);
+      const docSave   = req.method === "PUT"    && /^\/v1\/docs\/[^/]+$/.test(path);
+      const docDelete = req.method === "DELETE" && /^\/v1\/docs\/[^/]+$/.test(path);
       // Calendar (parameterized)
       const calPatch  = req.method === "PATCH"  && /^\/v1\/calendar\/events\/[^/]+$/.test(path);
       const calDelete = req.method === "DELETE" && /^\/v1\/calendar\/events\/[^/]+$/.test(path);
@@ -744,7 +752,7 @@ export default {
       const chatRoomDelete = req.method === "DELETE" && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
       const chatRoomPatch  = req.method === "PATCH"  && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailReply || mailDelete || fileGet || fileDelete || chatRoomDelete || chatRoomPatch || calPatch || calDelete;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailReply || mailDelete || fileGet || fileDelete || chatRoomDelete || chatRoomPatch || calPatch || calDelete || docGet || docSave || docDelete;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -791,6 +799,13 @@ export default {
           const roomName = path.split("/").pop()!;
           if (chatRoomDelete) return deleteRoom(req, env, authedUser, cors, roomName);
           if (chatRoomPatch)  return updateRoom(req, env, authedUser, cors, roomName);
+        }
+        // Docs — id is last path segment
+        if (docGet || docSave || docDelete) {
+          const docId = path.split("/").pop()!;
+          if (docGet)    return getDoc(req, env, { id: user.id }, cors, docId);
+          if (docSave)   return saveDoc(req, env, { id: user.id }, cors, docId);
+          if (docDelete) return deleteDoc(req, env, { id: user.id }, cors, docId);
         }
         // Calendar — id is last path segment
         if (calPatch || calDelete) {
