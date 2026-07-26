@@ -34,24 +34,10 @@ bucket_name = "shadowcypher-files"
 name = "CHAT_ROOM"
 class_name = "ChatRoom"
 
-[[durable_objects.bindings]]
-name = "VIDEO_ROOM"
-class_name = "VideoRoom"
-
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["ChatRoom"]
 
-[[migrations]]
-tag = "v2"
-new_sqlite_classes = ["VideoRoom"]
-
 [triggers]
 crons = ["0 * * * *"]
 
-# Shadow Mail — inbound email setup (one-time, in Cloudflare dashboard):
-#   1. Cloudflare Dashboard → Email → Email Routing → Enable on shadowcypher.site
-#   2. Add MX records as instructed (route1.mx.cloudflare.net / route2.mx.cloudflare.net)
-#   3. Create a catch-all rule: "*@shadowcypher.site" → Send to Worker → shadowcypher-api
-#   4. Optionally add DMARC: _dmarc.shadowcypher.site TXT "v=DMARC1; p=quarantine; rua=mailto:dmarc@shadowcypher.site"
-# No wrangler.toml changes needed — the email() handler in index.ts receives all routed mail.

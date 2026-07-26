@@ -81,25 +81,11 @@ import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLooku
 import { getOtaManifest, updateOtaManifest } from "./ota";
 import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, openDm, listDms, createRoom, deleteRoom, updateRoom } from "./chat";
 import { listFiles, uploadFile, downloadFile, deleteFile } from "./files";
-import { listEvents, createEvent, updateEvent, deleteEvent } from "./calendar";
-import { listDocs, createDoc, getDoc, saveDoc, deleteDoc } from "./docs";
-import { listSheets, createSheet, getSheet, saveSheet, deleteSheet } from "./sheets";
 export { ChatRoom } from "./chat_do";
-export { VideoRoom } from "./video_do";
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 import { sendWelcomeEmail, sendKeyRotatedEmail, sendRecoveryKitEmail } from "./emails";
-import {
-  storeInboundMail,
-  getInbox,
-  getMailCount,
-  getMail,
-  markRead,
-  replyMail,
-  deleteMail,
-  sendOutbound,
-} from "./mail";
 import { adminOverview, adminUsers } from "./admin";
 import { getProfile, updateProfile } from "./profile";
 import { rateLimit } from "./ratelimit";
@@ -146,7 +132,6 @@ export interface Env {
   OLLAMA_DEFAULT_MODEL?: string;
   // Durable Objects
   CHAT_ROOM: DurableObjectNamespace;
-  VIDEO_ROOM: DurableObjectNamespace;
   // R2 file storage
   SHADOW_FILES: R2Bucket;
 }
@@ -186,12 +171,6 @@ function json(body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
   });
 }
 
-function videoRoomCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
-  return Array.from(crypto.getRandomValues(new Uint8Array(8)))
-    .map((b) => chars[b % chars.length])
-    .join("");
-}
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
 
@@ -699,24 +678,9 @@ export default {
         "GET /v1/chat/online":                getOnlineUsers,
         "GET /v1/chat/dm":                    listDms,
         "POST /v1/chat/dm/open":              openDm,
-        // Docs
-        "GET /v1/docs":                       listDocs,
-        "POST /v1/docs":                      createDoc,
-        // Sheets
-        "GET /v1/sheets":                     listSheets,
-        "POST /v1/sheets":                    createSheet,
-        // Calendar
-        "GET /v1/calendar/events":            listEvents,
-        "POST /v1/calendar/events":           createEvent,
-        // Video calling
-        "POST /v1/video/rooms":               async (_req, _env, _user, cors) => json({ room: videoRoomCode() }, {}, cors),
         // File storage
         "GET /v1/files":                      listFiles,
         "POST /v1/files/upload":              uploadFile,
-        // Shadow Mail
-        "GET /v1/mail/inbox":                 getInbox,
-        "GET /v1/mail/count":                 getMailCount,
-        "POST /v1/mail/send":                 sendOutbound,
         // Profile
         "PATCH /v1/me/profile":               updateProfile,
         // Admin (shadow@shadowcypher.site only — checked inside each handler)
@@ -737,22 +701,6 @@ export default {
       const missionResult       = req.method === "POST" && /^\/v1\/missions\/[^/]+\/result$/.test(path);
       const missionGet          = req.method === "GET"  && /^\/v1\/missions\/[^/]+$/.test(path) && path !== "/v1/missions";
       const missionList         = req.method === "GET"  && path === "/v1/missions";
-      // Shadow Mail parameterized routes
-      const mailGet    = req.method === "GET"    && /^\/v1\/mail\/[^/]+$/.test(path) && path !== "/v1/mail/inbox" && path !== "/v1/mail/count";
-      const mailRead   = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/read$/.test(path);
-      const mailReply  = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/reply$/.test(path);
-      const mailDelete = req.method === "DELETE" && /^\/v1\/mail\/[^/]+$/.test(path);
-      // Docs (parameterized)
-      const docGet    = req.method === "GET"    && /^\/v1\/docs\/[^/]+$/.test(path);
-      const docSave   = req.method === "PUT"    && /^\/v1\/docs\/[^/]+$/.test(path);
-      const docDelete = req.method === "DELETE" && /^\/v1\/docs\/[^/]+$/.test(path);
-      // Sheets (parameterized)
-      const sheetGet    = req.method === "GET"    && /^\/v1\/sheets\/[^/]+$/.test(path);
-      const sheetSaveR  = req.method === "PUT"    && /^\/v1\/sheets\/[^/]+$/.test(path);
-      const sheetDelete = req.method === "DELETE" && /^\/v1\/sheets\/[^/]+$/.test(path);
-      // Calendar (parameterized)
-      const calPatch  = req.method === "PATCH"  && /^\/v1\/calendar\/events\/[^/]+$/.test(path);
-      const calDelete = req.method === "DELETE" && /^\/v1\/calendar\/events\/[^/]+$/.test(path);
       // File storage
       const fileGet    = req.method === "GET"    && /^\/v1\/files\/.+/.test(path);
       const fileDelete = req.method === "DELETE" && /^\/v1\/files\/.+/.test(path);
@@ -760,7 +708,7 @@ export default {
       const chatRoomDelete = req.method === "DELETE" && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
       const chatRoomPatch  = req.method === "PATCH"  && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailReply || mailDelete || fileGet || fileDelete || chatRoomDelete || chatRoomPatch || calPatch || calDelete || docGet || docSave || docDelete || sheetGet || sheetSaveR || sheetDelete;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || fileGet || fileDelete || chatRoomDelete || chatRoomPatch;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -797,36 +745,11 @@ export default {
         if (missionResult)       return reportMissionResult(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (missionGet)          return getMission(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (missionList)         return listMissions(req, env, { id: user.id, email: user.email }, cors);
-        // Shadow Mail
-        if (mailGet)    return getMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
-        if (mailRead)   return markRead(req, env, { id: user.id, email: user.email }, cors, parts[3]);
-        if (mailReply)  return replyMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
-        if (mailDelete) return deleteMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         // Chat room management — room name is last path segment
         if (chatRoomDelete || chatRoomPatch) {
           const roomName = path.split("/").pop()!;
           if (chatRoomDelete) return deleteRoom(req, env, authedUser, cors, roomName);
           if (chatRoomPatch)  return updateRoom(req, env, authedUser, cors, roomName);
-        }
-        // Docs — id is last path segment
-        if (docGet || docSave || docDelete) {
-          const docId = path.split("/").pop()!;
-          if (docGet)    return getDoc(req, env, { id: user.id }, cors, docId);
-          if (docSave)   return saveDoc(req, env, { id: user.id }, cors, docId);
-          if (docDelete) return deleteDoc(req, env, { id: user.id }, cors, docId);
-        }
-        // Sheets — id is last path segment
-        if (sheetGet || sheetSaveR || sheetDelete) {
-          const sheetId = path.split("/").pop()!;
-          if (sheetGet)    return getSheet(req, env, { id: user.id }, cors, sheetId);
-          if (sheetSaveR)  return saveSheet(req, env, { id: user.id }, cors, sheetId);
-          if (sheetDelete) return deleteSheet(req, env, { id: user.id }, cors, sheetId);
-        }
-        // Calendar — id is last path segment
-        if (calPatch || calDelete) {
-          const calId = path.split("/").pop()!;
-          if (calPatch)  return updateEvent(req, env, { id: user.id }, cors, calId);
-          if (calDelete) return deleteEvent(req, env, { id: user.id }, cors, calId);
         }
         // File storage — key is everything after /v1/files/
         const fileKey = path.slice("/v1/files/".length);
@@ -834,27 +757,7 @@ export default {
         if (fileDelete) return deleteFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
       }
 
-      // ── WebSocket upgrade: GET /v1/video/ws?room=<code>&name=<display> ──────
-      if (req.method === "GET" && path === "/v1/video/ws" && req.headers.get("Upgrade") === "websocket") {
-        const key = extractKey(req);
-        if (!key) return new Response("missing_or_invalid_key", { status: 401 });
-        const user = await findUserByKey(env, key);
-        if (!user) return new Response("key_not_found", { status: 401 });
 
-        const url      = new URL(req.url);
-        const roomCode = (url.searchParams.get("room") ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
-        if (!roomCode) return new Response("room_required", { status: 400 });
-
-        const handle = (user.user_metadata as { handle?: string })?.handle ?? user.email.split("@")[0];
-        const name   = (url.searchParams.get("name") ?? handle).slice(0, 32);
-
-        const doId = env.VIDEO_ROOM.idFromName(roomCode);
-        const stub = env.VIDEO_ROOM.get(doId);
-
-        const doUrl = new URL(req.url);
-        doUrl.searchParams.set("name", name);
-        return stub.fetch(new Request(doUrl.toString(), req));
-      }
 
       // ── WebSocket upgrade: GET /v1/chat/ws?room=<name> ─────────────────────
       if (req.method === "GET" && path === "/v1/chat/ws" && req.headers.get("Upgrade") === "websocket") {
@@ -914,23 +817,4 @@ export default {
     ctx.waitUntil(runCveMatchingCron(env));
   },
 
-  async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
-    // Read raw email body (cap at 10 MB to guard against oversized messages)
-    const MAX_BYTES = 10 * 1024 * 1024;
-    const reader = message.raw.getReader();
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done || !value) break;
-      total += value.byteLength;
-      if (total > MAX_BYTES) { message.setReject("Message too large"); return; }
-      chunks.push(value);
-    }
-    const merged = new Uint8Array(total);
-    let offset = 0;
-    for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
-    const rawBody = new TextDecoder("utf-8").decode(merged);
-    ctx.waitUntil(storeInboundMail(env, message, rawBody));
-  },
 };
