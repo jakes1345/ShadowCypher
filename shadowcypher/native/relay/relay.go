@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -37,16 +38,16 @@ type Message struct {
 }
 
 type RelayStatus struct {
-	ShadowID   string   `json:"shadow_id"`
-	Uptime     string   `json:"uptime"`
-	PeersCount int      `json:"peers_count"`
-	Peers      []string `json:"peers"`
-	ClientsCount int    `json:"clients_count"`
+	ShadowID     string   `json:"shadow_id"`
+	Uptime       string   `json:"uptime"`
+	PeersCount   int      `json:"peers_count"`
+	Peers        []string `json:"peers"`
+	ClientsCount int      `json:"clients_count"`
 }
 
 type RelayServer struct {
 	clients    map[chan Message]string
-	peers      map[string]time.Time 
+	peers      map[string]time.Time
 	clientsMux sync.Mutex
 	peersMux   sync.Mutex
 	broadcast  chan Message
@@ -60,12 +61,12 @@ func (s *RelayServer) GenerateShadowID() {
 	b := make([]byte, 8)
 	rand.Read(b)
 	s.shadowID = hex.EncodeToString(b)
-	
+
 	// Generate a unique session token
 	t := make([]byte, 16)
 	rand.Read(t)
 	s.authToken = hex.EncodeToString(t)
-	
+
 	// Save token to temporary file for Python to read (Citadel Handshake)
 	os.WriteFile(".relay_token", []byte(s.authToken), 0600)
 }
@@ -79,12 +80,12 @@ func NewRelayServer(beacon string) *RelayServer {
 		startTime: time.Now(),
 	}
 	s.GenerateShadowID()
-	log.Printf("\u26a1 ABSOLUT_GHOST: Transient Identity Initialized [%s]", s.shadowID)
-	log.Printf("\u1f512 SOVEREIGN_KEY_GENERATED: citadel-to-relay handshake ready.")
+	log.Printf("⚡ ABSOLUT_GHOST: Transient Identity Initialized [%s]", s.shadowID)
+	log.Printf("ὑ2 SOVEREIGN_KEY_GENERATED: citadel-to-relay handshake ready.")
 	return s
 }
 
-// ── SWARM: Gossip Protocol ──────────────────────────────────────
+// ── SWARM: Gossip Protocol ────────────────────────────────
 
 func (s *RelayServer) gossip() {
 	ticker := time.NewTicker(30 * time.Second)
@@ -105,7 +106,7 @@ func (s *RelayServer) gossip() {
 	}
 }
 
-// ── Admin API: Telemetry ────────────────────────────────────────
+// ── Admin API: Telemetry ──────────────────────────────
 
 func (s *RelayServer) handleStatus(w http.ResponseWriter, r *http.Request) {
 	host, _, _ := net.SplitHostPort(r.RemoteAddr)
@@ -137,7 +138,7 @@ func (s *RelayServer) handleStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(status)
 }
 
-// ── WebSocket: Swarm Delivery ───────────────────────────────────
+// ── WebSocket: Swarm Delivery ─────────────────────────
 
 func (s *RelayServer) handleWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -147,11 +148,13 @@ func (s *RelayServer) handleWS(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	ch := make(chan Message)
-	
+
 	// APEX_HARDENING: Initial Handshake
 	_, msgBytes, err := conn.ReadMessage()
-	if err != nil { return }
-	
+	if err != nil {
+		return
+	}
+
 	var authMsg Message
 	if err := json.Unmarshal(msgBytes, &authMsg); err != nil || authMsg.Auth != s.authToken {
 		log.Printf("[REJECT] UNAUTHORIZED_CONNECTION_ATTEMPT: IP %s", r.RemoteAddr)
@@ -201,13 +204,15 @@ func (s *RelayServer) handleWS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *RelayServer) handleTitanFrame(data []byte) {
-	if len(data) < 3 { return }
-	
+	if len(data) < 3 {
+		return
+	}
+
 	opCode := data[0]
 	missionID := (uint16(data[1]) << 8) | uint16(data[2])
-	
-	msg := Message{Type: "titan_event", MissionID: missionID}
-	
+
+	msg := Message{Type: "titan_event", MissionID: fmt.Sprintf("%d", missionID)}
+
 	switch opCode {
 	case 0xA1: // AI_DELEGATION
 		msg.Text = "AI_DELEGATION"
@@ -221,12 +226,14 @@ func (s *RelayServer) handleTitanFrame(data []byte) {
 	default:
 		return
 	}
-	
+
 	s.broadcast <- msg
 }
 
 func (s *RelayServer) handleBinaryFrame(data []byte) {
-	if len(data) < 1 { return }
+	if len(data) < 1 {
+		return
+	}
 	if data[0] == 0x99 {
 		s.handleTitanFrame(data[1:])
 		return
@@ -285,7 +292,7 @@ func main() {
 	http.HandleFunc("/ws", server.handleWS)
 	http.HandleFunc("/api/status", server.handleStatus)
 
-	log.Printf("\u26a1 SWARM_BRIDGE_ACTIVE: Secure Signal Plane :%s", port)
+	log.Printf("⚡ SWARM_BRIDGE_ACTIVE: Secure Signal Plane :%s", port)
 	if err := http.ListenAndServe("127.0.0.1:"+port, nil); err != nil {
 		log.Fatalf("NATIVE_FATAL: %v", err)
 	}

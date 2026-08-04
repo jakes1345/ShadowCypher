@@ -1,6 +1,10 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -12,23 +16,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-/*
-#cgo LDFLAGS: -L../libs -lrust_core -Wl,-rpath,../libs
-#include <stdlib.h>
-
-extern char* encrypt_signal(char* key, char* data);
-extern char* decrypt_signal(char* key, char* hex_data);
-extern void free_signal(char* s);
-*/
-import "C"
-
-import "unsafe"
-
 /**
  * ShadowCypher Nexus-V2 — The Multi-Language Sovereign Signal Plane.
- * Mix of Go (Concurrency), C++ (Performance Core), and Python (Orchestration).
- * Implements: 
- *  1. SOCKS5 Proxy over Encrypted UDP (No-VPN Browsing).
+ * Pure-Go implementation. Implements:
+ *  1. SOCKS5 Proxy (No-VPN Browsing).
  *  2. Sovereign WebSocket Chat (IRC Replacement).
  *  3. Admin Authority Keying.
  */
@@ -43,30 +34,59 @@ var (
 	maxHistory = 100
 )
 
-// ── RUST GHOST-CORE INTERFACE ─────────────────────────────────────
+// ── SIGNAL ENCRYPTION (AES-256-GCM) ────────────────────
 
+// ghostEncrypt AES-GCM encrypts data with key (hex or raw); returns nonce+ciphertext as hex.
 func ghostEncrypt(key, data string) string {
-	cKey := C.CString(key)
-	cData := C.CString(data)
-	defer C.free(unsafe.Pointer(cKey))
-	defer C.free(unsafe.Pointer(cData))
-
-	cResult := C.encrypt_signal(cKey, cData)
-	defer C.free_signal(cResult)
-
-	return C.GoString(cResult)
+	k := deriveKey(key)
+	block, err := aes.NewCipher(k)
+	if err != nil {
+		return ""
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return ""
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return ""
+	}
+	ct := gcm.Seal(nonce, nonce, []byte(data), nil)
+	return hex.EncodeToString(ct)
 }
 
+// ghostDecrypt reverses ghostEncrypt; returns plaintext or empty string on error.
 func ghostDecrypt(key, hexData string) string {
-	cKey := C.CString(key)
-	cHex := C.CString(hexData)
-	defer C.free(unsafe.Pointer(cKey))
-	defer C.free(unsafe.Pointer(cHex))
+	raw, err := hex.DecodeString(hexData)
+	if err != nil {
+		return ""
+	}
+	k := deriveKey(key)
+	block, err := aes.NewCipher(k)
+	if err != nil {
+		return ""
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return ""
+	}
+	ns := gcm.NonceSize()
+	if len(raw) < ns {
+		return ""
+	}
+	pt, err := gcm.Open(nil, raw[:ns], raw[ns:], nil)
+	if err != nil {
+		return ""
+	}
+	return string(pt)
+}
 
-	cResult := C.decrypt_signal(cKey, cHex)
-	defer C.free_signal(cResult)
-
-	return C.GoString(cResult)
+// deriveKey pads/trims key material to exactly 32 bytes for AES-256.
+func deriveKey(key string) []byte {
+	b := []byte(key)
+	k := make([]byte, 32)
+	copy(k, b)
+	return k
 }
 
 type ChatMessage struct {
@@ -76,14 +96,14 @@ type ChatMessage struct {
 	TS      int64  `json:"ts"`
 }
 
-// ── SOCKS5 PROXY ENGINE (NO-VPN BROWSING) ──────────────────────────
+// ── SOCKS5 PROXY ENGINE (NO-VPN BROWSING) ──────────────────
 
 func startProxy(port int) {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("[PROXY_FATAL] %v", err)
 	}
-	log.Printf("\u26a1 NEXUS_PROXY_ACTIVE: Listening on :%d (Encrypted SOCKS5)", port)
+	log.Printf("⚡ NEXUS_PROXY_ACTIVE: Listening on :%d (Encrypted SOCKS5)", port)
 
 	for {
 		conn, err := ln.Accept()
@@ -96,20 +116,26 @@ func startProxy(port int) {
 
 func handleProxy(conn net.Conn) {
 	defer conn.Close()
-	
+
 	// SOCKS5 Handshake (Simplified)
 	buf := make([]byte, 256)
-	if _, err := io.ReadFull(conn, buf[:2]); err != nil { return }
-	if buf[0] != 0x05 { return } // SOCKS5
-	
+	if _, err := io.ReadFull(conn, buf[:2]); err != nil {
+		return
+	}
+	if buf[0] != 0x05 {
+		return
+	} // SOCKS5
+
 	nmethods := int(buf[1])
 	io.ReadFull(conn, buf[:nmethods])
 	conn.Write([]byte{0x05, 0x00}) // No auth for now (internal)
 
 	// Request
 	io.ReadFull(conn, buf[:4])
-	if buf[1] != 0x01 { return } // CONNECT
-	
+	if buf[1] != 0x01 {
+		return
+	} // CONNECT
+
 	var addr string
 	switch buf[3] {
 	case 0x01: // IPv4
@@ -123,7 +149,7 @@ func handleProxy(conn net.Conn) {
 	}
 	io.ReadFull(conn, buf[:2])
 	port := (uint16(buf[0]) << 8) | uint16(buf[1])
-	
+
 	dest := fmt.Sprintf("%s:%d", addr, port)
 	remote, err := net.Dial("tcp", dest)
 	if err != nil {
@@ -131,7 +157,7 @@ func handleProxy(conn net.Conn) {
 		return
 	}
 	defer remote.Close()
-	
+
 	conn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0})
 
 	// Bridge traffic
@@ -139,7 +165,7 @@ func handleProxy(conn net.Conn) {
 	io.Copy(conn, remote)
 }
 
-// ── SOVEREIGN CHAT ENGINE (WS) ───────────────────────────────────
+// ── SOVEREIGN CHAT ENGINE (WS) ───────────────────────
 
 func handleChat(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -169,7 +195,7 @@ func handleChat(w http.ResponseWriter, r *http.Request) {
 func broadcast(msg ChatMessage) {
 	clientsMux.Lock()
 	defer clientsMux.Unlock()
-	
+
 	history = append(history, msg)
 	if len(history) > maxHistory {
 		history = history[1:]
@@ -183,11 +209,11 @@ func broadcast(msg ChatMessage) {
 func main() {
 	proxyPort := 8899
 	chatPort := 9988
-	
+
 	go startProxy(proxyPort)
 
 	http.HandleFunc("/chat", handleChat)
 	log.Printf("\U0001f4ac SOVEREIGN_CHAT_ACTIVE: WS Endpoint on :%d/chat", chatPort)
-	
+
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", chatPort), nil))
 }
