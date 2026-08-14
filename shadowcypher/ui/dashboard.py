@@ -4,19 +4,17 @@ Arc gauges for CPU/RAM/Disk, real metrics, arsenal status, live feed.
 """
 
 import gi
-
 gi.require_version("Gtk", "3.0")
-import math
-import shutil
-import time
-
+from gi.repository import Gtk, GLib, Pango, Gdk
 import cairo
+import math
 import psutil
-from gi.repository import GLib, Gtk, Pango
-
+import time
+import shutil
 from shadowcypher.ai.sisyphus import sisyphus
-from shadowcypher.core.bus import bus
+
 from shadowcypher.core.hub import hub
+from shadowcypher.core.bus import bus
 from shadowcypher.core.logger import logger
 from shadowcypher.ui.components import TacticalTerminal
 
@@ -44,6 +42,7 @@ class ArcGauge(Gtk.DrawingArea):
 
     def _on_draw(self, widget, cr):
         w = widget.get_allocated_width()
+        h = widget.get_allocated_height()
         cx = w / 2
         cy = self._size / 2 + 5
         radius = (self._size / 2) - 14
@@ -61,11 +60,9 @@ class ArcGauge(Gtk.DrawingArea):
             cr.set_line_width(10)
             r, g, b = self._accent
             # Color escalation
-            if self._value > 85:
-                r, g, b = 0.96, 0.25, 0.37
-            elif self._value > 65:
-                r, g, b = 0.96, 0.62, 0.04
-
+            if self._value > 85: r, g, b = 0.96, 0.25, 0.37
+            elif self._value > 65: r, g, b = 0.96, 0.62, 0.04
+            
             cr.set_source_rgba(r, g, b, 0.9)
             angle = 0.75 * math.pi + (self._value / 100.0) * (1.5 * math.pi)
             cr.arc(cx, cy, radius, 0.75 * math.pi, angle)
@@ -140,13 +137,13 @@ class DashboardPage(Gtk.Box):
         title_lbl = Gtk.Label(xalign=0)
         title_lbl.set_markup(
             "<span font_weight='900' size='large' color='#00d4ff'>"
-            "ShadowCypher</span>"
+            "SHADOW_NODE_HUD</span>"
         )
         header.pack_start(title_lbl, False, False, 0)
 
         self._status = Gtk.Label()
         self._status.set_markup(
-            "<span color='#10b981' font_weight='700'>● All systems ready</span>"
+            "<span color='#10b981' font_weight='700'>● ALL SYSTEMS NOMINAL</span>"
         )
         header.pack_end(self._status, False, False, 0)
         content.pack_start(header, False, False, 0)
@@ -158,9 +155,9 @@ class DashboardPage(Gtk.Box):
         gauges_box = Gtk.Box(spacing=15, homogeneous=False)
         gauges_box.get_style_context().add_class("citadel-pulse")
 
-        self.gauge_cpu = ArcGauge("CPU", "%", (0, 1.0, 0.61), 120)
-        self.gauge_ram = ArcGauge("Memory", "%", (0.6, 0.4, 1.0), 120)
-        self.gauge_disk = ArcGauge("Disk", "%", (1.0, 0.6, 0.1), 120)
+        self.gauge_cpu = ArcGauge("CPU LOAD", "%", (0, 1.0, 0.61), 120)
+        self.gauge_ram = ArcGauge("MEMORY", "%", (0.6, 0.4, 1.0), 120)
+        self.gauge_disk = ArcGauge("DISK", "%", (1.0, 0.6, 0.1), 120)
 
         for g in [self.gauge_cpu, self.gauge_ram, self.gauge_disk]:
             gauges_box.pack_start(g, True, True, 5)
@@ -172,25 +169,25 @@ class DashboardPage(Gtk.Box):
         stats_box.set_row_spacing(10)
         stats_box.set_valign(Gtk.Align.START)
 
-        self.stat_ai = MiniStat("AI Engine", "Ready", "#8b5cf6")
-        self.stat_missions = MiniStat("Active missions", "0", "#f43f5e")
-        self.stat_uptime = MiniStat("Uptime", "0:00:00", "#38bdf8")
-        self.stat_stealth = MiniStat("Stealth", "4/5 active", "#fbbf24")
-        self.stat_threats = MiniStat("Threat hits", "0", "#f97316")
-        self.stat_integrity = MiniStat("Integrity", "Verified", "#10b981")
-        self.stat_relay = MiniStat("Relay", "Offline", "#0ea5e9")
-        self.stat_net = MiniStat("I/O speed", "0 B/s", "#64748b")
-        self.stat_pulse = MiniStat("Tor", "Off", "#00ff9d")
+        self.stat_ai = MiniStat("AI_CORE", "NOMINAL", "#8b5cf6")
+        self.stat_missions = MiniStat("ACTIVE_MISSIONS", "0", "#f43f5e")
+        self.stat_uptime = MiniStat("MISSION_UPTIME", "0:00:00", "#38bdf8")
+        self.stat_stealth = MiniStat("STEALTH_SIGNATURE", "4/5 ACTIVE", "#fbbf24")
+        self.stat_threats = MiniStat("THREAT_INTEL", "0 HITS", "#f97316")
+        self.stat_integrity = MiniStat("CORE_INTEGRITY", "VERIFIED", "#10b981")
+        self.stat_relay = MiniStat("SHADOW_PLANE", "SECURE", "#0ea5e9")
+        self.stat_net = MiniStat("GHOST_IO_SPEED", "0 B/s", "#64748b")
+        self.stat_pulse = MiniStat("ENTROPY_SIGNATURE", "NOMINAL", "#00ff9d")
 
         stats_list = [
             self.stat_ai, self.stat_missions, self.stat_uptime,
             self.stat_stealth, self.stat_threats, self.stat_integrity,
             self.stat_relay, self.stat_net, self.stat_pulse
         ]
-
+        
         for i, stat in enumerate(stats_list):
             stats_box.attach(stat, i % 3, i // 3, 1, 1)
-
+        
         gauge_row.pack_start(stats_box, True, True, 10)
         content.pack_start(gauge_row, False, False, 0)
 
@@ -198,7 +195,7 @@ class DashboardPage(Gtk.Box):
         arsenal_lbl = Gtk.Label(xalign=0)
         arsenal_lbl.set_markup(
             "<span font_weight='800' color='#94a3b8' size='small'>"
-            "Tools</span>"
+            "ARSENAL STATUS</span>"
         )
         content.pack_start(arsenal_lbl, False, False, 2)
 
@@ -245,7 +242,7 @@ class DashboardPage(Gtk.Box):
         feed_lbl = Gtk.Label(xalign=0)
         feed_lbl.set_markup(
             "<span font_weight='800' color='#94a3b8' size='small'>"
-            "Live feed</span>"
+            "MISSION TELEMETRY</span>"
         )
         content.pack_start(feed_lbl, False, False, 2)
 
@@ -256,12 +253,12 @@ class DashboardPage(Gtk.Box):
         self.pack_start(scroll, True, True, 0)
 
         # ── Init + Timers ──
-        self._last_net = 0
+        _n = psutil.net_io_counters()
+        self._last_net_bytes = _n.bytes_sent + _n.bytes_recv
         self._last_t = time.time()
-        self._tick_id = GLib.timeout_add(2000, self._tick)
-        self.connect("unrealize", lambda _: GLib.source_remove(self._tick_id) if self._tick_id else None)
+        GLib.timeout_add(1500, self._tick)
         GLib.idle_add(self._init_once)
-
+        
         # Async Arsenal Audit (Prevents UI hang on constructor)
         import threading
         threading.Thread(target=self._async_arsenal_audit, daemon=True).start()
@@ -288,49 +285,25 @@ class DashboardPage(Gtk.Box):
             time.sleep(0.01) # Tiny yield to keep thread pool breathing
 
     def _init_once(self):
-        """One-shot boot sequence log and initial stat population."""
-        import platform as _plat
-        import socket
-
-        self.terminal.log("─── ShadowCypher starting ───", "SYSTEM")
-        self.terminal.log(f"  OS: {_plat.system()} {_plat.release()} | Arch: {_plat.machine()}", "INFO")
-
-        services = [
-            ("Go Relay",    8888),
-            ("Ghost C2",    44444),
-            ("Nexus Relay", 9988),
-            ("Tor SOCKS5",  9050),
-        ]
-        for name, port in services:
-            try:
-                with socket.create_connection(("127.0.0.1", port), timeout=0.4):
-                    self.terminal.log(f"  ✓ {name:<14} ONLINE  :{port}", "SUCCESS")
-            except Exception as e:
-                logger.debug("dashboard", f"Service check failed for {name}:{port}: {e}")
-                self.terminal.log(f"  ✗ {name:<14} OFFLINE :{port}", "WARNING")
-
-        # Ollama check
+        """One-shot init for AI + stealth."""
         try:
-            import urllib.request
-            urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=1)  # nosec B310
-            self.terminal.log("  ✓ Ollama AI     ONLINE  :11434", "SUCCESS")
-            self.stat_ai.set_value("Ollama (local)")
-        except Exception as e:
-            logger.debug("dashboard", f"Ollama health check failed: {e}")
-            self.terminal.log("  ✗ Ollama AI     OFFLINE :11434", "WARNING")
-            self.stat_ai.set_value("OFFLINE")
+            from shadowcypher.ai.providers import provider_registry
+            p = provider_registry.active
+            if p and p.is_configured:
+                self.stat_ai.set_value(f"{p.model}")
+            else:
+                self.stat_ai.set_value("Ollama (local)")
+        except Exception:
+            self.stat_ai.set_value("Offline")
 
-        # Stealth capabilities
         try:
             from shadowcypher.core.web import stealth_web
             caps = stealth_web.get_capabilities()
             n = sum(1 for v in caps.values() if v)
-            self.stat_stealth.set_value(f"{n}/{len(caps)} Active")
-        except Exception as e:
-            logger.debug("dashboard", f"Failed to get stealth capabilities: {e}")
+            self.stat_stealth.set_value(f"{n}/5 Active")
+        except Exception:
             self.stat_stealth.set_value("N/A")
 
-        self.terminal.log("─────────────────────────────────────────", "SYSTEM")
         return False
 
     def _tick(self):
@@ -349,26 +322,53 @@ class DashboardPage(Gtk.Box):
 
             # 2. Mission & System Stats
             summary = hub.get_tactical_summary()
-
+            
             # Map stats safely
             stat_map = {
                 self.stat_missions: str(summary.get("active_missions", 0)),
                 self.stat_uptime: summary.get("uptime", "0:00:00"),
-                self.stat_integrity: "Verified" if sisyphus.is_stable else "Tampered",
-                self.stat_threats: str(summary.get('threat_hits', 0)),
-                self.stat_stealth: "Active" if hub.is_stealth_ready() else "Exposed"
+                self.stat_integrity: "VERIFIED" if sisyphus.is_stable else "TAMPERED",
+                self.stat_threats: f"{summary.get('threat_hits', 0)} HITS",
+                self.stat_stealth: "ACTIVE" if hub.is_stealth_ready() else "EXPOSED"
             }
-
+            
             for widget, val in stat_map.items():
                 widget.set_value(val)
 
-            # Signal Bridge (Go Relay) — use flat telemetry key set by health monitor
-            relay_up = summary.get("relay_up", False)
-            tor_up = summary.get("tor_up", False)
-            self.stat_relay.set_value("Connected" if relay_up else "Offline")
-            self.stat_pulse.set_value("Up" if tor_up else "Down")
+            # Signal Bridge (Go Relay)
+            relay_lbl = "SECURE" if (hasattr(hub, 'relay_bridge') and hub.relay_bridge.connected) else "OFFLINE"
+            self.stat_relay.set_value(relay_lbl)
+
+            # Real network throughput
+            now = time.time()
+            dt = now - self._last_t or 1
+            net = psutil.net_io_counters()
+            total_bytes = net.bytes_sent + net.bytes_recv
+            bps = (total_bytes - self._last_net_bytes) / dt
+            self._last_net_bytes = total_bytes
+            self._last_t = now
+            if bps >= 1_048_576:
+                net_str = f"{bps/1_048_576:.1f} MB/s"
+            elif bps >= 1024:
+                net_str = f"{bps/1024:.1f} KB/s"
+            else:
+                net_str = f"{bps:.0f} B/s"
+            self.stat_net.set_value(net_str)
+
+            # Real entropy: measure randomness of /dev/urandom read
+            try:
+                import struct
+                raw = open("/dev/urandom", "rb").read(64)
+                byte_counts = [0] * 256
+                for b in raw:
+                    byte_counts[b] += 1
+                import math as _math
+                ent = -sum((c/64) * _math.log2(c/64) for c in byte_counts if c)
+                self.stat_pulse.set_value(f"{ent:.2f} bits")
+            except Exception:
+                self.stat_pulse.set_value("NOMINAL")
 
         except Exception as e:
-            logger.debug("ui", f"Dashboard tick error: {e}")
-
+            logger.debug("ui", f"DASHBOARD_TICK_FAILURE: {e}")
+            
         return True

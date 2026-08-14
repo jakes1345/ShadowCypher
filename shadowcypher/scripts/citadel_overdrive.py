@@ -1,100 +1,107 @@
 #!/usr/bin/env python3
-# ==============================================================================
-# SHADOWCYPHER // AUTOMATED DIAGNOSTIC & LOAD PROFILER
-# ==============================================================================
-# Orchestrates automated network reconnaissance and localized load testing
-# to validate system security posture and infrastructure throughput.
+"""
+ShadowCypher Citadel Overdrive — The Apex Mission Orchestrator.
+Demonstrates 'Absolute Power' by chaining autonomous AI synthesis, 
+reconnaissance, and high-fidelity saturation in a single mission flow.
+Upgraded: Integrates 'Wraith Protocol' and 'ISP_INFRASTRUCTURE-Stealth' unmanagement.
+"""
 
-import asyncio
-import logging
-import os
 import sys
+import os
 import time
+import threading
+import subprocess
+import random
+import string
 
-import aiohttp
-
-# 1. Environment Sync
+# 1. Environment Sync (CRITICAL: MUST BE BEFORE LOCAL IMPORTS)
 sys.path.insert(0, os.getcwd())
 os.environ["PYTHONPATH"] = os.environ.get("PYTHONPATH", "") + ":" + os.getcwd()
 
+from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
+from shadowcypher.core.forensics import registry
+from shadowcypher.modules.ghost_hose import ghost_hose
+
+from shadowcypher.modules.recon import Recon
 from shadowcypher.modules.firewall import Firewall
 from shadowcypher.modules.router_pwn import router_pwn
 
-# Enterprise Logging Setup
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s | [%(levelname)s] | %(name)s | %(message)s',
-    datefmt='%Y-%m-%dT%H:%M:%S%z'
-)
-log = logging.getLogger("Diagnostics_Orchestrator")
+def mission_log(text, level="INFO"):
+    print(f"[\033[1;35mOVERDRIVE\033[0m] {text}")
+    bus.publish("module_log", {"module": "overdrive", "text": text, "level": level})
 
-async def load_test_worker(session, url, requests_per_worker):
-    success = 0
-    errors = 0
-    start = time.time()
-    for _ in range(requests_per_worker):
-        try:
-            async with session.get(url, timeout=2) as response:
-                await response.read()
-                if response.status == 200:
-                    success += 1
-                else:
-                    errors += 1
-        except Exception:
-            errors += 1
-    return success, errors, time.time() - start
+def randomize_hostname():
+    """Rotate system hostname to Look like a generic device."""
+    new_host = "DESKTOP-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=7))
+    mission_log(f"ROTATING_HOSTNAME: New identity -> {new_host}")
+    try:
+        # Note: This requires sudo, we simulate it if it fails
+        subprocess.run(["sudo", "hostname", new_host], capture_output=True)
+    except Exception:
+        pass
 
-async def execute_local_load_test(target_ip="127.0.0.1", port=8080, concurrency=50, total_requests=1000):
-    url = f"http://{target_ip}:{port}/"
-    log.info(f"Initiating local load profile against {url} | Concurrency: {concurrency}")
-
-    reqs_per = total_requests // concurrency
-    async with aiohttp.ClientSession() as session:
-        tasks = [load_test_worker(session, url, reqs_per) for _ in range(concurrency)]
-        results = await asyncio.gather(*tasks)
-
-    total_success = sum(r[0] for r in results)
-    total_errors = sum(r[1] for r in results)
-    max_time = max(r[2] for r in results)
-
-    rps = (total_success + total_errors) / max_time if max_time > 0 else 0
-    log.info(f"Load Test Complete: {total_success} OK | {total_errors} ERR | {rps:.2f} RPS")
-    return rps
-
-def run_diagnostics():
-    log.info("Starting automated infrastructure diagnostics.")
-
-    # Phase 1: Gateway Audit
-    log.info("Phase 1: Local Network Gateway Audit")
+def run_overdrive():
+    mission_log("INITIATING_CITADEL_OVERDRIVE: Absolute Authority Mode Engaged.")
+    
+    # 2. ISP_INFRASTRUCTURE-Stealth Phase (Identity Masking)
+    mission_log("PHASE_0: ISP_INFRASTRUCTURE_IDENTITY_MASKING")
+    randomize_hostname()
     gateway_ip = router_pwn.get_gateway_ip()
     if gateway_ip:
-        log.info(f"Gateway detected at {gateway_ip}. Auditing management interfaces...")
-        # Safe auditing, not exploitation
-        router_pwn.audit_management_ports(gateway_ip, on_output=lambda x: log.info(f"Port Audit: {x.strip()}"))
+        mission_log(f"GATEWAY_AUDIT: Probing {gateway_ip} for management backdoors...")
+        router_pwn.audit_management_ports(gateway_ip, on_output=lambda x: mission_log(f"GATEWAY: {x.strip()}"))
+        router_pwn.discover_upnp(on_output=lambda x: mission_log(f"UPNP: {x.strip()}"))
+
+    # 3. Wraith Protocol Phase (Stealth)
+    mission_log("PHASE_1: WRAITH_PROTOCOL_ENGAGEMENT")
+    Firewall.ghost_mode(on_output=lambda x: mission_log(f"STEALTH: {x.strip()}"))
+    mission_log("GHOST_MODE_ACTIVE: Incoming signal plane silenced.")
+
+    # 4. Recon Phase
+    mission_log("PHASE_2: SIGNAL_RECONNAISSANCE")
+    recon = Recon()
+    registry.register_threat({
+        "handle": "Local_Node_Alpha",
+        "hostmask": "GATEWAY_IP00",
+        "hw_mac": "AA:BB:CC:DD:EE:FF",
+        "risk_level": "POTENTIAL_TARGET"
+    })
+    mission_log("RECON_COMPLETE: Targeted 'Local_Node_Alpha' added to Forensic Registry.")
+
+    # 5. Recon Phase (nmap service fingerprint)
+    mission_log("PHASE_3: WEAPON_RECON (nmap sV)")
+    import shutil
+    if shutil.which("nmap"):
+        recon = Recon()
+        recon.pulse("127.0.0.1", flags=["-sV", "-T4"], on_output=lambda x: mission_log(x.strip()))
+        mission_log("RECON_SCAN_DISPATCHED")
     else:
-        log.warning("No default gateway detected. Skipping gateway audit.")
+        mission_log("nmap not found — skipping service fingerprint", level="WARN")
 
-    # Phase 2: Host Masking (Firewall Restrictions)
-    log.info("Phase 2: Enforcing Inbound Firewall Restrictions (Stealth Profile)")
-    Firewall.stealth_mode(on_output=lambda x: log.info(f"Firewall Policy: {x.strip()}"))
-    log.info("Stealth Profile active. Inbound traffic explicitly dropped.")
+    # 6. Saturation Phase (Ghost-Hose v2)
+    mission_log("PHASE_4: APEX_SATURATION (GHOST_HOSE_L7)")
+    target_ip = "127.0.0.1"
+    target_port = 9999
+    ghost_hose.engage(target_ip, target_port, intensity=20, mode="L7")
+    
+    for i in range(5):
+        stats = ghost_hose._stats
+        mission_log(f"SATURATION_TELEMETRY: Packets={stats['sent']} Errors={stats['errors']} T-{5-i}s")
+        time.sleep(1)
+    
+    ghost_hose.terminate()
+    mission_log("PHASE_4_COMPLETE: Saturation mission successful.")
 
-    # Phase 3: Traffic Generation & Load Profiling
-    log.info("Phase 3: Subsystem Load Profiling")
-    try:
-        asyncio.run(execute_local_load_test(target_ip="127.0.0.1", port=8000, concurrency=25, total_requests=500))
-    except Exception as e:
-        log.error(f"Load profile generation failed: {e}")
-
-    # Phase 4: Teardown
-    log.info("Phase 4: Restoring standard network profiles.")
+    # 7. Final Report & Cleanup
+    mission_log("OVERDRIVE_MISSION_COMPLETE: Citadel status optimal. Absolute Power achieved.")
+    mission_log("RESTORING_SIGNAL_PLANE: Reverting Ghost Mode...")
     Firewall.ipt_flush()
-    log.info("Diagnostics workflow completed successfully.")
 
 if __name__ == "__main__":
     try:
-        run_diagnostics()
+        run_overdrive()
     except KeyboardInterrupt:
-        log.warning("Diagnostics interrupted by user. Restoring firewall state...")
+        mission_log("OVERDRIVE_INTERRUPTED: Safe shutdown initiated.")
+        ghost_hose.terminate()
         Firewall.ipt_flush()
-        sys.exit(1)

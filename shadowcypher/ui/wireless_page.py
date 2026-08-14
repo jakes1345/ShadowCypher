@@ -1,9 +1,8 @@
 """Wireless page — aircrack-ng suite UI."""
 
 import gi
-
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk  # noqa: E402
+from gi.repository import Gtk # noqa: E402
 
 from shadowcypher.modules.wireless import Wireless
 from shadowcypher.ui.base_page import BasePage
@@ -134,6 +133,7 @@ class WirelessPage(BasePage):
         if not bssid:
             self.clear_output("Enter at least one target BSSID for the swarm.")
             return
-        self.terminal.log(f"Starting deauth swarm: {bssid}", "AI")
+        iface = self._get_iface()
+        self.terminal.log(f"SWARM_DEAUTH: {bssid} on {iface}", "WARN")
         w = Wireless()
-        w.deauth_swarm([bssid], on_output=self.on_output)
+        w.deauth_swarm([bssid], iface=iface, on_output=self.on_output)
