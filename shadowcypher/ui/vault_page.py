@@ -3,19 +3,19 @@ Shadow Vault — Encrypted Artifact Storage & Intelligence Crypt.
 AES-256-GCM encryption for mission artifacts with integrity verification.
 """
 
-import hashlib
-import json
 import os
 import time
+import hashlib
+import json
 
 import gi
-
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib, Gdk, Pango
 
+from shadowcypher.ui.base_page import BasePage
 from shadowcypher.core.hub import hub
 from shadowcypher.core.logger import logger
-from shadowcypher.ui.base_page import BasePage
+from shadowcypher.modules.secure_wipe import secure_wipe, WipeLevel
 
 try:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -107,8 +107,31 @@ class ShadowVaultPage(BasePage):
         delete_btn = self.make_action_btn("🗑 Purge", self._on_purge)
         btn_box.pack_start(delete_btn, False, False, 0)
 
+        wipe_btn = self.make_action_btn("☠ Secure Wipe", self._on_secure_wipe, "destructive-action")
+        btn_box.pack_start(wipe_btn, False, False, 0)
+
+        wipe_dir_btn = self.make_action_btn("💀 Wipe Directory", self._on_wipe_directory)
+        btn_box.pack_start(wipe_dir_btn, False, False, 0)
+
         export_btn = self.make_action_btn("📤 Export Manifest", self._on_export_manifest)
         btn_box.pack_start(export_btn, False, False, 0)
+
+        # Wipe-level selector
+        level_box = Gtk.Box(spacing=6)
+        level_lbl = Gtk.Label(label="Wipe Level:")
+        level_lbl.get_style_context().add_class("dim-label")
+        level_box.pack_start(level_lbl, False, False, 0)
+
+        self._wipe_combo = Gtk.ComboBoxText()
+        for entry in [("Quick (1-pass random)", "QUICK"),
+                      ("Clear (3-pass DoD 5220.22-M)", "CLEAR"),
+                      ("Purge (7-pass + crypto)", "PURGE"),
+                      ("Crypto Erasure (SSD-safe)", "CRYPTO")]:
+            self._wipe_combo.append(entry[1], entry[0])
+        self._wipe_combo.set_active_id("CLEAR")
+        level_box.pack_start(self._wipe_combo, False, False, 0)
+
+        self.workspace.pack_start(level_box, False, False, 4)
 
         self.build_terminal()
         self._on_scan(None)
@@ -129,7 +152,7 @@ class ShadowVaultPage(BasePage):
             os.makedirs(findings_dir, exist_ok=True)
             self.terminal.log(f"VAULT: Created findings directory: {findings_dir}", "WARN")
 
-        for root, _, files in os.walk(findings_dir):
+        for root, dirs, files in os.walk(findings_dir):
             for f in sorted(files):
                 path = os.path.join(root, f)
                 try:
@@ -156,8 +179,8 @@ class ShadowVaultPage(BasePage):
                     rel_path = os.path.relpath(path, findings_dir)
                     self.store.append([rel_path, ext, _human_size(size), ts, integrity, path])
                     count += 1
-                except Exception as e:
-                    logger.warning("vault_page", f"Failed to index artifact {f}: {e}")
+                except Exception:
+                    pass
 
         self.stats_bar.set_markup(
             f"<span color='#64748b'>{count} artifacts | "
@@ -248,22 +271,126 @@ class ShadowVaultPage(BasePage):
         except Exception as e:
             self.terminal.log(f"ENCRYPTION_ERROR: {e}", "ERROR")
 
+    def _get_wipe_level(self) -> WipeLevel:
+        active_id = self._wipe_combo.get_active_id() or "CLEAR"
+        return WipeLevel(active_id.lower())
+
     def _on_purge(self, btn):
-        """Securely delete an artifact (overwrite then unlink)."""
+        """Quick single-pass random overwrite + unlink (legacy fast purge)."""
         name, path = self._get_selected_path()
         if not path:
             return
 
         try:
-            # Overwrite with random data before deletion
             size = os.path.getsize(path)
-            with open(path, "wb") as f:
+            with open(path, "r+b") as f:
                 f.write(os.urandom(size))
+                os.fsync(f.fileno())
             os.remove(path)
             self.terminal.log(f"PURGED: {name} ({size} bytes overwritten + unlinked)", "SUCCESS")
             self._on_scan(None)
         except Exception as e:
             self.terminal.log(f"PURGE_ERROR: {e}", "ERROR")
+
+    def _on_secure_wipe(self, btn):
+        """NIST 800-88 secure wipe of selected artifact using chosen wipe level."""
+        name, path = self._get_selected_path()
+        if not path:
+            return
+
+        level = self._get_wipe_level()
+
+        dialog = Gtk.MessageDialog(
+            transient_for=self.get_toplevel(),
+            flags=0,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.YES_NO,
+            text=f"SECURE WIPE: {name}",
+        )
+        dialog.format_secondary_text(
+            f"Level: {level.value.upper()}\n"
+            "This operation is IRREVERSIBLE. The file will be cryptographically destroyed.\n\n"
+            "Proceed?"
+        )
+        resp = dialog.run()
+        dialog.destroy()
+
+        if resp != Gtk.ResponseType.YES:
+            self.terminal.log("WIPE_ABORTED: User cancelled.", "WARN")
+            return
+
+        self.terminal.log(f"SECURE_WIPE_START: {name} [{level.value.upper()}]", "SYSTEM")
+
+        import threading
+        def _run():
+            def _log(msg):
+                GLib.idle_add(self.terminal.log, msg, "INFO")
+
+            result = secure_wipe.wipe_file(path, level, progress_cb=_log)
+            if result.success:
+                GLib.idle_add(self.terminal.log,
+                    f"WIPE_COMPLETE: {result.passes} pass(es) | {secure_wipe._human(result.bytes_wiped)} | UNLINKED",
+                    "SUCCESS")
+            else:
+                GLib.idle_add(self.terminal.log, f"WIPE_FAILED: {result.error}", "ERROR")
+            GLib.idle_add(self._on_scan, None)
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _on_wipe_directory(self, btn):
+        """Recursively wipe all files in a user-selected directory."""
+        level = self._get_wipe_level()
+
+        dialog = Gtk.FileChooserDialog(
+            title="Select Directory to Wipe",
+            transient_for=self.get_toplevel(),
+            action=Gtk.FileChooserAction.SELECT_FOLDER,
+        )
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            "Wipe", Gtk.ResponseType.OK,
+        )
+        resp = dialog.run()
+        target_dir = dialog.get_filename()
+        dialog.destroy()
+
+        if resp != Gtk.ResponseType.OK or not target_dir:
+            return
+
+        confirm = Gtk.MessageDialog(
+            transient_for=self.get_toplevel(),
+            flags=0,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.YES_NO,
+            text=f"WIPE ENTIRE DIRECTORY?",
+        )
+        confirm.format_secondary_text(
+            f"Path: {target_dir}\nLevel: {level.value.upper()}\n\n"
+            "Every file inside will be permanently destroyed. Continue?"
+        )
+        resp2 = confirm.run()
+        confirm.destroy()
+
+        if resp2 != Gtk.ResponseType.YES:
+            self.terminal.log("DIR_WIPE_ABORTED: User cancelled.", "WARN")
+            return
+
+        self.terminal.log(f"DIR_WIPE_START: {target_dir} [{level.value.upper()}]", "SYSTEM")
+
+        import threading
+        def _run():
+            def _log(msg):
+                GLib.idle_add(self.terminal.log, msg, "INFO")
+
+            results = secure_wipe.wipe_directory(target_dir, level, progress_cb=_log)
+            ok = sum(1 for r in results if r.success)
+            fail = len(results) - ok
+            GLib.idle_add(self.terminal.log,
+                f"DIR_WIPE_COMPLETE: {ok} wiped | {fail} errors | {level.value.upper()}",
+                "SUCCESS" if fail == 0 else "WARN")
+            GLib.idle_add(self._on_scan, None)
+
+        threading.Thread(target=_run, daemon=True).start()
 
     def _on_export_manifest(self, btn):
         """Export a JSON manifest of all vault contents."""
