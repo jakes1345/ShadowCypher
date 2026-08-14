@@ -29,9 +29,9 @@ class TestAIEngine:
         result = engine.generate("test prompt")
         assert "[AI offline]" in result or "not loaded" in result.lower()
 
-    @patch.object(__import__("shadowcypher.ai.engine", fromlist=["AIEngine"]).AIEngine, "check_ollama", return_value=True)
-    @patch.object(__import__("shadowcypher.ai.engine", fromlist=["AIEngine"]).AIEngine, "list_ollama_models", return_value=["shadowcypher-ai:latest", "llama3:latest"])
-    @patch.object(__import__("shadowcypher.ai.engine", fromlist=["AIEngine"]).AIEngine, "_ollama_request")
+    @patch("shadowcypher.ai.engine.AIEngine.check_ollama", return_value=True)
+    @patch("shadowcypher.ai.engine.AIEngine.list_ollama_models", return_value=["shadowcypher-ai:latest", "llama3:latest"])
+    @patch("shadowcypher.ai.engine.AIEngine._ollama_request")
     def test_ollama_load_and_model_selection(self, mock_req, mock_list, mock_check, engine):
         mock_req.return_value = {"message": {"content": "ok"}}
         result = engine.load()
@@ -39,17 +39,17 @@ class TestAIEngine:
         assert engine.backend == "ollama"
         assert engine.model_name == "shadowcypher-ai:latest"  # First preference
 
-    @patch.object(__import__("shadowcypher.ai.engine", fromlist=["AIEngine"]).AIEngine, "check_ollama", return_value=True)
-    @patch.object(__import__("shadowcypher.ai.engine", fromlist=["AIEngine"]).AIEngine, "list_ollama_models", return_value=["qwen2.5-coder:7b", "mistral:latest"])
-    @patch.object(__import__("shadowcypher.ai.engine", fromlist=["AIEngine"]).AIEngine, "_ollama_request")
+    @patch("shadowcypher.ai.engine.AIEngine.check_ollama", return_value=True)
+    @patch("shadowcypher.ai.engine.AIEngine.list_ollama_models", return_value=["qwen2.5-coder:7b", "mistral:latest"])
+    @patch("shadowcypher.ai.engine.AIEngine._ollama_request")
     def test_model_preference_order(self, mock_req, mock_list, mock_check, engine):
         mock_req.return_value = {"message": {"content": "ok"}}
         engine.load()
         # qwen2.5-coder should be selected over mistral per preference list
         assert "qwen2.5-coder" in engine.model_name
 
-    @patch.object(__import__("shadowcypher.ai.engine", fromlist=["AIEngine"]).AIEngine, "check_ollama", return_value=True)
-    @patch.object(__import__("shadowcypher.ai.engine", fromlist=["AIEngine"]).AIEngine, "_ollama_request")
+    @patch("shadowcypher.ai.engine.AIEngine.check_ollama", return_value=True)
+    @patch("shadowcypher.ai.engine.AIEngine._ollama_request")
     def test_generate_routes_to_ollama(self, mock_req, mock_check, engine):
         engine._loaded = True
         engine._backend = "ollama"
