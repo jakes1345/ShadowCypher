@@ -5,6 +5,7 @@ Enforces AES-256 DRM encryption over all offensive payload generation logic.
 from cryptography.fernet import Fernet
 import json
 import os
+import time
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 
@@ -24,6 +25,8 @@ class CryptoManager:
         with open(self.key_file, "wb") as f:
             f.write(key)
         os.chmod(self.key_file, 0o600)
+        self.fernet = Fernet(key)
+        self.is_unlocked = True
         return key.decode()
 
     def _load_key(self):
@@ -41,8 +44,6 @@ class CryptoManager:
                 self.is_unlocked = False
 
     def unlock_system(self, user_key):
-        import time
-
         lockout_path = os.path.join(config.project_root, ".drm-lockout")
         if os.path.exists(lockout_path):
             try:
