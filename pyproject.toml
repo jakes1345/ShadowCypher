@@ -42,6 +42,11 @@ dependencies = [
     "scipy>=1.11.0",
     "rich>=13.0.0",
     "prompt_toolkit>=3.0.0",
+    "litellm>=1.0.0",
+    "huggingface-hub<1.0",
+    "paramiko>=3.0.0",
+    "scapy>=2.5.0",
+    "mitmproxy>=10.0.0",
 ]
 
 [project.optional-dependencies]

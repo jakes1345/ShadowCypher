@@ -12,6 +12,8 @@ import secrets
 import shutil
 from pathlib import Path
 
+from shadowcypher.core.logger import logger
+
 
 def _default_nick() -> str:
     base = (os.environ.get("USER") or os.environ.get("USERNAME") or "operator")
@@ -46,8 +48,8 @@ def ensure_user_config(project_root: Path) -> Path:
     cfg_path.write_text(json.dumps(data, indent=2))
     try:
         cfg_path.chmod(0o600)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("onboarding", f"chmod config failed: {e}")
     return cfg_path
 
 

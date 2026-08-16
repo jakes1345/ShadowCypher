@@ -126,16 +126,18 @@ class StealthHoneypot:
         except Exception as e:
             logger.debug("security", f"Honeypot connection dropped: {e}")
         finally:
-            try: conn.close()
-            except Exception: pass
+            try:
+                conn.close()
+            except Exception as e:
+                logger.debug("security", f"Honeypot conn.close() failed: {e}")
 
     def stop(self):
         self.active = False
         if self._sock:
             try:
                 self._sock.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("security", f"Honeypot socket close failed: {e}")
 
 
 class IdentityHardener:
@@ -163,14 +165,15 @@ class IdentityHardener:
             try:
                 os.rename(forensic_dir, hidden_dir)
                 logger.info("security", f"LOCKDOWN: Forensics vault relocated to {hidden_dir}")
-            except Exception: pass
+            except Exception as e:
+                logger.warning("security", f"Forensics vault relocation failed: {e}")
             
         from shadowcypher.core.runner import runner
         for task_id in list(runner.active_processes.keys()):
             try:
                 runner.stop_task(task_id)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("security", f"Flash-wipe: stop_task({task_id}) failed: {e}")
         
         bus.publish("security_lockdown", {"status": "ENCRYPTED"})
 

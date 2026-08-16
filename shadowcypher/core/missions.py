@@ -30,7 +30,7 @@ class GhostMission:
     def _run_phase(self, phase: str, prompt: str, progress: float, status_msg: str) -> str:
         self.report(phase, status_msg, progress)
         try:
-            result = orchestrator.run(prompt)
+            result = orchestrator.execute_query_sync(prompt)
             self.findings.append({"phase": phase, "result": result})
             return result
         except Exception as e:

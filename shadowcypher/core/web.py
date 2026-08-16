@@ -168,8 +168,8 @@ class StealthFetcher:
                     timeout=5, capture_output=True,
                 )
                 time.sleep(3)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("web", f"Tor circuit rotation via nc failed: {e}")
         except Exception as e:
             logger.info("web", f"Circuit rotation failed: {e}")
 
@@ -229,8 +229,8 @@ class StealthFetcher:
                 )
                 if r.status_code == 200:
                     valid.append(proxy)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("web", f"Proxy {proxy} validation failed: {e}")
 
         # Test in parallel (20 threads, fast validation)
         threads = []
@@ -495,7 +495,7 @@ class StealthFetcher:
             import playwright
             caps["L4_playwright"] = True
         except ImportError:
-            pass
+            logger.debug("web", "playwright not installed; L4 headless browser unavailable")
         return caps
 
 

@@ -54,7 +54,12 @@ class AutoOrchestrator:
     async def run_mission_async(self, query: str, callback=None):
         """Execute a mission using the MetaChain synthesis loop."""
         if not MetaChain:
-            return "ERROR: AutoAgent suite is not installed or dependencies missing."
+            notice = "HIGH_INTENSITY mode unavailable (autoagent not installed). Routing to standard engine."
+            logger.warn("autoagent", notice)
+            if callback:
+                callback(notice)
+            from shadowcypher.ai.orchestrator import orchestrator
+            return orchestrator.execute_query_sync(query)
 
         mission_log = self.log_dir / f"mission_{int(asyncio.get_event_loop().time())}.log"
         mc_logger = MetaChainLogger(mission_log)

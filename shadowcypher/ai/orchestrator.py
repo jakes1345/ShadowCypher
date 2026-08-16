@@ -78,9 +78,26 @@ class AIOrchestrator:
                             history: Optional[List[dict]] = None):
         """Initiates an autonomous MetaChain mission with optional multimodal and history context."""
         if not _AUTOAGENT_AVAILABLE:
-            msg = "[AI] autoagent not installed — high-intensity mode unavailable. Falling back via engine.generate()."
-            if callback: callback(msg)
-            if on_complete: on_complete(msg)
+            notice = "HIGH_INTENSITY mode unavailable (autoagent not installed). Routing to standard engine."
+            logger.warn("ai", notice)
+            if callback:
+                callback(notice)
+
+            def _std_fallback():
+                try:
+                    from shadowcypher.ai.providers import provider_registry
+                    result = provider_registry.generate(
+                        query,
+                        "You are a helpful AI security assistant.",
+                        max_tokens=4096,
+                        temperature=0.3,
+                    )
+                except Exception as _e:
+                    result = f"[FALLBACK_ERROR] Standard engine unavailable: {_e}"
+                if on_complete:
+                    on_complete(result)
+
+            threading.Thread(target=_std_fallback, daemon=True, name="MetaChain-fallback").start()
             return
 
         from shadowcypher.ai.agents import AGENT_FLEET

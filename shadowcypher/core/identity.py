@@ -82,8 +82,8 @@ def verify_admin(irc_nick: Optional[str] = None) -> bool:
         if current_handle and current_handle in admin_list:
             logger.info("identity", f"Escalating privileges for authorized ADMIN: {current_handle}")
             return True
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("identity", f"Admin list check failed: {e}")
 
     # 2. Secondary: Cryptographic Key Proofs
     pub = _load_public_key()

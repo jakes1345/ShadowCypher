@@ -18,7 +18,7 @@ def mock_bus():
 @pytest.fixture
 def mock_orchestrator():
     with patch("shadowcypher.core.missions.orchestrator") as m:
-        m.run.return_value = "mock AI response"
+        m.execute_query_sync.return_value = "mock AI response"
         yield m
 
 
@@ -81,7 +81,7 @@ class TestRunPhase:
 
     def test_run_phase_calls_orchestrator(self, mission, mock_orchestrator):
         mission._run_phase("ANALYSIS", "analyze this", 0.5, "Analyzing...")
-        mock_orchestrator.run.assert_called_once_with("analyze this")
+        mock_orchestrator.execute_query_sync.assert_called_once_with("analyze this")
 
     def test_run_phase_returns_ai_response(self, mission, mock_orchestrator):
         result = mission._run_phase("P", "prompt", 0.0, "status")
@@ -94,7 +94,7 @@ class TestRunPhase:
         assert mission.findings[0]["result"] == "mock AI response"
 
     def test_multiple_phases_all_in_findings(self, mission, mock_orchestrator):
-        mock_orchestrator.run.side_effect = ["result_a", "result_b", "result_c"]
+        mock_orchestrator.execute_query_sync.side_effect = ["result_a", "result_b", "result_c"]
         mission._run_phase("A", "p1", 0.1, "s1")
         mission._run_phase("B", "p2", 0.5, "s2")
         mission._run_phase("C", "p3", 1.0, "s3")
@@ -109,17 +109,17 @@ class TestRunPhase:
         assert mock_bus.publish.called
 
     def test_run_phase_orchestrator_error_returns_error_string(self, mission, mock_orchestrator):
-        mock_orchestrator.run.side_effect = RuntimeError("AI offline")
+        mock_orchestrator.execute_query_sync.side_effect = RuntimeError("AI offline")
         result = mission._run_phase("ERR_PHASE", "prompt", 0.5, "status")
         assert "ERR_PHASE" in result or "ERROR" in result
 
     def test_run_phase_orchestrator_error_still_appends_finding(self, mission, mock_orchestrator):
-        mock_orchestrator.run.side_effect = ValueError("boom")
+        mock_orchestrator.execute_query_sync.side_effect = ValueError("boom")
         mission._run_phase("ERR", "p", 0.5, "s")
         assert len(mission.findings) == 1  # Error still recorded
 
     def test_run_phase_orchestrator_error_does_not_raise(self, mission, mock_orchestrator):
-        mock_orchestrator.run.side_effect = Exception("any error")
+        mock_orchestrator.execute_query_sync.side_effect = Exception("any error")
         # Must not propagate the exception
         mission._run_phase("SAFE", "p", 0.5, "s")
 

@@ -137,8 +137,8 @@ def add_timing_jitter(self, min_ms: int = 500, max_ms: int = 5000):
                 )
                 logger.info("stealth", f"tc netem jitter: {delay_ms}ms ±50ms on {iface}")
                 return
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("stealth", f"tc netem jitter setup failed on {iface}: {e}")
 
     # Fallback: simple sleep-based jitter
     logger.info("stealth", f"Timing jitter: sleeping {delay_ms}ms")
@@ -155,8 +155,8 @@ def remove_timing_jitter(self):
                 subprocess.run([tc, "qdisc", "del", "dev", iface, "root"],
                                capture_output=True, timeout=5)
                 logger.info("stealth", f"tc netem jitter removed from {iface}")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("stealth", f"tc netem jitter removal failed on {iface}: {e}")
 
 
 def _default_interface(self) -> str:
@@ -169,8 +169,8 @@ def _default_interface(self) -> str:
                              "src", "onlink", "linkdown"):
                 if re.match(r"^[a-zA-Z]", token):
                     return token
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("stealth", f"Default interface lookup failed: {e}")
     return ""
 
 

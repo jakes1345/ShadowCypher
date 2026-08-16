@@ -124,7 +124,60 @@ class WarMapPage(Gtk.Box):
     def _on_draw(self, widget, cr):
         width = widget.get_allocated_width()
         height = widget.get_allocated_height()
-        
+
+        # --- Background: very dark fill matching app theme (#080808) ---
+        cr.set_source_rgb(8 / 255, 8 / 255, 8 / 255)
+        cr.paint()
+
+        # --- Grid: faint green horizontal + vertical lines every 30 px ---
+        # Color: rgba(0, 255, 65, 0.08)  →  rgba(0.0, 1.0, 0.255, 0.08)
+        cr.set_line_width(0.5)
+        cr.set_source_rgba(0.0, 1.0, 0.255, 0.08)
+        gx = 0.0
+        while gx <= width:
+            cr.move_to(gx, 0)
+            cr.line_to(gx, height)
+            cr.stroke()
+            gx += 30
+        gy = 0.0
+        while gy <= height:
+            cr.move_to(0, gy)
+            cr.line_to(width, gy)
+            cr.stroke()
+            gy += 30
+
+        # --- Latitude / longitude style arc ellipses (very faint) ---
+        cx, cy = width / 2.0, height / 2.0
+        cr.set_source_rgba(0.0, 1.0, 0.255, 0.04)
+        cr.set_line_width(0.7)
+        # Concentric "latitude" ellipses at increasing radii
+        for scale in (0.22, 0.42, 0.62, 0.82):
+            cr.save()
+            cr.translate(cx, cy)
+            cr.scale(width * scale, height * scale * 0.52)
+            cr.arc(0, 0, 1.0, 0, 2 * math.pi)
+            cr.restore()
+            cr.stroke()
+        # "Meridian" vertical ellipses at different horizontal compressions
+        for h_scale in (0.18, 0.45, 0.72):
+            cr.save()
+            cr.translate(cx, cy)
+            cr.scale(width * h_scale * 0.5, height * 0.50)
+            cr.arc(0, 0, 1.0, 0, 2 * math.pi)
+            cr.restore()
+            cr.stroke()
+
+        # --- "SPECTRE WAR-MAP" watermark text, centered, tactical green ---
+        cr.set_source_rgba(0.0, 1.0, 0.255, 0.22)
+        # select_font_face(family, slant=NORMAL=0, weight=BOLD=1)
+        cr.select_font_face("Monospace", 0, 1)
+        cr.set_font_size(16)
+        label = "SPECTRE WAR-MAP"
+        te = cr.text_extents(label)
+        # te: (x_bearing, y_bearing, width, height, x_advance, y_advance)
+        cr.move_to(cx - te[2] / 2 - te[0], cy - te[3] / 2 - te[1])
+        cr.show_text(label)
+
         # Draw Connection Lines (Signal Paths)
         node_coords = []
         for i, (nid, node) in enumerate(self.nodes.items()):

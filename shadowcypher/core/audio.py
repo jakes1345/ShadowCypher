@@ -28,8 +28,8 @@ class AudioEngine:
         self._last_play = now
         try:
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("audio", f"Audio playback failed (SoX not installed?): {e}")
 
     def play_success(self):
         """Retro 'Bling' sound (High pitch rising)."""
