@@ -116,10 +116,101 @@ class SovereignGhostMission(GhostMission):
             logger.error("ghost", f"SOVEREIGN_MISSION_FAULT: {e}")
             self._emergency_sever()
 
-def ignite_ghost_operation(target: str):
-    mission = SovereignGhostMission(target)
+class AgenticMission(GhostMission):
+    """
+    Real agentic mission — the LLM decides which tools to call based on
+    actual results, not a fixed script. Uses Ollama function calling.
+
+    Flow: nmap → follow interesting services → exploit search → final report
+    No fixed phases. The AI drives the investigation from start to finish.
+    """
+
+    SYSTEM_PROMPT = (
+        "You are a security reconnaissance AI conducting an authorized assessment on systems "
+        "owned by or explicitly authorized for testing by the operator. "
+        "You have access to real security tools. Use them systematically.\n\n"
+        "Workflow:\n"
+        "1. Start with run_nmap to discover open ports and service versions\n"
+        "2. For web services: use http_probe to fingerprint, then search_exploit for the version\n"
+        "3. For FTP: check_ftp_anon. For SMB: check_smb. For HTTPS: ssl_check\n"
+        "4. For any identified service version, call search_exploit to find public CVEs/PoCs\n"
+        "5. If web services found, run run_nuclei for automated vuln detection\n"
+        "6. Once you have sufficient data, give a final report WITHOUT calling more tools\n\n"
+        "Final report format:\n"
+        "## SERVICES FOUND\n[list]\n"
+        "## VULNERABILITIES\n[CVEs, misconfigs, weak points]\n"
+        "## RECOMMENDED ACTIONS\n[prioritized next steps]\n\n"
+        "Be systematic. Do not repeat scans already run. Stop when you have a complete picture."
+    )
+
+    def __init__(self, target: str, model: str = "llama3.2",
+                 passive_only: bool = False):
+        super().__init__(target)
+        from shadowcypher.ai.tool_loop import AgentLoop
+        from shadowcypher.ai.security_tools import SECURITY_TOOLS, PASSIVE_TOOLS
+        tools = PASSIVE_TOOLS if passive_only else SECURITY_TOOLS
+        self.loop = AgentLoop(
+            tools=tools,
+            model=model,
+            system_prompt=self.SYSTEM_PROMPT,
+        )
+        self._passive_only = passive_only
+
+    def _approval_gate(self, tool_name: str, args: dict) -> bool:
+        """Publish approval request to bus. UI can intercept; auto-approves by default."""
+        bus.publish("approval_required", {
+            "mid": self.mid,
+            "tool": tool_name,
+            "args": args,
+        })
+        self.report("APPROVAL", f"Running {tool_name} (configure UI gate to require manual approval)", 0.5)
+        return True
+
+    def _on_update(self, msg: str):
+        if "[TOOL:RUN]" in msg:
+            self.report("TOOL_CALL", msg, 0.4)
+        elif "[TOOL:RESULT]" in msg:
+            self.report("TOOL_RESULT", msg, 0.5)
+        elif "[LOOP:DONE]" in msg:
+            self.report("FINALIZING", "Synthesizing intelligence report...", 0.9)
+        elif "[LOOP:ERROR]" in msg:
+            self.report("ERROR", msg, 0.5)
+        else:
+            self.report("RUNNING", msg, 0.3)
+
+    def execute(self):
+        mode = "PASSIVE" if self._passive_only else "FULL"
+        self.report("START", f"Agentic mission [{mode}] — target: {self.target}", 0.0)
+        try:
+            result = self.loop.run(
+                task=f"Conduct a security assessment of: {self.target}",
+                callback=self._on_update,
+                approval_gate=self._approval_gate,
+            )
+            self.findings.append({"phase": "FINAL_REPORT", "result": result})
+            self.report("COMPLETE", "Mission complete. Intelligence secured.", 1.0)
+        except Exception as e:
+            logger.error("mission", f"AgenticMission fault: {e}")
+            self._emergency_sever()
+
+
+def ignite_ghost_operation(target: str, model: str = "llama3.2",
+                           passive_only: bool = False) -> str:
+    """
+    Launch an agentic security mission in a background thread.
+
+    Args:
+        target: IP, hostname, or URL to assess
+        model: Ollama model to use (default: llama3.2)
+        passive_only: If True, skip active scanners (nuclei, gobuster, nikto)
+
+    Returns:
+        mission ID (8-char string) for tracking via bus events
+    """
+    mission = AgenticMission(target, model=model, passive_only=passive_only)
     import threading
     threading.Thread(
-        target=mission.execute, daemon=True, name=f"GhostMission-{mission.mid}"
+        target=mission.execute, daemon=True,
+        name=f"AgenticMission-{mission.mid}"
     ).start()
     return mission.mid
