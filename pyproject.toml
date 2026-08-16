@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shadowcypher"
-version = "3.0.0"
+version = "2.2.0"
 description = "Enterprise Offensive Security & Autonomous Intelligence Suite"
 readme = "README.md"
 license = {text = "MIT"}
@@ -39,10 +39,9 @@ dependencies = [
     "cryptography>=41.0.0",
     "websockets>=12.0",
     "numpy>=1.24.0",
+    "scipy>=1.11.0",
     "rich>=13.0.0",
     "prompt_toolkit>=3.0.0",
-    "fastapi>=0.104.0",
-    "uvicorn>=0.24.0",
 ]
 
 [project.optional-dependencies]
@@ -54,8 +53,7 @@ full = [
     "paramiko>=3.0.0",
     "impacket>=0.11.0",
     "scapy>=2.5.0",
-    "chromadb>=0.4.0",
-    "sentence-transformers>=2.2.0",
+    "mitmproxy>=10.0.0",
 ]
 # AI orchestration only
 ai = [
@@ -99,41 +97,4 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "S", "B"]
-ignore = [
-    # Subprocess / URL / degradation — intentional in a security tool
-    "S603", "S607",  # subprocess with user-controlled args
-    "S310",          # urllib.request.urlopen — all calls target https:// external APIs
-    "S110",          # try-except-pass — MCP helpers degrade gracefully by design
-    "S112",          # try-except-continue — same rationale as S110
-    # Import ordering
-    "E402",          # gi.require_version must precede gi.repository imports
-    # Style — not enforced (matches prior CI behaviour)
-    "E501",          # line too long
-    "W191",          # tabs in indentation (legacy files)
-    "W291",          # trailing whitespace
-    "W293",          # whitespace on blank lines
-    # FastAPI pattern — Depends() in function-default IS the intended usage
-    "B008",
-    # Closures over non-loop locals flagged as loop-var closures (false positive)
-    "B023",
-    # zip() without strict= — not worth the noise in this codebase
-    "B905",
-    # Pseudo-random — used for AI model simulation/evolution, not crypto
-    "S311",
-    # Temporary files — /tmp is intentional for a desktop security tool
-    "S108",
-    # Binding all interfaces — intentional for local server / self-host mode
-    "S104",
-    # MD5 / SHA1 — used for non-cryptographic caching and deduplication
-    "S324",
-    # Assert — used in internal guards and test helpers
-    "S101",
-    # chmod 755 — intentional for tool scripts
-    "S103",
-    # token_type / variable names that look like passwords but aren't
-    "S105", "S106",
-    # requests verify=False — intentional for a security research tool
-    "S501",
-    # FTP / auto-trust host keys / missing timeout — intentional in pentest modules
-    "S321", "S507", "S113",
-]
+ignore = ["S603", "S607"]  # subprocess calls are intentional in a security tool
