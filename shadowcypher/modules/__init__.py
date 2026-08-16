@@ -5,7 +5,7 @@ def _safe_import(name, attr):
         import importlib
         mod = importlib.import_module(name)
         return getattr(mod, attr, None)
-    except Exception:
+    except BaseException:
         return None
 
 # ── Original modules ──────────────────────────────────────────────────────────
