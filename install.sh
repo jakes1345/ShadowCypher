@@ -50,7 +50,19 @@ log_step() { echo -e "${CYAN}[SYSTEM]${NC} $1"; }
 log_succ() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_err()  { echo -e "${RED}[FATAL]${NC} $1"; exit 1; }
 
-# --- 0. Initialization ---
+# --- 0. System Dependencies (Debian/Ubuntu/Mint) ---
+if command -v apt-get &>/dev/null; then
+    log_step "Installing GTK3 / PyGObject system dependencies..."
+    sudo apt-get install -y -qq \
+        python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-glib-2.0 \
+        gir1.2-pango-1.0 gir1.2-gdkpixbuf-2.0 \
+        python3-venv python3-pip libgirepository1.0-dev \
+        gobject-introspection libcairo2-dev \
+        2>/dev/null || echo -e "${RED}[WARN]${NC} Some system packages failed — continuing anyway."
+    log_succ "System packages ready."
+fi
+
+# --- 0b. Initialization ---
 log_step "Initializing ShadowCypher local deployment..."
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -65,17 +77,32 @@ mkdir -p "$APP_DIR/wordlists" "$APP_DIR/findings" "$APP_DIR/reports" \
 
 # --- 1. Python Environment ---
 log_step "Resolving Python dependencies and virtual environment..."
-if command -v python3 &>/dev/null; then
-    if [ ! -d "$APP_DIR/venv" ]; then
-        python3 -m venv "$APP_DIR/venv"
-    fi
-    source "$APP_DIR/venv/bin/activate"
-    pip install --upgrade pip -q
-    pip install -r "$APP_DIR/requirements.txt" -q
-    log_succ "Python ecosystem synchronized."
-else
+if ! command -v python3 &>/dev/null; then
     log_err "Python 3 is required but not found in PATH."
 fi
+
+# Ensure venv module is available
+if ! python3 -c "import venv" 2>/dev/null; then
+    log_err "python3-venv is missing. Run: sudo apt install python3-venv"
+fi
+
+if [ ! -d "$APP_DIR/venv" ]; then
+    python3 -m venv "$APP_DIR/venv"
+fi
+source "$APP_DIR/venv/bin/activate"
+pip install --upgrade pip -q
+
+# Install from pyproject.toml (canonical) or requirements.txt fallback
+if [ -f "$APP_DIR/pyproject.toml" ]; then
+    pip install -e "$APP_DIR[all]" -q 2>/dev/null || pip install -e "$APP_DIR" -q
+elif [ -f "$APP_DIR/requirements.txt" ]; then
+    pip install -r "$APP_DIR/requirements.txt" -q
+fi
+
+# PyGObject inside venv needs a nudge on some distros
+python3 -c "import gi" 2>/dev/null || pip install PyGObject -q 2>/dev/null || true
+
+log_succ "Python ecosystem synchronized."
 
 # --- 2. Pre-Flight Audit ---
 log_step "Executing system stability audit..."
@@ -110,7 +137,7 @@ ln -sf "$APP_DIR/shadowcypher_launch" "$LOCAL_BIN/shadowcypher"
 log_step "Registering desktop environment integration..."
 cat <<DESKTOP > "$DESKTOP_FILE"
 [Desktop Entry]
-Version=3.0
+Version=1.0
 Type=Application
 Name=ShadowCypher
 GenericName=Tactical Security Suite
@@ -143,7 +170,7 @@ if command -v ollama &>/dev/null; then
         VRAM_MB=$(rocm-smi --showmeminfo vram 2>/dev/null | grep -i "total" | awk '{sum+=$NF} END{print int(sum/1024/1024)}')
     fi
 
-    VRAM_GB=$(echo "$VRAM_MB / 1024" | bc 2>/dev/null || echo "0")
+    VRAM_GB=$(( VRAM_MB / 1024 )) 2>/dev/null || VRAM_GB=0
 
     if   [ "$VRAM_GB" -ge 22 ] 2>/dev/null; then
         SHADOW_BASE="dolphin-mixtral:8x7b"

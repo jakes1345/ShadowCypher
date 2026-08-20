@@ -10,5 +10,5 @@ Modules:
     ai        — Local LLM inference and team-specific prompts
 """
 
-__version__ = "3.0.0"
+__version__ = "4.1.0"
 __author__ = "shadow_operator"
