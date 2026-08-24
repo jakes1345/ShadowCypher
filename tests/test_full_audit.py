@@ -610,7 +610,7 @@ class TestWireless:
         from shadowcypher.modules.wireless import Wireless
         assert hasattr(Wireless, "list_interfaces")
 
-    @patch("shadowcypher.modules.wireless.subprocess.Popen")
+    @patch("shadowcypher.core.runner.subprocess.Popen")
     def test_list_interfaces(self, mock_popen):
         mock_proc = MagicMock()
         mock_proc.stdout = iter(["wlan0\n"])

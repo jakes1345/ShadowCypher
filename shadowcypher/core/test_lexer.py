@@ -23,7 +23,7 @@ class TestKeywords:
     @pytest.mark.parametrize("kw", [
         "VAR", "SWARM", "STRIKE", "TARGET", "AI", "IF", "FOR",
         "WHILE", "RETURN", "IMPORT", "EXPORT", "ASYNC", "AWAIT",
-        "UNSAFE", "VOID", "MAP", "FILTER", "YIELD",
+        "UNSAFE", "MAP", "FILTER", "YIELD",
     ])
     def test_keyword_tokenized(self, lexer, kw):
         tokens = lexer.tokenize(kw)
@@ -31,19 +31,11 @@ class TestKeywords:
         assert tokens[0].ttype == Token.TYPE_KEYWORD
         assert tokens[0].value == kw
 
-    def test_register_rax_becomes_reg_rax(self, lexer):
-        tokens = lexer.tokenize("RAX")
-        assert tokens[0].ttype == Token.TYPE_KEYWORD
-        assert tokens[0].value == "REG_RAX"
-
-    def test_register_rbx_becomes_reg_rbx(self, lexer):
-        tokens = lexer.tokenize("RBX")
-        assert tokens[0].value == "REG_RBX"
-
     @pytest.mark.parametrize("reg", ["RAX", "RBX", "RCX", "RDX", "RSP", "RBP", "RIP"])
-    def test_all_registers_get_prefix(self, lexer, reg):
+    def test_registers_are_identifiers(self, lexer, reg):
         tokens = lexer.tokenize(reg)
-        assert tokens[0].value == f"REG_{reg}"
+        assert tokens[0].ttype == Token.TYPE_IDENTIFIER
+        assert tokens[0].value == reg
 
     def test_unknown_uppercase_becomes_identifier(self, lexer):
         tokens = lexer.tokenize("FOOBAR")

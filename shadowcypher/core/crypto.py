@@ -3,6 +3,7 @@ Enforces AES-256 DRM encryption over all offensive payload generation logic.
 """
 
 import os
+import time
 
 from cryptography.fernet import Fernet
 
@@ -53,8 +54,6 @@ class CryptoManager:
                 self.is_unlocked = False
 
     def unlock_system(self, user_key):
-        import time
-
         lockout_path = os.path.join(config.project_root, ".drm-lockout")
         if os.path.exists(lockout_path):
             try:

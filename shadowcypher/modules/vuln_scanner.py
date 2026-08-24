@@ -4,7 +4,11 @@ Handles Nuclei, Sqlmap, Nikto, and automated vulnerability verification.
 """
 
 
-from ai_engine.autoagent.registry import register_tool
+try:
+    from ai_engine.autoagent.registry import register_tool
+except ImportError:
+    def register_tool(name):  # no-op when ai_engine not installed
+        return lambda f: f
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target

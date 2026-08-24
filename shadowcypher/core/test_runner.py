@@ -26,7 +26,7 @@ def collect(q, timeout=5):
         try:
             results.append(q.get(timeout=0.1))
         except queue.Empty:
-            if any("[MISSION_" in r for r in results):
+            if any("[done:" in r for r in results):
                 break
     return results
 
@@ -55,13 +55,13 @@ class TestBasicExecution:
         q = queue.Queue()
         runner.execute_task("TERM", ["true"], callback=q.put)
         lines = collect(q)
-        assert any("[MISSION_" in line for line in lines)
+        assert any("[done:" in line for line in lines)
 
     def test_failing_command_delivers_return_code(self, runner):
         q = queue.Queue()
         runner.execute_task("FAIL", ["false"], callback=q.put)
         lines = collect(q)
-        term_lines = [line for line in lines if "[MISSION_" in line]
+        term_lines = [line for line in lines if "[done:" in line]
         assert term_lines
         assert "1" in term_lines[0]  # Return code 1
 
@@ -95,7 +95,7 @@ class TestTaskIds:
         done = threading.Event()
 
         def cb(line):
-            if "[MISSION_" in line:
+            if "[done:" in line:
                 done.set()
 
         runner.execute_task("CLEANUP", ["true"], callback=cb)
@@ -115,7 +115,7 @@ class TestProcessControl:
 
         def cb(line):
             lines.append(line)
-            if "[MISSION_" in line:
+            if "[done:" in line:
                 terminated.set()
 
         task_id = runner.execute_task("SLEEP", ["sleep", "30"], callback=cb)
@@ -135,7 +135,7 @@ class TestConcurrency:
 
             def make_cb(event):
                 def cb(line):
-                    if "[MISSION_" in line:
+                    if "[done:" in line:
                         event.set()
                 return cb
 
@@ -153,7 +153,7 @@ class TestConcurrency:
             def make_cb(bucket_idx, ev):
                 def cb(line):
                     buckets[bucket_idx].append(line)
-                    if "[MISSION_" in line:
+                    if "[done:" in line:
                         ev.set()
                 return cb
 
