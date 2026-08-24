@@ -10,12 +10,42 @@ import socket
 import subprocess
 import urllib.request
 from typing import Optional
+from urllib.parse import urlparse
 
 from shadowcypher.ai.tool_loop import AgentTool
 from shadowcypher.core.stealth import stealth
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _tor_proxy() -> Optional[tuple]:
+    """Return (host, port) of the active SOCKS5 proxy, or None if stealth is off."""
+    if not stealth.active:
+        return None
+    proxy_url = stealth.proxy_url or "socks5h://127.0.0.1:9050"
+    try:
+        p = urlparse(proxy_url)
+        return (p.hostname or "127.0.0.1", p.port or 9050)
+    except Exception:
+        return ("127.0.0.1", 9050)
+
+
+def _proxy_socket() -> socket.socket:
+    """
+    Return a socket routed through the Tor SOCKS5 proxy when stealth is active.
+    Falls back to a plain socket when Tor is not running.
+    """
+    proxy = _tor_proxy()
+    if proxy:
+        try:
+            import socks  # PySocks
+            s = socks.socksocket()
+            s.set_proxy(socks.SOCKS5, proxy[0], proxy[1])
+            return s
+        except ImportError:
+            pass  # PySocks not installed — fall through to plain socket
+    return socket.socket()
+
 
 def _run(cmd: list, timeout: int = 90) -> str:
     """Run a command, routing through proxychains/torsocks when Tor is active."""
@@ -79,7 +109,7 @@ def dns_lookup(domain: str) -> str:
 def grab_banner(host: str, port: int) -> str:
     """Connect to host:port and grab the raw service banner."""
     try:
-        s = socket.socket()
+        s = _proxy_socket()
         s.settimeout(5)
         s.connect((host, int(port)))
         s.send(b"HEAD / HTTP/1.0\r\nHost: " + host.encode() + b"\r\n\r\n")
@@ -164,8 +194,21 @@ def check_ftp_anon(host: str) -> str:
     """Check if FTP allows anonymous login."""
     try:
         import ftplib
-        ftp = ftplib.FTP(timeout=5)
-        ftp.connect(host, 21)
+        proxy = _tor_proxy()
+        if proxy:
+            # Inject a SOCKS5 socket directly into ftplib so the control
+            # connection is routed through Tor without monkey-patching globals.
+            sock = _proxy_socket()
+            sock.settimeout(5)
+            sock.connect((host, 21))
+            ftp = ftplib.FTP()
+            ftp.sock = sock
+            ftp.af = sock.family
+            ftp.file = sock.makefile("rb")
+            ftp.welcome = ftp.getresp()
+        else:
+            ftp = ftplib.FTP(timeout=5)
+            ftp.connect(host, 21)
         try:
             ftp.login("anonymous", "probe@test.local")
             files = ftp.nlst()
