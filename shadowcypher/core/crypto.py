@@ -19,13 +19,22 @@ class CryptoManager:
         self.fernet = None
         self._load_key()
 
+    @property
+    def _sentinel_path(self):
+        return self.key_file + ".sentinel"
+
     def generate_license_key(self):
         """Generates a master 256-bit AES license key (Admin Only)."""
         key = Fernet.generate_key()
+        f_obj = Fernet(key)
+        sentinel = f_obj.encrypt(b"sc-drm-sentinel-ok")
         with open(self.key_file, "wb") as f:
             f.write(key)
         os.chmod(self.key_file, 0o600)
-        self.fernet = Fernet(key)
+        with open(self._sentinel_path, "wb") as f:
+            f.write(sentinel)
+        os.chmod(self._sentinel_path, 0o600)
+        self.fernet = f_obj
         self.is_unlocked = True
         return key.decode()
 
@@ -60,7 +69,13 @@ class CryptoManager:
                 os.unlink(lockout_path)
 
         try:
-            self.fernet = Fernet(user_key.encode())
+            candidate = Fernet(user_key.encode())
+            # Validate against sentinel if one exists (created by generate_license_key)
+            if os.path.exists(self._sentinel_path):
+                with open(self._sentinel_path, "rb") as f:
+                    sentinel_token = f.read()
+                candidate.decrypt(sentinel_token)  # raises InvalidToken if key is wrong
+            self.fernet = candidate
             with open(self.key_file, "wb") as f:
                 f.write(user_key.encode())
             os.chmod(self.key_file, 0o600)

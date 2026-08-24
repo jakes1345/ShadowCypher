@@ -131,6 +131,11 @@ class Runner:
             proc.wait(timeout=1800)
             if callback:
                 callback(f"\n[MISSION_{name[:4]}_TERM: Return {proc.returncode}]")
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            if callback:
+                callback(f"\n[TIMEOUT] {name} killed after 1800s")
         except Exception as e:
             if callback:
                 callback(f"[ERROR] RUNNER_CRITICAL_FAULT: {str(e)}")

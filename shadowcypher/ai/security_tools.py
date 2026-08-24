@@ -65,9 +65,14 @@ def _run(cmd: list, timeout: int = 90) -> str:
 
 # ── Tool Functions ────────────────────────────────────────────────────────────
 
+_NMAP_BLOCKED = ("--script", "--script-args", "--script-help", "--proxies", "-iL", "-oX", "-oG", "--datadir")
+
 def run_nmap(target: str,
              flags: str = "-sV --version-light -p 21,22,23,25,53,80,110,443,445,3306,3389,8080,8443") -> str:
     """Port scan with service version detection."""
+    for token in flags.split():
+        if any(token.startswith(b) for b in _NMAP_BLOCKED):
+            return f"BLOCKED: flag {token!r} is not permitted in agentic context"
     return _run(["nmap"] + flags.split() + [target], timeout=120)
 
 
@@ -108,16 +113,17 @@ def dns_lookup(domain: str) -> str:
 
 def grab_banner(host: str, port: int) -> str:
     """Connect to host:port and grab the raw service banner."""
+    s = _proxy_socket()
     try:
-        s = _proxy_socket()
         s.settimeout(5)
         s.connect((host, int(port)))
         s.send(b"HEAD / HTTP/1.0\r\nHost: " + host.encode() + b"\r\n\r\n")
         banner = s.recv(2048).decode(errors="replace")
-        s.close()
         return banner.strip() or "(connected but no banner received)"
     except Exception as e:
         return f"BANNER_ERROR: {e}"
+    finally:
+        s.close()
 
 
 def run_whois(target: str) -> str:
