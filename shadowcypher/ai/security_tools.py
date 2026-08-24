@@ -15,7 +15,6 @@ from urllib.parse import urlparse
 from shadowcypher.ai.tool_loop import AgentTool
 from shadowcypher.core.stealth import stealth
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _tor_proxy() -> Optional[tuple]:

@@ -31,12 +31,12 @@ class ShadowShell:
     def execute(cmd: Union[str, list], timeout: int = 300, env_updates: Dict[str, str] = None) -> Dict[str, Any]:
         """
         Execute a command synchronously with enterprise-grade monitoring.
-        
+
         Args:
             cmd: The shell command string or argument list to execute.
             timeout: Maximum execution time in seconds.
             env_updates: Optional environment variables to overlay.
-            
+
         Returns:
             Structured results including status, output, and telemetry.
         """

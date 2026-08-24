@@ -8,7 +8,7 @@ class EgressRouter:
     """
     Enterprise Egress Rotation Manager.
     Instead of modifying local LAN IPs (which does not provide anonymity),
-    this module interfaces with Tor control ports or proxychains to rotate 
+    this module interfaces with Tor control ports or proxychains to rotate
     the external egress IP address, ensuring operational footprint modification.
     """
 

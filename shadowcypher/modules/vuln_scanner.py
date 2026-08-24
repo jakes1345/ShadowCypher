@@ -3,14 +3,16 @@ Vulnerability Scanner Module — Apex Intelligence Build.
 Handles Nuclei, Sqlmap, Nikto, and automated vulnerability verification.
 """
 
+
+from ai_engine.autoagent.registry import register_tool
+
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target
-from ai_engine.autoagent.registry import register_tool
-import os
+
 
 class VulnScanner(BaseModule):
     """The 'Spectre' engine for vulnerability detection."""
-    
+
     def __init__(self):
         super().__init__(module_name="vuln_scanner")
 
@@ -23,13 +25,13 @@ class VulnScanner(BaseModule):
             tags: Optional tags to filter templates (e.g., 'cve,crit').
         """
         if not validate_target(target): return
-        
+
         self.log(f"INITIATING_NUCLEI_SCAN: {target}")
         nuclei = self.get_tool_path("nuclei")
         args = [nuclei, "-u", target, "-nc"] # -nc for no-color in terminal
         if tags:
             args.extend(["-tags", tags])
-        
+
         return self.execute(f"NUCLEI_{target}", args, callback=on_output)
 
     @register_tool("vuln_sqlmap_scan")
@@ -40,7 +42,7 @@ class VulnScanner(BaseModule):
             target: The target URL.
         """
         if not validate_target(target): return
-        
+
         self.log(f"INITIATING_SQLMAP_SCAN: {target}")
         sqlmap = self.get_tool_path("sqlmap")
         # Run in batch mode for autonomous flow
@@ -55,7 +57,7 @@ class VulnScanner(BaseModule):
             target: The target host/URL.
         """
         if not validate_target(target): return
-        
+
         self.log(f"INITIATING_NIKTO_SCAN: {target}")
         nikto = self.get_tool_path("nikto")
         args = [nikto, "-h", target]

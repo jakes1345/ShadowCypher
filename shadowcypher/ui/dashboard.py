@@ -4,17 +4,19 @@ Arc gauges for CPU/RAM/Disk, real metrics, arsenal status, live feed.
 """
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Pango, Gdk
-import cairo
-import math
-import psutil
-import time
-import shutil
-from shadowcypher.ai.sisyphus import sisyphus
 
-from shadowcypher.core.hub import hub
+gi.require_version("Gtk", "3.0")
+import math
+import shutil
+import time
+
+import cairo
+import psutil
+from gi.repository import GLib, Gtk, Pango
+
+from shadowcypher.ai.sisyphus import sisyphus
 from shadowcypher.core.bus import bus
+from shadowcypher.core.hub import hub
 from shadowcypher.core.logger import logger
 from shadowcypher.ui.components import TacticalTerminal
 
@@ -42,7 +44,7 @@ class ArcGauge(Gtk.DrawingArea):
 
     def _on_draw(self, widget, cr):
         w = widget.get_allocated_width()
-        h = widget.get_allocated_height()
+        widget.get_allocated_height()
         cx = w / 2
         cy = self._size / 2 + 5
         radius = (self._size / 2) - 14
@@ -62,7 +64,7 @@ class ArcGauge(Gtk.DrawingArea):
             # Color escalation
             if self._value > 85: r, g, b = 0.96, 0.25, 0.37
             elif self._value > 65: r, g, b = 0.96, 0.62, 0.04
-            
+
             cr.set_source_rgba(r, g, b, 0.9)
             angle = 0.75 * math.pi + (self._value / 100.0) * (1.5 * math.pi)
             cr.arc(cx, cy, radius, 0.75 * math.pi, angle)
@@ -184,10 +186,10 @@ class DashboardPage(Gtk.Box):
             self.stat_stealth, self.stat_threats, self.stat_integrity,
             self.stat_relay, self.stat_net, self.stat_pulse
         ]
-        
+
         for i, stat in enumerate(stats_list):
             stats_box.attach(stat, i % 3, i // 3, 1, 1)
-        
+
         gauge_row.pack_start(stats_box, True, True, 10)
         content.pack_start(gauge_row, False, False, 0)
 
@@ -258,7 +260,7 @@ class DashboardPage(Gtk.Box):
         self._last_t = time.time()
         GLib.timeout_add(1500, self._tick)
         GLib.idle_add(self._init_once)
-        
+
         # Async Arsenal Audit (Prevents UI hang on constructor)
         import threading
         threading.Thread(target=self._async_arsenal_audit, daemon=True).start()
@@ -322,7 +324,7 @@ class DashboardPage(Gtk.Box):
 
             # 2. Mission & System Stats
             summary = hub.get_tactical_summary()
-            
+
             # Map stats safely
             stat_map = {
                 self.stat_missions: str(summary.get("active_missions", 0)),
@@ -331,7 +333,7 @@ class DashboardPage(Gtk.Box):
                 self.stat_threats: f"{summary.get('threat_hits', 0)} HITS",
                 self.stat_stealth: "ACTIVE" if hub.is_stealth_ready() else "EXPOSED"
             }
-            
+
             for widget, val in stat_map.items():
                 widget.set_value(val)
 
@@ -357,7 +359,6 @@ class DashboardPage(Gtk.Box):
 
             # Real entropy: measure randomness of /dev/urandom read
             try:
-                import struct
                 raw = open("/dev/urandom", "rb").read(64)
                 byte_counts = [0] * 256
                 for b in raw:
@@ -370,5 +371,5 @@ class DashboardPage(Gtk.Box):
 
         except Exception as e:
             logger.debug("ui", f"DASHBOARD_TICK_FAILURE: {e}")
-            
+
         return True

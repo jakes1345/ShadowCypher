@@ -9,8 +9,8 @@ Loop continues until the LLM stops calling tools and gives a final answer.
 import json
 import threading
 import urllib.request
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional
 
 from shadowcypher.core.logger import logger
 

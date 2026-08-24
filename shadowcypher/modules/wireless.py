@@ -3,10 +3,9 @@ Wireless Module — Apex Intelligence Build.
 Handles Aircrack-ng suite integration, WPA/WPA2 audits, and deauth attacks.
 """
 
-import subprocess
 from shadowcypher.core.module import BaseModule
-from shadowcypher.core.sanitize import validate_interface
 from shadowcypher.core.platform import platform_engine
+from shadowcypher.core.sanitize import validate_interface
 
 
 class Wireless(BaseModule):
@@ -120,7 +119,8 @@ class Wireless(BaseModule):
 
     def deauth_swarm(self, bssid_list, iface="wlan0mon", on_output=None):
         """Coordinated deauth across multiple targets using aireplay-ng."""
-        import shutil, threading
+        import shutil
+        import threading
         if not shutil.which("aireplay-ng"):
             if on_output: on_output("[WARN] aireplay-ng not found — install aircrack-ng suite.\n")
             return

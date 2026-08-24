@@ -1,5 +1,5 @@
 """AI ShadowMemory — Persistent tactical memory powered by mem0 logic.
-Provides long-term recall of operator preferences, mission history, and 
+Provides long-term recall of operator preferences, mission history, and
 target-specific intelligence across all ShadowCypher components.
 """
 

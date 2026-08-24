@@ -67,7 +67,7 @@ def oc_list_infrastructure() -> str:
 def oc_strike_remote(node_id: str, command: str) -> str:
     """
     Executes a shell command on a remote infrastructure node via OpenControl.
-    
+
     Args:
         node_id: The unique ID of the target node.
         command: The shell command to execute (e.g., 'cat /etc/shadow' or 'reboot').
