@@ -122,6 +122,13 @@ ignore = [
     "S501",  # request-with-no-cert-validation: intentional in pentest contexts
     "S507",  # ssh-no-host-key-verification: intentional for target scanning
     "S113",  # request-without-timeout: intentional for long-running scan sessions
+    # Bugbear rules that are intentional patterns in this codebase
+    "B008",  # function-call-in-default-argument: FastAPI Depends() / intentional
+    "B023",  # function-uses-loop-variable: intentional callback captures
+    # Additional security-tool rules
+    "S101",  # assert: used for runtime invariant checks in operational code
+    "S106",  # hardcoded-password-func-arg: config defaults and test fixtures
+    "S307",  # suspicious-eval-usage: intentional in payload/script execution
 ]
 
 [tool.ruff.lint.per-file-ignores]

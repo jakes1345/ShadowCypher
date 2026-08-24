@@ -4,19 +4,20 @@ Inspired by rmmh/skybot: Multithreaded, Hook-based, and Self-Healing.
 Connects to Ergo IRC (Sovereign) as a standard IRC client.
 """
 
+import hashlib
+import random
+import re
 import threading
 import time
-import re
-import random
-import hashlib
 import traceback
-from typing import Optional, Callable, Dict, List
-from shadowcypher.core.irc import IRCClient
+from typing import Callable, Dict, List, Optional
+
 from shadowcypher.core.bus import bus
-from shadowcypher.core.logger import logger
-from shadowcypher.core.identity import identity
-from shadowcypher.core.forensics import registry
 from shadowcypher.core.config import config
+from shadowcypher.core.forensics import registry
+from shadowcypher.core.irc import IRCClient
+from shadowcypher.core.logger import logger
+
 
 class Hook:
     """Skybot-style Hook containers."""
@@ -49,7 +50,7 @@ class ShadowSentinel:
         self._active = False
         self._user_states: Dict[str, dict] = {}
         self._states_lock = threading.Lock()
-        
+
     def start(self):
         """Bootstrap the bot — connects to both external IRC and Sovereign (Ergo)."""
         if self._active: return
@@ -88,15 +89,15 @@ class ShadowSentinel:
             self._sov_irc.on_message(self._handle_sov_message)
             self._sov_irc.on_private(lambda n, m, s: self._handle_sov_message(n, self._bot_nick, m, s))
             self._sov_irc.on_join(self._handle_join)
-            
+
             def _sov_boot():
                 self._sov_irc.connect()
                 # Autojoin and identify
                 time.sleep(2)
                 if config.get("irc", "sasl_pass", default=""):
                     self._sov_irc._send_raw(f"PRIVMSG NickServ :IDENTIFY {config.irc.sasl_pass}")
-                self._sov_irc._send_raw(f"JOIN #general")
-                self._sov_irc._send_raw(f"JOIN #intel")
+                self._sov_irc._send_raw("JOIN #general")
+                self._sov_irc._send_raw("JOIN #intel")
 
             threading.Thread(target=_sov_boot, daemon=True).start()
 
@@ -133,12 +134,12 @@ class ShadowSentinel:
         module = data.get("module", "CORE")
         text = data.get("text", "")
         level = data.get("level", "INFO")
-        
+
         color = "14" # Gray
         if level == "ERROR": color = "04" # Red
         elif level == "SUCCESS": color = "03" # Green
         elif level == "WARNING": color = "07" # Orange
-        
+
         self.client.send_message(f"\x03{color}[{module}]\x03 {text}")
 
     def _relay_anomalies(self, data: dict):
@@ -249,15 +250,14 @@ class ShadowSentinel:
 
     def _verify_pow(self, nick: str, target: str, message: str, reply: Callable, is_admin: bool):
         """Validate SHA-256 PoW solution and measure Latency-to-Compute (LTC)."""
-        import hashlib
         salt = self._user_states[nick].get("pow_salt")
         prefix = self._user_states[nick].get("pow_prefix", "0000")
         start_time = self._user_states[nick].get("pow_start", time.time())
-        
+
         # Check the challenge
         test_hash = hashlib.sha256(f"{salt}{message}".encode()).hexdigest()
         ltc = time.time() - start_time
-        
+
         if test_hash.startswith(prefix):
             logger.info("bot", f"POW_SOLVED: {nick} | LTC: {ltc:.3f}s | Hardware Class: {'HIGH' if ltc < 1 else 'THROTTLED'}")
             del self._user_states[nick]["pow_salt"]
@@ -283,7 +283,7 @@ class ShadowSentinel:
         """Inject WHOIS Recon into the Forensic state."""
         nick = info.get("nick")
         if not nick: return
-        
+
         logger.warning("bot", f"RECON_RESULT: Captured Identity for {nick}: {info}")
         if nick in self._user_states:
             # Flatten WHOIS info for AI Context
@@ -293,8 +293,9 @@ class ShadowSentinel:
 
     def _ai_initiate_audit(self, nick: str, target: str, message: str, reply: Callable, is_admin: bool):
         """Initiate the 'Worthy' audit flow with 2026-grade 'Proof of Compute'."""
-        from shadowcypher.ai.classic_brain import brain
         import secrets
+
+        from shadowcypher.ai.classic_brain import brain
 
         # 1. Active Forensic Probes
         if self.client:
@@ -336,19 +337,19 @@ class ShadowSentinel:
             res_judge = brain.audit_judge(nick, message, history)
             res_hunter = brain.audit_hunter(nick, hostmask, fingerprint, whois)
             res = brain.audit_architect(res_judge, res_hunter)
-            
+
             if "UNWORTHY" in res.upper():
                 # Generate Deep Forensic Report
                 reason_packet = f"CONSENSUS_REJECTION: {res.strip()} | JUDGE: {res_judge} | HUNTER: {res_hunter}"
-                
+
                 # 1. Local Ticket Generation (Incidental Record)
                 create_support_ticket(
-                    handle=nick, 
-                    message=message, 
-                    hostmask=hostmask, 
+                    handle=nick,
+                    message=message,
+                    hostmask=hostmask,
                     reason=f"{reason_packet} [FINGERPRINT: {fingerprint}] [WHOIS: {whois}]"
                 )
-                
+
                 # 2. Global Forensic Registration (Deep Integration)
                 registry.register_threat(
                     handle=nick,
@@ -360,11 +361,11 @@ class ShadowSentinel:
                         "justification": message
                     }
                 )
-                
+
                 self._user_states[nick]["state"] = "IDLE"
             else:
                 self._user_states[nick]["state"] = "COMPLETED"
-            
+
             # Use GLib.idle_add or similar if this was a GUI, but for IRC we can reply directly
             reply(res.strip())
             self._update_history(nick, message, res.strip())
@@ -404,7 +405,7 @@ class ShadowSentinel:
             # Check Admin Permissions (RBAC) via Central Identity Service
             from shadowcypher.core.identity import verify_admin as v_admin
             is_admin = v_admin(nick)
-            
+
             # Simple reply wrapper (Handles both Channel and PM and Sovereign)
             def reply(msg):
                 self._reply(target, nick, msg)
@@ -432,7 +433,7 @@ def cmd_stealth(nick, target, args, reply, admin):
     current = config.get("irc", "stealth_mode", default=False)
     new_val = not current
     config.set("irc", "stealth_mode", new_val)
-    
+
     status = "ENGAGED" if new_val else "DISENGAGED"
     reply(f"STEALTH_MODE: {status}. Telemetry broadcast muted.")
 
@@ -441,11 +442,11 @@ def cmd_whois(nick, target, args, reply, admin):
     """Integrate with ShadowCypher target database."""
     if not args: return reply("Usage: !whois <target_ip>")
     from shadowcypher.core.database import db
-    
+
     # Query the local mission database for this target
     db.cursor.execute("SELECT * FROM target_grid WHERE ip=?", (args,))
     row = db.cursor.fetchone()
-    
+
     if row:
         reply(f"[INTEL] Target: {args} | Status: KNOWN | Last Seen: {row[3]}")
     else:
@@ -489,11 +490,11 @@ def cmd_peek(nick, target, args, reply, admin):
     victim = args.strip() or nick
     if victim not in sentinel._user_states:
         return reply(f"NO_DATA: {victim} has not been audited yet.")
-    
+
     state = sentinel._user_states[victim]
     host = state.get("hostmask", "Unknown")
     fp = state.get("fingerprint", "N/A")
-    
+
     from shadowcypher.ai.classic_brain import brain
     profile = f"Host={host} FP={fp}"
     res = brain.respond(victim, f"peek {profile}")
@@ -594,7 +595,7 @@ def cmd_calc(nick, target, args, reply, admin):
         # Only allow safe math operations
         tree = ast.parse(args.strip(), mode='eval')
         for node in ast.walk(tree):
-            if not isinstance(node, (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num, 
+            if not isinstance(node, (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num,
                                      ast.Add, ast.Sub, ast.Mult, ast.Div,
                                      ast.FloorDiv, ast.USub, ast.UAdd)):
                 return reply("Only math expressions allowed.")
@@ -686,6 +687,7 @@ def cmd_threat(nick, target, args, reply, admin):
         reply(f"  \x02{t.get('handle', '?')}\x02 | {t.get('hostmask', '?')} | Risk: {t.get('risk_level', '?')}")
 
 import os
+
 
 @hook.regex(r'https?://\S+')
 def url_title(nick, target, matches, reply, admin):

