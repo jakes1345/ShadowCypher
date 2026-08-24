@@ -103,12 +103,13 @@ class MissionExecutor:
 
     def _run_network_scan(self, mission_id: str, subnet: Optional[str] = None):
         """Execute network scan (runs in background thread)."""
-        mission = self.missions[mission_id]
-
-        try:
+        with self.lock:
+            mission = self.missions[mission_id]
             mission.status = MissionStatus.RUNNING
             mission.started_at = datetime.now(timezone.utc).isoformat()
-            self._notify_mission_update(mission_id, mission)
+        self._notify_mission_update(mission_id, mission)
+
+        try:
 
             # Auto-detect subnet if not provided
             if not subnet or subnet == "auto-detect":
@@ -126,12 +127,7 @@ class MissionExecutor:
                 timeout=300,
             )
 
-            mission.result_output = result.stdout
-            mission.exit_code = result.returncode
-
-            # Parse devices from nmap output
             devices = self._parse_nmap_output(result.stdout, subnet)
-            mission.devices_found = len(devices)
 
             # Save to history
             scan_history = get_scan_history()
@@ -143,8 +139,12 @@ class MissionExecutor:
                 incidents=[],
             )
 
-            mission.status = MissionStatus.COMPLETED
-            mission.completed_at = datetime.now(timezone.utc).isoformat()
+            with self.lock:
+                mission.result_output = result.stdout
+                mission.exit_code = result.returncode
+                mission.devices_found = len(devices)
+                mission.status = MissionStatus.COMPLETED
+                mission.completed_at = datetime.now(timezone.utc).isoformat()
 
             logger.info(
                 "mission_executor",
@@ -152,63 +152,69 @@ class MissionExecutor:
             )
 
         except subprocess.TimeoutExpired:
-            mission.status = MissionStatus.FAILED
-            mission.result_output = "Timeout: scan took too long"
-            mission.exit_code = -1
+            with self.lock:
+                mission.status = MissionStatus.FAILED
+                mission.result_output = "Timeout: scan took too long"
+                mission.exit_code = -1
+                mission.completed_at = datetime.now(timezone.utc).isoformat()
             logger.error("mission_executor", f"Mission {mission_id} timeout")
 
         except Exception as e:
-            mission.status = MissionStatus.FAILED
-            mission.result_output = str(e)
-            mission.exit_code = -1
+            with self.lock:
+                mission.status = MissionStatus.FAILED
+                mission.result_output = str(e)
+                mission.exit_code = -1
+                mission.completed_at = datetime.now(timezone.utc).isoformat()
             logger.error("mission_executor", f"Mission {mission_id} failed: {e}")
 
         finally:
-            mission.completed_at = datetime.now(timezone.utc).isoformat()
             self._notify_mission_update(mission_id, mission)
 
     def _run_host_audit(self, mission_id: str, target: str):
         """Execute host audit (runs in background thread)."""
-        mission = self.missions[mission_id]
-
-        try:
+        with self.lock:
+            mission = self.missions[mission_id]
             mission.status = MissionStatus.RUNNING
             mission.started_at = datetime.now(timezone.utc).isoformat()
-            self._notify_mission_update(mission_id, mission)
+        self._notify_mission_update(mission_id, mission)
+
+        try:
+            result_output = None
+            exit_code = 0
+            incidents_found = 0
 
             try:
                 from shadowcypher.modules.host_audit import HostAudit
                 auditor = HostAudit()
-
                 output = auditor.rkhunter_scan()
-                mission.result_output = output or "RKHunter not available"
-                mission.exit_code = 0
-
-                # Parse for threats
+                result_output = output or "RKHunter not available"
                 if output:
-                    threat_count = output.count("INFECTED") + output.count("WARNING")
-                    mission.incidents_found = threat_count
-
+                    incidents_found = output.count("INFECTED") + output.count("WARNING")
             except Exception as e:
-                mission.result_output = f"Host audit failed: {e}"
-                mission.exit_code = -1
+                result_output = f"Host audit failed: {e}"
+                exit_code = -1
 
-            mission.status = MissionStatus.COMPLETED
-            mission.completed_at = datetime.now(timezone.utc).isoformat()
+            with self.lock:
+                mission.result_output = result_output
+                mission.exit_code = exit_code
+                mission.incidents_found = incidents_found
+                mission.status = MissionStatus.COMPLETED
+                mission.completed_at = datetime.now(timezone.utc).isoformat()
 
             logger.info(
                 "mission_executor",
-                f"Mission {mission_id} completed: {mission.incidents_found} issues found",
+                f"Mission {mission_id} completed: {incidents_found} issues found",
             )
 
         except Exception as e:
-            mission.status = MissionStatus.FAILED
-            mission.result_output = str(e)
-            mission.exit_code = -1
+            with self.lock:
+                mission.status = MissionStatus.FAILED
+                mission.result_output = str(e)
+                mission.exit_code = -1
+                mission.completed_at = datetime.now(timezone.utc).isoformat()
             logger.error("mission_executor", f"Mission {mission_id} failed: {e}")
 
         finally:
-            mission.completed_at = datetime.now(timezone.utc).isoformat()
             self._notify_mission_update(mission_id, mission)
 
     def get_mission(self, mission_id: str) -> Optional[Mission]:
@@ -240,17 +246,22 @@ class MissionExecutor:
         try:
             from shadowcypher.api.websocket_server import get_ws_manager
             manager = get_ws_manager()
-            # Schedule async broadcast
             import asyncio
             try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    asyncio.create_task(
-                        manager.broadcast_mission_update(mission_id, asdict(mission))
-                    )
+                # Called from the event-loop thread: schedule as a task directly
+                loop = asyncio.get_running_loop()
+                self._ws_loop = loop
+                loop.create_task(
+                    manager.broadcast_mission_update(mission_id, asdict(mission))
+                )
             except RuntimeError:
-                # No event loop in this thread, try to create one
-                pass
+                # Called from a worker thread: use the stored loop if available
+                stored = getattr(self, "_ws_loop", None)
+                if stored is not None and stored.is_running():
+                    asyncio.run_coroutine_threadsafe(
+                        manager.broadcast_mission_update(mission_id, asdict(mission)),
+                        stored,
+                    )
         except ImportError:
             pass  # WebSocket not available
 

@@ -60,12 +60,15 @@ class ADPivot:
     @staticmethod
     def setup_pivot_tunnel(target_ip, local_port=1080, on_output=None):
         """Establish a SOCKS5 pivot tunnel using SSH or Chisel."""
-        # Pro-Choice: Default to SSH Dynamic Forwarding if possible, else Chisel
+        import re
+        if not re.fullmatch(r'[a-zA-Z0-9._\-]+', str(target_ip)):
+            if on_output:
+                on_output(f"[ERROR] Invalid target_ip — refusing shell execution: {target_ip!r}")
+            return None
         if on_output:
             on_output(f"[PIVOT] ESTABLISHING_SOCKS5_TUNNEL_ON_PORT_{local_port}...")
-
-        cmd = f"ssh -D {local_port} -f -N -q {target_ip}"
-        return runner.execute_task_shell(f"PIVOT_TUNNEL_{target_ip}", cmd, callback=on_output)
+        cmd = ["ssh", "-D", str(local_port), "-f", "-N", "-q", str(target_ip)]
+        return runner.execute_task(f"PIVOT_TUNNEL_{target_ip}", cmd, callback=on_output)
 
     @staticmethod
     def crackmapexec_scan(target, protocol="smb", domain=None, user=None, password=None, on_output=None):
