@@ -69,6 +69,10 @@ class SecureWipe:
         path = os.path.abspath(path)
         result = WipeResult(path=path, success=False)
 
+        if os.path.islink(path):
+            result.error = "symlinks are not supported for secure wipe"
+            return result
+
         if not os.path.isfile(path):
             result.error = "not a regular file"
             return result

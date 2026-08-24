@@ -89,6 +89,10 @@ fi
 if [ ! -d "$APP_DIR/venv" ]; then
     # --system-site-packages lets the venv see python3-gi (GTK) from apt
     python3 -m venv --system-site-packages "$APP_DIR/venv"
+elif grep -q "include-system-site-packages = false" "$APP_DIR/venv/pyvenv.cfg" 2>/dev/null; then
+    # Existing venv was created without system packages — GTK would be invisible; recreate it
+    rm -rf "$APP_DIR/venv"
+    python3 -m venv --system-site-packages "$APP_DIR/venv"
 fi
 source "$APP_DIR/venv/bin/activate"
 pip install --upgrade pip -q

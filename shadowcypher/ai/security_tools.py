@@ -198,6 +198,7 @@ SECURITY_TOOLS = [
             "required": ["target"],
         },
         fn=run_nmap,
+        requires_approval=True,
     ),
     AgentTool(
         name="http_probe",
@@ -214,6 +215,7 @@ SECURITY_TOOLS = [
             "required": ["url"],
         },
         fn=http_probe,
+        requires_approval=True,
     ),
     AgentTool(
         name="dns_lookup",
@@ -239,6 +241,7 @@ SECURITY_TOOLS = [
             "required": ["host", "port"],
         },
         fn=grab_banner,
+        requires_approval=True,
     ),
     AgentTool(
         name="run_whois",
@@ -267,6 +270,7 @@ SECURITY_TOOLS = [
             "required": ["service"],
         },
         fn=search_exploit,
+        requires_approval=True,
     ),
     AgentTool(
         name="ssl_check",
@@ -280,6 +284,7 @@ SECURITY_TOOLS = [
             "required": ["host"],
         },
         fn=ssl_check,
+        requires_approval=True,
     ),
     AgentTool(
         name="check_ftp_anon",
@@ -292,6 +297,7 @@ SECURITY_TOOLS = [
             "required": ["host"],
         },
         fn=check_ftp_anon,
+        requires_approval=True,
     ),
     AgentTool(
         name="check_smb",
@@ -304,6 +310,7 @@ SECURITY_TOOLS = [
             "required": ["target"],
         },
         fn=check_smb,
+        requires_approval=True,
     ),
     AgentTool(
         name="run_nuclei",
@@ -372,8 +379,10 @@ SECURITY_TOOLS = [
             "required": ["domain"],
         },
         fn=run_theHarvester,
+        requires_approval=True,
     ),
 ]
 
-# Passive-only subset (no active traffic beyond initial recon)
-PASSIVE_TOOLS = [t for t in SECURITY_TOOLS if not t.requires_approval]
+# Passive-only subset: tools that make no active connections to the target
+_PASSIVE_NAMES = {"dns_lookup", "run_whois"}
+PASSIVE_TOOLS = [t for t in SECURITY_TOOLS if t.name in _PASSIVE_NAMES]

@@ -23,6 +23,15 @@ class ShadowBus:
             if callback not in self._listeners[event_type]:
                 self._listeners[event_type].append(callback)
 
+    def unsubscribe(self, event_type: str, callback: Callable):
+        """Remove a previously registered listener."""
+        with self._lock:
+            listeners = self._listeners.get(event_type, [])
+            try:
+                listeners.remove(callback)
+            except ValueError:
+                pass
+
     def publish(self, event_type: str, data: Any, ui_thread: bool = False):
         """
         Broadcasts an event to all registered listeners.

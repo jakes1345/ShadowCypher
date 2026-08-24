@@ -157,14 +157,28 @@ class AgenticMission(GhostMission):
         self._passive_only = passive_only
 
     def _approval_gate(self, tool_name: str, args: dict) -> bool:
-        """Publish approval request to bus. UI can intercept; auto-approves by default."""
+        """Publish approval request and wait up to 30 s for a UI decision; deny on timeout."""
+        import threading as _threading
+        event = _threading.Event()
+        result = [False]
+
+        def _on_decision(payload):
+            if payload.get("mid") == self.mid and payload.get("tool") == tool_name:
+                result[0] = bool(payload.get("approved", False))
+                event.set()
+
+        bus.subscribe("approval_decision", _on_decision)
         bus.publish("approval_required", {
             "mid": self.mid,
             "tool": tool_name,
             "args": args,
         })
-        self.report("APPROVAL", f"Running {tool_name} (configure UI gate to require manual approval)", 0.5)
-        return True
+        self.report("APPROVAL", f"Awaiting approval for {tool_name} (30 s timeout → deny)", 0.5)
+        event.wait(timeout=30)
+        bus.unsubscribe("approval_decision", _on_decision)
+        if not result[0]:
+            self.report("DENIED", f"{tool_name} denied (timeout or explicit deny)", 0.5)
+        return result[0]
 
     def _on_update(self, msg: str):
         if "[TOOL:RUN]" in msg:

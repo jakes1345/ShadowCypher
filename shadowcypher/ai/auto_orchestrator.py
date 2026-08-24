@@ -59,7 +59,8 @@ class AutoOrchestrator:
             if callback:
                 callback(notice)
             from shadowcypher.ai.orchestrator import orchestrator
-            return orchestrator.execute_query_sync(query)
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, orchestrator.execute_query_sync, query)
 
         mission_log = self.log_dir / f"mission_{int(asyncio.get_event_loop().time())}.log"
         mc_logger = MetaChainLogger(mission_log)
