@@ -13,11 +13,23 @@ from dataclasses import dataclass, field
 
 from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
-from shadowcypher.ai.orchestrator import AIOrchestrator
 from shadowcypher.core.platform import platform_engine
-from shadowcypher.core.nexus import nexus
-from shadowcypher.ai.sisyphus import sisyphus
-from shadowcypher.ai.guard import guard
+from shadowcypher.ai.orchestrator import AIOrchestrator
+
+try:
+    from shadowcypher.core.nexus import nexus
+except Exception:
+    nexus = None  # type: ignore
+
+try:
+    from shadowcypher.ai.sisyphus import sisyphus
+except Exception:
+    sisyphus = None  # type: ignore
+
+try:
+    from shadowcypher.ai.guard import guard
+except Exception:
+    guard = None  # type: ignore
 
 import asyncio
 import json
@@ -180,25 +192,32 @@ class ShadowHub:
         self.autonomous_enabled: bool = False
         self._initialized: bool = True
         
-        # APEX_HARDENING: Enforce Hardware Sovereign Identity
-        from shadowcypher.core.identity import identity
-        if not identity.is_admin:
-            logger.critical("hub", "SOVEREIGN_REJECTION: This machine is not authorized as the MASTER_NODE. System locking.")
-            # In a real environment, we'd halt here, but for this audit we'll log it.
-            # sys.exit(1)
+        try:
+            from shadowcypher.core.identity import identity
+            if not identity.is_admin:
+                logger.warning("hub", "SOVEREIGN_REJECTION: Machine not authorized as MASTER_NODE.")
+        except Exception as e:
+            logger.debug("hub", f"IDENTITY_CHECK_SKIP: {e}")
 
         self._wire_bus()
-        self._engage_distributed_nodes() # sentinel/irc bridge
-        self._start_relay_bridge()
-        self._start_honeypot()
+        self._engage_distributed_nodes()
+
+        for name, fn in [
+            ("relay_bridge",       self._start_relay_bridge),
+            ("honeypot",           self._start_honeypot),
+            ("nexus_relay",        self._start_nexus_relay),
+            ("sisyphus",           self._start_sisyphus),
+            ("ghost_orchestrator", self._start_ghost_orchestrator),
+            ("training_range",     self._start_training_range),
+            ("v2_services",        self._start_v2_services),
+            ("health_monitor",     self._start_health_monitor),
+        ]:
+            try:
+                fn()
+            except Exception as e:
+                logger.warning("hub", f"{name.upper()}_SKIP: {e}")
 
         logger.info("hub", "SHADOWHUB_ULTIMA: MISSION_CONTROL_ENGAGED")
-        self._start_nexus_relay()
-        self._start_sisyphus()
-        self._start_ghost_orchestrator()
-        self._start_training_range()
-        self._start_v2_services()
-        self._start_health_monitor()
 
     def _start_health_monitor(self) -> None:
         """Background health sentinel — polls Tor and relay liveness every 10 s."""
@@ -268,22 +287,24 @@ class ShadowHub:
             logger.warning("hub", f"KG_INIT_FAIL: {e}")
 
         # ShadowGuard — log stats to telemetry every 30 min
-        def _guard_telemetry():
-            import time
-            while True:
-                time.sleep(1800)
-                try:
-                    stats = guard.get_stats()
-                    self._update_telemetry("guard_blocked", stats.get("blocked", 0))
-                    self._update_telemetry("guard_scanned", stats.get("scanned", 0))
-                except Exception:
-                    pass
-        threading.Thread(target=_guard_telemetry, daemon=True, name="GuardTelemetry").start()
-        logger.info("hub", "SHADOWGUARD: Telemetry loop active")
+        if guard is not None:
+            def _guard_telemetry():
+                import time
+                while True:
+                    time.sleep(1800)
+                    try:
+                        stats = guard.get_stats()
+                        self._update_telemetry("guard_blocked", stats.get("blocked", 0))
+                        self._update_telemetry("guard_scanned", stats.get("scanned", 0))
+                    except Exception:
+                        pass
+            threading.Thread(target=_guard_telemetry, daemon=True, name="GuardTelemetry").start()
+            logger.info("hub", "SHADOWGUARD: Telemetry loop active")
 
     def _start_sisyphus(self) -> None:
         """Launches the Sisyphus integrity sentinel."""
-        sisyphus.start()
+        if sisyphus is not None:
+            sisyphus.start()
 
     def _start_honeypot(self) -> None:
         """Launches the active defense honeypot."""
@@ -547,5 +568,20 @@ class ShadowHub:
         summary.update(self.telemetry)
         return summary
 
-# Global Singleton Backbone
-hub = ShadowHub()
+# Global Singleton — instantiated lazily on first attribute access
+# so importing hub.py in tests/CI doesn't spin up background threads.
+class _LazyHub:
+    _hub: Optional['ShadowHub'] = None
+
+    def _get(self) -> 'ShadowHub':
+        if self._hub is None:
+            self._hub = ShadowHub()
+        return self._hub
+
+    def __getattr__(self, name: str):
+        return getattr(self._get(), name)
+
+    def __repr__(self) -> str:
+        return repr(self._get())
+
+hub: Any = _LazyHub()
