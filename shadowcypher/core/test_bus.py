@@ -3,11 +3,12 @@ ShadowCypher Test Suite — ShadowBus Event Backbone
 Tests subscription, dispatch, error isolation, thread safety, and async support.
 """
 
-import asyncio
 import threading
 import time
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
+
 from shadowcypher.core.bus import ShadowBus
 
 
@@ -88,7 +89,7 @@ class TestErrorIsolation:
 
     def test_multiple_crashes_still_delivers_survivors(self, bus):
         results = []
-        for i in range(3):
+        for _ in range(3):
             bus.subscribe("multi_err", lambda d: (_ for _ in ()).throw(ValueError("boom")))
         bus.subscribe("multi_err", results.append)
         bus.publish("multi_err", "survive")
@@ -131,7 +132,7 @@ class TestThreadSafety:
             done.set()
 
         def subscriber():
-            for i in range(20):
+            for _ in range(20):
                 bus.subscribe("race", lambda d: results.append(d))
                 time.sleep(0.001)
 

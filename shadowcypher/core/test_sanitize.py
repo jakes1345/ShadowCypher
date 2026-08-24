@@ -4,10 +4,17 @@ Tests every validator in core/sanitize.py with both valid and adversarial input.
 """
 
 import pytest
+
 from shadowcypher.core.sanitize import (
-    quote, validate_target, validate_ip, validate_mac,
-    validate_interface, validate_port, validate_ports,
-    validate_filepath, sanitize_bpf_filter,
+    quote,
+    sanitize_bpf_filter,
+    validate_filepath,
+    validate_interface,
+    validate_ip,
+    validate_mac,
+    validate_port,
+    validate_ports,
+    validate_target,
 )
 
 

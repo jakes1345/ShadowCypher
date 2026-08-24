@@ -5,9 +5,10 @@ All tests use temp files — no actual vault data is touched.
 
 import os
 import tempfile
+
 import pytest
 
-from shadowcypher.modules.secure_wipe import SecureWipe, WipeLevel, WipeResult
+from shadowcypher.modules.secure_wipe import SecureWipe, WipeLevel
 
 
 @pytest.fixture

@@ -5,8 +5,9 @@ error recovery, and uuid uniqueness.
 All AI/orchestrator calls are mocked — no real inference.
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock, call
 
 
 @pytest.fixture

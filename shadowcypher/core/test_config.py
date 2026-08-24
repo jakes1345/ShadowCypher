@@ -3,11 +3,11 @@ ShadowCypher Test Suite — Configuration Engine
 Tests the Pydantic config system: defaults, JSON loading, nested access, env overrides.
 """
 
-import pytest
 import json
 import os
-from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 
 class TestConfig:

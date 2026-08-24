@@ -7,8 +7,9 @@ file permissions, and corrupt-registry recovery.
 import json
 import os
 import stat
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 def _make_auth(tmp_path):

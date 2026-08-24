@@ -10,8 +10,9 @@ and mocks time.sleep so lockout tests run in milliseconds.
 import os
 import stat
 import time
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 @pytest.fixture
@@ -45,7 +46,6 @@ class TestKeyGeneration:
         assert m.is_unlocked is True
 
     def test_generate_sets_fernet(self, mgr):
-        from cryptography.fernet import Fernet
         m, _ = mgr
         m.generate_license_key()
         assert m.fernet is not None

@@ -5,6 +5,7 @@ and full expression parsing. No mocking needed — pure function.
 """
 
 import pytest
+
 from shadowcypher.compiler.lexer import ShadowLexer, Token
 
 

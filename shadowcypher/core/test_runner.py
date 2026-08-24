@@ -7,7 +7,9 @@ concurrent tasks, and cleanup.
 import queue
 import threading
 import time
+
 import pytest
+
 from shadowcypher.core.runner import Runner
 
 
@@ -35,31 +37,31 @@ class TestBasicExecution:
         q = queue.Queue()
         runner.execute_task("ECHO", ["echo", "hello"], callback=q.put)
         lines = collect(q)
-        assert any("hello" in l for l in lines)
+        assert any("hello" in line for line in lines)
 
     def test_string_command_delivers_output(self, runner):
         q = queue.Queue()
         runner.execute_task("ECHO_STR", "echo worldtest", callback=q.put)
         lines = collect(q)
-        assert any("worldtest" in l for l in lines)
+        assert any("worldtest" in line for line in lines)
 
     def test_shell_command_delivers_output(self, runner):
         q = queue.Queue()
         runner.execute_task_shell("SHELL", "echo shelltest", callback=q.put)
         lines = collect(q)
-        assert any("shelltest" in l for l in lines)
+        assert any("shelltest" in line for line in lines)
 
     def test_callback_receives_termination_message(self, runner):
         q = queue.Queue()
         runner.execute_task("TERM", ["true"], callback=q.put)
         lines = collect(q)
-        assert any("[MISSION_" in l for l in lines)
+        assert any("[MISSION_" in line for line in lines)
 
     def test_failing_command_delivers_return_code(self, runner):
         q = queue.Queue()
         runner.execute_task("FAIL", ["false"], callback=q.put)
         lines = collect(q)
-        term_lines = [l for l in lines if "[MISSION_" in l]
+        term_lines = [line for line in lines if "[MISSION_" in line]
         assert term_lines
         assert "1" in term_lines[0]  # Return code 1
 
@@ -148,8 +150,6 @@ class TestConcurrency:
         events = [threading.Event() for _ in range(3)]
 
         for i in range(3):
-            idx = i
-
             def make_cb(bucket_idx, ev):
                 def cb(line):
                     buckets[bucket_idx].append(line)

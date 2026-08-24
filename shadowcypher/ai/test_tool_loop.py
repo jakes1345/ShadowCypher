@@ -4,10 +4,11 @@ Ollama is mocked so tests run offline.
 """
 
 import json
-import pytest
-from unittest.mock import patch, MagicMock, call
-from shadowcypher.ai.tool_loop import AgentLoop, AgentTool
+from unittest.mock import patch
 
+import pytest
+
+from shadowcypher.ai.tool_loop import AgentLoop, AgentTool
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -236,8 +237,6 @@ class TestAgentLoop:
             _ollama_final("done"),
         ]
         tool_messages = []
-
-        original_chat = loop2._chat
 
         def intercepting_chat(messages):
             tool_msgs = [m for m in messages if m["role"] == "tool"]
