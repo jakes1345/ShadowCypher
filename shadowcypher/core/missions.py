@@ -193,6 +193,11 @@ class AgenticMission(GhostMission):
             self.report("RUNNING", msg, 0.3)
 
     def execute(self):
+        from shadowcypher.core.stealth import stealth
+        engaged = stealth.engage()
+        if not engaged:
+            self.report("STEALTH_WARN",
+                        "Tor/proxy not available — mission traffic will NOT be anonymised", 0.0)
         mode = "PASSIVE" if self._passive_only else "FULL"
         self.report("START", f"Agentic mission [{mode}] — target: {self.target}", 0.0)
         try:

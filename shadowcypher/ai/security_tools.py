@@ -12,17 +12,19 @@ import urllib.request
 from typing import Optional
 
 from shadowcypher.ai.tool_loop import AgentTool
+from shadowcypher.core.stealth import stealth
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _run(cmd: list, timeout: int = 90) -> str:
-    """Run a command, return stdout+stderr as a string."""
+    """Run a command, routing through proxychains/torsocks when Tor is active."""
     binary = cmd[0]
     if not shutil.which(binary):
         return f"NOT_INSTALLED: {binary} — install it first (e.g. apt install {binary})"
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        wrapped = stealth.wrap_command(cmd)
+        proc = subprocess.run(wrapped, capture_output=True, text=True, timeout=timeout)
         out = (proc.stdout + proc.stderr).strip()
         return out or "(no output)"
     except subprocess.TimeoutExpired:
