@@ -139,6 +139,7 @@ class Runner:
                 callback(f"\n[done: exit {proc.returncode}]")
         except subprocess.TimeoutExpired:
             proc.kill()
+            proc.wait()
             if callback:
                 callback(f"[TIMEOUT] Task {name} exceeded 1800s — killed.")
         except Exception as e:

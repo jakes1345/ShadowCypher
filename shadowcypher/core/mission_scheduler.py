@@ -153,20 +153,19 @@ class MissionScheduler:
             try:
                 current_time = datetime.now(timezone.utc)
 
+                due = []
                 with self.lock:
                     for schedule in self.schedules.values():
                         if not schedule.enabled:
                             continue
-
-                        # Check if it's time to run
                         if schedule.next_run_at is None:
-                            # First run
                             schedule.next_run_at = current_time.isoformat()
-
                         next_run = datetime.fromisoformat(schedule.next_run_at)
                         if current_time >= next_run:
-                            # Time to run!
-                            self._trigger_mission(schedule)
+                            due.append(schedule)
+
+                for schedule in due:
+                    self._trigger_mission(schedule)
 
                 self._save_schedules()
             except Exception as e:
