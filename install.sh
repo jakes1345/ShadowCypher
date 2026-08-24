@@ -87,20 +87,23 @@ if ! python3 -c "import venv" 2>/dev/null; then
 fi
 
 if [ ! -d "$APP_DIR/venv" ]; then
-    python3 -m venv "$APP_DIR/venv"
+    # --system-site-packages lets the venv see python3-gi (GTK) from apt
+    python3 -m venv --system-site-packages "$APP_DIR/venv"
 fi
 source "$APP_DIR/venv/bin/activate"
 pip install --upgrade pip -q
 
-# Install from pyproject.toml (canonical) or requirements.txt fallback
+# Install from pyproject.toml (base deps only — GTK comes from system)
 if [ -f "$APP_DIR/pyproject.toml" ]; then
-    pip install -e "$APP_DIR[all]" -q 2>/dev/null || pip install -e "$APP_DIR" -q
+    pip install -e "$APP_DIR" -q
 elif [ -f "$APP_DIR/requirements.txt" ]; then
     pip install -r "$APP_DIR/requirements.txt" -q
 fi
 
-# PyGObject inside venv needs a nudge on some distros
-python3 -c "import gi" 2>/dev/null || pip install PyGObject -q 2>/dev/null || true
+# Verify GTK is visible (comes from system via --system-site-packages)
+if ! python3 -c "import gi; gi.require_version('Gtk','3.0'); from gi.repository import Gtk" 2>/dev/null; then
+    echo -e "${RED}[WARN]${NC} GTK3 not found. Run: sudo apt install python3-gi gir1.2-gtk-3.0"
+fi
 
 log_succ "Python ecosystem synchronized."
 
