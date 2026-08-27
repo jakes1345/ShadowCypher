@@ -522,9 +522,11 @@ class TestVulnScanner:
         assert hasattr(vs, "nuclei_scan")
         assert hasattr(vs, "audit_target")
 
-    @patch("shadowcypher.core.runner.Runner.execute_task", return_value="tid-003")
-    def test_nuclei_scan(self, mock_exec, vs):
-        vs.nuclei_scan("http://127.0.0.1", on_output=lambda l: None)
+    def test_nuclei_scan_raises_without_ai_engine(self, vs):
+        # register_tool fallback raises ImportError when ai_engine is not installed
+        import pytest
+        with pytest.raises(ImportError, match="ai_engine"):
+            vs.nuclei_scan("http://127.0.0.1", on_output=lambda l: None)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
