@@ -288,7 +288,7 @@ class TestApprovalGate:
 
         assert len(fn_calls) == 0  # Function was never called
 
-    def test_no_approval_gate_runs_tool_regardless(self):
+    def test_no_approval_gate_blocks_requires_approval_tool(self):
         tool = _make_tool("dangerous", requires_approval=True)
         loop = AgentLoop(tools=[tool], model="m")
         called = []
@@ -299,9 +299,9 @@ class TestApprovalGate:
             _ollama_final("done"),
         ]
         with patch.object(loop, "_chat", side_effect=responses):
-            loop.run("task")  # No approval_gate passed
+            loop.run("task")  # No approval_gate passed — must block
 
-        assert len(called) == 1
+        assert len(called) == 0  # Tool must NOT run without an approval gate
 
 
 # ── Async ─────────────────────────────────────────────────────────────────────

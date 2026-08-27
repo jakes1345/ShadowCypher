@@ -7,8 +7,15 @@ Handles Nuclei, Sqlmap, Nikto, and automated vulnerability verification.
 try:
     from ai_engine.autoagent.registry import register_tool
 except ImportError:
-    def register_tool(name):  # no-op when ai_engine not installed
-        return lambda f: f
+    def register_tool(name):
+        def _decorator(func):
+            def _missing(*args, **kwargs):
+                raise ImportError(
+                    f"Tool '{name}' requires the ai_engine package which is not installed. "
+                    "Install ai_engine to use tool registration."
+                )
+            return _missing
+        return _decorator
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target
