@@ -6,14 +6,14 @@ Handles Nuclei, Sqlmap, Nikto, and automated vulnerability verification.
 
 try:
     from ai_engine.autoagent.registry import register_tool
-except ImportError as _ai_engine_err:
+except ImportError:
     def register_tool(name):
         def _decorator(func):
             def _missing(*args, **kwargs):
                 raise ImportError(
                     f"Tool '{name}' requires the ai_engine package which is not installed. "
                     "Install ai_engine to use tool registration."
-                ) from _ai_engine_err
+                )
             return _missing
         return _decorator
 
