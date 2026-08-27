@@ -1,5 +1,5 @@
 """
-ShadowCypher Payload Factory — Level 100 Evasion & Delivery. 
+ShadowCypher Payload Factory — Level 100 Evasion & Delivery.
 Professional-grade shellcode generation with multi-stage encoding and XOR stubs.
 """
 

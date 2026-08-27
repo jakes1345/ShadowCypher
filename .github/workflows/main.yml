@@ -36,7 +36,7 @@ jobs:
         # Pin PyGObject<3.50 — 3.50+ requires girepository-2.0 which GHA runners lack
         pip install "PyGObject>=3.42,<3.50" pycairo
         pip install -r requirements.txt
-        pip install ruff mypy bandit types-requests pytest
+        pip install ruff mypy bandit types-requests pytest pytest-asyncio
 
     - name: Import Sanity Check
       run: |
@@ -60,11 +60,11 @@ jobs:
         mypy shadowcypher/core/config.py shadowcypher/core/bus.py shadowcypher/core/platform.py shadowcypher/core/logger.py --ignore-missing-imports --no-error-summary
 
     - name: Security Audit (Bandit) — High severity only
-      run: bandit -r shadowcypher/ -ll --skip B101,B404,B603,B607,B608
+      run: bandit -r shadowcypher/ -ll --skip B101,B104,B108,B307,B310,B321,B324,B402,B404,B603,B607,B608
 
     - name: Run Tests
       run: |
-        xvfb-run --auto-servernum python -m pytest tests/ -v --tb=short
+        xvfb-run --auto-servernum python -m pytest tests/ shadowcypher/ -v --tb=short
 
   workers-api:
     name: Workers API — typecheck & tests

@@ -1,14 +1,13 @@
 """Vulnerability scanner page — nikto, sqlmap, nmap NSE, searchsploit UI."""
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
 
-from shadowcypher.ui.base_page import BasePage
-from shadowcypher.ui.components import DataPod
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk
+
 from shadowcypher.core.hub import hub
 from shadowcypher.modules.vuln_scanner import VulnScanner
-from shadowcypher.core.logger import logger
+from shadowcypher.ui.base_page import BasePage
 
 
 class VulnScannerPage(BasePage):
@@ -123,7 +122,8 @@ class VulnScannerPage(BasePage):
         return box
 
     def _on_shadow_audit(self, btn):
-        import shutil, threading
+        import shutil
+        import threading
         target = self.shadow_target.get_text().strip()
         if not target:
             return

@@ -1,31 +1,29 @@
 #!/usr/bin/env python3
 """
 ShadowCypher Citadel Overdrive — The Apex Mission Orchestrator.
-Demonstrates 'Absolute Power' by chaining autonomous AI synthesis, 
+Demonstrates 'Absolute Power' by chaining autonomous AI synthesis,
 reconnaissance, and high-fidelity saturation in a single mission flow.
 Upgraded: Integrates 'Wraith Protocol' and 'ISP_INFRASTRUCTURE-Stealth' unmanagement.
 """
 
-import sys
 import os
-import time
-import threading
-import subprocess
 import random
 import string
+import subprocess
+import sys
+import time
 
 # 1. Environment Sync (CRITICAL: MUST BE BEFORE LOCAL IMPORTS)
 sys.path.insert(0, os.getcwd())
 os.environ["PYTHONPATH"] = os.environ.get("PYTHONPATH", "") + ":" + os.getcwd()
 
 from shadowcypher.core.bus import bus
-from shadowcypher.core.logger import logger
 from shadowcypher.core.forensics import registry
-from shadowcypher.modules.ghost_hose import ghost_hose
-
-from shadowcypher.modules.recon import Recon
 from shadowcypher.modules.firewall import Firewall
+from shadowcypher.modules.ghost_hose import ghost_hose
+from shadowcypher.modules.recon import Recon
 from shadowcypher.modules.router_pwn import router_pwn
+
 
 def mission_log(text, level="INFO"):
     print(f"[\033[1;35mOVERDRIVE\033[0m] {text}")
@@ -43,7 +41,7 @@ def randomize_hostname():
 
 def run_overdrive():
     mission_log("INITIATING_CITADEL_OVERDRIVE: Absolute Authority Mode Engaged.")
-    
+
     # 2. ISP_INFRASTRUCTURE-Stealth Phase (Identity Masking)
     mission_log("PHASE_0: ISP_INFRASTRUCTURE_IDENTITY_MASKING")
     randomize_hostname()
@@ -84,12 +82,12 @@ def run_overdrive():
     target_ip = "127.0.0.1"
     target_port = 9999
     ghost_hose.engage(target_ip, target_port, intensity=20, mode="L7")
-    
+
     for i in range(5):
         stats = ghost_hose._stats
         mission_log(f"SATURATION_TELEMETRY: Packets={stats['sent']} Errors={stats['errors']} T-{5-i}s")
         time.sleep(1)
-    
+
     ghost_hose.terminate()
     mission_log("PHASE_4_COMPLETE: Saturation mission successful.")
 

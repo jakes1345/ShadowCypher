@@ -610,7 +610,7 @@ class TestWireless:
         from shadowcypher.modules.wireless import Wireless
         assert hasattr(Wireless, "list_interfaces")
 
-    @patch("shadowcypher.modules.wireless.subprocess.Popen")
+    @patch("shadowcypher.core.runner.subprocess.Popen")
     def test_list_interfaces(self, mock_popen):
         mock_proc = MagicMock()
         mock_proc.stdout = iter(["wlan0\n"])
@@ -659,8 +659,8 @@ class TestCVEFeed:
 class TestChaos:
     @pytest.fixture
     def chaos(self):
-        from shadowcypher.modules.chaos import ChaosOrchestrator
-        return ChaosOrchestrator()
+        from shadowcypher.modules.chaos import ChaosEngine
+        return ChaosEngine()
 
     def test_instantiates(self, chaos):
         assert chaos is not None
@@ -679,7 +679,7 @@ class TestChaos:
         mock_sock.return_value = MagicMock()
         mock_sock.return_value.sendto.return_value = None
         lines = []
-        chaos.start_udp_flood("127.0.0.1", 9, duration=0, threads=1, on_output=lines.append)
+        chaos.start_udp_flood("127.0.0.1", 9, duration=0, threads=1)
         time.sleep(0.3)
         chaos.stop()
 

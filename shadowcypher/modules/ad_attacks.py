@@ -1,9 +1,10 @@
 """Active Directory & Internal Network Attacks — Impacket and Responder."""
 
+import os
+
+from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_target
-from shadowcypher.core.logger import logger
-import os
 
 
 class ADAttacks:

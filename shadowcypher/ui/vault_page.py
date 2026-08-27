@@ -3,19 +3,19 @@ Shadow Vault — Encrypted Artifact Storage & Intelligence Crypt.
 AES-256-GCM encryption for mission artifacts with integrity verification.
 """
 
-import os
-import time
 import hashlib
 import json
+import os
+import time
 
 import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib, Gdk, Pango
 
-from shadowcypher.ui.base_page import BasePage
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk
+
 from shadowcypher.core.hub import hub
-from shadowcypher.core.logger import logger
-from shadowcypher.modules.secure_wipe import secure_wipe, WipeLevel
+from shadowcypher.modules.secure_wipe import WipeLevel, secure_wipe
+from shadowcypher.ui.base_page import BasePage
 
 try:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -152,7 +152,7 @@ class ShadowVaultPage(BasePage):
             os.makedirs(findings_dir, exist_ok=True)
             self.terminal.log(f"VAULT: Created findings directory: {findings_dir}", "WARN")
 
-        for root, dirs, files in os.walk(findings_dir):
+        for root, _dirs, files in os.walk(findings_dir):
             for f in sorted(files):
                 path = os.path.join(root, f)
                 try:
@@ -362,7 +362,7 @@ class ShadowVaultPage(BasePage):
             flags=0,
             message_type=Gtk.MessageType.WARNING,
             buttons=Gtk.ButtonsType.YES_NO,
-            text=f"WIPE ENTIRE DIRECTORY?",
+            text="WIPE ENTIRE DIRECTORY?",
         )
         confirm.format_secondary_text(
             f"Path: {target_dir}\nLevel: {level.value.upper()}\n\n"

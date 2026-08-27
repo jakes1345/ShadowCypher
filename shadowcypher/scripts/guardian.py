@@ -177,7 +177,7 @@ def cmd_scan():
         print(f"  {rc}[{dev['risk']:6s}]{C['N']} {C['Y']}{dev['ip']:15s}{C['N']} "
               f"{dev['mac']:17s}  {dev.get('vendor',''):20s} {dev['os_guess']}{is_gw}")
         if dev["open_ports"]:
-            port_str = ", ".join(f"{p}/{s}" for p, s in zip(dev["open_ports"], dev["services"]))
+            port_str = ", ".join(f"{p}/{s}" for p, s in zip(dev["open_ports"], dev["services"], strict=False))
             print(f"           Ports: {C['D']}{port_str}{C['N']}")
         if dev["risk"] == "HIGH":
             dangerous = set(dev["open_ports"]).intersection({23, 445, 3389, 7547})

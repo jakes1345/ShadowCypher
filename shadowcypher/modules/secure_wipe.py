@@ -12,13 +12,9 @@ multi-pass, since wear-leveling makes multi-pass rewrites unreliable.
 """
 
 import os
-import shutil
-import struct
-import stat
-import hashlib
 import secrets
-import threading
-from dataclasses import dataclass, field
+import stat
+from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Optional
 
@@ -138,7 +134,7 @@ class SecureWipe:
 
         # Collect all files depth-first (files before dirs)
         all_files = []
-        for root, dirs, files in os.walk(path, topdown=False):
+        for root, _dirs, files in os.walk(path, topdown=False):
             for fname in files:
                 all_files.append(os.path.join(root, fname))
 
@@ -149,7 +145,7 @@ class SecureWipe:
             results.append(r)
 
         # Remove empty directories (bottom-up)
-        for root, dirs, files in os.walk(path, topdown=False):
+        for root, _dirs, _files in os.walk(path, topdown=False):
             try:
                 os.rmdir(root)
             except OSError:

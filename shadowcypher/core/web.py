@@ -350,20 +350,20 @@ class StealthFetcher:
             page.add_init_script("""
                 // Override webdriver flag
                 Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                
+
                 // Chrome runtime
                 window.chrome = { runtime: {}, loadTimes: function(){}, csi: function(){} };
-                
+
                 // Plugins array
                 Object.defineProperty(navigator, 'plugins', {
                     get: () => [1, 2, 3, 4, 5],
                 });
-                
+
                 // Languages
                 Object.defineProperty(navigator, 'languages', {
                     get: () => ['en-US', 'en'],
                 });
-                
+
                 // Permission query
                 const originalQuery = window.navigator.permissions.query;
                 window.navigator.permissions.query = (parameters) => (

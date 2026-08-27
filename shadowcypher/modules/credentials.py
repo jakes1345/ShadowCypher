@@ -5,7 +5,7 @@ hash identification, and macOS Keychain auditing.
 """
 
 import tempfile
-import os
+
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 
@@ -38,9 +38,10 @@ class Credentials(BaseModule):
     def hydra_attack(target, service, username="admin", passlist=None,
                      extra_args="", on_output=None, on_complete=None):
         """Launch a Hydra brute-force attack with timing-based Pulse ingestion."""
-        from shadowcypher.core.runner import runner
-        from shadowcypher.core.pulse import pulse
         import time
+
+        from shadowcypher.core.pulse import pulse
+        from shadowcypher.core.runner import runner
 
         wordlist = passlist or "/usr/share/wordlists/rockyou.txt"
         args = ["hydra", "-l", username, "-P", wordlist, "-t", "4"]
@@ -152,7 +153,9 @@ class Credentials(BaseModule):
 
     def deep_leak_correlation(self, target_email, on_output=None):
         """Check breach exposure via HaveIBeenPwned public API (no auth, domain-level)."""
-        import urllib.request, urllib.error, json
+        import json
+        import urllib.error
+        import urllib.request
         if on_output: on_output(f"[CREDS] BREACH_LOOKUP: {target_email}\n")
         try:
             url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{urllib.request.quote(target_email)}?truncateResponse=false"

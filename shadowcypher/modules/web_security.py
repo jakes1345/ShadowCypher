@@ -203,7 +203,7 @@ class WebSecurity:
 
 class Bypass403Tool:
     """
-    A multi-vector tool designed to bypass HTTP 403 Forbidden errors 
+    A multi-vector tool designed to bypass HTTP 403 Forbidden errors
     by manipulating headers, paths, and request structure.
     """
     def __init__(self, base_url: str, headers: dict = None):

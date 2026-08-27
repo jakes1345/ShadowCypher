@@ -51,7 +51,7 @@ class AdPage(BasePage):
         self._target_entries = {}
         placeholders = ["corp.local", "192.168.1.10", "administrator", "Password1 or NTLM hash", "findings/kerberoast.txt"]
 
-        for i, (lbl, ph) in enumerate(zip(labels, placeholders)):
+        for i, (lbl, ph) in enumerate(zip(labels, placeholders, strict=False)):
             k = Gtk.Label(label=lbl + ":", xalign=0)
             entry = Gtk.Entry()
             entry.set_placeholder_text(ph)
