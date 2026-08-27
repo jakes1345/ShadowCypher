@@ -1,6 +1,6 @@
 """
 ShadowCypher Test Suite — CryptoManager DRM
-Tests Fernet key generation, unlock flow, lockout-after-failures,
+Tests AES-256-GCM key generation, unlock flow, lockout-after-failures,
 lockout expiry, and the require_unlock decorator.
 
 Uses yield fixtures so the config patch stays active through the entire test,
@@ -26,6 +26,11 @@ def mgr(tmp_path):
         yield m, tmp_path
 
 
+def _fresh_key() -> str:
+    """Return a valid 32-byte key as a 64-char hex string."""
+    return os.urandom(32).hex()
+
+
 class TestKeyGeneration:
 
     def test_generate_creates_key_file(self, mgr):
@@ -34,21 +39,21 @@ class TestKeyGeneration:
         key_file = os.path.join(str(tmp_path), ".session-secret")
         assert os.path.exists(key_file)
 
-    def test_generated_key_is_valid_fernet(self, mgr):
-        from cryptography.fernet import Fernet
+    def test_generated_key_is_hex_string(self, mgr):
         m, _ = mgr
         key = m.generate_license_key()
-        Fernet(key.encode())  # Must not raise
+        assert len(key) == 64
+        assert all(c in "0123456789abcdef" for c in key)
 
     def test_generate_sets_unlocked(self, mgr):
         m, _ = mgr
         m.generate_license_key()
         assert m.is_unlocked is True
 
-    def test_generate_sets_fernet(self, mgr):
+    def test_generate_sets_key(self, mgr):
         m, _ = mgr
         m.generate_license_key()
-        assert m.fernet is not None
+        assert m._key is not None
 
     def test_key_file_permissions(self, mgr):
         m, tmp_path = mgr
@@ -60,14 +65,12 @@ class TestKeyGeneration:
 
 class TestUnlock:
 
-    def test_valid_fernet_key_unlocks(self, mgr):
-        from cryptography.fernet import Fernet
+    def test_valid_key_unlocks(self, mgr):
         m, _ = mgr
         with patch("shadowcypher.core.crypto.time") as mock_time:
             mock_time.time.return_value = time.time()
             mock_time.sleep = lambda _: None
-            key = Fernet.generate_key().decode()
-            assert m.unlock_system(key) is True
+            assert m.unlock_system(_fresh_key()) is True
         assert m.is_unlocked is True
 
     def test_garbage_key_fails(self, mgr):
@@ -75,7 +78,7 @@ class TestUnlock:
         with patch("shadowcypher.core.crypto.time") as mock_time:
             mock_time.time.return_value = time.time()
             mock_time.sleep = lambda _: None
-            result = m.unlock_system("definitely-not-a-fernet-key")
+            result = m.unlock_system("definitely-not-a-valid-key")
         assert result is False
         assert m.is_unlocked is False
 
@@ -90,15 +93,13 @@ class TestUnlock:
             assert m._failed_attempts == 2
 
     def test_success_resets_failed_attempts(self, mgr):
-        from cryptography.fernet import Fernet
         m, _ = mgr
         with patch("shadowcypher.core.crypto.time") as mock_time:
             mock_time.time.return_value = time.time()
             mock_time.sleep = lambda _: None
             m.unlock_system("bad")
             assert m._failed_attempts == 1
-            key = Fernet.generate_key().decode()
-            m.unlock_system(key)
+            m.unlock_system(_fresh_key())
             assert m._failed_attempts == 0
 
 
@@ -120,43 +121,37 @@ class TestLockout:
         assert os.path.exists(lockout_path)
 
     def test_fresh_lockout_blocks_unlock(self, mgr):
-        from cryptography.fernet import Fernet
         m, tmp_path = mgr
         lockout_path = os.path.join(str(tmp_path), ".drm-lockout")
         with open(lockout_path, "w") as f:
             f.write(str(time.time()))
-        key = Fernet.generate_key().decode()
         with patch("shadowcypher.core.crypto.time") as mock_time:
             mock_time.time.return_value = time.time()
             mock_time.sleep = lambda _: None
-            result = m.unlock_system(key)
+            result = m.unlock_system(_fresh_key())
         assert result is False
 
     def test_expired_lockout_cleared_and_allows_unlock(self, mgr):
-        from cryptography.fernet import Fernet
         m, tmp_path = mgr
         lockout_path = os.path.join(str(tmp_path), ".drm-lockout")
         with open(lockout_path, "w") as f:
             f.write(str(time.time() - 7200))  # 2 hours ago
-        key = Fernet.generate_key().decode()
         with patch("shadowcypher.core.crypto.time") as mock_time:
             mock_time.time.return_value = time.time()
             mock_time.sleep = lambda _: None
-            result = m.unlock_system(key)
+            result = m.unlock_system(_fresh_key())
         assert result is True
         assert not os.path.exists(lockout_path)
 
     def test_corrupt_lockout_file_cleared(self, mgr):
-        from cryptography.fernet import Fernet
         m, tmp_path = mgr
         lockout_path = os.path.join(str(tmp_path), ".drm-lockout")
         with open(lockout_path, "w") as f:
             f.write("not a timestamp")
-        key = Fernet.generate_key().decode()
         with patch("shadowcypher.core.crypto.time") as mock_time:
             mock_time.time.return_value = time.time()
             mock_time.sleep = lambda _: None
-            result = m.unlock_system(key)
+            result = m.unlock_system(_fresh_key())
         assert result is True
 
 
@@ -174,12 +169,11 @@ class TestRequireUnlockDecorator:
         assert "ACCESS DENIED" in result or "DRM_LOCK" in result
 
     def test_unlocked_calls_through(self, mgr):
-        from cryptography.fernet import Fernet
         m, _ = mgr
         with patch("shadowcypher.core.crypto.time") as mock_time:
             mock_time.time.return_value = time.time()
             mock_time.sleep = lambda _: None
-            m.unlock_system(Fernet.generate_key().decode())
+            m.unlock_system(_fresh_key())
 
         @m.require_unlock
         def protected():
@@ -188,12 +182,11 @@ class TestRequireUnlockDecorator:
         assert protected() == "secret_data"
 
     def test_decorator_passes_args_through(self, mgr):
-        from cryptography.fernet import Fernet
         m, _ = mgr
         with patch("shadowcypher.core.crypto.time") as mock_time:
             mock_time.time.return_value = time.time()
             mock_time.sleep = lambda _: None
-            m.unlock_system(Fernet.generate_key().decode())
+            m.unlock_system(_fresh_key())
 
         @m.require_unlock
         def add(a, b):

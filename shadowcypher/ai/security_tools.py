@@ -5,6 +5,7 @@ Tools that send active traffic to the target are marked requires_approval=True.
 """
 
 import json
+import re
 import shutil
 import socket
 import subprocess
@@ -64,14 +65,29 @@ def _run(cmd: list, timeout: int = 90) -> str:
 
 # ── Tool Functions ────────────────────────────────────────────────────────────
 
-_NMAP_BLOCKED = ("--script", "--script-args", "--script-help", "--proxies", "-iL", "-oX", "-oG", "--datadir")
+# Strict allowlist: each token in the flags string must match to proceed.
+# Anything not on this list (scripts, file I/O, proxy, raw packet crafting) is denied.
+_NMAP_ALLOWED_RE = re.compile(
+    r'^('
+    r'-s[VnSTU]'               # scan modes: version, no-ping, SYN, TCP, UDP
+    r'|-[FvAO]'                # fast, verbose, aggressive, OS detection
+    r'|-vv?'                   # extra verbosity (-vv, -vvv)
+    r'|--version-light'
+    r'|--version-intensity'
+    r'|--open'
+    r'|-T[0-5]'                # timing templates
+    r'|-p(?:-|[\d,\-]+)?'      # port specs: -p, -p-, -p80, -p80,443
+    r'|[\d][\d,\-]*'           # bare port list following -p (e.g. 21,22,443)
+    r')$'
+)
+
 
 def run_nmap(target: str,
              flags: str = "-sV --version-light -p 21,22,23,25,53,80,110,443,445,3306,3389,8080,8443") -> str:
     """Port scan with service version detection."""
     for token in flags.split():
-        if any(token.startswith(b) for b in _NMAP_BLOCKED):
-            return f"BLOCKED: flag {token!r} is not permitted in agentic context"
+        if not _NMAP_ALLOWED_RE.match(token):
+            return f"BLOCKED: flag {token!r} is not in the permitted nmap flag allowlist"
     return _run(["nmap"] + flags.split() + [target], timeout=120)
 
 
@@ -197,12 +213,13 @@ def check_smb(target: str) -> str:
 
 def check_ftp_anon(host: str) -> str:
     """Check if FTP allows anonymous login."""
+    import ftplib
+    proxy = _tor_proxy()
+    sock = None
+    ftp = None
     try:
-        import ftplib
-        proxy = _tor_proxy()
         if proxy:
-            # Inject a SOCKS5 socket directly into ftplib so the control
-            # connection is routed through Tor without monkey-patching globals.
+            # Inject SOCKS5 socket so control connection routes through Tor.
             sock = _proxy_socket()
             sock.settimeout(5)
             sock.connect((host, 21))
@@ -214,15 +231,19 @@ def check_ftp_anon(host: str) -> str:
         else:
             ftp = ftplib.FTP(timeout=5)
             ftp.connect(host, 21)
-        try:
-            ftp.login("anonymous", "probe@test.local")
-            files = ftp.nlst()
-            ftp.quit()
-            return f"ANONYMOUS_LOGIN: allowed\nFiles: {files[:20]}"
-        except ftplib.error_perm:
-            return "ANONYMOUS_LOGIN: denied"
+        ftp.login("anonymous", "probe@test.local")
+        files = ftp.nlst()
+        return f"ANONYMOUS_LOGIN: allowed\nFiles: {files[:20]}"
+    except ftplib.error_perm:
+        return "ANONYMOUS_LOGIN: denied"
     except Exception as e:
         return f"FTP_ERROR: {e}"
+    finally:
+        for obj in filter(None, [ftp, sock]):
+            try:
+                obj.close()
+            except Exception:
+                pass
 
 
 # ── Tool Registry ─────────────────────────────────────────────────────────────

@@ -149,9 +149,11 @@ class AgentLoop:
                     tool_result = f"UNKNOWN_TOOL: {tool_name}"
                     emit(f"[TOOL:UNKNOWN] {tool_name}")
                 else:
-                    if tool.requires_approval and approval_gate:
-                        approved = approval_gate(tool_name, raw_args)
-                        if not approved:
+                    if tool.requires_approval:
+                        if not approval_gate:
+                            tool_result = f"BLOCKED: {tool_name} requires operator approval but no approval gate is configured"
+                            emit(f"[TOOL:BLOCKED] {tool_name}")
+                        elif not approval_gate(tool_name, raw_args):
                             tool_result = f"SKIPPED: {tool_name} not approved"
                             emit(f"[TOOL:SKIPPED] {tool_name}")
                         else:
