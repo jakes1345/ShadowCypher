@@ -158,34 +158,46 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         # 4. Final Initialization
         self._page_registry = {}
 
-        self._switch_to_page("Central Command HUD")
-
-        # Ensure sidebar selection reflects the initial page
-        first_row = self.sidebar_list.get_row_at_index(1)
-        if first_row is None:
-            first_row = self.sidebar_list.get_row_at_index(0)
-        if first_row:
-            self.sidebar_list.select_row(first_row)
-
         # Hide to tray on close instead of destroying the window
         self.connect("delete-event", self._on_delete_event)
 
         # Subscribe to Autonomous Ticket Events
         bus.subscribe("new_ticket", self._on_new_ticket)
 
-        # Tor probe runs off-thread every 10s; cached result read on main thread
+        # Single persistent background thread: probes Tor every 10s, caches result
         self._tor_up = False
-        threading.Thread(target=self._tor_probe_worker, daemon=True).start()
+        threading.Thread(target=self._tor_probe_worker, daemon=True, name="TorProbe").start()
 
-        # Telemetry tick — 3s is plenty, no need to hammer every 2s
+        # Hub summary is fetched off the GTK main thread to avoid blocking the UI
+        self._hub_summary: dict = {}
+        threading.Thread(target=self._hub_summary_worker, daemon=True, name="HubSummary").start()
+
+        # Telemetry tick — 3s is plenty
         GLib.timeout_add(3000, self._pulse_tick)
 
         self.show_all()
+
+        # Defer first page load until the window is fully realized and painted.
+        # Loading pages before realization causes the black-window-on-launch bug
+        # because many GTK widgets (WebKit, DrawingArea, etc.) require a realized
+        # parent to paint their first frame correctly.
+        GLib.idle_add(self._load_initial_page)
 
         # Auto-start tour on first launch (after UI is visible and welcome is done)
         if not tour_completed():
             # Delay slightly so the window fully renders before tour slides up
             GLib.timeout_add(800, self._maybe_start_tour)
+
+    def _load_initial_page(self) -> bool:
+        """Load the landing page after the window is realized. One-shot idle callback."""
+        self._switch_to_page("Central Command HUD")
+        # Sync sidebar highlight to the initial page
+        first_row = self.sidebar_list.get_row_at_index(1)
+        if first_row is None:
+            first_row = self.sidebar_list.get_row_at_index(0)
+        if first_row:
+            self.sidebar_list.select_row(first_row)
+        return False  # one-shot
 
     def _maybe_start_tour(self) -> bool:
         from shadowcypher.ui.tour import tour_completed
@@ -218,8 +230,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         bar.show_all()
 
     def _pulse_tick(self) -> bool:
-        from shadowcypher.core.hub import hub
-
         try:
             # 1. /proc reads — fast, no I/O blocking
             vitals = platform_engine.get_system_vitals()
@@ -227,8 +237,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             self.cpu_label.set_text(f"CPU_LOAD: [{'|'*int(cpu/10)}{'.'*(10-int(cpu/10))}] {cpu:.1f}%")
             self.mem_label.set_text(f"MEM_PRESSURE: [{'|'*int(mem/10)}{'.'*(10-int(mem/10))}] {mem:.1f}%")
 
-            # 2. Tactical metrics — flat dict (hub.get_tactical_summary() flattens telemetry)
-            summary = hub.get_tactical_summary()
+            # 2. Tactical metrics — read the off-thread cache (_hub_summary_worker)
+            summary = self._hub_summary
             swarm_count = summary.get("swarm_nodes", 0)
             load_avg = summary.get("load_avg", 0.0)
             self.net_label.set_text(f"NET_ENTROPY: {load_avg:.2f}")
@@ -258,20 +268,30 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             _log.warning("app", f"PULSE_TICK_ERROR: {_e}")
         return True
 
-    def _tor_probe_worker(self) -> bool:
-        """Background thread: probe Tor port every 10s, cache result."""
+    def _tor_probe_worker(self) -> None:
+        """Single persistent background thread: probe Tor port every 10s."""
         import socket as _sock
-        try:
-            s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
-            s.settimeout(0.5)
-            self._tor_up = s.connect_ex(("127.0.0.1", 9050)) == 0
-            s.close()
-        except Exception:
-            self._tor_up = False
-        GLib.timeout_add_seconds(10, lambda: (
-            threading.Thread(target=self._tor_probe_worker, daemon=True).start(), False
-        )[-1])
-        return False
+        import time as _time
+        while True:
+            try:
+                s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
+                s.settimeout(0.5)
+                self._tor_up = s.connect_ex(("127.0.0.1", 9050)) == 0
+                s.close()
+            except Exception:
+                self._tor_up = False
+            _time.sleep(10)
+
+    def _hub_summary_worker(self) -> None:
+        """Single persistent background thread: refresh hub summary every 3s."""
+        import time as _time
+        while True:
+            try:
+                from shadowcypher.core.hub import hub
+                self._hub_summary = hub.get_tactical_summary()
+            except Exception:
+                pass
+            _time.sleep(3)
 
     def _on_new_ticket(self, data: dict):
         handle = data.get("handle", "Unknown")
@@ -445,6 +465,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 err_box.pack_start(detail, False, False, 0)
                 self._page_registry[name] = err_box
                 self._page_container.add_named(err_box, name)
+                err_box.show_all()
 
         # Switch instantly if requested
         if make_visible:

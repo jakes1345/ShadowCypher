@@ -13,6 +13,60 @@ interface Env {
   SHADOW_FILES: R2Bucket;
 }
 
+interface ReleaseManifest {
+  version: string;
+  notes: string;
+  pub_date: string;
+  platforms: Record<string, { url: string; signature: string }>;
+}
+
+function semverGt(a: string, b: string): boolean {
+  const norm = (v: string) => v.replace(/^v/, "").split(".").map(Number);
+  const [aMaj, aMin, aPat] = norm(a);
+  const [bMaj, bMin, bPat] = norm(b);
+  if (aMaj !== bMaj) return aMaj > bMaj;
+  if (aMin !== bMin) return aMin > bMin;
+  return aPat > bPat;
+}
+
+async function serveTauriUpdate(
+  env: Env,
+  target: string,
+  arch: string,
+  clientVersion: string,
+): Promise<Response> {
+  const obj = await env.SHADOW_FILES.get("releases/manifest.json");
+  if (!obj) return new Response(null, { status: 204 });
+
+  let m: ReleaseManifest;
+  try {
+    m = await obj.json<ReleaseManifest>();
+  } catch {
+    return new Response(null, { status: 204 });
+  }
+
+  const latest = m.version.replace(/^v/, "");
+  if (!semverGt(latest, clientVersion.replace(/^v/, ""))) {
+    return new Response(null, { status: 204 });
+  }
+
+  const platform = m.platforms?.[`${target}-${arch}`];
+  if (!platform?.url || !platform?.signature) {
+    return new Response(null, { status: 204 });
+  }
+
+  return Response.json(
+    {
+      version: latest,
+      notes: m.notes ?? "",
+      pub_date: m.pub_date ?? new Date().toISOString(),
+      url: platform.url,
+      signature: platform.signature,
+    },
+    { headers: { "Cache-Control": "public, max-age=60", "Access-Control-Allow-Origin": "*" } },
+  );
+}
+
 const MIME: Record<string, string> = {
   iso:   "application/x-iso9660-image",
   apk:   "application/vnd.android.package-archive",
@@ -151,6 +205,11 @@ export default {
     // GET /manifest.json
     if (segments[0] === "manifest.json") {
       return serveFile(env, "releases/manifest.json", "manifest.json");
+    }
+
+    // GET /api/tauri/<target>/<arch>/<current_version>  — Tauri v2 updater endpoint
+    if (segments[0] === "api" && segments[1] === "tauri" && segments.length >= 5) {
+      return serveTauriUpdate(env, segments[2], segments[3], segments[4]);
     }
 
     const version = segments[0]; // e.g. "latest" or "v1.0.0"

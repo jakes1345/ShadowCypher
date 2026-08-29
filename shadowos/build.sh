@@ -52,9 +52,9 @@ if [[ -d "$REPO_ROOT/assets" ]]; then
 fi
 
 # Native icons + launch entrypoint
-if [[ -d "$REPO_ROOT/shadowcypher/native/icons" ]]; then
+if [[ -d "$REPO_ROOT/native/icons" ]]; then
   mkdir -p "$ISO_OPT/native/icons"
-  rsync -a "$REPO_ROOT/shadowcypher/native/icons/" "$ISO_OPT/native/icons/"
+  rsync -a "$REPO_ROOT/native/icons/" "$ISO_OPT/native/icons/"
 fi
 [[ -f "$REPO_ROOT/native/launch.sh" ]] && cp -f "$REPO_ROOT/native/launch.sh" "$ISO_OPT/launch.sh"
 [[ -f "$ISO_OPT/launch.sh" ]] || cp -f "$PROFILE/airootfs/opt/shadowcypher/launch.sh" "$ISO_OPT/launch.sh" 2>/dev/null || true
