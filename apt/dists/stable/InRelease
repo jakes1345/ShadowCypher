@@ -9,26 +9,26 @@ Version: 2.2.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Thu, 27 Aug 2026 01:47:28 +0000
+Date: Sat, 29 Aug 2026 22:38:04 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- 536474103b3d69d026ce2e9159924bd3 29 main/binary-amd64/Packages.gz
+ f6ec8c3a48b70e152c972a91b3cfaa47 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- 65b5863b5da541a837a9ebe2b970475963f064803d07f425c5635a3c94fcfd4a 29 main/binary-amd64/Packages.gz
+ b05c5be0e2c0210278f0d06038db17779bfc90e2f6e53e96b93d070c7798b8af 29 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmqPlzAACgkQ2fHRjxMT
-8IP/YA/+JzmFtvosqHj0ktDTU2TUEhGSofY+R3nqUiCJoepegnRtY5Qjz9OaZ5fn
-TInzzwkeAso71OqxfB4Yd3/2XGr6aBGko7XjnozkjyrhRS9leuWaOdlH7JTLnoht
-gRGXAjdDcBZAXCYsNw3M8G8MlMqjfqInFq/vHZfWEn1AUyb4yIO/UfdRuqklBrEv
-x8AA7fsFYLOFRS4lN0FoAkw1G0T1lBh7FGbDfNKiyFyJmx/6j71U+tteW8cwDYZp
-9joYyTK0+F0ei85vhe8fDhOa2kw+0I9IuUZA4X8ve1iWg3ibjDoDVEX1W6sV2nwU
-Hqzro12q8NmUMw8ikQeQXo6UlPbQFkz4i+qrXSrU549gjpFrzDLWaU28qEoAy279
-l7zBn8aUUmxr3xaVVtQs/cpnqpM0kOJhxUz7GrRMqxurJp7Q4bskwauSVU3q69BT
-K78AEOM1ZRf1o5sMrv/K+Au9kupNTOLm35uzjbMFRJEiZwt6I7ekphQHWzimDbgJ
-YoSq0xaFafYASc0vitPVTDHZ43muy4aUX9xe5dcObogmHnIpZTMorizSNhTeIvfZ
-NYhlxUSn2fLD3SWS0hhBiMFRSCH5A/9NMNtY5y5e4lihipnihLgMEM6bUv9XMG8A
-DMh0lMCdRYvx10jUh9R2CAfz4zhKf8qCHAHTPQ7gGAa0i9UBHK0=
-=La34
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmqTX0wACgkQ2fHRjxMT
+8IMkFg/9F4rXq86gYqsSHynVszi48Y1ZD7JKxlDeVs6cmkkZiJ5eKbny1wvkLWPZ
+jdklgv18vdMZnrQKuX4nuC2vVEmZcqr9GJrHZgQzQURpzAiX3gSEE3BpIUtjdGFP
+nZiPHl2QWnATAdKcK6pMk/7hQW9c3UlT+Pj/MScywgjJnX7F8crP5x1103ypKEzl
+ukpld0dC8bhFk8QHtn3yF6c4VWKMuj/5whoWzjTqfk5VJrxQdy2VR5i3y0iyREpi
+gizecD5tN0EiDtvLmML91A3Og91IZywviyQ9wYz17QNoEBqgNoteS+GmfKuBpije
+VEQjmg4nR8vX5nqVfMbr6Cx03gbFVgxpkGReSeslorUCeUuBakAC3YLHjp/lUs1r
+tsiVjS7T6JMb8ihdwHL7rZwHzzAAfIUhSb9JHRswaJRlL3eO804ugDDONUOCDvxg
+A24uI7j9W1dL7i/gdhY6tvjZvJ5QaUg6Z+h3FUS6aTraZZmSV3jVXn5MsrBfsiGs
+2BdDzFY/dtdBivrTOMD+q+Q6FS33q+TU0d8IeZ4Az1VSkcaWOY+xcBjA9kyv5Nyu
+Or+NLszezMcBlmbRPK90lT/cw7Ze12NUe31MTkCH8FXXz1C0OLHteTTuK6Zg96tP
+xn4jIpDKItXkx7L49Pzc66jimBi4CDV5sUFkmixM1dAKue++oB8=
+=B40f
 -----END PGP SIGNATURE-----
