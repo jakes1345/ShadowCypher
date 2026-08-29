@@ -10,7 +10,9 @@ RESET='\033[0m'
 
 INSTALL_DIR="$HOME/.local/share/shadowcypher-agent"
 BIN_DIR="$HOME/.local/bin"
-AGENT_URL="https://shadowcypher.site/agent/shadowcypher_agent.py"
+GITHUB_REPO="jakes1345/ShadowCypher"
+GITHUB_API="https://api.github.com"
+AGENT_FALLBACK_URL="https://shadowcypher.site/agent/shadowcypher_agent.py"
 
 echo -e "\n${CYAN}${BOLD}ShadowCypher Guardian Agent${RESET}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
@@ -41,8 +43,35 @@ echo "  Python:   $("$PY" --version)"
 
 # ── 2. Download agent ────────────────────────────────────────────────────────
 mkdir -p "$INSTALL_DIR" "$BIN_DIR"
+
+# Try GitHub releases first (agent-v* tags); fall back to shadowcypher.site
+AGENT_URL=""
+echo "[*] Looking up latest release..."
+RELEASE_JSON="$(curl -sSL --max-time 10 \
+    -H "Accept: application/vnd.github+json" \
+    "$GITHUB_API/repos/$GITHUB_REPO/releases" 2>/dev/null || true)"
+if [[ -n "$RELEASE_JSON" ]]; then
+    AGENT_URL="$(echo "$RELEASE_JSON" | python3 -c "
+import sys, json
+releases = json.load(sys.stdin)
+for r in releases:
+    if r.get('tag_name','').startswith('agent-v') and not r.get('prerelease') and not r.get('draft'):
+        for a in r.get('assets', []):
+            if a['name'] == 'shadowcypher_agent.py':
+                print(a['browser_download_url'])
+                sys.exit(0)
+" 2>/dev/null || true)"
+fi
+
+if [[ -z "$AGENT_URL" ]]; then
+    echo "[*] No GitHub release found — using latest from shadowcypher.site"
+    AGENT_URL="$AGENT_FALLBACK_URL"
+else
+    echo "[*] Found release asset: $AGENT_URL"
+fi
+
 echo "[*] Downloading agent to $INSTALL_DIR..."
-curl -sSL "$AGENT_URL" -o "$INSTALL_DIR/shadowcypher_agent.py"
+curl -fsSL "$AGENT_URL" -o "$INSTALL_DIR/shadowcypher_agent.py"
 chmod +x "$INSTALL_DIR/shadowcypher_agent.py"
 
 # ── 3. Create venv and install deps ─────────────────────────────────────────
@@ -87,6 +116,7 @@ echo -e "${CYAN}${BOLD}✓ Guardian Agent installed${RESET}"
 echo ""
 echo "  Commands:"
 echo "    shadow-agent status            # check daemon status"
+echo "    shadow-agent update            # check for and apply updates"
 echo "    shadow-agent once              # run a single scan"
 echo "    shadow-agent uninstall-service # remove daemon"
 echo ""

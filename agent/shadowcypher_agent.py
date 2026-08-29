@@ -50,6 +50,8 @@ STATE_PATH = CONFIG_DIR / "state.json"
 DEFAULT_API = "https://api.shadowcypher.site"
 AGENT_VERSION = "0.3.0"
 UPDATE_CHECK_INTERVAL = 86400  # 24 hours
+GITHUB_REPO = "jakes1345/ShadowCypher"
+GITHUB_API = "https://api.github.com"
 
 
 # ─── Auto-update ─────────────────────────────────────────────────────────────
@@ -62,23 +64,53 @@ def _version_tuple(v: str) -> tuple:
         return (0,)
 
 
-def check_for_update(api_base: str) -> None:
-    """Download and self-replace if a newer agent version is available. Never raises."""
+def check_for_update(force: bool = False) -> None:
+    """Check GitHub releases for a newer agent version and self-replace if found.
+
+    Agent releases use the tag prefix 'agent-v' (e.g. agent-v0.4.0) to
+    distinguish them from app/Tauri releases. The release must include an
+    asset named 'shadowcypher_agent.py'; a companion
+    'shadowcypher_agent.py.sha256' asset is required for integrity checking.
+    Never raises — update failures are logged and the daemon continues.
+    """
     try:
-        url = f"{api_base}/v1/agent/version"
-        with urllib.request.urlopen(url, timeout=10) as resp:
-            data = json.loads(resp.read().decode())
+        url = f"{GITHUB_API}/repos/{GITHUB_REPO}/releases"
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": f"shadowcypher-agent/{AGENT_VERSION}"},
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            releases = json.loads(resp.read().decode())
 
-        remote_ver = data.get("version", "")
-        download_url = data.get("download_url", "")
-        expected_sha256 = data.get("sha256", "")
-
-        if not remote_ver or not download_url or not expected_sha256:
+        # Find the latest non-prerelease agent release
+        agent_releases = [
+            r for r in releases
+            if r.get("tag_name", "").startswith("agent-v")
+            and not r.get("prerelease", False)
+            and not r.get("draft", False)
+        ]
+        if not agent_releases:
             return
-        if _version_tuple(remote_ver) <= _version_tuple(AGENT_VERSION):
+
+        latest = agent_releases[0]  # GitHub returns newest-first
+        tag = latest["tag_name"]   # e.g. "agent-v0.4.0"
+        remote_ver = tag[len("agent-v"):]
+
+        if not force and _version_tuple(remote_ver) <= _version_tuple(AGENT_VERSION):
             return
 
         print(f"[*] update available: {AGENT_VERSION} → {remote_ver}")
+
+        assets = {a["name"]: a["browser_download_url"] for a in latest.get("assets", [])}
+        download_url = assets.get("shadowcypher_agent.py")
+        sha256_url = assets.get("shadowcypher_agent.py.sha256")
+
+        if not download_url:
+            print("[!] update skipped: release has no shadowcypher_agent.py asset", file=sys.stderr)
+            return
+        if not sha256_url:
+            print("[!] update skipped: release has no .sha256 asset (refusing unverified download)", file=sys.stderr)
+            return
 
         script_path = os.path.abspath(__file__)
         script_dir = os.path.dirname(script_path)
@@ -86,8 +118,11 @@ def check_for_update(api_base: str) -> None:
         fd, tmp_path = tempfile.mkstemp(dir=script_dir, suffix=".tmp")
         try:
             with os.fdopen(fd, "wb") as f:
-                with urllib.request.urlopen(download_url, timeout=30) as resp:
+                with urllib.request.urlopen(download_url, timeout=60) as resp:
                     f.write(resp.read())
+
+            with urllib.request.urlopen(sha256_url, timeout=10) as resp:
+                expected_sha256 = resp.read().decode().strip().split()[0]
 
             h = hashlib.sha256()
             with open(tmp_path, "rb") as f:
@@ -110,6 +145,14 @@ def check_for_update(api_base: str) -> None:
 
     except Exception as e:
         print(f"[!] update check failed (continuing): {e}", file=sys.stderr)
+
+
+def cmd_update() -> None:
+    """Manually check for and apply an agent update. Prints version info."""
+    print(f"ShadowCypher Guardian Agent  v{AGENT_VERSION}")
+    print(f"Checking GitHub for updates...")
+    check_for_update(force=False)
+    print("Already up to date.")
 
 
 # ─── Config / state ─────────────────────────────────────────────────────────
@@ -679,7 +722,7 @@ def cmd_run(cfg: dict[str, Any]) -> None:
     api = ApiClient(cfg["api_base"], cfg["api_key"])
     state = load_state()
 
-    check_for_update(cfg["api_base"])
+    check_for_update()
 
     # Sanity-check key against /v1/me before starting the loop
     try:
@@ -704,7 +747,7 @@ def cmd_run(cfg: dict[str, Any]) -> None:
                 cycle(cfg, api, state)
                 last_scan = now
             if now - last_update_check >= UPDATE_CHECK_INTERVAL:
-                check_for_update(cfg["api_base"])
+                check_for_update()
                 last_update_check = now
             time.sleep(hb_interval)
         except KeyboardInterrupt:
@@ -816,7 +859,7 @@ def cmd_status() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="ShadowCypher Guardian Agent")
     parser.add_argument("command", choices=[
-        "init", "login", "run", "once",
+        "init", "login", "run", "once", "update",
         "install-service", "uninstall-service", "status",
     ])
     args = parser.parse_args()
@@ -826,6 +869,9 @@ def main() -> None:
         return
     if args.command == "login":
         cmd_login()
+        return
+    if args.command == "update":
+        cmd_update()
         return
     if args.command == "install-service":
         cmd_install_service()

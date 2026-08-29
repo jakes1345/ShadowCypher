@@ -67,13 +67,13 @@
         <div class="item shipped"><span class="tag ship">DONE</span>Tauri desktop auto-update — Windows/macOS builds check releases.shadowcypher.site on launch and install silently in background</div>
         <div class="item shipped"><span class="tag ship">DONE</span>Linux desktop packaging — hicolor icon theme registration, <code>shadowcypher --update</code> self-upgrade, Tauri .deb/.AppImage CI builds</div>
         <div class="item shipped"><span class="tag ship">DONE</span>AES-256-GCM encryption — full Fernet→GCM migration; 12-byte random nonce, auth tag verification, sentinel-based key validation</div>
+        <div class="item shipped"><span class="tag ship">DONE</span>Guardian agent auto-update — daemon polls GitHub releases every 24h; SHA256-verified atomic self-replace + auto-restart; <code>shadow-agent update</code> for on-demand upgrades</div>
     </div>
 
     <h2 style="color: var(--accent-primary);">// NEXT — active development</h2>
     <div class="col">
         <div class="item next"><span class="tag next">NEXT</span>ShadowOS public ISO release — host verified ISO on CDN or GitHub LFS so users can download without building</div>
         <div class="item next"><span class="tag next">NEXT</span>ShadowOS installer polish — test Calamares flow end-to-end, fix any firstboot service failures</div>
-        <div class="item next"><span class="tag next">NEXT</span>Guardian agent auto-update — daemon checks GitHub releases and self-upgrades via pip</div>
         <div class="item next"><span class="tag next">NEXT</span>Shadow wake word — background service listens for "Hey Shadow" without draining battery (openWakeWord via ONNX Runtime)</div>
         <div class="item next"><span class="tag next">NEXT</span>Device detail drilldown — click any device to see full port history, CVE matches, risk score, and scan timeline</div>
         <div class="item next"><span class="tag next">NEXT</span>ShadowScript missions library — 10+ pre-built .shadow mission files for common ops (recon, audit, OSINT)</div>
