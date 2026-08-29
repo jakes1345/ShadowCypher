@@ -8,6 +8,24 @@ cat > /etc/sudoers.d/shadowcypher << 'SUDOERS'
 SUDOERS
 chmod 440 /etc/sudoers.d/shadowcypher
 
+# Install icons into the hicolor theme at each available size
+ICON_SRC=/usr/share/shadowcypher/native/icons
+for size in 16 24 32 48 64 128 256; do
+    src="$ICON_SRC/shadowcypher-${size}.png"
+    dest="/usr/share/icons/hicolor/${size}x${size}/apps"
+    if [ -f "$src" ]; then
+        install -Dm644 "$src" "$dest/shadowcypher.png"
+    fi
+done
+
+# Refresh icon cache and app database so launchers pick up the new icon
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications 2>/dev/null || true
+fi
+
 # Systemd service
 systemctl daemon-reload
 systemctl enable shadowcypher.service 2>/dev/null || true
