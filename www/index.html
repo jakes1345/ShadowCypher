@@ -2645,15 +2645,32 @@
                   }).join('')
                 : '<span style="color:#555;font-size:0.75rem;">No incidents linked to this device</span>';
 
-            const trustBadge = d.trusted
-                ? `<span style="font-size:0.65rem;padding:2px 8px;background:rgba(72,199,142,0.1);border:1px solid rgba(72,199,142,0.3);color:var(--success);border-radius:3px;">TRUSTED</span>`
-                : `<span style="font-size:0.65rem;padding:2px 8px;background:rgba(255,255,255,0.04);border:1px solid #333;color:#555;border-radius:3px;">UNTRUSTED</span>`;
+            // Risk score: CVEs 12pts ea (cap 36), open incidents crit=20/warn=10/info=4, risky ports 8pts ea, cap 100
+            const RISKY_PORTS = new Set([21, 23, 445, 1900, 3389, 7547]);
+            let risk = 0;
+            risk += Math.min(cves.length * 12, 36);
+            for (const inc of incs) {
+                if (inc.status === 'open') {
+                    if (inc.severity === 'critical') risk += 20;
+                    else if (inc.severity === 'warning') risk += 10;
+                    else risk += 4;
+                }
+            }
+            for (const p of ports) { if (RISKY_PORTS.has(Number(p))) risk += 8; }
+            risk = Math.min(risk, 100);
+            const riskColor = risk >= 60 ? 'var(--critical)' : risk >= 30 ? 'var(--warning)' : 'var(--success)';
+            const riskLabel = risk >= 60 ? 'HIGH' : risk >= 30 ? 'MEDIUM' : 'LOW';
+
+            const trustBtn = d.trusted
+                ? `<button onclick="toggleDeviceTrust('${escapeHtml(d.id)}', false)" style="font-size:0.65rem;padding:2px 10px;background:rgba(72,199,142,0.1);border:1px solid rgba(72,199,142,0.3);color:var(--success);border-radius:3px;cursor:pointer;font-family:var(--font-mono);">TRUSTED ✕</button>`
+                : `<button onclick="toggleDeviceTrust('${escapeHtml(d.id)}', true)" style="font-size:0.65rem;padding:2px 10px;background:rgba(255,255,255,0.04);border:1px solid #333;color:#aaa;border-radius:3px;cursor:pointer;font-family:var(--font-mono);">MARK TRUSTED</button>`;
 
             document.getElementById('device-modal-body').innerHTML = `
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
                     <span style="font-size:0.95rem;font-weight:700;color:#fff;">${escapeHtml(d.hostname || d.ip || d.mac)}</span>
-                    ${trustBadge}
+                    ${trustBtn}
                     <span style="font-size:0.65rem;font-family:var(--font-mono);color:var(--accent-primary);padding:2px 8px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.25);border-radius:3px;">${escapeHtml(d.device_type || 'unknown')}</span>
+                    <span style="font-size:0.65rem;font-family:var(--font-mono);color:${riskColor};padding:2px 8px;background:rgba(0,0,0,0.2);border:1px solid ${riskColor};border-radius:3px;margin-left:auto;">RISK ${risk}/100 · ${riskLabel}</span>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;font-size:0.78rem;">
                     <div><span style="color:#555;">MAC</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(d.mac)}</span></div>
@@ -2680,6 +2697,14 @@
 
         function closeDeviceModal() {
             document.getElementById('device-modal').style.display = 'none';
+        }
+
+        async function toggleDeviceTrust(id, trusted) {
+            try {
+                await callApi(`/v1/devices/${id}`, { method: 'PATCH', body: JSON.stringify({ trusted }) });
+                const d = _deviceCache.find(x => x.id === id);
+                if (d) { d.trusted = trusted; showDevice(id); }
+            } catch (e) { alert('Failed: ' + e.message); }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -4820,6 +4845,28 @@
 
 
     <!-- ── Profile viewer modal ──────────────────────────────────────────── -->
+    <!-- Device detail modal -->
+    <div id="device-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.86);z-index:8500;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#0a0a14;border:1px solid rgba(180,74,255,0.35);max-width:580px;width:100%;max-height:88vh;display:flex;flex-direction:column;border-radius:4px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
+                <span style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:2px;color:var(--text-secondary);">// DEVICE_DETAIL</span>
+                <button onclick="closeDeviceModal()" style="background:none;border:none;color:#555;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
+            </div>
+            <div id="device-modal-body" style="padding:18px 20px 24px;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- Incident detail modal -->
+    <div id="incident-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.86);z-index:8600;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#0a0a14;border:1px solid rgba(255,184,77,0.3);max-width:520px;width:100%;max-height:82vh;display:flex;flex-direction:column;border-radius:4px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
+                <span style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:2px;color:var(--text-secondary);">// INCIDENT_DETAIL</span>
+                <button onclick="closeIncidentModal()" style="background:none;border:none;color:#555;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
+            </div>
+            <div id="incident-modal-body" style="padding:18px 20px 24px;overflow-y:auto;"></div>
+        </div>
+    </div>
+
     <div id="profile-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(6px);" onclick="if(event.target===this)profileHideModal()">
         <div style="background:#0a0a14;border:1px solid rgba(180,74,255,0.4);padding:32px;max-width:420px;width:92%;position:relative;border-radius:4px;">
             <button onclick="profileHideModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;">✕</button>
