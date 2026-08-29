@@ -8,6 +8,9 @@ cat > /etc/sudoers.d/shadowcypher << 'SUDOERS'
 SUDOERS
 chmod 440 /etc/sudoers.d/shadowcypher
 
+# Make updater executable (dpkg doesn't preserve script bits from the archive)
+chmod +x /usr/share/shadowcypher/updater.sh 2>/dev/null || true
+
 # Install icons into the hicolor theme at each available size
 ICON_SRC=/usr/share/shadowcypher/native/icons
 for size in 16 24 32 48 64 128 256; do
