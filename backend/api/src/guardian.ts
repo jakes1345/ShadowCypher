@@ -234,6 +234,21 @@ export async function listDevices(req: Request, env: Env, user: AuthedUser, cors
   return json({ devices }, {}, cors);
 }
 
+export async function patchDevice(req: Request, env: Env, user: AuthedUser, cors: HeadersInit, deviceId: string) {
+  if (!/^[0-9a-f-]{36}$/.test(deviceId)) {
+    return json({ error: "invalid_device_id" }, { status: 400 }, cors);
+  }
+  let body: { trusted?: boolean; notes?: string };
+  try { body = await req.json<{ trusted?: boolean; notes?: string }>(); }
+  catch { return json({ error: "invalid_json" }, { status: 400 }, cors); }
+  const patch: Record<string, unknown> = {};
+  if (typeof body.trusted === "boolean") patch.trusted = body.trusted;
+  if (typeof body.notes === "string") patch.notes = body.notes.slice(0, 500);
+  if (!Object.keys(patch).length) return json({ error: "nothing_to_update" }, { status: 400 }, cors);
+  await dbUpdate(env, "devices", { user_id: `eq.${user.id}`, id: `eq.${deviceId}` }, patch);
+  return json({ ok: true }, {}, cors);
+}
+
 export async function recentScans(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
   // Plan gate: free tier sees only last 7 days; Pro = 90 days; Operator = unlimited
   const profile = await getProfile(env, user.id);

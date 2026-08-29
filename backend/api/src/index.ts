@@ -38,6 +38,7 @@ import {
   heartbeatAgent,
   uploadScan,
   listDevices,
+  patchDevice,
   recentScans,
   createIncident,
   listIncidents,
@@ -707,8 +708,10 @@ export default {
       // Chat room management (parameterized)
       const chatRoomDelete = req.method === "DELETE" && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
       const chatRoomPatch  = req.method === "PATCH"  && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
+      // Device patch (trusted / notes)
+      const devicePatch = req.method === "PATCH" && /^\/v1\/devices\/[0-9a-f-]{36}$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || fileGet || fileDelete || chatRoomDelete || chatRoomPatch;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || fileGet || fileDelete || chatRoomDelete || chatRoomPatch || devicePatch;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -745,6 +748,8 @@ export default {
         if (missionResult)       return reportMissionResult(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (missionGet)          return getMission(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (missionList)         return listMissions(req, env, { id: user.id, email: user.email }, cors);
+        // Device patch — id is last path segment
+        if (devicePatch) return patchDevice(req, env, authedUser, cors, parts[3]);
         // Chat room management — room name is last path segment
         if (chatRoomDelete || chatRoomPatch) {
           const roomName = path.split("/").pop()!;
