@@ -168,6 +168,10 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         self._tor_up = False
         threading.Thread(target=self._tor_probe_worker, daemon=True, name="TorProbe").start()
 
+        # Hub summary is fetched off the GTK main thread to avoid blocking the UI
+        self._hub_summary: dict = {}
+        threading.Thread(target=self._hub_summary_worker, daemon=True, name="HubSummary").start()
+
         # Telemetry tick — 3s is plenty
         GLib.timeout_add(3000, self._pulse_tick)
 
@@ -226,8 +230,6 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
         bar.show_all()
 
     def _pulse_tick(self) -> bool:
-        from shadowcypher.core.hub import hub
-
         try:
             # 1. /proc reads — fast, no I/O blocking
             vitals = platform_engine.get_system_vitals()
@@ -235,8 +237,8 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             self.cpu_label.set_text(f"CPU_LOAD: [{'|'*int(cpu/10)}{'.'*(10-int(cpu/10))}] {cpu:.1f}%")
             self.mem_label.set_text(f"MEM_PRESSURE: [{'|'*int(mem/10)}{'.'*(10-int(mem/10))}] {mem:.1f}%")
 
-            # 2. Tactical metrics — flat dict (hub.get_tactical_summary() flattens telemetry)
-            summary = hub.get_tactical_summary()
+            # 2. Tactical metrics — read the off-thread cache (_hub_summary_worker)
+            summary = self._hub_summary
             swarm_count = summary.get("swarm_nodes", 0)
             load_avg = summary.get("load_avg", 0.0)
             self.net_label.set_text(f"NET_ENTROPY: {load_avg:.2f}")
@@ -279,6 +281,17 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             except Exception:
                 self._tor_up = False
             _time.sleep(10)
+
+    def _hub_summary_worker(self) -> None:
+        """Single persistent background thread: refresh hub summary every 3s."""
+        import time as _time
+        while True:
+            try:
+                from shadowcypher.core.hub import hub
+                self._hub_summary = hub.get_tactical_summary()
+            except Exception:
+                pass
+            _time.sleep(3)
 
     def _on_new_ticket(self, data: dict):
         handle = data.get("handle", "Unknown")
