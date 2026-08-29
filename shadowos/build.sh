@@ -65,7 +65,7 @@ chmod +x "$ISO_OPT/launch.sh" 2>/dev/null || true
 # Stamp build metadata into os-release (visible in neofetch / welcome)
 OSR="$PROFILE/airootfs/etc/os-release"
 if [[ -f "$OSR" ]]; then
-  sed -i "s/^PRETTY_NAME=.*/PRETTY_NAME=\"ShadowOS 3.0 (${BUILD_DATE})\"/" "$OSR"
+  sed -i "s/^PRETTY_NAME=.*/PRETTY_NAME=\"ShadowOS 0.3 (${BUILD_DATE})\"/" "$OSR"
   sed -i "s/^BUILD_ID=.*/BUILD_ID=${BUILD_DATE}/" "$OSR"
 fi
 
