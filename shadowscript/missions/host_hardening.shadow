@@ -1,0 +1,45 @@
+# ShadowScript Mission: Host Hardening Audit
+# Full local host security audit — services, open ports, rootkit check, lynis.
+# Run as root or sudo for complete results.
+
+!echo("=== HOST HARDENING AUDIT ===")
+
+!echo("[*] Phase 1: system info")
+!sys("uname -r")
+!echo("Kernel: $LAST")
+
+!sys("whoami")
+!echo("User: $LAST")
+
+!sys("uptime")
+!echo("Uptime: $LAST")
+
+!echo("[*] Phase 2: listening services")
+!sys("ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null")
+AI("Review these listening services and flag anything unexpected or risky: $LAST")
+!echo("[*] Services: $LAST")
+
+!echo("[*] Phase 3: sudoers check")
+UNSAFE {
+    !sys("cat /etc/sudoers 2>/dev/null | grep -v '^#' | grep -v '^$'")
+    AI("Flag any dangerous sudoers entries — NOPASSWD, ALL, wildcards: $LAST")
+}
+
+!echo("[*] Phase 4: SUID/SGID binaries")
+UNSAFE {
+    !sys("find / -perm /6000 -type f 2>/dev/null | head -30")
+    AI("Flag any suspicious or exploitable SUID binaries in this list: $LAST")
+}
+
+!echo("[*] Phase 5: rkhunter rootkit scan")
+STRIKE(host, rkhunter_scan)
+IF $LAST != "" {
+    AI("Analyse this rkhunter output and highlight any genuine warnings: $LAST")
+}
+
+!echo("[*] Phase 6: lynis security audit")
+STRIKE(host, lynis_audit)
+AI("Summarise the lynis findings and give the top 5 hardening actions: $LAST")
+
+!echo("=== HOST HARDENING AUDIT COMPLETE ===")
+RETURN "ok"

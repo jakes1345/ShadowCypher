@@ -1,0 +1,53 @@
+# ShadowScript Mission: OSINT Domain Deep Dive
+# Passive + active OSINT on a domain: DNS, SSL, headers, subdomain brute, amass.
+# Generates a full intelligence picture before any active testing.
+
+VAR domain = "target.example.com"
+
+!echo("=== OSINT DOMAIN DEEP DIVE — $domain ===")
+
+TARGET($domain)
+
+!echo("[*] Phase 1: DNS baseline")
+!sys("dig +short $domain A")
+!echo("A record: $LAST")
+
+!sys("dig +short $domain MX")
+!echo("MX: $LAST")
+
+!sys("dig +short $domain TXT")
+!echo("TXT/SPF: $LAST")
+
+AI("Based on these DNS records, identify any security misconfigurations (missing SPF, DMARC, DKIM): $LAST")
+
+!echo("[*] Phase 2: WHOIS + ASN")
+!sys("whois $domain 2>/dev/null | head -30")
+!echo("[*] WHOIS: $LAST")
+
+STRIKE(osint, subnet_info)
+!echo("[*] Subnet/ASN: $LAST")
+
+!echo("[*] Phase 3: SSL intelligence")
+STRIKE(osint, ssl_cert_info)
+!echo("[*] SSL cert: $LAST")
+
+!echo("[*] Phase 4: HTTP headers + tech fingerprint")
+STRIKE(osint, http_headers)
+STRIKE(osint, tech_detect)
+AI("Given these headers and tech stack, what attack vectors are most likely? $LAST")
+
+!echo("[*] Phase 5: subdomain enumeration (passive)")
+STRIKE(recon, amass_enum)
+!echo("[*] Amass results: $LAST")
+
+STRIKE(recon, subdomain_enum)
+!echo("[*] All subdomains: $LAST")
+
+!echo("[*] Phase 6: HTTP probe on discovered subdomains")
+STRIKE(recon, http_probe)
+AI("Which of these live subdomains look most interesting for further testing? $LAST")
+
+AI("Write a one-page threat intelligence summary for $domain including key findings, exposed infrastructure, and recommended next steps.")
+
+!echo("=== OSINT DOMAIN DEEP DIVE COMPLETE ===")
+RETURN "ok"
