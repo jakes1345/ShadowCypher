@@ -1,0 +1,43 @@
+# ShadowScript Mission: Web Audit
+# Full web application security sweep — directory fuzz, vuln scan, SQLi probe.
+# Run against targets you own or are contracted to test.
+
+VAR target_url = "http://192.168.1.1"
+
+!echo("=== WEB AUDIT — $target_url ===")
+
+TARGET($target_url)
+
+!echo("[*] Phase 1: directory enumeration")
+STRIKE(web, ffuf_dir_fuzz)
+AI("Review these discovered paths and flag anything suspicious or high-risk: $LAST")
+
+!echo("[*] Phase 2: vulnerability scan")
+STRIKE(web, nuclei_scan)
+IF $LAST != "" {
+    AI("Summarise these nuclei findings and rank by severity: $LAST")
+    !echo("[!] Findings: $LAST")
+} ELSE {
+    !echo("[+] No nuclei findings")
+}
+
+!echo("[*] Phase 3: Nikto scan")
+STRIKE(vuln, nikto_scan)
+!echo("[*] Nikto: $LAST")
+
+!echo("[*] Phase 4: SQL injection probe")
+STRIKE(vuln, sqlmap_scan)
+IF $LAST != "" {
+    AI("SQLmap found the following — explain impact and remediation: $LAST")
+} ELSE {
+    !echo("[+] No SQL injection found")
+}
+
+!echo("[*] Phase 5: 403 bypass check")
+STRIKE(web, bypass_403_test)
+!echo("[*] Bypass results: $LAST")
+
+AI("Given all findings for $target_url, write a brief executive summary with remediation priorities.")
+
+!echo("=== WEB AUDIT COMPLETE ===")
+RETURN "ok"

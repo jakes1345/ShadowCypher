@@ -1,0 +1,51 @@
+# ShadowScript Mission: Ghost Recon
+# Passive OSINT recon on a domain — no active port scanning.
+# Safe to run against any target; leaves minimal footprint.
+# Usage: set VAR domain before running, or edit below.
+
+VAR domain = "example.com"
+
+!echo("=== GHOST RECON — $domain ===")
+!echo("[*] Phase 1: surface intelligence")
+
+TARGET($domain)
+
+# SSL certificate — expiry, SAN, issuer
+STRIKE(osint, ssl_cert_info)
+AI("Summarise any risks in this SSL certificate: $LAST")
+
+# HTTP headers — security posture
+STRIKE(osint, http_headers)
+AI("Flag any missing security headers or misconfigurations: $LAST")
+
+# Technology fingerprint
+STRIKE(osint, tech_detect)
+!echo("[*] Tech stack: $LAST")
+
+!echo("[*] Phase 2: DNS intelligence")
+
+# MX records — mail infrastructure
+STRIKE(osint, email_mx_check)
+!echo("[*] Mail records: $LAST")
+
+# Subnet ownership / ASN
+STRIKE(osint, subnet_info)
+!echo("[*] Network info: $LAST")
+
+# Zone transfer attempt (passive check)
+STRIKE(osint, zone_transfer)
+IF $LAST != "" {
+    AI("A zone transfer succeeded on $domain — what does this expose? $LAST")
+    !echo("[!] Zone transfer result: $LAST")
+} ELSE {
+    !echo("[+] Zone transfer blocked (expected)")
+}
+
+!echo("[*] Phase 3: subdomain enumeration")
+STRIKE(recon, subdomain_enum)
+!echo("[*] Subdomains: $LAST")
+
+AI("Given these subdomains for $domain, which look highest risk and why? $LAST")
+
+!echo("=== GHOST RECON COMPLETE ===")
+RETURN "ok"

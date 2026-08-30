@@ -1,0 +1,45 @@
+# ShadowScript Mission: Forensics Triage
+# Rapid triage of a suspicious file or directory.
+# Set VAR artifact to the path you want to investigate.
+
+VAR artifact = "/tmp/suspicious_file"
+
+!echo("=== FORENSICS TRIAGE — $artifact ===")
+
+TARGET($artifact)
+
+!echo("[*] Phase 1: file identification")
+!sys("file $artifact 2>/dev/null")
+!echo("Type: $LAST")
+
+!sys("ls -lah $artifact 2>/dev/null")
+!echo("Metadata: $LAST")
+
+!echo("[*] Phase 2: hashes")
+STRIKE(forensics, generate_hashes)
+!echo("[*] Hashes: $LAST")
+
+!echo("[*] Phase 3: metadata extraction")
+STRIKE(forensics, extract_metadata)
+AI("Flag any suspicious metadata — unusual authors, tools, timestamps, GPS: $LAST")
+
+!echo("[*] Phase 4: string extraction")
+STRIKE(forensics, extract_strings)
+AI("Review these strings for IOCs — IPs, URLs, credentials, commands, base64: $LAST")
+
+!echo("[*] Phase 5: binary analysis (if applicable)")
+STRIKE(forensics, binwalk_scan)
+IF $LAST != "" {
+    AI("Analyse these binwalk findings — are there embedded files or firmware components? $LAST")
+}
+
+!echo("[*] Phase 6: AI deep investigation")
+STRIKE(forensics, ai_investigate)
+!echo("[*] AI verdict: $LAST")
+
+!echo("[*] Phase 7: check file hash against known bad")
+!sys("sha256sum $artifact 2>/dev/null")
+AI("Is this SHA256 hash associated with any known malware? Hash: $LAST — If unsure, advise how to check it on VirusTotal.")
+
+!echo("=== FORENSICS TRIAGE COMPLETE ===")
+RETURN "ok"

@@ -1,0 +1,44 @@
+# ShadowScript Mission: Vulnerability Sweep
+# Comprehensive vuln scan on a single target — deep port scan, nuclei, nikto, AI triage.
+# Set VAR target to your lab IP before running.
+
+VAR target = "192.168.1.100"
+
+!echo("=== VULNERABILITY SWEEP — $target ===")
+
+TARGET($target)
+
+!echo("[*] Phase 1: full port discovery")
+SCAN(1-65535)
+AI("Review these open ports and identify which services are most likely to have exploitable vulnerabilities: $LAST")
+!echo("[*] Ports: $LAST")
+
+!echo("[*] Phase 2: deep service recon")
+STRIKE(recon, deep_recon)
+!echo("[*] Services: $LAST")
+
+!echo("[*] Phase 3: nuclei vulnerability scan")
+STRIKE(vuln, nuclei_scan)
+IF $LAST != "" {
+    AI("Triage these nuclei findings by exploitability — which should be patched first? $LAST")
+    !echo("[!] Nuclei findings: $LAST")
+} ELSE {
+    !echo("[+] No nuclei findings")
+}
+
+!echo("[*] Phase 4: web surface check (port 80/443)")
+STRIKE(vuln, nikto_scan)
+!echo("[*] Nikto: $LAST")
+
+!echo("[*] Phase 5: zero-day surface scan")
+STRIKE(vuln, shadow_zero_day_scan)
+IF $LAST != "" {
+    AI("Explain these shadow zero-day scan results and their potential impact: $LAST")
+}
+
+!echo("[*] Phase 6: full audit summary")
+STRIKE(vuln, audit_target)
+AI("Write a vulnerability report for $target. Include: severity breakdown, top three critical findings, and remediation steps. Findings: $LAST")
+
+!echo("=== VULNERABILITY SWEEP COMPLETE ===")
+RETURN "ok"
