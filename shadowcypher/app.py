@@ -325,7 +325,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
             ("\U0001f50e", "OSINT Probe", None),
             ("\U0001f4bc", "Session Manager", None),
             ("\U0001f9e0", "Recon Engine", None),
-            ("\U0001f3ae", "Steam OSINT", None),
+
             ("---", "Operations", None),
             ("\U0001f575", "Web Security", None),
             ("\U0001f4a3", "Payload Builder", "APEX"),
@@ -406,7 +406,7 @@ class ShadowCypherWindow(Gtk.ApplicationWindow):
                 "OSINT Probe": "osint_page.OSINTPage",
                 "Session Manager": "session_page.SessionPage",
                 "Recon Engine": "recon_page.ReconPage",
-                "Steam OSINT": "steam_page.SteamAuditPage",
+
                 "Web Security": "web_security_page.WebSecurityPage",
                 "Payload Builder": "craft_page.CraftPage",
                 "Wireless": "wireless_page.WirelessPage",

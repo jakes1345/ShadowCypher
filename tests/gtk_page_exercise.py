@@ -23,7 +23,7 @@ PAGE_MAP = {
     "OSINT Probe": ("osint_page", "OSINTPage"),
     "Session Manager": ("session_page", "SessionPage"),
     "Recon Engine": ("recon_page", "ReconPage"),
-    "Steam OSINT": ("steam_page", "SteamAuditPage"),
+
     "Web & Cloud Strikes": ("web_security_page", "WebSecurityPage"),
     "Payload Factory": ("craft_page", "CraftPage"),
     "Wireless Saturation": ("wireless_page", "WirelessPage"),

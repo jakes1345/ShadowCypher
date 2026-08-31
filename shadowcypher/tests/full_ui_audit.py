@@ -26,7 +26,7 @@ def audit_ui():
         "Digital Analysis": "shadowcypher.ui.forensics_page.ForensicsPage",
         "OSINT Intelligence": "shadowcypher.ui.osint_page.OSINTPage",
         "Credential Hub": "shadowcypher.ui.secrets_page.SecretsPage",
-        "Master Asset Discovery": "shadowcypher.ui.steam_page.SteamAuditPage",
+
         "Firewall Defense": "shadowcypher.ui.firewall_page.FirewallPage",
         "Wireless Signals": "shadowcypher.ui.wireless_page.WirelessPage",
         "System Control": "shadowcypher.ui.session_page.SessionPage",

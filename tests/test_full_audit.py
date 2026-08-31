@@ -713,33 +713,6 @@ class TestStaticAnalyzer:
             assert results is not None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MODULES: gaming_osint  (DigitalAssetDiscovery)
-# ─────────────────────────────────────────────────────────────────────────────
-class TestGamingOSINT:
-    @pytest.fixture
-    def go(self):
-        from shadowcypher.modules.gaming_osint import DigitalAssetDiscovery
-        return DigitalAssetDiscovery()
-
-    def test_instantiates(self, go):
-        assert go is not None
-
-    def test_is_authenticated_without_creds(self, go):
-        result = go.is_authenticated
-        assert isinstance(result, bool) or callable(result)
-
-    def test_set_credentials_and_check(self, go):
-        go.set_credentials(steam_api_key="test_key", steam_id="76561198000000000")
-        result = go.steam_api_key
-        assert result == "test_key"
-
-    @patch.object(__import__("shadowcypher.modules.gaming_osint", fromlist=["DigitalAssetDiscovery"]).DigitalAssetDiscovery, "_steam_api")
-    def test_get_player_profile_mocked(self, mock_api, go):
-        mock_api.return_value = {"response": {"players": [{"personaname": "TestUser", "steamid": "12345"}]}}
-        go.set_credentials(steam_api_key="key", steam_id="12345")
-        result = go.get_player_profile()
-        assert result is None or isinstance(result, (dict, list))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -893,7 +866,7 @@ class TestUIPageImports:
         "OSINT Probe": ("osint_page", "OSINTPage"),
         "Session Manager": ("session_page", "SessionPage"),
         "Recon Engine": ("recon_page", "ReconPage"),
-        "Steam OSINT": ("steam_page", "SteamAuditPage"),
+
         "Web & Cloud Strikes": ("web_security_page", "WebSecurityPage"),
         "Payload Factory": ("craft_page", "CraftPage"),
         "Wireless Saturation": ("wireless_page", "WirelessPage"),
