@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=ShadowCypher
+Comment=Sovereign personal security platform
+Exec=shadowcypher
+Icon=shadowcypher
+Terminal=false
+Type=Application
+Categories=Network;Security;System;
+Keywords=security;network;monitoring;hacking;pentest;shadowcypher;
+StartupNotify=true
