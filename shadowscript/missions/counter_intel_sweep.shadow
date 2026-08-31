@@ -1,0 +1,82 @@
+# ShadowScript Mission: Counter-Intelligence Sweep
+# Runs the full counter-intel detection engine: ARP spoof, SSL interception,
+# DNS leak, rogue DHCP, promiscuous interfaces, and traffic anomaly detection.
+# Optionally performs OSINT self-audit if handle is set.
+#
+# Usage:
+#   VAR interface = "eth0"      # target network interface
+#   VAR handle = ""             # your email/handle for OSINT self-audit (leave empty to skip)
+
+VAR interface = "eth0"
+VAR handle = ""
+
+!echo("=== COUNTER-INTEL SWEEP ===")
+!echo("[*] Interface: $interface")
+
+!echo("[*] Phase 1: Promiscuous interface check")
+STRIKE(counter_intel, detect_promiscuous_interfaces)
+IF $LAST != "" {
+    AI("A network interface is in promiscuous mode. Explain the risk and likely cause: $LAST")
+    !echo("[!] Promisc: $LAST")
+} ELSE {
+    !echo("[+] No promiscuous interfaces")
+}
+
+!echo("[*] Phase 2: SSL interception / MITM proxy detection")
+STRIKE(counter_intel, detect_ssl_interception)
+IF $LAST != "" {
+    AI("SSL certificate anomaly detected. Explain what this means and how to respond: $LAST")
+    !echo("[!] SSL: $LAST")
+} ELSE {
+    !echo("[+] SSL clean — no interception detected")
+}
+
+!echo("[*] Phase 3: DNS leak detection")
+STRIKE(counter_intel, detect_dns_leak)
+IF $LAST != "" {
+    AI("DNS leak detected. Explain the operational security impact and remediation: $LAST")
+    !echo("[!] DNS: $LAST")
+} ELSE {
+    !echo("[+] DNS clean")
+}
+
+!echo("[*] Phase 4: Traffic anomaly scan")
+STRIKE(counter_intel, scan_traffic_anomalies)
+IF $LAST != "" {
+    AI("Suspicious outbound connections found. Triage by severity and recommend action: $LAST")
+    !echo("[!] Traffic: $LAST")
+} ELSE {
+    !echo("[+] Traffic clean")
+}
+
+!echo("[*] Phase 5: ARP spoofing detection ($interface)")
+STRIKE(counter_intel, detect_arp_spoofing)
+IF $LAST != "" {
+    AI("ARP cache poisoning detected. Explain attack vector and countermeasures: $LAST")
+    !echo("[!] ARP: $LAST")
+} ELSE {
+    !echo("[+] ARP clean")
+}
+
+!echo("[*] Phase 6: Rogue DHCP server detection ($interface)")
+STRIKE(counter_intel, detect_rogue_dhcp)
+IF $LAST != "" {
+    AI("Rogue DHCP server detected. Explain the MITM risk and how to isolate it: $LAST")
+    !echo("[!] DHCP: $LAST")
+} ELSE {
+    !echo("[+] DHCP clean")
+}
+
+IF $handle != "" {
+    !echo("[*] Phase 7: OSINT self-audit for $handle")
+    STRIKE(counter_intel, osint_self_audit)
+    IF $LAST != "" {
+        AI("OSINT self-audit findings. Explain what an adversary could learn and how to reduce exposure: $LAST")
+        !echo("[!] OSINT: $LAST")
+    } ELSE {
+        !echo("[+] OSINT: no critical exposures found")
+    }
+}
+
+!echo("=== COUNTER-INTEL SWEEP COMPLETE ===")
+RETURN "ok"
