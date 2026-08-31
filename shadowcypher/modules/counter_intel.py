@@ -22,7 +22,7 @@ from typing import Callable, Dict, List, Optional
 from shadowcypher.core.bus import bus
 from shadowcypher.core.logger import logger
 from shadowcypher.core.module import BaseModule
-from shadowcypher.core.sanitize import validate_interface, validate_ip
+from shadowcypher.core.sanitize import validate_ip
 from shadowcypher.core.stealth import stealth
 
 
@@ -388,7 +388,6 @@ class CounterIntelEngine(BaseModule):
                 if stealth.active:
                     self._out(on_output, "[DNS] Stealth active — querying via Tor...")
                     try:
-                        import requests  # type: ignore
                         session = stealth.torify_requests_session()
                         resp = session.get("https://ipleak.net/json/", timeout=15,
                                            headers={"User-Agent": "ShadowCypher/1.0 counter-intel"})
