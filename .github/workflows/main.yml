@@ -145,7 +145,7 @@ jobs:
             'shadowcypher.modules.firewall',
             'shadowcypher.modules.awareness_sim',
             'shadowcypher.modules.craft_factory',
-            'shadowcypher.modules.gaming_osint',
+
             'shadowcypher.modules.ad_pivot',
             'shadowcypher.modules.deephat',
             'shadowcypher.modules.web_security',
