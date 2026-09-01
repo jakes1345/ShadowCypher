@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Concurrent)
 
 qt_add_executable(shadowcypher
     src/main.cpp
@@ -24,6 +24,16 @@ qt_add_executable(shadowcypher
     src/widgets/TacticalTerminal.h
     src/pages/DashboardPage.cpp
     src/pages/DashboardPage.h
+    src/pages/GuardianPage.cpp
+    src/pages/GuardianPage.h
+    src/pages/CounterIntelPage.cpp
+    src/pages/CounterIntelPage.h
+    src/pages/ArsenalPage.cpp
+    src/pages/ArsenalPage.h
+    src/pages/AiPage.cpp
+    src/pages/AiPage.h
+    src/pages/ShadowScriptPage.cpp
+    src/pages/ShadowScriptPage.h
     src/pages/PlaceholderPage.h
 )
 
@@ -31,6 +41,7 @@ target_link_libraries(shadowcypher PRIVATE
     Qt6::Core
     Qt6::Widgets
     Qt6::Network
+    Qt6::Concurrent
 )
 
 target_compile_options(shadowcypher PRIVATE -Wall -Wextra -O2)
