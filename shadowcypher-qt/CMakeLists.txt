@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Concurrent WebSockets)
 
 qt_add_executable(shadowcypher
     src/main.cpp
@@ -34,7 +34,10 @@ qt_add_executable(shadowcypher
     src/pages/AiPage.h
     src/pages/ShadowScriptPage.cpp
     src/pages/ShadowScriptPage.h
-    src/pages/PlaceholderPage.h
+    src/pages/ChatPage.cpp
+    src/pages/ChatPage.h
+    src/pages/SettingsPage.cpp
+    src/pages/SettingsPage.h
 )
 
 target_link_libraries(shadowcypher PRIVATE
@@ -42,6 +45,7 @@ target_link_libraries(shadowcypher PRIVATE
     Qt6::Widgets
     Qt6::Network
     Qt6::Concurrent
+    Qt6::WebSockets
 )
 
 target_compile_options(shadowcypher PRIVATE -Wall -Wextra -O2)

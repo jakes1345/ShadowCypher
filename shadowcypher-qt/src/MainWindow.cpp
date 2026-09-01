@@ -6,7 +6,8 @@
 #include "pages/ArsenalPage.h"
 #include "pages/AiPage.h"
 #include "pages/ShadowScriptPage.h"
-#include "pages/PlaceholderPage.h"
+#include "pages/ChatPage.h"
+#include "pages/SettingsPage.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -101,6 +102,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         {"  ARSENAL"},
         {"  AI ASSISTANT"},
         {"  SHADOWSCRIPT"},
+        {"  CHAT"},
         {"  SETTINGS"},
     };
     for (const auto& item : navItems)
@@ -126,8 +128,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     m_stack->addWidget(new CounterIntelPage(m_ipc, this));   // 2
     m_stack->addWidget(new ArsenalPage(this));               // 3
     m_stack->addWidget(new AiPage(m_ipc, this));             // 4
-    m_stack->addWidget(new ShadowScriptPage(m_ipc, this));   // 5
-    m_stack->addWidget(new PlaceholderPage("SETTINGS", this)); // 6
+    m_stack->addWidget(new ShadowScriptPage(m_ipc, this));    // 5
+    m_stack->addWidget(new ChatPage(m_ipc, this));             // 6
+    m_stack->addWidget(new SettingsPage(this));                // 7
 
     rootLayout->addWidget(m_stack);
 
