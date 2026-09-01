@@ -1,6 +1,11 @@
 #include "MainWindow.h"
 #include "theme.h"
 #include "pages/DashboardPage.h"
+#include "pages/GuardianPage.h"
+#include "pages/CounterIntelPage.h"
+#include "pages/ArsenalPage.h"
+#include "pages/AiPage.h"
+#include "pages/ShadowScriptPage.h"
 #include "pages/PlaceholderPage.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -116,13 +121,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     m_stack = new QStackedWidget;
     m_stack->setStyleSheet("QStackedWidget { background: #0d0f1a; }");
 
-    m_stack->addWidget(new DashboardPage(m_ipc, this));          // 0
-    m_stack->addWidget(new PlaceholderPage("GUARDIAN",   this)); // 1
-    m_stack->addWidget(new PlaceholderPage("COUNTER-INTELLIGENCE", this)); // 2
-    m_stack->addWidget(new PlaceholderPage("ARSENAL",    this)); // 3
-    m_stack->addWidget(new PlaceholderPage("AI ASSISTANT", this)); // 4
-    m_stack->addWidget(new PlaceholderPage("SHADOWSCRIPT", this)); // 5
-    m_stack->addWidget(new PlaceholderPage("SETTINGS",   this)); // 6
+    m_stack->addWidget(new DashboardPage(m_ipc, this));      // 0
+    m_stack->addWidget(new GuardianPage(m_ipc, this));       // 1
+    m_stack->addWidget(new CounterIntelPage(m_ipc, this));   // 2
+    m_stack->addWidget(new ArsenalPage(this));               // 3
+    m_stack->addWidget(new AiPage(m_ipc, this));             // 4
+    m_stack->addWidget(new ShadowScriptPage(m_ipc, this));   // 5
+    m_stack->addWidget(new PlaceholderPage("SETTINGS", this)); // 6
 
     rootLayout->addWidget(m_stack);
 
