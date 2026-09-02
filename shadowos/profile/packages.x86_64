@@ -407,6 +407,39 @@ ntfs-3g
 exfatprogs
 cryptsetup
 
+# === Omarchy-inspired polish ===
+# File navigation
+yazi                        # TUI file manager (replaces thunar for power users)
+zoxide                      # smart cd — learns your most-visited dirs
+atuin                       # shell history search with sync (omarchy-style ctrl+r)
+# Dev productivity
+zellij                      # multiplexer alternative to tmux (modern, splits built-in)
+# Terminal experience
+sd                          # sed alternative with simpler syntax
+choose                      # human-friendly cut/awk alternative
+bottom                      # btop alternative (cross-platform)
+procs                       # modern ps replacement
+tokei                       # code statistics counter
+hyperfine                   # command benchmarking tool
+gdu                         # fast disk usage analyzer
+
+# === Qubes OS-inspired VM compartmentalization ===
+libvirt                     # VM management API
+virt-manager                # GUI VM manager
+qemu-system-x86             # x86/x64 guest emulation
+qemu-img                    # disk image tools (qcow2, raw, etc.)
+edk2-ovmf                   # UEFI firmware for VMs
+swtpm                       # TPM 2.0 emulator for VMs
+virt-viewer                 # SPICE/VNC viewer for VM displays
+spice-vdagent               # clipboard/file sharing between host and VM
+dnsmasq                     # DHCP/DNS for libvirt isolated networks
+bridge-utils                # network bridge management for VMs
+dmidecode                   # BIOS/hardware info used by VMs
+
+# === Tails OS-inspired amnesia ===
+secure-delete               # sdmem: RAM wipe on shutdown
+memtester                   # memory testing (also used for secure wipe verification)
+
 # === Gaming — additions ===
 # xpadneo-dkms — AUR only; install via yay post-boot
 corectrl

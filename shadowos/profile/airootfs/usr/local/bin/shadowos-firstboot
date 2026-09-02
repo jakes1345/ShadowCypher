@@ -108,10 +108,24 @@ PACMAN
         echo "    AD toolchain installed → /usr/local/bin/{impacket-*,netexec,certipy,bloodhound,...}"
     fi
 
-    # ── 2c. Responder (AUR / Chaotic-AUR) ───────────────────────────────────
+    # ── 2c. Responder + Chaotic-AUR packages ────────────────────────────────
     if grep -q "\[chaotic-aur\]" /etc/pacman.conf 2>/dev/null; then
         pacman -S --noconfirm --needed python-responder 2>&1 | tail -5 \
             || echo "    responder not in chaotic-aur yet — install manually: pipx install responder"
+
+        # ghostty — modern GPU-accelerated terminal (omarchy's preferred terminal)
+        echo "[*] Installing ghostty (GPU-accelerated terminal)..."
+        pacman -S --noconfirm --needed ghostty 2>&1 | tail -5 \
+            || echo "    ghostty not in chaotic-aur yet — try: yay -S ghostty"
+
+        # catppuccin-gtk-theme-mocha — ShadowOS default GTK theme
+        pacman -S --noconfirm --needed catppuccin-gtk-theme-mocha 2>&1 | tail -5 || true
+
+        # bibata-cursor-theme
+        pacman -S --noconfirm --needed bibata-cursor-theme 2>&1 | tail -5 || true
+
+        # wl-screenrec — wayland screen recording
+        pacman -S --noconfirm --needed wl-screenrec 2>&1 | tail -5 || true
     fi
 
     # ── 2b. AUR-only goodies installed without an AUR helper ────────────────

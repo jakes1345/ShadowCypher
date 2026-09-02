@@ -1,0 +1,62 @@
+[manager]
+ratio = [1, 2, 5]      # sidebar : parent : preview ratio (omarchy-style)
+sort_by = "natural"
+sort_sensitive = false
+sort_reverse = false
+linemode = "size_and_mtime"
+show_hidden = false
+show_symlink = true
+
+[preview]
+tab_size = 2
+max_width = 600
+max_height = 900
+cache_dir = ""
+ueberzugpp_scale = 1
+
+[opener]
+edit = [
+  { run = 'nvim "$@"', block = true, for = "unix" },
+]
+open = [
+  { run = 'xdg-open "$@"', for = "unix" },
+]
+reveal = [
+  { run = 'xdg-open "$(dirname "$0")"', for = "unix" },
+]
+extract = [
+  { run = 'file-roller "$@"', for = "unix" },
+]
+play = [
+  { run = 'mpv "$@"', orphan = true, for = "unix" },
+]
+
+[open]
+rules = [
+  { mime = "text/*",    use = "edit" },
+  { mime = "image/*",   use = ["open", "reveal"] },
+  { mime = "video/*",   use = "play" },
+  { mime = "audio/*",   use = "play" },
+  { mime = "*/pdf",     use = "open" },
+  { mime = "application/zip",           use = "extract" },
+  { mime = "application/x-tar",         use = "extract" },
+  { mime = "application/x-bzip2",       use = "extract" },
+  { mime = "application/x-gzip",        use = "extract" },
+  { mime = "application/x-7z-compressed", use = "extract" },
+  { name = "*/",        use = "open" },
+  { name = "*",         use = ["open", "edit", "reveal"] },
+]
+
+[tasks]
+micro_workers = 10
+macro_workers = 25
+bizarre_retry = 5
+image_alloc   = 536_870_912  # 512MB
+image_bound   = [0, 0]
+suppress_preload = false
+
+[log]
+enabled = false
+
+[headsup]
+session_watchers = false

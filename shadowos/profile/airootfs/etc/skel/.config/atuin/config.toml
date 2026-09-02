@@ -1,0 +1,36 @@
+# atuin — shell history (omarchy-style: powerful search replaces ctrl+r)
+# ShadowOS keeps history LOCAL ONLY — no sync server (privacy default)
+
+# History storage
+db_path = "~/.local/share/atuin/history.db"
+key_path = "~/.local/share/atuin/key"
+session_path = "~/.local/share/atuin/session"
+
+# Search settings
+dialect = "us"
+auto_sync = false          # privacy: no cloud sync by default
+update_check = false
+sync_address = ""          # leave empty — local only
+
+search_mode = "fuzzy"      # fuzzy matching like fzf
+filter_mode = "global"     # search all sessions
+style = "compact"          # compact = more results visible
+inline_height = 20         # show 20 results in inline mode
+
+# Privacy: redact commands containing secrets
+secrets_filter = true
+history_filter = [
+    "^(export|set) .*=(.*KEY|.*SECRET|.*TOKEN|.*PASS|.*PWD).*",
+    "^wrangler secret",
+    "^echo.*key",
+]
+
+# UX
+enter_accept = true       # press Enter to accept (not just run)
+show_preview = true       # preview full command in search
+max_preview_height = 4
+
+# Disable sending any stats
+[stats]
+common_subcommands = []
+common_prefix = ["sudo", "pkexec", "env"]

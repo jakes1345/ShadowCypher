@@ -55,4 +55,16 @@ file_permissions=(
   ["/usr/local/bin/patch-policy.sh"]="0:0:0755"
   ["/usr/local/bin/selinux-generator.sh"]="0:0:0755"
   ["/usr/local/bin/audit-daemon.py"]="0:0:0755"
+  # Parrot AnonSurf / Qubes / Tails / SteamOS features
+  ["/usr/local/bin/shadow-anonsurf"]="0:0:0755"
+  ["/usr/local/bin/shadow-qube"]="0:0:0755"
+  ["/usr/local/bin/shadow-gamescope"]="0:0:0755"
+  ["/usr/local/bin/shadow-panic-wipe"]="0:0:0755"
+  ["/usr/local/bin/shadowos-ramwipe"]="0:0:0755"
+  ["/etc/shadowos/modes/amnesia/apply.sh"]="0:0:0755"
+  ["/etc/shadowos/modes/amnesia/revert.sh"]="0:0:0755"
+  ["/etc/shadowos/modes/qubes/apply.sh"]="0:0:0755"
+  ["/etc/shadowos/modes/qubes/revert.sh"]="0:0:0755"
+  ["/etc/shadowos/modes/steamos/apply.sh"]="0:0:0755"
+  ["/etc/shadowos/modes/steamos/revert.sh"]="0:0:0755"
 )
