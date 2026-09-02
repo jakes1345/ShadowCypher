@@ -71,13 +71,19 @@
         <div class="item shipped"><span class="tag ship">DONE</span>Counter-intelligence engine — MITM/ARP spoofing detection, SSL interception (cert fingerprint pinning), DNS leak analysis, rogue DHCP discovery, promiscuous interface detection, traffic anomaly scan, and OSINT self-audit (HIBP breach check, Tor exit node status, public IP exposure)</div>
     </div>
 
+    <h2 style="color: var(--success);">// RECENTLY SHIPPED</h2>
+    <div class="col">
+        <div class="item shipped"><span class="tag ship">DONE</span>Qt6 C++ native desktop app — replaces GTK3 Python UI; compiled binary, instant startup, HiDPI rendering. Full page suite: Dashboard (arc gauges), Network Guardian (device table, incident feed), Counter-Intelligence (7 live detectors), Arsenal (24-tool status grid), AI Assistant (chat), ShadowScript (mission runner + editor)</div>
+        <div class="item shipped"><span class="tag ship">DONE</span>Shadow daemon (IPC server) — JSON-RPC 2.0 Unix socket bridge connecting Qt6 UI to all Python modules (guardian, counter-intel, AI engine, ShadowScript interpreter)</div>
+    </div>
+
     <h2 style="color: var(--accent-primary);">// NEXT — active development</h2>
     <div class="col">
+        <div class="item next"><span class="tag next">NEXT</span>Qt6 Settings page — API key manager, Ollama endpoint config, notification prefs</div>
+        <div class="item next"><span class="tag next">NEXT</span>Qt6 encrypted chat — QWebSocket E2E chat with AES-256-GCM (replaces broken GTK3 chat)</div>
+        <div class="item next"><span class="tag next">NEXT</span>WinUI 3 C# app — Windows-native ShadowCypher using Microsoft's open-source Fluent UI framework, same Python daemon via IPC</div>
         <div class="item next"><span class="tag next">NEXT</span>ShadowOS public ISO release — host verified ISO on CDN or GitHub LFS so users can download without building</div>
-        <div class="item next"><span class="tag next">NEXT</span>ShadowOS installer polish — test Calamares flow end-to-end, fix any firstboot service failures</div>
         <div class="item next"><span class="tag next">NEXT</span>Shadow wake word — background service listens for "Hey Shadow" without draining battery (openWakeWord via ONNX Runtime)</div>
-        <div class="item next"><span class="tag next">NEXT</span>Device detail drilldown — click any device to see full port history, CVE matches, risk score, and scan timeline</div>
-        <div class="item shipped"><span class="tag ship">DONE</span>ShadowScript missions library — 10 pre-built .shadow mission files: ghost_recon, web_audit, wifi_survey, host_hardening, osint_domain, forensics_triage, cred_audit, vuln_sweep + ignition + temple_strike</div>
     </div>
 
     <h2 style="color: var(--text-secondary);">// LATER — planned</h2>
