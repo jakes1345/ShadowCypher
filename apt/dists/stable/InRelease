@@ -9,26 +9,26 @@ Version: 2.2.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Tue, 01 Sep 2026 00:13:27 +0000
+Date: Wed, 02 Sep 2026 00:02:22 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- e43e9a75a5b5b9fd3e14e7abb98dd8ea 29 main/binary-amd64/Packages.gz
+ daf57eca96b17eaf563cbe123d0bab8d 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- 8877acb11ee77d4547fe9ef230fbc173a90ae93cc8073329437c11a5b7042b46 29 main/binary-amd64/Packages.gz
+ 138a78d3ad9aed810e38f8f48f6d00b9b3b6f1c69a34383a38950358d3c78dc5 29 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmqWGKcACgkQ2fHRjxMT
-8INsrhAAimQw9vMc128U1X4IkmByS2ltY5vEg20m7ZDnlm2qsW03l3IIde0TsUyf
-mZf1v8BCpMjHoSpiMriRjw/L6RIDKB/wSy9xu4l5zfbQiMCTaFGCkrA5FF1TDZ0+
-B7or/ELYNOyCBOyJMfve3e+fcFcTWbYq8WFjpXmAIOnhiKfMCfiTCmOmG5jbno0f
-OKrCGaNsvwgghStkqhMpFOxd7UE8PV8hMki0ETvTh6RDRM1I1z3YP2wtEqd9dP3T
-YuVN+8/2Ygvz5Cl3DR5ZVvbMRMLkbu1ypLcvcnbfyvhZ9mgYufMB6eovt5Wp6uV6
-vFtTrDcswnkzT/kveOgNtTmGkAUZ0k0sPgudZyviGAjAkBQWyoOkshg/k7phEOO2
-kKk6+HDn0ahHmOX728CV0fjS9VX2r22qAWz27WYtWd3gbmgInFOqv8nqcJ+8erMh
-U2iOR408KiqBQcqsYpZlNqPvoksq4g2tVWZ2j55zCd5B7kS5hQAOtC1SQix+ptIK
-woVsgUNb+QMw5BafpV34GeJ9rytAtTMVyGK7bfuOGn4ofv2550mpIjZcHxGS6qG6
-d9tsAdmwRiqpr7jaxFOmONpMRoD/FwMsAgjRGcrjAFQkBa8v/AEmwHyYQgIDLHpW
-rExEokHweo0eG01SfBLmHJFEPUiCR4ApbDubfQ0A0D/vvmnJ7UY=
-=Z6Mz
+iQIzBAEBCgAdFiEEOsxJKIrE87y+HN6Y2fHRjxMT8IMFAmqXZ44ACgkQ2fHRjxMT
+8INrSQ/+OSH4/sMS9oWWphh1roQ/VWZVGRHnv96BAd8u2NaO+RnKeiOu55fihaua
+vNwvvUOUmtzuNU39an59UoK1VUD6SneKbz5XVUQXrN6rcjDLXMv3DfHkYcsCWsvv
+C+5nUUiTeuCya+ghxbZ0cnfJG2v2Rw+rwCP6csxD21/hXyOIc+ut+LsNQ5HDh9xs
+ZTQv7H+asiD7fiL7b6YzzAGcm+/tXjjqfMIhwyTlJblIOKlidwzu7Z9TkFdAhJn1
+DU+Luv39Xxo10QPm3xj4zWuv88iOpbpVWCr0Kfe5TYmjo/tBgpSrolc1hjytaTUp
+TjV/Kxd4Ry02dWDkh5ZjnDnJbpsEZVPGqMOju3CHZCOcVZ2T0dUrPts7XkynxeG/
+Bp0xr7pEm8Gi53wSHexsTm7rnKCV4dmp5KlYZYsZH3Lm5qouIvR7kVSFO2BLHcIf
+yb3xHtvix40i0g82VIy4DMH0Jj5Dj9YRwR8OLvtwurjZAD0ILKw6tQLQBZZeYHMb
+UBcAuwKZHypL0BldwlOJquOiQdK1DE/GB2IgmZ4ZXfSt/BkR8dHyBdP7tcQ2AvwO
+/Q++LsJ4GzmRMddb6SiUxMB/I9/JwXBS2rKo63lcPenIrmHFQqusCI6peV86HETW
+p9WqZ5YatiNx/yXdg9st+j/FUDEBCKsg2NS2yPNVDRlI/B/HYBQ=
+=md+O
 -----END PGP SIGNATURE-----
