@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# shadow-panic-wipe — Emergency data destruction (SUPER+CTRL+SHIFT+W)
+# Immediately destroys session data and optionally triggers shutdown.
+# Inspired by Tails' emergency shutdown and LUKS panic features.
+#
+# Bound in Hyprland as: bind = $mod CTRL SHIFT, W, exec, pkexec shadow-panic-wipe
+
+set -e
+
+# Visual confirmation via notify before acting
+if command -v notify-send &>/dev/null; then
+    notify-send -u critical "PANIC WIPE" "Emergency wipe in 5 seconds — kill this notification to abort" -t 5000 &
+fi
+
+sleep 5
+
+echo "[panic-wipe] EMERGENCY WIPE INITIATED"
+
+# 1. Drop all caches immediately
+sync
+echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+
+# 2. Kill all user processes to close file handles and flush buffers
+for user in $(who | awk '{print $1}' | sort -u); do
+    killall -9 -u "$user" 2>/dev/null || true
+done
+
+# 3. Unmount tmpfs home (amnesia mode) — data gone immediately
+for mount in $(mount | grep tmpfs | grep '/home' | awk '{print $3}'); do
+    umount -f "$mount" 2>/dev/null || true
+done
+
+# 4. Clear bash/zsh history
+for h in /home/*/.bash_history /home/*/.zsh_history /root/.bash_history /root/.zsh_history; do
+    [[ -f "$h" ]] && shred -u "$h" 2>/dev/null || true
+done
+
+# 5. Wipe /tmp and /run/user
+find /tmp -mindepth 1 -exec shred -u {} + 2>/dev/null || rm -rf /tmp/* 2>/dev/null || true
+find /run/user -mindepth 2 -exec shred -u {} + 2>/dev/null || true
+
+# 6. Clear nftables (stop any ongoing connections leaking data)
+nft flush ruleset 2>/dev/null || true
+
+# 7. Stop Tor to prevent any in-flight circuit data being logged
+systemctl stop tor 2>/dev/null || true
+
+# 8. Initiate RAM wipe + shutdown
+/usr/local/bin/shadowos-ramwipe 2>/dev/null || true
+
+echo "[panic-wipe] Shutting down NOW"
+systemctl poweroff --force
