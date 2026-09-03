@@ -437,7 +437,7 @@ bridge-utils                # network bridge management for VMs
 dmidecode                   # BIOS/hardware info used by VMs
 
 # === Tails OS-inspired amnesia ===
-secure-delete               # sdmem: RAM wipe on shutdown
+# secure-delete is already listed above (security section)
 memtester                   # memory testing (also used for secure wipe verification)
 
 # === Gaming — additions ===

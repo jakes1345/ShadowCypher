@@ -467,13 +467,17 @@ SECTIONS = [
     ("overview",     "◈",  "Overview",             "START"),
     ("desktop",      "⊞",  "Desktop & Keys",        "DESKTOP"),
     ("modes",        "⟳",  "Shadow Modes",          "DESKTOP"),
+    ("omarchy",      "◇",  "Shell & File Tools",    "DESKTOP"),
     ("ghost",        "◯",  "Ghost Mode",            "SECURITY"),
+    ("anonsurf",     "⊛",  "AnonSurf (Parrot)",     "SECURITY"),
+    ("amnesia",      "◌",  "Amnesia Mode (Tails)",  "SECURITY"),
+    ("qubes",        "⬢",  "VM Compartments",       "SECURITY"),
     ("pentest",      "◉",  "Pentest Arsenal",       "SECURITY"),
     ("shadowcypher", "⬡",  "ShadowCypher App",      "SECURITY"),
     ("privacy",      "◫",  "Privacy & Encryption",  "SECURITY"),
     ("terminal",     "▸",  "Terminal & Shell",      "TOOLS"),
     ("dev",          "◧",  "Development",           "TOOLS"),
-    ("gaming",       "◈",  "Gaming",                "TOOLS"),
+    ("gaming",       "◈",  "Gaming & SteamOS",      "TOOLS"),
     ("sysops",       "⊙",  "System Management",     "SYSTEM"),
     ("install",      "◎",  "Installing to Disk",    "SYSTEM"),
     ("emergency",    "◬",  "Emergency Protocols",   "SYSTEM"),
@@ -942,46 +946,252 @@ def pg_dev():
     return p
 
 
+def pg_omarchy():
+    p = vbox(16)
+    p.pack_start(sec_header("DESKTOP  ·  04 / 17", "Shell & File Tools",
+        "Omarchy-inspired: ghostty terminal, yazi file manager, atuin history, zoxide smart navigation."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+
+    p.pack_start(two_col(
+        [
+            h3("Terminal — Ghostty"),
+            cmd_table([
+                ("SUPER + Return",      "Open ghostty (GPU-accelerated, JetBrainsMono NF)"),
+                ("Ctrl+Shift+T",        "New tab inside ghostty"),
+                ("Ctrl+Shift+N",        "New ghostty window"),
+                ("Ctrl + / -",         "Increase / decrease font size"),
+            ]),
+            spacer(8),
+            h3("File manager — yazi"),
+            cmd_table([
+                ("SUPER + E",           "Open yazi (TUI file manager)"),
+                ("yy",                  "Shell function: cd to dir yazi exits in"),
+                ("h / l",               "Navigate parent / child directory"),
+                ("Enter",               "Open file with correct app (nvim/mpv/xdg-open)"),
+                ("y / p",               "Yank / paste"),
+                ("Space",               "Multi-select files"),
+            ]),
+        ],
+        [
+            h3("Shell history — atuin"),
+            cmd_table([
+                ("Ctrl + R",            "Fuzzy search full shell history (atuin TUI)"),
+                ("SUPER + R",           "atuin search in a floating terminal"),
+                ("atuin stats",         "Show your most-used commands"),
+            ]),
+            spacer(8),
+            h3("Smart cd — zoxide"),
+            cmd_table([
+                ("cd <partial>",        "Jumps to best-match directory from history"),
+                ("zi",                  "Interactive zoxide picker (fzf)"),
+                ("zoxide query -l",     "List all known directories ranked by frecency"),
+            ]),
+        ]
+    ), False, False, 0)
+
+    p.pack_start(code_block(
+        "# Jump to any project you've visited before\ncd shadow   # → /home/shadow/ShadowCypher (best match)\n\n"
+        "# yazi — press q to quit AND cd into current dir\nyy\n\n"
+        "# atuin — local-only, secrets filtered automatically\nCtrl+R  →  fuzzy search  →  Enter to run"
+    ), False, False, 0)
+    p.pack_start(tip("💡",
+        "Atuin stores history locally only (sync disabled). Secrets and wrangler commands "
+        "are stripped by the filter — they will never appear in search results."), False, False, 0)
+    return p
+
+
+def pg_anonsurf():
+    p = vbox(16)
+    p.pack_start(sec_header("SECURITY  ·  06 / 17", "AnonSurf",
+        "Parrot OS-inspired: routes all TCP through Tor via nftables. One command, system-wide."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+    p.pack_start(code_block(
+        "SUPER + A              # start AnonSurf\nSUPER + SHIFT + A      # stop AnonSurf\nSUPER + ALT + A        # leak check (terminal)"
+    ), False, False, 0)
+
+    p.pack_start(two_col(
+        [
+            h3("Commands"),
+            cmd_table([
+                ("shadow-anonsurf start",   "Route all TCP through Tor, block IPv6, randomize MAC"),
+                ("shadow-anonsurf stop",    "Restore normal routing, flush Tor nft rules"),
+                ("shadow-anonsurf status",  "Show Tor circuit IP + DNS check"),
+                ("shadow-anonsurf check",   "Full leak test: IP, DNS, WebRTC"),
+                ("anon-start / anon-stop",  "Shell aliases for the above"),
+            ]),
+        ],
+        [
+            h3("What it does"),
+            cmd_table([
+                ("nftables",        "shadow_privacy table — not iptables (no leaks)"),
+                ("DNS redirect",    "Port 53 → Tor port 5353 (prevents DNS leaks)"),
+                ("TCP redirect",    "All TCP → Tor transparent proxy port 9040"),
+                ("IPv6 block",      "Hard drop — IPv6 cannot leak real IP"),
+                ("MAC random",      "macchanger -r on each interface at start"),
+                ("Clock sync",      "Syncs from Tor consensus (no NTP leak)"),
+                ("Kill daemons",    "Stops avahi, cups, nmbd at start"),
+            ]),
+        ]
+    ), False, False, 0)
+
+    p.pack_start(tip("◬",
+        "AnonSurf protects network traffic only. Browser fingerprint, WebGL, "
+        "canvas, and font enumeration are separate — use Librewolf or Mullvad Browser "
+        "for those. Run shadow-anonsurf check to verify nothing leaks.", style="warn"), False, False, 0)
+    return p
+
+
+def pg_amnesia():
+    p = vbox(16)
+    p.pack_start(sec_header("SECURITY  ·  07 / 17", "Amnesia Mode",
+        "Tails OS-inspired: ephemeral home on RAM, transparent Tor, RAM wipe on shutdown."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+    p.pack_start(code_block(
+        "SUPER + F7             # enter amnesia mode\npkexec /etc/shadowos/modes/amnesia/apply.sh    # direct"
+    ), False, False, 0)
+
+    p.pack_start(two_col(
+        [
+            h3("What amnesia mode does"),
+            cmd_table([
+                ("tmpfs home",          "Mounts 4 GB RAM disk at /home/shadow — nothing persists"),
+                ("swap disabled",       "swapoff -a — no data can spill to disk"),
+                ("journal volatile",    "systemd journal goes to RAM, not /var/log"),
+                ("AnonSurf starts",     "Tor routing enabled automatically"),
+                ("Core dumps off",      "ulimit -c 0 — no crash files written"),
+                ("Browser firejail",    "librewolf/mullvad run in sandboxed namespace"),
+                ("RAM wipe armed",      "shadowos-ramwipe runs on shutdown via systemd"),
+            ]),
+        ],
+        [
+            h3("RAM wipe layers"),
+            cmd_table([
+                ("sync + drop_caches",  "Flush kernel page / dentry / inode caches"),
+                ("compact_memory",      "Defragment memory before wipe"),
+                ("sdmem",               "secure-delete RAM wipe (overwrites freed pages)"),
+                ("Python zero-fill",    "Fills ~85% of free RAM with zeros as fallback"),
+            ]),
+            spacer(8),
+            h3("Exit amnesia mode"),
+            cmd_table([
+                ("pkexec …/revert.sh",  "Restore NTP, swap, persistent journal, stop Tor"),
+                ("Reboot",              "All RAM data gone — machine is clean"),
+            ]),
+        ]
+    ), False, False, 0)
+
+    p.pack_start(tip("◬",
+        "Amnesia mode gives session-level privacy. The installed ShadowOS on disk is unchanged. "
+        "For full Tails-grade anonymity, boot from a read-only live USB instead.", style="warn"), False, False, 0)
+    return p
+
+
+def pg_qubes():
+    p = vbox(16)
+    p.pack_start(sec_header("SECURITY  ·  08 / 17", "VM Compartments",
+        "Qubes OS-inspired: isolate work by trust level using KVM/QEMU VMs with color-coded borders."), False, False, 0)
+    p.pack_start(sep(), False, False, 0)
+    p.pack_start(code_block(
+        "SUPER + SHIFT + Q      # launch disposable VM\nSUPER + F8             # enable Qubes mode\nshadow-qube list       # show running VMs"
+    ), False, False, 0)
+
+    p.pack_start(two_col(
+        [
+            h3("Trust levels & border colors"),
+            cmd_table([
+                ("vault   (red border)",       "Offline — no network interface at all"),
+                ("untrusted (red border)",      "Isolated DHCP range, Internet blocked"),
+                ("disposable (grey border)",    "Auto-deleted when window closes"),
+                ("work  (yellow border)",       "NAT, full internet, corporate-ready"),
+                ("personal (orange border)",    "NAT, full internet, daily-use"),
+            ]),
+            spacer(8),
+            h3("Commands"),
+            cmd_table([
+                ("shadow-qube disposable",      "Spin up a one-shot throwaway VM"),
+                ("shadow-qube new-vault myvm",  "Create an offline vault VM"),
+                ("shadow-qube list",            "List all VMs + trust level + state"),
+                ("shadow-qube stop myvm",       "Graceful shutdown"),
+                ("shadow-qube destroy myvm",    "Force-kill and delete the VM"),
+            ]),
+        ],
+        [
+            h3("Technical stack"),
+            cmd_table([
+                ("KVM/QEMU",        "Hypervisor (libvirt manages lifecycle)"),
+                ("OVMF (UEFI)",     "Secure Boot-capable firmware for each VM"),
+                ("swtpm",           "TPM 2.0 emulation per VM"),
+                ("SPICE",           "Display protocol — virt-viewer for GUI"),
+                ("libvirt networks","Separate DHCP subnets per trust level"),
+            ]),
+            spacer(8),
+            h3("Workspace mapping"),
+            cmd_table([
+                ("WS 5 — vault",      "Offline credential / key storage"),
+                ("WS 4 — untrusted",  "Opening sketchy files / links"),
+                ("WS 2 — work",       "Corporate / client work"),
+                ("WS 3 — personal",   "Personal browsing / comms"),
+            ]),
+        ]
+    ), False, False, 0)
+
+    p.pack_start(tip("💡",
+        "Border colors are enforced by Hyprland windowrulev2 on the VM window title. "
+        "Each VM title follows the pattern trust-name (e.g. vault-keys, disp-0001). "
+        "Disposable VMs auto-delete in the background when the window closes."), False, False, 0)
+    return p
+
+
 def pg_gaming():
     p = vbox(16)
-    p.pack_start(sec_header("TOOLS  ·  10 / 13", "Gaming",
-        "Steam, Lutris, Heroic, MangoHUD, Wine. SUPER+F10 for max performance."), False, False, 0)
+    p.pack_start(sec_header("TOOLS  ·  14 / 17", "Gaming & SteamOS",
+        "Steam, gamescope Big Picture, Proton, MangoHUD. SUPER+F10 for max performance."), False, False, 0)
     p.pack_start(sep(), False, False, 0)
-    p.pack_start(code_block("SUPER + F10              # gaming mode (CPU boost, GPU clocks)\nSUPER + SHIFT + F10      # return to normal"), False, False, 0)
+    p.pack_start(code_block(
+        "SUPER + G              # Steam\nSUPER + SHIFT + G      # gamescope Big Picture (SteamOS mode)\nSUPER + F10            # gaming mode (CPU/GPU performance governors)\nSUPER + SHIFT + F10    # return to normal\nSUPER + SHIFT + F9     # exit gamescope"
+    ), False, False, 0)
 
     p.pack_start(two_col(
         [
             h3("Launchers"),
             cmd_table([
-                ("steam",           "Steam (SUPER+G). Proton enabled by default."),
-                ("lutris",          "Lutris — GOG, Epic, Battle.net via community scripts."),
-                ("heroic",          "Heroic Games Launcher — Epic + GOG native (firstboot install)."),
-                ("prismlauncher",   "Minecraft with mod support."),
-                ("bottles",         "Isolated Wine environments (firstboot Flatpak)."),
+                ("SUPER + G",              "Steam"),
+                ("SUPER + SHIFT + G",      "gamescope Big Picture (SteamOS mode)"),
+                ("lutris",                 "Lutris — GOG, Epic, Battle.net scripts"),
+                ("heroic",                 "Heroic Games Launcher — Epic + GOG native"),
+                ("prismlauncher",          "Minecraft with mod support"),
+                ("bottles",                "Isolated Wine environments (firstboot Flatpak)"),
+                ("emulationstation-de",    "Retro emulation frontend (firstboot Flatpak)"),
             ]),
         ],
         [
+            h3("gamescope — SteamOS Big Picture"),
+            cmd_table([
+                ("shadow-gamescope",       "Full gamescope session — auto-detects GPU + resolution"),
+                ("--hdr-enabled",          "HDR output (AMD + supported display)"),
+                ("--adaptive-sync",        "VRR / FreeSync / G-Sync"),
+                ("SUPER + SHIFT + F9",     "Kill gamescope, return to desktop"),
+            ]),
+            spacer(8),
             h3("Performance layer"),
             cmd_table([
-                ("gamemoderun <game>",  "Activate GameMode for a specific binary."),
-                ("mangohud <game>",     "Overlay: FPS, GPU/CPU, temps, frame time."),
-                ("gamescope",           "Micro-compositor — fixes Wayland scaling issues."),
-                ("goverlay",            "GUI to configure MangoHUD."),
-                ("protonup-qt",         "Install custom Proton versions (firstboot Flatpak)."),
-                ("wine <exe>",          "Run Windows executables directly."),
-                ("winetricks <verb>",   "Install Wine components (vcredist, directx…)."),
+                ("gamemoderun <game>",     "GameMode boost for a specific binary"),
+                ("mangohud <game>",        "FPS / GPU / CPU overlay"),
+                ("protonup-qt",            "Install custom Proton-GE versions"),
+                ("wine / winetricks",      "Run Windows binaries directly"),
             ]),
         ]
     ), False, False, 0)
     p.pack_start(tip("💡",
-        "Gaming mode calls cpupower to set the performance governor and flips GPU clocks. "
-        "Your security posture is unchanged — it's a performance-only switch."), False, False, 0)
+        "shadow-gamescope auto-detects your GPU vendor (AMD/NVIDIA/Intel) and applies "
+        "the right flags. It sets CPU + GPU to performance governors for the session "
+        "and restores them when gamescope exits. Workspace 7 is reserved for gaming."), False, False, 0)
     return p
 
 
 def pg_sysops():
     p = vbox(16)
-    p.pack_start(sec_header("SYSTEM  ·  11 / 13", "System Management",
+    p.pack_start(sec_header("SYSTEM  ·  15 / 17", "System Management",
         "Updates, diagnostics, Btrfs snapshots, and keeping the system healthy."), False, False, 0)
     p.pack_start(sep(), False, False, 0)
 
@@ -1125,7 +1335,11 @@ PAGE_FNS = {
     "overview":     pg_overview,
     "desktop":      pg_desktop,
     "modes":        pg_modes,
+    "omarchy":      pg_omarchy,
     "ghost":        pg_ghost,
+    "anonsurf":     pg_anonsurf,
+    "amnesia":      pg_amnesia,
+    "qubes":        pg_qubes,
     "pentest":      pg_pentest,
     "shadowcypher": pg_shadowcypher,
     "privacy":      pg_privacy,
