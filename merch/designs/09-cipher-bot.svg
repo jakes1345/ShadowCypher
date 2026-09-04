@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 840">
+  <!-- CIPHER BOT - robot/tech version of the ghost. Square head, antenna, HUD visor, tech vibe -->
+  <defs>
+    <linearGradient id="gg9" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="bg9" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0e0e26"/><stop offset="100%" stop-color="#080812"/>
+    </linearGradient>
+    <linearGradient id="screenG9" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#00ff41" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#00d4ff" stop-opacity="0.7"/>
+    </linearGradient>
+    <filter id="eg9" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="zg9" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="bigAura9" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="30"/>
+    </filter>
+  </defs>
+
+  <!-- Background aura -->
+  <ellipse cx="320" cy="420" rx="260" ry="340" fill="#00d4ff" opacity="0.04" filter="url(#bigAura9)"/>
+
+  <!-- ═══ ANTENNA ═══ -->
+  <line x1="320" y1="52" x2="320" y2="120" stroke="url(#gg9)" stroke-width="4" filter="url(#zg9)"/>
+  <circle cx="320" cy="46" r="12" fill="#00d4ff" filter="url(#eg9)"/>
+  <circle cx="320" cy="46" r="7" fill="white" opacity="0.7"/>
+  <!-- Antenna crossbar -->
+  <line x1="294" y1="88" x2="346" y2="88" stroke="url(#gg9)" stroke-width="3" filter="url(#zg9)"/>
+  <circle cx="294" cy="88" r="5" fill="#a855f7" filter="url(#zg9)"/>
+  <circle cx="346" cy="88" r="5" fill="#a855f7" filter="url(#zg9)"/>
+
+  <!-- ═══ ROBOT HEAD - square with rounded corners ═══ -->
+  <rect x="148" y="118" width="344" height="268" rx="32" fill="url(#bg9)"/>
+  <rect x="148" y="118" width="344" height="268" rx="32"
+        fill="none" stroke="url(#gg9)" stroke-width="3.5" filter="url(#eg9)"/>
+
+  <!-- Ear panels (tech side panels) -->
+  <rect x="108" y="162" width="44" height="80" rx="10" fill="#0e0e26" stroke="#00d4ff" stroke-width="2" filter="url(#zg9)"/>
+  <circle cx="130" cy="202" r="12" fill="#00d4ff" opacity="0.5" filter="url(#zg9)"/>
+  <rect x="488" y="162" width="44" height="80" rx="10" fill="#0e0e26" stroke="#a855f7" stroke-width="2" filter="url(#zg9)"/>
+  <circle cx="510" cy="202" r="12" fill="#a855f7" opacity="0.5" filter="url(#zg9)"/>
+
+  <!-- HUD visor bar (thin strip above eyes) -->
+  <rect x="166" y="168" width="308" height="16" rx="6" fill="#000814" stroke="#00d4ff" stroke-width="1.5" opacity="0.6"/>
+  <!-- HUD data lines -->
+  <text x="182" y="181" font-family="monospace" font-size="9" fill="#00d4ff" opacity="0.6" letter-spacing="1">SYS:OK  ENC:AES  LAT:2ms</text>
+
+  <!-- EYES - rectangular HUD-style with scan line effect -->
+  <!-- Left eye panel -->
+  <rect x="174" y="200" width="118" height="64" rx="8" fill="#020812"/>
+  <rect x="174" y="200" width="118" height="64" rx="8"
+        fill="none" stroke="#00d4ff" stroke-width="2" filter="url(#zg9)"/>
+  <rect x="182" y="208" width="102" height="40" rx="4" fill="#00d4ff" filter="url(#eg9)" opacity="0.9"/>
+  <rect x="186" y="212" width="94" height="12" rx="3" fill="white" opacity="0.5"/>
+  <rect x="182" y="230" width="102" height="3" rx="1" fill="#000" opacity="0.4"/>
+  <rect x="182" y="236" width="102" height="3" rx="1" fill="#000" opacity="0.3"/>
+  <!-- Eye flicker/data number inside -->
+  <text x="224" y="246" text-anchor="middle" font-family="monospace" font-size="12" fill="#000816" font-weight="bold" opacity="0.6">0xAF</text>
+
+  <!-- Right eye panel -->
+  <rect x="348" y="200" width="118" height="64" rx="8" fill="#020812"/>
+  <rect x="348" y="200" width="118" height="64" rx="8"
+        fill="none" stroke="#00d4ff" stroke-width="2" filter="url(#zg9)"/>
+  <rect x="356" y="208" width="102" height="40" rx="4" fill="#00d4ff" filter="url(#eg9)" opacity="0.9"/>
+  <rect x="360" y="212" width="94" height="12" rx="3" fill="white" opacity="0.5"/>
+  <rect x="356" y="230" width="102" height="3" rx="1" fill="#000" opacity="0.4"/>
+  <rect x="356" y="236" width="102" height="3" rx="1" fill="#000" opacity="0.3"/>
+  <text x="406" y="246" text-anchor="middle" font-family="monospace" font-size="12" fill="#000816" font-weight="bold" opacity="0.6">0x1F</text>
+
+  <!-- MOUTH - speaker grill / display strip -->
+  <rect x="218" y="292" width="204" height="36" rx="8" fill="#020c12" stroke="#00d4ff" stroke-width="1.5" opacity="0.8"/>
+  <!-- Grill lines -->
+  <line x1="232" y1="296" x2="232" y2="324" stroke="#00d4ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="246" y1="296" x2="246" y2="324" stroke="#00d4ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="260" y1="296" x2="260" y2="324" stroke="#00d4ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="274" y1="296" x2="274" y2="324" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <line x1="288" y1="296" x2="288" y2="324" stroke="#a855f7" stroke-width="1.5" opacity="0.3"/>
+  <line x1="302" y1="296" x2="302" y2="324" stroke="#a855f7" stroke-width="2" opacity="0.5"/>
+  <line x1="316" y1="296" x2="316" y2="324" stroke="#a855f7" stroke-width="1.5" opacity="0.3"/>
+  <line x1="330" y1="296" x2="330" y2="324" stroke="#a855f7" stroke-width="1.5" opacity="0.3"/>
+  <line x1="344" y1="296" x2="344" y2="324" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <line x1="358" y1="296" x2="358" y2="324" stroke="#00d4ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="372" y1="296" x2="372" y2="324" stroke="#00d4ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="386" y1="296" x2="386" y2="324" stroke="#00d4ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="400" y1="296" x2="400" y2="324" stroke="#00d4ff" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- ═══ ROBOT BODY / TORSO ═══ -->
+  <rect x="172" y="390" width="296" height="248" rx="24" fill="url(#bg9)"/>
+  <rect x="172" y="390" width="296" height="248" rx="24"
+        fill="none" stroke="url(#gg9)" stroke-width="3" filter="url(#eg9)"/>
+
+  <!-- Neck connector -->
+  <rect x="252" y="382" width="136" height="18" rx="6" fill="#0e0e26" stroke="url(#gg9)" stroke-width="2"/>
+
+  <!-- Chest screen / SC badge -->
+  <rect x="218" y="418" width="204" height="100" rx="12" fill="#020c1a" stroke="#00d4ff" stroke-width="2" filter="url(#zg9)"/>
+  <!-- Screen content -->
+  <text x="320" y="454" text-anchor="middle" font-family="monospace" font-size="13" fill="#00d4ff" opacity="0.55" letter-spacing="1">SHADOWCYPHER</text>
+  <text x="320" y="476" text-anchor="middle" font-family="monospace" font-size="32" font-weight="bold" fill="url(#screenG9)" filter="url(#zg9)">SC</text>
+  <text x="320" y="506" text-anchor="middle" font-family="monospace" font-size="10" fill="#a855f7" opacity="0.55" letter-spacing="2">CIPHER-BOT v2.0</text>
+
+  <!-- Belly power button -->
+  <circle cx="320" cy="550" r="24" fill="#0a0a1e" stroke="url(#gg9)" stroke-width="2.5"/>
+  <path d="M 312,540 L 312,552 A 10 10 0 1 0 328,552 L 328,540" fill="none" stroke="#00d4ff" stroke-width="2.5" stroke-linecap="round" filter="url(#zg9)"/>
+  <line x1="320" y1="535" x2="320" y2="546" stroke="#00d4ff" stroke-width="2.5" stroke-linecap="round" filter="url(#zg9)"/>
+
+  <!-- ═══ ROBOT ARMS ═══ -->
+  <!-- Left arm -->
+  <rect x="100" y="398" width="76" height="130" rx="20" fill="#0e0e26" stroke="#00d4ff" stroke-width="2.5" filter="url(#zg9)"/>
+  <!-- Left hand/claw -->
+  <rect x="96" y="524" width="84" height="44" rx="14" fill="#0a0a1e" stroke="#00d4ff" stroke-width="2" filter="url(#zg9)"/>
+  <!-- Right arm -->
+  <rect x="464" y="398" width="76" height="130" rx="20" fill="#0e0e26" stroke="#a855f7" stroke-width="2.5" filter="url(#zg9)"/>
+  <!-- Right hand/claw -->
+  <rect x="460" y="524" width="84" height="44" rx="14" fill="#0a0a1e" stroke="#a855f7" stroke-width="2" filter="url(#zg9)"/>
+
+  <!-- ═══ ROBOT LEGS ═══ -->
+  <rect x="206" y="634" width="88" height="100" rx="16" fill="#0e0e26" stroke="#00d4ff" stroke-width="2.5" filter="url(#zg9)"/>
+  <rect x="196" y="728" width="108" height="36" rx="10" fill="#0a0a1e" stroke="#00d4ff" stroke-width="2.5" filter="url(#zg9)"/>
+  <rect x="346" y="634" width="88" height="100" rx="16" fill="#0e0e26" stroke="#a855f7" stroke-width="2.5" filter="url(#zg9)"/>
+  <rect x="336" y="728" width="108" height="36" rx="10" fill="#0a0a1e" stroke="#a855f7" stroke-width="2.5" filter="url(#zg9)"/>
+
+  <!-- ZAP bolts on sides (matching other designs) -->
+  <path d="M 54,360 L 76,396 L 60,396 L 84,440" fill="none" stroke="#00d4ff" stroke-width="5" stroke-linecap="round" filter="url(#eg9)"/>
+  <path d="M 586,360 L 564,396 L 580,396 L 556,440" fill="none" stroke="#a855f7" stroke-width="5" stroke-linecap="round" filter="url(#eg9)"/>
+
+  <!-- WORDMARK -->
+  <text x="320" y="800" text-anchor="middle" font-family="monospace" font-size="42" font-weight="bold"
+        fill="white" letter-spacing="3">SHADOWCYPHER</text>
+  <text x="320" y="834" text-anchor="middle" font-family="monospace" font-size="11"
+        fill="url(#gg9)" letter-spacing="7" opacity="0.65">CIPHER BOT</text>
+</svg>

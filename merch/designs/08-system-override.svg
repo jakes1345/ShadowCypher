@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1000">
+  <defs>
+    <linearGradient id="g8" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#00d4ff"/>
+    </linearGradient>
+    <filter id="glow8">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Top bar decoration -->
+  <rect x="60" y="60" width="780" height="8" rx="4" fill="url(#g8)" opacity="0.7"/>
+
+  <!-- Large bold SYSTEM text -->
+  <text x="450" y="210" text-anchor="middle" font-family="monospace" font-size="136" font-weight="bold"
+        fill="none" stroke="white" stroke-width="2" opacity="0.9">SYSTEM</text>
+
+  <!-- Diagonal slash / override mark -->
+  <line x1="60" y1="230" x2="840" y2="100" stroke="#00d4ff" stroke-width="5" opacity="0.5" filter="url(#glow8)"/>
+
+  <!-- OVERRIDE in big filled text -->
+  <text x="450" y="380" text-anchor="middle" font-family="monospace" font-size="118" font-weight="bold"
+        fill="url(#g8)">OVERRIDE</text>
+
+  <!-- Scan line accent -->
+  <rect x="60" y="395" width="780" height="3" rx="2" fill="url(#g8)" opacity="0.4"/>
+
+  <!-- Smaller data lines -->
+  <text x="90" y="460" font-family="monospace" font-size="14" fill="#00d4ff" opacity="0.55">ACCESS_LEVEL := ROOT</text>
+  <text x="90" y="490" font-family="monospace" font-size="14" fill="#a855f7" opacity="0.55">ENCRYPTION := AES-256-SOVEREIGN</text>
+  <text x="90" y="520" font-family="monospace" font-size="14" fill="#00ff41" opacity="0.55">STATUS := UNDETECTABLE</text>
+  <text x="90" y="550" font-family="monospace" font-size="14" fill="white" opacity="0.35">IDENTITY := [REDACTED]</text>
+  <text x="90" y="580" font-family="monospace" font-size="14" fill="white" opacity="0.25">LOCATION := [REDACTED]</text>
+
+  <!-- Progress bar style elements -->
+  <rect x="90" y="620" width="720" height="3" rx="2" fill="white" opacity="0.1"/>
+  <rect x="90" y="620" width="540" height="3" rx="2" fill="url(#g8)" opacity="0.65"/>
+  <text x="820" y="616" text-anchor="end" font-family="monospace" font-size="12" fill="#00d4ff" opacity="0.6">75%</text>
+  <text x="90" y="645" font-family="monospace" font-size="12" fill="white" opacity="0.3">BREACH_ANALYSIS_COMPLETE.........RUNNING</text>
+
+  <!-- Bottom rule -->
+  <rect x="60" y="710" width="780" height="3" rx="2" fill="url(#g8)" opacity="0.5"/>
+
+  <!-- Node dots on rule -->
+  <circle cx="90" cy="711" r="5" fill="#a855f7" opacity="0.8" filter="url(#glow8)"/>
+  <circle cx="450" cy="711" r="5" fill="#00ff41" opacity="0.8" filter="url(#glow8)"/>
+  <circle cx="810" cy="711" r="5" fill="#00d4ff" opacity="0.8" filter="url(#glow8)"/>
+
+  <!-- WORDMARK -->
+  <text x="450" y="820" text-anchor="middle" font-family="monospace" font-size="62" font-weight="bold"
+        fill="white" letter-spacing="4">SHADOWCYPHER</text>
+  <text x="450" y="870" text-anchor="middle" font-family="monospace" font-size="14"
+        fill="url(#g8)" letter-spacing="10" opacity="0.65">SOVEREIGN SECURITY</text>
+
+  <!-- Bottom bar -->
+  <rect x="60" y="930" width="780" height="8" rx="4" fill="url(#g8)" opacity="0.7"/>
+</svg>

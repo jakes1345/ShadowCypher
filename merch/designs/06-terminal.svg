@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100">
+  <defs>
+    <linearGradient id="g6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="glow6">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Terminal window frame -->
+  <rect x="60" y="60" width="780" height="620" rx="12" fill="none" stroke="url(#g6)" stroke-width="3"/>
+  <!-- Title bar -->
+  <rect x="60" y="60" width="780" height="44" rx="12" fill="none" stroke="url(#g6)" stroke-width="3"/>
+  <line x1="60" y1="104" x2="840" y2="104" stroke="url(#g6)" stroke-width="2" opacity="0.6"/>
+  <!-- Window dots -->
+  <circle cx="96" cy="82" r="7" fill="#a855f7" opacity="0.8"/>
+  <circle cx="120" cy="82" r="7" fill="#00d4ff" opacity="0.8"/>
+  <circle cx="144" cy="82" r="7" fill="#00ff41" opacity="0.8"/>
+  <!-- Title text -->
+  <text x="450" y="88" text-anchor="middle" font-family="monospace" font-size="14"
+        fill="white" letter-spacing="3" opacity="0.6">shadowcypher — terminal</text>
+
+  <!-- Terminal content lines -->
+  <text x="88" y="146" font-family="monospace" font-size="16" fill="#00d4ff">$ <tspan fill="white">shadowcypher --init</tspan></text>
+  <text x="88" y="180" font-family="monospace" font-size="16" fill="#00ff41">  ✓ Encryption layer activated</text>
+  <text x="88" y="214" font-family="monospace" font-size="16" fill="#00ff41">  ✓ Identity shield online</text>
+  <text x="88" y="248" font-family="monospace" font-size="16" fill="#00ff41">  ✓ Threat feed connected</text>
+  <text x="88" y="282" font-family="monospace" font-size="16" fill="#a855f7">  ◆ Scanning network...</text>
+
+  <text x="88" y="334" font-family="monospace" font-size="16" fill="#00d4ff">$ <tspan fill="white">scan --deep --stealth</tspan></text>
+  <text x="88" y="368" font-family="monospace" font-size="14" fill="white" opacity="0.5">  [████████████████████] 100%</text>
+  <text x="88" y="402" font-family="monospace" font-size="16" fill="#00ff41">  ✓ 0 vulnerabilities detected</text>
+  <text x="88" y="436" font-family="monospace" font-size="16" fill="#00ff41">  ✓ System integrity: VERIFIED</text>
+
+  <text x="88" y="488" font-family="monospace" font-size="16" fill="#00d4ff">$ <tspan fill="white">protect --sovereign</tspan></text>
+  <text x="88" y="522" font-family="monospace" font-size="16" fill="#a855f7">  ◆ SHADOW MODE: ENABLED</text>
+  <text x="88" y="556" font-family="monospace" font-size="16" fill="#a855f7">  ◆ You are invisible.</text>
+
+  <!-- Blinking cursor -->
+  <rect x="88" y="598" width="12" height="22" rx="1" fill="#00d4ff" opacity="0.9" filter="url(#glow6)"/>
+
+  <!-- Bottom frame detail -->
+  <line x1="60" y1="643" x2="840" y2="643" stroke="url(#g6)" stroke-width="1" opacity="0.4"/>
+  <text x="840" y="658" text-anchor="end" font-family="monospace" font-size="11"
+        fill="#00d4ff" opacity="0.4" letter-spacing="1">sc_runtime v3.0.0</text>
+
+  <!-- WORDMARK -->
+  <text x="450" y="790" text-anchor="middle" font-family="monospace" font-size="72" font-weight="bold"
+        fill="white" letter-spacing="4">SHADOW</text>
+  <text x="450" y="875" text-anchor="middle" font-family="monospace" font-size="72" font-weight="bold"
+        fill="url(#g6)" letter-spacing="4">CYPHER</text>
+  <line x1="120" y1="900" x2="780" y2="900" stroke="url(#g6)" stroke-width="1.5" opacity="0.35"/>
+  <text x="450" y="940" text-anchor="middle" font-family="monospace" font-size="13"
+        fill="white" letter-spacing="8" opacity="0.4">ROOT ACCESS ONLY</text>
+</svg>
