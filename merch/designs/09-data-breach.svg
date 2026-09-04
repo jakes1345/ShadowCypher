@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100">
+  <defs>
+    <linearGradient id="g9v" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0.1"/>
+    </linearGradient>
+    <linearGradient id="g9h" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="glow9">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Binary rain columns - fading downward -->
+  <text x="68" y="100" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.7">1</text>
+  <text x="68" y="128" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.55">0</text>
+  <text x="68" y="156" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.4">1</text>
+  <text x="68" y="184" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.28">1</text>
+  <text x="68" y="212" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.15">0</text>
+
+  <text x="136" y="72" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.7">0</text>
+  <text x="136" y="100" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.55">0</text>
+  <text x="136" y="128" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.4">1</text>
+  <text x="136" y="156" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.25">0</text>
+
+  <text x="204" y="88" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.65">1</text>
+  <text x="204" y="116" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.5">1</text>
+  <text x="204" y="144" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.35">0</text>
+
+  <text x="272" y="60" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.6">1</text>
+  <text x="272" y="88" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.45">0</text>
+  <text x="272" y="116" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.3">1</text>
+
+  <!-- mirror on right side -->
+  <text x="628" y="60" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.6">0</text>
+  <text x="628" y="88" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.45">1</text>
+  <text x="628" y="116" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.3">0</text>
+  <text x="696" y="72" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.65">1</text>
+  <text x="696" y="100" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.5">1</text>
+  <text x="696" y="128" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.35">0</text>
+  <text x="764" y="88" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.6">0</text>
+  <text x="764" y="116" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.45">1</text>
+  <text x="764" y="144" font-family="monospace" font-size="18" fill="#00d4ff" opacity="0.3">0</text>
+  <text x="832" y="100" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.55">1</text>
+  <text x="832" y="128" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.4">0</text>
+  <text x="832" y="156" font-family="monospace" font-size="18" fill="#a855f7" opacity="0.25">1</text>
+
+  <!-- DATA BREACH main text - massive -->
+  <text x="450" y="320" text-anchor="middle" font-family="monospace" font-size="140" font-weight="bold"
+        fill="white">DATA</text>
+  <text x="450" y="480" text-anchor="middle" font-family="monospace" font-size="117" font-weight="bold"
+        fill="url(#g9h)">BREACH</text>
+
+  <!-- Glitch effect lines -->
+  <rect x="60" y="380" width="300" height="6" rx="2" fill="#00d4ff" opacity="0.25"/>
+  <rect x="540" y="395" width="260" height="4" rx="2" fill="#a855f7" opacity="0.2"/>
+  <rect x="60" y="440" width="180" height="3" rx="2" fill="#00ff41" opacity="0.15"/>
+
+  <!-- Sub text -->
+  <text x="450" y="560" text-anchor="middle" font-family="monospace" font-size="18"
+        fill="white" letter-spacing="6" opacity="0.45">INITIATED · ENCRYPTED · ERASED</text>
+
+  <!-- Separator -->
+  <line x1="120" y1="595" x2="780" y2="595" stroke="url(#g9h)" stroke-width="2" opacity="0.4"/>
+
+  <!-- Binary columns below separator -->
+  <text x="340" y="650" font-family="monospace" font-size="15" fill="#00d4ff" opacity="0.4">01001000 01000001 01000011 01001011</text>
+  <text x="340" y="675" font-family="monospace" font-size="15" fill="#a855f7" opacity="0.3">11001100 10101010 11110000 00001111</text>
+  <text x="340" y="700" font-family="monospace" font-size="15" fill="#00d4ff" opacity="0.2">10110101 01001011 11000011 00111100</text>
+
+  <!-- Wordmark -->
+  <text x="450" y="820" text-anchor="middle" font-family="monospace" font-size="58" font-weight="bold"
+        fill="white" letter-spacing="4">SHADOWCYPHER</text>
+  <text x="450" y="868" text-anchor="middle" font-family="monospace" font-size="14"
+        fill="url(#g9h)" letter-spacing="8" opacity="0.6">OFFENSIVE SECURITY</text>
+
+  <!-- Bottom binary trail -->
+  <text x="450" y="940" text-anchor="middle" font-family="monospace" font-size="12"
+        fill="#00d4ff" opacity="0.25" letter-spacing="1">0 1 1 0 1 0 0 1 · 1 0 1 1 0 0 1 0 · 0 1 0 1 1 1 0 0</text>
+  <text x="450" y="965" text-anchor="middle" font-family="monospace" font-size="12"
+        fill="#a855f7" opacity="0.15" letter-spacing="1">1 1 0 0 1 0 1 1 · 0 0 1 1 0 1 1 0 · 1 0 1 0 0 1 0 1</text>
+</svg>

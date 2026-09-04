@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900">
+  <defs>
+    <linearGradient id="g7" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="glow7">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- HEX GRID - all-over pattern design -->
+  <!-- Row 1 -->
+  <polygon points="100,52 136,30 172,52 172,96 136,118 100,96" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="196,52 232,30 268,52 268,96 232,118 196,96" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="292,52 328,30 364,52 364,96 328,118 292,96" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="388,52 424,30 460,52 460,96 424,118 388,96" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="484,52 520,30 556,52 556,96 520,118 484,96" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="580,52 616,30 652,52 652,96 616,118 580,96" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="676,52 712,30 748,52 748,96 712,118 676,96" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="772,52 808,30 844,52 844,96 808,118 772,96" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- Row 2 (offset) -->
+  <polygon points="52,140 88,118 124,140 124,184 88,206 52,184" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.2"/>
+  <polygon points="148,140 184,118 220,140 220,184 184,206 148,184" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="244,140 280,118 316,140 316,184 280,206 244,184" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="340,140 376,118 412,140 412,184 376,206 340,184" fill="none" stroke="#00d4ff" stroke-width="2" opacity="0.4"/>
+  <polygon points="436,140 472,118 508,140 508,184 472,206 436,184" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="532,140 568,118 604,140 604,184 568,206 532,184" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="628,140 664,118 700,140 700,184 664,206 628,184" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="724,140 760,118 796,140 796,184 760,206 724,184" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.2"/>
+  <polygon points="820,140 856,118 892,140 892,184 856,206 820,184" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.15"/>
+
+  <!-- Rows 3-8 continue the pattern (abbreviated for clarity) -->
+  <!-- Row 3 -->
+  <polygon points="100,228 136,206 172,228 172,272 136,294 100,272" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="196,228 232,206 268,228 268,272 232,294 196,272" fill="none" stroke="#a855f7" stroke-width="2" opacity="0.4"/>
+  <polygon points="292,228 328,206 364,228 364,272 328,294 292,272" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="388,228 424,206 460,228 460,272 424,294 388,272" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="484,228 520,206 556,228 556,272 520,294 484,272" fill="none" stroke="#00d4ff" stroke-width="2" opacity="0.4"/>
+  <polygon points="580,228 616,206 652,228 652,272 616,294 580,272" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="676,228 712,206 748,228 748,272 712,294 676,272" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="772,228 808,206 844,228 844,272 808,294 772,272" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- Row 4 offset -->
+  <polygon points="52,316 88,294 124,316 124,360 88,382 52,360" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.2"/>
+  <polygon points="148,316 184,294 220,316 220,360 184,382 148,360" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="244,316 280,294 316,316 316,360 280,382 244,360" fill="none" stroke="#00d4ff" stroke-width="2.5" opacity="0.5"/>
+  <polygon points="340,316 376,294 412,316 412,360 376,382 340,360" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="436,316 472,294 508,316 508,360 472,382 436,360" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="532,316 568,294 604,316 604,360 568,382 532,360" fill="none" stroke="#a855f7" stroke-width="2.5" opacity="0.5"/>
+  <polygon points="628,316 664,294 700,316 700,360 664,382 628,360" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="724,316 760,294 796,316 796,360 760,382 724,360" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="820,316 856,294 892,316 892,360 856,382 820,360" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.15"/>
+
+  <!-- CENTER LARGE HEX - hero element -->
+  <polygon points="450,310 530,265 610,310 610,400 530,445 450,400"
+           fill="none" stroke="url(#g7)" stroke-width="5" filter="url(#glow7)"/>
+  <polygon points="450,322 525,280 600,322 600,388 525,430 450,388"
+           fill="none" stroke="white" stroke-width="2" opacity="0.3"/>
+  <text x="530" y="368" text-anchor="middle" font-family="monospace" font-size="44" font-weight="bold"
+        fill="url(#g7)" filter="url(#glow7)">SC</text>
+
+  <!-- Row 5 - continuing -->
+  <polygon points="100,404 136,382 172,404 172,448 136,470 100,448" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.2"/>
+  <polygon points="196,404 232,382 268,404 268,448 232,470 196,448" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="292,404 328,382 364,404 364,448 328,470 292,448" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <!-- skip center area for hero hex -->
+  <polygon points="580,404 616,382 652,404 652,448 616,470 580,448" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="676,404 712,382 748,404 748,448 712,470 676,448" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="772,404 808,382 844,404 844,448 808,470 772,448" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- Row 6 offset -->
+  <polygon points="52,492 88,470 124,492 124,536 88,558 52,536" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.15"/>
+  <polygon points="148,492 184,470 220,492 220,536 184,558 148,536" fill="none" stroke="#00d4ff" stroke-width="2" opacity="0.35"/>
+  <polygon points="244,492 280,470 316,492 316,536 280,558 244,536" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="340,492 376,470 412,492 412,536 376,558 340,536" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="436,492 472,470 508,492 508,536 472,558 436,536" fill="none" stroke="#a855f7" stroke-width="2" opacity="0.35"/>
+  <polygon points="532,492 568,470 604,492 604,536 568,558 532,536" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="628,492 664,470 700,492 700,536 664,558 628,536" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="724,492 760,470 796,492 796,536 760,558 724,536" fill="none" stroke="#00d4ff" stroke-width="2" opacity="0.35"/>
+  <polygon points="820,492 856,470 892,492 892,536 856,558 820,536" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.15"/>
+
+  <!-- Row 7 -->
+  <polygon points="100,580 136,558 172,580 172,624 136,646 100,624" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.2"/>
+  <polygon points="196,580 232,558 268,580 268,624 232,646 196,624" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="292,580 328,558 364,580 364,624 328,646 292,624" fill="none" stroke="#00d4ff" stroke-width="2" opacity="0.38"/>
+  <polygon points="388,580 424,558 460,580 460,624 424,646 388,624" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="484,580 520,558 556,580 556,624 520,646 484,624" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="580,580 616,558 652,580 652,624 616,646 580,624" fill="none" stroke="#a855f7" stroke-width="2" opacity="0.38"/>
+  <polygon points="676,580 712,558 748,580 748,624 712,646 676,624" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="772,580 808,558 844,580 844,624 808,646 772,624" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- Row 8 offset -->
+  <polygon points="148,668 184,646 220,668 220,712 184,734 148,712" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.2"/>
+  <polygon points="244,668 280,646 316,668 316,712 280,734 244,712" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="340,668 376,646 412,668 412,712 376,734 340,712" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="436,668 472,646 508,668 508,712 472,734 436,712" fill="none" stroke="#a855f7" stroke-width="2" opacity="0.4"/>
+  <polygon points="532,668 568,646 604,668 604,712 568,734 532,712" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+  <polygon points="628,668 664,646 700,668 700,712 664,734 628,712" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.25"/>
+  <polygon points="724,668 760,646 796,668 796,712 760,734 724,712" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- SHADOWCYPHER wordmark at bottom -->
+  <text x="450" y="820" text-anchor="middle" font-family="monospace" font-size="48" font-weight="bold"
+        fill="white" letter-spacing="5">SHADOWCYPHER</text>
+  <text x="450" y="858" text-anchor="middle" font-family="monospace" font-size="12"
+        fill="url(#g7)" letter-spacing="10" opacity="0.65">HEX EDITION</text>
+</svg>

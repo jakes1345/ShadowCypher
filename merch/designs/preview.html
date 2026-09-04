@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShadowCypher — Design Preview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #f0ede6;
+    --dim: #9e9a90;
+    --bg: #0f0d0b;
+    --bg2: #161310;
+    --accent: #d4a853;
+    --cyan: #4ecdc4;
+    --warm: #c9735a;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Film grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%);
+    pointer-events: none;
+    z-index: 99;
+  }
+
+  header {
+    padding: 48px 40px 32px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+  }
+
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 6px;
+    color: var(--ink);
+  }
+
+  header span {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .tape {
+    display: inline-block;
+    background: var(--accent);
+    color: #1a1200;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 3px 10px;
+    transform: rotate(-1.5deg);
+    margin-left: 8px;
+  }
+
+  /* Now playing lofi bar */
+  .lofi-bar {
+    background: var(--bg2);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 10px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 2px;
+  }
+
+  .lofi-bar .pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--warm);
+    box-shadow: 0 0 8px var(--warm);
+    animation: blink 1.4s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .lofi-bar .track { color: var(--ink); }
+
+  /* Design grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    padding: 48px 40px;
+    max-width: 1400px;
+  }
+
+  .card {
+    position: relative;
+  }
+
+  .card-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-label::before {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  /* Hoodie mockup shell */
+  .hoodie-wrap {
+    position: relative;
+    background: #1a1714;
+    border-radius: 2px;
+    padding: 0;
+    overflow: hidden;
+    aspect-ratio: 680 / 860;
+    box-shadow:
+      0 4px 24px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* Cassette-tape corner sticker */
+  .hoodie-wrap::after {
+    content: attr(data-chapter);
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: var(--accent);
+    color: #1a1000;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 2px 8px;
+    text-transform: uppercase;
+    transform: rotate(-2deg);
+    z-index: 10;
+  }
+
+  .hoodie-wrap img,
+  .hoodie-wrap object {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Aged photo border */
+  .hoodie-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.4);
+    z-index: 5;
+    pointer-events: none;
+    border-radius: 2px;
+  }
+
+  .card-meta {
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .card-tagline {
+    font-size: 8px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+
+  .card-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    color: rgba(255,255,255,0.06);
+    line-height: 1;
+  }
+
+  /* Scratch marks under cards (lofi detail) */
+  .scratch {
+    margin-top: 10px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.06) 30%, rgba(255,255,255,0.06) 70%, transparent);
+  }
+
+  /* Bottom spec bar */
+  footer {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 24px 40px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+
+  footer strong {
+    display: block;
+    color: var(--ink);
+    margin-bottom: 4px;
+    font-size: 10px;
+  }
+
+  /* Cassette art top-right */
+  .cassette {
+    position: fixed;
+    top: 20px;
+    right: 40px;
+    opacity: 0.15;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+<!-- Cassette decoration -->
+<svg class="cassette" width="80" height="54" viewBox="0 0 80 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="1" y="1" width="78" height="52" rx="4" stroke="white" stroke-width="1.5"/>
+  <circle cx="22" cy="27" r="10" stroke="white" stroke-width="1.5"/>
+  <circle cx="58" cy="27" r="10" stroke="white" stroke-width="1.5"/>
+  <circle cx="22" cy="27" r="4" stroke="white" stroke-width="1"/>
+  <circle cx="58" cy="27" r="4" stroke="white" stroke-width="1"/>
+  <line x1="32" y1="27" x2="48" y2="27" stroke="white" stroke-width="1.5"/>
+  <rect x="30" y="38" width="20" height="6" rx="1" stroke="white" stroke-width="1"/>
+</svg>
+
+<header>
+  <h1>SHADOWCYPHER</h1>
+  <span>Merch · Season 01</span>
+  <div class="tape">UNRELEASED</div>
+</header>
+
+<div class="lofi-bar">
+  <div class="pulse"></div>
+  <span class="track">lofi grind radio — 3am session</span>
+  <span>·</span>
+  <span>DESIGN PREVIEW · 3 CHAPTERS</span>
+</div>
+
+<div class="grid">
+
+  <div class="card">
+    <div class="card-label">Chapter 01</div>
+    <div class="hoodie-wrap" data-chapter="The Grind">
+      <img src="sc-3am.svg" alt="3AM — The Grind" loading="lazy"/>
+    </div>
+    <div class="card-meta">
+      <div>
+        <div class="card-title">The Grind</div>
+        <div class="card-tagline">3:17 AM · The Grind Never Stops</div>
+      </div>
+      <div class="card-num">01</div>
+    </div>
+    <div class="scratch"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Chapter 02</div>
+    <div class="hoodie-wrap" data-chapter="Ghost Mode">
+      <img src="sc-ghost-mode.svg" alt="Ghost Mode" loading="lazy"/>
+    </div>
+    <div class="card-meta">
+      <div>
+        <div class="card-title">Ghost Mode</div>
+        <div class="card-tagline">They Can't See Me</div>
+      </div>
+      <div class="card-num">02</div>
+    </div>
+    <div class="scratch"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Chapter 03</div>
+    <div class="hoodie-wrap" data-chapter="On Watch">
+      <img src="sc-standing-watch.svg" alt="Standing Watch" loading="lazy"/>
+    </div>
+    <div class="card-meta">
+      <div>
+        <div class="card-title">Standing Watch</div>
+        <div class="card-tagline">He Never Sleeps So You Can</div>
+      </div>
+      <div class="card-num">03</div>
+    </div>
+    <div class="scratch"></div>
+  </div>
+
+</div>
+
+<footer>
+  <div>
+    <strong>Blank</strong>
+    Bella+Canvas 3729 Sponge Fleece
+  </div>
+  <div>
+    <strong>Weight</strong>
+    7.5oz · 52% Cotton / 48% Poly
+  </div>
+  <div>
+    <strong>Print Method</strong>
+    Water-Based Discharge Screen Print
+  </div>
+  <div>
+    <strong>Budget Target</strong>
+    $700 · 20 Units · Small Batch
+  </div>
+</footer>
+
+</body>
+</html>

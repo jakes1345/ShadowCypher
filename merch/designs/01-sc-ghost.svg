@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 820">
+  <defs>
+    <linearGradient id="bodyGrad" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" stop-color="#12122a"/>
+      <stop offset="100%" stop-color="#0a0a18"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="bigGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="12" result="b1"/>
+      <feGaussianBlur stdDeviation="6" result="b2"/>
+      <feMerge><feMergeNode in="b1"/><feMergeNode in="b2"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="eyeGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="zapGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="outerAura" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="18" result="b"/>
+      <feMerge><feMergeNode in="b"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- OUTER PURPLE AURA behind whole character -->
+  <ellipse cx="300" cy="430" rx="210" ry="300" fill="#a855f7" opacity="0.08" filter="url(#outerAura)"/>
+  <ellipse cx="300" cy="250" rx="140" ry="160" fill="#00d4ff" opacity="0.06" filter="url(#outerAura)"/>
+
+  <!-- MAIN CHARACTER SILHOUETTE -->
+  <!-- Full body path: dome head + chunky body + stubby feet -->
+  <path d="
+    M 300,72
+    C 378,70 438,120 445,188
+    C 452,248 438,290 420,308
+    C 450,322 472,358 472,398
+    C 472,448 458,492 442,530
+    C 428,566 412,594 408,628
+    C 404,652 396,670 378,678
+    C 364,684 348,686 335,682
+    C 325,692 315,696 300,696
+    C 285,696 275,692 265,682
+    C 252,686 236,684 222,678
+    C 204,670 196,652 192,628
+    C 188,594 172,566 158,530
+    C 142,492 128,448 128,398
+    C 128,358 150,322 180,308
+    C 162,290 148,248 155,188
+    C 162,120 222,70 300,72 Z"
+    fill="url(#bodyGrad)"/>
+
+  <!-- GLOW OUTLINE around entire character -->
+  <path d="
+    M 300,72
+    C 378,70 438,120 445,188
+    C 452,248 438,290 420,308
+    C 450,322 472,358 472,398
+    C 472,448 458,492 442,530
+    C 428,566 412,594 408,628
+    C 404,652 396,670 378,678
+    C 364,684 348,686 335,682
+    C 325,692 315,696 300,696
+    C 285,696 275,692 265,682
+    C 252,686 236,684 222,678
+    C 204,670 196,652 192,628
+    C 188,594 172,566 158,530
+    C 142,492 128,448 128,398
+    C 128,358 150,322 180,308
+    C 162,290 148,248 155,188
+    C 162,120 222,70 300,72 Z"
+    fill="none" stroke="url(#glowGrad)" stroke-width="3" filter="url(#bigGlow)" opacity="0.9"/>
+
+  <!-- HOOD DOME - slightly lighter to show roundness -->
+  <ellipse cx="300" cy="200" rx="128" ry="118" fill="#161630" opacity="0.6"/>
+
+  <!-- HOOD BRIM LINE - separates hood from body -->
+  <path d="M 178,300 Q 300,330 422,300" fill="none" stroke="#a855f7" stroke-width="2.5" opacity="0.55"/>
+  <path d="M 178,300 Q 300,330 422,300" fill="none" stroke="#a855f7" stroke-width="8" opacity="0.12"/>
+
+  <!-- FACE VOID - dark area where face would be -->
+  <path d="M 248,148 C 238,148 222,162 220,190 C 218,222 228,262 248,276 L 352,276 C 372,262 382,222 380,190 C 378,162 362,148 352,148 Z"
+        fill="#070710"/>
+
+  <!-- MASK / VISOR LINE - angular line across face -->
+  <path d="M 224,220 L 248,205 L 352,205 L 376,220"
+        fill="none" stroke="#a855f7" stroke-width="2" opacity="0.6"/>
+
+  <!-- EYES - the hero element -->
+  <!-- Left eye -->
+  <rect x="228" y="224" width="68" height="24" rx="4" fill="#00d4ff" filter="url(#eyeGlow)"/>
+  <rect x="234" y="228" width="56" height="10" rx="2" fill="white" opacity="0.65"/>
+  <!-- Right eye -->
+  <rect x="304" y="224" width="68" height="24" rx="4" fill="#00d4ff" filter="url(#eyeGlow)"/>
+  <rect x="310" y="228" width="56" height="10" rx="2" fill="white" opacity="0.65"/>
+
+  <!-- BODY DETAIL - SC badge / arrow mark on chest -->
+  <path d="M 270,400 L 300,380 L 330,400 L 320,430 L 300,445 L 280,430 Z"
+        fill="none" stroke="#a855f7" stroke-width="2" opacity="0.4"/>
+  <text x="300" y="420" text-anchor="middle" font-family="monospace" font-size="18" font-weight="bold"
+        fill="#a855f7" opacity="0.45">SC</text>
+
+  <!-- Body center shadow line (hood flow) -->
+  <line x1="300" y1="310" x2="300" y2="560" stroke="#a855f7" stroke-width="1.5" opacity="0.18"/>
+
+  <!-- FEET - two rounded bumps peeking at bottom -->
+  <ellipse cx="250" cy="680" rx="48" ry="24" fill="#0f0f22" stroke="#a855f7" stroke-width="2" opacity="0.8"/>
+  <ellipse cx="350" cy="680" rx="48" ry="24" fill="#0f0f22" stroke="#a855f7" stroke-width="2" opacity="0.8"/>
+  <!-- Foot glow -->
+  <ellipse cx="250" cy="680" rx="48" ry="24" fill="none" stroke="#a855f7" stroke-width="6" opacity="0.15" filter="url(#zapGlow)"/>
+  <ellipse cx="350" cy="680" rx="48" ry="24" fill="none" stroke="#00d4ff" stroke-width="6" opacity="0.15" filter="url(#zapGlow)"/>
+
+  <!-- STUBBY ARMS at sides -->
+  <ellipse cx="115" cy="420" rx="35" ry="55" fill="#0f0f22" stroke="#a855f7" stroke-width="2.5" transform="rotate(-12,115,420)"/>
+  <ellipse cx="115" cy="420" rx="35" ry="55" fill="none" stroke="#a855f7" stroke-width="8" opacity="0.12" transform="rotate(-12,115,420)"/>
+  <ellipse cx="485" cy="420" rx="35" ry="55" fill="#0f0f22" stroke="#a855f7" stroke-width="2.5" transform="rotate(12,485,420)"/>
+  <ellipse cx="485" cy="420" rx="35" ry="55" fill="none" stroke="#a855f7" stroke-width="8" opacity="0.12" transform="rotate(12,485,420)"/>
+
+  <!-- LEFT LIGHTNING BOLTS (ZAP!) -->
+  <path d="M 88,340 L 108,368 L 94,368 L 118,408" fill="none" stroke="#00d4ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#zapGlow)"/>
+  <path d="M 78,380 L 100,410 L 85,410 L 108,450" fill="none" stroke="#00d4ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#zapGlow)" opacity="0.8"/>
+  <path d="M 82,420 L 102,448 L 88,448 L 110,485" fill="none" stroke="#00d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#zapGlow)" opacity="0.6"/>
+  <!-- ZAP dots left -->
+  <circle cx="75" cy="350" r="3.5" fill="#00d4ff" opacity="0.7" filter="url(#zapGlow)"/>
+  <circle cx="68" cy="400" r="2.5" fill="#00d4ff" opacity="0.55"/>
+  <circle cx="80" cy="460" r="2" fill="#00d4ff" opacity="0.4"/>
+
+  <!-- RIGHT LIGHTNING BOLTS -->
+  <path d="M 512,340 L 492,368 L 506,368 L 482,408" fill="none" stroke="#a855f7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#zapGlow)"/>
+  <path d="M 522,380 L 500,410 L 515,410 L 492,450" fill="none" stroke="#a855f7" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#zapGlow)" opacity="0.8"/>
+  <path d="M 518,420 L 498,448 L 512,448 L 490,485" fill="none" stroke="#a855f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#zapGlow)" opacity="0.6"/>
+  <!-- ZAP dots right -->
+  <circle cx="525" cy="350" r="3.5" fill="#a855f7" opacity="0.7" filter="url(#zapGlow)"/>
+  <circle cx="532" cy="400" r="2.5" fill="#a855f7" opacity="0.55"/>
+  <circle cx="520" cy="460" r="2" fill="#a855f7" opacity="0.4"/>
+
+  <!-- ENERGY DOTS floating -->
+  <circle cx="158" cy="290" r="3" fill="#00ff41" opacity="0.6" filter="url(#zapGlow)"/>
+  <circle cx="442" cy="290" r="3" fill="#00ff41" opacity="0.6" filter="url(#zapGlow)"/>
+  <circle cx="138" cy="510" r="2.5" fill="#00d4ff" opacity="0.4"/>
+  <circle cx="462" cy="510" r="2.5" fill="#a855f7" opacity="0.4"/>
+
+  <!-- WORDMARK -->
+  <text x="300" y="762" text-anchor="middle" font-family="monospace" font-size="52" font-weight="bold"
+        fill="white" letter-spacing="5">SHADOWCYPHER</text>
+  <text x="300" y="800" text-anchor="middle" font-family="monospace" font-size="13"
+        fill="url(#glowGrad)" letter-spacing="8" opacity="0.7">GHOST EDITION</text>
+</svg>
