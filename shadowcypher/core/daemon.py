@@ -306,6 +306,100 @@ async def handle_mail_send(params: dict) -> dict:
         return {"ok": False, "error": str(e)}
 
 
+async def handle_cve_feed_recent(params: dict) -> dict:
+    try:
+        from shadowcypher.modules.cve_feed import cve_feed
+        days = int(params.get("days", 7))
+        raw_vulns = cve_feed.fetch_recent(days=days)
+        kev = cve_feed.fetch_cisa_kev()
+        normalized = []
+        for vuln in raw_vulns:
+            cve_obj = vuln.get("cve", {})
+            if not cve_obj:
+                continue
+            nd = cve_feed._normalize_cve(cve_obj)
+            normalized.append({
+                "cve_id":          nd["id"],
+                "severity":        nd["severity"],
+                "score":           nd["score"],
+                "description":     nd["desc"][:250],
+                "published":       nd["published"],
+                "references":      nd["refs"],
+                "epss_score":      0.0,
+                "epss_percentile": 0.0,
+                "kev_exploited":   nd["id"] in kev,
+                "kev_due_date":    kev.get(nd["id"], ""),
+                "service":         "",
+            })
+        return {"cves": normalized, "count": len(normalized)}
+    except Exception as e:
+        logger.exception("cve_feed_recent error")
+        return {"cves": [], "count": 0, "error": str(e)}
+
+
+async def handle_cve_feed_search(params: dict) -> dict:
+    try:
+        from shadowcypher.modules.cve_feed import cve_feed
+        keyword = params.get("keyword", "").strip()
+        if not keyword:
+            return {"cves": [], "count": 0, "error": "keyword required"}
+        kev = cve_feed.fetch_cisa_kev()
+        raw_cves = cve_feed.search(keyword)
+        result = []
+        for nd in raw_cves:
+            result.append({
+                "cve_id":          nd["id"],
+                "severity":        nd["severity"],
+                "score":           nd["score"],
+                "description":     nd["desc"][:250],
+                "published":       nd["published"],
+                "references":      nd["refs"],
+                "epss_score":      0.0,
+                "epss_percentile": 0.0,
+                "kev_exploited":   nd["id"] in kev,
+                "kev_due_date":    kev.get(nd["id"], ""),
+                "service":         "",
+            })
+        return {"cves": result, "count": len(result)}
+    except Exception as e:
+        logger.exception("cve_feed_search error")
+        return {"cves": [], "count": 0, "error": str(e)}
+
+
+async def handle_cve_feed_scan(params: dict, writer: asyncio.StreamWriter, req_id: int) -> None:
+    target   = params.get("target", "").strip()
+    services = params.get("services", [])
+
+    if not target or not services:
+        writer.write(ok(req_id, {"output": "target and services are required", "level": "ERROR", "complete": True}))
+        await writer.drain()
+        return
+
+    def _send_line(text: str):
+        if not writer.is_closing():
+            data = ok(req_id, {"output": text.rstrip(), "level": "INFO", "complete": False})
+            asyncio.get_event_loop().call_soon_threadsafe(writer.write, data)
+
+    try:
+        from shadowcypher.modules.cve_feed import cve_feed
+        matches = await asyncio.to_thread(
+            cve_feed.correlate_target,
+            target, list(services), _send_line
+        )
+        cves = [m.to_dict() for m in matches]
+        writer.write(ok(req_id, {
+            "output":   f"Scan complete — {len(cves)} CVE(s) matched.",
+            "level":    "SUCCESS",
+            "complete": True,
+            "cves":     cves,
+            "count":    len(cves),
+        }))
+        await writer.drain()
+    except Exception as e:
+        writer.write(ok(req_id, {"output": f"Scan error: {e}", "level": "ERROR", "complete": True}))
+        await writer.drain()
+
+
 async def handle_ghost_mode_status(_params: dict) -> dict:
     tor_rc, tor_out, _ = await _run_cmd(["systemctl", "is-active", "tor"])
     tor_active = (tor_out.strip() == "active")
@@ -393,9 +487,11 @@ METHODS = {
     "ghost_mode_disable":        handle_ghost_mode_disable,
     "mail_inbox":                handle_mail_inbox,
     "mail_send":                 handle_mail_send,
+    "cve_feed_recent":           handle_cve_feed_recent,
+    "cve_feed_search":           handle_cve_feed_search,
 }
 
-STREAMING_METHODS = {"run_mission"}
+STREAMING_METHODS = {"run_mission", "cve_feed_scan"}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -422,7 +518,10 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                 params = req.get("params") or {}
 
                 if method in STREAMING_METHODS:
-                    asyncio.create_task(handle_run_mission(params, writer, req_id))
+                    if method == "cve_feed_scan":
+                        asyncio.create_task(handle_cve_feed_scan(params, writer, req_id))
+                    else:
+                        asyncio.create_task(handle_run_mission(params, writer, req_id))
                     continue
 
                 handler = METHODS.get(method)

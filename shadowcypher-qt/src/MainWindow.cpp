@@ -9,6 +9,7 @@
 #include "pages/ChatPage.h"
 #include "pages/GhostPage.h"
 #include "pages/MailPage.h"
+#include "pages/CveFeedPage.h"
 #include "pages/SettingsPage.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -107,6 +108,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         {"  CHAT"},
         {"  GHOST MODE"},
         {"  SHADOW MAIL"},
+        {"  CVE FEED"},
         {"  SETTINGS"},
     };
     for (const auto& item : navItems)
@@ -136,7 +138,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     m_stack->addWidget(new ChatPage(m_ipc, this));             // 6
     m_stack->addWidget(new GhostPage(m_ipc, this));            // 7
     m_stack->addWidget(new MailPage(m_ipc, this));             // 8
-    m_stack->addWidget(new SettingsPage(this));                // 9
+    m_stack->addWidget(new CveFeedPage(m_ipc, this));          // 9
+    m_stack->addWidget(new SettingsPage(this));                // 10
 
     rootLayout->addWidget(m_stack);
 
