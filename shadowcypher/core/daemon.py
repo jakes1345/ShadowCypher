@@ -251,6 +251,61 @@ async def _run_cmd(cmd: list[str]) -> tuple[int, str, str]:
     return proc.returncode or 0, stdout.decode(), stderr.decode()
 
 
+def _mail_credentials() -> tuple[str, str]:
+    """Read API key and base URL from the local config file written by the Qt6 app."""
+    import configparser
+    cfg = configparser.ConfigParser()
+    cfg_path = Path.home() / ".config" / "shadowcypher" / "config.ini"
+    cfg.read(str(cfg_path))
+    api_key  = cfg.get("api",  "key",      fallback="")
+    base_url = cfg.get("api",  "base_url", fallback="https://api.shadowcypher.site")
+    return api_key, base_url
+
+
+async def handle_mail_inbox(_params: dict) -> dict:
+    try:
+        import urllib.request
+        import json as _json
+        api_key, base_url = _mail_credentials()
+        if not api_key:
+            return {"messages": [], "error": "API key not configured"}
+        req = urllib.request.Request(
+            f"{base_url}/v1/mail/inbox",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return _json.loads(resp.read())
+    except Exception as e:
+        return {"messages": [], "error": str(e)}
+
+
+async def handle_mail_send(params: dict) -> dict:
+    try:
+        import urllib.request
+        import json as _json
+        api_key, base_url = _mail_credentials()
+        if not api_key:
+            return {"ok": False, "error": "API key not configured"}
+        body = _json.dumps({
+            "to":      params.get("to", ""),
+            "subject": params.get("subject", ""),
+            "body":    params.get("body", ""),
+        }).encode()
+        req = urllib.request.Request(
+            f"{base_url}/v1/mail/send",
+            data=body,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return _json.loads(resp.read())
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 async def handle_ghost_mode_status(_params: dict) -> dict:
     tor_rc, tor_out, _ = await _run_cmd(["systemctl", "is-active", "tor"])
     tor_active = (tor_out.strip() == "active")
@@ -336,6 +391,8 @@ METHODS = {
     "ghost_mode_status":         handle_ghost_mode_status,
     "ghost_mode_enable":         handle_ghost_mode_enable,
     "ghost_mode_disable":        handle_ghost_mode_disable,
+    "mail_inbox":                handle_mail_inbox,
+    "mail_send":                 handle_mail_send,
 }
 
 STREAMING_METHODS = {"run_mission"}
