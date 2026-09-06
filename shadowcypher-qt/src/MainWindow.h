@@ -36,5 +36,6 @@ private:
     static constexpr int PAGE_GHOST        = 7;
     static constexpr int PAGE_MAIL         = 8;
     static constexpr int PAGE_CVE_FEED     = 9;
-    static constexpr int PAGE_SETTINGS     = 10;
+    static constexpr int PAGE_OSINT        = 10;
+    static constexpr int PAGE_SETTINGS     = 11;
 };
