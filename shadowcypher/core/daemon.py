@@ -264,8 +264,8 @@ def _mail_credentials() -> tuple[str, str]:
 
 async def handle_mail_inbox(_params: dict) -> dict:
     try:
-        import urllib.request
         import json as _json
+        import urllib.request
         api_key, base_url = _mail_credentials()
         if not api_key:
             return {"messages": [], "error": "API key not configured"}
@@ -281,8 +281,8 @@ async def handle_mail_inbox(_params: dict) -> dict:
 
 async def handle_mail_send(params: dict) -> dict:
     try:
-        import urllib.request
         import json as _json
+        import urllib.request
         api_key, base_url = _mail_credentials()
         if not api_key:
             return {"ok": False, "error": "API key not configured"}
