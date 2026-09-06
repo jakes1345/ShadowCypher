@@ -36,6 +36,8 @@ qt_add_executable(shadowcypher
     src/pages/ShadowScriptPage.h
     src/pages/ChatPage.cpp
     src/pages/ChatPage.h
+    src/pages/GhostPage.cpp
+    src/pages/GhostPage.h
     src/pages/SettingsPage.cpp
     src/pages/SettingsPage.h
 )

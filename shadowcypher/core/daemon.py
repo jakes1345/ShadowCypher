@@ -241,6 +241,83 @@ async def handle_stop_mission(params: dict) -> dict:
     return {"ok": False, "error": "not running"}
 
 
+async def _run_cmd(cmd: list[str]) -> tuple[int, str, str]:
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    return proc.returncode or 0, stdout.decode(), stderr.decode()
+
+
+async def handle_ghost_mode_status(_params: dict) -> dict:
+    tor_rc, tor_out, _ = await _run_cmd(["systemctl", "is-active", "tor"])
+    tor_active = (tor_out.strip() == "active")
+
+    ks_rc, ks_out, _ = await _run_cmd(
+        ["sh", "-c", "iptables -L OUTPUT -n 2>/dev/null | grep -i drop"]
+    )
+    kill_switch = (ks_rc == 0 and bool(ks_out.strip()))
+
+    try:
+        gw_rc, gw_out, _ = await _run_cmd(
+            ["sh", "-c", "ip route list default 2>/dev/null | awk '{print $5}' | head -1"]
+        )
+        iface = gw_out.strip() or "eth0"
+        _, mac_out, _ = await _run_cmd(
+            ["sh", "-c", f"ip -o link show {iface} 2>/dev/null | awk '{{print $17}}'"]
+        )
+        mac = mac_out.strip() or "unknown"
+    except Exception:
+        mac = "unknown"
+
+    try:
+        with open("/etc/resolv.conf") as f:
+            content = f.read()
+        dns_locked = any(ns in content for ns in ("127.", "::1", "127.0.0.1"))
+    except Exception:
+        dns_locked = False
+
+    active = tor_active and kill_switch
+    return {
+        "tor": tor_active,
+        "kill_switch": kill_switch,
+        "mac": mac,
+        "dns_locked": dns_locked,
+        "active": active,
+    }
+
+
+async def handle_ghost_mode_enable(_params: dict) -> dict:
+    try:
+        cmds = [
+            ["systemctl", "start", "tor"],
+            ["sh", "-c", "iptables -I OUTPUT -m state --state NEW -o ! lo -j DROP 2>/dev/null || true"],
+            ["sh", "-c", "iptables -I OUTPUT -m owner --uid-owner debian-tor -j ACCEPT 2>/dev/null || true"],
+        ]
+        for cmd in cmds:
+            rc, _, stderr = await _run_cmd(cmd)
+            if rc not in (0, 1) and stderr:
+                logger.warning("ghost enable cmd error: %s", stderr.strip())
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+async def handle_ghost_mode_disable(_params: dict) -> dict:
+    try:
+        cmds = [
+            ["systemctl", "stop", "tor"],
+            ["sh", "-c", "iptables -F OUTPUT 2>/dev/null || true"],
+        ]
+        for cmd in cmds:
+            await _run_cmd(cmd)
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Method dispatch table
 # ──────────────────────────────────────────────────────────────────────────────
@@ -256,6 +333,9 @@ METHODS = {
     "ai_chat":                   handle_ai_chat,
     "list_missions":             handle_list_missions,
     "stop_mission":              handle_stop_mission,
+    "ghost_mode_status":         handle_ghost_mode_status,
+    "ghost_mode_enable":         handle_ghost_mode_enable,
+    "ghost_mode_disable":        handle_ghost_mode_disable,
 }
 
 STREAMING_METHODS = {"run_mission"}
