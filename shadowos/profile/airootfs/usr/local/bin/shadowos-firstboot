@@ -126,6 +126,16 @@ PACMAN
 
         # wl-screenrec — wayland screen recording
         pacman -S --noconfirm --needed wl-screenrec 2>&1 | tail -5 || true
+
+        # Privacy browsers (AUR-only — must come from Chaotic-AUR)
+        echo "[*] Installing privacy browsers (LibreWolf, Mullvad Browser, Tor Browser)..."
+        pacman -S --noconfirm --needed librewolf 2>&1 | tail -5 \
+            || echo "    librewolf not in chaotic-aur — try: yay -S librewolf"
+        pacman -S --noconfirm --needed mullvad-browser-bin 2>&1 | tail -5 \
+            || echo "    mullvad-browser-bin not in chaotic-aur — try: yay -S mullvad-browser-bin"
+        pacman -S --noconfirm --needed torbrowser-launcher 2>&1 | tail -5 \
+            || echo "    torbrowser-launcher not in chaotic-aur — try: yay -S torbrowser-launcher"
+        echo "    Browsers installed: librewolf, mullvad-browser-bin, torbrowser-launcher"
     fi
 
     # ── 2b. AUR-only goodies installed without an AUR helper ────────────────
