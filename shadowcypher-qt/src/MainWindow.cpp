@@ -7,6 +7,8 @@
 #include "pages/AiPage.h"
 #include "pages/ShadowScriptPage.h"
 #include "pages/ChatPage.h"
+#include "pages/GhostPage.h"
+#include "pages/MailPage.h"
 #include "pages/SettingsPage.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -103,6 +105,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         {"  AI ASSISTANT"},
         {"  SHADOWSCRIPT"},
         {"  CHAT"},
+        {"  GHOST MODE"},
+        {"  SHADOW MAIL"},
         {"  SETTINGS"},
     };
     for (const auto& item : navItems)
@@ -130,7 +134,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     m_stack->addWidget(new AiPage(m_ipc, this));             // 4
     m_stack->addWidget(new ShadowScriptPage(m_ipc, this));    // 5
     m_stack->addWidget(new ChatPage(m_ipc, this));             // 6
-    m_stack->addWidget(new SettingsPage(this));                // 7
+    m_stack->addWidget(new GhostPage(m_ipc, this));            // 7
+    m_stack->addWidget(new MailPage(m_ipc, this));             // 8
+    m_stack->addWidget(new SettingsPage(this));                // 9
 
     rootLayout->addWidget(m_stack);
 

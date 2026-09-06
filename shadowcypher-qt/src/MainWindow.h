@@ -32,5 +32,8 @@ private:
     static constexpr int PAGE_ARSENAL      = 3;
     static constexpr int PAGE_AI           = 4;
     static constexpr int PAGE_SHADOWSCRIPT = 5;
-    static constexpr int PAGE_SETTINGS     = 6;
+    static constexpr int PAGE_CHAT         = 6;
+    static constexpr int PAGE_GHOST        = 7;
+    static constexpr int PAGE_MAIL         = 8;
+    static constexpr int PAGE_SETTINGS     = 9;
 };
