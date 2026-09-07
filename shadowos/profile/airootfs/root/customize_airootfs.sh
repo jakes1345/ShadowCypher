@@ -26,7 +26,7 @@ systemctl enable NetworkManager.service
 systemctl enable iwd.service
 systemctl enable sddm.service
 systemctl enable ollama.service
-systemctl enable ufw.service
+systemctl enable nftables.service
 systemctl enable apparmor.service
 systemctl enable fail2ban.service
 systemctl enable systemd-timesyncd.service
@@ -63,15 +63,10 @@ systemctl set-default graphical.target
 systemctl enable dnscrypt-proxy.service 2>/dev/null || true
 systemctl disable tor.service 2>/dev/null || true
 
-# Firewall: deny all inbound by default; SSH only from LAN (RFC1918).
-# ufw --force enable fails in the chroot (no kernel/iptables) — rules are saved to disk
-# and applied at first boot by ufw.service. || true prevents set -e abort.
-ufw default deny incoming  2>/dev/null || true
-ufw default allow outgoing 2>/dev/null || true
-ufw allow from 192.168.0.0/16 to any port 22 proto tcp comment 'ShadowOS live SSH (LAN only)' 2>/dev/null || true
-ufw allow from 10.0.0.0/8    to any port 22 proto tcp comment 'ShadowOS live SSH (LAN only)' 2>/dev/null || true
-ufw allow from 172.16.0.0/12 to any port 22 proto tcp comment 'ShadowOS live SSH (LAN only)' 2>/dev/null || true
-ufw --force enable 2>/dev/null || true
+# Firewall: nftables is the canonical ShadowOS firewall (not UFW).
+# /etc/nftables.conf ships the base ruleset (deny all inbound, accept established).
+# nftables.service loads it at boot. AnonSurf adds its own tables on top.
+# SSH is rate-limited in nftables.conf — no need for per-rule allows here.
 
 # Re-stamp OS identity files (upstream `filesystem` package owns these and
 # clobbers them; we overwrite at the END of customize so our values win)
