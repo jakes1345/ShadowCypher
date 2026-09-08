@@ -1,0 +1,25 @@
+## ShadowOS Tor configuration
+## AnonSurf appends TransPort + DNSPort when activated.
+
+# SOCKS proxy for direct application use (browser, curl, etc.)
+SocksPort 9050
+SocksPolicy accept 127.0.0.0/8
+
+# Control port for torsocks, arm, Tor Browser (cookie auth — no plaintext password)
+ControlPort 9051
+CookieAuthentication 1
+
+# Logging — file only, no stdout noise
+Log notice file /var/log/tor/notices.log
+
+# Persistent data directory
+DataDirectory /var/lib/tor
+
+# Entry guard rotation (milliseconds): 60 days is Tor's recommended default
+# GuardLifetime 60 days
+
+# Disable connection padding when bandwidth is limited (can re-enable for paranoid mode)
+# ConnectionPadding 0
+
+# Enforce strict key pinning for guard nodes
+# EnforceDistinctSubnets 1

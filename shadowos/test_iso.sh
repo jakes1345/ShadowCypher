@@ -340,7 +340,7 @@ if [[ -f "$ca" ]]; then
   for svc in $(grep -oE 'systemctl enable [a-z][a-zA-Z0-9_-]+\.service' "$ca" | awk '{print $3}'); do
     # Built-in package services
     case "$svc" in
-      NetworkManager.service|sddm.service|ufw.service|apparmor.service|fail2ban.service|systemd-timesyncd.service|bluetooth.service|sshd.service|dnscrypt-proxy.service|docker.service|udisks2.service|power-profiles-daemon.service|tlp.service|gamemoded.service|cpupower.service|usbguard.service|auditd.service|cups.service)
+      NetworkManager.service|sddm.service|nftables.service|apparmor.service|fail2ban.service|systemd-timesyncd.service|bluetooth.service|sshd.service|dnscrypt-proxy.service|docker.service|udisks2.service|power-profiles-daemon.service|tlp.service|gamemoded.service|cpupower.service|usbguard.service|auditd.service|cups.service)
         pass "service enabled: $svc (provided by a listed package)" ;;
       *)
         if [[ -f "$AIRFS/etc/systemd/system/$svc" ]]; then
@@ -504,7 +504,7 @@ declare -A categories=(
   [dev]="git neovim code docker podman"
   [pentest]="nmap metasploit wireshark-qt aircrack-ng"
   [gaming]="steam gamemode mangohud lutris prismlauncher"
-  [security]="tor ufw apparmor fail2ban"
+  [security]="tor nftables apparmor fail2ban"
 )
 for cat_name in "${!categories[@]}"; do
   missing=""

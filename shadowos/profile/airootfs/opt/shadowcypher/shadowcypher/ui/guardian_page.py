@@ -132,7 +132,7 @@ class GuardianPage(BasePage):
         box.set_margin_bottom(10)
 
         lbl = Gtk.Label()
-        lbl.set_markup("<span size='small' color='#94a3b8'>Auto-harden this machine: disable unused services, tighten SSH, configure UFW, remove weak ciphers. Requires root.</span>")
+        lbl.set_markup("<span size='small' color='#94a3b8'>Auto-harden this machine: disable unused services, tighten SSH, configure nftables rules, remove weak ciphers. Requires root.</span>")
         lbl.set_line_wrap(True)
         lbl.set_xalign(0)
         box.pack_start(lbl, False, False, 0)

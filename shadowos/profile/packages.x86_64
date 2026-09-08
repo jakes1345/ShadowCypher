@@ -41,7 +41,6 @@ dnscrypt-proxy
 tor
 firejail
 apparmor
-ufw
 nftables
 conntrack-tools
 fail2ban
@@ -179,12 +178,9 @@ python-scikit-learn
 python-matplotlib
 
 # Apps
-# Browsers — privacy-first: LibreWolf default, Mullvad for anti-fingerprint,
-# Tor Browser via launcher. Firefox/Mozilla products are NOT shipped because
-# Mozilla telemetry + recent policy changes contradict the distro's brand.
-librewolf
-mullvad-browser-bin
-# firefox removed — contradicts brand (no Mozilla telemetry); use librewolf or mullvad-browser
+# Browsers — LibreWolf, Mullvad Browser, and Tor Browser are AUR-only (Chaotic-AUR).
+# They are installed by shadowos-firstboot after Chaotic-AUR is added.
+# Firefox/Mozilla products are NOT shipped (telemetry contradicts the brand).
 # chaotic-keyring/mirrorlist installed by build script via URL, not via pacstrap
 mpv
 imv
@@ -353,7 +349,6 @@ xdg-user-dirs
 xdg-utils
 zathura
 zathura-pdf-mupdf
-gufw
 gnome-keyring
 libsecret
 seahorse

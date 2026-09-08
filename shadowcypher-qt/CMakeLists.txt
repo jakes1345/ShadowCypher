@@ -43,6 +43,8 @@ qt_add_executable(shadowcypher
     src/pages/GhostPage.h
     src/pages/CveFeedPage.cpp
     src/pages/CveFeedPage.h
+    src/pages/OsintPage.cpp
+    src/pages/OsintPage.h
     src/pages/SettingsPage.cpp
     src/pages/SettingsPage.h
 )
