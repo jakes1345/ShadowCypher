@@ -141,6 +141,8 @@ cmd_start() {
 
     mac_randomize_all
     kill_leak_daemons
+    # Pause dnscrypt-proxy — all DNS goes to Tor DNSPort via nftables PREROUTING
+    systemctl stop dnscrypt-proxy 2>/dev/null || true
     configure_tor_transparent
     apply_nftables
     sync_clock_tor
@@ -182,6 +184,10 @@ cmd_stop() {
 
     systemctl stop tor 2>/dev/null || true
     _ok "Tor stopped"
+
+    # Restart dnscrypt-proxy so encrypted DNS resumes after AnonSurf exits
+    systemctl start dnscrypt-proxy 2>/dev/null || true
+    _ok "dnscrypt-proxy restarted — encrypted DNS resumed"
 
     rm -f "$STATE_FILE"
     echo ""
