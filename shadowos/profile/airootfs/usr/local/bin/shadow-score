@@ -12,9 +12,13 @@ def run_cmd(args):
         return "", -1
 
 def check_ufw():
-    # systemctl is-active is non-blocking and works without root
-    out, code = run_cmd(["systemctl", "is-active", "ufw"])
-    return out == "active"
+    # Check nftables is active and has rules loaded (ShadowOS uses nftables, not UFW)
+    out, code = run_cmd(["systemctl", "is-active", "nftables"])
+    if out == "active":
+        return True
+    # Also consider active if nftables has any tables loaded (AnonSurf/mode tables count)
+    tables, _ = run_cmd(["nft", "list", "tables"])
+    return bool(tables.strip())
 
 def check_dns():
     try:
