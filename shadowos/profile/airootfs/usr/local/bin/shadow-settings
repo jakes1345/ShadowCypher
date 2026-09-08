@@ -11,7 +11,7 @@ pick=$(printf '%s\n' \
     "Display & monitors" \
     "Appearance (GTK theme)" \
     "Personality mode" \
-    "Firewall (UFW)" \
+    "Firewall (nftables)" \
     "Privacy leak test" \
     "Security score" \
     "Check for updates" \
