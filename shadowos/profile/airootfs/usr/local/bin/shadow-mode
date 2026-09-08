@@ -133,7 +133,7 @@ case "${1:-}" in
         fi
         echo "tor:        $(systemctl is-active tor 2>/dev/null || echo inactive)"
         echo "dnscrypt:   $(systemctl is-active dnscrypt-proxy 2>/dev/null || echo inactive)"
-        echo "ufw:        $(ufw status 2>/dev/null | head -1 || echo unknown)"
+        echo "firewall:   $(nft list tables 2>/dev/null | tr '\n' ' ' || echo unknown)"
         echo "macchanger: $(cat /sys/class/net/*/address 2>/dev/null | head -3)"
         ;;
     -h|--help|help) usage ;;

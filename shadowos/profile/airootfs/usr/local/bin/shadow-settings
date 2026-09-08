@@ -51,12 +51,8 @@ case "$pick" in
     "Personality mode")
         exec shadow-mode picker
         ;;
-    "Firewall (UFW)")
-        if command -v gufw >/dev/null; then
-            exec pkexec gufw
-        else
-            run_term "ufw" "sudo ufw status verbose"
-        fi
+    "Firewall (nftables)")
+        run_term "nftables" "sudo nft list ruleset"
         ;;
     "Privacy leak test")
         run_term "leak-test" "shadow-leak-test"
