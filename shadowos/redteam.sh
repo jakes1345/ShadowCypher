@@ -149,7 +149,7 @@ SR 'uname -r' | grep -q 'hardened' && pass "kernel: linux-hardened active" || wa
 
 # ── 5. KEY SERVICES ───────────────────────────────────────────────────────
 section "5. KEY SERVICES"
-for svc in sddm NetworkManager ufw fail2ban dnscrypt-proxy sshd shadowos-mac-randomize shadowos-firstboot; do
+for svc in sddm NetworkManager nftables fail2ban dnscrypt-proxy sshd shadowos-mac-randomize shadowos-firstboot; do
     state=$(SR "systemctl is-active $svc 2>/dev/null || echo missing")
     result=$(SR "systemctl show -p Result --value $svc 2>/dev/null")
     case "$state" in
@@ -294,11 +294,11 @@ done
 
 # ── 12. FIREWALL POSTURE ──────────────────────────────────────────────────
 section "12. FIREWALL POSTURE"
-ufw_status=$(SRT 'echo shadow | sudo -S ufw status verbose 2>&1' | head -5)
-echo "$ufw_status" | grep -q 'Status: active' && pass "ufw active" || warn "ufw — $ufw_status"
 nft_rules=$(SRT 'echo shadow | sudo -S nft list ruleset 2>&1' | wc -l)
 info "nftables ruleset: $nft_rules lines"
-[[ "$nft_rules" -gt 0 ]] && pass "nftables has rules ($nft_rules lines)" || warn "nftables ruleset empty"
+[[ "$nft_rules" -gt 5 ]] && pass "nftables has rules ($nft_rules lines)" || warn "nftables ruleset empty or minimal"
+nft_tables=$(SRT 'echo shadow | sudo -S nft list tables 2>&1')
+echo "$nft_tables" | grep -q 'inet shadowos' && pass "base inet shadowos table loaded" || warn "inet shadowos table missing"
 
 # ── 13. DNS LEAK CHECK ────────────────────────────────────────────────────
 section "13. DNS BEHAVIOR"
