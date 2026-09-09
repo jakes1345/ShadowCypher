@@ -96,6 +96,9 @@ hyprlock
 hypridle
 hyprcursor
 mako
+libnotify
+wlr-randr
+pacman-contrib
 foot
 xterm
 thunar
@@ -149,6 +152,7 @@ bluez-utils
 # Installer (bare-metal install support) — Calamares is AUR-only so we ship
 # archinstall (official Arch TUI installer) + a friendlier wrapper.
 archinstall
+calamares
 
 # ShadowCypher runtime deps (GTK app)
 gtk3
@@ -180,8 +184,9 @@ python-matplotlib
 # Apps
 # Browsers — LibreWolf, Mullvad Browser, and Tor Browser are AUR-only (Chaotic-AUR).
 # They are installed by shadowos-firstboot after Chaotic-AUR is added.
-# Firefox/Mozilla products are NOT shipped (telemetry contradicts the brand).
+# librewolf: hardened Firefox fork — no telemetry, no auto-update, Tor-compatible
 # chaotic-keyring/mirrorlist installed by build script via URL, not via pacstrap
+librewolf
 mpv
 imv
 yt-dlp

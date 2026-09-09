@@ -1,7 +1,6 @@
 [Unit]
 Description=ShadowOS VPN Kill Switch
-After=network.target
-PartOf=openvpn@.service
+After=network.target openvpn@.service
 
 [Service]
 Type=oneshot

@@ -92,7 +92,7 @@ apply_mode() {
 
     # Switch AI model for this mode
     if [[ -f /etc/shadowcypher/ai.json ]] && command -v jq >/dev/null 2>&1; then
-        MODEL=$(jq -r ".models["$mode"] // .default_model" /etc/shadowcypher/ai.json 2>/dev/null)
+        MODEL=$(jq -r --arg m "$mode" '.models[$m] // .default_model' /etc/shadowcypher/ai.json 2>/dev/null)
         [[ -n "$MODEL" ]] && echo "$mode → AI model: $MODEL"
     fi
 
@@ -117,13 +117,13 @@ case "${1:-}" in
         ;;
     picker)
         choice=$(printf "normal\ndev\npentest\nprivacy\nghost\namnesia\nqubes\nsteamos\nundercover\ngaming" | wofi --dmenu --prompt="mode →")
-        [[ -n "$choice" ]] && pkexec "$0" "$choice"
+        [[ -n "$choice" ]] && pkexec /usr/local/bin/shadow-mode "$choice"
         ;;
     status|"")
         cur=$(current)
         echo "current mode: $cur"
         echo
-        if nft list tables 2>/dev/null | grep -qw shadow; then
+        if nft list tables 2>/dev/null | grep -qE 'shadow|anonsurf|killswitch'; then
             case "$cur" in
                 normal|dev|pentest|undercover)
                     echo "warning: ghost/privacy firewall rules still active — run: sudo shadow-mode $cur"

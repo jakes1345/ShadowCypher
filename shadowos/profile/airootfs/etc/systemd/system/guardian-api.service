@@ -3,6 +3,7 @@ Description=Guardian Security API Service
 Documentation=https://shadowcypher.site/guardian
 After=network.target
 Before=multi-user.target
+ConditionPathExists=/opt/shadowcypher/shadowcypher/api/local_api.py
 
 [Service]
 Type=simple

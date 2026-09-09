@@ -1,0 +1,8 @@
+# SDL2 Game Controller DB — SteamOS mode override
+# Format: GUID,name,mappings
+# This file is intentionally minimal — SDL2 ships a comprehensive built-in DB.
+# Add custom controller mappings here if the built-in DB misses your hardware.
+# See: https://github.com/gabomdq/SDL_GameControllerDB for the full community DB.
+#
+# Example entry:
+# 030000005e040000120b000001050000,Xbox Series Controller,a:b0,b:b1,x:b2,y:b3,...

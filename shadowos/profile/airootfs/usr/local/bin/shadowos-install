@@ -1,3 +1,16 @@
 #!/bin/bash
-# ShadowOS Installer launcher — delegates to the Qt6 installer binary
-exec /usr/local/bin/shadowos-installer "$@"
+# shadowos-install — launch the Calamares GUI installer (live session only)
+set -e
+
+if ! command -v calamares >/dev/null 2>&1; then
+    notify-send -u critical "ShadowOS Installer" "calamares not found — boot from the live ISO to install." 2>/dev/null || true
+    echo "Error: calamares is not installed. Boot from the ShadowOS live ISO to use the installer." >&2
+    exit 1
+fi
+
+# Calamares must run as root
+if [[ $EUID -ne 0 ]]; then
+    exec pkexec /usr/local/bin/shadowos-install "$@"
+fi
+
+exec calamares -style fusion "$@"
