@@ -1,0 +1,143 @@
+# ─────────────────────────────────────────────────────
+# C++ Lesson 3 — Advanced String & Data Processing
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • std::regex for pattern matching on captured data
+#   • Building a structured report from raw text
+#   • Extracting IPs, emails, hashes from arbitrary text
+#   • C++17 structured bindings and string_view
+# ─────────────────────────────────────────────────────
+# Real use case: you captured raw command output, log files,
+# or HTML and need to pull structured IOCs out of the noise.
+
+cpp extract_iocs {
+    #include <iostream>
+    #include <regex>
+    #include <set>
+    #include <sstream>
+    #include <string>
+    #include <vector>
+
+    std::string json_get(const std::string& j, const std::string& key) {
+        std::string needle = "\"" + key + "\":";
+        auto pos = j.find(needle);
+        if (pos == std::string::npos) return "";
+        pos += needle.size();
+        while (pos < j.size() && j[pos] == ' ') ++pos;
+        if (j[pos] == '"') {
+            ++pos;
+            std::string val;
+            while (pos < j.size() && j[pos] != '"') {
+                if (j[pos] == '\\' && pos+1 < j.size()) {
+                    if (j[pos+1] == 'n') { val += '\n'; pos += 2; continue; }
+                    if (j[pos+1] == 't') { val += '\t'; pos += 2; continue; }
+                    if (j[pos+1] == '"') { val += '"';  pos += 2; continue; }
+                }
+                val += j[pos++];
+            }
+            return val;
+        }
+        auto end = j.find_first_of(",}", pos);
+        return j.substr(pos, end == std::string::npos ? j.size() : end);
+    }
+
+    // Find all regex matches in text, return unique set
+    std::set<std::string> find_all(const std::string& text, const std::regex& re) {
+        std::set<std::string> results;
+        auto begin = std::sregex_iterator(text.begin(), text.end(), re);
+        auto end   = std::sregex_iterator();
+        for (auto it = begin; it != end; ++it) {
+            results.insert((*it)[0].str());
+        }
+        return results;
+    }
+
+    int main() {
+        std::string buf(
+            std::istreambuf_iterator<char>(std::cin),
+            std::istreambuf_iterator<char>()
+        );
+
+        std::string text = json_get(buf, "arg0");
+        if (text.empty()) {
+            std::cout << "No text provided as arg0\n";
+            return 0;
+        }
+
+        // IOC regexes — real patterns used in threat intel
+        std::regex re_ipv4(R"(\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b)");
+        std::regex re_email(R"(\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b)");
+        std::regex re_md5(R"(\b[0-9a-fA-F]{32}\b)");
+        std::regex re_sha1(R"(\b[0-9a-fA-F]{40}\b)");
+        std::regex re_sha256(R"(\b[0-9a-fA-F]{64}\b)");
+        std::regex re_url(R"(https?://[^\s"'<>]+)");
+        std::regex re_domain(R"(\b(?:[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.)+[a-z]{2,}\b)");
+
+        auto ips      = find_all(text, re_ipv4);
+        auto emails   = find_all(text, re_email);
+        auto md5s     = find_all(text, re_md5);
+        auto sha1s    = find_all(text, re_sha1);
+        auto sha256s  = find_all(text, re_sha256);
+        auto urls     = find_all(text, re_url);
+
+        auto join = [](const std::set<std::string>& s) {
+            std::string out;
+            for (auto& v : s) out += (out.empty() ? "" : ",") + v;
+            return out;
+        };
+
+        // Write back counts and lists
+        std::cout << "SHADOWVAR:IOC_IPS="    << join(ips)     << "\n";
+        std::cout << "SHADOWVAR:IOC_EMAILS=" << join(emails)  << "\n";
+        std::cout << "SHADOWVAR:IOC_MD5S="   << join(md5s)    << "\n";
+        std::cout << "SHADOWVAR:IOC_SHA256S=" << join(sha256s) << "\n";
+        std::cout << "SHADOWVAR:IOC_URLS="   << join(urls)    << "\n";
+        std::cout << "SHADOWVAR:IOC_TOTAL="
+                  << ips.size()+emails.size()+md5s.size()+sha1s.size()+sha256s.size()+urls.size()
+                  << "\n";
+
+        if (!ips.empty())     std::cout << "IPs:     " << join(ips)     << "\n";
+        if (!emails.empty())  std::cout << "Emails:  " << join(emails)  << "\n";
+        if (!md5s.empty())    std::cout << "MD5s:    " << join(md5s)    << "\n";
+        if (!sha256s.empty()) std::cout << "SHA256s: " << join(sha256s) << "\n";
+        if (!urls.empty())    std::cout << "URLs:    " << join(urls)    << "\n";
+
+        std::cout << "--- " << join({std::to_string(ips.size()+emails.size()+md5s.size()+sha256s.size()+urls.size())})
+                  << " IOCs extracted ---\n";
+
+        return 0;
+    }
+}
+
+# ── Test it against realistic threat intel text ───────
+VAR intel = "Threat actor contacted 192.168.1.45 and 10.0.0.254 from the C2 at 45.33.32.156. Dropped malware with hash d41d8cd98f00b204e9800998ecf8427e and sent phishing from attacker@evil-domain.ru. C2 callback URL: http://45.33.32.156/gate.php?id=abc"
+
+UNSAFE {
+    extract_iocs $intel
+}
+
+!echo($LAST)
+!echo("Total IOCs found: $IOC_TOTAL")
+!echo("IPs: $IOC_IPS")
+!echo("Emails: $IOC_EMAILS")
+!echo("Hashes: $IOC_MD5S")
+!echo("URLs: $IOC_URLS")
+
+IF $IOC_TOTAL > "0" {
+    AI("I extracted these IOCs from threat intel: IPs=$IOC_IPS emails=$IOC_EMAILS hashes=$IOC_MD5S urls=$IOC_URLS — what does this threat activity profile look like?")
+}
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • std::regex with raw string literals R"(...)" avoids
+#     backslash hell in regex patterns
+#   • std::set automatically deduplicates IOCs
+#   • std::sregex_iterator is the clean way to find ALL matches
+#   • R"(\b...\b)" word boundaries work with IPv4 — critical
+#     to avoid matching partial IPs inside longer numbers
+#
+# CHALLENGE: add URLS with ports (http://host:8080/path)
+#   and extract the port into SHADOWVAR:IOC_PORTS separately
+# ─────────────────────────────────────────────────────
+
+RETURN "cpp lesson 3 complete"

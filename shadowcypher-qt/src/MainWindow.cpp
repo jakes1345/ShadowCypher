@@ -12,6 +12,10 @@
 #include "pages/CveFeedPage.h"
 #include "pages/OsintPage.h"
 #include "pages/SettingsPage.h"
+#include "pages/NetworkPage.h"
+#include "pages/ThreatPage.h"
+#include "pages/OsintPage.h"
+#include "pages/VulnPage.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -102,6 +106,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     static const NavDef navItems[] = {
         {"  DASHBOARD"},
         {"  GUARDIAN"},
+        {"  NETWORK OPS"},
+        {"  THREAT INTEL"},
+        {"  OSINT NEXUS"},
+        {"  VULN NEXUS"},
         {"  COUNTER-INTEL"},
         {"  ARSENAL"},
         {"  AI ASSISTANT"},
@@ -110,7 +118,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         {"  GHOST MODE"},
         {"  SHADOW MAIL"},
         {"  CVE FEED"},
-        {"  OSINT"},
         {"  SETTINGS"},
     };
     for (const auto& item : navItems)
@@ -131,18 +138,21 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     m_stack = new QStackedWidget;
     m_stack->setStyleSheet("QStackedWidget { background: #0d0f1a; }");
 
-    m_stack->addWidget(new DashboardPage(m_ipc, this));      // 0
-    m_stack->addWidget(new GuardianPage(m_ipc, this));       // 1
-    m_stack->addWidget(new CounterIntelPage(m_ipc, this));   // 2
-    m_stack->addWidget(new ArsenalPage(this));               // 3
-    m_stack->addWidget(new AiPage(m_ipc, this));             // 4
-    m_stack->addWidget(new ShadowScriptPage(m_ipc, this));    // 5
-    m_stack->addWidget(new ChatPage(m_ipc, this));             // 6
-    m_stack->addWidget(new GhostPage(m_ipc, this));            // 7
-    m_stack->addWidget(new MailPage(m_ipc, this));             // 8
-    m_stack->addWidget(new CveFeedPage(m_ipc, this));          // 9
-    m_stack->addWidget(new OsintPage(m_ipc, this));            // 10
-    m_stack->addWidget(new SettingsPage(this));                // 11
+    m_stack->addWidget(new DashboardPage(m_ipc, this));       // 0
+    m_stack->addWidget(new GuardianPage(m_ipc, this));        // 1
+    m_stack->addWidget(new NetworkPage(m_ipc, this));         // 2
+    m_stack->addWidget(new ThreatPage(m_ipc, this));          // 3
+    m_stack->addWidget(new OsintPage(this));                  // 4
+    m_stack->addWidget(new VulnPage(this));                   // 5
+    m_stack->addWidget(new CounterIntelPage(m_ipc, this));    // 6
+    m_stack->addWidget(new ArsenalPage(this));                // 7
+    m_stack->addWidget(new AiPage(m_ipc, this));              // 8
+    m_stack->addWidget(new ShadowScriptPage(m_ipc, this));    // 9
+    m_stack->addWidget(new ChatPage(m_ipc, this));            // 10
+    m_stack->addWidget(new GhostPage(m_ipc, this));           // 11
+    m_stack->addWidget(new MailPage(m_ipc, this));            // 12
+    m_stack->addWidget(new CveFeedPage(m_ipc, this));         // 13
+    m_stack->addWidget(new SettingsPage(this));               // 14
 
     rootLayout->addWidget(m_stack);
 

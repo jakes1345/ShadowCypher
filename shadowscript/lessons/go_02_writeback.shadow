@@ -1,0 +1,129 @@
+# ─────────────────────────────────────────────────────
+# Go Lesson 2 — Structured Write-Back
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • Setting multiple SHADOWVAR: values from Go
+#   • Encoding Go structs back to the caller
+#   • Using the current ShadowScript vars (injected into args)
+#   • Error handling pattern for ShadowScript blocks
+# ─────────────────────────────────────────────────────
+# Real use case: you have a URL and want to break it into
+# scheme, host, port, path — and set them as separate vars
+# so ShadowScript can branch on each one.
+
+go parse_url {
+    package main
+
+    import (
+        "encoding/json"
+        "fmt"
+        "net/url"
+        "os"
+        "strings"
+    )
+
+    func main() {
+        var args map[string]interface{}
+        json.NewDecoder(os.Stdin).Decode(&args)
+
+        raw, _ := args["arg0"].(string)
+        if raw == "" {
+            // Write an error back and exit cleanly
+            fmt.Println("SHADOWVAR:URL_ERROR=no URL provided")
+            fmt.Println("Error: pass a URL as the first argument")
+            os.Exit(0)  // exit 0 so ShadowScript doesn't treat it as a crash
+        }
+
+        // Go's net/url package handles all the parsing
+        u, err := url.Parse(raw)
+        if err != nil {
+            fmt.Printf("SHADOWVAR:URL_ERROR=%s\n", err.Error())
+            fmt.Println("Error:", err)
+            os.Exit(0)
+        }
+
+        // Extract the parts
+        scheme := u.Scheme
+        host   := u.Hostname()
+        port   := u.Port()
+        path   := u.Path
+        query  := u.RawQuery
+
+        // Default port from scheme if not explicit
+        if port == "" {
+            switch scheme {
+            case "https": port = "443"
+            case "http":  port = "80"
+            case "ftp":   port = "21"
+            case "ssh":   port = "22"
+            }
+        }
+
+        // Write each part back as a ShadowScript variable
+        fmt.Printf("SHADOWVAR:URL_SCHEME=%s\n", scheme)
+        fmt.Printf("SHADOWVAR:URL_HOST=%s\n", host)
+        fmt.Printf("SHADOWVAR:URL_PORT=%s\n", port)
+        fmt.Printf("SHADOWVAR:URL_PATH=%s\n", path)
+        fmt.Printf("SHADOWVAR:URL_QUERY=%s\n", query)
+        fmt.Printf("SHADOWVAR:URL_IS_SECURE=%s\n", map[bool]string{true: "yes", false: "no"}[scheme == "https"])
+        fmt.Printf("SHADOWVAR:URL_ERROR=\n")   // clear any previous error
+
+        // Summary to $LAST
+        parts := []string{
+            "scheme: " + scheme,
+            "host: "   + host,
+            "port: "   + port,
+        }
+        if path != "" && path != "/" {
+            parts = append(parts, "path: "+path)
+        }
+        if query != "" {
+            parts = append(parts, "query: "+query)
+        }
+        fmt.Println(strings.Join(parts, " | "))
+    }
+}
+
+# ── Try it with a few different URLs ─────────────────
+VAR url1 = "https://api.target.com:8443/v2/users?token=abc"
+
+UNSAFE {
+    parse_url $url1
+}
+
+!echo("Parsed: $LAST")
+!echo("Host → $URL_HOST  Port → $URL_PORT  Secure → $URL_IS_SECURE")
+!echo("Path → $URL_PATH")
+
+IF $URL_IS_SECURE == "no" {
+    !echo("[!] Plain HTTP endpoint — check for sensitive data in transit")
+}
+
+IF $URL_PATH != "" {
+    !echo("[*] Path found: $URL_PATH — worth probing for directory listing")
+}
+
+# Re-use the block with a different target
+VAR url2 = "http://admin.internal.corp/manager/html"
+
+UNSAFE {
+    parse_url $url2
+}
+
+!echo("Second target: host=$URL_HOST path=$URL_PATH secure=$URL_IS_SECURE")
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • Exit cleanly (os.Exit(0)) even on errors — exit codes
+#     other than 0 set $LAST to the error and stop the block
+#   • Clear SHADOWVAR: values from previous runs explicitly
+#     (e.g. SHADOWVAR:URL_ERROR=) so stale data doesn't leak
+#   • net/url.Parse is robust — handles edge cases in URLs
+#   • You can call the same native block multiple times —
+#     each call is a fresh subprocess
+#
+# CHALLENGE: add SHADOWVAR:URL_SUBPATH — the first path segment
+#   e.g. "/api/v2/users" → "api"
+# ─────────────────────────────────────────────────────
+
+RETURN "go lesson 2 complete"

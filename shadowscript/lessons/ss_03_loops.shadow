@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────
+# ShadowScript Lesson 3 — Loops & Iteration
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   FOR item IN ...   — iterate over a list of values
+#   WHILE condition   — loop until condition is false
+#   BREAK             — exit a loop early
+#   MAP               — run a block on each line of $LAST
+#   FILTER            — keep only lines that match
+# ─────────────────────────────────────────────────────
+
+# 1. FOR loop over a list of targets
+FOR host IN "10.0.0.1" "10.0.0.2" "10.0.0.3" {
+    !echo("Checking host: $host")
+}
+
+# 2. FOR loop over ports — like iterating an array
+FOR port IN "22" "80" "443" "8080" "3389" {
+    !echo("Queuing port: $port")
+}
+
+# 3. WHILE loop with a counter
+VAR count = "0"
+WHILE $count < "5" {
+    !echo("Attempt $count ...")
+    VAR count = "1"   # Note: VAR overwrites — use a module for math
+}
+
+# 4. BREAK — exit a loop when a condition is met
+FOR status IN "miss" "miss" "hit" "miss" {
+    IF $status == "hit" {
+        !echo("Got a hit — stopping search")
+        BREAK
+    }
+    !echo("No hit yet, status: $status")
+}
+
+# 5. MAP — applies a block to every line in $LAST
+#    $LAST is set by the previous directive; $ITEM holds the current line
+VAR data = "ssh\nhttp\nhttps\nrdp\nsmb"
+SET LAST = $data
+
+MAP {
+    !echo("Service found: $ITEM")
+}
+
+# 6. FILTER — keeps only lines where the condition is true
+VAR services = "ssh\ntelnet\nhttp\nftp\nhttps"
+SET LAST = $services
+
+FILTER {
+    # Keeps lines where $ITEM == "telnet" or $ITEM == "ftp"
+    # (simplified — one condition per FILTER block)
+    $ITEM == "telnet"
+}
+!echo("Legacy protocols still exposed: $FILTERED")
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • FOR items are space-separated on one line, quoted if they
+#     contain spaces
+#   • WHILE has a 1000-iteration hard cap — it'll tell you if hit
+#   • MAP and FILTER operate on $LAST — pipe output into $LAST first
+#   • $ITEM is the loop variable inside MAP/FILTER
+#   • $FILTERED holds the result after FILTER
+# ─────────────────────────────────────────────────────
+
+RETURN "lesson 3 complete"

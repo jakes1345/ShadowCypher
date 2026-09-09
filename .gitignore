@@ -91,6 +91,8 @@ temp/
 out/
 dist/
 build/
+_build/
+cmake-build-*/
 bin/go/
 
 # Runtime state & forensic artifacts

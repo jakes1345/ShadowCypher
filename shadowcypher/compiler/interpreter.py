@@ -15,16 +15,30 @@ Syntax overview:
   FOR var IN items { body }  — iterate over space-separated items
   WHILE condition { body }   — loop while condition is true
   RETURN value               — set $RESULT and stop execution
-  !sys(command)              — run a system command
-  !pipe(cmd)                 — run a command, capture output to $PIPE_OUT
-  !module(mod, fn, args)     — call a module method directly
+  UNSAFE { body }            — enable !sys, !pipe, and native FFI calls
+
+Native language blocks (require UNSAFE to call):
+  rust  <name> { /* complete Rust program */ }
+  go    <name> { /* complete Go program */   }
+  cpp   <name> { /* complete C++ program */  }
+
+  Blocks are compiled once (cached by hash) and called as subprocess.
+  Protocol: JSON written to binary stdin; JSON read from stdout.
+  Variable injection: $VAR references in source are replaced before compile.
+  Write-back: print "SHADOWVAR:NAME=value" from the binary to set vars.
+
+  UNSAFE { <name> '{"key": "$val"}' }  — call a declared native function
+
+  !sys(command)  — run a shell command           [requires UNSAFE]
+  !pipe(cmd)     — run command, capture stdout   [requires UNSAFE]
+  !module(mod, fn, args)     — call module method directly
   !echo(text)                — print with $VAR interpolation
   !sleep(seconds)            — pause
-  UNSAFE { body }            — run body without stealth checks
 
 Conditions:  $VAR == value  |  $VAR != value  |  $VAR > n  |  $VAR < n  |  $VAR
 """
 
+import json
 import os
 import shlex
 import subprocess
@@ -56,6 +70,9 @@ class ShadowRuntime:
         self.output_callback = on_output or (lambda x: print(f"\033[1;32m[SHADOW]\033[0m {x}"))
         self.last_result: str = ""
         self._module_cache: Dict[str, Any] = {}
+        # FFI state
+        self._unsafe_context: bool = False        # True only inside UNSAFE { }
+        self._native_fns: Dict[str, str] = {}     # name → compiled binary path
 
     def emit(self, text: str):
         self.last_result = str(text)
@@ -135,6 +152,45 @@ class ShadowRuntime:
             logger.error("shadowscript", f"MODULE_LOAD_FAILED: {name} → {e}")
             return None
 
+    def call_native(self, name: str, args: List[str]) -> None:
+        """
+        Call a compiled native function (rust/go/cpp block).
+        Must be inside an UNSAFE block. Args are passed as JSON to stdin.
+        Stdout is parsed for result JSON and SHADOWVAR: write-back lines.
+        """
+        if not self._unsafe_context:
+            self.emit(f"Heads up — '{name}' is compiled native code. Wrap it in UNSAFE {{ }} to confirm you mean it.")
+            return
+        binary_path = self._native_fns.get(name)
+        if not binary_path:
+            self.emit(f"Can't find '{name}' — declare it first with a rust/go/cpp block above.")
+            return
+        # Build args JSON: positional args as arg0, arg1, … plus all current variables
+        payload: Dict[str, Any] = {f"arg{i}": v for i, v in enumerate(args)}
+        payload.update({k: v for k, v in self.variables.items() if isinstance(v, (str, int, float, bool))})
+        args_json = json.dumps(payload)
+
+        from shadowcypher.compiler.ffi_runner import call_native
+        self.emit(f"NATIVE: {name}({', '.join(args)})")
+        result, error = call_native(binary_path, args_json)
+        if error:
+            self.emit(f"Native call failed — {error}")
+            return
+        # Parse write-back lines (SHADOWVAR:NAME=value)
+        output_lines = []
+        for line in result.splitlines():
+            if line.startswith("SHADOWVAR:"):
+                parts = line[len("SHADOWVAR:"):].split("=", 1)
+                if len(parts) == 2:
+                    self.variables[parts[0].strip()] = parts[1].strip()
+            elif line:
+                output_lines.append(line)
+        combined = "\n".join(output_lines)
+        self.variables["LAST"] = combined
+        self.variables["NATIVE_RESULT"] = combined
+        for line in output_lines:
+            self.emit(line)
+
     def execute_directive(self, cmd: str, args: List[str]):
         """Execute a single directive with its args."""
         args = [self.resolve_var(a) for a in args]
@@ -142,7 +198,7 @@ class ShadowRuntime:
         if cmd == "TARGET":
             target = args[0] if args else ""
             self.variables["CURRENT_TARGET"] = target
-            self.emit(f"TARGET_SET: {target}")
+            self.emit(f"Target locked → {target}")
 
         elif cmd == "STRIKE":
             target = self.variables.get("CURRENT_TARGET", "")
@@ -151,7 +207,7 @@ class ShadowRuntime:
             extra_args  = args[2:] if len(args) > 2 else []
             mod = self._get_module(module_name)
             if mod and hasattr(mod, method):
-                self.emit(f"STRIKE: {module_name}.{method} → {target or '(no target)'}")
+                self.emit(f"Striking {module_name}.{method} → {target or '(no target set)'}")
                 fn = getattr(mod, method)
                 call_args = ([target] + extra_args) if target else extra_args
                 try:
@@ -160,17 +216,17 @@ class ShadowRuntime:
                     try:
                         fn(*call_args)
                     except Exception as e:
-                        self.emit(f"STRIKE_ERROR: {e}")
+                        self.emit(f"Strike failed — {e}")
             else:
-                self.emit(f"STRIKE_FAILED: module '{module_name}' or method '{method}' not found")
+                self.emit(f"Couldn't find {module_name}.{method} — check the module name or method spelling")
 
         elif cmd == "SCAN":
             target = self.variables.get("CURRENT_TARGET", "")
             if not target:
-                self.emit("SCAN_SKIPPED: no target set — use TARGET(ip) first")
+                self.emit("No target set yet — use TARGET(ip) before scanning.")
                 return
             port_range = args[0] if args else "1-1000"
-            self.emit(f"SCAN: {target} ports {port_range}")
+            self.emit(f"Scanning {target} on ports {port_range} ...")
             try:
                 from shadowcypher.modules.network import Network
                 net = Network()
@@ -180,27 +236,27 @@ class ShadowRuntime:
                     daemon=True,
                 ).start()
             except Exception as e:
-                self.emit(f"SCAN_ERROR: {e}")
+                self.emit(f"Scan failed — {e}")
 
         elif cmd == "SWARM":
             self.swarm_active = True
-            self.emit("SWARM: broadcasting to linked Shadow Nodes")
+            self.emit("Broadcasting to linked Shadow Nodes ...")
             try:
                 from shadowcypher.core.ghost import ghost_orchestrator
                 nodes = ghost_orchestrator.get_active_nodes()
                 if nodes:
                     cmd_str = args[0] if args else "ping"
                     ok = sum(1 for n in nodes if ghost_orchestrator.execute(n["fp"], cmd_str))
-                    self.emit(f"SWARM_RESULT: {ok}/{len(nodes)} nodes responded")
+                    self.emit(f"Swarm response: {ok}/{len(nodes)} nodes came back")
                 else:
-                    self.emit("SWARM: no Shadow Nodes linked — deploy an agent first")
+                    self.emit("No Shadow Nodes linked yet — deploy an agent to a machine first.")
             except Exception as e:
-                self.emit(f"SWARM_ERROR: {e}")
+                self.emit(f"Swarm error — {e}")
             bus.publish("module_status", {"module": "swarm", "status": "ENGAGED"})
 
         elif cmd == "AI":
             prompt = " ".join(args) if args else "Summarise the current mission state."
-            self.emit(f"AI: querying brain → {prompt[:80]}")
+            self.emit(f"Asking AI → {prompt[:80]}")
             try:
                 from shadowcypher.ai.orchestrator import orchestrator
                 result = orchestrator.execute_query_sync(prompt)
@@ -208,7 +264,7 @@ class ShadowRuntime:
                 for line in result.splitlines():
                     self.emit(line)
             except Exception as e:
-                self.emit(f"AI_ERROR: {e}")
+                self.emit(f"AI is offline — {e}")
 
         elif cmd == "LOAD":
             path = args[0] if args else ""
@@ -216,16 +272,19 @@ class ShadowRuntime:
                 base = os.path.join(os.path.dirname(__file__), "..", "..", "shadowscript", "missions")
                 path = os.path.join(base, path)
             if os.path.exists(path):
-                self.emit(f"LOAD: executing {path}")
+                self.emit(f"Loading {path} ...")
                 with open(path) as f:
                     ShadowInterpreter(on_output=self.output_callback).run(f.read())
             else:
-                self.emit(f"LOAD_ERROR: file not found: {path}")
+                self.emit(f"Can't find '{path}' — double-check the path.")
 
         elif cmd == "UNSAFE":
-            self.emit("UNSAFE: stealth checks disabled for this block")
+            self.emit("Entering unsafe context — shell commands and native FFI are live.")
 
         elif cmd == "!sys":
+            if not self._unsafe_context:
+                self.emit("!sys runs raw shell commands — you need an UNSAFE block around this. That's intentional.")
+                return
             full_cmd = " ".join(args)
             self.emit(f"SYS: {full_cmd}")
             try:
@@ -245,6 +304,9 @@ class ShadowRuntime:
                 self.emit(f"SYS_ERROR: {e}")
 
         elif cmd == "!pipe":
+            if not self._unsafe_context:
+                self.emit("!pipe runs shell commands under the hood — same deal as !sys, needs UNSAFE { }.")
+                return
             full_cmd = " ".join(args)
             try:
                 result = subprocess.run(
@@ -262,7 +324,7 @@ class ShadowRuntime:
 
         elif cmd == "!module":
             if len(args) < 2:
-                self.emit("!module: usage: !module(mod, method, ...args)")
+                self.emit("Usage: !module(module_name, method, ...args)")
                 return
             mod_name, method = args[0], args[1]
             method_args = args[2:]
@@ -276,7 +338,7 @@ class ShadowRuntime:
                     if result:
                         self.emit(str(result))
             else:
-                self.emit(f"MODULE_NOT_FOUND: {mod_name}.{method}")
+                self.emit(f"No method '{method}' on module '{mod_name}'")
 
         elif cmd == "!echo":
             self.emit(self.resolve_var(" ".join(args)))
@@ -288,7 +350,7 @@ class ShadowRuntime:
                 pass
 
         else:
-            self.emit(f"UNKNOWN_DIRECTIVE: {cmd}")
+            self.emit(f"Unknown directive '{cmd}' — check the ShadowScript reference (.help in the REPL)")
 
 
 class ShadowInterpreter:
@@ -335,31 +397,56 @@ class ShadowInterpreter:
         return body, ptr
 
     def _run_tokens(self, tokens: List[Token]):
-        """Execute a token list (used for IF/FOR/WHILE bodies)."""
+        """Execute a token list (used for IF/FOR/WHILE/UNSAFE bodies)."""
         interp = ShadowInterpreter(on_output=self.runtime.output_callback)
-        interp.runtime.variables = self.runtime.variables
+        interp.runtime.variables     = self.runtime.variables
         interp.runtime._module_cache = self.runtime._module_cache
+        interp.runtime._unsafe_context = self.runtime._unsafe_context  # propagate unsafe scope
+        interp.runtime._native_fns   = self.runtime._native_fns        # share compiled binary registry
         interp._execute(tokens)
-        # Propagate variable changes back
-        self.runtime.variables = interp.runtime.variables
-        self.runtime.last_result = interp.runtime.last_result
+        # Propagate state back
+        self.runtime.variables    = interp.runtime.variables
+        self.runtime.last_result  = interp.runtime.last_result
+        self.runtime._native_fns  = interp.runtime._native_fns  # pick up any new compilations
 
     # ── Main execution ───────────────────────────────────────────────────────
 
     def run(self, code: str):
         """Execute ShadowScript source code."""
         tokens = self.lexer.tokenize(code)
-        logger.info("shadowscript", f"EXECUTING: {len(tokens)} tokens")
+        logger.info("shadowscript", f"Running {len(tokens)} tokens")
         try:
             self._execute(tokens)
         except _Return as r:
             self.runtime.variables["RESULT"] = r.value
-            self.runtime.emit(f"RETURN: {r.value}")
+            self.runtime.emit(f"Done — returned: {r.value}")
 
     def _execute(self, tokens: List[Token]):
         ptr = 0
         while ptr < len(tokens):
             token = tokens[ptr]
+
+            # ── Native language block: rust/go/cpp <name> { ... } ─────────
+            if token.ttype == Token.TYPE_LANGBLOCK:
+                block  = token.value  # {"lang": …, "name": …, "source": …}
+                lang   = block["lang"]
+                name   = block["name"]
+                source = block["source"]
+                # Variable injection: replace $VAR refs in source before compiling
+                source = self.runtime.resolve_var(source)
+                self.runtime.emit(f"Compiling {lang} block '{name}' ...")
+                try:
+                    from shadowcypher.compiler.ffi_runner import compile_native
+                    binary_path, error = compile_native(lang, name, source)
+                    if error:
+                        self.runtime.emit(f"Compile failed for '{name}' — {error}")
+                    else:
+                        self.runtime._native_fns[name] = binary_path
+                        self.runtime.emit(f"'{name}' is ready → {binary_path}")
+                except Exception as e:
+                    self.runtime.emit(f"Could not compile '{name}' — {e}")
+                ptr += 1
+                continue
 
             # ── VAR / SET ──────────────────────────────────────────────────
             if token.ttype == Token.TYPE_KEYWORD and token.value in ("VAR", "SET"):
@@ -435,7 +522,7 @@ class ShadowInterpreter:
                         self._run_tokens(body_tokens)
                         max_iter -= 1
                     if max_iter == 0:
-                        self.runtime.emit("WHILE_LIMIT: reached 1000-iteration safety cap")
+                        self.runtime.emit("WHILE loop hit the 1000-iteration safety cap — breaking out.")
                 except _Break:
                     pass
                 continue
@@ -494,8 +581,12 @@ class ShadowInterpreter:
                         body_tokens, next_ptr = self._parse_block(tokens, next_ptr)
                         ptr = next_ptr
                         if cmd == "UNSAFE":
+                            # Set unsafe context on THIS runtime so _run_tokens inherits it
+                            old_unsafe = self.runtime._unsafe_context
+                            self.runtime._unsafe_context = True
                             self.runtime.execute_directive("UNSAFE", args)
                             self._run_tokens(body_tokens)
+                            self.runtime._unsafe_context = old_unsafe  # restore after block exits
                         elif cmd == "MAP":
                             # MAP: run body for each item in $LAST (newline-separated)
                             items = self.runtime.variables.get("LAST", "").splitlines()
@@ -517,20 +608,36 @@ class ShadowInterpreter:
                 else:
                     self.runtime.execute_directive(cmd, args)
 
-            # ── Bare identifier — try as module dispatch ───────────────────
+            # ── Bare identifier — dispatch native fn if registered ────────
             elif token.ttype == Token.TYPE_IDENTIFIER:
-                # Ignore standalone identifiers silently
-                pass
+                name = token.value
+                if name in self.runtime._native_fns:
+                    # Collect args on the same "line" (until next keyword or EOF)
+                    call_args = []
+                    ptr += 1
+                    while ptr < len(tokens):
+                        t = tokens[ptr]
+                        if t.ttype == Token.TYPE_KEYWORD:
+                            ptr -= 1  # let outer loop increment past this token
+                            break
+                        if t.ttype == Token.TYPE_LANGBLOCK:
+                            ptr -= 1
+                            break
+                        if t.value not in (",",):
+                            call_args.append(self.runtime.resolve_var(t.value))
+                        ptr += 1
+                    self.runtime.call_native(name, call_args)
+                # else: silently ignore unknown bare identifiers
 
             ptr += 1
 
     # ── Interactive REPL ─────────────────────────────────────────────────────
 
     def run_interactive(self):
-        print("\033[1;36m╔══════════════════════════════════════╗\033[0m")
-        print("\033[1;36m║  ShadowScript REPL  —  v2.0          ║\033[0m")
-        print("\033[1;36m║  .help  .vars  .modules  .exit       ║\033[0m")
-        print("\033[1;36m╚══════════════════════════════════════╝\033[0m")
+        print("\033[1;36m╔══════════════════════════════════════════════╗\033[0m")
+        print("\033[1;36m║  ShadowScript  —  tactical language runtime  ║\033[0m")
+        print("\033[1;36m║  .help  .vars  .native  .modules  .exit      ║\033[0m")
+        print("\033[1;36m╚══════════════════════════════════════════════╝\033[0m")
         while True:
             try:
                 line = input("\033[1;35mshadow>\033[0m ").strip()
@@ -544,11 +651,18 @@ class ShadowInterpreter:
             if line == ".help":
                 self._print_help()
             elif line == ".vars":
-                for k, v in self.runtime.variables.items():
-                    print(f"  {k} = {v}")
+                if self.runtime.variables:
+                    for k, v in self.runtime.variables.items():
+                        print(f"  \033[1;33m{k}\033[0m = {v}")
+                else:
+                    print("  No variables set yet.")
+            elif line == ".native":
+                if self.runtime._native_fns:
+                    for name, path in self.runtime._native_fns.items():
+                        print(f"  \033[1;32m{name}\033[0m → {path}")
+                else:
+                    print("  No native functions compiled yet. Declare one with: rust <name> { ... }")
             elif line == ".modules":
-                for _ in self.runtime._get_module.__func__.__code__.co_consts:
-                    pass
                 mods = ["recon", "network", "wireless", "exploit", "poc", "privesc",
                         "c2", "payload", "craft", "web", "osint", "credentials",
                         "secrets", "forensics", "vuln"]
@@ -560,35 +674,46 @@ class ShadowInterpreter:
     @staticmethod
     def _print_help():
         print("""
-\033[1;33mShadowScript Language:\033[0m
-  VAR name = value           Set a variable (also: SET)
-  TARGET(ip)                 Lock onto a target
-  STRIKE(module, method)     Execute a module against current target
-  SCAN(ports)                Network port scan (e.g. SCAN(22,80,443))
-  SWARM()                    Broadcast to linked Shadow Nodes
-  AI("prompt")               Query the local AI brain
-  LOAD("file.shadow")        Execute another script file
+\033[1;33mCore directives:\033[0m
+  VAR name = value              Set a variable (SET works too)
+  TARGET(ip)                    Lock a target — sets $CURRENT_TARGET
+  STRIKE(module, method)        Hit a module against the current target
+  SCAN(ports)                   Port scan, e.g. SCAN(22,80,443) or SCAN(1-1024)
+  SWARM(task)                   Push a task to all linked Shadow Nodes
+  AI("your question here")      Ask the local AI — result lands in $AI_RESULT
+  LOAD("mission.shadow")        Run another .shadow file inline
 
-\033[1;33mControl Flow:\033[0m
-  IF $VAR == value { body }  Conditional block
-  ELSE { body }              Else clause
-  FOR item IN a b c { body } Iterate over items
-  WHILE $VAR != 0 { body }   Loop while true
-  RETURN value               Exit script / return value
-  BREAK                      Exit loop
+\033[1;33mControl flow:\033[0m
+  IF $VAR == value { ... }      Standard conditional
+  ELSE { ... }                  Else branch
+  FOR item IN a b c { ... }     Iterate over a list
+  WHILE $VAR != 0 { ... }       Loop (max 1000 iterations)
+  RETURN value                  Exit the script, set $RESULT
+  BREAK                         Exit the current loop
 
-\033[1;33mSystem Commands:\033[0m
-  !sys(command)              Run a shell command (output → $LAST)
-  !pipe(command)             Run command (output → $PIPE_OUT)
-  !module(mod, fn, args)     Call module method directly
-  !echo(text)                Print with $VAR interpolation
-  !sleep(seconds)            Pause execution
+\033[1;33mNative language blocks (polyglot):\033[0m
+  rust  name { /* full Rust program */ }   Compile to binary, cache it
+  go    name { /* full Go program */   }
+  cpp   name { /* full C++ program */  }
 
-\033[1;33mREPL Metacommands:\033[0m
-  .vars      Show all variables
-  .modules   List available modules
-  .help      This help
-  .exit      Exit
+  Binary gets $VAR values injected before compile.
+  Binary reads JSON from stdin, writes JSON + SHADOWVAR: lines to stdout.
+
+  UNSAFE { name arg1 arg2 }     Call a compiled native binary (UNSAFE required)
+
+\033[1;33mSystem access (both require UNSAFE { }):\033[0m
+  !sys(command)                 Run a shell command — output → $LAST
+  !pipe(command)                Run a command, capture stdout → $PIPE_OUT
+  !module(mod, fn, args)        Call a Python module method directly
+  !echo(text)                   Print text, $VAR interpolation included
+  !sleep(seconds)               Pause
+
+\033[1;33mREPL commands:\033[0m
+  .vars      All current variables
+  .native    Compiled native functions in this session
+  .modules   Available Python modules for STRIKE
+  .help      This reference
+  .exit      Close the REPL
 """)
 
 

@@ -1,0 +1,221 @@
+# ─────────────────────────────────────────────────────
+# C++ Lesson 4 — Raw TCP Sockets with POSIX API
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • getaddrinfo() for DNS + address resolution
+#   • socket() / connect() / close() lifecycle
+#   • setsockopt() SO_SNDTIMEO / SO_RCVTIMEO for timeouts
+#   • Non-blocking connect pattern with select()
+#   • Writing to and reading from a raw TCP socket
+# ─────────────────────────────────────────────────────
+# Real use case: check if a port is open, grab the first
+# bytes the server sends (the service banner).
+
+cpp tcp_probe {
+    #include <iostream>
+    #include <string>
+    #include <cstring>
+    #include <sys/types.h>
+    #include <sys/socket.h>
+    #include <netdb.h>
+    #include <unistd.h>
+    #include <arpa/inet.h>
+    #include <sys/select.h>
+    #include <fcntl.h>
+    #include <errno.h>
+
+    std::string json_get(const std::string& j, const std::string& key) {
+        std::string needle = "\"" + key + "\":";
+        auto pos = j.find(needle);
+        if (pos == std::string::npos) return "";
+        pos += needle.size();
+        while (pos < j.size() && j[pos] == ' ') ++pos;
+        if (j[pos] == '"') {
+            ++pos;
+            std::string val;
+            while (pos < j.size() && j[pos] != '"') {
+                if (j[pos] == '\\' && pos+1 < j.size()) {
+                    if (j[pos+1] == 'n') { val += '\n'; pos += 2; continue; }
+                    if (j[pos+1] == 't') { val += '\t'; pos += 2; continue; }
+                    if (j[pos+1] == '"') { val += '"';  pos += 2; continue; }
+                }
+                val += j[pos++];
+            }
+            return val;
+        }
+        auto end = j.find_first_of(",}", pos);
+        return j.substr(pos, end == std::string::npos ? j.size() : end);
+    }
+
+    // Connect to host:port with a timeout_ms deadline.
+    // Returns an open socket fd on success, -1 on failure.
+    // Sets errstr on failure.
+    int connect_with_timeout(const std::string& host, const std::string& port,
+                             int timeout_ms, std::string& errstr) {
+        addrinfo hints{}, *res = nullptr;
+        hints.ai_family   = AF_UNSPEC;   // IPv4 or IPv6
+        hints.ai_socktype = SOCK_STREAM;
+
+        int rc = getaddrinfo(host.c_str(), port.c_str(), &hints, &res);
+        if (rc != 0 || res == nullptr) {
+            errstr = gai_strerror(rc);
+            return -1;
+        }
+
+        int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        if (fd < 0) {
+            errstr = strerror(errno);
+            freeaddrinfo(res);
+            return -1;
+        }
+
+        // Switch to non-blocking for connect-with-timeout
+        int flags = fcntl(fd, F_GETFL, 0);
+        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
+        rc = connect(fd, res->ai_addr, res->ai_addrlen);
+        freeaddrinfo(res);
+
+        if (rc == 0) {
+            // Instant connect (rare — loopback only)
+            fcntl(fd, F_SETFL, flags);  // restore blocking
+            return fd;
+        }
+        if (errno != EINPROGRESS) {
+            errstr = strerror(errno);
+            close(fd);
+            return -1;
+        }
+
+        // Wait for writability with select()
+        fd_set wfds;
+        FD_ZERO(&wfds);
+        FD_SET(fd, &wfds);
+        timeval tv{ timeout_ms / 1000, (timeout_ms % 1000) * 1000 };
+
+        rc = select(fd + 1, nullptr, &wfds, nullptr, &tv);
+        if (rc <= 0) {
+            errstr = (rc == 0) ? "timed out" : strerror(errno);
+            close(fd);
+            return -1;
+        }
+
+        // Check if the connect actually succeeded
+        int err = 0;
+        socklen_t len = sizeof(err);
+        getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len);
+        if (err != 0) {
+            errstr = strerror(err);
+            close(fd);
+            return -1;
+        }
+
+        fcntl(fd, F_SETFL, flags);  // restore blocking
+        return fd;
+    }
+
+    // Read up to `max_bytes` within `timeout_ms` from an open fd.
+    std::string read_banner(int fd, int timeout_ms, size_t max_bytes = 256) {
+        // Apply receive timeout so recv() doesn't block forever
+        timeval tv{ timeout_ms / 1000, (timeout_ms % 1000) * 1000 };
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+        std::string banner;
+        banner.resize(max_bytes);
+        ssize_t n = recv(fd, &banner[0], max_bytes, 0);
+        if (n > 0) banner.resize(n);
+        else banner.clear();
+
+        // Strip control characters (except \n) for safe output
+        std::string safe;
+        for (char c : banner) {
+            if (c == '\r') continue;
+            if (c >= 32 || c == '\n') safe += c;
+            else safe += '.';
+        }
+        return safe;
+    }
+
+    int main() {
+        std::string buf(
+            std::istreambuf_iterator<char>(std::cin),
+            std::istreambuf_iterator<char>()
+        );
+
+        std::string host    = json_get(buf, "arg0");
+        std::string port    = json_get(buf, "arg1");
+        std::string timeout = json_get(buf, "arg2");
+        if (host.empty()) { std::cerr << "arg0 = host required\n"; return 1; }
+        if (port.empty()) port = "80";
+        int timeout_ms = timeout.empty() ? 2000 : std::stoi(timeout);
+
+        std::string errstr;
+        int fd = connect_with_timeout(host, port, timeout_ms, errstr);
+
+        if (fd < 0) {
+            std::cout << "SHADOWVAR:PROBE_OPEN=false\n";
+            std::cout << "SHADOWVAR:PROBE_ERROR=" << errstr << "\n";
+            std::cout << host << ":" << port << "  CLOSED  (" << errstr << ")\n";
+            return 0;
+        }
+
+        // Port is open — try to grab a banner
+        std::string banner = read_banner(fd, 1500);
+        close(fd);
+
+        std::cout << "SHADOWVAR:PROBE_OPEN=true\n";
+        std::cout << "SHADOWVAR:PROBE_PORT=" << port << "\n";
+        std::cout << "SHADOWVAR:PROBE_BANNER=" << banner << "\n";
+
+        std::cout << host << ":" << port << "  OPEN\n";
+        if (!banner.empty()) {
+            std::cout << "Banner: " << banner << "\n";
+        } else {
+            std::cout << "No banner (silent service)\n";
+        }
+
+        return 0;
+    }
+}
+
+# ── Probe a host and port ────────────────────────────
+VAR host    = "scanme.nmap.org"
+VAR port    = "22"
+VAR timeout = "2000"
+
+!echo("Probing $host:$port ...")
+
+UNSAFE {
+    tcp_probe $host $port $timeout
+}
+
+!echo($LAST)
+
+IF $PROBE_OPEN == "true" {
+    !echo("Port $PROBE_PORT is open — banner: $PROBE_BANNER")
+    AI("I connected to $host port $PROBE_PORT and got this banner: $PROBE_BANNER — what service is this, what version, and what should I check next?")
+}
+
+IF $PROBE_OPEN == "false" {
+    !echo("Port is closed: $PROBE_ERROR")
+}
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • getaddrinfo() handles both DNS resolution and IPv4/IPv6 — always
+#     prefer it over gethostbyname() which is obsolete and not thread-safe
+#   • Non-blocking connect + select() is the only portable way to add
+#     a connect timeout — connect() with SO_SNDTIMEO alone isn't reliable
+#   • fcntl(F_GETFL/F_SETFL + O_NONBLOCK) is the Linux/BSD pattern for
+#     switching a socket to non-blocking mode
+#   • Always getsockopt(SO_ERROR) after select() returns writable —
+#     the select() itself only tells you the fd is ready, not that the
+#     connect succeeded (a refused connection also makes fd writable)
+#   • setsockopt(SO_RCVTIMEO) is the clean way to add a recv() timeout
+#     without needing another select() call
+#
+# CHALLENGE: resolve the remote IP and write it back as SHADOWVAR:PROBE_IP
+#   Hint: inet_ntop() on res->ai_addr converts the sockaddr to a string
+# ─────────────────────────────────────────────────────
+
+RETURN "cpp lesson 4 complete"

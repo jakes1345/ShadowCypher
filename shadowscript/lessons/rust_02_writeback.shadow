@@ -1,0 +1,78 @@
+# ─────────────────────────────────────────────────────
+# Rust Lesson 2 — Writing Back to ShadowScript
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • The SHADOWVAR: protocol — how Rust sets $variables
+#   • Regular output lines vs write-back lines
+#   • Reading back the variables Rust set
+#   • Passing structured data (multiple values) back
+# ─────────────────────────────────────────────────────
+
+rust parse_target {
+    use std::io::Read;
+
+    fn main() {
+        let mut buf = String::new();
+        std::io::stdin().read_to_string(&mut buf).unwrap();
+        let args: serde_json::Value = serde_json::from_str(&buf)
+            .unwrap_or(serde_json::Value::Null);
+
+        let target = args["arg0"].as_str().unwrap_or("localhost");
+
+        // Split host:port if present
+        let (host, port) = if let Some(pos) = target.rfind(':') {
+            (&target[..pos], &target[pos+1..])
+        } else {
+            (target, "80")
+        };
+
+        // ── SHADOWVAR write-back protocol ──────────────────
+        // Any line starting with SHADOWVAR: sets a variable.
+        // Format:  SHADOWVAR:VARNAME=value
+        // The value is everything after the = sign.
+        // These lines do NOT appear in $LAST — they're consumed.
+        println!("SHADOWVAR:PARSED_HOST={}", host);
+        println!("SHADOWVAR:PARSED_PORT={}", port);
+        println!("SHADOWVAR:IS_HTTPS={}", if port == "443" { "yes" } else { "no" });
+
+        // Regular println! lines go to $LAST as normal output
+        println!("Parsed: host={} port={}", host, port);
+    }
+}
+
+# ── Demo: read the written-back vars ─────────────────
+VAR input = "api.example.com:443"
+
+UNSAFE {
+    parse_target $input
+}
+
+# $LAST has the regular output
+!echo("Output: $LAST")
+
+# The SHADOWVAR: lines set these automatically
+!echo("Host extracted: $PARSED_HOST")
+!echo("Port extracted: $PARSED_PORT")
+!echo("Is HTTPS: $IS_HTTPS")
+
+# Branch on what Rust figured out
+IF $IS_HTTPS == "yes" {
+    !echo("SSL target — make sure to check the cert")
+} ELSE {
+    !echo("Plain HTTP — look for upgrade headers")
+}
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • SHADOWVAR: lines set variables in the CALLING script
+#   • They're filtered out of $LAST — only regular output goes there
+#   • Variable names after SHADOWVAR: should be UPPER_CASE
+#     to avoid clashing with script variables ($lowercase)
+#   • You can set as many SHADOWVAR: lines as you need
+#   • Values can be any string including JSON, spaces, etc.
+#
+# CHALLENGE: extend parse_target to also extract a URL path
+#   e.g. "example.com:8080/admin" → SHADOWVAR:PATH=/admin
+# ─────────────────────────────────────────────────────
+
+RETURN "rust lesson 2 complete"

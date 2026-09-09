@@ -1,59 +1,47 @@
 #pragma once
 #include <QWidget>
-#include <QTabWidget>
 #include <QLineEdit>
-#include <QPushButton>
-#include <QCheckBox>
-#include <QComboBox>
+#include <QTabWidget>
 #include <QLabel>
-#include <QJsonObject>
-#include "../ipc/IpcClient.h"
+#include <QPushButton>
+#include <QProcess>
+#include <QComboBox>
 #include "../widgets/TacticalTerminal.h"
 
 class OsintPage : public QWidget {
     Q_OBJECT
 public:
-    explicit OsintPage(IpcClient* ipc, QWidget* parent = nullptr);
+    explicit OsintPage(QWidget* parent = nullptr);
 
 private slots:
-    void runDomainScan();
-    void runIdentityScan();
-    void onIpcResult(int id, QJsonObject result);
+    void runWhois();
+    void runDns();
+    void runHarvester();
+    void runSubfinder();
+    void runAmass();
+    void runShodan();
+    void stopAll();
+    void onOutput();
+    void onFinished(int code, QProcess::ExitStatus);
 
 private:
-    IpcClient*  m_ipc;
-    QTabWidget* m_tabs;
-
-    // ── Domain Intel tab ─────────────────────────────────
-    QLineEdit*    m_domainInput;
-    QPushButton*  m_domainRunBtn;
-    QCheckBox*    m_chkWhois;
-    QCheckBox*    m_chkDns;
-    QCheckBox*    m_chkSsl;
-    QCheckBox*    m_chkHeaders;
-    QCheckBox*    m_chkTech;
-    QCheckBox*    m_chkMx;
-    QCheckBox*    m_chkSubnet;
-    QCheckBox*    m_chkZone;
-    QCheckBox*    m_chkWayback;
-    TacticalTerminal* m_domainTerminal;
-    QLabel*       m_domainStatusLbl;
-
-    // ── Identity Intel tab ───────────────────────────────
-    QLineEdit*    m_identInput;
-    QComboBox*    m_modeBox;
-    QPushButton*  m_identRunBtn;
-    TacticalTerminal* m_identTerminal;
-    QLabel*       m_identStatusLbl;
-
-    int  m_domainReqId = -1;
-    int  m_identReqId  = -1;
-    bool m_domainRunning = false;
-    bool m_identRunning  = false;
-
     void buildUi();
-    QWidget* buildDomainTab();
-    QWidget* buildIdentityTab();
+    void startTool(const QStringList& cmd, const QString& label);
 
-    static QCheckBox* makeCheck(const QString& label, bool checked = true);
+    QLineEdit*      m_targetEdit;
+    QTabWidget*     m_tabs;
+
+    // Per-tab terminals
+    TacticalTerminal* m_whoisOut;
+    TacticalTerminal* m_dnsOut;
+    TacticalTerminal* m_harvOut;
+    TacticalTerminal* m_subOut;
+    TacticalTerminal* m_amassOut;
+    TacticalTerminal* m_shodanOut;
+
+    QPushButton*    m_stopBtn;
+
+    QProcess*       m_proc{nullptr};
+    QString         m_activeLabel;
+    TacticalTerminal* m_activeOut{nullptr};
 };
