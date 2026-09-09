@@ -844,7 +844,7 @@ class TestShadowOSPackages:
 
     def test_core_security_tools_present(self):
         pkgs = self._get_packages()
-        required = ["nmap", "wireshark-qt", "ufw", "fail2ban"]
+        required = ["nmap", "wireshark-qt", "nftables", "fail2ban"]
         for p in required:
             assert p in pkgs, f"Missing package: {p}"
 

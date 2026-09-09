@@ -180,8 +180,9 @@ python-matplotlib
 # Apps
 # Browsers — LibreWolf, Mullvad Browser, and Tor Browser are AUR-only (Chaotic-AUR).
 # They are installed by shadowos-firstboot after Chaotic-AUR is added.
-# Firefox/Mozilla products are NOT shipped (telemetry contradicts the brand).
+# librewolf: hardened Firefox fork — no telemetry, no auto-update, Tor-compatible
 # chaotic-keyring/mirrorlist installed by build script via URL, not via pacstrap
+librewolf
 mpv
 imv
 yt-dlp
