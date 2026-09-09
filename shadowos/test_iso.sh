@@ -258,9 +258,9 @@ fi
 section "9. WALLPAPERS"
 wp="$AIRFS/usr/share/backgrounds/shadowos"
 desktop_count=$(ls "$wp"/shadowos-??-*-1920x1080.png 2>/dev/null | wc -l)
-[[ "$desktop_count" == "20" ]] && pass "20 desktop wallpapers (1080p)" || fail "expected 20 desktop 1080p wallpapers, got $desktop_count"
+[[ "$desktop_count" == "12" ]] && pass "12 desktop wallpapers (1080p)" || fail "expected 12 desktop 1080p wallpapers, got $desktop_count"
 desktop_4k=$(ls "$wp"/shadowos-??-*-3840x2160.png 2>/dev/null | wc -l)
-[[ "$desktop_4k" == "20" ]] && pass "20 desktop wallpapers (4K)" || fail "expected 20 4K wallpapers, got $desktop_4k"
+[[ "$desktop_4k" == "12" ]] && pass "12 desktop wallpapers (4K)" || fail "expected 12 4K wallpapers, got $desktop_4k"
 login_count=$(ls "$wp"/login/shadowos-login-*-1920x1080.png 2>/dev/null | wc -l)
 [[ "$login_count" == "3" ]] && pass "3 login wallpapers" || fail "expected 3 login wallpapers, got $login_count"
 [[ -L "$wp/wallpaper.png" ]] && pass "default symlink: wallpaper.png" || warn "wallpaper.png not symlink"
@@ -405,7 +405,7 @@ fi
 section "17. WALLPAPER UNIQUENESS"
 md5s=$(find "$AIRFS/usr/share/backgrounds/shadowos" -maxdepth 1 -name 'shadowos-*-1920x1080.png' -exec md5sum {} \; | awk '{print $1}' | sort | uniq -d)
 if [[ -z "$md5s" ]]; then
-  pass "all 20 desktop wallpapers are unique"
+  pass "all 12 desktop wallpapers are unique"
 else
   fail "duplicate wallpaper content detected: $md5s"
 fi

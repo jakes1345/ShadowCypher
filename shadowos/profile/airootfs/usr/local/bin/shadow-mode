@@ -78,6 +78,32 @@ apply_mode() {
             XDG_RUNTIME_DIR="/run/user/$uid" \
             DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
             /usr/local/bin/shadowos-theme-apply "$mode" 2>/dev/null || true
+
+        # Swap wallpaper to match mode personality
+        declare -A MODE_WALLPAPER=(
+            [normal]="shadowos-01-centaurus-a-1920x1080.png"
+            [dev]="shadowos-12-deep-field-1920x1080.png"
+            [pentest]="shadowos-08-rho-ophiuchi-1920x1080.png"
+            [privacy]="shadowos-09-seagull-1920x1080.png"
+            [ghost]="shadowos-05-collision-1920x1080.png"
+            [undercover]="shadowos-03-ngc253-1920x1080.png"
+            [gaming]="shadowos-10-aurora-1920x1080.png"
+            [steamos]="shadowos-10-aurora-1920x1080.png"
+            [amnesia]="shadowos-07-dark-wolf-1920x1080.png"
+            [qubes]="shadowos-02-milkyway-1920x1080.png"
+        )
+        WP_FILE="${MODE_WALLPAPER[$mode]:-}"
+        WP_PATH="/usr/share/backgrounds/shadowos/${WP_FILE}"
+        if [[ -n "$WP_FILE" && -f "$WP_PATH" ]]; then
+            sudo -u "$SUDO_USER" \
+                XDG_RUNTIME_DIR="/run/user/$uid" \
+                WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}" \
+                hyprctl hyprpaper preload "$WP_PATH" 2>/dev/null || true
+            sudo -u "$SUDO_USER" \
+                XDG_RUNTIME_DIR="/run/user/$uid" \
+                WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}" \
+                hyprctl hyprpaper wallpaper ",$WP_PATH" 2>/dev/null || true
+        fi
     fi
 
     # Notify desktop
