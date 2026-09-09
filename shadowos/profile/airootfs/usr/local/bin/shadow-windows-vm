@@ -1,0 +1,478 @@
+#!/usr/bin/env bash
+# shadow-windows-vm — ShadowOS Windows VM manager
+# Boots a Windows KVM/QEMU VM with GPU passthrough (if hardware supports it)
+# or falls back to SPICE software rendering.  Designed to be called from
+# shadow-game-launcher or directly.
+#
+# Usage:
+#   shadow-windows-vm                          # start/resume the VM
+#   shadow-windows-vm --launch-game "Forza"   # start VM, show reminder to launch game
+#   shadow-windows-vm --stop                  # gracefully shut down the VM
+#   shadow-windows-vm --status                # show VM state
+#   shadow-windows-vm --setup                 # first-time setup wizard
+#
+# VM image lives at: $SHADOW_VM_DIR/windows.qcow2
+# Config lives at:   $SHADOW_VM_DIR/vm.conf
+
+set -euo pipefail
+
+# ── Config ─────────────────────────────────────────────────────────────────────
+SHADOW_VM_DIR="${SHADOW_VM_DIR:-/var/lib/shadowos/windows-vm}"
+VM_IMAGE="$SHADOW_VM_DIR/windows.qcow2"
+VM_CONF="$SHADOW_VM_DIR/vm.conf"
+VM_NAME="shadowos-windows"
+VM_RAM_MB="${VM_RAM_MB:-8192}"    # 8 GB default — overridable
+VM_CPUS="${VM_CPUS:-4}"
+SPICE_PORT=5910                   # local-only, no network listener
+LOCK_FILE="/tmp/shadow-windows-vm.lock"
+
+# ── Parse args ─────────────────────────────────────────────────────────────────
+ACTION="start"
+LAUNCH_GAME=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --stop)         ACTION="stop";   shift ;;
+        --status)       ACTION="status"; shift ;;
+        --setup)        ACTION="setup";  shift ;;
+        --launch-game)  LAUNCH_GAME="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+_log()  { echo "  [shadow-windows-vm] $*"; }
+_err()  { echo "  ✗ $*" >&2; }
+_ok()   { echo "  ✓ $*"; }
+_notify() { notify-send -a "ShadowOS Windows VM" "$1" "${2:-}" 2>/dev/null || true; }
+
+_vm_running() {
+    virsh --connect qemu:///system domstate "$VM_NAME" 2>/dev/null | grep -q "running"
+}
+
+# ── IOMMU / GPU passthrough detection ─────────────────────────────────────────
+detect_iommu() {
+    # Returns: "amd", "intel", or "none"
+    local cmdline
+    cmdline=$(cat /proc/cmdline)
+    if echo "$cmdline" | grep -q "amd_iommu=on"; then
+        echo "amd"
+    elif echo "$cmdline" | grep -q "intel_iommu=on"; then
+        echo "intel"
+    else
+        echo "none"
+    fi
+}
+
+detect_gpu() {
+    # Returns primary GPU vendor: "amd", "nvidia", "intel", "unknown"
+    if lspci 2>/dev/null | grep -i "vga\|3d" | grep -qi "amd\|radeon"; then
+        echo "amd"
+    elif lspci 2>/dev/null | grep -i "vga\|3d" | grep -qi "nvidia"; then
+        echo "nvidia"
+    elif lspci 2>/dev/null | grep -i "vga\|3d" | grep -qi "intel"; then
+        echo "intel"
+    else
+        echo "unknown"
+    fi
+}
+
+get_gpu_pci_id() {
+    # Get PCI ID of the first discrete GPU (not Intel iGPU if dual-GPU)
+    local pci_id
+    # Prefer AMD/NVIDIA over Intel iGPU for passthrough
+    pci_id=$(lspci -n 2>/dev/null | grep -i "0300\|0302" \
+        | grep -iv "8086" | head -1 | awk '{print $1}' || true)
+    # Fallback: just take first GPU
+    if [[ -z "${pci_id:-}" ]]; then
+        pci_id=$(lspci -n 2>/dev/null | grep -i "0300\|0302" \
+            | head -1 | awk '{print $1}' || true)
+    fi
+    echo "${pci_id:-}"
+}
+
+check_vfio_bound() {
+    local pci_id="$1"
+    local driver
+    driver=$(lspci -k -s "$pci_id" 2>/dev/null | grep "Kernel driver in use" | awk '{print $NF}' || true)
+    [[ "$driver" == "vfio-pci" ]]
+}
+
+bind_vfio() {
+    # Bind GPU to vfio-pci driver so QEMU can own it
+    local pci_id="$1"
+    local full_id="0000:$pci_id"
+
+    _log "Binding $pci_id to vfio-pci..."
+    # Load vfio modules
+    modprobe vfio vfio_pci vfio_iommu_type1 2>/dev/null || true
+
+    # Get vendor:device IDs
+    local ids
+    ids=$(lspci -n -s "$pci_id" 2>/dev/null | awk '{print $3}' | tr ':' ' ' || true)
+    if [[ -n "$ids" ]]; then
+        echo "$ids" > /sys/bus/pci/drivers/vfio-pci/new_id 2>/dev/null || true
+    fi
+
+    # Unbind from current driver
+    if [[ -e "/sys/bus/pci/devices/$full_id/driver" ]]; then
+        echo "$full_id" > "/sys/bus/pci/devices/$full_id/driver/unbind" 2>/dev/null || true
+    fi
+
+    # Bind to vfio
+    echo "vfio-pci" > "/sys/bus/pci/devices/$full_id/driver_override" 2>/dev/null || true
+    echo "$full_id" > /sys/bus/pci/drivers/vfio-pci/bind 2>/dev/null || true
+    _ok "GPU $pci_id → vfio-pci"
+}
+
+unbind_vfio() {
+    # Release GPU back to host driver after VM shuts down
+    local pci_id="$1"
+    local full_id="0000:$pci_id"
+    local gpu_vendor
+    gpu_vendor=$(detect_gpu)
+
+    _log "Releasing $pci_id back to host..."
+    echo "" > "/sys/bus/pci/devices/$full_id/driver_override" 2>/dev/null || true
+    echo "$full_id" > /sys/bus/pci/drivers/vfio-pci/unbind 2>/dev/null || true
+
+    # Rebind to native driver
+    case "$gpu_vendor" in
+        amd)    echo "$full_id" > /sys/bus/pci/drivers/amdgpu/bind   2>/dev/null || true ;;
+        nvidia) echo "$full_id" > /sys/bus/pci/drivers/nvidia/bind    2>/dev/null || true ;;
+        intel)  echo "$full_id" > /sys/bus/pci/drivers/i915/bind      2>/dev/null || true ;;
+    esac
+    _ok "GPU released back to host"
+}
+
+# ── Build QEMU command ─────────────────────────────────────────────────────────
+build_qemu_cmd() {
+    local use_passthrough="$1"   # true/false
+    local gpu_pci="${2:-}"
+
+    local cmd=(
+        qemu-system-x86_64
+        -name "$VM_NAME,process=$VM_NAME"
+        -machine type=q35,accel=kvm,vmport=off
+        -cpu host,kvm=on,hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time,hv_vendor_id=AuthenticAMD
+        -smp "$VM_CPUS",sockets=1,cores="$VM_CPUS",threads=1
+        -m "${VM_RAM_MB}M"
+        -mem-prealloc
+        # UEFI — required for Windows 11 / Secure Boot
+        -drive if=pflash,format=raw,readonly=on,file=/usr/share/ovmf/x64/OVMF_CODE.fd
+        -drive if=pflash,format=raw,file="$SHADOW_VM_DIR/OVMF_VARS.fd"
+        # Windows disk
+        -drive file="$VM_IMAGE",if=virtio,cache=writeback,discard=unmap,format=qcow2
+        # Virtio-net (fast, paravirtualised)
+        -netdev user,id=net0 -device virtio-net-pci,netdev=net0
+        # USB tablet for pointer (no mouse grab needed)
+        -device usb-ehci -device usb-tablet
+        # USB passthrough for keyboard/mouse/controllers into VM
+        -device qemu-xhci
+        # Clipboard + guest tools channel
+        -device virtio-serial-pci
+        -chardev spicevmc,id=vdagent,name=vdagent
+        -device virtserialport,chardev=vdagent,name=com.redhat.spice.0
+        # DASD for host<→guest file sharing via virtio-fs (optional, safe)
+        -object memory-backend-memfd,id=mem,size="${VM_RAM_MB}M",share=on
+        -numa node,memdev=mem
+        # Disable RTC drift
+        -rtc base=localtime,clock=host,driftfix=slew
+        # No default graphical output (we use SPICE or passthrough)
+        -vga none
+        -nodefaults
+    )
+
+    if [[ "$use_passthrough" == "true" && -n "$gpu_pci" ]]; then
+        # ── GPU Passthrough mode ───────────────────────────────────────────
+        cmd+=(
+            -device vfio-pci,host="$gpu_pci",multifunction=on,x-vga=on
+        )
+        # Audio function of GPU (same IOMMU group, usually .1)
+        local audio_pci="${gpu_pci%.*}.1"
+        if lspci -s "$audio_pci" 2>/dev/null | grep -qi "audio"; then
+            cmd+=(-device vfio-pci,host="$audio_pci")
+        fi
+        # SPICE only for clipboard/agent; display comes out of the real GPU
+        cmd+=(
+            -spice port=$SPICE_PORT,addr=127.0.0.1,disable-ticketing=on,seamless-migration=on
+        )
+    else
+        # ── Software rendering fallback (SPICE) ────────────────────────────
+        cmd+=(
+            -device virtio-vga-gl
+            -display gtk,gl=on 2>/dev/null ||
+            -device VGA,vgamem_mb=64
+            -spice port=$SPICE_PORT,addr=127.0.0.1,disable-ticketing=on
+        )
+    fi
+
+    printf '%q ' "${cmd[@]}"
+}
+
+# ── Actions ────────────────────────────────────────────────────────────────────
+action_status() {
+    if _vm_running; then
+        _ok "Windows VM is running"
+        virsh --connect qemu:///system dominfo "$VM_NAME" 2>/dev/null | grep -E "State|Max memory|Used memory|CPU" || true
+    else
+        _log "Windows VM is not running"
+    fi
+}
+
+action_stop() {
+    if ! _vm_running; then
+        _log "VM is not running"
+        return 0
+    fi
+    _log "Sending graceful shutdown to Windows VM..."
+    virsh --connect qemu:///system shutdown "$VM_NAME" 2>/dev/null || true
+    # Wait up to 60s for clean shutdown
+    local waited=0
+    while _vm_running && [[ $waited -lt 60 ]]; do
+        sleep 2; (( waited+=2 ))
+    done
+    if _vm_running; then
+        _log "Forcing off..."
+        virsh --connect qemu:///system destroy "$VM_NAME" 2>/dev/null || true
+    fi
+    # Release GPU if we bound it
+    local gpu_pci
+    gpu_pci=$(get_gpu_pci_id)
+    if [[ -n "$gpu_pci" ]] && check_vfio_bound "$gpu_pci"; then
+        unbind_vfio "$gpu_pci"
+    fi
+    rm -f "$LOCK_FILE"
+    _ok "Windows VM stopped"
+}
+
+action_setup() {
+    echo ""
+    echo "  ═══════════════════════════════════════════════════"
+    echo "   ShadowOS Windows VM — First-Time Setup"
+    echo "  ═══════════════════════════════════════════════════"
+    echo ""
+
+    # Check KVM
+    if ! grep -q "vmx\|svm" /proc/cpuinfo 2>/dev/null; then
+        _err "CPU virtualisation (VT-x/AMD-V) is not enabled."
+        _err "Enable it in your BIOS/UEFI first."
+        exit 1
+    fi
+    _ok "CPU virtualisation available"
+
+    # Check IOMMU
+    local iommu_type
+    iommu_type=$(detect_iommu)
+    if [[ "$iommu_type" == "none" ]]; then
+        echo ""
+        echo "  ⚠  IOMMU not enabled — GPU passthrough won't be available."
+        echo "     To enable it, add one of these to your kernel cmdline in"
+        echo "     /etc/default/grub or your bootloader config:"
+        echo ""
+        echo "       Intel: intel_iommu=on iommu=pt"
+        echo "       AMD:   amd_iommu=on iommu=pt"
+        echo ""
+        echo "     GPU passthrough requires IOMMU. The VM will still work"
+        echo "     without it using software rendering (SPICE), just slower."
+        echo ""
+    else
+        _ok "IOMMU enabled ($iommu_type)"
+    fi
+
+    # Create VM dir
+    mkdir -p "$SHADOW_VM_DIR"
+
+    # Copy OVMF vars (writable copy per VM)
+    if [[ ! -f "$SHADOW_VM_DIR/OVMF_VARS.fd" ]]; then
+        cp /usr/share/ovmf/x64/OVMF_VARS.fd "$SHADOW_VM_DIR/OVMF_VARS.fd"
+        _ok "UEFI vars → $SHADOW_VM_DIR/OVMF_VARS.fd"
+    fi
+
+    # Create disk image if missing
+    if [[ ! -f "$VM_IMAGE" ]]; then
+        echo ""
+        echo "  Creating a 128 GB dynamic disk image for Windows..."
+        qemu-img create -f qcow2 "$VM_IMAGE" 128G
+        _ok "Disk image created: $VM_IMAGE"
+    fi
+
+    # Write config
+    cat > "$VM_CONF" <<EOF
+VM_RAM_MB=$VM_RAM_MB
+VM_CPUS=$VM_CPUS
+GPU_PASSTHROUGH=$([ "$iommu_type" != "none" ] && echo "auto" || echo "off")
+EOF
+    _ok "Config written: $VM_CONF"
+
+    echo ""
+    echo "  Next step: install Windows into the VM."
+    echo "  Run this command to boot from a Windows ISO:"
+    echo ""
+    echo "    shadow-windows-vm --install /path/to/windows.iso"
+    echo ""
+    echo "  Or use virt-manager to manage the VM visually:"
+    echo "    virt-manager"
+    echo ""
+}
+
+action_start() {
+    # ── Pre-flight ──────────────────────────────────────────────────────────
+    if [[ ! -f "$VM_IMAGE" ]]; then
+        _err "No Windows VM image found at $VM_IMAGE"
+        _err "Run 'shadow-windows-vm --setup' first."
+        _notify "Windows VM not set up" "Run: shadow-windows-vm --setup"
+        exit 1
+    fi
+
+    # Load config
+    [[ -f "$VM_CONF" ]] && source "$VM_CONF"
+
+    # ── Already running? Just open the viewer ──────────────────────────────
+    if _vm_running; then
+        _ok "Windows VM already running — connecting..."
+        _notify "Connecting to Windows VM" "${LAUNCH_GAME:+Game: $LAUNCH_GAME}"
+        virt-viewer --connect qemu:///system --wait "$VM_NAME" &
+        return 0
+    fi
+
+    # ── Detect GPU passthrough availability ────────────────────────────────
+    local iommu_type use_passthrough gpu_pci
+    iommu_type=$(detect_iommu)
+    use_passthrough="false"
+    gpu_pci=$(get_gpu_pci_id)
+
+    if [[ "$iommu_type" != "none" && -n "$gpu_pci" && "${GPU_PASSTHROUGH:-auto}" != "off" ]]; then
+        use_passthrough="true"
+        _log "GPU passthrough available: $gpu_pci ($iommu_type IOMMU)"
+
+        # Bind GPU to vfio — requires root
+        if [[ $EUID -ne 0 ]]; then
+            _log "Requesting sudo for GPU passthrough..."
+            sudo bash -c "$(declare -f bind_vfio detect_gpu); bind_vfio '$gpu_pci'"
+        else
+            bind_vfio "$gpu_pci"
+        fi
+    else
+        _log "GPU passthrough not available — using SPICE software rendering"
+        _log "(To enable: add intel_iommu=on or amd_iommu=on to kernel cmdline)"
+    fi
+
+    # ── Start VM via libvirt ───────────────────────────────────────────────
+    # Check if domain is already defined; define it if not
+    if ! virsh --connect qemu:///system dominfo "$VM_NAME" &>/dev/null; then
+        _log "Defining VM in libvirt..."
+        _generate_libvirt_xml "$use_passthrough" "$gpu_pci" \
+            | virsh --connect qemu:///system define /dev/stdin
+    fi
+
+    # Apply current RAM/CPU settings in case they changed
+    virsh --connect qemu:///system setmaxmem "$VM_NAME" "${VM_RAM_MB}000" --config 2>/dev/null || true
+    virsh --connect qemu:///system setmem    "$VM_NAME" "${VM_RAM_MB}000" --config 2>/dev/null || true
+
+    _notify "Starting Windows VM" "${LAUNCH_GAME:+Launching: $LAUNCH_GAME}"
+    echo ""
+    _log "Starting Windows VM..."
+    [[ -n "$LAUNCH_GAME" ]] && _log "Remember to launch: $LAUNCH_GAME in Steam/Xbox app"
+    echo ""
+
+    virsh --connect qemu:///system start "$VM_NAME"
+    touch "$LOCK_FILE"
+
+    # ── Connect viewer ─────────────────────────────────────────────────────
+    sleep 2
+    if [[ "$use_passthrough" == "true" ]]; then
+        # With GPU passthrough: video comes out of the physical GPU.
+        # Nothing to open — user sees it on their monitor once Windows boots.
+        _ok "GPU passthrough active — video on physical display"
+        _ok "VM is booting. Switch to your monitor input if needed."
+
+        # Release GPU on VM shutdown (background watcher)
+        (
+            while virsh --connect qemu:///system domstate "$VM_NAME" 2>/dev/null | grep -q "running"; do
+                sleep 5
+            done
+            unbind_vfio "$gpu_pci" 2>/dev/null || true
+            rm -f "$LOCK_FILE"
+            _notify "Windows VM shut down" "GPU returned to Linux"
+        ) &
+    else
+        # Software rendering: open SPICE viewer
+        _ok "Opening SPICE display..."
+        virt-viewer --connect qemu:///system --wait "$VM_NAME" &
+    fi
+}
+
+_generate_libvirt_xml() {
+    local use_passthrough="$1"
+    local gpu_pci="${2:-}"
+
+    cat <<XMLEOF
+<domain type='kvm'>
+  <name>$VM_NAME</name>
+  <memory unit='MiB'>$VM_RAM_MB</memory>
+  <vcpu>$VM_CPUS</vcpu>
+  <os firmware='efi'>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    <firmware>
+      <feature enabled='yes' name='secure-boot'/>
+    </firmware>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/><apic/>
+    <hyperv mode='custom'>
+      <relaxed state='on'/>
+      <vapic state='on'/>
+      <spinlocks state='on' retries='8191'/>
+      <vendor_id state='on' value='AuthenticAMD'/>
+    </hyperv>
+    <kvm><hidden state='on'/></kvm>
+  </features>
+  <cpu mode='host-passthrough' check='none' migratable='off'/>
+  <clock offset='localtime'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+    <timer name='hypervclock' present='yes'/>
+  </clock>
+  <devices>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='writeback' discard='unmap'/>
+      <source file='$VM_IMAGE'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <interface type='user'>
+      <model type='virtio'/>
+    </interface>
+    <input type='tablet' bus='usb'/>
+    <input type='keyboard' bus='usb'/>
+    $(if [[ "$use_passthrough" == "true" && -n "$gpu_pci" ]]; then
+        echo "<!-- GPU passthrough -->"
+        echo "<hostdev mode='subsystem' type='pci' managed='yes'>"
+        echo "  <source><address domain='0x0000' bus='0x${gpu_pci%%:*}' slot='0x${gpu_pci#*:}' function='0x0'/></source>"
+        echo "</hostdev>"
+    else
+        echo "<graphics type='spice' port='$SPICE_PORT' listen='127.0.0.1'>"
+        echo "  <listen type='address' address='127.0.0.1'/>"
+        echo "</graphics>"
+        echo "<video><model type='virtio' heads='1' primary='yes'/></video>"
+    fi)
+    <channel type='spicevmc'>
+      <target type='virtio' name='com.redhat.spice.0'/>
+    </channel>
+    <rng model='virtio'>
+      <backend model='random'>/dev/urandom</backend>
+    </rng>
+    <memballoon model='virtio'/>
+  </devices>
+</domain>
+XMLEOF
+}
+
+# ── Main ───────────────────────────────────────────────────────────────────────
+case "$ACTION" in
+    start)  action_start  ;;
+    stop)   action_stop   ;;
+    status) action_status ;;
+    setup)  action_setup  ;;
+esac
