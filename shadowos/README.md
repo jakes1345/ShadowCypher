@@ -18,7 +18,7 @@ practical daily driver — pentest, dev, and gaming, all in one.
 | **Pentest** | nmap, sqlmap, hydra, metasploit, aircrack-ng, bettercap, john, hashcat, wireshark, **rustscan, ffuf, feroxbuster, subfinder, httpx, nuclei, naabu, impacket, netexec, sshuttle, mitmproxy** |
 | **Gaming** | Steam + steam-runtime, Heroic, Lutris, PrismLauncher (Minecraft), gamemode, MangoHUD, gamescope, wine-staging |
 | **Cross-distro tools** | Distrobox (run Kali/Ubuntu/Debian as containers), Flatpak/Flathub |
-| **Privacy** | Tor, dnscrypt-proxy, MAC randomizer (per-mode), AppArmor, ufw |
+| **Privacy** | Tor, dnscrypt-proxy, MAC randomizer (per-mode), AppArmor, nftables |
 | **Modes** | `shadow-mode <normal/dev/pentest/privacy/ghost/undercover>` — hot-swap firewall, DNS, autostart |
 | **AI** | ShadowCypher (GTK) pre-installed at /opt/shadowcypher; Ollama for local LLMs |
 | **Installer** | archinstall (live → disk) + Calamares config |

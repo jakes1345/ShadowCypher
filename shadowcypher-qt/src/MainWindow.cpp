@@ -7,6 +7,10 @@
 #include "pages/AiPage.h"
 #include "pages/ShadowScriptPage.h"
 #include "pages/ChatPage.h"
+#include "pages/GhostPage.h"
+#include "pages/MailPage.h"
+#include "pages/CveFeedPage.h"
+#include "pages/OsintPage.h"
 #include "pages/SettingsPage.h"
 #include "pages/NetworkPage.h"
 #include "pages/ThreatPage.h"
@@ -111,6 +115,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         {"  AI ASSISTANT"},
         {"  SHADOWSCRIPT"},
         {"  CHAT"},
+        {"  GHOST MODE"},
+        {"  SHADOW MAIL"},
+        {"  CVE FEED"},
         {"  SETTINGS"},
     };
     for (const auto& item : navItems)
@@ -142,7 +149,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     m_stack->addWidget(new AiPage(m_ipc, this));              // 8
     m_stack->addWidget(new ShadowScriptPage(m_ipc, this));    // 9
     m_stack->addWidget(new ChatPage(m_ipc, this));            // 10
-    m_stack->addWidget(new SettingsPage(this));               // 11
+    m_stack->addWidget(new GhostPage(m_ipc, this));           // 11
+    m_stack->addWidget(new MailPage(m_ipc, this));            // 12
+    m_stack->addWidget(new CveFeedPage(m_ipc, this));         // 13
+    m_stack->addWidget(new SettingsPage(this));               // 14
 
     rootLayout->addWidget(m_stack);
 

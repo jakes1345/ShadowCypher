@@ -70,7 +70,9 @@ configure_tor_transparent() {
 
 apply_nftables() {
     # Full transparent proxy ruleset — all traffic from non-Tor UIDs routed through Tor
-    nft flush ruleset
+    # Only remove our own tables; leave the base inet shadowos firewall intact
+    nft delete table inet anonsurf 2>/dev/null || true
+    nft delete table ip6 anonsurf_v6 2>/dev/null || true
 
     nft -f - << NFT
 table inet anonsurf {
@@ -88,8 +90,8 @@ table inet anonsurf {
         ct state established,related accept
         oifname "lo" accept
         meta skuid $TOR_UID accept
-        # Allow LAN management (SSH still works if you need recovery)
-        ip daddr 127.0.0.0/8 accept
+        # Allow LAN SSH/management — loopback + RFC1918 ranges
+        ip daddr { 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } accept
     }
 }
 
@@ -139,6 +141,8 @@ cmd_start() {
 
     mac_randomize_all
     kill_leak_daemons
+    # Pause dnscrypt-proxy — all DNS goes to Tor DNSPort via nftables PREROUTING
+    systemctl stop dnscrypt-proxy 2>/dev/null || true
     configure_tor_transparent
     apply_nftables
     sync_clock_tor
@@ -166,8 +170,11 @@ cmd_stop() {
     echo ""
     echo "  Stopping AnonSurf..."
 
-    nft flush ruleset
-    _ok "nftables ruleset cleared — direct routing restored"
+    # Remove only AnonSurf-specific tables; restore base firewall from /etc/nftables.conf
+    nft delete table inet anonsurf 2>/dev/null || true
+    nft delete table ip6 anonsurf_v6 2>/dev/null || true
+    nft -f /etc/nftables.conf
+    _ok "AnonSurf rules removed — base firewall restored"
 
     mac_restore_all
 
@@ -177,6 +184,10 @@ cmd_stop() {
 
     systemctl stop tor 2>/dev/null || true
     _ok "Tor stopped"
+
+    # Restart dnscrypt-proxy so encrypted DNS resumes after AnonSurf exits
+    systemctl start dnscrypt-proxy 2>/dev/null || true
+    _ok "dnscrypt-proxy restarted — encrypted DNS resumed"
 
     rm -f "$STATE_FILE"
     echo ""

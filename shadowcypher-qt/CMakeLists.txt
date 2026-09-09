@@ -8,6 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Concurrent WebSockets)
+find_package(OpenSSL REQUIRED)
 
 qt_add_executable(shadowcypher
     src/main.cpp
@@ -36,6 +37,14 @@ qt_add_executable(shadowcypher
     src/pages/ShadowScriptPage.h
     src/pages/ChatPage.cpp
     src/pages/ChatPage.h
+    src/pages/MailPage.cpp
+    src/pages/MailPage.h
+    src/pages/GhostPage.cpp
+    src/pages/GhostPage.h
+    src/pages/CveFeedPage.cpp
+    src/pages/CveFeedPage.h
+    src/pages/OsintPage.cpp
+    src/pages/OsintPage.h
     src/pages/SettingsPage.cpp
     src/pages/SettingsPage.h
     src/pages/NetworkPage.cpp
@@ -54,6 +63,7 @@ target_link_libraries(shadowcypher PRIVATE
     Qt6::Network
     Qt6::Concurrent
     Qt6::WebSockets
+    OpenSSL::Crypto
 )
 
 target_compile_options(shadowcypher PRIVATE -Wall -Wextra -O2)

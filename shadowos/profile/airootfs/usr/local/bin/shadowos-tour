@@ -610,7 +610,7 @@ def pg_modes():
     p.pack_start(spacer(4), False, False, 0)
 
     modes = [
-        ("normal",     "◎", "Normal",     "b-green",  "Daily driver. dnscrypt-proxy on, ufw deny-incoming, no Tor."),
+        ("normal",     "◎", "Normal",     "b-green",  "Daily driver. dnscrypt-proxy on, nftables deny-incoming, no Tor."),
         ("dev",        "⚡", "Dev",        "b-cyan",   "Dev daemons up, Docker/Podman accessible, local ports open."),
         ("pentest",    "◉", "Pentest",    "b-red",    "Scan-friendly firewall. Full BlackArch arsenal. No Tor (tools need direct access)."),
         ("privacy",    "◫", "Privacy",    "b-amber",  "All traffic through Tor. MAC randomized. dnscrypt+Tor. For hostile networks."),
@@ -652,7 +652,7 @@ def pg_ghost():
 
     layers_left = [
         ("01", "Tor transparent proxy",   "All TCP/UDP routed through Tor — no bypass at userspace level."),
-        ("02", "iptables kill-switch",    "If Tor dies, traffic drops. Your real IP never leaks mid-session."),
+        ("02", "nftables kill-switch",    "If Tor dies, traffic drops. Your real IP never leaks mid-session."),
         ("03", "MAC randomization",       "New MAC per session. Your hardware is invisible on the LAN."),
         ("04", "Hostname neutralization", "Hostname becomes 'localhost'. Timezone forced to UTC."),
         ("05", "DNS over Tor",            "All DNS resolves through Tor's internal resolver. Zero DNS leaks."),
@@ -694,7 +694,7 @@ def pg_ghost():
     p.pack_start(code_block("shadow-leak-test",
                              demo_cmd="shadow-leak-test 2>/dev/null | head -30"), False, False, 0)
     p.pack_start(tip("⚠️",
-        "Disengage before suspending. The iptables kill-switch blocks all traffic on resume "
+        "Disengage before suspending. The nftables kill-switch blocks all traffic on resume "
         "until you disengage manually.", "card-warn"), False, False, 0)
     return p
 
@@ -812,7 +812,7 @@ def pg_privacy():
             h3("Always on (every mode)", _G),
             cmd_table([
                 ("dnscrypt-proxy",   "Encrypted DNS queries. Active in all modes."),
-                ("ufw",              "Deny-all inbound firewall. Active in all modes."),
+                ("nftables",         "Deny-all inbound firewall. Active in all modes."),
                 ("AppArmor",         "Mandatory access control for system daemons."),
                 ("firejail <app>",   "Sandbox any application in a seccomp jail."),
             ]),

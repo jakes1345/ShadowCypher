@@ -41,7 +41,6 @@ dnscrypt-proxy
 tor
 firejail
 apparmor
-ufw
 nftables
 conntrack-tools
 fail2ban
@@ -102,6 +101,9 @@ hyprlock
 hypridle
 hyprcursor
 mako
+libnotify
+wlr-randr
+pacman-contrib
 foot
 xterm
 thunar
@@ -155,6 +157,7 @@ bluez-utils
 # Installer (bare-metal install support) — Calamares is AUR-only so we ship
 # archinstall (official Arch TUI installer) + a friendlier wrapper.
 archinstall
+calamares
 
 # ShadowCypher runtime deps (GTK app)
 gtk3
@@ -184,13 +187,11 @@ python-scikit-learn
 python-matplotlib
 
 # Apps
-# Browsers — privacy-first: LibreWolf default, Mullvad for anti-fingerprint,
-# Tor Browser via launcher. Firefox/Mozilla products are NOT shipped because
-# Mozilla telemetry + recent policy changes contradict the distro's brand.
-librewolf
-mullvad-browser-bin
-# firefox removed — contradicts brand (no Mozilla telemetry); use librewolf or mullvad-browser
+# Browsers — LibreWolf, Mullvad Browser, and Tor Browser are AUR-only (Chaotic-AUR).
+# They are installed by shadowos-firstboot after Chaotic-AUR is added.
+# librewolf: hardened Firefox fork — no telemetry, no auto-update, Tor-compatible
 # chaotic-keyring/mirrorlist installed by build script via URL, not via pacstrap
+librewolf
 mpv
 imv
 yt-dlp
@@ -358,7 +359,6 @@ xdg-user-dirs
 xdg-utils
 zathura
 zathura-pdf-mupdf
-gufw
 gnome-keyring
 libsecret
 seahorse

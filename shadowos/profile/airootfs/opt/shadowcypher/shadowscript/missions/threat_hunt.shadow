@@ -1,0 +1,53 @@
+# ShadowScript Mission: Threat Hunt
+# Hunt for indicators of compromise on the local host and network.
+# Looks for persistence, unusual connections, LOLBIN abuse, and credential access.
+
+!echo("=== THREAT HUNT — $(date) ===")
+
+!echo("[*] Phase 1: Persistence mechanisms")
+
+# Scheduled tasks / crontabs
+!sys("crontab -l 2>/dev/null; ls /etc/cron* 2>/dev/null")
+!echo("[*] Cron entries: $LAST")
+AI("Flag any suspicious cron entries that could indicate persistence: $LAST")
+
+# Startup services
+!sys("systemctl list-units --type=service --state=running --no-pager | grep -v 'systemd\|dbus\|NetworkManager\|sshd\|cron\|snap\|getty' | head -30")
+!echo("[*] Running services: $LAST")
+
+!echo("[*] Phase 2: Network connections")
+
+# Outbound connections — look for C2 beacons
+!sys("ss -tunp 2>/dev/null | grep ESTAB")
+!echo("[*] Established connections: $LAST")
+AI("Identify any connections that look like C2 beaconing — non-standard ports, suspicious IPs, unusually regular timing patterns: $LAST")
+
+!echo("[*] Phase 3: Process anomalies")
+
+# Processes with unusual parent-child relationships
+!sys("ps -eo pid,ppid,user,cmd --no-headers | grep -E '(nc|ncat|socat|bash.*-i|python.*socket|perl.*socket|curl.*sh|wget.*sh)' 2>/dev/null")
+!echo("[*] Suspicious processes: $LAST")
+
+# LOLBIN abuse (common living-off-the-land binaries)
+!sys("find /tmp /dev/shm /var/tmp -type f -newer /proc/1 2>/dev/null | head -20")
+!echo("[*] Recently created files in volatile dirs: $LAST")
+
+!echo("[*] Phase 4: Credential access indicators")
+
+# Auth logs for brute-force or unusual logins
+!sys("grep -E '(Failed|Invalid|Accepted)' /var/log/auth.log 2>/dev/null | tail -20 || journalctl -u sshd --since '24h ago' --no-pager 2>/dev/null | tail -20")
+!echo("[*] Auth log excerpt: $LAST")
+AI("Summarise any credential attacks or suspicious logins: $LAST")
+
+# Dump users with login shells (potential new accounts)
+!sys("grep -E '/bin/(bash|sh|zsh|fish)' /etc/passwd | awk -F: '{print $1, $3}'")
+!echo("[*] Shell users: $LAST")
+
+!echo("[*] Phase 5: File integrity")
+!sys("find /usr/bin /usr/sbin /bin /sbin -newer /etc/passwd -type f 2>/dev/null | head -20")
+!echo("[*] System binaries modified after passwd: $LAST")
+
+AI("Provide a threat hunt summary with a risk rating (Clean/Suspicious/Compromised) and the top 3 IOCs if any: $(cat /tmp/sc_threat_hunt_$$ 2>/dev/null)")
+
+!echo("=== THREAT HUNT COMPLETE ===")
+RETURN "ok"

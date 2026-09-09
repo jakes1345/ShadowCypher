@@ -9,26 +9,6 @@ static TacticalTerminal* makeTerminal(QWidget* parent) {
     return t;
 }
 
-static QPushButton* toolBtn(const QString& label, const QString& color) {
-    auto* btn = new QPushButton(label);
-    btn->setStyleSheet(QString(R"(
-        QPushButton { background: rgba(%1,0.1); border: 1px solid rgba(%1,0.35);
-            color: #%2; font-family: 'JetBrains Mono'; font-size: 11px; letter-spacing:1px;
-            padding: 6px 14px; border-radius: 4px; font-weight: 700; }
-        QPushButton:hover { background: rgba(%1,0.2); }
-        QPushButton:disabled { color: #334155; border-color: #1e293b; }
-    )").arg(color.mid(1) + ",255").arg(color.mid(1)));
-    // Simpler approach:
-    btn->setStyleSheet(QString(R"(
-        QPushButton { background: %1; border: 1px solid %2;
-            color: %3; font-family: 'JetBrains Mono'; font-size: 11px; letter-spacing:1px;
-            padding: 6px 14px; border-radius: 4px; font-weight: 700; }
-        QPushButton:hover { background: %4; }
-        QPushButton:disabled { color: #334155; border-color: #1e293b; }
-    )").arg("rgba(0,212,255,0.1)", "#00d4ff", "#00d4ff", "rgba(0,212,255,0.2)"));
-    return btn;
-}
-
 OsintPage::OsintPage(QWidget* parent) : QWidget(parent) {
     buildUi();
 }
@@ -155,7 +135,6 @@ void OsintPage::runDns() {
     if (t.isEmpty()) { m_dnsOut->log("Enter a target", "WARNING"); return; }
     m_activeOut = m_dnsOut;
     m_tabs->setCurrentWidget(m_dnsOut);
-    // dig with ALL record types + reverse DNS
     startTool({"dig", t, "ANY", "+noall", "+answer", "+additional"}, "DNS[" + t + "]");
 }
 
@@ -189,7 +168,6 @@ void OsintPage::runShodan() {
     if (t.isEmpty()) { m_shodanOut->log("Enter an IP or hostname", "WARNING"); return; }
     m_activeOut = m_shodanOut;
     m_tabs->setCurrentWidget(m_shodanOut);
-    // shodan CLI — requires SHODAN_API_KEY env var
     startTool({"shodan", "host", t}, "SHODAN[" + t + "]");
 }
 

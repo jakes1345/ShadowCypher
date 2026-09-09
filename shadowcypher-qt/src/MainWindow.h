@@ -37,5 +37,8 @@ private:
     static constexpr int PAGE_AI            = 8;
     static constexpr int PAGE_SHADOWSCRIPT  = 9;
     static constexpr int PAGE_CHAT          = 10;
-    static constexpr int PAGE_SETTINGS      = 11;
+    static constexpr int PAGE_GHOST         = 11;
+    static constexpr int PAGE_MAIL          = 12;
+    static constexpr int PAGE_CVE_FEED      = 13;
+    static constexpr int PAGE_SETTINGS      = 14;
 };
