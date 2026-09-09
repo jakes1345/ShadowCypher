@@ -844,7 +844,7 @@ class TestShadowOSPackages:
 
     def test_core_security_tools_present(self):
         pkgs = self._get_packages()
-        required = ["nmap", "wireshark-qt", "ufw", "fail2ban"]
+        required = ["nmap", "wireshark-qt", "nftables", "fail2ban"]
         for p in required:
             assert p in pkgs, f"Missing package: {p}"
 
@@ -856,8 +856,10 @@ class TestShadowOSPackages:
 
     def test_browser_present(self):
         pkgs = self._get_packages()
-        browsers = ["librewolf", "firefox", "chromium"]
-        assert any(b in pkgs for b in browsers), "No browser in packages"
+        firstboot = (AIRFS / "usr" / "local" / "bin" / "shadowos-firstboot").read_text()
+        browsers = ["librewolf", "chromium"]
+        assert any(b in pkgs for b in browsers) or any(b in firstboot for b in browsers), \
+            "No supported browser is shipped or installed by shadowos-firstboot"
 
     def test_service_packages_present(self):
         pkgs = self._get_packages()

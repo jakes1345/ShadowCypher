@@ -500,7 +500,6 @@ declare -A categories=(
   [base]="base linux-hardened"
   [boot]="grub efibootmgr"
   [desktop]="hyprland waybar wofi sddm foot"
-  [browser]="librewolf"
   [dev]="git neovim code docker podman"
   [pentest]="nmap metasploit wireshark-qt aircrack-ng"
   [gaming]="steam gamemode mangohud lutris prismlauncher"
@@ -519,6 +518,13 @@ for cat_name in "${!categories[@]}"; do
     fail "$cat_name missing:$missing"
   fi
 done
+
+browser_firstboot="$AIRFS/usr/local/bin/shadowos-firstboot"
+if grep -Eq 'pacman -S .*librewolf|pacman -S .*chromium' "$browser_firstboot" 2>/dev/null; then
+  pass "browser bootstrap configured"
+else
+  fail "browser bootstrap missing from shadowos-firstboot"
+fi
 
 # ── 25. Hyprland: all bound binaries are realistic ────────────────────────
 section "25. HYPRLAND BIND TARGETS"
