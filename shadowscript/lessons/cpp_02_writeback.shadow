@@ -1,0 +1,153 @@
+# ─────────────────────────────────────────────────────
+# C++ Lesson 2 — Write-Back & Working with Strings
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • Robust json_get() helper (use this as your template)
+#   • String splitting and tokenisation in C++17
+#   • Writing multiple SHADOWVAR: values back
+#   • Using string_view for zero-copy slicing
+# ─────────────────────────────────────────────────────
+# Real use case: you captured a raw HTTP response header block
+# and want to parse it into individual headers quickly.
+
+cpp parse_headers {
+    #include <iostream>
+    #include <sstream>
+    #include <string>
+    #include <vector>
+    #include <algorithm>
+    #include <cctype>
+
+    // Reusable json_get — copy this into any block that reads args
+    std::string json_get(const std::string& j, const std::string& key) {
+        std::string needle = "\"" + key + "\":";
+        auto pos = j.find(needle);
+        if (pos == std::string::npos) return "";
+        pos += needle.size();
+        while (pos < j.size() && j[pos] == ' ') ++pos;
+        if (j[pos] == '"') {
+            ++pos;
+            auto end = j.find('"', pos);
+            if (end == std::string::npos) return "";
+            // Unescape \n (ShadowScript encodes newlines this way in strings)
+            std::string val = j.substr(pos, end - pos);
+            std::string out;
+            for (size_t i = 0; i < val.size(); ++i) {
+                if (val[i] == '\\' && i+1 < val.size() && val[i+1] == 'n') {
+                    out += '\n'; ++i;
+                } else {
+                    out += val[i];
+                }
+            }
+            return out;
+        }
+        auto end = j.find_first_of(",}", pos);
+        return j.substr(pos, end - pos);
+    }
+
+    // Lowercase a string
+    std::string lower(std::string s) {
+        std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+        return s;
+    }
+
+    // Check for security-relevant header values
+    std::string check_header(const std::string& name, const std::string& value) {
+        std::string n = lower(name);
+        if (n == "server" || n == "x-powered-by") {
+            return "DISCLOSE";  // software disclosure
+        }
+        if (n == "x-frame-options" && lower(value).find("deny") == std::string::npos) {
+            return "WEAK";
+        }
+        if (n == "strict-transport-security" && value.find("max-age=") == std::string::npos) {
+            return "MISCONFIGURED";
+        }
+        return "OK";
+    }
+
+    int main() {
+        std::string buf(
+            std::istreambuf_iterator<char>(std::cin),
+            std::istreambuf_iterator<char>()
+        );
+
+        // arg0 is a raw HTTP header block (one header per line, name: value)
+        std::string raw = json_get(buf, "arg0");
+
+        std::vector<std::string> findings;
+        int header_count = 0;
+        std::string server_val;
+        std::string powered_val;
+
+        std::istringstream stream(raw);
+        std::string line;
+        while (std::getline(stream, line)) {
+            if (line.empty() || line[0] == ' ') continue;
+
+            auto colon = line.find(':');
+            if (colon == std::string::npos) continue;
+
+            std::string name  = line.substr(0, colon);
+            std::string value = line.substr(colon + 2);  // skip ": "
+            // Trim trailing \r
+            if (!value.empty() && value.back() == '\r') value.pop_back();
+
+            ++header_count;
+            std::string verdict = check_header(name, value);
+
+            if (verdict == "DISCLOSE") {
+                findings.push_back("Disclosure: " + name + " = " + value);
+                if (lower(name) == "server") server_val = value;
+                if (lower(name) == "x-powered-by") powered_val = value;
+            } else if (verdict != "OK") {
+                findings.push_back(verdict + ": " + name);
+            }
+
+            std::cout << name << ": " << value << "\n";
+        }
+
+        // Write back structured results
+        std::cout << "SHADOWVAR:HEADER_COUNT=" << header_count << "\n";
+        std::cout << "SHADOWVAR:SERVER_HEADER=" << server_val << "\n";
+        std::cout << "SHADOWVAR:POWERED_BY=" << powered_val << "\n";
+        std::cout << "SHADOWVAR:FINDING_COUNT=" << findings.size() << "\n";
+
+        if (!findings.empty()) {
+            std::cout << "\n--- FINDINGS ---\n";
+            for (auto& f : findings) std::cout << "[!] " << f << "\n";
+        }
+
+        return 0;
+    }
+}
+
+# ── Feed it some HTTP headers ─────────────────────────
+VAR headers = "HTTP/1.1 200 OK\nServer: Apache/2.4.51 (Ubuntu)\nX-Powered-By: PHP/7.4.3\nContent-Type: text/html\nX-Frame-Options: SAMEORIGIN\nSet-Cookie: session=abc123; Path=/"
+
+UNSAFE {
+    parse_headers $headers
+}
+
+!echo($LAST)
+!echo("Server: $SERVER_HEADER")
+!echo("Powered by: $POWERED_BY")
+!echo("Findings: $FINDING_COUNT issues")
+
+IF $SERVER_HEADER != "" {
+    AI("The server is $SERVER_HEADER and runs $POWERED_BY. Are there known CVEs for these versions? What should I test?")
+}
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • Copy json_get() into every block — it's your stdlib JSON parser
+#   • std::istringstream is the clean way to split on newlines
+#   • std::transform for lowercase avoids case-sensitivity bugs
+#   • The \\n in the VAR above — ShadowScript passes it as literal \n
+#     which json_get() unescapes back to real newlines
+#
+# CHALLENGE: detect cookies without HttpOnly or Secure flags
+#   and write SHADOWVAR:INSECURE_COOKIES=name1,name2
+# ─────────────────────────────────────────────────────
+
+RETURN "cpp lesson 2 complete"

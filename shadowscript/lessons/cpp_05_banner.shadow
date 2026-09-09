@@ -1,0 +1,253 @@
+# ─────────────────────────────────────────────────────
+# C++ Lesson 5 — Service Banner Grabber (Full Tool)
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • Combining lessons 1-4 into a production-grade tool
+#   • Service fingerprinting from banners (SSH, HTTP, FTP, SMTP)
+#   • Sending protocol-specific probes to elicit banners
+#   • Structured JSON output for multi-port recon
+#   • Putting it all together: error handling, timeouts, write-back
+# ─────────────────────────────────────────────────────
+# This is the capstone C++ lesson. A real banner grabber
+# used in recon to fingerprint services before exploitation.
+
+cpp banner_grab {
+    #include <iostream>
+    #include <string>
+    #include <vector>
+    #include <sstream>
+    #include <cstring>
+    #include <sys/types.h>
+    #include <sys/socket.h>
+    #include <netdb.h>
+    #include <unistd.h>
+    #include <arpa/inet.h>
+    #include <sys/select.h>
+    #include <fcntl.h>
+    #include <errno.h>
+
+    std::string json_get(const std::string& j, const std::string& key) {
+        std::string needle = "\"" + key + "\":";
+        auto pos = j.find(needle);
+        if (pos == std::string::npos) return "";
+        pos += needle.size();
+        while (pos < j.size() && j[pos] == ' ') ++pos;
+        if (j[pos] == '"') {
+            ++pos;
+            std::string val;
+            while (pos < j.size() && j[pos] != '"') {
+                if (j[pos] == '\\' && pos+1 < j.size()) {
+                    if (j[pos+1] == 'n') { val += '\n'; pos += 2; continue; }
+                    if (j[pos+1] == 't') { val += '\t'; pos += 2; continue; }
+                    if (j[pos+1] == '"') { val += '"';  pos += 2; continue; }
+                }
+                val += j[pos++];
+            }
+            return val;
+        }
+        auto end = j.find_first_of(",}", pos);
+        return j.substr(pos, end == std::string::npos ? j.size() : end);
+    }
+
+    int connect_with_timeout(const std::string& host, const std::string& port,
+                             int timeout_ms, std::string& errstr) {
+        addrinfo hints{}, *res = nullptr;
+        hints.ai_family   = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        int rc = getaddrinfo(host.c_str(), port.c_str(), &hints, &res);
+        if (rc != 0 || !res) { errstr = gai_strerror(rc); return -1; }
+
+        int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        if (fd < 0) { errstr = strerror(errno); freeaddrinfo(res); return -1; }
+
+        int flags = fcntl(fd, F_GETFL, 0);
+        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+        rc = connect(fd, res->ai_addr, res->ai_addrlen);
+        freeaddrinfo(res);
+
+        if (rc == 0) { fcntl(fd, F_SETFL, flags); return fd; }
+        if (errno != EINPROGRESS) { errstr = strerror(errno); close(fd); return -1; }
+
+        fd_set wfds; FD_ZERO(&wfds); FD_SET(fd, &wfds);
+        timeval tv{ timeout_ms / 1000, (timeout_ms % 1000) * 1000 };
+        rc = select(fd + 1, nullptr, &wfds, nullptr, &tv);
+        if (rc <= 0) { errstr = rc ? strerror(errno) : "timed out"; close(fd); return -1; }
+
+        int err = 0; socklen_t len = sizeof(err);
+        getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len);
+        if (err) { errstr = strerror(err); close(fd); return -1; }
+        fcntl(fd, F_SETFL, flags);
+        return fd;
+    }
+
+    // Send a probe string and receive the response
+    std::string probe_recv(int fd, const std::string& send_str, int recv_ms, size_t max = 512) {
+        if (!send_str.empty()) {
+            send(fd, send_str.data(), send_str.size(), MSG_NOSIGNAL);
+        }
+        timeval tv{ recv_ms / 1000, (recv_ms % 1000) * 1000 };
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+        std::string out;
+        out.resize(max);
+        ssize_t n = recv(fd, &out[0], max, 0);
+        if (n > 0) out.resize(n); else out.clear();
+        return out;
+    }
+
+    // Sanitise a banner for single-line output (strip CR, replace control chars)
+    std::string sanitise(const std::string& raw) {
+        std::string s;
+        for (unsigned char c : raw) {
+            if (c == '\r') continue;
+            if (c == '\n') { s += ' '; continue; }
+            s += (c >= 32 && c < 127) ? (char)c : '.';
+        }
+        // Trim trailing spaces
+        while (!s.empty() && s.back() == ' ') s.pop_back();
+        return s;
+    }
+
+    struct PortProbe {
+        std::string port;
+        std::string probe;      // what to send (empty = passive grab)
+        std::string service;    // human label
+    };
+
+    // Fingerprint a banner string to a service name
+    std::string fingerprint(const std::string& banner, const std::string& port) {
+        if (banner.find("SSH-") != std::string::npos)    return "ssh";
+        if (banner.substr(0,4) == "220 ")                return "ftp/smtp";
+        if (banner.find("HTTP/") != std::string::npos)   return "http";
+        if (banner.find("* OK")  != std::string::npos)   return "imap";
+        if (banner.find("+OK")   != std::string::npos)   return "pop3";
+        if (banner.find("RFB ")  != std::string::npos)   return "vnc";
+        if (port == "3306")                               return "mysql";
+        if (port == "5432")                               return "postgres";
+        return "unknown";
+    }
+
+    struct Result {
+        std::string port;
+        bool open;
+        std::string banner;
+        std::string service;
+        std::string error;
+    };
+
+    int main() {
+        std::string buf(
+            std::istreambuf_iterator<char>(std::cin),
+            std::istreambuf_iterator<char>()
+        );
+
+        std::string host    = json_get(buf, "arg0");
+        std::string portstr = json_get(buf, "arg1");
+        if (host.empty()) { std::cout << "arg0 = host required\n"; return 0; }
+        if (portstr.empty()) portstr = "21,22,25,80,110,143,443,3306,5432,8080";
+
+        // Parse comma-separated ports
+        std::vector<std::string> ports;
+        std::istringstream ss(portstr);
+        std::string tok;
+        while (std::getline(ss, tok, ',')) {
+            while (!tok.empty() && tok.front() == ' ') tok.erase(tok.begin());
+            while (!tok.empty() && tok.back()  == ' ') tok.pop_back();
+            if (!tok.empty()) ports.push_back(tok);
+        }
+
+        // Per-port probes: some services need a nudge to send their banner
+        auto get_probe = [](const std::string& p) -> std::string {
+            if (p == "80" || p == "8080") return "HEAD / HTTP/1.0\r\nHost: target\r\n\r\n";
+            if (p == "443")               return "";  // TLS — passive would need SSL wrap
+            return "";  // passive: just wait
+        };
+
+        std::vector<Result> results;
+        int open_count = 0;
+
+        for (auto& port : ports) {
+            std::string err;
+            int fd = connect_with_timeout(host, port, 1500, err);
+            if (fd < 0) {
+                results.push_back({port, false, "", "", err});
+                std::cout << "  CLOSED  " << host << ":" << port
+                          << "  (" << err << ")\n";
+                continue;
+            }
+
+            ++open_count;
+            std::string probe  = get_probe(port);
+            std::string raw    = probe_recv(fd, probe, 1500);
+            close(fd);
+
+            std::string banner  = sanitise(raw);
+            std::string service = fingerprint(raw, port);
+            results.push_back({port, true, banner, service, ""});
+
+            std::cout << "  OPEN    " << host << ":" << port
+                      << "  [" << service << "]";
+            if (!banner.empty()) std::cout << "  " << banner.substr(0, 80);
+            std::cout << "\n";
+        }
+
+        // Build compact summary for ShadowScript
+        std::string open_ports, services, banners;
+        for (auto& r : results) {
+            if (!r.open) continue;
+            if (!open_ports.empty()) { open_ports += ","; services += ","; banners += "|"; }
+            open_ports += r.port;
+            services   += r.service;
+            banners    += r.banner.substr(0, 60);
+        }
+
+        std::cout << "SHADOWVAR:BANNER_HOST="      << host        << "\n";
+        std::cout << "SHADOWVAR:BANNER_OPEN="      << open_ports  << "\n";
+        std::cout << "SHADOWVAR:BANNER_SERVICES="  << services    << "\n";
+        std::cout << "SHADOWVAR:BANNER_OPEN_COUNT="<< open_count  << "\n";
+        std::cout << "SHADOWVAR:BANNER_DATA="      << banners     << "\n";
+        std::cout << "--- " << open_count << "/" << results.size()
+                  << " ports open on " << host << " ---\n";
+
+        return 0;
+    }
+}
+
+# ── Full recon on a target ───────────────────────────
+VAR target = "scanme.nmap.org"
+VAR ports  = "22,80,443,8080"
+
+!echo("Banner grabbing $target on ports: $ports")
+
+UNSAFE {
+    banner_grab $target $ports
+}
+
+!echo($LAST)
+!echo("Open: $BANNER_OPEN_COUNT ports — $BANNER_OPEN")
+!echo("Services: $BANNER_SERVICES")
+
+IF $BANNER_OPEN_COUNT > "0" {
+    AI("I ran a banner grab on $target and found these open ports: $BANNER_OPEN running services: $BANNER_SERVICES. Banner data: $BANNER_DATA — what vulnerabilities should I research and what's the attack surface?")
+}
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • Sending a protocol-specific probe (HTTP HEAD, FTP EHLO etc.) is
+#     often needed to elicit a banner — passive recv() silently times out
+#     on many services
+#   • sanitise() is critical: raw banners contain \r\n and control chars
+#     that corrupt terminal output and ShadowScript variable parsing
+#   • The fingerprint() function is intentionally simple — for production
+#     use nmap's service detection engine or banner2service libraries
+#   • MSG_NOSIGNAL on send() prevents SIGPIPE from crashing the process
+#     when the remote closes the connection during the send
+#   • This tool deliberately doesn't do TLS (port 443) — add OpenSSL's
+#     SSL_CTX/SSL_connect layer on top of the fd for HTTPS banner grabs
+#
+# CHALLENGE: Add TLS support using OpenSSL's BIO_new_ssl_connect() for
+#   port 443 — extract the server's X.509 subject/issuer/SAN fields and
+#   write them back as SHADOWVAR:TLS_SUBJECT and SHADOWVAR:TLS_SAN
+# ─────────────────────────────────────────────────────
+
+RETURN "cpp lesson 5 complete — C++ track done"
