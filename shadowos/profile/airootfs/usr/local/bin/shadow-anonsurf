@@ -90,8 +90,8 @@ table inet anonsurf {
         ct state established,related accept
         oifname "lo" accept
         meta skuid $TOR_UID accept
-        # Allow LAN management (SSH still works if you need recovery)
-        ip daddr 127.0.0.0/8 accept
+        # Allow LAN SSH/management — loopback + RFC1918 ranges
+        ip daddr { 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 } accept
     }
 }
 

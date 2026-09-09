@@ -209,7 +209,7 @@ PACMAN
     fi
 
     # ── 3. BlackArch keyring (if it failed at build time) ──────────────────
-    if [[ ! -f /etc/pacman.d/blackarch-keyring ]] && command -v pacman >/dev/null 2>&1; then
+    if ! pacman-key --list-keys 2>/dev/null | grep -qi blackarch && command -v pacman >/dev/null 2>&1; then
         echo "[*] Importing BlackArch keyring..."
         if curl -fsSL https://blackarch.org/keyring/blackarch-keyring.pkg.tar.zst \
             -o /tmp/blackarch-keyring.pkg.tar.zst; then
