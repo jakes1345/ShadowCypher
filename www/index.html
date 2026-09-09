@@ -2612,27 +2612,40 @@
             }).join('');
         }
 
-        function showDevice(id) {
+        async function showDevice(id) {
             const d = _deviceCache.find(x => x.id === id);
             if (!d) return;
-            const seen = new Date(d.last_seen_at).toLocaleString();
-            const first = d.first_seen_at ? new Date(d.first_seen_at).toLocaleString() : '—';
-            const ports = (d.open_ports || []);
+
+            // Show modal immediately with cached data, then enrich from API
+            const modal = document.getElementById('device-modal');
+            const body = document.getElementById('device-modal-body');
+            modal.style.display = 'flex';
+            body.innerHTML = '<div style="color:#555;font-size:0.85rem;padding:40px 0;text-align:center;">Loading device details…</div>';
+
+            let detail = null;
+            try { detail = await callApi(`/v1/devices/${id}`); } catch(_) {}
+
+            const device = (detail && detail.device) ? detail.device : d;
+            const seen = new Date(device.last_seen_at || d.last_seen_at).toLocaleString();
+            const first = (device.first_seen_at || d.first_seen_at) ? new Date(device.first_seen_at || d.first_seen_at).toLocaleString() : '—';
+            const ports = (device.open_ports || d.open_ports || []);
             const portsHtml = ports.length
                 ? ports.map(p => `<span style="font-family:var(--font-mono);font-size:0.75rem;padding:2px 8px;background:rgba(99,179,237,0.08);border:1px solid rgba(99,179,237,0.2);border-radius:3px;color:var(--accent-primary);">${p}</span>`).join('')
                 : '<span style="color:#555;font-size:0.75rem;">No open ports detected</span>';
 
-            // CVE alerts for this device
-            const cves = window._cveAlertCache ? (window._cveAlertCache[id] || []) : [];
+            // CVE alerts — prefer API response, fall back to cached
+            const cves = (detail && detail.cve_alerts) ? detail.cve_alerts
+                : (window._cveAlertCache ? (window._cveAlertCache[id] || []) : []);
             const cvesHtml = cves.length
                 ? cves.map(a => `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
                     <span style="font-family:var(--font-mono);font-size:0.75rem;color:#ef4444;">${escapeHtml(a.cve_id)}</span>
-                    <span style="color:#555;font-size:0.65rem;margin-left:auto;">${new Date(a.sent_at).toLocaleDateString()}</span>
+                    <span style="color:#555;font-size:0.65rem;margin-left:auto;">${new Date(a.fired_at || a.sent_at).toLocaleDateString()}</span>
                   </div>`).join('')
                 : '<span style="color:#555;font-size:0.75rem;">No CVE matches</span>';
 
-            // Incidents linked to this device
-            const incs = _incidentCache.filter(i => i.device_id === id);
+            // Incidents — prefer API response, fall back to incident cache
+            const incs = (detail && detail.incidents) ? detail.incidents
+                : _incidentCache.filter(i => i.device_id === id);
             const sevColor = { info: 'var(--success)', warning: 'var(--warning)', critical: 'var(--critical)' };
             const incsHtml = incs.length
                 ? incs.slice(0, 20).map(inc => {
@@ -2644,6 +2657,22 @@
                     </div>`;
                   }).join('')
                 : '<span style="color:#555;font-size:0.75rem;">No incidents linked to this device</span>';
+
+            // Scan timeline
+            const scans = (detail && detail.scans) ? detail.scans : [];
+            const scanTypeColor = { network:'var(--accent-primary)', router:'var(--warning)', dns:'var(--success)', firewall:'var(--success)', system:'var(--warning)', port:'#888', arp:'var(--critical)' };
+            const scansHtml = scans.length
+                ? scans.map(s => {
+                    const c = scanTypeColor[s.scan_type] || '#888';
+                    const t = new Date(s.started_at).toLocaleString(undefined, {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+                    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                        <span style="font-family:var(--font-mono);font-size:0.65rem;color:${c};text-transform:uppercase;min-width:58px;">${escapeHtml(s.scan_type)}</span>
+                        ${s.device_count != null ? `<span style="color:var(--text-secondary);font-size:0.7rem;">${s.device_count} devices</span>` : ''}
+                        ${s.duration_ms != null ? `<span style="color:#444;font-size:0.65rem;">${s.duration_ms}ms</span>` : ''}
+                        <span style="color:#444;font-size:0.62rem;margin-left:auto;">${escapeHtml(t)}</span>
+                    </div>`;
+                  }).join('')
+                : '<span style="color:#555;font-size:0.75rem;">No scans in plan history window</span>';
 
             // Risk score: CVEs 12pts ea (cap 36), open incidents crit=20/warn=10/info=4, risky ports 8pts ea, cap 100
             const RISKY_PORTS = new Set([21, 23, 445, 1900, 3389, 7547]);
@@ -2661,23 +2690,24 @@
             const riskColor = risk >= 60 ? 'var(--critical)' : risk >= 30 ? 'var(--warning)' : 'var(--success)';
             const riskLabel = risk >= 60 ? 'HIGH' : risk >= 30 ? 'MEDIUM' : 'LOW';
 
-            const trustBtn = d.trusted
-                ? `<button onclick="toggleDeviceTrust('${escapeHtml(d.id)}', false)" style="font-size:0.65rem;padding:2px 10px;background:rgba(72,199,142,0.1);border:1px solid rgba(72,199,142,0.3);color:var(--success);border-radius:3px;cursor:pointer;font-family:var(--font-mono);">TRUSTED ✕</button>`
-                : `<button onclick="toggleDeviceTrust('${escapeHtml(d.id)}', true)" style="font-size:0.65rem;padding:2px 10px;background:rgba(255,255,255,0.04);border:1px solid #333;color:#aaa;border-radius:3px;cursor:pointer;font-family:var(--font-mono);">MARK TRUSTED</button>`;
+            const trustBtn = device.trusted
+                ? `<button onclick="toggleDeviceTrust('${escapeHtml(id)}', false)" style="font-size:0.65rem;padding:2px 10px;background:rgba(72,199,142,0.1);border:1px solid rgba(72,199,142,0.3);color:var(--success);border-radius:3px;cursor:pointer;font-family:var(--font-mono);">TRUSTED ✕</button>`
+                : `<button onclick="toggleDeviceTrust('${escapeHtml(id)}', true)" style="font-size:0.65rem;padding:2px 10px;background:rgba(255,255,255,0.04);border:1px solid #333;color:#aaa;border-radius:3px;cursor:pointer;font-family:var(--font-mono);">MARK TRUSTED</button>`;
 
-            document.getElementById('device-modal-body').innerHTML = `
+            body.innerHTML = `
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
-                    <span style="font-size:0.95rem;font-weight:700;color:#fff;">${escapeHtml(d.hostname || d.ip || d.mac)}</span>
+                    <span style="font-size:0.95rem;font-weight:700;color:#fff;">${escapeHtml(device.hostname || device.ip || device.mac || d.hostname || d.mac)}</span>
                     ${trustBtn}
-                    <span style="font-size:0.65rem;font-family:var(--font-mono);color:var(--accent-primary);padding:2px 8px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.25);border-radius:3px;">${escapeHtml(d.device_type || 'unknown')}</span>
+                    <span style="font-size:0.65rem;font-family:var(--font-mono);color:var(--accent-primary);padding:2px 8px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.25);border-radius:3px;">${escapeHtml(device.device_type || d.device_type || 'unknown')}</span>
                     <span style="font-size:0.65rem;font-family:var(--font-mono);color:${riskColor};padding:2px 8px;background:rgba(0,0,0,0.2);border:1px solid ${riskColor};border-radius:3px;margin-left:auto;">RISK ${risk}/100 · ${riskLabel}</span>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;font-size:0.78rem;">
-                    <div><span style="color:#555;">MAC</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(d.mac)}</span></div>
-                    <div><span style="color:#555;">IP</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(d.ip || '—')}</span></div>
-                    <div><span style="color:#555;">Vendor</span><br><span style="color:var(--text-primary);">${escapeHtml(d.vendor || '—')}</span></div>
-                    <div><span style="color:#555;">Last seen</span><br><span style="color:var(--text-primary);">${escapeHtml(seen)}</span></div>
+                    <div><span style="color:#555;">MAC</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(device.mac || d.mac)}</span></div>
+                    <div><span style="color:#555;">IP</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(device.ip || d.ip || '—')}</span></div>
+                    <div><span style="color:#555;">Vendor</span><br><span style="color:var(--text-primary);">${escapeHtml(device.vendor || d.vendor || '—')}</span></div>
+                    <div><span style="color:#555;">OS</span><br><span style="color:var(--text-primary);">${escapeHtml(device.os_fingerprint || '—')}</span></div>
                     <div><span style="color:#555;">First seen</span><br><span style="color:var(--text-primary);">${escapeHtml(first)}</span></div>
+                    <div><span style="color:#555;">Last seen</span><br><span style="color:var(--text-primary);">${escapeHtml(seen)}</span></div>
                 </div>
                 <div style="margin-bottom:20px;">
                     <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-secondary);margin-bottom:8px;">// OPEN_PORTS</div>
@@ -2687,12 +2717,15 @@
                     <div style="font-family:var(--font-mono);font-size:0.65rem;color:#ef4444;margin-bottom:8px;">// CVE_MATCHES (${cves.length})</div>
                     ${cvesHtml}
                 </div>
-                <div>
+                <div style="margin-bottom:20px;">
                     <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--warning);margin-bottom:8px;">// LINKED_INCIDENTS (${incs.length})</div>
                     ${incsHtml}
                 </div>
+                <div>
+                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:#888;margin-bottom:8px;">// SCAN_TIMELINE (${scans.length} scans since device first seen)</div>
+                    ${scansHtml}
+                </div>
             `;
-            document.getElementById('device-modal').style.display = 'flex';
         }
 
         function closeDeviceModal() {

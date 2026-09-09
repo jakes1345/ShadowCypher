@@ -1,0 +1,59 @@
+# ShadowScript Mission: Cloud Recon
+# Passive reconnaissance of cloud infrastructure — S3 buckets, exposed APIs,
+# cloud metadata endpoints, and misconfigured storage.
+# Safe passive footprint — no exploitation.
+
+VAR target = "example.com"
+
+!echo("=== CLOUD RECON — $target ===")
+
+TARGET($target)
+
+!echo("[*] Phase 1: Cloud provider fingerprint")
+STRIKE(osint, tech_detect)
+!echo("[*] Tech stack: $LAST")
+AI("What cloud provider and services does this stack suggest? $LAST")
+
+!echo("[*] Phase 2: DNS cloud indicators")
+# CNAME chains pointing to cloud
+STRIKE(osint, cname_chain)
+!echo("[*] CNAME chain: $LAST")
+AI("From this CNAME chain, identify any dangling CNAMEs pointing to defunct cloud resources (subdomain takeover risk): $LAST")
+
+!echo("[*] Phase 3: S3 / blob storage enumeration")
+VAR bucket_name = $target
+STRIKE(cloud, s3_bucket_enum)
+IF $LAST != "" {
+    !echo("[!] Exposed storage: $LAST")
+    AI("Assess the sensitivity of what's exposed in this cloud storage — PII, source code, credentials: $LAST")
+} ELSE {
+    !echo("[+] No exposed storage buckets found")
+}
+
+!echo("[*] Phase 4: Cloud metadata endpoint probe")
+# Check for SSRF exposure to cloud metadata
+STRIKE(cloud, metadata_ssrf_check)
+IF $LAST != "" {
+    !echo("[!] Cloud metadata reachable: $LAST")
+} ELSE {
+    !echo("[+] Metadata endpoint not exposed")
+}
+
+!echo("[*] Phase 5: Exposed API keys / credentials in JS")
+STRIKE(cloud, js_secret_scan)
+IF $LAST != "" {
+    AI("Triage these potential secrets by sensitivity — which are live credentials vs test keys: $LAST")
+    !echo("[!] Potential secrets in client JS: $LAST")
+} ELSE {
+    !echo("[+] No credentials found in client-side JS")
+}
+
+!echo("[*] Phase 6: Certificate transparency — all subdomains")
+STRIKE(osint, cert_transparency)
+!echo("[*] Subdomains from CT logs: $LAST")
+AI("From this subdomain list, identify dev/staging/admin panels and internal tooling that shouldn't be public: $LAST")
+
+AI("Cloud attack surface summary for $target — rank findings by exploitability: $LAST")
+
+!echo("=== CLOUD RECON COMPLETE ===")
+RETURN "ok"

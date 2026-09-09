@@ -1,0 +1,40 @@
+# ShadowScript Mission: Network Pivot
+# Internal pivot reconnaissance — map the next hop after compromising a host.
+# Enumerate the local subnet, identify live hosts, fingerprint services.
+# Run only on networks you are authorized to test.
+
+VAR subnet = "192.168.1.0/24"
+
+!echo("=== NETWORK PIVOT RECON ===")
+!echo("[*] Mapping subnet: $subnet")
+
+TARGET($subnet)
+
+# Identify live hosts
+STRIKE(network, arp_scan)
+!echo("[*] Live hosts (ARP): $LAST")
+AI("From this ARP scan of $subnet, identify hosts that may be interesting pivot targets (servers, domain controllers, printers with embedded creds): $LAST")
+
+# Port sweep of common internal services
+SCAN(22,23,80,443,445,3389,5985,8080,8443)
+!echo("[*] Open ports: $LAST")
+
+# Check for SMB signing (common lateral movement weakness)
+STRIKE(network, smb_signing_check)
+IF $LAST != "" {
+    AI("Evaluate SMB signing posture for these hosts — does signing-disabled status enable relay attacks? $LAST")
+    !echo("[!] SMB signing info: $LAST")
+}
+
+# Identify NetBIOS names (internal name resolution without DNS)
+STRIKE(network, netbios_scan)
+!echo("[*] NetBIOS names: $LAST")
+
+# Check for default credentials on common internal services
+STRIKE(vuln, default_creds_check)
+!echo("[*] Default cred check: $LAST")
+
+AI("Summarise the highest-value lateral movement paths from this internal network scan: $LAST")
+
+!echo("=== PIVOT RECON COMPLETE ===")
+RETURN "ok"
