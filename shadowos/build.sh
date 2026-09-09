@@ -78,6 +78,40 @@ if [[ -d "$GRUB_THEME_SRC" ]]; then
   echo ">> GRUB theme staged → profile/grub/themes/shadowos/"
 fi
 
+# ── Build Qt6 installer binary and stage it into airootfs ──────────────────
+INSTALLER_SRC="$REPO_ROOT/shadowos/installer"
+INSTALLER_BIN="$PROFILE/airootfs/usr/local/bin/shadowos-installer"
+
+if [[ -d "$INSTALLER_SRC/src" ]]; then
+  echo ">> Compiling Qt6 installer..."
+  INSTALLER_BUILD="$INSTALLER_SRC/_build"
+  mkdir -p "$INSTALLER_BUILD"
+
+  if ! command -v cmake >/dev/null 2>&1; then
+    echo "   cmake not found — skipping installer build" >&2
+  elif ! pkg-config --exists Qt6Widgets 2>/dev/null; then
+    echo "   Qt6 not found — skipping installer build (install qt6-base)" >&2
+  else
+    cmake -S "$INSTALLER_SRC" -B "$INSTALLER_BUILD" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -Wno-dev -DCMAKE_VERBOSE_MAKEFILE=OFF 2>&1 | tail -5
+
+    make -C "$INSTALLER_BUILD" -j"$(nproc)" 2>&1 | tail -10
+
+    if [[ -f "$INSTALLER_BUILD/shadowos-installer" ]]; then
+      cp -f "$INSTALLER_BUILD/shadowos-installer" "$INSTALLER_BIN"
+      chmod +x "$INSTALLER_BIN"
+      strip --strip-unneeded "$INSTALLER_BIN" 2>/dev/null || true
+      echo "   Installer staged → $INSTALLER_BIN ($(du -sh "$INSTALLER_BIN" | cut -f1))"
+    else
+      echo "   WARNING: installer binary not produced — check cmake output" >&2
+    fi
+  fi
+else
+  echo "   Installer source not found at $INSTALLER_SRC — skipping" >&2
+fi
+
 echo ">> Building ShadowOS ISO (mkarchiso)"
 mkarchiso -v -w "$WORK" -o "$OUT" "$PROFILE"
 

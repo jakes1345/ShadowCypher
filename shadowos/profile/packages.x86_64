@@ -80,15 +80,20 @@ sleuthkit
 radare2
 proxychains-ng
 
+# Qt6 runtime — required by shadowos-installer and shadowcypher-qt desktop app
+qt6-base
+qt6-wayland
+qt6-declarative
+qt6-websockets
+qt6-svg
+qt6-5compat
+
 # === Modern desktop: Hyprland ===
 hyprland
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
-qt6-wayland
+# qt6-wayland, qt6-declarative, qt6-5compat, qt6-svg already listed above (Qt6 runtime block)
 qt5-wayland
-qt6-declarative
-qt6-5compat
-qt6-svg
 waybar
 wofi
 hyprpaper

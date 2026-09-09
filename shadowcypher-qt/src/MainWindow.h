@@ -26,11 +26,16 @@ private:
     void applyWindowStyle();
 
     struct NavItem { QString icon; QString label; };
-    static constexpr int PAGE_DASHBOARD    = 0;
-    static constexpr int PAGE_GUARDIAN     = 1;
-    static constexpr int PAGE_COUNTER_INTEL = 2;
-    static constexpr int PAGE_ARSENAL      = 3;
-    static constexpr int PAGE_AI           = 4;
-    static constexpr int PAGE_SHADOWSCRIPT = 5;
-    static constexpr int PAGE_SETTINGS     = 6;
+    static constexpr int PAGE_DASHBOARD     = 0;
+    static constexpr int PAGE_GUARDIAN      = 1;
+    static constexpr int PAGE_NETWORK       = 2;
+    static constexpr int PAGE_THREAT        = 3;
+    static constexpr int PAGE_OSINT         = 4;
+    static constexpr int PAGE_VULN          = 5;
+    static constexpr int PAGE_COUNTER_INTEL = 6;
+    static constexpr int PAGE_ARSENAL       = 7;
+    static constexpr int PAGE_AI            = 8;
+    static constexpr int PAGE_SHADOWSCRIPT  = 9;
+    static constexpr int PAGE_CHAT          = 10;
+    static constexpr int PAGE_SETTINGS      = 11;
 };

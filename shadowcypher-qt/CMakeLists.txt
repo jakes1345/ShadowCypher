@@ -38,6 +38,14 @@ qt_add_executable(shadowcypher
     src/pages/ChatPage.h
     src/pages/SettingsPage.cpp
     src/pages/SettingsPage.h
+    src/pages/NetworkPage.cpp
+    src/pages/NetworkPage.h
+    src/pages/ThreatPage.cpp
+    src/pages/ThreatPage.h
+    src/pages/OsintPage.cpp
+    src/pages/OsintPage.h
+    src/pages/VulnPage.cpp
+    src/pages/VulnPage.h
 )
 
 target_link_libraries(shadowcypher PRIVATE
