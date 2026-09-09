@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────
+# ShadowScript Lesson 2 — Conditionals
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   IF / ELSE     — branch on a condition
+#   ==  !=        — equality checks
+#   >  <  >=  <=  — numeric comparisons
+#   $VAR alone    — truthy check (empty string = false)
+# ─────────────────────────────────────────────────────
+
+VAR target = "192.168.1.1"
+VAR port    = "443"
+VAR status  = "open"
+
+# 1. Basic equality check
+IF $status == "open" {
+    !echo("Port $port is open on $target — worth investigating")
+}
+
+# 2. Not-equal check
+IF $status != "closed" {
+    !echo("Something is listening, status: $status")
+}
+
+# 3. IF + ELSE
+VAR score = "9.8"
+
+IF $score >= "7.0" {
+    !echo("High severity — CVSS $score. Prioritise this.")
+} ELSE {
+    !echo("Lower risk — CVSS $score. Log and monitor.")
+}
+
+# 4. Truthy check — an empty variable is falsy
+VAR found = ""
+IF $found {
+    !echo("We have findings")
+} ELSE {
+    !echo("Nothing found yet — keep looking")
+}
+
+VAR found = "admin:admin"
+IF $found {
+    !echo("Credential found: $found")
+}
+
+# 5. Chained decisions — real triage logic
+VAR cvss  = "8.5"
+VAR patch = "no"
+
+IF $cvss >= "9.0" {
+    !echo("CRITICAL — exploit this now, patch window is days")
+} ELSE {
+    IF $patch == "no" {
+        !echo("HIGH unpatched — schedule exploit attempt this sprint")
+    } ELSE {
+        !echo("HIGH patched — verify patch effectiveness")
+    }
+}
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • Numeric comparisons work even though values are strings
+#     (ShadowScript converts to float before comparing)
+#   • Brace { must be on the same line as IF / ELSE
+#   • No "ELSE IF" — nest another IF inside ELSE instead
+#   • Comparisons are strict string equality for == and !=
+# ─────────────────────────────────────────────────────
+
+RETURN "lesson 2 complete"

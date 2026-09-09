@@ -1,0 +1,142 @@
+# ─────────────────────────────────────────────────────
+# Rust Lesson 5 — Concurrent Port Scanner
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • std::thread::spawn for parallel port checks
+#   • std::sync::mpsc channel to collect results
+#   • Parsing port ranges (22 or 1-1024 or 22,80,443)
+#   • Timing a concurrent scan vs sequential
+#   • Full real-world scanner in ~80 lines of Rust
+# ─────────────────────────────────────────────────────
+
+rust fast_scan {
+    use std::io::Read;
+    use std::net::{TcpStream, ToSocketAddrs};
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::{Duration, Instant};
+
+    // Parse "1-1024", "22,80,443", or "80" into a Vec<u16>
+    fn parse_ports(spec: &str) -> Vec<u16> {
+        let mut ports = Vec::new();
+        for part in spec.split(',') {
+            let part = part.trim();
+            if let Some(dash) = part.find('-') {
+                let lo: u16 = part[..dash].parse().unwrap_or(1);
+                let hi: u16 = part[dash+1..].parse().unwrap_or(lo);
+                for p in lo..=hi {
+                    ports.push(p);
+                }
+            } else if let Ok(p) = part.parse::<u16>() {
+                ports.push(p);
+            }
+        }
+        ports
+    }
+
+    fn probe(host: String, port: u16, timeout_ms: u64) -> Option<(u16, u128)> {
+        let addr_str = format!("{}:{}", host, port);
+        let addr = addr_str.to_socket_addrs().ok()?.next()?;
+        let start = Instant::now();
+        TcpStream::connect_timeout(&addr, Duration::from_millis(timeout_ms))
+            .ok()
+            .map(|_| (port, start.elapsed().as_millis()))
+    }
+
+    fn main() {
+        let mut buf = String::new();
+        std::io::stdin().read_to_string(&mut buf).unwrap();
+        let args: serde_json::Value = serde_json::from_str(&buf)
+            .unwrap_or(serde_json::Value::Null);
+
+        let host       = args["arg0"].as_str().unwrap_or("localhost").to_string();
+        let port_spec  = args["arg1"].as_str().unwrap_or("1-1024");
+        let timeout_ms = args["arg2"].as_str()
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(300);
+        // Max concurrent threads — tune for your machine and network
+        let concurrency: usize = args["arg3"].as_str()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(256);
+
+        let ports = parse_ports(port_spec);
+        let total = ports.len();
+        eprintln!("Scanning {} ports on {} with {} threads ...", total, host, concurrency);
+
+        let start = Instant::now();
+        let (tx, rx) = mpsc::channel();
+        let mut handles = Vec::new();
+
+        for chunk in ports.chunks(concurrency) {
+            for &port in chunk {
+                let tx    = tx.clone();
+                let host  = host.clone();
+                handles.push(thread::spawn(move || {
+                    if let Some(result) = probe(host, port, timeout_ms) {
+                        tx.send(result).ok();
+                    }
+                }));
+            }
+            // Drain this chunk before spawning the next
+            for h in handles.drain(..) {
+                h.join().ok();
+            }
+        }
+        drop(tx);
+
+        let elapsed = start.elapsed();
+        let mut results: Vec<(u16, u128)> = rx.into_iter().collect();
+        results.sort_by_key(|(p, _)| *p);
+
+        let open_list: Vec<String> = results.iter()
+            .map(|(p, ms)| format!("{}({}ms)", p, ms))
+            .collect();
+
+        println!("SHADOWVAR:OPEN_PORTS={}", results.iter()
+            .map(|(p,_)| p.to_string()).collect::<Vec<_>>().join(","));
+        println!("SHADOWVAR:OPEN_COUNT={}", results.len());
+        println!("SHADOWVAR:SCAN_TIME_MS={}", elapsed.as_millis());
+
+        println!("--- Scan complete: {}/{} open  ({:.1}s) ---",
+            results.len(), total, elapsed.as_secs_f64());
+        for (port, ms) in &results {
+            println!("  OPEN  {:>5}/tcp  {}ms", port, ms);
+        }
+    }
+}
+
+# ── Run the full concurrent scanner ───────────────────
+VAR target      = "scanme.nmap.org"
+VAR ports       = "1-1024"
+VAR timeout_ms  = "300"
+VAR concurrency = "300"
+
+!echo("Fast scanning $target on $ports ...")
+
+UNSAFE {
+    fast_scan $target $ports $timeout_ms $concurrency
+}
+
+!echo($LAST)
+!echo("Found $OPEN_COUNT open ports in ${SCAN_TIME_MS}ms")
+!echo("Open: $OPEN_PORTS")
+
+IF $OPEN_COUNT > "0" {
+    AI("Port scan of $target found $OPEN_COUNT open ports: $OPEN_PORTS. What are the most exploitable and what's the attack order?")
+}
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • chunks(concurrency) controls the thread pool size —
+#     too many threads = OS file descriptor limits hit
+#   • mpsc::channel is the clean Rust way to collect results
+#     from concurrent threads without shared mutable state
+#   • 300ms timeout + 300 threads = scans 1024 ports in ~1s
+#   • eprintln! goes to stderr — it won't appear in $LAST
+#   • This is the pattern for any parallel Rust work in ShadowScript
+#
+# CHALLENGE: extend this to also probe UDP ports (SOCK_DGRAM)
+#   for DNS (53), SNMP (161), NTP (123) — common oversights
+# ─────────────────────────────────────────────────────
+
+RETURN "rust lesson 5 complete"
