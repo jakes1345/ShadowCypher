@@ -82,3 +82,9 @@ alias rm='rm -I'
 alias ps='procs'
 alias du='gdu'
 alias diff='diff --color=always'
+
+# Zsh plugins (installed as packages, must be sourced)
+[[ -f /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && \
+    source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+[[ -f /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
+    source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
