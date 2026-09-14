@@ -6,7 +6,9 @@ systemctl start tor
 systemctl start dnscrypt-proxy 2>/dev/null || true
 
 # MAC randomize all interfaces
-for iface in $(ls /sys/class/net/ | grep -v lo); do
+for iface in /sys/class/net/*; do
+    iface=$(basename "$iface")
+    [[ "$iface" == "lo" ]] && continue
     ip link set "$iface" down 2>/dev/null || true
     macchanger -r "$iface" 2>/dev/null || true
     ip link set "$iface" up 2>/dev/null || true

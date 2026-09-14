@@ -155,7 +155,8 @@ if command -v hyprctl >/dev/null 2>&1; then
         DESKTOP_USER=$(loginctl list-sessions --no-legend 2>/dev/null \
             | awk '{print $3}' | grep -v root | head -1 || echo "shadow")
     fi
-    HIS=$(find /run/user/$(id -u "$DESKTOP_USER" 2>/dev/null || echo 1000)/hypr \
+    _UID=$(id -u "$DESKTOP_USER" 2>/dev/null || echo 1000)
+    HIS=$(find /run/user/"$_UID"/hypr \
         -maxdepth 1 -mindepth 1 -type d 2>/dev/null | head -1 | xargs basename 2>/dev/null || true)
     if [[ -n "$HIS" ]]; then
         sudo -u "$DESKTOP_USER" env HYPRLAND_INSTANCE_SIGNATURE="$HIS" \
