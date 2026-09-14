@@ -21,7 +21,8 @@
 set -euo pipefail
 
 # Global configuration
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 readonly POLICY_FILE="${SCRIPT_DIR}/secureboot-policy.json"
 readonly LOG_FILE="/var/log/secureboot-setup.log"
 readonly STATE_DIR="/var/lib/secureboot"
@@ -38,14 +39,13 @@ VERBOSE=0
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
 readonly NC='\033[0m' # No Color
 
 # Logging functions
 log() {
     local level="$1"
     shift
-    local message="$@"
+    local message="$*"
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[${timestamp}] [${level}] ${message}" | tee -a "${LOG_FILE}"
@@ -223,7 +223,8 @@ check_requirements() {
 backup_efi_vars() {
     log_info "Backing up current EFI variables..."
 
-    local backup_dir="${EFI_BACKUP_DIR}/backup-$(date +%Y%m%d-%H%M%S)"
+    local backup_dir
+    backup_dir="${EFI_BACKUP_DIR}/backup-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "${backup_dir}"
 
     if [[ ${DRY_RUN} -eq 1 ]]; then
@@ -483,7 +484,8 @@ setup_rollback_protection() {
         return 0
     fi
 
-    local version="1.0.0-$(date +%Y%m%d)"
+    local version
+    version="1.0.0-$(date +%Y%m%d)"
     echo "${version}" > "${rollback_file}"
     chmod 600 "${rollback_file}"
 
@@ -495,7 +497,8 @@ setup_rollback_protection() {
 generate_audit_report() {
     log_info "Generating audit report..."
 
-    local report_file="${STATE_DIR}/audit-report-$(date +%Y%m%d-%H%M%S).txt"
+    local report_file
+    report_file="${STATE_DIR}/audit-report-$(date +%Y%m%d-%H%M%S).txt"
 
     {
         echo "=== ShadowCypher Secure Boot Audit Report ==="

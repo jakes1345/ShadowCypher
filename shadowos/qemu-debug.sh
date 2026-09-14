@@ -60,7 +60,7 @@ echo "==> Waiting for system to boot (up to 120s)..."
 
 # Poll SSH until it responds — means system is up enough to login
 READY=0
-for i in $(seq 1 60); do
+for _ in $(seq 1 60); do
     if ssh -o StrictHostKeyChecking=no \
            -o ConnectTimeout=2 \
            -o PasswordAuthentication=no \

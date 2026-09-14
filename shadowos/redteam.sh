@@ -27,7 +27,6 @@ HERE_REDTEAM="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ISO="${1:-$(ls -t "${HERE_REDTEAM}/out/shadowos-"*.iso 2>/dev/null | head -1)}"
 [[ -f "$ISO" ]] || { echo "ISO not found: $ISO" >&2; exit 1; }
 
-HERE="$(cd "$(dirname "$0")" && pwd)"
 SHOTS="/tmp/shadowos-redteam-shots"
 LOG="/tmp/shadowos-redteam.log"
 QMP="/tmp/qemu-redteam-qmp.sock"
@@ -82,7 +81,7 @@ fi
 section "2. BOOT TIMELINE SCREENSHOTS"
 shot() {
     local n="$1" label="$2"
-    local out="$SHOTS/$(printf '%02d' "$n")-${label}.ppm"
+    local out; out="$SHOTS/$(printf '%02d' "$n")-${label}.ppm"
     { echo '{"execute":"qmp_capabilities"}'
       echo "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$out\"}}"
       sleep 1

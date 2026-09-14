@@ -30,7 +30,6 @@
 set -euo pipefail
 
 ## Global configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 POLICY_DIR="${POLICY_DIR:-.}"
 LOG_DIR="${LOG_DIR:-./.selinux-logs}"
 BACKUP_DIR="${BACKUP_DIR:-./.selinux-backup}"
@@ -168,7 +167,8 @@ load_policy() {
 	log_success "Policy loaded successfully"
 
 	## Verify load
-	local module_name=$(basename "$policy_file" .pp)
+	local module_name
+	module_name=$(basename "$policy_file" .pp)
 	if semodule -l | grep -q "^$module_name"; then
 		log_success "Module verified in loaded policies"
 		echo "$module_name"
@@ -210,12 +210,13 @@ set_selinux_mode() {
 	check_selinux
 	require_commands semanage getenforce
 
-	if [[ ! " ${valid_modes[*]} " =~ " ${mode} " ]]; then
+	if [[ ! " ${valid_modes[*]} " =~ ${mode} ]]; then
 		log_error "Invalid mode: $mode (valid: ${valid_modes[*]})"
 		return 1
 	fi
 
-	local current_mode=$(getenforce)
+	local current_mode
+	current_mode=$(getenforce)
 	log_info "Current SELinux mode: $current_mode"
 	log_info "Setting SELinux mode to: $mode"
 
@@ -257,7 +258,6 @@ set_permissive_domain() {
 
 generate_rules_from_audit() {
 	local pattern="${1:-AVC}"
-	local output_file="$LOG_DIR/generated_rules_$(date +%s).te"
 
 	check_root
 	require_commands ausearch audit2allow
@@ -473,7 +473,8 @@ audit_summary() {
 ## ============================================================================
 
 backup_current_policy() {
-	local timestamp=$(date +%Y%m%d_%H%M%S)
+	local timestamp
+	timestamp=$(date +%Y%m%d_%H%M%S)
 	local backup_file="$BACKUP_DIR/policy_backup_$timestamp.tar.gz"
 
 	log_info "Backing up current policy state..."
@@ -500,7 +501,8 @@ rollback_policy() {
 
 	if [[ "$version" == "latest" ]]; then
 		## Get most recent backup
-		local latest_backup=$(ls -t "$BACKUP_DIR"/modules_*.list 2>/dev/null | head -1)
+		local latest_backup
+		latest_backup=$(ls -t "$BACKUP_DIR"/modules_*.list 2>/dev/null | head -1)
 		if [[ -z "$latest_backup" ]]; then
 			log_error "No backup found"
 			return 1
