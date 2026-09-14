@@ -57,17 +57,17 @@ log_info() {
 
 log_warn() {
     log "WARN" "$@"
-    echo -e "${YELLOW}[WARNING]${NC} $@" >&2
+    echo -e "${YELLOW}[WARNING]${NC} $*" >&2
 }
 
 log_error() {
     log "ERROR" "$@"
-    echo -e "${RED}[ERROR]${NC} $@" >&2
+    echo -e "${RED}[ERROR]${NC} $*" >&2
 }
 
 log_success() {
     log "SUCCESS" "$@"
-    echo -e "${GREEN}[OK]${NC} $@"
+    echo -e "${GREEN}[OK]${NC} $*"
 }
 
 log_debug() {
@@ -388,9 +388,11 @@ verify_secureboot_status() {
     log_info "Verifying Secure Boot status..."
 
     # Check SecureBoot variable
-    if [[ -f /sys/firmware/efi/efivars/SecureBoot-* ]]; then
+    local sb_var
+    sb_var=$(ls /sys/firmware/efi/efivars/SecureBoot-* 2>/dev/null | head -1 || true)
+    if [[ -f "${sb_var:-}" ]]; then
         local sb_status
-        sb_status=$(od -An -tx1 /sys/firmware/efi/efivars/SecureBoot-* | awk '{print $NF}')
+        sb_status=$(od -An -tx1 "${sb_var}" | awk '{print $NF}')
 
         if [[ "${sb_status}" == "01" ]]; then
             log_success "Secure Boot is ENABLED"
@@ -440,8 +442,10 @@ audit_boot_chain() {
     echo "Firmware: $(cat /sys/firmware/efi/fw_platform_size)" | tee -a "${LOG_FILE}"
 
     # Check Secure Boot status
-    if [[ -f /sys/firmware/efi/efivars/SecureBoot-* ]]; then
-        echo "Secure Boot: $(od -An -tx1 /sys/firmware/efi/efivars/SecureBoot-*)" | tee -a "${LOG_FILE}"
+    local _sb_var
+    _sb_var=$(ls /sys/firmware/efi/efivars/SecureBoot-* 2>/dev/null | head -1 || true)
+    if [[ -f "${_sb_var:-}" ]]; then
+        echo "Secure Boot: $(od -An -tx1 "${_sb_var}")" | tee -a "${LOG_FILE}"
     fi
 
     # Check EFI boot variables
@@ -504,8 +508,10 @@ generate_audit_report() {
         [[ -d /sys/firmware/efi ]] && echo "UEFI: YES" || echo "UEFI: NO"
         echo ""
         echo "=== Secure Boot Status ==="
-        if [[ -f /sys/firmware/efi/efivars/SecureBoot-* ]]; then
-            od -An -tx1 /sys/firmware/efi/efivars/SecureBoot-* | awk '{print $NF}'
+        local _sb
+        _sb=$(ls /sys/firmware/efi/efivars/SecureBoot-* 2>/dev/null | head -1 || true)
+        if [[ -f "${_sb:-}" ]]; then
+            od -An -tx1 "${_sb}" | awk '{print $NF}'
         fi
         echo ""
         echo "=== Key Information ==="
