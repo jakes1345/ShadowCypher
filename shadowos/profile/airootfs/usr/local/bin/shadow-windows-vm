@@ -198,10 +198,9 @@ build_qemu_cmd() {
         )
     else
         # ── Software rendering fallback (SPICE) ────────────────────────────
+        # Use virtio-vga; SPICE handles display via virt-viewer
         cmd+=(
-            -device virtio-vga-gl
-            -display gtk,gl=on 2>/dev/null ||
-            -device VGA,vgamem_mb=64
+            -device virtio-vga,vgamem_mb=64
             -spice port=$SPICE_PORT,addr=127.0.0.1,disable-ticketing=on
         )
     fi

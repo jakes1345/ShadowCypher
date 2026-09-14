@@ -35,7 +35,7 @@ echo "  Target: $SSH_HOST port $PORT"
 echo "═══════════════════════════════════════════════════════════"
 
 echo ">> Waiting for SSH..."
-for i in $(seq 1 60); do
+for _ in $(seq 1 60); do
     if timeout 2 bash -c "</dev/tcp/${SSH_HOST#*@}/${PORT}" 2>/dev/null; then
         break
     fi

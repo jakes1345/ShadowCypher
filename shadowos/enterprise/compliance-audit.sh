@@ -6,7 +6,8 @@
 set -euo pipefail
 
 readonly SCRIPT_VERSION="1.0.0"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 readonly POLICY_FILE="${SCRIPT_DIR}/audit-policy.json"
 readonly LOG_DIR="/var/log/audit"
 readonly ARCHIVE_DIR="/var/audit/archive"
@@ -21,13 +22,6 @@ readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
 readonly NC='\033[0m' # No Color
 
-# Alert thresholds from policy
-declare -A THRESHOLDS=(
-    [max_log_size]=524288000
-    [max_failed_auth]=5
-    [alert_response_time]=2
-)
-
 # Global variables
 VERBOSE=0
 DRY_RUN=0
@@ -40,16 +34,18 @@ QUIET=0
 log() {
     local level="$1"
     shift
-    local message="$@"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local message="$*"
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
     if [[ "$QUIET" -eq 0 ]]; then
         case "$level" in
-            INFO)  echo -e "${BLUE}[${timestamp}]${NC} INFO: $message" ;;
-            WARN)  echo -e "${YELLOW}[${timestamp}]${NC} WARN: $message" ;;
-            ERROR) echo -e "${RED}[${timestamp}]${NC} ERROR: $message" ;;
+            INFO)    [[ "$VERBOSE" -eq 1 || "$level" != "DEBUG" ]] && echo -e "${BLUE}[${timestamp}]${NC} INFO: $message" ;;
+            DEBUG)   [[ "$VERBOSE" -eq 1 ]] && echo -e "${NC}[${timestamp}] DEBUG: $message" ;;
+            WARN)    echo -e "${YELLOW}[${timestamp}]${NC} WARN: $message" ;;
+            ERROR)   echo -e "${RED}[${timestamp}]${NC} ERROR: $message" ;;
             SUCCESS) echo -e "${GREEN}[${timestamp}]${NC} SUCCESS: $message" ;;
-            *) echo "[${timestamp}] $message" ;;
+            *)       echo "[${timestamp}] $message" ;;
         esac
     fi
 
@@ -75,7 +71,7 @@ acquire_lock() {
     fi
 
     echo $$ > "$LOCK_FILE"
-    trap "rm -f '$LOCK_FILE'" EXIT
+    trap 'rm -f "$LOCK_FILE"' EXIT
 }
 
 release_lock() {
@@ -160,8 +156,6 @@ configure_auditd() {
 }
 
 apply_audit_rules() {
-    local rule_count=0
-
     # Exit audit configuration mode
     auditctl -b 8192 > /dev/null 2>&1 || true
     auditctl -r 0 > /dev/null 2>&1 || true
@@ -287,8 +281,9 @@ verify_log_integrity() {
         local hmac_file="${log_file}.hmac"
 
         if [[ -f "$hmac_file" ]]; then
-            local current_hmac=$(calculate_hmac "$log_file")
-            local stored_hmac=$(cat "$hmac_file")
+            local current_hmac stored_hmac
+            current_hmac=$(calculate_hmac "$log_file")
+            stored_hmac=$(cat "$hmac_file")
 
             if [[ "$current_hmac" != "$stored_hmac" ]]; then
                 log ERROR "Integrity check failed for $log_file"
@@ -329,7 +324,8 @@ create_log_signatures() {
 
     for log_file in "$LOG_DIR"/audit.log*; do
         if [[ -f "$log_file" ]]; then
-            local hmac=$(calculate_hmac "$log_file")
+            local hmac
+            hmac=$(calculate_hmac "$log_file")
             if [[ "$DRY_RUN" -eq 0 ]]; then
                 echo "$hmac" > "${log_file}.hmac"
                 ((sig_count++))
@@ -347,7 +343,8 @@ create_log_signatures() {
 monitor_log_size() {
     log INFO "Monitoring audit log size"
 
-    local max_size=$(jq -r '.log_retention.max_size_bytes // 524288000' "$POLICY_FILE")
+    local max_size
+    max_size=$(jq -r '.log_retention.max_size_bytes // 524288000' "$POLICY_FILE")
     local current_size=0
 
     for log_file in "$LOG_DIR"/audit.log*; do
@@ -410,7 +407,6 @@ archive_logs() {
     acquire_lock
 
     # Find logs older than retention period
-    local retention_days=$(jq -r '.log_retention.hot_days // 30' "$POLICY_FILE")
     local archive_cmd="find $LOG_DIR -name 'audit.log.*' -type f"
 
     local archived_count=0
@@ -434,7 +430,8 @@ archive_logs() {
 
 archive_single_log() {
     local log_file="$1"
-    local basename=$(basename "$log_file")
+    local basename
+    basename=$(basename "$log_file")
     local archive_file="${ARCHIVE_DIR}/${basename}.xz"
 
     # Verify integrity before archiving
@@ -452,7 +449,8 @@ archive_single_log() {
             create_archive_metadata "$log_file" "$archive_file"
 
             # Encrypt if configured
-            local encrypt=$(jq -r '.archive.encrypt // false' "$POLICY_FILE")
+            local encrypt
+            encrypt=$(jq -r '.archive.encrypt // false' "$POLICY_FILE")
             if [[ "$encrypt" == "true" ]]; then
                 encrypt_archive "$archive_file"
             fi
@@ -477,8 +475,9 @@ verify_single_log_integrity() {
         return 0  # No HMAC to verify
     fi
 
-    local current_hmac=$(calculate_hmac "$log_file")
-    local stored_hmac=$(cat "$hmac_file" 2>/dev/null)
+    local current_hmac stored_hmac
+    current_hmac=$(calculate_hmac "$log_file")
+    stored_hmac=$(cat "$hmac_file" 2>/dev/null)
 
     if [[ -z "$stored_hmac" || "$current_hmac" == "$stored_hmac" ]]; then
         return 0
@@ -492,8 +491,9 @@ create_archive_metadata() {
     local archive_file="$2"
     local metadata_file="${archive_file}.meta"
 
-    local log_size=$(stat -c%s "$log_file" 2>/dev/null || echo 0)
-    local archive_size=$(stat -c%s "$archive_file" 2>/dev/null || echo 0)
+    local log_size archive_size
+    log_size=$(stat -c%s "$log_file" 2>/dev/null || echo 0)
+    archive_size=$(stat -c%s "$archive_file" 2>/dev/null || echo 0)
     local compress_ratio=$((archive_size * 100 / log_size))
 
     cat > "$metadata_file" << EOF
@@ -534,7 +534,8 @@ encrypt_archive() {
 generate_compliance_report() {
     log INFO "Generating compliance report"
 
-    local report_file="${STATE_DIR}/compliance_report_$(date +%Y%m%d_%H%M%S).json"
+    local report_file
+    report_file="${STATE_DIR}/compliance_report_$(date +%Y%m%d_%H%M%S).json"
 
     {
         cat << EOF
@@ -580,16 +581,18 @@ EOF
 export_to_siem() {
     log INFO "Exporting logs to SIEM"
 
-    local siem_enabled=$(jq -r '.siem.enabled // false' "$POLICY_FILE")
+    local siem_enabled
+    siem_enabled=$(jq -r '.siem.enabled // false' "$POLICY_FILE")
 
     if [[ "$siem_enabled" != "true" ]]; then
         log INFO "SIEM export disabled"
         return
     fi
 
-    local siem_host=$(jq -r '.siem.host // ""' "$POLICY_FILE")
-    local siem_port=$(jq -r '.siem.port // 514' "$POLICY_FILE")
-    local siem_protocol=$(jq -r '.siem.protocol // "syslog"' "$POLICY_FILE")
+    local siem_host siem_port siem_protocol
+    siem_host=$(jq -r '.siem.host // ""' "$POLICY_FILE")
+    siem_port=$(jq -r '.siem.port // 514' "$POLICY_FILE")
+    siem_protocol=$(jq -r '.siem.protocol // "syslog"' "$POLICY_FILE")
 
     if [[ -z "$siem_host" ]]; then
         log WARN "SIEM host not configured"
@@ -599,7 +602,9 @@ export_to_siem() {
     log INFO "Sending logs to SIEM: $siem_host:$siem_port"
 
     if [[ "$DRY_RUN" -eq 0 ]]; then
-        tail -f "$LOG_DIR/audit.log" 2>/dev/null | nc -w 1 "$siem_host" "$siem_port" > /dev/null 2>&1 &
+        local nc_flags="-w 1"
+        [[ "$siem_protocol" == "udp" ]] && nc_flags="-u -w 1"
+        tail -f "$LOG_DIR/audit.log" 2>/dev/null | nc $nc_flags "$siem_host" "$siem_port" > /dev/null 2>&1 &
         log INFO "SIEM export started"
     else
         log INFO "[DRY-RUN] Would send logs to SIEM"

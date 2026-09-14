@@ -251,7 +251,6 @@ python-pipx
 #   pipx install bloodhound       → AD path analysis
 # responder — AUR; install via: sudo pacman -S python-responder (chaotic-aur after first-boot)
 sshuttle
-# chisel is AUR-only — installed via go install at first-boot if needed
 seclists
 dnsenum
 whatweb

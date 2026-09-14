@@ -27,8 +27,9 @@ NC='\033[0m' # No Color
 log() {
     local level="$1"
     shift
-    local message="$@"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local message="$*"
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[${timestamp}] [${level}] ${message}" >> "${LOG_FILE}"
 }
 
@@ -167,9 +168,9 @@ list_profiles() {
 
     info "Available boot profiles:"
     jq -r '.profiles | keys[]' "${PROFILES_FILE}" | while read -r profile; do
-        local name=$(jq -r ".profiles[\"${profile}\"].name" "${PROFILES_FILE}")
-        local description=$(jq -r ".profiles[\"${profile}\"].description" "${PROFILES_FILE}")
-        local security_level=$(jq -r ".profiles[\"${profile}\"].security_level" "${PROFILES_FILE}")
+        local name; name=$(jq -r ".profiles[\"${profile}\"].name" "${PROFILES_FILE}")
+        local description; description=$(jq -r ".profiles[\"${profile}\"].description" "${PROFILES_FILE}")
+        local security_level; security_level=$(jq -r ".profiles[\"${profile}\"].security_level" "${PROFILES_FILE}")
         printf "  %-20s %s (Security Level: %d)\n" "${profile}" "${name}" "${security_level}"
         printf "    %s\n" "${description}"
     done
@@ -264,8 +265,8 @@ validate_system() {
     fi
 
     # Check Secure Boot
-    local secure_boot_required=$(echo "${profile}" | jq -r '.uefi.secure_boot.enabled')
-    local secure_boot_status=$(get_secure_boot_status)
+    local secure_boot_required; secure_boot_required=$(echo "${profile}" | jq -r '.uefi.secure_boot.enabled')
+    local secure_boot_status; secure_boot_status=$(get_secure_boot_status)
     if [ "${secure_boot_required}" = "true" ]; then
         if [ "${secure_boot_status}" = "enabled" ]; then
             success "Secure Boot is enabled (required)"
@@ -279,7 +280,7 @@ validate_system() {
     fi
 
     # Check TPM
-    local tpm_required=$(echo "${profile}" | jq -r '.uefi.tpm.enabled')
+    local tpm_required; tpm_required=$(echo "${profile}" | jq -r '.uefi.tpm.enabled')
     if [ "${tpm_required}" = "true" ]; then
         if check_tpm_present; then
             success "TPM device detected"
@@ -293,7 +294,7 @@ validate_system() {
     fi
 
     # Check NX bit
-    local nx_required=$(echo "${profile}" | jq -r '.uefi.memory_protection.nx_bit_enabled')
+    local nx_required; nx_required=$(echo "${profile}" | jq -r '.uefi.memory_protection.nx_bit_enabled')
     if [ "${nx_required}" = "true" ]; then
         if check_nx_bit_enabled; then
             success "NX bit is enabled"
@@ -305,7 +306,7 @@ validate_system() {
     fi
 
     # Check VT-d/IOMMU
-    local iommu_required=$(echo "${profile}" | jq -r '.uefi.iommu.enabled')
+    local iommu_required; iommu_required=$(echo "${profile}" | jq -r '.uefi.iommu.enabled')
     if [ "${iommu_required}" = "true" ]; then
         if check_vt_d_enabled; then
             success "VT-d/IOMMU is enabled"
@@ -346,7 +347,7 @@ apply_profile() {
     profile=$(get_profile "${profile_name}") || return 1
 
     # Set boot timeout
-    local boot_timeout=$(echo "${profile}" | jq -r '.uefi.boot_timeout_seconds')
+    local boot_timeout; boot_timeout=$(echo "${profile}" | jq -r '.uefi.boot_timeout_seconds')
     if command -v efibootmgr &> /dev/null; then
         info "Setting boot timeout to ${boot_timeout} seconds"
         efibootmgr -t "${boot_timeout}" 2>/dev/null || warn "Could not set boot timeout"
@@ -441,7 +442,7 @@ generate_report() {
         # Available profiles
         echo "Available Profiles:"
         jq -r '.profiles | keys[]' "${PROFILES_FILE}" | while read -r profile; do
-            local name=$(jq -r ".profiles[\"${profile}\"].name" "${PROFILES_FILE}")
+            local name; name=$(jq -r ".profiles[\"${profile}\"].name" "${PROFILES_FILE}")
             printf "  - %s (%s)\n" "${profile}" "${name}"
         done
         echo ""

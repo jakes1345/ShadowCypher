@@ -39,7 +39,7 @@ else
     echo "UEFI: not found — booting BIOS (install ovmf for UEFI)"
 fi
 
-DISPLAY_ARGS=(-display gtk,show-cursor=on)
+DISPLAY_ARGS=(-display "gtk,show-cursor=on")
 # Fallback to SDL if GTK not available
 if ! qemu-system-x86_64 -display gtk -version >/dev/null 2>&1; then
     DISPLAY_ARGS=(-display sdl)

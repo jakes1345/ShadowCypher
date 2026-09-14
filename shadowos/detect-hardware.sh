@@ -90,7 +90,8 @@ detect_secure_boot() {
 
     # Check Secure Boot status via efivarfs
     if [[ -e /sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c ]]; then
-        local sb_var=$(cat /sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c 2>/dev/null | od -An -tx1 | tail -c 3 | tr -d ' ')
+        local sb_var
+        sb_var=$(cat /sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c 2>/dev/null | od -An -tx1 | tail -c 3 | tr -d ' ')
         if [[ "$sb_var" == "01" ]]; then
             secure_boot="enabled"
             log_success "Secure Boot is enabled"
@@ -102,7 +103,8 @@ detect_secure_boot() {
 
     # Check Setup Mode
     if [[ -e /sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c ]]; then
-        local setup_var=$(cat /sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c 2>/dev/null | od -An -tx1 | tail -c 3 | tr -d ' ')
+        local setup_var
+        setup_var=$(cat /sys/firmware/efi/efivars/SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c 2>/dev/null | od -An -tx1 | tail -c 3 | tr -d ' ')
         if [[ "$setup_var" == "01" ]]; then
             secure_boot_setup="setup"
             log_info "Secure Boot is in Setup Mode (keys can be enrolled)"
@@ -189,7 +191,6 @@ detect_gpu() {
 
 detect_tpm() {
     local tpm_version="none"
-    local tpm_present=false
 
     log_info "Detecting TPM information..."
 
@@ -197,14 +198,13 @@ detect_tpm() {
     if [[ -c /dev/tpm0 ]]; then
         # Try to get TPM version from sysfs
         if [[ -f /sys/class/tpm/tpm0/tpm_version_major ]]; then
-            local major=$(cat /sys/class/tpm/tpm0/tpm_version_major 2>/dev/null)
+            local major
+            major=$(cat /sys/class/tpm/tpm0/tpm_version_major 2>/dev/null)
             if [[ "$major" == "2" ]]; then
                 tpm_version="2.0"
-                tpm_present=true
                 log_success "Detected TPM 2.0"
             elif [[ "$major" == "1" ]]; then
                 tpm_version="1.2"
-                tpm_present=true
                 log_success "Detected TPM 1.2"
             fi
         fi
@@ -215,13 +215,11 @@ detect_tpm() {
             if command -v tpm2_getcap &>/dev/null; then
                 if tpm2_getcap properties-fixed 2>/dev/null | grep -q "TPM2_PT_FIRMWARE_VERSION"; then
                     tpm_version="2.0"
-                    tpm_present=true
                     log_success "Detected TPM 2.0 (via tpm2_getcap)"
                 fi
             else
                 # Assume TPM 2.0 if /dev/tpm0 exists and we're on modern system
                 tpm_version="2.0"
-                tpm_present=true
                 log_success "Detected TPM (assumed 2.0)"
             fi
         fi
@@ -433,17 +431,17 @@ main() {
     log_info "Starting hardware detection..."
 
     # Detect all hardware components
-    local boot_mode=$(detect_boot_mode)
-    local sb_status=$(detect_secure_boot)
-    local cpu_info=$(detect_cpu)
-    local gpu_info=$(detect_gpu)
-    local tpm_version=$(detect_tpm)
-    local ram_mb=$(detect_ram)
-    local storage_info=$(detect_storage)
+    local boot_mode; boot_mode=$(detect_boot_mode)
+    local sb_status; sb_status=$(detect_secure_boot)
+    local cpu_info; cpu_info=$(detect_cpu)
+    local gpu_info; gpu_info=$(detect_gpu)
+    local tpm_version; tpm_version=$(detect_tpm)
+    local ram_mb; ram_mb=$(detect_ram)
+    local storage_info; storage_info=$(detect_storage)
 
     # Generate recommendation
     IFS=':' read -r sb_enabled sb_setup <<<"$sb_status"
-    local recommendation=$(recommend_boot_config "$boot_mode" "$sb_enabled" "$tpm_version")
+    local recommendation; recommendation=$(recommend_boot_config "$boot_mode" "$sb_enabled" "$tpm_version")
 
     # Output results
     if [[ "$JSON_OUTPUT" == true ]]; then
