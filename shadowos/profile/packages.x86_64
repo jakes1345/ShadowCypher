@@ -499,6 +499,9 @@ tpm2-tss
 tpm2-pkcs11
 # (dedup) efibootmgr
 shim-signed
+sbctl                       # Secure Boot key manager (enroll, sign, verify)
+efivar                      # EFI variable access (required by secureboot-enable.sh)
+mokutil                     # MOK key enrollment for Secure Boot
 
 # SELinux & Mandatory Access Control
 # selinux-policy        # not in standard Arch repos
@@ -519,3 +522,42 @@ libsodium
 bind-tools
 unbound
 ldns
+
+# === Missing system deps (found in package audit) ===
+
+# Bluetooth extras
+bluez-obex                  # OBEX push for Bluetooth file transfer
+
+# Audio — GStreamer integration with PipeWire
+gst-plugin-pipewire         # makes media players (vlc, etc.) use pipewire
+libpulse                    # PulseAudio compatibility layer (many apps link against it)
+
+# Network service discovery (required for printer discovery, avahi-browse)
+avahi
+nss-mdns                    # mDNS hostname resolution (.local domains)
+
+# Hardware sensors & power
+lm_sensors                  # CPU/GPU temperature monitoring (used by waybar)
+acpi                        # battery/power event CLI
+acpid                       # ACPI event daemon (lid close, power button)
+
+# Filesystem
+fuse2                       # FUSE 2.x compat (AppImage, VeraCrypt containers)
+fuse3                       # FUSE 3.x (already pulled by many packages, explicit is safe)
+
+# Boot — GRUB EFI target
+grub-efi-x86_64-signed      # pre-signed GRUB EFI binary for Secure Boot systems
+os-prober                   # detect other OSes for GRUB menu
+
+# Mirror ranking at install/first-boot
+reflector                   # update pacman mirrorlist by speed
+
+# GTK4 (required by newer apps — ghostty, some GNOME-based tools)
+gtk4
+
+# Zsh quality-of-life plugins (loaded by /etc/zsh/zshrc or user .zshrc)
+zsh-autosuggestions
+zsh-syntax-highlighting
+
+# sbsign is from AUR package 'sbsigntools' — installed via firstboot if online
+# ghostty is installed via Chaotic-AUR in firstboot (GPU-accelerated terminal)
