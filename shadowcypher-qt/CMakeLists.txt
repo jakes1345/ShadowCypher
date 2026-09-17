@@ -55,6 +55,8 @@ qt_add_executable(shadowcypher
     src/pages/OsintPage.h
     src/pages/VulnPage.cpp
     src/pages/VulnPage.h
+    src/pages/SmartContractPage.cpp
+    src/pages/SmartContractPage.h
 )
 
 target_link_libraries(shadowcypher PRIVATE
