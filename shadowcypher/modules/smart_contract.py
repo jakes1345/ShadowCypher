@@ -6,15 +6,13 @@ Runs standalone (python -m shadowcypher.modules.smart_contract <file.sol>) or im
 
 from __future__ import annotations
 
-import re
-import sys
-import json
-import hashlib
 import argparse
+import hashlib
+import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
-
 
 # ─────────────────────────── data types ────────────────────────────────────
 
@@ -981,7 +979,7 @@ def _main():
     c = result["contract"]
     s = result["summary"]
     print(f"\n{'='*60}")
-    print(f"  SHADOWCYPHER SMART CONTRACT AUDIT")
+    print("  SHADOWCYPHER SMART CONTRACT AUDIT")
     print(f"  Contract : {c['name']}")
     print(f"  Pragma   : {c['pragma'] or 'unknown'}")
     print(f"  Hash     : {c['source_hash']}")
