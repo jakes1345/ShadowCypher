@@ -49,6 +49,7 @@ class WebSecurity:
         """Virtual Host (VHost) fuzzing with Ffuf."""
         require_stealth(on_output=on_output)
         from shadowcypher.core.config import config
+
         ffuf = config.get_tool_path("ffuf")
 
         if not validate_target(url):

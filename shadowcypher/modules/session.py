@@ -1,9 +1,13 @@
 """ShadowCypher Control (Session) Engine — High-Fidelity Sync (V23.2)."""
 
+import logging
 import subprocess
 
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_filepath
+
+logger = logging.getLogger(__name__)
+
 
 
 class Session:

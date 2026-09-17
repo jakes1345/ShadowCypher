@@ -2,10 +2,14 @@
 Steganography + IPFS Dead Drop Module (T4-2).
 LSB steganography in PNG images with AES-GCM payload encryption.
 """
+import logging
 import os
 import secrets
 import struct
 from typing import Optional
+
+logger = logging.getLogger(__name__)
+
 
 try:
     from PIL import Image
@@ -15,6 +19,7 @@ except ImportError:
 
 try:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
     HAS_CRYPTO = True
 except ImportError:
     HAS_CRYPTO = False

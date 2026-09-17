@@ -30,6 +30,7 @@ try:
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
     from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+
     HAS_CRYPTO = True
 except ImportError:
     HAS_CRYPTO = False

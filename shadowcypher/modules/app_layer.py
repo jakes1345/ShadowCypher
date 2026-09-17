@@ -5,6 +5,7 @@ via threaded operations and native subprocess orchestration.
 For authorized infrastructure resilience auditing only.
 """
 
+import logging
 import random
 import socket
 import ssl
@@ -18,11 +19,15 @@ from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_port, validate_target
 from shadowcypher.core.stealth import require_stealth
 
+logger = logging.getLogger(__name__)
+
+
 try:
     import h2.config
     import h2.connection
     import h2.events
     import h2.exceptions
+
     HAS_H2 = True
 except ImportError:
     HAS_H2 = False

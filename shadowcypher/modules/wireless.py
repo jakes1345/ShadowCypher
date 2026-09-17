@@ -3,9 +3,14 @@ Wireless Module — Apex Intelligence Build.
 Handles Aircrack-ng suite integration, WPA/WPA2 audits, and deauth attacks.
 """
 
+import logging
+
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_interface
+
+logger = logging.getLogger(__name__)
+
 
 
 class Wireless(BaseModule):
@@ -58,6 +63,7 @@ class Wireless(BaseModule):
         if not Wireless._check_iface(interface):
             return
         from shadowcypher.core.runner import runner
+
         args = ["timeout", str(duration), "airodump-ng", interface, "--output-format", "csv"]
         return runner.execute_task(f"SCAN_{interface}", args, callback=on_output)
 
