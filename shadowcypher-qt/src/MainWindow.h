@@ -3,6 +3,7 @@
 #include <QStackedWidget>
 #include <QListWidget>
 #include <QPushButton>
+#include <QLabel>
 #include "ipc/IpcClient.h"
 
 class MainWindow : public QMainWindow {

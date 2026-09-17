@@ -132,7 +132,8 @@ ChatPage::ChatPage(IpcClient* ipc, QWidget* parent)
     connect(m_socket, &QWebSocket::connected,           this, &ChatPage::onWsConnected);
     connect(m_socket, &QWebSocket::disconnected,        this, &ChatPage::onWsDisconnected);
     connect(m_socket, &QWebSocket::textMessageReceived, this, &ChatPage::onTextMessageReceived);
-    connect(m_socket, &QWebSocket::errorOccurred,       this, &ChatPage::onWsError);
+    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error),
+            this, &ChatPage::onWsError);
 
     if (m_ipc) {
         connect(m_ipc, &IpcClient::resultReady, this, &ChatPage::onIpcResult);

@@ -13,7 +13,7 @@
 QString ShadowScriptPage::missionDir() {
     // Check common locations
     for (const QString& d : {
-            "/opt/shadowcypher/shadowscript/missions",
+            QString("/opt/shadowcypher/shadowscript/missions"),
             QDir::homePath() + "/.local/share/shadowcypher/missions",
             QString(QCoreApplication::applicationDirPath()) + "/../shadowscript/missions",
         }) {
