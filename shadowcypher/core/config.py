@@ -113,7 +113,7 @@ class Config(BaseSettings):
     # Path Resolution
     project_root: Path = Field(default_factory=lambda: Path(__file__).resolve().parent.parent.parent)
 
-    def load_from_json(self, path: Path):
+    def load_from_json(self, path: Path) -> None:
         """Backwards compatibility for legacy config.json."""
         if not path.exists():
             return
@@ -210,7 +210,7 @@ class Config(BaseSettings):
             except Exception:
                 pass
 
-    def set(self, *args: Any):
+    def set(self, *args: Any) -> None:
         """
         Enterprise-grade nested configuration updates.
         Usage: config.set("ai", "active_provider", "anthropic")

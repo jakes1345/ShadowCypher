@@ -4,6 +4,7 @@ Implements XSS scanning, CSRF PoC generation, clickjacking, CORS, header audit,
 subdomain takeover, LFI, and open redirect testing.
 """
 
+import logging
 import subprocess
 import urllib.parse
 from typing import Callable, Optional
@@ -14,6 +15,9 @@ import requests.exceptions
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_target
+
+logger = logging.getLogger(__name__)
+
 
 # Common XSS payloads for injection testing
 _XSS_PAYLOADS = [

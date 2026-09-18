@@ -13,11 +13,11 @@ from shadowcypher.core.logger import logger
 class ShadowBus:
     """Thread-safe, Async-aware Event Backbone for the ShadowCypher suite."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._listeners: Dict[str, List[Callable]] = {}
         self._lock = threading.RLock()
 
-    def subscribe(self, event_type: str, callback: Callable):
+    def subscribe(self, event_type: str, callback: Callable) -> None:
         """Thread-safe subscription to tactical event channels."""
         with self._lock:
             if event_type not in self._listeners:
@@ -25,7 +25,7 @@ class ShadowBus:
             if callback not in self._listeners[event_type]:
                 self._listeners[event_type].append(callback)
 
-    def publish(self, event_type: str, data: Any, ui_thread: bool = False):
+    def publish(self, event_type: str, data: Any, ui_thread: bool = False) -> None:
         """
         Broadcasts an event to all registered listeners.
         Supports automatic async resolution and GLib UI proxying.
@@ -45,7 +45,7 @@ class ShadowBus:
             except Exception as e:
                 logger.error("bus", f"DISPATCH_FAILURE ({event_type}): {e}")
 
-    def _dispatch_ui(self, callback: Callable, data: Any):
+    def _dispatch_ui(self, callback: Callable, data: Any) -> None:
         """Proxies event delivery to the main GTK/GLib thread."""
         try:
             from gi.repository import GLib
@@ -53,7 +53,7 @@ class ShadowBus:
         except (ImportError, ValueError, AttributeError):
             self._dispatch_standard(callback, data)
 
-    def _dispatch_standard(self, callback: Callable, data: Any):
+    def _dispatch_standard(self, callback: Callable, data: Any) -> None:
         if asyncio.iscoroutinefunction(callback):
             try:
                 loop = asyncio.get_running_loop()

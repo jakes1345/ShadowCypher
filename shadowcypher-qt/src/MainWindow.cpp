@@ -16,6 +16,7 @@
 #include "pages/ThreatPage.h"
 #include "pages/OsintPage.h"
 #include "pages/VulnPage.h"
+#include "pages/SmartContractPage.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -119,6 +120,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         {"  SHADOW MAIL"},
         {"  CVE FEED"},
         {"  SETTINGS"},
+        {"  WEB3 AUDIT"},
     };
     for (const auto& item : navItems)
         m_nav->addItem(item.label);
@@ -153,6 +155,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     m_stack->addWidget(new MailPage(m_ipc, this));            // 12
     m_stack->addWidget(new CveFeedPage(m_ipc, this));         // 13
     m_stack->addWidget(new SettingsPage(this));               // 14
+    m_stack->addWidget(new SmartContractPage(this));          // 15
 
     rootLayout->addWidget(m_stack);
 

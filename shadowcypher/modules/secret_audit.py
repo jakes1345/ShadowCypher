@@ -4,12 +4,16 @@ Handles brute-force operations (hydra), hash cracking (hashcat/john),
 hash identification, and macOS Keychain auditing.
 """
 
+import logging
 import shutil
 import tempfile
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.stealth import require_stealth
+
+logger = logging.getLogger(__name__)
+
 
 
 def _require_tool(name: str) -> str:
@@ -57,6 +61,7 @@ class Credentials(BaseModule):
         args = ["hydra", "-l", username, "-P", wordlist, "-t", "4"]
         if extra_args:
             import shlex
+
             args += shlex.split(extra_args)
         args += [target, service]
 

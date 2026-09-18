@@ -44,6 +44,7 @@ class ChaosEngine:
         import shutil
 
         from shadowcypher.core.runner import runner
+
         if on_output: on_output(f"[OSINT] IDENTITY_CORRELATION: {identity}\n")
         if shutil.which("theHarvester"):
             runner.execute_task(

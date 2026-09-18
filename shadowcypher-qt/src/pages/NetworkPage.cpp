@@ -153,7 +153,7 @@ void NetworkPage::buildUi() {
     )");
     m_ifaceCombo->addItem("auto");
     for (const auto& iface : QNetworkInterface::allInterfaces()) {
-        if (iface.flags().testFlag(QNetworkInterface::IsLoBack)) continue;
+        if (iface.flags().testFlag(QNetworkInterface::IsLoopBack)) continue;
         m_ifaceCombo->addItem(iface.name());
     }
     ctrlRow->addWidget(m_ifaceCombo);
@@ -378,7 +378,7 @@ void NetworkPage::runCapture() {
     if (iface == "auto") {
         // Pick first non-loopback
         for (const auto& i : QNetworkInterface::allInterfaces())
-            if (!i.flags().testFlag(QNetworkInterface::IsLoBack) &&
+            if (!i.flags().testFlag(QNetworkInterface::IsLoopBack) &&
                  i.flags().testFlag(QNetworkInterface::IsRunning)) {
                 iface = i.name();
                 break;

@@ -40,6 +40,7 @@ class ADPivot:
     def smb_relay_start(target_list, interface="eth0", on_output=None):
         """Launch SMB Relay attack against a target list."""
         from shadowcypher.core.config import config
+
         responder_path = config.get_tool_path("Responder.py")
 
         # MultiRelay is usually in the same dir as Responder

@@ -3,11 +3,15 @@ PocEngine Module — Enterprise Intelligence Build.
 Handles Metasploit, Searchsploit, and custom payload delivery.
 """
 
+import logging
 import shutil
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.stealth import require_stealth
+
+logger = logging.getLogger(__name__)
+
 
 
 class PocEngine(BaseModule):
@@ -49,5 +53,6 @@ class PocEngine(BaseModule):
     def auto_exploit(self, target, cve=None, on_output=None):
         """Escalate to the Swarm for precision exploitation."""
         from shadowcypher.core.hub import hub
+
         self.log(f"AUTO_EXPLOIT_INITIATED: {target} [CVE={cve}]", "AI")
         return hub.dispatch_mission(f"Identify and execute the most reliable exploit for {cve or 'detected services'} on {target}. Gain shell.")

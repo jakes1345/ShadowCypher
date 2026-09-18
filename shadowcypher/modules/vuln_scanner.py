@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 """
 Vulnerability Scanner Module — Apex Intelligence Build.
 Handles Nuclei, Sqlmap, Nikto, and automated vulnerability verification.

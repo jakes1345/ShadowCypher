@@ -136,6 +136,8 @@ export interface Env {
   CHAT_ROOM: DurableObjectNamespace;
   // R2 file storage
   SHADOW_FILES: R2Bucket;
+  // KV rate-limit store (binding: SHADOW_RL)
+  SHADOW_RL?: KVNamespace;
 }
 
 interface SupabaseUser {
@@ -335,10 +337,10 @@ async function handleRotate(req: Request, env: Env, cors: HeadersInit): Promise<
   if (!user) return json({ error: "key_not_found" }, { status: 401 }, cors);
 
   // Tighter rate limit: 5 rotations per hour per user
-  if (!rateLimit(`rotate:${user.id}`, 5, 3_600_000))
+  if (!(await rateLimit(env.SHADOW_RL, `rotate:${user.id}`, 5, 3_600_000)))
     return json({ error: "rate_limited" }, { status: 429 }, cors);
   // Per-IP gate
-  if (!rateLimit(`rotate_ip:${ip}`, 10, 3_600_000))
+  if (!(await rateLimit(env.SHADOW_RL, `rotate_ip:${ip}`, 10, 3_600_000)))
     return json({ error: "rate_limited" }, { status: 429 }, cors);
 
   const newKey = generateApiKey();
@@ -505,12 +507,12 @@ export default {
       // Device-authorization flow — kickoff + poll are unauthenticated (the device_code IS the secret)
       const ip = req.headers.get("CF-Connecting-IP") ?? req.headers.get("X-Forwarded-For") ?? "unknown";
       if (path === "/v1/auth/device" && req.method === "POST") {
-        if (!rateLimit(`device:${ip}`, 5, 60_000))
+        if (!(await rateLimit(env.SHADOW_RL, `device:${ip}`, 5, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         return startDeviceAuth(req, env, undefined, cors);
       }
       if (path === "/v1/auth/device/poll" && req.method === "POST") {
-        if (!rateLimit(`poll:${ip}`, 30, 60_000))
+        if (!(await rateLimit(env.SHADOW_RL, `poll:${ip}`, 30, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         return pollDeviceAuth(req, env, undefined, cors);
       }
@@ -548,7 +550,7 @@ export default {
       // POST /v1/auth/send-recovery-kit — fire-and-forget: sends codes to disposal email then discards it.
       // Disposal email is NEVER stored. Rate-limited to prevent abuse as a spam relay.
       if (path === "/v1/auth/send-recovery-kit" && req.method === "POST") {
-        if (!rateLimit(`recovery-kit:${ip}`, 3, 3_600_000))
+        if (!(await rateLimit(env.SHADOW_RL, `recovery-kit:${ip}`, 3, 3_600_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         const body = (await req.json().catch(() => null)) as {
           disposal_email?: string; codes?: string[]; handle?: string;
@@ -565,7 +567,7 @@ export default {
 
       // POST /v1/auth/recover — validate recovery code, return a session the client can set.
       if (path === "/v1/auth/recover" && req.method === "POST") {
-        if (!rateLimit(`recover:${ip}`, 5, 3_600_000))
+        if (!(await rateLimit(env.SHADOW_RL, `recover:${ip}`, 5, 3_600_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         const body = (await req.json().catch(() => null)) as { handle?: string; code?: string } | null;
         if (!body?.handle || !body.code) return json({ error: "handle_and_code_required" }, { status: 400 }, cors);
@@ -718,27 +720,27 @@ export default {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
         // Per-IP gate before expensive Supabase lookup (120 req/min across all authed routes)
-        if (!rateLimit(`auth:${ip}`, 120, 60_000))
+        if (!(await rateLimit(env.SHADOW_RL, `auth:${ip}`, 120, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         const user = await findUserByKey(env, key);
         if (!user) return json({ error: "key_not_found" }, { status: 401 }, cors);
         // Tighter per-user limits on expensive/sensitive operations
         // Note: POST /v1/keys/rotate is handled directly above (has its own auth+rate-limit inside handleRotate)
-        if (routeKey === "POST /v1/assistant/query" && !rateLimit(`ai:${user.id}`, 20, 60_000))
+        if (routeKey === "POST /v1/assistant/query" && !(await rateLimit(env.SHADOW_RL, `ai:${user.id}`, 20, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/scans" && !rateLimit(`scan:${user.id}`, 30, 60_000))
+        if (routeKey === "POST /v1/scans" && !(await rateLimit(env.SHADOW_RL, `scan:${user.id}`, 30, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/incidents" && !rateLimit(`inc:${user.id}`, 60, 60_000))
+        if (routeKey === "POST /v1/incidents" && !(await rateLimit(env.SHADOW_RL, `inc:${user.id}`, 60, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if ((agentMissionCreate || agentMissionPending) && !rateLimit(`msn:${user.id}`, 10, 60_000))
+        if ((agentMissionCreate || agentMissionPending) && !(await rateLimit(env.SHADOW_RL, `msn:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/files/upload" && !rateLimit(`upload:${user.id}`, 10, 60_000))
+        if (routeKey === "POST /v1/files/upload" && !(await rateLimit(env.SHADOW_RL, `upload:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/chat/dm/open" && !rateLimit(`dm-open:${user.id}`, 20, 60_000))
+        if (routeKey === "POST /v1/chat/dm/open" && !(await rateLimit(env.SHADOW_RL, `dm-open:${user.id}`, 20, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/mail/send" && !rateLimit(`mail-send:${user.id}`, 10, 60_000))
+        if (routeKey === "POST /v1/mail/send" && !(await rateLimit(env.SHADOW_RL, `mail-send:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/chat/rooms" && !rateLimit(`room-create:${user.id}`, 5, 3_600_000))
+        if (routeKey === "POST /v1/chat/rooms" && !(await rateLimit(env.SHADOW_RL, `room-create:${user.id}`, 5, 3_600_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
 
         const authedUser = { id: user.id, email: user.email, handle: (user.user_metadata as { handle?: string })?.handle };

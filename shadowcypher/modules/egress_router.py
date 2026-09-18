@@ -39,6 +39,7 @@ class EgressRouter:
         logger.info("egress", "Requesting egress IP rotation via Tor Control Port...")
         try:
             import socket
+
             s = socket.socket()
             s.connect(('127.0.0.1', self.control_port))
 

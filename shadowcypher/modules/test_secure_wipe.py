@@ -3,12 +3,16 @@ Tests for SecureWipe module — NIST 800-88 compliant erasure.
 All tests use temp files — no actual vault data is touched.
 """
 
+import logging
 import os
 import tempfile
 
 import pytest
 
 from shadowcypher.modules.secure_wipe import SecureWipe, WipeLevel
+
+logger = logging.getLogger(__name__)
+
 
 
 @pytest.fixture
@@ -37,6 +41,7 @@ def temp_dir():
             f.write(os.urandom(1024 * (i + 1)))
     yield d
     import shutil
+
     if os.path.exists(d):
         shutil.rmtree(d)
 

@@ -3,6 +3,7 @@ HTTPS Intercept Module — MitM proxy, SSLstrip, credential capture, and JS inje
 Orchestrates mitmproxy, sslstrip, and arpspoof for full HTTPS interception pipelines.
 """
 
+import logging
 import os
 import subprocess
 import tempfile
@@ -11,6 +12,9 @@ from typing import Optional
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_ip, validate_port
+
+logger = logging.getLogger(__name__)
+
 
 # ── mitmproxy inline addon: credential extraction ──
 

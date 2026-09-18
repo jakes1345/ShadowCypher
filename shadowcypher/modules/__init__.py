@@ -1,5 +1,10 @@
 """ShadowCypher Universal Module Registry — Tactical Build (V26.3 / v2.0)."""
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def _safe_import(name, attr):
     try:
         import importlib

@@ -3,8 +3,13 @@ Forensics Module — Enterprise Intelligence Build.
 Handles data analysis, metadata extraction, and binary auditing.
 """
 
+import logging
+
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_filepath
+
+logger = logging.getLogger(__name__)
+
 
 
 class Forensics(BaseModule):
@@ -60,6 +65,7 @@ class Forensics(BaseModule):
     def ai_investigate(self, target, on_output=None):
         """Escalate suspicious files to the AI for deep-dive analysis."""
         from shadowcypher.core.hub import hub
+
         self.log(f"AI_INVESTIGATION_INITIATED: {target}", "AI")
         # We might pass the strings output to the AI here
         return hub.dispatch_mission(f"Investigate the file {target}. Perform static analysis and explain its function/possible malicious attributes.")

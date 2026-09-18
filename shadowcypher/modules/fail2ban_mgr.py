@@ -6,12 +6,16 @@ unban/ban actions are explicit, logged, and never touch jails you didn't
 name.
 """
 
+import logging
 import re
 import shutil
 from typing import Callable, Optional
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_ip
+
+logger = logging.getLogger(__name__)
+
 
 
 class Fail2BanManager(BaseModule):

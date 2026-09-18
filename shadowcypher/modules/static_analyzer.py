@@ -14,6 +14,7 @@ from shadowcypher.core.logger import logger
 
 try:
     from tree_sitter import Language, Parser  # noqa: F401
+
     HAS_TS = True
 except ImportError:
     HAS_TS = False

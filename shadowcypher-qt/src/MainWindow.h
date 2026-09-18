@@ -3,6 +3,7 @@
 #include <QStackedWidget>
 #include <QListWidget>
 #include <QPushButton>
+#include <QLabel>
 #include "ipc/IpcClient.h"
 
 class MainWindow : public QMainWindow {
@@ -41,4 +42,5 @@ private:
     static constexpr int PAGE_MAIL          = 12;
     static constexpr int PAGE_CVE_FEED      = 13;
     static constexpr int PAGE_SETTINGS      = 14;
+    static constexpr int PAGE_WEB3_AUDIT    = 15;
 };
