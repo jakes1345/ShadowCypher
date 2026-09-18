@@ -1,12 +1,11 @@
-import logging
-
-logger = logging.getLogger(__name__)
-
 """
 Vulnerability Scanner Module — Apex Intelligence Build.
 Handles Nuclei, Sqlmap, Nikto, and automated vulnerability verification.
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     from ai_engine.autoagent.registry import register_tool
@@ -21,8 +20,8 @@ except ImportError:
             return _missing
         return _decorator
 
-from shadowcypher.core.module import BaseModule
-from shadowcypher.core.sanitize import validate_target
+from shadowcypher.core.module import BaseModule  # noqa: E402
+from shadowcypher.core.sanitize import validate_target  # noqa: E402
 
 
 class VulnScanner(BaseModule):

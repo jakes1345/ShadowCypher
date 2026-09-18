@@ -11,25 +11,22 @@ from shadowcypher.core.logger import logger
 
 
 class ShadowBus:
-    """Thread-safe, Async-aware Event Backbone for the ShadowCypher suite."""
+    """Thread-safe, async-aware event backbone for the ShadowCypher suite."""
 
     def __init__(self) -> None:
         self._listeners: Dict[str, List[Callable]] = {}
         self._lock = threading.RLock()
 
     def subscribe(self, event_type: str, callback: Callable) -> None:
-        """Thread-safe subscription to tactical event channels."""
+        """Thread-safe subscription to event channels."""
         with self._lock:
             if event_type not in self._listeners:
                 self._listeners[event_type] = []
             if callback not in self._listeners[event_type]:
                 self._listeners[event_type].append(callback)
 
-    def publish(self, event_type: str, data: Any, ui_thread: bool = False) -> None:
-        """
-        Broadcasts an event to all registered listeners.
-        Supports automatic async resolution and GLib UI proxying.
-        """
+    def publish(self, event_type: str, data: Any) -> None:
+        """Broadcasts an event to all registered listeners."""
         with self._lock:
             listeners = self._listeners.get(event_type, []).copy()
 
@@ -38,22 +35,11 @@ class ShadowBus:
 
         for callback in listeners:
             try:
-                if ui_thread:
-                    self._dispatch_ui(callback, data)
-                else:
-                    self._dispatch_standard(callback, data)
+                self._dispatch(callback, data)
             except Exception as e:
                 logger.error("bus", f"DISPATCH_FAILURE ({event_type}): {e}")
 
-    def _dispatch_ui(self, callback: Callable, data: Any) -> None:
-        """Proxies event delivery to the main GTK/GLib thread."""
-        try:
-            from gi.repository import GLib
-            GLib.idle_add(callback, data)
-        except (ImportError, ValueError, AttributeError):
-            self._dispatch_standard(callback, data)
-
-    def _dispatch_standard(self, callback: Callable, data: Any) -> None:
+    def _dispatch(self, callback: Callable, data: Any) -> None:
         if asyncio.iscoroutinefunction(callback):
             try:
                 loop = asyncio.get_running_loop()

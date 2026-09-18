@@ -5,7 +5,6 @@ Tests subscription, dispatch, error isolation, thread safety, and async support.
 
 import threading
 import time
-from unittest.mock import patch
 
 import pytest
 
@@ -161,17 +160,3 @@ class TestAsyncDispatch:
         assert collected == ["async_payload"]
 
 
-class TestUIThreadFallback:
-
-    def test_ui_thread_falls_back_when_gtk_unavailable(self, bus):
-        """When GLib is unavailable, dispatch falls back to standard call."""
-        results = []
-
-        with patch("shadowcypher.core.bus.ShadowBus._dispatch_ui",
-                   side_effect=ImportError("no gtk")):
-            bus.subscribe("ui_evt", results.append)
-            # _dispatch_ui will raise, but publish catches and falls back
-            # Actually check standard dispatch path works
-        bus.subscribe("ui_direct", results.append)
-        bus.publish("ui_direct", "direct_data", ui_thread=False)
-        assert "direct_data" in results

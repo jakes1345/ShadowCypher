@@ -53,11 +53,6 @@ def verify_core_architecture():
 def verify_module_registry():
     return True
 
-def verify_ui_bindings():
-    import gi
-    gi.require_version("Gtk", "3.0")
-    return True
-
 def run_diagnostic_probe():
     res = subprocess.run([sys.executable, "shadowcypher/scripts/signal_diagnostic.py"], capture_output=True, text=True)
     if res.returncode != 0:
@@ -75,7 +70,6 @@ def main():
         ("Python Environment Dependency Audit", audit_dependencies),
         ("Core Architecture Initialization", verify_core_architecture),
         ("Internal Module Registry Verification", verify_module_registry),
-        ("GTK3 User Interface Bindings", verify_ui_bindings),
         ("Subsystem Diagnostic Probe", run_diagnostic_probe)
     ]
 

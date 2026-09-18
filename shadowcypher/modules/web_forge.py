@@ -5,6 +5,7 @@ subdomain takeover, LFI, and open redirect testing.
 """
 
 import logging
+import re
 import subprocess
 import urllib.parse
 from typing import Callable, Optional
@@ -609,8 +610,6 @@ class WebAppDiagnostics(BaseModule):
 
         _emit(on_output, "[OPEN_REDIRECT] Scan complete.")
 
-
-import re  # used in subdomain_takeover A-record check
 
 # Module-level instance for direct import usage
 web_diagnostics_instance = WebAppDiagnostics()

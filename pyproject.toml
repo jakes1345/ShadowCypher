@@ -98,8 +98,6 @@ select = ["E", "W", "F", "I", "S", "B"]
 ignore = [
     # Subprocess / exec — intentional throughout this security tool
     "S603", "S607",
-    # GTK pattern: gi.require_version() must precede gi.repository imports
-    "E402",
     # Cosmetic style — pre-existing across the codebase, not our concern
     "E501",  # line-too-long
     "E701",  # multiple-statements-on-one-line-colon

@@ -5,6 +5,7 @@ Connects to Ergo IRC (Sovereign) as a standard IRC client.
 """
 
 import hashlib
+import os
 import random
 import re
 import threading
@@ -685,8 +686,6 @@ def cmd_threat(nick, target, args, reply, admin):
     reply(f"\x0304[THREATS]\x03 {len(threats)} registered:")
     for t in threats[:5]:
         reply(f"  \x02{t.get('handle', '?')}\x02 | {t.get('hostmask', '?')} | Risk: {t.get('risk_level', '?')}")
-
-import os
 
 
 @hook.regex(r'https?://\S+')
