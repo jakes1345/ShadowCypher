@@ -30,8 +30,8 @@ preview_id = "806c715c0dbd4e8aadd072a75e87bbc6"
 # Then fill in the IDs returned by that command.
 [[kv_namespaces]]
 binding = "SHADOW_RL"
-id = "FILL_IN_AFTER_wrangler_kv_namespace_create_SHADOW_RL"
-preview_id = "FILL_IN_AFTER_wrangler_kv_namespace_create_SHADOW_RL_preview"
+id = "e2f5c9e600a84db8896f0593f11ed775"
+preview_id = "0d90869f0fef46ba83019221285315d1"
 
 [[r2_buckets]]
 binding = "SHADOW_FILES"
