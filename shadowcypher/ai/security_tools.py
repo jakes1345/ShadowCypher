@@ -9,9 +9,9 @@ import re
 import shutil
 import socket
 import subprocess
+import urllib.parse
 import urllib.request
 from typing import Optional
-from urllib.parse import urlparse
 
 from shadowcypher.ai.tool_loop import AgentTool
 from shadowcypher.core.stealth import stealth
@@ -24,7 +24,7 @@ def _tor_proxy() -> Optional[tuple]:
         return None
     proxy_url = stealth.proxy_url or "socks5h://127.0.0.1:9050"
     try:
-        p = urlparse(proxy_url)
+        p = urllib.parse.urlparse(proxy_url)
         return (p.hostname or "127.0.0.1", p.port or 9050)
     except Exception:
         return ("127.0.0.1", 9050)
@@ -100,8 +100,12 @@ def http_probe(url: str, path: str = "/") -> str:
     """Fetch a URL and return status code, headers, and body preview."""
     try:
         full = f"{url.rstrip('/')}{path}"
+        # Validate scheme — only http/https allowed; reject file://, ftp://, etc.
+        parsed = urllib.parse.urlparse(full)  # nosec B310
+        if parsed.scheme not in ("http", "https"):
+            return f"HTTP_ERROR: scheme '{parsed.scheme}' not permitted (only http/https)"
         req = urllib.request.Request(full, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
             body = resp.read(1024).decode(errors="replace")
             return json.dumps({
                 "url": full,
@@ -213,7 +217,7 @@ def check_smb(target: str) -> str:
 
 def check_ftp_anon(host: str) -> str:
     """Check if FTP allows anonymous login."""
-    import ftplib
+    import ftplib  # nosec B402
     proxy = _tor_proxy()
     sock = None
     ftp = None
@@ -223,13 +227,13 @@ def check_ftp_anon(host: str) -> str:
             sock = _proxy_socket()
             sock.settimeout(5)
             sock.connect((host, 21))
-            ftp = ftplib.FTP()
+            ftp = ftplib.FTP()  # nosec B321
             ftp.sock = sock
             ftp.af = sock.family
             ftp.file = sock.makefile("rb")
             ftp.welcome = ftp.getresp()
         else:
-            ftp = ftplib.FTP(timeout=5)
+            ftp = ftplib.FTP(timeout=5)  # nosec B321
             ftp.connect(host, 21)
         ftp.login("anonymous", "probe@test.local")
         files = ftp.nlst()

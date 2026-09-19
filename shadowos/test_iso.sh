@@ -375,7 +375,14 @@ while IFS= read -r p; do
   [[ -f "$p" ]] || continue
   ((checked++))
   # PNG signature is the first 8 bytes
-  sig=$(head -c 8 "$p" 2>/dev/null | xxd -p)
+  # Use xxd if available, fall back to od (POSIX coreutils) or python3
+  if command -v xxd >/dev/null 2>&1; then
+    sig=$(head -c 8 "$p" 2>/dev/null | xxd -p)
+  elif command -v od >/dev/null 2>&1; then
+    sig=$(head -c 8 "$p" 2>/dev/null | od -A n -t x1 | tr -d ' \n')
+  else
+    sig=$(python3 -c "import sys; sys.stdout.write(open('$p','rb').read(8).hex())" 2>/dev/null)
+  fi
   if [[ "$sig" != "89504e470d0a1a0a" ]]; then
     fail "bad PNG sig: $p"
     ((broken++))

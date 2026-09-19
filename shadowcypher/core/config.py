@@ -313,6 +313,6 @@ except Exception as e:
     print(f"WARNING: config startup failed: {e}", file=sys.stderr)
 
 # Import logger AFTER singleton for enterprise bootstrap
-from shadowcypher.core.logger import logger
+from shadowcypher.core.logger import logger  # noqa: E402
 
 logger.info("config", f"ENTERPRISE_CORE_LOADED: {config.app_name} v{config.version}")
