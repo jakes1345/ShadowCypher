@@ -32,6 +32,7 @@ file_permissions=(
   ["/usr/local/bin/shadow-ai-overlay"]="0:0:0755"
   ["/usr/local/bin/shadowos-install"]="0:0:0755"
   ["/usr/local/bin/shadowos-welcome"]="0:0:0755"
+  ["/usr/local/bin/shadowos-tour"]="0:0:0755"
   ["/etc/shadowos/modes/gaming/apply.sh"]="0:0:0755"
   ["/etc/shadowos/modes/gaming/revert.sh"]="0:0:0755"
   ["/etc/shadowos/modes/pentest/apply.sh"]="0:0:0755"

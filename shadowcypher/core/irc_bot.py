@@ -600,7 +600,7 @@ def cmd_calc(nick, target, args, reply, admin):
                                      ast.Add, ast.Sub, ast.Mult, ast.Div,
                                      ast.FloorDiv, ast.USub, ast.UAdd)):
                 return reply("Only math expressions allowed.")
-        result = eval(compile(tree, '<calc>', 'eval'))
+        result = eval(compile(tree, '<calc>', 'eval'))  # nosec B307 — AST pre-validated to math nodes only
         reply(f"\x0303[CALC]\x03 {args.strip()} = \x02{result}\x02")
     except Exception as e:
         reply(f"Calc error: {e}")
