@@ -51,8 +51,6 @@ qt_add_executable(shadowcypher
     src/pages/NetworkPage.h
     src/pages/ThreatPage.cpp
     src/pages/ThreatPage.h
-    src/pages/OsintPage.cpp
-    src/pages/OsintPage.h
     src/pages/VulnPage.cpp
     src/pages/VulnPage.h
     src/pages/SmartContractPage.cpp
