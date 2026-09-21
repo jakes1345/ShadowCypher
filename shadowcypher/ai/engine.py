@@ -17,6 +17,7 @@ from shadowcypher.ai.providers import provider_registry
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 
+
 def _read_ollama_endpoint() -> str:
     """Read Ollama endpoint — Qt6 config.ini takes precedence over pydantic default."""
     try:
