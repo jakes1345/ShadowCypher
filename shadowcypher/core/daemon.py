@@ -257,7 +257,8 @@ def _mail_credentials() -> tuple[str, str]:
     cfg = configparser.ConfigParser()
     cfg_path = Path.home() / ".config" / "shadowcypher" / "config.ini"
     cfg.read(str(cfg_path))
-    api_key  = cfg.get("api",  "key",      fallback="")
+    # Qt6 SettingsPage writes key under [auth] → api_key
+    api_key  = cfg.get("auth", "api_key",  fallback="") or cfg.get("api", "key", fallback="")
     base_url = cfg.get("api",  "base_url", fallback="https://api.shadowcypher.site")
     return api_key, base_url
 
