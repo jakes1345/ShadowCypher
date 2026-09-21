@@ -213,10 +213,12 @@ async def handle_run_mission(params: dict, writer: asyncio.StreamWriter, req_id:
         writer.write(ok(req_id, {"output": f"Mission not found: {name}", "level": "ERROR", "complete": True}))
         return
 
+    _loop = asyncio.get_running_loop()
+
     def _send_line(text: str, level: str = "INFO"):
         if not writer.is_closing():
             data = ok(req_id, {"output": text, "level": level, "complete": False})
-            asyncio.get_event_loop().call_soon_threadsafe(writer.write, data)
+            _loop.call_soon_threadsafe(writer.write, data)
 
     try:
         from shadowcypher.core.shadowscript import ShadowScriptEngine
@@ -342,8 +344,7 @@ async def handle_osint_domain_scan(params: dict, writer: asyncio.StreamWriter, r
     def _send(text: str, level: str = "INFO"):
         if writer.is_closing():
             return
-        data = ok(req_id, {"output": text.rstrip(), "level": level, "complete": False})
-        asyncio.get_event_loop().call_soon_threadsafe(writer.write, data)
+        writer.write(ok(req_id, {"output": text.rstrip(), "level": level, "complete": False}))
 
     _send(f"[OSINT] Starting domain scan: {target} ({len(checks)} checks)")
 
@@ -466,8 +467,7 @@ async def handle_osint_identity_scan(params: dict, writer: asyncio.StreamWriter,
     def _send(text: str, level: str = "INFO"):
         if writer.is_closing():
             return
-        data = ok(req_id, {"output": text.rstrip(), "level": level, "complete": False})
-        asyncio.get_event_loop().call_soon_threadsafe(writer.write, data)
+        writer.write(ok(req_id, {"output": text.rstrip(), "level": level, "complete": False}))
 
     _send(f"[OSINT] {mode.upper()} → {query}")
 
@@ -637,10 +637,12 @@ async def handle_cve_feed_scan(params: dict, writer: asyncio.StreamWriter, req_i
         await writer.drain()
         return
 
+    _loop = asyncio.get_running_loop()
+
     def _send_line(text: str):
         if not writer.is_closing():
             data = ok(req_id, {"output": text.rstrip(), "level": "INFO", "complete": False})
-            asyncio.get_event_loop().call_soon_threadsafe(writer.write, data)
+            _loop.call_soon_threadsafe(writer.write, data)
 
     try:
         from shadowcypher.modules.cve_feed import cve_feed
