@@ -583,7 +583,8 @@ class ShadowHub:
 
     def get_devices(self) -> List[Dict[str, Any]]:
         """Return LAN devices from the ARP cache, refreshing the cache if stale."""
-        import subprocess, re, time
+        import subprocess
+        import time
         cache_age = getattr(self, "_devices_cache_ts", 0)
         if time.time() - cache_age > 30 or not self._devices_cache:
             devices: List[Dict[str, Any]] = []
@@ -625,11 +626,13 @@ class ShadowHub:
 
     def trigger_scan(self) -> None:
         """Kick off a background ARP sweep to refresh the devices cache."""
-        import subprocess, threading, time
+        import subprocess
+        import threading
 
         def _sweep():
             try:
-                import ipaddress, socket
+                import ipaddress
+                import socket
                 hostname = socket.gethostname()
                 local_ip = socket.gethostbyname(hostname)
                 net = ipaddress.ip_network(f"{local_ip}/24", strict=False)
