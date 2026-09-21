@@ -118,6 +118,13 @@ shadowcypher/ ← open-source desktop tool (separate product)
 
 **Don't create documentation that isn't user-facing.** No `VENDOR_PARTNERSHIPS.md`, no `VIDEO_TUTORIALS.md`, no `HARDWARE_CERTIFICATION.md` unless those things actually exist and users need to read them.
 
+## Git commit conventions
+
+- Do NOT add `Co-Authored-By: Claude` or any Anthropic attribution lines to commits
+- Do NOT add `Claude-Session:` lines to commit messages
+- Commits belong to the project owner: **jakes1345**
+- PR descriptions should not include Claude Code attribution footers
+
 ## Important conventions
 
 - `callApi(path, opts)` in `www/index.html` returns **parsed JSON**, not a `Response` — don't call `.ok` or `.json()` on the result

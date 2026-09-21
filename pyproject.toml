@@ -40,9 +40,14 @@ dependencies = [
     "scipy>=1.11.0",
     "rich>=13.0.0",
     "prompt_toolkit>=3.0.0",
+    "scrapling>=0.4.15",
 ]
 
 [project.optional-dependencies]
+# Scrapling JS-rendering backend (Playwright + Camoufox stealth browser)
+recon = [
+    "scrapling[playwright]>=0.4.15",
+]
 # Premium/full install with all optional backends
 full = [
     "litellm>=1.0.0",

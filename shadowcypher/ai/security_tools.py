@@ -119,6 +119,74 @@ def http_probe(url: str, path: str = "/") -> str:
         return f"HTTP_ERROR: {e}"
 
 
+def http_probe_js(url: str, path: str = "/", stealth_mode: bool = False) -> str:
+    """Fetch a URL with a real browser engine — handles JS-rendered pages, SPAs, and anti-bot walls.
+
+    Uses Scrapling's curl_cffi-backed Fetcher (no browser) by default.
+    Pass stealth_mode=True to launch a headless Camoufox browser (requires scrapling[playwright]).
+    """
+    try:
+        full = f"{url.rstrip('/')}{path}"
+        parsed = urllib.parse.urlparse(full)
+        if parsed.scheme not in ("http", "https"):
+            return f"HTTP_ERROR: scheme '{parsed.scheme}' not permitted"
+        try:
+            from scrapling.fetchers import Fetcher, StealthyFetcher
+        except ImportError:
+            return "NOT_INSTALLED: scrapling — pip install scrapling"
+        if stealth_mode:
+            try:
+                resp = StealthyFetcher.fetch(full, headless=True, network_idle=True)
+            except Exception:
+                resp = Fetcher.get(full)
+        else:
+            resp = Fetcher.get(full)
+        body_preview = (resp.body[:1024].decode(errors="replace") if isinstance(resp.body, bytes) else str(resp.body)[:1024])
+        return json.dumps({
+            "url": full,
+            "status": resp.status,
+            "headers": dict(resp.headers),
+            "body_preview": body_preview,
+        }, indent=2)
+    except Exception as e:
+        return f"HTTP_ERROR: {e}"
+
+
+def web_scrape(url: str, css_selector: str = "", extract_links: bool = False) -> str:
+    """Fetch a page and extract structured content using CSS selectors or return all links.
+
+    Uses Scrapling's curl_cffi Fetcher — handles TLS fingerprinting and modern anti-bot headers
+    without a browser. Pass css_selector to pull specific elements; set extract_links=True
+    to dump all anchor hrefs (useful for crawling a target's site structure).
+    """
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return f"HTTP_ERROR: scheme '{parsed.scheme}' not permitted"
+        try:
+            from scrapling.fetchers import Fetcher
+        except ImportError:
+            return "NOT_INSTALLED: scrapling — pip install scrapling"
+        resp = Fetcher.get(url)
+        if extract_links:
+            links = [a.attrib.get("href", "") for a in resp.css("a") if a.attrib.get("href")]
+            abs_links = []
+            for href in links:
+                if href.startswith("http"):
+                    abs_links.append(href)
+                elif href.startswith("/"):
+                    abs_links.append(f"{parsed.scheme}://{parsed.netloc}{href}")
+            return json.dumps({"url": url, "links": sorted(set(abs_links))[:200]}, indent=2)
+        if css_selector:
+            elements = resp.css(css_selector)
+            texts = [el.text.strip() for el in elements if el.text and el.text.strip()]
+            return json.dumps({"url": url, "selector": css_selector, "results": texts[:100]}, indent=2)
+        body_preview = (resp.body[:2048].decode(errors="replace") if isinstance(resp.body, bytes) else str(resp.body)[:2048])
+        return json.dumps({"url": url, "status": resp.status, "body_preview": body_preview}, indent=2)
+    except Exception as e:
+        return f"SCRAPE_ERROR: {e}"
+
+
 def dns_lookup(domain: str) -> str:
     """Resolve domain to IPs."""
     try:
@@ -290,6 +358,51 @@ SECURITY_TOOLS = [
             "required": ["url"],
         },
         fn=http_probe,
+        requires_approval=True,
+    ),
+    AgentTool(
+        name="http_probe_js",
+        description=(
+            "Probe an HTTP/HTTPS endpoint using a real browser engine (curl_cffi). "
+            "Handles JS-rendered pages, SPAs, and targets with TLS fingerprinting / anti-bot headers. "
+            "Use instead of http_probe when the target is a modern web app or Cloudflare-protected. "
+            "Pass stealth_mode=True to launch a headless Camoufox browser for full JS execution "
+            "(requires scrapling[playwright] installed)."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "Base URL e.g. https://target.com"},
+                "path": {"type": "string", "description": "Path to probe", "default": "/"},
+                "stealth_mode": {
+                    "type": "boolean",
+                    "description": "Launch headless Camoufox browser for full JS rendering (requires playwright)",
+                    "default": False,
+                },
+            },
+            "required": ["url"],
+        },
+        fn=http_probe_js,
+        requires_approval=True,
+    ),
+    AgentTool(
+        name="web_scrape",
+        description=(
+            "Fetch a page and extract structured data using CSS selectors, or dump all links. "
+            "Uses curl_cffi — bypasses TLS fingerprinting and bot detection without a browser. "
+            "Useful for OSINT: extract email addresses, subdomains, endpoint paths from a target site. "
+            "set extract_links=True to map a site's link graph; use css_selector for targeted extraction."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "Target URL"},
+                "css_selector": {"type": "string", "description": "CSS selector to extract elements", "default": ""},
+                "extract_links": {"type": "boolean", "description": "Return all absolute hrefs instead", "default": False},
+            },
+            "required": ["url"],
+        },
+        fn=web_scrape,
         requires_approval=True,
     ),
     AgentTool(
