@@ -78,6 +78,40 @@ if [[ -d "$GRUB_THEME_SRC" ]]; then
   echo ">> GRUB theme staged → profile/grub/themes/shadowos/"
 fi
 
+# ── Build Qt6 desktop app and stage it into airootfs ──────────────────────
+QT_APP_SRC="$REPO_ROOT/shadowcypher-qt"
+QT_APP_DEST="$PROFILE/airootfs/opt/shadowcypher/shadowcypher-qt"
+
+if [[ -d "$QT_APP_SRC/src" ]]; then
+  echo ">> Compiling Qt6 desktop app (shadowcypher-qt)..."
+  QT_APP_BUILD="$QT_APP_SRC/_build"
+  mkdir -p "$QT_APP_BUILD" "$QT_APP_DEST"
+
+  if ! command -v cmake >/dev/null 2>&1; then
+    echo "   cmake not found — skipping shadowcypher-qt build" >&2
+  elif ! pkg-config --exists Qt6Widgets 2>/dev/null; then
+    echo "   Qt6 not found — skipping shadowcypher-qt build (install qt6-base qt6-websockets)" >&2
+  else
+    cmake -S "$QT_APP_SRC" -B "$QT_APP_BUILD" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -Wno-dev -DCMAKE_VERBOSE_MAKEFILE=OFF 2>&1 | tail -5
+
+    make -C "$QT_APP_BUILD" -j"$(nproc)" 2>&1 | tail -10
+
+    if [[ -f "$QT_APP_BUILD/shadowcypher" ]]; then
+      cp -f "$QT_APP_BUILD/shadowcypher" "$QT_APP_DEST/shadowcypher-qt"
+      chmod +x "$QT_APP_DEST/shadowcypher-qt"
+      strip --strip-unneeded "$QT_APP_DEST/shadowcypher-qt" 2>/dev/null || true
+      echo "   Desktop app staged → $QT_APP_DEST/shadowcypher-qt ($(du -sh "$QT_APP_DEST/shadowcypher-qt" | cut -f1))"
+    else
+      echo "   WARNING: shadowcypher-qt binary not produced — check cmake output" >&2
+    fi
+  fi
+else
+  echo "   shadowcypher-qt source not found — skipping" >&2
+fi
+
 # ── Build Qt6 installer binary and stage it into airootfs ──────────────────
 INSTALLER_SRC="$REPO_ROOT/shadowos/installer"
 INSTALLER_BIN="$PROFILE/airootfs/usr/local/bin/shadowos-installer"

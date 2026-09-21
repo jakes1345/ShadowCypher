@@ -1,0 +1,19 @@
+[Unit]
+Description=ShadowCypher IPC Daemon (Qt6 bridge)
+Documentation=https://shadowcypher.site/docs
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m shadowcypher.core.daemon
+WorkingDirectory=%h
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=shadowcypher-daemon
+Environment=PYTHONPATH=/opt/shadowcypher
+
+[Install]
+WantedBy=graphical-session.target
