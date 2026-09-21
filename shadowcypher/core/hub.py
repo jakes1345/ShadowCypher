@@ -170,6 +170,8 @@ class ShadowHub:
         }
 
         self.autonomous_enabled: bool = False
+        self._incidents: List[Dict[str, Any]] = []
+        self._devices_cache: List[Dict[str, Any]] = []
         self._initialized: bool = True
 
         from shadowcypher.core.identity import identity
@@ -277,7 +279,18 @@ class ShadowHub:
         self.honeypot = StealthHoneypot()
         def _on_threat(msg):
             self.telemetry["threat_hits"] += 1
-            self.telemetry["last_incident"] = datetime.now(timezone.utc).isoformat()
+            ts = datetime.now(timezone.utc).isoformat()
+            self.telemetry["last_incident"] = ts
+            self._incidents.append({
+                "status": "open",
+                "severity": "warning",
+                "created_at": ts,
+                "device_ip": "unknown",
+                "type": "honeypot_hit",
+                "description": str(msg)[:200],
+            })
+            if len(self._incidents) > 500:
+                self._incidents = self._incidents[-500:]
             bus.publish("threat_detected", {"message": msg})
         self.honeypot.start_bait(on_threat=_on_threat)
 
@@ -567,6 +580,69 @@ class ShadowHub:
             phases=phases,
         )
         return mission_id
+
+    def get_devices(self) -> List[Dict[str, Any]]:
+        """Return LAN devices from the ARP cache, refreshing the cache if stale."""
+        import subprocess, re, time
+        cache_age = getattr(self, "_devices_cache_ts", 0)
+        if time.time() - cache_age > 30 or not self._devices_cache:
+            devices: List[Dict[str, Any]] = []
+            try:
+                out = subprocess.check_output(
+                    ["ip", "neigh", "show"],
+                    stderr=subprocess.DEVNULL, text=True, timeout=5
+                )
+                for line in out.splitlines():
+                    parts = line.split()
+                    if len(parts) < 3:
+                        continue
+                    ip   = parts[0]
+                    lladdr_idx = next((i for i, p in enumerate(parts) if p == "lladdr"), -1)
+                    mac  = parts[lladdr_idx + 1] if lladdr_idx >= 0 and lladdr_idx + 1 < len(parts) else ""
+                    state = parts[-1].lower()
+                    if not mac or state in ("failed",):
+                        continue
+                    oui   = mac.replace(":", "").replace("-", "").upper()[:6]
+                    trusted = oui.startswith(("AABBCC",))  # extend via config
+                    devices.append({
+                        "ip":        ip,
+                        "mac":       mac,
+                        "hostname":  "",
+                        "vendor":    "Unknown",
+                        "open_ports": [],
+                        "risk_score": 0,
+                        "trusted":   trusted,
+                    })
+            except Exception:
+                pass
+            self._devices_cache = devices
+            self._devices_cache_ts = time.time()
+        return self._devices_cache
+
+    def get_incidents(self) -> List[Dict[str, Any]]:
+        """Return the last 100 security incidents."""
+        return list(self._incidents[-100:])
+
+    def trigger_scan(self) -> None:
+        """Kick off a background ARP sweep to refresh the devices cache."""
+        import subprocess, threading, time
+
+        def _sweep():
+            try:
+                import ipaddress, socket
+                hostname = socket.gethostname()
+                local_ip = socket.gethostbyname(hostname)
+                net = ipaddress.ip_network(f"{local_ip}/24", strict=False)
+                for host in list(net.hosts())[:30]:
+                    subprocess.run(
+                        ["ping", "-c", "1", "-W", "1", str(host)],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                    )
+                self._devices_cache_ts = 0  # force refresh on next get_devices call
+            except Exception:
+                pass
+
+        threading.Thread(target=_sweep, daemon=True, name="HubArpSweep").start()
 
     def is_stealth_ready(self) -> bool:
         """Returns True if identity is secured and relay is connected."""

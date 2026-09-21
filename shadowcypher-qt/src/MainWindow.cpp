@@ -14,7 +14,6 @@
 #include "pages/SettingsPage.h"
 #include "pages/NetworkPage.h"
 #include "pages/ThreatPage.h"
-#include "pages/OsintPage.h"
 #include "pages/VulnPage.h"
 #include "pages/SmartContractPage.h"
 #include <QHBoxLayout>
