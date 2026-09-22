@@ -169,12 +169,12 @@ async def handle_get_ai_model(_params: dict) -> dict:
 
 async def handle_ai_chat(params: dict) -> dict:
     message = params.get("message", "")
+    team = params.get("team", "shadowai")
     if not message:
         return {"response": "", "error": "empty message"}
     try:
-        from shadowcypher.ai.engine import AIEngine
-        engine = AIEngine()
-        response = await asyncio.to_thread(engine.chat, message)
+        from shadowcypher.ai.engine import ai_engine
+        response = await asyncio.to_thread(ai_engine.chat, message, team)
         return {"response": response}
     except Exception as e:
         return {"response": "", "error": str(e)}

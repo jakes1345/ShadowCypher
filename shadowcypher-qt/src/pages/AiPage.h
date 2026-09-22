@@ -4,6 +4,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QLabel>
+#include <QComboBox>
 #include <QTimer>
 #include "../ipc/IpcClient.h"
 
@@ -23,10 +24,12 @@ private:
     QLineEdit*   m_input;
     QPushButton* m_sendBtn;
     QLabel*      m_modelLabel;
+    QComboBox*   m_teamSelector;
     int          m_chatReqId = -1;
     bool         m_waiting   = false;
 
     void buildUi();
     void appendMessage(const QString& role, const QString& content);
     void setWaiting(bool waiting);
+    QString currentTeam() const;
 };
