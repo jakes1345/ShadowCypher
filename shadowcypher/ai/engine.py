@@ -17,7 +17,21 @@ from shadowcypher.ai.providers import provider_registry
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 
-OLLAMA_BASE = getattr(config.ai, 'api_base', 'http://127.0.0.1:11434')
+
+def _read_ollama_endpoint() -> str:
+    """Read Ollama endpoint — Qt6 config.ini takes precedence over pydantic default."""
+    try:
+        import configparser
+        cfg = configparser.ConfigParser()
+        cfg.read(str(Path.home() / ".config" / "shadowcypher" / "config.ini"))
+        ep = cfg.get("ollama", "endpoint", fallback="").strip()
+        if ep:
+            return ep.rstrip("/")
+    except Exception:
+        pass
+    return getattr(config.ai, 'api_base', 'http://127.0.0.1:11434').rstrip("/")
+
+OLLAMA_BASE = _read_ollama_endpoint()
 
 
 class AIEngine:

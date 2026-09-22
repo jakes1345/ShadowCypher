@@ -235,7 +235,26 @@ else
     exit 0
 fi
 
-# ── 5. Stamp ────────────────────────────────────────────────────────────────
+# ── 6. ShadowCypher Python deps not packaged in Arch ───────────────────────
+# Most deps come from packages.x86_64. These six are pip-only:
+#   scrapling   — stealth web fetcher (curl_cffi + Camoufox) for recon tools
+#   litellm     — unified LLM API client for the AI assistant
+#   argon2-cffi — Argon2 KDF for key derivation
+#   ulid-py     — ULID unique IDs used in mission/event tracking
+#   treequest   — tree-of-thought search used by AI planner
+#   paramiko    — SSH client for remote shell operations
+echo "[*] Installing ShadowCypher pip-only dependencies..."
+pip install --break-system-packages --quiet --no-warn-script-location \
+    "scrapling>=0.4.15" \
+    "litellm>=1.0.0" \
+    "argon2-cffi>=23.0.0" \
+    "ulid-py>=1.1.0" \
+    "treequest>=0.3.2" \
+    "paramiko>=3.0.0" \
+    2>&1 | tail -5 || echo "    pip install failed — ShadowCypher AI/recon features may be limited"
+echo "    pip deps done"
+
+# ── 7. Stamp ────────────────────────────────────────────────────────────────
 date -Iseconds > "$STAMP"
 # ── AI models (background download after everything else) ──
 /usr/local/bin/shadowos-ai-setup &
