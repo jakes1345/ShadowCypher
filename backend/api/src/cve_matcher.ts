@@ -176,10 +176,19 @@ export async function runCveMatchingCron(env: Env): Promise<void> {
   const cves = await fetchRecentCves(env);
   if (cves.length === 0) return;
 
-  const devices = await dbSelect<DeviceRow>(env, "devices", {
-    select: "id,user_id,hostname,ip,open_ports,os_fingerprint",
-    limit: 10000,
-  });
+  const PAGE_SIZE = 500;
+  const devices: DeviceRow[] = [];
+  let offset = 0;
+  while (true) {
+    const page = await dbSelect<DeviceRow>(env, "devices", {
+      select: "id,user_id,hostname,ip,open_ports,os_fingerprint",
+      limit: PAGE_SIZE,
+      offset,
+    });
+    devices.push(...page);
+    if (page.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
   if (devices.length === 0) return;
 
   const byUser = new Map<string, DeviceRow[]>();
