@@ -12,6 +12,10 @@ find_package(OpenSSL REQUIRED)
 
 qt_add_executable(shadowcypher
     src/main.cpp
+    src/api/ApiClient.cpp
+    src/api/ApiClient.h
+    src/LoginDialog.cpp
+    src/LoginDialog.h
     src/MainWindow.cpp
     src/MainWindow.h
     src/theme.h
@@ -66,7 +70,11 @@ target_link_libraries(shadowcypher PRIVATE
     OpenSSL::Crypto
 )
 
-target_compile_options(shadowcypher PRIVATE -Wall -Wextra -O2)
+if(NOT MSVC)
+    target_compile_options(shadowcypher PRIVATE -Wall -Wextra -O2)
+else()
+    target_compile_options(shadowcypher PRIVATE /W3 /O2)
+endif()
 
 install(TARGETS shadowcypher DESTINATION bin)
 install(FILES assets/shadowcypher.desktop DESTINATION share/applications)

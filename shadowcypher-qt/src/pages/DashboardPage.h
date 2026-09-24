@@ -2,6 +2,7 @@
 #include <QWidget>
 #include <QLabel>
 #include <QTimer>
+#include <QFutureWatcher>
 #include "../widgets/ArcGauge.h"
 #include "../widgets/MiniStat.h"
 #include "../widgets/TacticalTerminal.h"
@@ -20,12 +21,10 @@ private:
     IpcClient* m_ipc;
     QTimer*    m_timer;
 
-    // Gauges
     ArcGauge* m_cpuGauge;
     ArcGauge* m_ramGauge;
     ArcGauge* m_diskGauge;
 
-    // Stats
     MiniStat* m_statAi;
     MiniStat* m_statMissions;
     MiniStat* m_statUptime;
@@ -39,12 +38,14 @@ private:
     TacticalTerminal* m_terminal;
     QLabel* m_statusLabel;
 
-    // Rolling net counter
     qint64 m_lastNetBytes = 0;
     qint64 m_lastNetTime  = 0;
 
     void buildUi();
     void refreshLocalMetrics();
+    void refreshCpu();
+    void refreshRam();
+    void refreshDisk();
     void requestDaemonStats();
     void updateNetSpeed();
     void updateEntropy();

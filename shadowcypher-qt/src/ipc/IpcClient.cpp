@@ -2,23 +2,53 @@
 #include <QTimer>
 #include <QJsonArray>
 
-static const QString SOCKET_PATH = "/tmp/shadowcypher-daemon.sock";
+#ifdef Q_OS_WIN
+#  include <QTcpSocket>
+static constexpr quint16 IPC_TCP_PORT = 54321;
+#else
+static const QString UNIX_SOCKET_PATH = "/tmp/shadowcypher-daemon.sock";
+#endif
 
 IpcClient::IpcClient(QObject* parent) : QObject(parent) {
-    m_socket = new QLocalSocket(this);
-    connect(m_socket, &QLocalSocket::connected,    this, &IpcClient::onConnected);
-    connect(m_socket, &QLocalSocket::disconnected, this, &IpcClient::onDisconnected);
-    connect(m_socket, &QLocalSocket::readyRead,    this, &IpcClient::onReadyRead);
-    connect(m_socket, &QLocalSocket::errorOccurred, this, &IpcClient::onSocketError);
+#ifdef Q_OS_WIN
+    auto* sock = new QTcpSocket(this);
+    connect(sock, &QTcpSocket::connected,     this, &IpcClient::onConnected);
+    connect(sock, &QTcpSocket::disconnected,  this, &IpcClient::onDisconnected);
+    connect(sock, &QTcpSocket::readyRead,     this, &IpcClient::onReadyRead);
+    connect(sock, &QTcpSocket::errorOccurred, this, [this](QAbstractSocket::SocketError) {
+        onSocketError();
+    });
+    m_device = sock;
+#else
+    auto* sock = new QLocalSocket(this);
+    connect(sock, &QLocalSocket::connected,     this, &IpcClient::onConnected);
+    connect(sock, &QLocalSocket::disconnected,  this, &IpcClient::onDisconnected);
+    connect(sock, &QLocalSocket::readyRead,     this, &IpcClient::onReadyRead);
+    connect(sock, &QLocalSocket::errorOccurred, this, [this](QLocalSocket::LocalSocketError) {
+        onSocketError();
+    });
+    m_device = sock;
+#endif
 }
 
 void IpcClient::connectToDaemon() {
-    if (m_socket->state() == QLocalSocket::ConnectedState) return;
-    m_socket->connectToServer(SOCKET_PATH);
+#ifdef Q_OS_WIN
+    auto* sock = qobject_cast<QTcpSocket*>(m_device);
+    if (sock->state() == QAbstractSocket::ConnectedState) return;
+    sock->connectToHost("127.0.0.1", IPC_TCP_PORT);
+#else
+    auto* sock = qobject_cast<QLocalSocket*>(m_device);
+    if (sock->state() == QLocalSocket::ConnectedState) return;
+    sock->connectToServer(UNIX_SOCKET_PATH);
+#endif
 }
 
 bool IpcClient::isConnected() const {
-    return m_socket->state() == QLocalSocket::ConnectedState;
+#ifdef Q_OS_WIN
+    return qobject_cast<QTcpSocket*>(m_device)->state() == QAbstractSocket::ConnectedState;
+#else
+    return qobject_cast<QLocalSocket*>(m_device)->state() == QLocalSocket::ConnectedState;
+#endif
 }
 
 int IpcClient::call(const QString& method, const QJsonObject& params) {
@@ -30,7 +60,7 @@ int IpcClient::call(const QString& method, const QJsonObject& params) {
         {"id", id}
     };
     QByteArray payload = QJsonDocument(req).toJson(QJsonDocument::Compact) + "\n";
-    m_socket->write(payload);
+    m_device->write(payload);
     return id;
 }
 
@@ -45,8 +75,7 @@ void IpcClient::onDisconnected() {
 }
 
 void IpcClient::onReadyRead() {
-    m_buffer += m_socket->readAll();
-    // Messages are newline-delimited JSON
+    m_buffer += m_device->readAll();
     while (true) {
         int nl = m_buffer.indexOf('\n');
         if (nl == -1) break;
@@ -68,7 +97,7 @@ void IpcClient::onReadyRead() {
     }
 }
 
-void IpcClient::onSocketError(QLocalSocket::LocalSocketError) {
+void IpcClient::onSocketError() {
     reconnectAfter(5000);
 }
 
