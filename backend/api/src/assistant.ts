@@ -275,7 +275,7 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
   // Build multi-turn messages array (prepend validated history, then current user turn)
   const rawHistory: HistoryMessage[] = Array.isArray(body.history) ? body.history : [];
   const validatedHistory: HistoryMessage[] = rawHistory
-    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.length > 0)
+    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.length > 0 && m.content.length <= 2000)
     .slice(-8);  // max 8 messages (4 turns)
 
   // The messages array sent to the LLM: prior turns + current question
@@ -284,11 +284,7 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
     { role: "user", content: userMessage },
   ];
 
-  // Merge client system prompt (has guardian live context) with backend SYSTEM_PROMPT
-  const clientSystem = (typeof body.system === "string" && body.system.length > 0) ? body.system : "";
-  const effectiveSystemPrompt = clientSystem
-    ? `${SYSTEM_PROMPT}\n\n${clientSystem}`
-    : SYSTEM_PROMPT;
+  const effectiveSystemPrompt = SYSTEM_PROMPT;
 
   // Dispatch to chosen provider
   try {

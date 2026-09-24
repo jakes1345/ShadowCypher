@@ -154,9 +154,11 @@ const KEY_PATTERN = /^sc_live_[a-f0-9]{48}$/;
 
 function corsHeaders(origin: string | null, allowed: string): HeadersInit {
   const allowList = allowed.split(",").map((o) => o.trim());
-  const allowOrigin = origin && allowList.includes(origin) ? origin : allowList[0];
+  if (!origin || !allowList.includes(origin)) {
+    return { Vary: "Origin" };
+  }
   return {
-    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Authorization,Content-Type",
     "Access-Control-Max-Age": "86400",
@@ -178,19 +180,31 @@ function json(body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
 
-function extractKey(req: Request): string | null {
+function extractKey(req: Request, allowQueryParam = false): string | null {
   const auth = req.headers.get("Authorization") || "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
-  const key = m ? m[1].trim() : new URL(req.url).searchParams.get("key") ?? "";
+  let key = m ? m[1].trim() : "";
+  if (!key && allowQueryParam) {
+    key = new URL(req.url).searchParams.get("key") ?? "";
+  }
   return KEY_PATTERN.test(key) ? key : null;
 }
 
 /**
- * Look up a user by api_key — races Supabase and Neon simultaneously.
- * Returns whichever responds first with a match. If one is down, the other wins.
+ * Look up a user by api_key.
+ *
+ * Fast path: Neon has an indexed api_keys table — O(1) lookup.
+ * Fallback: Supabase auth.users full scan — used when Neon is unavailable or
+ * the user was registered before the Neon sync webhook fired.
  */
 async function findUserByKey(env: Env, key: string): Promise<SupabaseUser | null> {
-  // Supabase lookup (scans user_metadata)
+  // Fast path — indexed lookup
+  if (env.NEON_DATABASE_URL) {
+    const neonResult = await neonFindUserByKey(env, key).catch(() => null);
+    if (neonResult) return neonResult;
+  }
+
+  // Slow fallback — full scan of Supabase auth.users
   async function fromSupabase(): Promise<SupabaseUser | null> {
     let page = 1;
     const perPage = 1000;
@@ -212,13 +226,7 @@ async function findUserByKey(env: Env, key: string): Promise<SupabaseUser | null
     }
   }
 
-  // Race both — first non-null result wins
-  const [supabaseResult, neonResult] = await Promise.all([
-    fromSupabase().catch(() => null),
-    neonFindUserByKey(env, key).catch(() => null),
-  ]);
-
-  return supabaseResult ?? neonResult;
+  return fromSupabase().catch(() => null);
 }
 
 async function updateUserMetadata(
@@ -771,7 +779,7 @@ export default {
 
       // ── WebSocket upgrade: GET /v1/chat/ws?room=<name> ─────────────────────
       if (req.method === "GET" && path === "/v1/chat/ws" && req.headers.get("Upgrade") === "websocket") {
-        const key = extractKey(req);
+        const key = extractKey(req, true); // WS clients can't set headers; allow ?key= query param
         if (!key) return new Response("missing_or_invalid_key", { status: 401 });
         const user = await findUserByKey(env, key);
         if (!user) return new Response("key_not_found", { status: 401 });

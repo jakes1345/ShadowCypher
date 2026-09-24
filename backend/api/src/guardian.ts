@@ -157,9 +157,11 @@ export async function heartbeatAgent(req: Request, env: Env, user: AuthedUser, c
 // ─── Scans + devices ────────────────────────────────────────────────────────
 
 export async function uploadScan(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
-  const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
-  if (contentLength > 1_000_000) return json({ error: "payload_too_large" }, { status: 413 }, cors);
-  const body = (await req.json().catch(() => ({}))) as ScanBody;
+  const raw = await req.arrayBuffer().catch(() => null);
+  if (!raw || raw.byteLength > 1_000_000) return json({ error: "payload_too_large" }, { status: 413 }, cors);
+  let body: ScanBody;
+  try { body = JSON.parse(new TextDecoder().decode(raw)) as ScanBody; }
+  catch { return json({ error: "invalid_json" }, { status: 400 }, cors); }
   if (!body.scan_type) return json({ error: "scan_type_required" }, { status: 400 }, cors);
 
   const scan = await dbInsert<{ id: string; started_at: string }>(env, "scans", {
@@ -311,9 +313,11 @@ export async function recentScans(req: Request, env: Env, user: AuthedUser, cors
 // ─── Incidents ──────────────────────────────────────────────────────────────
 
 export async function createIncident(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
-  const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
-  if (contentLength > 64_000) return json({ error: "payload_too_large" }, { status: 413 }, cors);
-  const body = (await req.json().catch(() => ({}))) as IncidentBody;
+  const raw = await req.arrayBuffer().catch(() => null);
+  if (!raw || raw.byteLength > 64_000) return json({ error: "payload_too_large" }, { status: 413 }, cors);
+  let body: IncidentBody;
+  try { body = JSON.parse(new TextDecoder().decode(raw)) as IncidentBody; }
+  catch { return json({ error: "invalid_json" }, { status: 400 }, cors); }
   if (!body.severity || !body.category || !body.title) {
     return json({ error: "severity_category_title_required" }, { status: 400 }, cors);
   }
