@@ -1,21 +1,21 @@
 #pragma once
-#include <QLocalSocket>
 #include <QObject>
+#include <QIODevice>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <functional>
 
-// JSON-RPC 2.0 client over QLocalSocket
-// Python daemon listens at /tmp/shadowcypher-daemon.sock
+#ifdef Q_OS_WIN
+#  include <QTcpSocket>
+#else
+#  include <QLocalSocket>
+#endif
+
 class IpcClient : public QObject {
     Q_OBJECT
 public:
     explicit IpcClient(QObject* parent = nullptr);
-
     void connectToDaemon();
     bool isConnected() const;
-
-    // Fire-and-forget call — result delivered via resultReady(id, result)
     int call(const QString& method, const QJsonObject& params = {});
 
 signals:
@@ -28,12 +28,11 @@ private slots:
     void onConnected();
     void onDisconnected();
     void onReadyRead();
-    void onSocketError(QLocalSocket::LocalSocketError err);
+    void onSocketError();
 
 private:
-    QLocalSocket* m_socket;
-    QByteArray    m_buffer;
-    int           m_nextId = 1;
-
+    QIODevice* m_device;
+    QByteArray m_buffer;
+    int m_nextId = 1;
     void reconnectAfter(int ms);
 };
