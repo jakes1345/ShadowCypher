@@ -117,8 +117,6 @@ class ShadowRuntime:
             "web":         ("shadowcypher.modules.web_security",     "WebSecurity"),
             "osint":       ("shadowcypher.modules.osint",            "OSINT"),
             "ghost_hose":  ("shadowcypher.modules.ghost_hose",       "ghost_hose"),
-            "credentials": ("shadowcypher.modules.secret_audit",     "Credentials"),
-            "secrets":     ("shadowcypher.modules.secret_audit",     "Credentials"),
             "forensics":   ("shadowcypher.modules.forensics",        "Forensics"),
             "vuln":        ("shadowcypher.modules.vuln_scanner",     "VulnScanner"),
         }

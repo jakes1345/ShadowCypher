@@ -17,7 +17,6 @@ pages = {
     "Network": ("shadowcypher.ui.network_page", "NetworkPage"),
     "Forensics": ("shadowcypher.ui.forensics_page", "ForensicsPage"),
     "OSINT": ("shadowcypher.ui.osint_page", "OSINTPage"),
-    "Credentials": ("shadowcypher.ui.secrets_page", "SecretsPage"),
     "Firewall": ("shadowcypher.ui.firewall_page", "FirewallPage"),
     "Wireless": ("shadowcypher.ui.wireless_page", "WirelessPage"),
     "Session": ("shadowcypher.ui.session_page", "SessionPage")

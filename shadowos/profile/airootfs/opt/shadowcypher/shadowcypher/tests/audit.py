@@ -13,7 +13,6 @@ from shadowcypher.modules.network import Network
 from shadowcypher.modules.osint import OSINT
 from shadowcypher.modules.poc_engine import PocEngine
 from shadowcypher.modules.recon import Recon
-from shadowcypher.modules.secret_audit import Credentials
 from shadowcypher.modules.vuln_scanner import VulnScanner
 from shadowcypher.modules.wireless import Wireless
 
