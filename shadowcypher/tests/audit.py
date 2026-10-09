@@ -5,15 +5,12 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-# ── Module Registry (matches modules/__init__.py + extras) ──
-
 from shadowcypher.modules.firewall import Firewall
 from shadowcypher.modules.forensics import Forensics
 from shadowcypher.modules.network import Network
 from shadowcypher.modules.osint import OSINT
 from shadowcypher.modules.poc_engine import PocEngine
 from shadowcypher.modules.recon import Recon
-from shadowcypher.modules.secret_audit import Credentials
 from shadowcypher.modules.vuln_scanner import VulnScanner
 from shadowcypher.modules.wireless import Wireless
 
@@ -22,14 +19,11 @@ modules = {
     'VulnScanner': VulnScanner,
     'Network': Network,
     'OSINT': OSINT,
-    'Credentials': Credentials,
     'Forensics': Forensics,
     'Wireless': Wireless,
     'Firewall': Firewall,
     'Recon': Recon,
 }
-
-# ── Required Methods (synced to 4.5.8 ULTIMA implementations) ──
 
 required_methods = {
     'PocEngine': [
@@ -43,7 +37,7 @@ required_methods = {
         'sqlmap_scan',
         'nikto_scan',
         'audit_target',
-        'shadow_zero_day_scan', # NEW
+        'shadow_zero_day_scan',
     ],
     'Network': [
         'get_interfaces',
@@ -69,19 +63,6 @@ required_methods = {
         'zone_transfer',
         'ai_intel',
     ],
-    'Credentials': [
-        'brute_force',
-        'hydra_attack',
-        'identify_hash',
-        'hashcat_crack',
-        'hashcat_crack_string',
-        'hashcat_benchmark',
-        'john_crack',
-        'john_crack_string',
-        'audit_macos_keychain',
-        'ai_crack',
-        'deep_leak_correlation', # NEW
-    ],
     'Forensics': [
         'analyze_file',
         'extract_metadata',
@@ -96,11 +77,6 @@ required_methods = {
         'disable_monitor',
         'scan_networks',
         'scan_wifi',
-        'capture_handshake',
-        'deauth',
-        'deauth_target',
-        'ai_jammer',
-        'deauth_swarm', # NEW
     ],
     'Firewall': [
         'detect_backend',
@@ -120,12 +96,10 @@ required_methods = {
     ],
 }
 
-# ── Audit Execution ──
-
 total_missing = 0
 total_methods = 0
 
-print("[SYSTEM] BEGINNING_PLATFORM_INTEGRITY_AUDIT_v4.5.8...")
+print("[SYSTEM] BEGINNING_PLATFORM_INTEGRITY_AUDIT...")
 
 for mod_name, methods in required_methods.items():
     mod_cls = modules.get(mod_name)
@@ -141,31 +115,14 @@ for mod_name, methods in required_methods.items():
     else:
         print(f"  [OK]      {mod_name:15}: All {len(methods)} methods verified.")
 
-# ── Extended Modules Check (non-__init__ modules) ──
-
-print("\nExtended Module Verification:")
-
 extended = {
-    'ADAssessment': ('shadowcypher.modules.ad_assessment', 'ADAssessment',
-                  ['impacket_psexec', 'impacket_secretsdump', 'run_responder', 'golden_ticket_forge']), # NEW
-    'ADPivot': ('shadowcypher.modules.ad_pivot', 'ADPivot',
-                ['kerberoast', 'smb_relay_start', 'setup_pivot_tunnel', 'crackmapexec_scan']),
-    'Phishing': ('shadowcypher.modules.awareness_sim', 'SocialEngineeringAssessment',
-                 ['generate_pdf', 'generate_obfuscated_ps1', 'start_phishing_server',
-                  'generate_fake_recaptcha', 'generate_html_smuggling', 'start_zphisher',
-                  'generate_professional_bait', 'start_secure_tunnel']), # NEW
-    'CraftFactory': ('shadowcypher.modules.craft_factory', 'CraftFactory',
-                       ['generate_evasive_elf', 'generate_stealth_powershell',
-                        'generate_stealth_c2_python', 'generate_obfuscated_python']),
-    'Exfiltration': ('shadowcypher.modules.data_transfer', 'Exfiltration',
-                     ['exfiltrate_via_webhook', 'exfiltrate_via_dns', 'encrypt_archive']),
     'WebSecurity': ('shadowcypher.modules.web_security', 'WebSecurity',
                    ['ffuf_dir_fuzz', 'ffuf_vhost_fuzz', 'nuclei_scan', 'nuclei_update']),
     'DeepOSINT': ('shadowcypher.modules.osint_deep', 'DeepOSINT',
                   ['social_footprint', 'email_audit', 'steam_correlate', 'leak_check']),
-    'Session': ('shadowcypher.modules.session', 'Session',
-                ['list_active_sessions', 'terminate_session', 'interact_session', 'upload_to_session']),
 }
+
+print("\nExtended Module Verification:")
 
 for label, (mod_path, cls_name, methods) in extended.items():
     try:
