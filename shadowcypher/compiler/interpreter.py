@@ -662,8 +662,8 @@ class ShadowInterpreter:
                     print("  No native functions compiled yet. Declare one with: rust <name> { ... }")
             elif line == ".modules":
                 mods = ["recon", "network", "wireless", "exploit", "poc", "privesc",
-                        "c2", "payload", "craft", "web", "osint", "credentials",
-                        "secrets", "forensics", "vuln"]
+                        "c2", "payload", "craft", "web", "osint",
+                        "forensics", "vuln"]
                 for m in mods:
                     print(f"  {m}")
             else:
