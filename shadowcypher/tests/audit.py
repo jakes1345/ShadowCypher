@@ -9,13 +9,11 @@ from shadowcypher.modules.firewall import Firewall
 from shadowcypher.modules.forensics import Forensics
 from shadowcypher.modules.network import Network
 from shadowcypher.modules.osint import OSINT
-from shadowcypher.modules.poc_engine import PocEngine
 from shadowcypher.modules.recon import Recon
 from shadowcypher.modules.vuln_scanner import VulnScanner
 from shadowcypher.modules.wireless import Wireless
 
 modules = {
-    'PocEngine': PocEngine,
     'VulnScanner': VulnScanner,
     'Network': Network,
     'OSINT': OSINT,
@@ -26,12 +24,6 @@ modules = {
 }
 
 required_methods = {
-    'PocEngine': [
-        'search_exploits',
-        'launch_msf_exploit',
-        'generate_payload',
-        'auto_exploit',
-    ],
     'VulnScanner': [
         'nuclei_scan',
         'sqlmap_scan',

