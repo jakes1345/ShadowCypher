@@ -3174,6 +3174,7 @@
                         cliPrint('Push permission denied by browser.', 'var(--warning)');
                     } else {
                         const keyResp = await fetch(API_BASE + '/v1/notifications/vapid-public-key');
+                        if (!keyResp.ok) throw new Error(`VAPID key fetch failed (${keyResp.status})`);
                         const { public_key: vapidKey } = await keyResp.json();
                         if (vapidKey) {
                             const reg = await navigator.serviceWorker.ready;
@@ -4039,7 +4040,7 @@
                 }
             };
             if (body) opts.body = JSON.stringify(body);
-            const resp = await fetch(`https://api.shadowcypher.site${path}`, opts);
+            const resp = await fetch(`${API_BASE}${path}`, opts);
             if (resp.status === 401) {
                 cliPrint('Chat session expired — sign in again.', 'var(--warning)');
                 return null;
@@ -4183,7 +4184,7 @@
         function chatFormatContent(content) {
             // Render [attachment:key:filename] tokens as download links
             return content.replace(/\[attachment:([^\]:]+):([^\]]*)\]/g, (_, key, name) => {
-                const url = `https://api.shadowcypher.site/v1/files/${encodeURIComponent(key)}?key=${encodeURIComponent(_sessionApiKey)}`;
+                const url = `${API_BASE}/v1/files/${encodeURIComponent(key)}?key=${encodeURIComponent(_sessionApiKey)}`;
                 const safeName = escapeHtml(name || 'file');
                 return `<a href="${url}" target="_blank" rel="noopener" download="${safeName}" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(180,74,255,0.12);border:1px solid rgba(180,74,255,0.3);border-radius:4px;color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">📎 ${safeName}</a>`;
             });
@@ -4629,7 +4630,7 @@
             try {
                 const form = new FormData();
                 form.append('file', file);
-                const res = await fetch('https://api.shadowcypher.site/v1/files/upload', {
+                const res = await fetch(API_BASE + '/v1/files/upload', {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${_sessionApiKey}` },
                     body: form,
@@ -4664,7 +4665,7 @@
         async function mailCallApi(method, path, body) {
             const opts = { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_sessionApiKey}` } };
             if (body) opts.body = JSON.stringify(body);
-            const resp = await fetch(`https://api.shadowcypher.site${path}`, opts);
+            const resp = await fetch(`${API_BASE}${path}`, opts);
             if (resp.status === 401) { showToast('Session expired — sign in again.', 'warning'); return null; }
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
@@ -5518,7 +5519,7 @@
             const form = new FormData();
             form.append('file', file);
             try {
-                await fetch('https://api.shadowcypher.site/v1/files/upload', {
+                await fetch(API_BASE + '/v1/files/upload', {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${_sessionApiKey}` },
                     body: form,
@@ -5553,7 +5554,7 @@
                 const form = new FormData();
                 form.append('file', file);
                 try {
-                    await fetch('https://api.shadowcypher.site/v1/files/upload', {
+                    await fetch(API_BASE + '/v1/files/upload', {
                         method: 'POST',
                         headers: { Authorization: `Bearer ${_sessionApiKey}` },
                         body: form,
@@ -5568,7 +5569,7 @@
     function driveOpenPreview(file) {
         _drivePreviewFile = file;
         document.getElementById('drive-preview-name').innerText = file.name;
-        const fileUrl = `https://api.shadowcypher.site/v1/files/${encodeURIComponent(file.key)}?key=${encodeURIComponent(_sessionApiKey)}`;
+        const fileUrl = `${API_BASE}/v1/files/${encodeURIComponent(file.key)}?key=${encodeURIComponent(_sessionApiKey)}`;
         const dlLink = document.getElementById('drive-preview-download');
         dlLink.href = fileUrl;
         dlLink.download = file.name;
