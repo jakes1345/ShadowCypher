@@ -167,7 +167,7 @@ Tools for authorized penetration testing. All of these assume you own the target
 |---|---|
 | **DeepHat Apex** | AI-powered offensive workflow. The MetaChain agent takes a high-level objective, breaks it into tool invocations, runs them in sequence, and synthesizes the findings. Backed by a 30+ tool registry. |
 | **Ghost Factory** | Payload generation via msfvenom. Linux, Windows, macOS targets. ELF, EXE, Mach-O, raw, and Python output formats. Payload history tracking. |
-| **Phishing Synthesis** | Phishing campaign toolkit: template-based page generation, automated Cloudflare tunnel for instant HTTPS, credential capture. Strictly for authorized social engineering engagements. |
+| **Social Engineering Assessment** | Awareness simulation engine for authorized engagements. PDF lure generation, automated Cloudflare tunnel for HTTPS delivery. Requires written authorization for any target. |
 | **Ghost-Hose** | Network stress testing. Five modes: UDP flood, TCP SYN, Layer 7 HTTP, Slowloris, and Mixed. Configurable threads and duration limits. Lab and authorized gauntlet use only. |
 | **Web Layer Attacks** | SQL injection, XSS, SSRF, directory fuzzing (ffuf). Automated scanning and manual injection with custom payloads. |
 | **Key Harvester** | Hydra for network protocol brute-forcing (SSH, FTP, RDP, SMB, HTTP). John the Ripper and Hashcat for offline hash cracking with GPU support. |
@@ -307,8 +307,8 @@ python3 -m shadowcypher.app
 
 ```
 ShadowCypher/
-├── shadowcypher/
-│   ├── app.py                 # GTK application entry point
+├── shadowcypher/              # Python CLI / MCP server tool
+│   ├── main.py                # CLI entry point
 │   ├── core/
 │   │   ├── hub.py             # Mission orchestrator + relay bridge + dispatch_auto_scan()
 │   │   ├── mitre.py           # MITRE ATT&CK database (65 technique IDs)
@@ -326,9 +326,6 @@ ShadowCypher/
 │   │   ├── classic_brain.py   # Offline ELIZA + Markov conversational AI
 │   │   ├── sisyphus.py        # File integrity sentinel
 │   │   └── ...
-│   ├── ui/
-│   │   ├── vuln_page.py       # Vulnerability Scanner (Auto Scan tab + Nikto / SQLmap / NSE)
-│   │   └── ...                # 40+ other pages
 │   ├── modules/
 │   │   ├── cve_feed.py        # NVD CVE feed + EPSS + CISA KEV enrichment
 │   │   ├── threat_intel.py    # OTX + AbuseIPDB + URLhaus + Tor exits
@@ -337,6 +334,17 @@ ShadowCypher/
 │   │   └── ...
 │   ├── native/relay/          # Go WebSocket relay (compiled binary)
 │   └── compiler/              # ShadowScript lexer + interpreter
+├── shadowcypher-qt/           # Qt6 cross-platform desktop application
+│   └── src/                   # C++ / Qt sources
+├── backend/api/src/           # Cloudflare Worker API (TypeScript)
+│   ├── index.ts               # Entry point — auth, guardian, threats, chat
+│   ├── guardian.ts            # Device monitoring + incident management
+│   ├── threats.ts             # Live CVE feed
+│   └── ...
+├── www/index.html             # Web frontend (single-file SPA)
+├── shadowos/                  # Arch Linux ISO profile
+│   └── profile/               # Hyprland + hardened kernel + pentest tooling
+├── agent/                     # Python Guardian daemon (runs on monitored machines)
 ├── ai_engine/autoagent/       # MetaChain autonomous agent framework
 ├── config.json                # Runtime configuration (gitignored — never pushed)
 └── requirements.txt
