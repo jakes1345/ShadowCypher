@@ -2306,14 +2306,12 @@
             if (log) {
                 log.prepend(line);
                 while (log.childElementCount > 12) log.removeChild(log.lastChild);
-            } else {
-                console.log('[shadowcypher]', msg);
             }
         }
 
         function showToast(msg, type = 'info') {
             const container = document.getElementById('toast-container');
-            if (!container) { console.log('[toast]', type, msg); return; }
+            if (!container) return;
             const palette = {
                 success: ['rgba(0,200,100,0.12)', 'rgba(0,200,100,0.3)', '#00c864'],
                 warning: ['rgba(255,184,77,0.12)', 'rgba(255,184,77,0.3)', '#ffb84d'],
@@ -3475,7 +3473,7 @@
         async function testWebhook(id) {
             try {
                 const r = await callApi('/v1/webhooks/test', { method: 'POST', body: JSON.stringify({ id }) });
-                cliPrint(r.ok ? `Test delivered (${r.status})` : `Test failed (${r.status})`, r.ok ? 'var(--success)' : 'var(--critical)');
+                cliPrint('Test delivered', 'var(--success)');
             } catch (err) {
                 cliPrint(`Test failed: ${err.message}`, 'var(--critical)');
             }
@@ -4852,7 +4850,7 @@
         async function mailPollUnread() {
             if (!_sessionApiKey) return;
             try {
-                const data = await fetch(`https://api.shadowcypher.site/v1/mail/count`, { headers: { Authorization: `Bearer ${_sessionApiKey}` } }).then(r => r.ok ? r.json() : null);
+                const data = await callApi('/v1/mail/count');
                 if (!data) return;
                 const badge = document.getElementById('mail-unread-badge');
                 if (badge) { badge.textContent = data.unread || ''; badge.style.display = data.unread ? 'inline' : 'none'; }
