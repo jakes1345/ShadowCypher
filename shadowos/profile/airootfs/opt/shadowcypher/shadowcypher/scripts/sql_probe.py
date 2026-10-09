@@ -10,13 +10,13 @@ Usage:
 """
 
 import argparse
+import re
+import ssl
 import sys
 import time
-import re
+import urllib.error
 import urllib.parse
 import urllib.request
-import urllib.error
-import ssl
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m"}

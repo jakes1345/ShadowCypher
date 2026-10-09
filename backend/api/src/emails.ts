@@ -47,8 +47,8 @@ function baseTemplate(title: string, body: string, ctaHref: string, ctaLabel: st
     <p style="color:${MUTED};font-size:11px;margin:0;line-height:1.6;">
       You're receiving this because you signed up at
       <a href="https://shadowcypher.site" style="color:${BRAND_PURPLE};text-decoration:none;">shadowcypher.site</a>.
-      <br>Questions? Reply to this email or visit our
-      <a href="https://shadowcypher.site/docs" style="color:${BRAND_PURPLE};text-decoration:none;">docs</a>.
+      <br>This is a no-reply address — do not reply to this email. Visit our
+      <a href="https://shadowcypher.site/docs" style="color:${BRAND_PURPLE};text-decoration:none;">docs</a> for help.
     </p>
   </div>
 </div>`;

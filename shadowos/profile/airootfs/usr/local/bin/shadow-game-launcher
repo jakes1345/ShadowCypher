@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# shadow-game-launcher — ShadowOS unified game launcher
+# Asks whether to run a game on Linux (Proton/native) or in the Windows VM.
+# If the game name is supplied as an argument it uses that in the prompt;
+# otherwise it asks for a name first.
+#
+# Usage:
+#   shadow-game-launcher                  # interactive — asks for game name
+#   shadow-game-launcher "Forza Horizon 6"
+#   shadow-game-launcher --appid 2530650  # pass Steam AppID directly
+#
+# Integrated with:
+#   shadow-gamescope  — Linux/Proton path (existing)
+#   shadow-windows-vm — Windows VM path   (new)
+
+set -euo pipefail
+
+GAME_NAME=""
+STEAM_APPID=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --appid) STEAM_APPID="$2"; shift 2 ;;
+        --) shift; GAME_NAME="$*"; break ;;
+        *)  GAME_NAME="${GAME_NAME:+$GAME_NAME }$1"; shift ;;
+    esac
+done
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+_wofi_menu() {
+    # Pipe newline-separated options into wofi dmenu. Returns chosen line.
+    local prompt="$1"
+    shift
+    printf '%s\n' "$@" | wofi --dmenu --prompt "$prompt" --width 500 --height 200 \
+        --insensitive --no-actions 2>/dev/null
+}
+
+_notify() {
+    notify-send -a "ShadowOS Games" "$1" "${2:-}" 2>/dev/null || true
+}
+
+# ── Ask for game name if not provided ─────────────────────────────────────────
+if [[ -z "$GAME_NAME" && -z "$STEAM_APPID" ]]; then
+    GAME_NAME=$(wofi --dmenu --prompt "Game name:" --width 500 --height 60 \
+        --lines 1 2>/dev/null || true)
+    [[ -z "$GAME_NAME" ]] && exit 0
+fi
+
+DISPLAY_NAME="${GAME_NAME:-AppID $STEAM_APPID}"
+
+# ── Choose platform ────────────────────────────────────────────────────────────
+CHOICE=$(_wofi_menu "How to launch: $DISPLAY_NAME" \
+    "🐧  Linux / Proton  (Steam + gamescope)" \
+    "🪟  Windows VM      (full Windows, GPU passthrough)" \
+    "ℹ️   Check ProtonDB  (is this game Linux compatible?)" \
+    ) || exit 0
+
+case "$CHOICE" in
+    *"Linux / Proton"*)
+        # ── Linux path: hand off to shadow-gamescope ───────────────────────
+        _notify "Launching on Linux/Proton" "$DISPLAY_NAME"
+
+        if [[ -n "$STEAM_APPID" ]]; then
+            # Launch specific Steam game by AppID in gamescope session
+            shadow-gamescope --app "steam steam://rungameid/$STEAM_APPID"
+        else
+            # Open Steam Big Picture so user can find and launch their game
+            shadow-gamescope
+        fi
+        ;;
+
+    *"Windows VM"*)
+        # ── Windows path: boot/resume the Windows VM ───────────────────────
+        _notify "Starting Windows VM" "GPU passthrough — give it a moment..."
+        shadow-windows-vm --launch-game "$DISPLAY_NAME"
+        ;;
+
+    *"ProtonDB"*)
+        # ── Info: open ProtonDB in browser ──────────────────────────────────
+        if [[ -n "$STEAM_APPID" ]]; then
+            URL="https://www.protondb.com/app/$STEAM_APPID"
+        else
+            ENCODED=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$DISPLAY_NAME" 2>/dev/null || echo "$DISPLAY_NAME")
+            URL="https://www.protondb.com/search?q=$ENCODED"
+        fi
+        xdg-open "$URL" 2>/dev/null || true
+        ;;
+esac

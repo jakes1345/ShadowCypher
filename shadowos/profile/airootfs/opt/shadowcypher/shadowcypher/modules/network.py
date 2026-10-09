@@ -8,9 +8,7 @@ import subprocess
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
-from shadowcypher.core.sanitize import (
-    validate_target, validate_ports, validate_interface
-)
+from shadowcypher.core.sanitize import validate_interface, validate_target
 
 
 def _require_tool(name: str) -> str:
@@ -101,14 +99,14 @@ class Network(BaseModule):
     @staticmethod
     def packet_capture(interface=None, count=100, bpf_filter=None, on_output=None, on_complete=None):
         """Live packet capture via tcpdump with Pulse spectrum injection."""
-        from shadowcypher.core.runner import runner
         from shadowcypher.core.pulse import pulse
-        
+        from shadowcypher.core.runner import runner
+
         iface = interface or "any"
         args = ["tcpdump", "-i", iface, "-c", str(count), "-nn", "-l"]
         if bpf_filter:
             args.append(bpf_filter)
-            
+
         def pulse_wrapper(line):
             # Extract length if present: "... length 102"
             import re
@@ -123,12 +121,12 @@ class Network(BaseModule):
     @staticmethod
     def network_monitor(interface=None, on_output=None, on_complete=None):
         """Live traffic monitoring (long-running) with real-time Pulse auditing."""
-        from shadowcypher.core.runner import runner
         from shadowcypher.core.pulse import pulse
-        
+        from shadowcypher.core.runner import runner
+
         iface = interface or "any"
         args = ["tcpdump", "-i", iface, "-nn", "-l", "-c", "500"]
-        
+
         def pulse_wrapper(line):
             import re
             match = re.search(r'length (\d+)', line)

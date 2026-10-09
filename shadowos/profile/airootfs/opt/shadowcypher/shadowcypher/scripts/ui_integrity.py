@@ -5,10 +5,8 @@ Validates that all critical UI pages and core modules can be imported
 without crashing. Run before deployment to catch missing deps.
 """
 
-import sys
 import os
-import time
-import traceback
+import sys
 
 # Ensure project root is in path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -55,7 +53,6 @@ print("\033[1;33m[*] GTK Foundation\033[0m")
 try:
     import gi
     gi.require_version("Gtk", "3.0")
-    from gi.repository import Gtk
     print(f"  {PASS} Gtk 3.0")
     results["pass"] += 1
 except Exception as e:

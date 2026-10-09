@@ -38,6 +38,8 @@ import {
   heartbeatAgent,
   uploadScan,
   listDevices,
+  patchDevice,
+  deviceDetail,
   recentScans,
   createIncident,
   listIncidents,
@@ -86,16 +88,9 @@ import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 import { sendWelcomeEmail, sendKeyRotatedEmail, sendRecoveryKitEmail } from "./emails";
-import {
-  storeInboundMail,
-  getInbox,
-  getMailCount,
-  getMail,
-  markRead,
-  replyMail,
-  deleteMail,
-  sendOutbound,
-} from "./mail";
+import { adminOverview, adminUsers } from "./admin";
+import { getProfile, updateProfile } from "./profile";
+import { rateLimit } from "./ratelimit";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -141,6 +136,8 @@ export interface Env {
   CHAT_ROOM: DurableObjectNamespace;
   // R2 file storage
   SHADOW_FILES: R2Bucket;
+  // KV rate-limit store (binding: SHADOW_RL)
+  SHADOW_RL?: KVNamespace;
 }
 
 interface SupabaseUser {
@@ -153,32 +150,15 @@ interface SupabaseUser {
 
 const KEY_PATTERN = /^sc_live_[a-f0-9]{48}$/;
 
-// ─── Rate limiting ──────────────────────────────────────────────────────────
-// Module-scoped sliding window (per isolate). Not distributed — for true
-// distributed rate limiting, configure Cloudflare Rate Limiting rules in the
-// dashboard (Security → WAF → Rate Limiting Rules) on api.shadowcypher.site.
-const _rl = new Map<string, number[]>();
-
-function rateLimit(key: string, maxReqs: number, windowMs: number): boolean {
-  const now = Date.now();
-  const hits = (_rl.get(key) ?? []).filter((t) => now - t < windowMs);
-  if (hits.length >= maxReqs) return false;
-  hits.push(now);
-  _rl.set(key, hits);
-  if (_rl.size > 10_000) {
-    const oldest = [..._rl.entries()].sort((a, b) => (a[1][0] ?? 0) - (b[1][0] ?? 0));
-    for (let i = 0; i < 1000; i++) _rl.delete(oldest[i][0]);
-  }
-  return true;
-}
-
 // ─── CORS ───────────────────────────────────────────────────────────────────
 
 function corsHeaders(origin: string | null, allowed: string): HeadersInit {
   const allowList = allowed.split(",").map((o) => o.trim());
-  const allowOrigin = origin && allowList.includes(origin) ? origin : allowList[0];
+  if (!origin || !allowList.includes(origin)) {
+    return { Vary: "Origin" };
+  }
   return {
-    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Authorization,Content-Type",
     "Access-Control-Max-Age": "86400",
@@ -197,21 +177,34 @@ function json(body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
   });
 }
 
+
 // ─── Auth ───────────────────────────────────────────────────────────────────
 
-function extractKey(req: Request): string | null {
+function extractKey(req: Request, allowQueryParam = false): string | null {
   const auth = req.headers.get("Authorization") || "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
-  const key = m ? m[1].trim() : new URL(req.url).searchParams.get("key") ?? "";
+  let key = m ? m[1].trim() : "";
+  if (!key && allowQueryParam) {
+    key = new URL(req.url).searchParams.get("key") ?? "";
+  }
   return KEY_PATTERN.test(key) ? key : null;
 }
 
 /**
- * Look up a user by api_key — races Supabase and Neon simultaneously.
- * Returns whichever responds first with a match. If one is down, the other wins.
+ * Look up a user by api_key.
+ *
+ * Fast path: Neon has an indexed api_keys table — O(1) lookup.
+ * Fallback: Supabase auth.users full scan — used when Neon is unavailable or
+ * the user was registered before the Neon sync webhook fired.
  */
 async function findUserByKey(env: Env, key: string): Promise<SupabaseUser | null> {
-  // Supabase lookup (scans user_metadata)
+  // Fast path — indexed lookup
+  if (env.NEON_DATABASE_URL) {
+    const neonResult = await neonFindUserByKey(env, key).catch(() => null);
+    if (neonResult) return neonResult;
+  }
+
+  // Slow fallback — full scan of Supabase auth.users
   async function fromSupabase(): Promise<SupabaseUser | null> {
     let page = 1;
     const perPage = 1000;
@@ -233,13 +226,7 @@ async function findUserByKey(env: Env, key: string): Promise<SupabaseUser | null
     }
   }
 
-  // Race both — first non-null result wins
-  const [supabaseResult, neonResult] = await Promise.all([
-    fromSupabase().catch(() => null),
-    neonFindUserByKey(env, key).catch(() => null),
-  ]);
-
-  return supabaseResult ?? neonResult;
+  return fromSupabase().catch(() => null);
 }
 
 async function updateUserMetadata(
@@ -358,10 +345,10 @@ async function handleRotate(req: Request, env: Env, cors: HeadersInit): Promise<
   if (!user) return json({ error: "key_not_found" }, { status: 401 }, cors);
 
   // Tighter rate limit: 5 rotations per hour per user
-  if (!rateLimit(`rotate:${user.id}`, 5, 3_600_000))
+  if (!(await rateLimit(env.SHADOW_RL, `rotate:${user.id}`, 5, 3_600_000)))
     return json({ error: "rate_limited" }, { status: 429 }, cors);
   // Per-IP gate
-  if (!rateLimit(`rotate_ip:${ip}`, 10, 3_600_000))
+  if (!(await rateLimit(env.SHADOW_RL, `rotate_ip:${ip}`, 10, 3_600_000)))
     return json({ error: "rate_limited" }, { status: 429 }, cors);
 
   const newKey = generateApiKey();
@@ -492,6 +479,10 @@ export default {
                 "POST /v1/chat/presence",
                 "GET /v1/chat/online?room=global",
               ],
+              admin: [
+                "GET /v1/admin/overview (shadow only)",
+                "GET /v1/admin/users?page=1&per_page=25 (shadow only)",
+              ],
               shadow: [
                 "GET /v1/shadow/weather?q=<city>",
                 "GET /v1/shadow/currency?from=USD&to=EUR&amount=1",
@@ -524,12 +515,12 @@ export default {
       // Device-authorization flow — kickoff + poll are unauthenticated (the device_code IS the secret)
       const ip = req.headers.get("CF-Connecting-IP") ?? req.headers.get("X-Forwarded-For") ?? "unknown";
       if (path === "/v1/auth/device" && req.method === "POST") {
-        if (!rateLimit(`device:${ip}`, 5, 60_000))
+        if (!(await rateLimit(env.SHADOW_RL, `device:${ip}`, 5, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         return startDeviceAuth(req, env, undefined, cors);
       }
       if (path === "/v1/auth/device/poll" && req.method === "POST") {
-        if (!rateLimit(`poll:${ip}`, 30, 60_000))
+        if (!(await rateLimit(env.SHADOW_RL, `poll:${ip}`, 30, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         return pollDeviceAuth(req, env, undefined, cors);
       }
@@ -567,7 +558,7 @@ export default {
       // POST /v1/auth/send-recovery-kit — fire-and-forget: sends codes to disposal email then discards it.
       // Disposal email is NEVER stored. Rate-limited to prevent abuse as a spam relay.
       if (path === "/v1/auth/send-recovery-kit" && req.method === "POST") {
-        if (!rateLimit(`recovery-kit:${ip}`, 3, 3_600_000))
+        if (!(await rateLimit(env.SHADOW_RL, `recovery-kit:${ip}`, 3, 3_600_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         const body = (await req.json().catch(() => null)) as {
           disposal_email?: string; codes?: string[]; handle?: string;
@@ -584,7 +575,7 @@ export default {
 
       // POST /v1/auth/recover — validate recovery code, return a session the client can set.
       if (path === "/v1/auth/recover" && req.method === "POST") {
-        if (!rateLimit(`recover:${ip}`, 5, 3_600_000))
+        if (!(await rateLimit(env.SHADOW_RL, `recover:${ip}`, 5, 3_600_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         const body = (await req.json().catch(() => null)) as { handle?: string; code?: string } | null;
         if (!body?.handle || !body.code) return json({ error: "handle_and_code_required" }, { status: 400 }, cors);
@@ -628,6 +619,12 @@ export default {
         if (!access_token) return json({ error: "session_issue_failed" }, { status: 500 }, cors);
 
         return json({ access_token, refresh_token: refresh_token ?? null }, {}, cors);
+      }
+
+      // Public profile lookup — no auth required
+      if (req.method === "GET" && path.startsWith("/v1/profile/")) {
+        const handle = path.slice("/v1/profile/".length);
+        return getProfile(req, env, handle, cors);
       }
 
       if (path === "/v1/me" && req.method === "GET") return handleMe(req, env, cors);
@@ -696,10 +693,11 @@ export default {
         // File storage
         "GET /v1/files":                      listFiles,
         "POST /v1/files/upload":              uploadFile,
-        // Shadow Mail
-        "GET /v1/mail/inbox":                 getInbox,
-        "GET /v1/mail/count":                 getMailCount,
-        "POST /v1/mail/send":                 sendOutbound,
+        // Profile
+        "PATCH /v1/me/profile":               updateProfile,
+        // Admin (shadow@shadowcypher.site only — checked inside each handler)
+        "GET /v1/admin/overview":             adminOverview,
+        "GET /v1/admin/users":                adminUsers,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];
@@ -715,47 +713,46 @@ export default {
       const missionResult       = req.method === "POST" && /^\/v1\/missions\/[^/]+\/result$/.test(path);
       const missionGet          = req.method === "GET"  && /^\/v1\/missions\/[^/]+$/.test(path) && path !== "/v1/missions";
       const missionList         = req.method === "GET"  && path === "/v1/missions";
-      // Shadow Mail parameterized routes
-      const mailGet    = req.method === "GET"    && /^\/v1\/mail\/[^/]+$/.test(path) && path !== "/v1/mail/inbox" && path !== "/v1/mail/count";
-      const mailRead   = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/read$/.test(path);
-      const mailReply  = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/reply$/.test(path);
-      const mailDelete = req.method === "DELETE" && /^\/v1\/mail\/[^/]+$/.test(path);
       // File storage
       const fileGet    = req.method === "GET"    && /^\/v1\/files\/.+/.test(path);
       const fileDelete = req.method === "DELETE" && /^\/v1\/files\/.+/.test(path);
       // Chat room management (parameterized)
       const chatRoomDelete = req.method === "DELETE" && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
       const chatRoomPatch  = req.method === "PATCH"  && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
+      // Device detail (GET) and patch (PATCH)
+      const deviceDetail_ = req.method === "GET"   && /^\/v1\/devices\/[0-9a-f-]{36}$/.test(path);
+      const devicePatch   = req.method === "PATCH"  && /^\/v1\/devices\/[0-9a-f-]{36}$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || mailGet || mailRead || mailReply || mailDelete || fileGet || fileDelete || chatRoomDelete || chatRoomPatch;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || fileGet || fileDelete || chatRoomDelete || chatRoomPatch || deviceDetail_ || devicePatch;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
         // Per-IP gate before expensive Supabase lookup (120 req/min across all authed routes)
-        if (!rateLimit(`auth:${ip}`, 120, 60_000))
+        if (!(await rateLimit(env.SHADOW_RL, `auth:${ip}`, 120, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         const user = await findUserByKey(env, key);
         if (!user) return json({ error: "key_not_found" }, { status: 401 }, cors);
         // Tighter per-user limits on expensive/sensitive operations
         // Note: POST /v1/keys/rotate is handled directly above (has its own auth+rate-limit inside handleRotate)
-        if (routeKey === "POST /v1/assistant/query" && !rateLimit(`ai:${user.id}`, 20, 60_000))
+        if (routeKey === "POST /v1/assistant/query" && !(await rateLimit(env.SHADOW_RL, `ai:${user.id}`, 20, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/scans" && !rateLimit(`scan:${user.id}`, 30, 60_000))
+        if (routeKey === "POST /v1/scans" && !(await rateLimit(env.SHADOW_RL, `scan:${user.id}`, 30, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/incidents" && !rateLimit(`inc:${user.id}`, 60, 60_000))
+        if (routeKey === "POST /v1/incidents" && !(await rateLimit(env.SHADOW_RL, `inc:${user.id}`, 60, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if ((agentMissionCreate || agentMissionPending) && !rateLimit(`msn:${user.id}`, 10, 60_000))
+        if ((agentMissionCreate || agentMissionPending) && !(await rateLimit(env.SHADOW_RL, `msn:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/files/upload" && !rateLimit(`upload:${user.id}`, 10, 60_000))
+        if (routeKey === "POST /v1/files/upload" && !(await rateLimit(env.SHADOW_RL, `upload:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/chat/dm/open" && !rateLimit(`dm-open:${user.id}`, 20, 60_000))
+        if (routeKey === "POST /v1/chat/dm/open" && !(await rateLimit(env.SHADOW_RL, `dm-open:${user.id}`, 20, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/mail/send" && !rateLimit(`mail-send:${user.id}`, 10, 60_000))
+        if (routeKey === "POST /v1/mail/send" && !(await rateLimit(env.SHADOW_RL, `mail-send:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/chat/rooms" && !rateLimit(`room-create:${user.id}`, 5, 3_600_000))
+        if (routeKey === "POST /v1/chat/rooms" && !(await rateLimit(env.SHADOW_RL, `room-create:${user.id}`, 5, 3_600_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
 
-        if (handler) return handler(req, env, { id: user.id, email: user.email }, cors);
+        const authedUser = { id: user.id, email: user.email, handle: (user.user_metadata as { handle?: string })?.handle };
+        if (handler) return handler(req, env, authedUser, cors);
 
         const parts = path.split("/");
         if (agentMissionCreate)  return createMission(req, env, { id: user.id, email: user.email }, cors, parts[3]);
@@ -763,16 +760,14 @@ export default {
         if (missionResult)       return reportMissionResult(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (missionGet)          return getMission(req, env, { id: user.id, email: user.email }, cors, parts[3]);
         if (missionList)         return listMissions(req, env, { id: user.id, email: user.email }, cors);
-        // Shadow Mail
-        if (mailGet)    return getMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
-        if (mailRead)   return markRead(req, env, { id: user.id, email: user.email }, cors, parts[3]);
-        if (mailReply)  return replyMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
-        if (mailDelete) return deleteMail(req, env, { id: user.id, email: user.email }, cors, parts[3]);
+        // Device detail/patch — id is last path segment
+        if (deviceDetail_) return deviceDetail(req, env, authedUser, cors, parts[3]);
+        if (devicePatch)   return patchDevice(req, env, authedUser, cors, parts[3]);
         // Chat room management — room name is last path segment
         if (chatRoomDelete || chatRoomPatch) {
           const roomName = path.split("/").pop()!;
-          if (chatRoomDelete) return deleteRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
-          if (chatRoomPatch)  return updateRoom(req, env, { id: user.id, email: user.email }, cors, roomName);
+          if (chatRoomDelete) return deleteRoom(req, env, authedUser, cors, roomName);
+          if (chatRoomPatch)  return updateRoom(req, env, authedUser, cors, roomName);
         }
         // File storage — key is everything after /v1/files/
         const fileKey = path.slice("/v1/files/".length);
@@ -780,9 +775,11 @@ export default {
         if (fileDelete) return deleteFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
       }
 
+
+
       // ── WebSocket upgrade: GET /v1/chat/ws?room=<name> ─────────────────────
       if (req.method === "GET" && path === "/v1/chat/ws" && req.headers.get("Upgrade") === "websocket") {
-        const key = extractKey(req);
+        const key = extractKey(req, true); // WS clients can't set headers; allow ?key= query param
         if (!key) return new Response("missing_or_invalid_key", { status: 401 });
         const user = await findUserByKey(env, key);
         if (!user) return new Response("key_not_found", { status: 401 });
@@ -812,7 +809,8 @@ export default {
           if (uid1 !== user.id && uid2 !== user.id) return new Response("forbidden", { status: 403 });
         }
 
-        const nick = user.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+        const rawNick = (user.user_metadata as { handle?: string })?.handle ?? user.email.split("@")[0];
+        const nick = rawNick.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
         const doId = env.CHAT_ROOM.idFromName(roomName);
         const stub = env.CHAT_ROOM.get(doId);
 
@@ -837,23 +835,4 @@ export default {
     ctx.waitUntil(runCveMatchingCron(env));
   },
 
-  async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
-    // Read raw email body (cap at 10 MB to guard against oversized messages)
-    const MAX_BYTES = 10 * 1024 * 1024;
-    const reader = message.raw.getReader();
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done || !value) break;
-      total += value.byteLength;
-      if (total > MAX_BYTES) { message.setReject("Message too large"); return; }
-      chunks.push(value);
-    }
-    const merged = new Uint8Array(total);
-    let offset = 0;
-    for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
-    const rawBody = new TextDecoder("utf-8").decode(merged);
-    ctx.waitUntil(storeInboundMail(env, message, rawBody));
-  },
 };

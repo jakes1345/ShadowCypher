@@ -2,14 +2,14 @@ Origin: ShadowCypher
 Label: ShadowCypher
 Suite: stable
 Codename: stable
-Version: 3.0.0
+Version: 2.2.0
 Architectures: amd64
 Components: main
 Description: ShadowCypher official apt repository
-Date: Wed, 15 Jul 2026 18:41:18 +0000
+Date: Wed, 02 Sep 2026 00:02:22 +0000
 MD5Sum:
  d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
- 67f5ddbb353290e6b20070362c54ca95 29 main/binary-amd64/Packages.gz
+ daf57eca96b17eaf563cbe123d0bab8d 29 main/binary-amd64/Packages.gz
 SHA256:
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
- b5b8a6ee976a2cd3f921e7932256e9d23176062337b90b8dde4d5fbfc158d90d 29 main/binary-amd64/Packages.gz
+ 138a78d3ad9aed810e38f8f48f6d00b9b3b6f1c69a34383a38950358d3c78dc5 29 main/binary-amd64/Packages.gz

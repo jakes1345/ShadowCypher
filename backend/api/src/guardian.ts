@@ -40,7 +40,7 @@ interface RegisterBody {
 
 interface ScanBody {
   agent_id?: string;
-  scan_type: "network" | "port" | "router" | "arp" | "audit";
+  scan_type: "network" | "port" | "router" | "arp" | "audit" | "dns" | "firewall" | "system";
   target?: string;
   duration_ms?: number;
   devices?: Array<{
@@ -157,9 +157,11 @@ export async function heartbeatAgent(req: Request, env: Env, user: AuthedUser, c
 // ─── Scans + devices ────────────────────────────────────────────────────────
 
 export async function uploadScan(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
-  const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
-  if (contentLength > 1_000_000) return json({ error: "payload_too_large" }, { status: 413 }, cors);
-  const body = (await req.json().catch(() => ({}))) as ScanBody;
+  const raw = await req.arrayBuffer().catch(() => null);
+  if (!raw || raw.byteLength > 1_000_000) return json({ error: "payload_too_large" }, { status: 413 }, cors);
+  let body: ScanBody;
+  try { body = JSON.parse(new TextDecoder().decode(raw)) as ScanBody; }
+  catch { return json({ error: "invalid_json" }, { status: 400 }, cors); }
   if (!body.scan_type) return json({ error: "scan_type_required" }, { status: 400 }, cors);
 
   const scan = await dbInsert<{ id: string; started_at: string }>(env, "scans", {
@@ -234,6 +236,64 @@ export async function listDevices(req: Request, env: Env, user: AuthedUser, cors
   return json({ devices }, {}, cors);
 }
 
+export async function patchDevice(req: Request, env: Env, user: AuthedUser, cors: HeadersInit, deviceId: string) {
+  if (!/^[0-9a-f-]{36}$/.test(deviceId)) {
+    return json({ error: "invalid_device_id" }, { status: 400 }, cors);
+  }
+  let body: { trusted?: boolean; notes?: string };
+  try { body = await req.json<{ trusted?: boolean; notes?: string }>(); }
+  catch { return json({ error: "invalid_json" }, { status: 400 }, cors); }
+  const patch: Record<string, unknown> = {};
+  if (typeof body.trusted === "boolean") patch.trusted = body.trusted;
+  if (typeof body.notes === "string") patch.notes = body.notes.slice(0, 500);
+  if (!Object.keys(patch).length) return json({ error: "nothing_to_update" }, { status: 400 }, cors);
+  await dbUpdate(env, "devices", { user_id: `eq.${user.id}`, id: `eq.${deviceId}` }, patch);
+  return json({ ok: true }, {}, cors);
+}
+
+export async function deviceDetail(req: Request, env: Env, user: AuthedUser, cors: HeadersInit, deviceId: string) {
+  if (!/^[0-9a-f-]{36}$/.test(deviceId)) {
+    return json({ error: "invalid_device_id" }, { status: 400 }, cors);
+  }
+
+  const devices = await dbSelect(env, "devices", {
+    select: "id,mac,ip,hostname,vendor,device_type,open_ports,os_fingerprint,trusted,notes,first_seen_at,last_seen_at",
+    filters: { user_id: `eq.${user.id}`, id: `eq.${deviceId}` },
+    limit: 1,
+  });
+  if (!devices.length) return json({ error: "not_found" }, { status: 404 }, cors);
+  const device = devices[0] as { first_seen_at?: string; [k: string]: unknown };
+
+  const profile = await getProfile(env, user.id);
+  const plan = getEffectivePlan(profile);
+  const limits = getLimits(plan);
+  const cutoff = new Date(Date.now() - limits.scanHistoryDays * 86400000).toISOString();
+  const scanSince = device.first_seen_at && device.first_seen_at > cutoff ? device.first_seen_at : cutoff;
+
+  const [incidents, cveAlerts, scans] = await Promise.all([
+    dbSelect(env, "incidents", {
+      select: "id,severity,category,title,detail,status,created_at",
+      filters: { user_id: `eq.${user.id}`, device_id: `eq.${deviceId}` },
+      order: "created_at.desc",
+      limit: 50,
+    }),
+    dbSelect(env, "cve_alerts_sent", {
+      select: "id,cve_id,fired_at",
+      filters: { user_id: `eq.${user.id}`, device_id: `eq.${deviceId}` },
+      order: "fired_at.desc",
+      limit: 30,
+    }),
+    dbSelect(env, "scans", {
+      select: "id,scan_type,target,duration_ms,device_count,started_at",
+      filters: { user_id: `eq.${user.id}`, started_at: `gte.${scanSince}` },
+      order: "started_at.desc",
+      limit: 20,
+    }),
+  ]);
+
+  return json({ device, incidents, cve_alerts: cveAlerts, scans }, {}, cors);
+}
+
 export async function recentScans(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
   // Plan gate: free tier sees only last 7 days; Pro = 90 days; Operator = unlimited
   const profile = await getProfile(env, user.id);
@@ -253,9 +313,11 @@ export async function recentScans(req: Request, env: Env, user: AuthedUser, cors
 // ─── Incidents ──────────────────────────────────────────────────────────────
 
 export async function createIncident(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
-  const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
-  if (contentLength > 64_000) return json({ error: "payload_too_large" }, { status: 413 }, cors);
-  const body = (await req.json().catch(() => ({}))) as IncidentBody;
+  const raw = await req.arrayBuffer().catch(() => null);
+  if (!raw || raw.byteLength > 64_000) return json({ error: "payload_too_large" }, { status: 413 }, cors);
+  let body: IncidentBody;
+  try { body = JSON.parse(new TextDecoder().decode(raw)) as IncidentBody; }
+  catch { return json({ error: "invalid_json" }, { status: 400 }, cors); }
   if (!body.severity || !body.category || !body.title) {
     return json({ error: "severity_category_title_required" }, { status: 400 }, cors);
   }

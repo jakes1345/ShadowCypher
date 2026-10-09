@@ -3,14 +3,16 @@ ShadowBus — The Apex Event Backbone.
 Decouples Core modules (Kairos, Hub, Orchestrator) to prevent circular imports.
 """
 
-import threading
 import asyncio
-from typing import Callable, List, Dict, Any, Union
+import threading
+from typing import Any, Callable, Dict, List
+
 from shadowcypher.core.logger import logger
+
 
 class ShadowBus:
     """Thread-safe, Async-aware Event Backbone for the ShadowCypher suite."""
-    
+
     def __init__(self):
         self._listeners: Dict[str, List[Callable]] = {}
         self._lock = threading.RLock()
@@ -30,10 +32,10 @@ class ShadowBus:
         """
         with self._lock:
             listeners = self._listeners.get(event_type, []).copy()
-        
+
         if not listeners:
             return
-        
+
         for callback in listeners:
             try:
                 if ui_thread:

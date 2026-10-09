@@ -8,7 +8,7 @@ TEMP_PASS="${SHADOWOS_TEMP_PASS:-ShadowOS1!}"
 DEMO_PASS="${SHADOWOS_SSH_PASS:-shadow}"
 
 echo ">> Waiting for SSH on port $PORT..."
-for i in $(seq 1 90); do
+for _ in $(seq 1 90); do
     timeout 2 bash -c "</dev/tcp/$HOST/$PORT" 2>/dev/null && break
     sleep 2
 done

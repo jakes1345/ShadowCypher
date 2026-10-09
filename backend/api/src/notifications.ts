@@ -33,6 +33,7 @@ interface NotificationPrefs {
   push_subscription: PushSubscriptionJSON | null;
   mail_push_enabled: boolean | null;
   mention_push_enabled: boolean | null;
+  cve_push_enabled: boolean | null;
 }
 
 interface PushPayload {
@@ -69,7 +70,7 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
 
 export async function getPreferences(req: Request, env: Env, user: AuthedUser, cors: HeadersInit) {
   const rows = await dbSelect<NotificationPrefs>(env, "notification_prefs", {
-    select: "user_id,email_enabled,email_severity,push_enabled,push_subscription,mail_push_enabled,mention_push_enabled",
+    select: "user_id,email_enabled,email_severity,push_enabled,push_subscription,mail_push_enabled,mention_push_enabled,cve_push_enabled",
     filters: { user_id: `eq.${user.id}` },
     limit: 1,
   }).catch(() =>
@@ -87,6 +88,7 @@ export async function getPreferences(req: Request, env: Env, user: AuthedUser, c
     push_subscription: null,
     mail_push_enabled: true,
     mention_push_enabled: true,
+    cve_push_enabled: true,
   };
   return json({ preferences: prefs }, {}, cors);
 }
@@ -105,6 +107,7 @@ export async function updatePreferences(req: Request, env: Env, user: AuthedUser
   if (body.push_subscription !== undefined) patch.push_subscription = body.push_subscription;
   if (body.mail_push_enabled !== undefined) patch.mail_push_enabled = !!body.mail_push_enabled;
   if (body.mention_push_enabled !== undefined) patch.mention_push_enabled = !!body.mention_push_enabled;
+  if (body.cve_push_enabled !== undefined) patch.cve_push_enabled = !!body.cve_push_enabled;
 
   const saved = await dbUpsert<NotificationPrefs>(env, "notification_prefs", patch, "user_id");
   return json({ preferences: saved }, {}, cors);
@@ -409,6 +412,31 @@ export async function dispatchMailPushNotification(
     body: `${fromShort}: ${mail.subject}`,
     url: "/?nav=mail",
     tag: `sc-mail-${userId}`,
+  }).catch(() => null);
+}
+
+// ─── CVE push (called from cve_matcher cron) ────────────────────────────────
+
+export async function dispatchCvePushNotification(
+  env: Env,
+  userId: string,
+  cve: { cve_id: string; severity: string; device_name: string; description: string }
+): Promise<void> {
+  if (!env.PUSH_VAPID_PRIVATE_KEY) return;
+  const prefRows = await dbSelect<NotificationPrefs>(env, "notification_prefs", {
+    select: "push_enabled,push_subscription,cve_push_enabled",
+    filters: { user_id: `eq.${userId}` },
+    limit: 1,
+  }).catch(() => [] as NotificationPrefs[]);
+  const prefs = prefRows[0];
+  if (!prefs?.push_enabled || prefs.cve_push_enabled === false || !prefs.push_subscription) return;
+  const sevEmoji = cve.severity === "CRITICAL" ? "🚨" : cve.severity === "HIGH" ? "⚠️" : "🔔";
+  await sendWebPushPayload(env, prefs.push_subscription, {
+    title: `${sevEmoji} ${cve.cve_id} — ${cve.severity}`,
+    body: `Affects ${cve.device_name}: ${cve.description.slice(0, 100)}`,
+    severity: cve.severity.toLowerCase() === "critical" ? "critical" : "warning",
+    url: "/?nav=threats",
+    tag: `sc-cve-${userId}-${cve.cve_id}`,
   }).catch(() => null);
 }
 

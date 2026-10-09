@@ -64,16 +64,18 @@
         <div class="item shipped"><span class="tag ship">DONE</span>ShadowOS v0.1.0 — Arch-based live/installable ISO. Hyprland, 250+ packages, 6 hot-swap modes, ShadowCypher + Ollama pre-installed. ISO builds verified at ~7.4 GB.</div>
         <div class="item shipped"><span class="tag ship">DONE</span>RAG knowledge base (1593 chunks) — live context injection for AI security teams</div>
         <div class="item shipped"><span class="tag ship">DONE</span>Gemma 4 local model — shadow-gemma4 modelfile, Ollama sovereign config (no telemetry)</div>
+        <div class="item shipped"><span class="tag ship">DONE</span>OSINT Intelligence page — integrated Shodan/Censys/WhoisXML/HaveIBeenPwned + AI triage panel in web dashboard</div>
+        <div class="item shipped"><span class="tag ship">DONE</span>ShadowOS full security hardening — AppArmor LSM activation, dnscrypt-proxy config, nftables-only firewall (UFW removed), AnonSurf DNS handoff, corrected boot cmdline across all entries</div>
+        <div class="item shipped"><span class="tag ship">DONE</span>Guardian agent auto-update — SHA256-verified GitHub release polling; atomic self-replace + execv restart; runs every 24 h</div>
+        <div class="item shipped"><span class="tag ship">DONE</span>Device detail drilldown — click any device to see OS fingerprint, CVE matches, linked incidents, risk score (0–100), and full scan timeline; powered by new <code>GET /v1/devices/:id</code> API route</div>
+        <div class="item shipped"><span class="tag ship">DONE</span>ShadowScript missions library — 15 pre-built .shadow missions: recon, OSINT, web audit, vuln sweep, forensics, WiFi survey, AD recon, threat hunt, network pivot, cloud recon, and more</div>
     </div>
 
     <h2 style="color: var(--accent-primary);">// NEXT — active development</h2>
     <div class="col">
         <div class="item next"><span class="tag next">NEXT</span>ShadowOS public ISO release — host verified ISO on CDN or GitHub LFS so users can download without building</div>
         <div class="item next"><span class="tag next">NEXT</span>ShadowOS installer polish — test Calamares flow end-to-end, fix any firstboot service failures</div>
-        <div class="item next"><span class="tag next">NEXT</span>Guardian agent auto-update — daemon checks GitHub releases and self-upgrades via pip</div>
         <div class="item next"><span class="tag next">NEXT</span>Shadow wake word — background service listens for "Hey Shadow" without draining battery (openWakeWord via ONNX Runtime)</div>
-        <div class="item next"><span class="tag next">NEXT</span>Device detail drilldown — click any device to see full port history, CVE matches, risk score, and scan timeline</div>
-        <div class="item next"><span class="tag next">NEXT</span>ShadowScript missions library — 10+ pre-built .shadow mission files for common ops (recon, audit, OSINT)</div>
     </div>
 
     <h2 style="color: var(--text-secondary);">// LATER — planned</h2>

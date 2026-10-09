@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=ShadowOS Installer
+GenericName=System Installer
+Comment=Install ShadowOS to your machine
+Exec=pkexec shadowos-installer
+Icon=shadowos-installer
+Terminal=false
+Type=Application
+Categories=System;
+Keywords=install;shadowos;

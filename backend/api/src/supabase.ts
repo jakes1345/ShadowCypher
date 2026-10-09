@@ -11,6 +11,7 @@ interface QueryOptions {
   filters?: Record<string, string>; // e.g. { user_id: "eq.<uuid>" }
   order?: string;                   // e.g. "created_at.desc"
   limit?: number;
+  offset?: number;
   single?: boolean;
 }
 
@@ -19,6 +20,7 @@ function buildUrl(env: Env, table: string, opts: QueryOptions = {}): string {
   if (opts.select) url.searchParams.set("select", opts.select);
   if (opts.order) url.searchParams.set("order", opts.order);
   if (opts.limit !== undefined) url.searchParams.set("limit", String(opts.limit));
+  if (opts.offset !== undefined) url.searchParams.set("offset", String(opts.offset));
   if (opts.filters) {
     for (const [k, v] of Object.entries(opts.filters)) {
       url.searchParams.set(k, v);
@@ -72,6 +74,20 @@ export async function dbUpsert<T = unknown>(
   if (!resp.ok) throw new Error(`db_upsert_failed:${table}:${resp.status}:${await resp.text()}`);
   const rows = (await resp.json()) as T[];
   return rows[0];
+}
+
+export async function dbCount(env: Env, table: string, filters: Record<string, string> = {}): Promise<number> {
+  const url = buildUrl(env, table, { filters, select: "id", limit: 1 });
+  const headers = {
+    ...authHeaders(env, "count=exact"),
+    "Range-Unit": "items",
+    "Range": "0-0",
+  } as Record<string, string>;
+  const resp = await fetch(url, { headers });
+  const range = resp.headers.get("Content-Range"); // "0-0/1234" or "*/0"
+  if (!range) return 0;
+  const total = range.split("/")[1];
+  return total && total !== "*" ? parseInt(total, 10) : 0;
 }
 
 export async function dbUpdate<T = unknown>(

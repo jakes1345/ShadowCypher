@@ -12,8 +12,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from shadowcypher.core.guardian_service import get_guardian_service
-from shadowcypher.core.scan_history import get_scan_history
+from shadowcypher.core.guardian_service import get_guardian_service  # noqa: E402
+from shadowcypher.core.scan_history import get_scan_history  # noqa: E402
 
 
 def test_guardian_service():

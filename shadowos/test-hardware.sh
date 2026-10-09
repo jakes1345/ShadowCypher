@@ -25,10 +25,10 @@ RESULTS="/tmp/shadowos-hw-test-$(date +%Y%m%d-%H%M%S).json"
     echo "    \"usb_ports\": $(lsusb | wc -l),"
 
     # Wireless detection
-    echo "    \"wireless\": \"$(ip link | grep -i wl | wc -l > 0 && echo 'detected' || echo 'none')\","
+    echo "    \"wireless\": \"$(if [[ $(ip link | grep -i wl | wc -l) -gt 0 ]]; then echo 'detected'; else echo 'none'; fi)\","
 
     # GPU detection
-    echo "    \"gpu\": \"$(lspci | grep -i display | wc -l > 0 && echo 'detected' || echo 'none')\""
+    echo "    \"gpu\": \"$(if [[ $(lspci | grep -i display | wc -l) -gt 0 ]]; then echo 'detected'; else echo 'none'; fi)\""
 
     echo "  }"
     echo "}"

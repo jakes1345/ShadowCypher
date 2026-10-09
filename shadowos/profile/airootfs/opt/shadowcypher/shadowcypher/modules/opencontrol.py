@@ -4,13 +4,15 @@ Bridges ShadowCypher to the OpenControl (AnomalyCo) control plane
 for remote hardware and node orchestration.
 """
 
-import json
-import requests
 import uuid
-from typing import Dict, List, Any, Optional
-from shadowcypher.core.module import BaseModule
-from shadowcypher.core.logger import logger
+from typing import Any, Dict, List
+
+import requests
+
 from shadowcypher.core.config import config
+from shadowcypher.core.logger import logger
+from shadowcypher.core.module import BaseModule
+
 try:
     from ai_engine.autoagent.registry import register_tool
 except ImportError:
@@ -37,7 +39,7 @@ class OpenControlClient:
         """Sends a high-velocity command to a remote infrastructure node."""
         payload = {"command": command, "node_id": node_id, "timestamp": uuid.uuid4().hex}
         try:
-            res = requests.post(f"{self.endpoint}/api/v1/execute", 
+            res = requests.post(f"{self.endpoint}/api/v1/execute",
                                json=payload, headers=self.headers, timeout=30)
             return res.json()
         except Exception as e:
@@ -55,7 +57,7 @@ def oc_list_infrastructure() -> str:
     nodes = client.list_nodes()
     if not nodes:
         return "No nodes detected in the OpenControl gateway."
-    
+
     output = "OPENCONTROL_TOPOLOGY:\n"
     for n in nodes:
         output += f"- NODE_ID: {n.get('id')} | IP: {n.get('ip')} | STATUS: {n.get('status')}\n"
@@ -72,7 +74,7 @@ def oc_strike_remote(node_id: str, command: str) -> str:
     """
     client = OpenControlClient()
     res = client.execute_remote(node_id, command)
-    
+
     if res.get("status") == "SUCCESS":
         return f"STRIKE_SUCCESS [{node_id}]:\n{res.get('output', 'No Output.')}"
     return f"STRIKE_FAILED [{node_id}]: {res.get('error', 'Unknown Error')}"

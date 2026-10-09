@@ -9,6 +9,7 @@ auto-downloaded from a hardcoded URL — point `rules_dir` at whatever rule
 pack you trust: Neo23x0/signature-base, Yara-Rules/rules, your own).
 """
 
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -16,6 +17,9 @@ from typing import Callable, Optional
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_filepath
+
+logger = logging.getLogger(__name__)
+
 
 
 def default_rules_dir() -> Path:

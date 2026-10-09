@@ -1,0 +1,149 @@
+# ─────────────────────────────────────────────────────
+# Go Lesson 4 — HTTP Recon with net/http
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • Full HTTP GET with custom headers
+#   • Reading response headers and status codes
+#   • Extracting a page title from HTML
+#   • Detecting security header presence/absence
+#   • Redirect chain following and detection
+# ─────────────────────────────────────────────────────
+
+go http_recon {
+    package main
+
+    import (
+        "encoding/json"
+        "fmt"
+        "io"
+        "net/http"
+        "os"
+        "regexp"
+        "strings"
+        "time"
+    )
+
+    var titleRe = regexp.MustCompile(`(?i)<title[^>]*>(.*?)</title>`)
+
+    // Security headers every site should have
+    var secHeaders = []string{
+        "Strict-Transport-Security",
+        "Content-Security-Policy",
+        "X-Frame-Options",
+        "X-Content-Type-Options",
+        "Referrer-Policy",
+        "Permissions-Policy",
+    }
+
+    func main() {
+        var args map[string]interface{}
+        json.NewDecoder(os.Stdin).Decode(&args)
+
+        target, _ := args["arg0"].(string)
+        if !strings.HasPrefix(target, "http") {
+            target = "https://" + target
+        }
+
+        client := &http.Client{
+            Timeout: 10 * time.Second,
+            CheckRedirect: func(req *http.Request, via []*http.Request) error {
+                if len(via) >= 5 {
+                    return fmt.Errorf("too many redirects")
+                }
+                return nil
+            },
+        }
+
+        req, _ := http.NewRequest("GET", target, nil)
+        // Blend in as a browser
+        req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36")
+        req.Header.Set("Accept", "text/html,application/xhtml+xml,*/*")
+
+        resp, err := client.Do(req)
+        if err != nil {
+            fmt.Printf("SHADOWVAR:HTTP_ERROR=%s\n", err.Error())
+            fmt.Println("Request failed:", err)
+            return
+        }
+        defer resp.Body.Close()
+
+        // Read body (capped at 64KB for title extraction)
+        body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+
+        // Extract title
+        title := ""
+        if m := titleRe.FindSubmatch(body); m != nil {
+            title = strings.TrimSpace(string(m[1]))
+        }
+
+        // Check security headers
+        var missing []string
+        var present []string
+        for _, h := range secHeaders {
+            if resp.Header.Get(h) != "" {
+                present = append(present, h)
+            } else {
+                missing = append(missing, h)
+            }
+        }
+
+        server := resp.Header.Get("Server")
+        powered := resp.Header.Get("X-Powered-By")
+
+        // Write back structured findings
+        fmt.Printf("SHADOWVAR:HTTP_STATUS=%d\n", resp.StatusCode)
+        fmt.Printf("SHADOWVAR:HTTP_TITLE=%s\n", title)
+        fmt.Printf("SHADOWVAR:HTTP_SERVER=%s\n", server)
+        fmt.Printf("SHADOWVAR:HTTP_POWERED_BY=%s\n", powered)
+        fmt.Printf("SHADOWVAR:MISSING_HEADERS=%s\n", strings.Join(missing, ","))
+        fmt.Printf("SHADOWVAR:SEC_SCORE=%d/%d\n", len(present), len(secHeaders))
+
+        // Human-readable output → $LAST
+        fmt.Printf("Status:  %d %s\n", resp.StatusCode, http.StatusText(resp.StatusCode))
+        fmt.Printf("Title:   %s\n", title)
+        if server != "" { fmt.Printf("Server:  %s\n", server) }
+        if powered != "" { fmt.Printf("Powered: %s\n", powered) }
+        fmt.Printf("Security headers: %d/%d present\n", len(present), len(secHeaders))
+        if len(missing) > 0 {
+            fmt.Printf("Missing: %s\n", strings.Join(missing, ", "))
+        }
+    }
+}
+
+# ── Run it against a target ───────────────────────────
+VAR target = "https://example.com"
+
+!echo("HTTP recon on $target ...")
+
+UNSAFE {
+    http_recon $target
+}
+
+!echo($LAST)
+
+# Branch on what we found
+IF $HTTP_SERVER != "" {
+    !echo("Server reveals itself as: $HTTP_SERVER — check CVEs for this version")
+}
+
+IF $HTTP_POWERED_BY != "" {
+    !echo("Technology disclosed: $HTTP_POWERED_BY")
+}
+
+AI("HTTP recon on $target found: status=$HTTP_STATUS title=$HTTP_TITLE server=$HTTP_SERVER missing security headers: $MISSING_HEADERS — what does this tell us and what should we test next?")
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • io.LimitReader prevents memory exhaustion on huge pages
+#   • CheckRedirect lets you track the full redirect chain
+#   • Server and X-Powered-By disclosure is extremely common —
+#     always check these, they point directly to CVEs
+#   • Missing security headers are low-effort findings with
+#     real impact (clickjacking, XSS, MIME sniff attacks)
+#
+# CHALLENGE: follow every redirect and print the chain
+#   e.g. http:// → https:// → https://www. → final
+#   Hint: log each request in CheckRedirect via via[len(via)-1].URL
+# ─────────────────────────────────────────────────────
+
+RETURN "go lesson 4 complete"

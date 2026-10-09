@@ -49,9 +49,9 @@ def conversations_to_gemma(example: dict) -> dict:
 
 
 def main():
-    from unsloth import FastLanguageModel
-    from trl import SFTTrainer, SFTConfig
     from datasets import Dataset
+    from trl import SFTConfig, SFTTrainer
+    from unsloth import FastLanguageModel
 
     print("[finetune] Loading base model: google/gemma-3-1b-it")
     model, tokenizer = FastLanguageModel.from_pretrained(

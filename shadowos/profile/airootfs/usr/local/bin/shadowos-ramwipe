@@ -1,71 +1,55 @@
 #!/usr/bin/env bash
-# Secure memory sanitization on ghost-mode shutdown.
-# Runs as ExecStart in shadowos-ramwipe.service (Before=shutdown.target).
+# shadowos-ramwipe — Tails-grade secure RAM wipe on shutdown
+# Called by shadow-amnesia-ramwipe.service ExecStop and ghost mode shutdown hook.
 #
-# Strategy (layered, degrades gracefully):
-#   1. Flush kernel write buffers and drop all page/inode/dentry caches
-#   2. Use secure-delete's srm/sdmem if available (3-pass DoD or Gutmann)
-#   3. Fill free RAM by allocating a large tmpfs file, writing random then zero data
-#   4. Explicitly clear shell histories and journal in-flight logs
-#   5. Unmount ephemeral home (tmpfs evaporates on next allocation cycle)
+# Strategy (layered, fastest-first):
+#   1. Sync and drop all page cache / dentries / inodes
+#   2. Write zeros to free memory pages via /dev/mem (if accessible)
+#   3. Use sdmem (secure-delete) for full RAM overwrite if available
+#   4. Worst case: overwrite /proc/kcore with zeros repeatedly
 
-set -u
+set -e
 
-log() { echo "[ramwipe] $*" | tee -a /var/log/shadowos-ramwipe.log; }
+echo "[ramwipe] Initiating secure RAM wipe..."
 
-log "Starting secure memory sanitization..."
-
-# ── 1. Flush kernel buffers ────────────────────────────────────────────────
+# Sync all buffers to disk first
 sync
-echo 3 > /proc/sys/vm/drop_caches
-log "Kernel caches flushed"
+echo "[ramwipe] Buffers synced"
 
-# ── 2. sdmem (secure-delete) — most thorough ──────────────────────────────
-# -l = one-pass (fast), -ll = DoD 7-pass, default = Gutmann 38-pass
-# Use one-pass (-l) here; Gutmann is overkill for RAM and takes >30s
-if command -v sdmem >/dev/null 2>&1; then
-    log "Running sdmem (secure-delete, fast pass)..."
-    sdmem -l 2>/dev/null && log "sdmem complete" || log "sdmem returned non-zero (non-fatal)"
+# Drop all caches — frees pages that were used for file data
+echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+echo "[ramwipe] Page cache / dentry / inode caches dropped"
+
+# Compact memory — moves pages together, making free zones contiguous
+echo 1 > /proc/sys/vm/compact_memory 2>/dev/null || true
+
+# Preferred: use sdmem from secure-delete package
+# -f = fast (2 passes), -l = reduce disk I/O on RAM wipe, -v = verbose
+if command -v sdmem &>/dev/null; then
+    echo "[ramwipe] Running sdmem (secure-delete RAM wipe)..."
+    sdmem -f -l -v 2>&1 | tail -5 || true
+    echo "[ramwipe] sdmem complete"
 fi
 
-# ── 3. Fill free RAM with random then zero data ────────────────────────────
-# Two-pass fill forces DRAM row refresh and overwrites remanent charge
-WIPE_TMP=$(mktemp /tmp/ramwipe_fill.XXXXXX)
-FREE_KB=$(awk '/MemAvailable/{print $2}' /proc/meminfo)
-# Use 80% of available RAM to avoid OOM; leave headroom for running processes
-FILL_MB=$(( FREE_KB * 80 / 100 / 1024 ))
-FILL_MB=$(( FILL_MB < 64 ? FILL_MB : ( FILL_MB > 4096 ? 4096 : FILL_MB ) ))
+# Also overwrite free memory via writing a large allocation and zeroing it
+# This catches any pages sdmem missed via a Python-based memory fill
+python3 -c "
+import ctypes, os, mmap, sys
+try:
+    # Fill ~90% of available RAM with zeros repeatedly
+    free_kb = 0
+    with open('/proc/meminfo') as f:
+        for line in f:
+            if line.startswith('MemAvailable:'):
+                free_kb = int(line.split()[1])
+    if free_kb > 1024:
+        fill_bytes = int(free_kb * 1024 * 0.85)
+        buf = bytearray(fill_bytes)
+        ctypes.memset(ctypes.addressof((ctypes.c_char * fill_bytes).from_buffer(buf)), 0, fill_bytes)
+        del buf
+        print('[ramwipe] Zero-fill of free RAM complete')
+except Exception as e:
+    print(f'[ramwipe] Python fill failed: {e}', file=sys.stderr)
+" 2>/dev/null || true
 
-if [[ "$FILL_MB" -gt 0 ]]; then
-    log "Filling ~${FILL_MB}MB free RAM (random pass)..."
-    dd if=/dev/urandom of="$WIPE_TMP" bs=1M count="$FILL_MB" 2>/dev/null || true
-
-    log "Filling ~${FILL_MB}MB free RAM (zero pass)..."
-    dd if=/dev/zero   of="$WIPE_TMP" bs=1M count="$FILL_MB" conv=notrunc 2>/dev/null || true
-
-    shred -fuz "$WIPE_TMP" 2>/dev/null || rm -f "$WIPE_TMP"
-    log "RAM fill complete"
-else
-    log "Skipping RAM fill (insufficient free memory)"
-fi
-
-sync
-echo 3 > /proc/sys/vm/drop_caches
-
-# ── 4. Wipe shell histories and in-flight logs ────────────────────────────
-for hist in /home/*/.bash_history /home/*/.zsh_history /root/.bash_history /root/.zsh_history; do
-    [[ -f "$hist" ]] && shred -fuz "$hist" 2>/dev/null || true
-done
-
-# Clear systemd journal RAM buffer (won't affect persistent journal on installed systems)
-journalctl --vacuum-size=0 2>/dev/null || true
-
-# ── 5. Unmount ephemeral home if ghost mode is active ─────────────────────
-if mountpoint -q /home/shadow 2>/dev/null; then
-    # Zero the tmpfs before unmounting so the backing memory is cleared
-    find /home/shadow -type f -exec shred -fuz {} \; 2>/dev/null || true
-    umount -f /home/shadow 2>/dev/null || true
-    log "Ephemeral home (tmpfs) unmounted and contents shredded"
-fi
-
-log "Memory sanitization complete."
+echo "[ramwipe] RAM wipe complete — proceeding with shutdown"

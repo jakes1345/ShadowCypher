@@ -5,11 +5,13 @@
 # Automates the Dynamic DNS update sequence for Namecheap domains.
 # Ensures the specified domain records point to the current public IP address.
 
-import requests
-import sys
 import os
+import sys
 import time
 from typing import Optional
+
+import requests
+
 from shadowcypher.core.logger import logger
 
 DOMAIN = os.environ.get("NAMECHEAP_DOMAIN", "shadowcypher.site")
@@ -41,7 +43,7 @@ def update_dns(host: str, domain: str, password: str, ip: str):
         "password": password,
         "ip": ip
     }
-    
+
     try:
         logger.info("dns", f"Synchronizing record: {host}.{domain} -> {ip}")
         response = requests.get(url, params=params, timeout=10)
@@ -68,12 +70,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     logger.info("dns", "Initiating DNS synchronization sequence...")
-    
+
     current_ip = get_public_ip()
     if not current_ip:
         logger.error("dns", "Failed to resolve public IP address. Aborting.")
         sys.exit(1)
-        
+
     for h in HOSTS:
         update_dns(h, DOMAIN, PASSWORD, current_ip)
         time.sleep(1) # Rate-limit protection

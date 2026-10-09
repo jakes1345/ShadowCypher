@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shadowcypher"
-version = "3.0.0"
+version = "2.2.0"
 description = "Enterprise Offensive Security & Autonomous Intelligence Suite"
 readme = "README.md"
 license = {text = "MIT"}
@@ -15,7 +15,7 @@ authors = [
 keywords = ["security", "pentesting", "red-team", "offensive-security", "ai"]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "Environment :: X11 Applications :: GTK",
+    "Environment :: Console",
     "Intended Audience :: Information Technology",
     "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
@@ -27,8 +27,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "PyGObject>=3.42.0,<3.50.0",
-    "pycairo>=1.20.0",
     "psutil>=5.8.0",
     "requests>=2.31.0",
     "python-dotenv>=0.19.0",
@@ -39,13 +37,17 @@ dependencies = [
     "cryptography>=41.0.0",
     "websockets>=12.0",
     "numpy>=1.24.0",
+    "scipy>=1.11.0",
     "rich>=13.0.0",
     "prompt_toolkit>=3.0.0",
-    "fastapi>=0.104.0",
-    "uvicorn>=0.24.0",
+    "scrapling>=0.4.15",
 ]
 
 [project.optional-dependencies]
+# Scrapling JS-rendering backend (Playwright + Camoufox stealth browser)
+recon = [
+    "scrapling[playwright]>=0.4.15",
+]
 # Premium/full install with all optional backends
 full = [
     "litellm>=1.0.0",
@@ -54,8 +56,7 @@ full = [
     "paramiko>=3.0.0",
     "impacket>=0.11.0",
     "scapy>=2.5.0",
-    "chromadb>=0.4.0",
-    "sentence-transformers>=2.2.0",
+    "mitmproxy>=10.0.0",
 ]
 # AI orchestration only
 ai = [
@@ -87,7 +88,7 @@ include = ["shadowcypher*"]
 exclude = ["ai_engine*", "tests*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "shadowcypher"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -100,40 +101,36 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "S", "B"]
 ignore = [
-    # Subprocess / URL / degradation — intentional in a security tool
-    "S603", "S607",  # subprocess with user-controlled args
-    "S310",          # urllib.request.urlopen — all calls target https:// external APIs
-    "S110",          # try-except-pass — MCP helpers degrade gracefully by design
-    "S112",          # try-except-continue — same rationale as S110
-    # Import ordering
-    "E402",          # gi.require_version must precede gi.repository imports
-    # Style — not enforced (matches prior CI behaviour)
-    "E501",          # line too long
-    "W191",          # tabs in indentation (legacy files)
-    "W291",          # trailing whitespace
-    "W293",          # whitespace on blank lines
-    # FastAPI pattern — Depends() in function-default IS the intended usage
-    "B008",
-    # Closures over non-loop locals flagged as loop-var closures (false positive)
-    "B023",
-    # zip() without strict= — not worth the noise in this codebase
-    "B905",
-    # Pseudo-random — used for AI model simulation/evolution, not crypto
-    "S311",
-    # Temporary files — /tmp is intentional for a desktop security tool
-    "S108",
-    # Binding all interfaces — intentional for local server / self-host mode
-    "S104",
-    # MD5 / SHA1 — used for non-cryptographic caching and deduplication
-    "S324",
-    # Assert — used in internal guards and test helpers
-    "S101",
-    # chmod 755 — intentional for tool scripts
-    "S103",
-    # token_type / variable names that look like passwords but aren't
-    "S105", "S106",
-    # requests verify=False — intentional for a security research tool
-    "S501",
-    # FTP / auto-trust host keys / missing timeout — intentional in pentest modules
-    "S321", "S507", "S113",
+    # Subprocess / exec — intentional throughout this security tool
+    "S603", "S607",
+    # Cosmetic style — pre-existing across the codebase, not our concern
+    "E501",  # line-too-long
+    "E701",  # multiple-statements-on-one-line-colon
+    "E702",  # multiple-statements-on-one-line-semicolon
+    "E731",  # lambda-assignment
+    "W191",  # tab-indentation (pre-existing in UI files)
+    # Security rules that are intentional for an offensive/network security tool
+    "S104",  # hardcoded-bind-all-interfaces: servers/listeners need 0.0.0.0
+    "S108",  # hardcoded-temp-file: /tmp usage is intentional in scan modules
+    "S110",  # try-except-pass: intentional resilience in plugin/driver code
+    "S112",  # try-except-continue: intentional resilience
+    "S103",  # bad-file-permissions: intentional for key/cert files
+    "S105",  # hardcoded-password-string: test fixtures and config defaults
+    "S311",  # non-cryptographic random: intentional for network ops, not crypto
+    "S310",  # url-open: intentional — this is a network security tool
+    "S321",  # ftp-lib: intentional for network protocol support
+    "S324",  # hashlib-insecure-hash: MD5/SHA1 used for fingerprinting, not auth
+    "S501",  # request-with-no-cert-validation: intentional in pentest contexts
+    "S507",  # ssh-no-host-key-verification: intentional for target scanning
+    "S113",  # request-without-timeout: intentional for long-running scan sessions
+    # Bugbear rules that are intentional patterns in this codebase
+    "B008",  # function-call-in-default-argument: FastAPI Depends() / intentional
+    "B023",  # function-uses-loop-variable: intentional callback captures
+    # Additional security-tool rules
+    "S101",  # assert: used for runtime invariant checks in operational code
+    "S106",  # hardcoded-password-func-arg: config defaults and test fixtures
+    "S307",  # suspicious-eval-usage: intentional in payload/script execution
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"**/test_*.py" = ["S101", "S104", "S108"]  # assert/0.0.0.0/tmp are normal in test data

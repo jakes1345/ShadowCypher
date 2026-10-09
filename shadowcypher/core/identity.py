@@ -54,7 +54,7 @@ def get_pubkey_fingerprint() -> str:
 
 def verify_admin(irc_nick: Optional[str] = None) -> bool:
     """Enterprise Identity Verification.
-    
+
     Two modes:
     - Local (irc_nick=None): Checks machine handle + crypto key proof.
       Used by the UI to gate admin features.

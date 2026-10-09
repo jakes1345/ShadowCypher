@@ -1,0 +1,52 @@
+# ShadowScript Mission: Credential Audit
+# Find exposed credentials and weak secrets on the local machine.
+# Run as the user whose environment you're auditing.
+
+!echo("=== CREDENTIAL AUDIT ===")
+
+!echo("[*] Phase 1: shell history secrets scan")
+UNSAFE {
+    !sys("grep -hE '(pass|secret|key|token|api|bearer|aws|mysql|mongo)' ~/.bash_history ~/.zsh_history 2>/dev/null | grep -v '^#' | head -30")
+    IF $LAST != "" {
+        AI("Flag any real credentials or tokens visible in this shell history: $LAST")
+        !echo("[!] Potential secrets in history: $LAST")
+    } ELSE {
+        !echo("[+] No obvious secrets in shell history")
+    }
+}
+
+!echo("[*] Phase 2: credential file scan")
+UNSAFE {
+    !sys("find ~ /etc -name '*.env' -o -name 'credentials' -o -name '.netrc' -o -name 'id_rsa' -o -name '*.pem' 2>/dev/null | head -20")
+    AI("These files may contain credentials — which are highest risk? $LAST")
+    !echo("[*] Credential files: $LAST")
+}
+
+!echo("[*] Phase 3: secrets audit")
+STRIKE(credentials, audit_macos_keychain)
+!echo("[*] Keychain results: $LAST")
+
+!echo("[*] Phase 4: environment variable leak check")
+UNSAFE {
+    !sys("env | grep -iE '(key|secret|token|pass|api)' 2>/dev/null")
+    IF $LAST != "" {
+        AI("Flag any environment variables that contain real credentials: $LAST")
+        !echo("[!] Env vars with sensitive names: $LAST")
+    } ELSE {
+        !echo("[+] No obvious secrets in environment")
+    }
+}
+
+!echo("[*] Phase 5: SSH config review")
+!sys("cat ~/.ssh/config 2>/dev/null")
+AI("Flag any risky SSH config entries — StrictHostKeyChecking no, IdentityFile issues: $LAST")
+
+!echo("[*] Phase 6: git credential store")
+!sys("git config --global --list 2>/dev/null | grep -i 'credential\\|user\\|email'")
+!echo("[*] Git credentials: $LAST")
+
+AI("Based on this credential audit, what are the top three remediation steps?")
+!echo("[*] Recommendations: $AI_RESULT")
+
+!echo("=== CREDENTIAL AUDIT COMPLETE ===")
+RETURN "ok"

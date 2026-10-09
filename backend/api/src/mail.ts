@@ -14,7 +14,7 @@
  */
 
 import type { Env } from "./index";
-import { dbSelect, dbInsert, dbUpdate } from "./supabase";
+import { dbSelect, dbInsert, dbUpdate, dbCount } from "./supabase";
 import { dispatchMailWebhook } from "./webhooks";
 import { dispatchMailPushNotification } from "./notifications";
 import { decodeMimeWords, decodeQuotedPrintable, decodeBase64Body, parseHeaders, parseMimeParts, escapeRegex, extractBodies } from "./mime";
@@ -130,14 +130,18 @@ export async function getInbox(
     filters.or = `(subject.ilike.%${safe}%,from_addr.ilike.%${safe}%)`;
   }
 
-  const rows = await dbSelect<MailRow>(env, "mail_messages", {
-    select: "id,from_addr,to_addr,subject,direction,is_read,received_at",
-    filters,
-    order: "received_at.desc",
-    limit,
-  });
+  const [rows, total] = await Promise.all([
+    dbSelect<MailRow>(env, "mail_messages", {
+      select: "id,from_addr,to_addr,subject,direction,is_read,received_at",
+      filters,
+      order: "received_at.desc",
+      limit,
+      offset,
+    }),
+    dbCount(env, "mail_messages", filters),
+  ]);
 
-  return json({ messages: rows.slice(offset, offset + limit), total: rows.length }, {}, cors);
+  return json({ messages: rows, total }, {}, cors);
 }
 
 export async function getMailCount(
@@ -146,12 +150,10 @@ export async function getMailCount(
   user: { id: string; email: string },
   cors: HeadersInit
 ): Promise<Response> {
-  const rows = await dbSelect<{ is_read: boolean }>(env, "mail_messages", {
-    select: "is_read",
-    filters: { user_id: `eq.${user.id}` },
-  });
-  const total = rows.length;
-  const unread = rows.filter((r) => !r.is_read).length;
+  const [total, unread] = await Promise.all([
+    dbCount(env, "mail_messages", { user_id: `eq.${user.id}` }),
+    dbCount(env, "mail_messages", { user_id: `eq.${user.id}`, is_read: "eq.false" }),
+  ]);
   return json({ total, unread }, {}, cors);
 }
 
@@ -227,7 +229,10 @@ export async function sendOutbound(
   if (!body?.to || !emailRegex.test(body.to) || !body.subject?.trim())
     return json({ error: "to_and_subject_required" }, { status: 400 }, cors);
 
-  const from = env.RESEND_FROM_EMAIL || "ShadowCypher <noreply@shadowcypher.site>";
+  const handle = user.email.split("@")[0];
+  const from = user.email.endsWith("@shadowcypher.site")
+    ? `${handle} <${user.email}>`
+    : env.RESEND_FROM_EMAIL || "ShadowCypher <noreply@shadowcypher.site>";
   const sendResp = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -284,7 +289,10 @@ export async function replyMail(
 
   const replyTo = orig.from_addr;
   const replySubject = /^re:/i.test(orig.subject) ? orig.subject : `Re: ${orig.subject}`;
-  const fromAddr = user.email;
+  const handle = user.email.split("@")[0];
+  const fromAddr = user.email.endsWith("@shadowcypher.site")
+    ? `${handle} <${user.email}>`
+    : user.email;
 
   const extraHeaders: Record<string, string> = {};
   if (orig.message_id) {

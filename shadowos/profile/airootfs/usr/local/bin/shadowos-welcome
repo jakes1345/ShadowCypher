@@ -266,7 +266,28 @@ class Welcome(Gtk.Window):
         email = data.get("email", "unknown")
         self._cs.set_markup(f'<span color="#00d4ff">✓ Connected as {email}</span>')
         self._save_cfg({"api_key": key, "api_url": "https://api.shadowcypher.site"})
+        self._write_agent_cfg(key)
         GLib.timeout_add(1000, lambda: self._finish() or False)
+
+    def _write_agent_cfg(self, key: str):
+        """Write ~/.shadowcypher/config.json for the platform agent (runs as shadow user)."""
+        agent_cfg_dir = "/home/shadow/.shadowcypher"
+        agent_cfg_path = f"{agent_cfg_dir}/config.json"
+        try:
+            os.makedirs(agent_cfg_dir, exist_ok=True)
+            cfg = {
+                "api_base": "https://api.shadowcypher.site",
+                "api_key": key,
+                "scan_interval_sec": 600,
+                "heartbeat_interval_sec": 60,
+            }
+            with open(agent_cfg_path, "w") as f:
+                json.dump(cfg, f, indent=2)
+            os.chmod(agent_cfg_path, 0o600)
+            subprocess.run(["chown", "-R", "shadow:shadow", agent_cfg_dir],
+                           capture_output=True)
+        except Exception:
+            pass
 
     def _on_close(self, *_):
         self._write_stamp()

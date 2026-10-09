@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Delay ShadowCypher until the Hyprland desktop (wallpaper + waybar) is visible.
+# Launch the ShadowCypher Qt6 desktop app.
+# Gated by SHADOWCYPHER_MANUAL=1 — not an autostart hijack.
+# Triggered by SUPER+S or the Waybar icon.
 set -euo pipefail
 
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/shadowcypher"
@@ -14,32 +16,38 @@ if [[ "${SHADOWCYPHER_MANUAL:-0}" != "1" && "${1:-}" != "--manual" ]]; then
     exit 0
 fi
 
-if pgrep -f "python3 -m shadowcypher\.app" >/dev/null 2>&1; then
-    log "ShadowCypher already running — skip autostart"
+# Qt6 binary (built from shadowcypher-qt/ and staged into the ISO by build.sh)
+QT_BIN=/opt/shadowcypher/shadowcypher-qt/shadowcypher-qt
+
+# Fallback: system-installed binary
+if [[ ! -x "$QT_BIN" ]]; then
+    QT_BIN=$(command -v shadowcypher-qt 2>/dev/null || true)
+fi
+
+if pgrep -f "shadowcypher-qt" >/dev/null 2>&1; then
+    log "ShadowCypher already running — skip"
     exit 0
 fi
 
-# Let hyprpaper/waybar settle before the heavy GTK app boots.
-sleep 4
-
-# Verify runtime deps before launching (fail loudly in log, not silently).
-missing=()
-for mod in gi psutil aiohttp pydantic_settings websockets; do
-    if ! python3 -c "import ${mod}" 2>/dev/null; then
-        missing+=("$mod")
+if [[ -z "$QT_BIN" || ! -x "$QT_BIN" ]]; then
+    log "shadowcypher-qt binary not found — falling back to python engine"
+    # Python backend engine (no UI) as last resort
+    if python3 -c "import shadowcypher" 2>/dev/null; then
+        export PYTHONPATH=/opt/shadowcypher
+        exec python3 -m shadowcypher.engine >>"$LOG_FILE" 2>&1
     fi
-done
-if ((${#missing[@]})); then
-    log "Missing Python modules: ${missing[*]}"
     notify-send -i dialog-error "ShadowCypher" \
-        "Missing Python deps: ${missing[*]}. Run: sudo pacman -S python-psutil python-aiohttp python-pydantic-settings" \
+        "ShadowCypher binary not found. Re-install from: https://shadowcypher.site" \
         2>/dev/null || true
     exit 1
 fi
 
-export PYTHONPATH=/opt/shadowcypher
-export GDK_BACKEND=wayland,x11
+# Let hyprpaper/waybar settle before the app boots.
+sleep 2
+
+export QT_QPA_PLATFORM=wayland
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 export XDG_CURRENT_DESKTOP=Hyprland
 
-log "Launching ShadowCypher"
-exec python3 -m shadowcypher.app >>"$LOG_FILE" 2>&1
+log "Launching ShadowCypher Qt6: $QT_BIN"
+exec "$QT_BIN" >>"$LOG_FILE" 2>&1

@@ -2,6 +2,7 @@
 Handles sovereign messaging and operator notifications.
 """
 
+
 import requests
 
 from shadowcypher.core.logger import logger
@@ -36,7 +37,7 @@ class CommsEngine:
                     <p>LEVEL: LEAD_OPERATOR</p>
                     <br>
                     <p>// MISSION_START</p>
-                    <p>Your identity has been established in the local SQLite matrix. 
+                    <p>Your identity has been established in the local SQLite matrix.
                     You now have access to the Shadow-CLI and the Sovereign Dashboard.</p>
                     <br>
                     <p style="color:#666;">STAY VIGILANT. STAY INVISIBLE.</p>

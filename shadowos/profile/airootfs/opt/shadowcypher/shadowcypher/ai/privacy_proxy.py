@@ -18,15 +18,14 @@ Hard limitation documented here so it's never hidden from users:
 
 import hashlib
 import json
-import os
 import re
 import shutil
 import sqlite3
 import subprocess
 import threading
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Optional
 

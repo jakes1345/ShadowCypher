@@ -91,6 +91,8 @@ temp/
 out/
 dist/
 build/
+_build/
+cmake-build-*/
 bin/go/
 
 # Runtime state & forensic artifacts
@@ -104,9 +106,17 @@ sessions/
 # Local tactical configs (contains WireGuard private keys, swarm fingerprints)
 configs/
 
-# Test artifacts
+# Test artifacts and debug output — never commit these
 test_venv/
 test_out.txt
+e2.txt
+err.txt
+*.tmp
+*.swp
+*.orig
+gauntlet.log
+tunnel_output.log
+tunnel_socks.log
 # Leaked mock filesystem artifact (mocked config writing real dirs keyed by id())
 MagicMock/
 
@@ -174,3 +184,9 @@ shadowos/test-disk.qcow2
 .aider.conf.yml
 node_modules/
 shadowcypher/ui/node_modules/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example

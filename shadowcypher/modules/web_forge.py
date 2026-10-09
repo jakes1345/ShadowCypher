@@ -4,6 +4,8 @@ Implements XSS scanning, CSRF PoC generation, clickjacking, CORS, header audit,
 subdomain takeover, LFI, and open redirect testing.
 """
 
+import logging
+import re
 import subprocess
 import urllib.parse
 from typing import Callable, Optional
@@ -14,6 +16,9 @@ import requests.exceptions
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_target
+
+logger = logging.getLogger(__name__)
+
 
 # Common XSS payloads for injection testing
 _XSS_PAYLOADS = [
@@ -605,8 +610,6 @@ class WebAppDiagnostics(BaseModule):
 
         _emit(on_output, "[OPEN_REDIRECT] Scan complete.")
 
-
-import re  # used in subdomain_takeover A-record check
 
 # Module-level instance for direct import usage
 web_diagnostics_instance = WebAppDiagnostics()

@@ -14,7 +14,7 @@
 import type { Env } from "./index";
 import { dbSelect, dbInsert, dbUpsert, dbUpdate } from "./supabase";
 
-interface AuthedUser { id: string; email: string }
+interface AuthedUser { id: string; email: string; handle?: string }
 
 interface ChatRoom {
   id: string;
@@ -49,8 +49,9 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
     headers: { "Content-Type": "application/json", ...cors, ...(init.headers ?? {}) },
   });
 
-function nickFromEmail(email: string): string {
-  return email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+function nickFromUser(user: AuthedUser): string {
+  if (user.handle) return user.handle.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
+  return user.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 20) || "user";
 }
 
 async function resolveRoom(env: Env, roomName: string, userId: string): Promise<ChatRoom | null> {
@@ -94,10 +95,10 @@ export async function listRooms(
     }),
   ]);
 
-  // Include team rooms where user is a member
+  // Include team rooms where user is an active member (not pending/left)
   const memberships = await dbSelect<{ team_id: string }>(env, "team_members", {
     select: "team_id",
-    filters: { user_id: `eq.${user.id}` },
+    filters: { user_id: `eq.${user.id}`, status: "eq.active" },
   });
 
   let teamRooms: ChatRoom[] = [];
@@ -155,7 +156,7 @@ export async function sendMessage(
   const room = await resolveRoom(env, roomName, user.id);
   if (!room) return json({ error: "room_not_found" }, { status: 404 }, cors);
 
-  const nick = nickFromEmail(user.email);
+  const nick = nickFromUser(user);
   const msg = await dbInsert<ChatMessage>(env, "chat_messages", {
     room_id: room.id,
     user_id: user.id,
@@ -190,7 +191,7 @@ export async function updatePresence(
   await dbUpsert(env, "chat_presence", {
     user_id: user.id,
     room_id: room.id,
-    nick: nickFromEmail(user.email),
+    nick: nickFromUser(user),
     seen_at: new Date().toISOString(),
   }, "user_id,room_id");
 
@@ -229,7 +230,7 @@ export async function openDm(
   const handle = body?.handle?.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
   if (!handle) return json({ error: "handle_required" }, { status: 400 }, cors);
 
-  const myNick = nickFromEmail(user.email);
+  const myNick = nickFromUser(user);
   if (handle === myNick) return json({ error: "cannot_dm_self" }, { status: 400 }, cors);
 
   // Verify target user exists
@@ -289,18 +290,34 @@ export async function listDms(
     limit: 50,
   });
 
-  const dms = rooms.map(r => {
+  // Enrich each room with last message time and user's read receipt to compute unread flag
+  const dms = await Promise.all(rooms.map(async r => {
     const parts = r.display_name.split(":");
-    // parts: [nick1, nick2, uid1, uid2]  (uid may contain hyphens — split gives more parts)
-    // Since UIDs look like "abc-def-ghi", splitting "n1:n2:uid1:uid2" by ":" yields [n1, n2, uidPart1, uidPart2, ...]
-    // Reassemble: nicks are first two parts, UIDs are the remaining joined back with ":"
     const nick1 = parts[0];
     const nick2 = parts[1];
-    // uid1 and uid2 are the 3rd and 4th original fields, but UUIDs don't have ":" so parts[2] = uid1, parts[3] = uid2
     const uid1 = parts[2];
     const otherNick = uid1 === user.id ? nick2 : nick1;
-    return { ...r, display_name: `@${otherNick}`, other_nick: otherNick };
-  });
+
+    const [lastMsgs, readReceipt] = await Promise.all([
+      dbSelect<{ created_at: string }>(env, "chat_messages", {
+        select: "created_at",
+        filters: { room_id: `eq.${r.id}` },
+        order: "created_at.desc",
+        limit: 1,
+      }).catch(() => [] as { created_at: string }[]),
+      dbSelect<{ last_read_at: string }>(env, "dm_read_receipts", {
+        select: "last_read_at",
+        filters: { room_id: `eq.${r.name}`, user_id: `eq.${user.id}` },
+        limit: 1,
+      }).catch(() => [] as { last_read_at: string }[]),
+    ]);
+
+    const lastMsgAt = lastMsgs[0]?.created_at ?? null;
+    const lastReadAt = readReceipt[0]?.last_read_at ?? null;
+    const unread = !!(lastMsgAt && (!lastReadAt || lastMsgAt > lastReadAt));
+
+    return { ...r, display_name: `@${otherNick}`, other_nick: otherNick, last_message_at: lastMsgAt, unread };
+  }));
 
   return json({ dms }, {}, cors);
 }

@@ -1,0 +1,185 @@
+# ─────────────────────────────────────────────────────
+# Go Lesson 5 — Concurrent Subnet Scanner
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • Generating IPs from a CIDR range in Go
+#   • Semaphore pattern for bounded concurrency
+#   • Combining TCP probe + HTTP check in one pass
+#   • Building a host inventory from scan results
+# ─────────────────────────────────────────────────────
+# This is a real network discovery tool. Feed it a /24
+# and it returns every live host with open ports in seconds.
+
+go subnet_scan {
+    package main
+
+    import (
+        "encoding/json"
+        "fmt"
+        "net"
+        "net/http"
+        "os"
+        "strings"
+        "sync"
+        "time"
+    )
+
+    // Generate all IPs in a CIDR range (e.g. "192.168.1.0/24")
+    func hostsInCIDR(cidr string) ([]string, error) {
+        ip, network, err := net.ParseCIDR(cidr)
+        if err != nil {
+            return nil, err
+        }
+        var hosts []string
+        for ip := ip.Mask(network.Mask); network.Contains(ip); inc(ip) {
+            // Skip network address and broadcast
+            s := ip.String()
+            if !strings.HasSuffix(s, ".0") && !strings.HasSuffix(s, ".255") {
+                hosts = append(hosts, s)
+            }
+        }
+        return hosts, nil
+    }
+
+    func inc(ip net.IP) {
+        for j := len(ip) - 1; j >= 0; j-- {
+            ip[j]++
+            if ip[j] > 0 {
+                break
+            }
+        }
+    }
+
+    // Check if any of the given ports are open
+    func probePorts(host string, ports []string, timeout time.Duration) []string {
+        var open []string
+        for _, port := range ports {
+            conn, err := net.DialTimeout("tcp", host+":"+port, timeout)
+            if err == nil {
+                conn.Close()
+                open = append(open, port)
+            }
+        }
+        return open
+    }
+
+    // Quick HTTP title grab
+    func httpTitle(host string) string {
+        client := &http.Client{Timeout: 3 * time.Second}
+        for _, scheme := range []string{"http", "https"} {
+            resp, err := client.Get(scheme + "://" + host)
+            if err != nil {
+                continue
+            }
+            defer resp.Body.Close()
+            return fmt.Sprintf("HTTP %d", resp.StatusCode)
+        }
+        return ""
+    }
+
+    type HostResult struct {
+        IP    string
+        Ports []string
+        Web   string
+    }
+
+    func main() {
+        var args map[string]interface{}
+        json.NewDecoder(os.Stdin).Decode(&args)
+
+        cidr, _ := args["arg0"].(string)
+        if cidr == "" {
+            cidr = "192.168.1.0/24"
+        }
+
+        // Semaphore — cap concurrency (goroutines are cheap but network isn't)
+        concurrency := 100
+        sem := make(chan struct{}, concurrency)
+
+        probeports := []string{"22", "80", "443", "445", "3389", "8080", "8443"}
+        timeout    := 500 * time.Millisecond
+
+        hosts, err := hostsInCIDR(cidr)
+        if err != nil {
+            fmt.Fprintln(os.Stderr, "CIDR parse error:", err)
+            os.Exit(1)
+        }
+
+        results := make([]HostResult, 0)
+        var mu  sync.Mutex
+        var wg  sync.WaitGroup
+
+        for _, host := range hosts {
+            wg.Add(1)
+            sem <- struct{}{}   // acquire semaphore slot
+            go func(h string) {
+                defer wg.Done()
+                defer func() { <-sem }()  // release slot
+
+                open := probePorts(h, probeports, timeout)
+                if len(open) == 0 {
+                    return  // host has nothing open — skip
+                }
+
+                web := ""
+                for _, p := range open {
+                    if p == "80" || p == "443" || p == "8080" || p == "8443" {
+                        web = httpTitle(h)
+                        break
+                    }
+                }
+
+                mu.Lock()
+                results = append(results, HostResult{IP: h, Ports: open, Web: web})
+                mu.Unlock()
+
+                fmt.Printf("LIVE  %s  ports=%s  %s\n", h, strings.Join(open, ","), web)
+            }(host)
+        }
+        wg.Wait()
+
+        // Build inventory string for ShadowScript
+        var inventory []string
+        for _, r := range results {
+            entry := r.IP + ":" + strings.Join(r.Ports, "+")
+            inventory = append(inventory, entry)
+        }
+
+        fmt.Printf("SHADOWVAR:LIVE_HOSTS=%s\n", strings.Join(inventory, "|"))
+        fmt.Printf("SHADOWVAR:LIVE_COUNT=%d\n", len(results))
+        fmt.Printf("SHADOWVAR:TOTAL_SCANNED=%d\n", len(hosts))
+        fmt.Printf("--- %d live hosts found in %s ---\n", len(results), cidr)
+    }
+}
+
+# ── Run the subnet discovery ───────────────────────────
+# Use your actual LAN range — 192.168.x.0/24 is common
+VAR network = "192.168.1.0/24"
+
+!echo("Scanning $network for live hosts ...")
+
+UNSAFE {
+    subnet_scan $network
+}
+
+!echo($LAST)
+!echo("Found $LIVE_COUNT live hosts out of $TOTAL_SCANNED")
+
+IF $LIVE_COUNT > "0" {
+    AI("I scanned $network and found $LIVE_COUNT hosts: $LIVE_HOSTS. Which hosts look most interesting and why?")
+}
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • Semaphore (buffered channel) is the Go idiom for
+#     bounded concurrency — it's cleaner than worker pools
+#   • Skip hosts with no open ports early — cuts runtime 10x
+#   • The inventory format IP:port1+port2|IP:port is a
+#     ShadowScript-friendly serialisation you can parse later
+#   • On a /24, this typically completes in 2-5 seconds
+#
+# CHALLENGE: add OS fingerprinting — if port 445 is open,
+#   try an SMB negotiation to identify Windows vs Samba
+# ─────────────────────────────────────────────────────
+
+RETURN "go lesson 5 complete"

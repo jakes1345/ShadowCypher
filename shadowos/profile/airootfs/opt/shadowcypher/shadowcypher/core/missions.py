@@ -6,15 +6,17 @@ autonomous exploit engine — human approval is still required before
 any destructive action taken on a target.
 """
 
-import uuid
 import threading
-from typing import List, Dict, Any
-from shadowcypher.core.logger import logger
-from shadowcypher.core.bus import bus
+import uuid
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List
+
 from shadowcypher.ai.orchestrator import orchestrator
+from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
 
 
-class GhostMission:
+class GhostMission(ABC):
     """Base class for AI-driven multi-phase security missions."""
 
     def __init__(self, target: str):
@@ -41,8 +43,9 @@ class GhostMission:
     def _emergency_sever(self):
         self.report("ABORT", "Mission severed — unrecoverable error.", 1.0)
 
+    @abstractmethod
     def execute(self):
-        raise NotImplementedError
+        """Execute the mission. Must be implemented by subclasses."""
 
 
 class SovereignGhostMission(GhostMission):
@@ -72,7 +75,7 @@ class SovereignGhostMission(GhostMission):
             # Phase 1: REAL RECON
             recon_raw = self._execute_recon_tool()
             self.findings.append({"phase": "RECON_RAW", "result": recon_raw})
-            
+
             # Use AI to summarize the raw recon
             recon_summary = self._run_phase(
                 "RECON_AI",
@@ -109,9 +112,9 @@ class SovereignGhostMission(GhostMission):
                 1.00,
                 "Finalizing Intelligence Briefing"
             )
-            
+
             self.report("COMPLETE", f"Mission {self.mid} terminated. Intelligence Secured.", 1.0)
-            
+
         except Exception as e:
             logger.error("ghost", f"ghost mission error: {e}")
             self._emergency_sever()

@@ -130,8 +130,9 @@ class Firewall(BaseModule):
     @staticmethod
     def ipt_add_rule(chain, rule_str, on_output=None, on_complete=None):
         """Add a custom iptables/firewall rule."""
-        from shadowcypher.core.runner import runner
         import shlex
+
+        from shadowcypher.core.runner import runner
         if platform_engine.IS_LINUX:
             parts = shlex.split(rule_str)
             cmd = ["sudo", "iptables", "-A", chain] + parts

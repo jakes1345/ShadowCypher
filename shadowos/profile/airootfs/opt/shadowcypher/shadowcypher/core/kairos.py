@@ -6,11 +6,11 @@ into the SQLite target registry.
 """
 
 import re
-from shadowcypher.core.logger import logger
-from shadowcypher.core.database import db
-
 
 from shadowcypher.core.bus import bus
+from shadowcypher.core.database import db
+from shadowcypher.core.logger import logger
+
 
 class Kairos:
     """Background intelligence analyzer that watches all tool output."""
@@ -43,13 +43,13 @@ class Kairos:
         # We track the 'Transient Density' of the incoming data stream
         from shadowcypher.core.pulse import pulse
         pulse.ingest("tactical_feed", float(len(line)))
-        
+
         # Periodic Spectrum Audit (Every 50 lines)
         if not hasattr(self, '_line_count'):
             self._line_count: int = 0
-            
+
         self._line_count += 1
-            
+
         if self._line_count % 50 == 0:
             analysis = pulse.analyze_spectrum("tactical_feed")
             if analysis.get("status") == "CAUTION":
@@ -67,7 +67,7 @@ class Kairos:
             if cve_up not in self._seen_cves:
                 self._seen_cves.add(cve_up)
                 logger.info("kairos", f"INTEL_FOUND: {cve_up}")
-                
+
                 # Publish event to whichever system cares (Orchestrator, UI, etc)
                 bus.publish("intel_found", {"type": "CVE", "value": cve_up, "ip": ips[0] if ips else "TARGET"})
                 db.log_vulnerability(ips[0] if ips else "TARGET", 0, "unknown", cve_id=cve_up, severity="CRITICAL", payload=line)
@@ -90,7 +90,7 @@ class Kairos:
                     self._alert("VULN", line[:120])
                     potential_ip = ips[0] if ips else "TARGET"
                     db.log_vulnerability(potential_ip, 0, "unknown", severity="MEDIUM", payload=line)
-                    
+
                     # If high-value target, escalate via the hub
                     if "critical" in line.lower() or "rce" in line.lower():
                         try:
@@ -111,11 +111,11 @@ class Kairos:
                     user_match = re.search(r'(?:username|user|login)\s*[:=]\s*(\S+)', line, re.IGNORECASE)
                     pass_match = re.search(r'(?:password|passwd|pwd)\s*[:=]\s*(\S+)', line, re.IGNORECASE)
                     hash_match = re.search(r'([a-f0-9]{32,64})', line, re.IGNORECASE)
-                    
+
                     username = user_match.group(1) if user_match else "unknown"
                     password = pass_match.group(1) if pass_match else None
                     cred_hash = hash_match.group(1) if hash_match else None
-                    
+
                     if password or cred_hash:
                         db.log_credential(potential_ip, "unknown", username, password, cred_hash, False)
                 except Exception:

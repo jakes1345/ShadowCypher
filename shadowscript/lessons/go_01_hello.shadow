@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────────────
+# Go Lesson 1 — Hello from Go
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • Go block structure (package main, imports, func main)
+#   • Reading JSON from stdin with encoding/json
+#   • Printing output and SHADOWVAR: write-back
+#   • How Go differs from Rust in the block model
+# ─────────────────────────────────────────────────────
+# Go compiles fast (~2s), has a great stdlib for networking,
+# and goroutines make concurrent work feel effortless.
+# The binary is statically linked — no runtime deps on the target.
+
+go greet {
+    package main
+
+    import (
+        "encoding/json"
+        "fmt"
+        "os"
+    )
+
+    func main() {
+        // Step 1: decode JSON from stdin
+        // Go's json.NewDecoder is the idiomatic way
+        var args map[string]interface{}
+        if err := json.NewDecoder(os.Stdin).Decode(&args); err != nil {
+            fmt.Fprintln(os.Stderr, "stdin JSON error:", err)
+            os.Exit(1)
+        }
+
+        // Step 2: extract arguments
+        // ShadowScript sends positional args as arg0, arg1, ...
+        // and ALL current $variables are also in the map
+        name, _ := args["arg0"].(string)
+        if name == "" {
+            name = "world"
+        }
+
+        // Step 3: SHADOWVAR write-back
+        // Same protocol as Rust — print SHADOWVAR:KEY=value
+        fmt.Printf("SHADOWVAR:GREETED=%s\n", name)
+
+        // Step 4: regular output goes to $LAST
+        fmt.Printf("Hello from Go, %s!\n", name)
+        fmt.Printf("Go stdlib version: %s\n", goVersion())
+        fmt.Printf("Args received: %v\n", args)
+    }
+
+    // Go lets you define helper functions freely
+    func goVersion() string {
+        return "1.21+"
+    }
+}
+
+# ── Call it ───────────────────────────────────────────
+VAR who = "Shadow Operator"
+
+UNSAFE {
+    greet $who
+}
+
+!echo("Output: $LAST")
+!echo("Greeted: $GREETED")
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • Always start with  package main  — required for a Go binary
+#   • json.NewDecoder(os.Stdin).Decode(&args) — idiomatic stdin JSON
+#   • Use map[string]interface{} for flexible JSON input
+#   • Type-assert with .(string) — check the second bool if needed
+#   • fmt.Fprintf(os.Stderr, ...) for debug output (won't appear in $LAST)
+#   • Helper functions can be defined anywhere in the block
+#
+# CHALLENGE: add args["arg1"] for a custom greeting word
+#   e.g.  greet "operator" "Greetings"  → "Greetings, operator!"
+# ─────────────────────────────────────────────────────
+
+RETURN "go lesson 1 complete"

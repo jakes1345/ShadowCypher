@@ -11,6 +11,7 @@
 import type { Env } from "./index";
 import { dbSelect, dbInsert } from "./supabase";
 import { dispatchCveWebhook, type CveMatchPayload } from "./webhooks";
+import { dispatchCvePushNotification } from "./notifications";
 
 // Port → service keywords for matching CVE descriptions
 const PORT_KEYWORDS: Record<number, string[]> = {
@@ -35,7 +36,7 @@ const PORT_KEYWORDS: Record<number, string[]> = {
   27017: ["mongodb", "mongo"],
 };
 
-function osKeywords(os: string | null): string[] {
+export function osKeywords(os: string | null): string[] {
   if (!os) return [];
   const lower = os.toLowerCase();
   const kws: string[] = [];
@@ -52,7 +53,7 @@ function osKeywords(os: string | null): string[] {
   return kws;
 }
 
-interface DeviceRow {
+export interface DeviceRow {
   id: string;
   user_id: string;
   hostname: string | null;
@@ -61,7 +62,7 @@ interface DeviceRow {
   os_fingerprint: string | null;
 }
 
-interface NvdCve {
+export interface NvdCve {
   id: string;
   description: string;
   severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
@@ -137,7 +138,7 @@ async function fetchRecentCves(env: Env): Promise<NvdCve[]> {
   return [...allCves.values()];
 }
 
-function matchCveToDevice(cve: NvdCve, device: DeviceRow): string[] | null {
+export function matchCveToDevice(cve: NvdCve, device: DeviceRow): string[] | null {
   const descLower = cve.description.toLowerCase();
   const keywords = new Set<string>();
 
@@ -175,10 +176,19 @@ export async function runCveMatchingCron(env: Env): Promise<void> {
   const cves = await fetchRecentCves(env);
   if (cves.length === 0) return;
 
-  const devices = await dbSelect<DeviceRow>(env, "devices", {
-    select: "id,user_id,hostname,ip,open_ports,os_fingerprint",
-    limit: 10000,
-  });
+  const PAGE_SIZE = 500;
+  const devices: DeviceRow[] = [];
+  let offset = 0;
+  while (true) {
+    const page = await dbSelect<DeviceRow>(env, "devices", {
+      select: "id,user_id,hostname,ip,open_ports,os_fingerprint",
+      limit: PAGE_SIZE,
+      offset,
+    });
+    devices.push(...page);
+    if (page.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
   if (devices.length === 0) return;
 
   const byUser = new Map<string, DeviceRow[]>();
@@ -209,6 +219,12 @@ export async function runCveMatchingCron(env: Env): Promise<void> {
         };
 
         await dispatchCveWebhook(env, userId, payload);
+        dispatchCvePushNotification(env, userId, {
+          cve_id: cve.id,
+          severity: cve.severity,
+          device_name: payload.device_name,
+          description: cve.description,
+        }).catch(() => null);
         await markSent(env, userId, device.id, cve.id);
       }
     }

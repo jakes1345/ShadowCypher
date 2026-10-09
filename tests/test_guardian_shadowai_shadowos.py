@@ -143,42 +143,6 @@ class TestGuardianScript:
             assert f'"{sub}"' in src or f"'{sub}'" in src
 
 
-class TestGuardianPage:
-    """Tests for shadowcypher/ui/guardian_page.py"""
-
-    def test_import(self):
-        from shadowcypher.ui.guardian_page import GuardianPage
-        assert GuardianPage is not None
-
-    def test_has_five_tabs(self):
-        src = (REPO / "shadowcypher" / "ui" / "guardian_page.py").read_text()
-        tabs = ["Network Scan", "Host Audit", "Router Audit", "Monitor", "Harden"]
-        for t in tabs:
-            assert t in src
-
-    def test_handlers_call_run_script(self):
-        src = (REPO / "shadowcypher" / "ui" / "guardian_page.py").read_text()
-        assert 'self.run_script("guardian.py"' in src
-
-    def test_harden_has_confirmation_dialog(self):
-        src = (REPO / "shadowcypher" / "ui" / "guardian_page.py").read_text()
-        assert "MessageDialog" in src or "OK_CANCEL" in src
-
-    def test_page_registered_in_app(self):
-        src = (REPO / "shadowcypher" / "app.py").read_text()
-        assert "guardian_page.GuardianPage" in src
-
-    def test_run_script_resolves_correct_path(self):
-        src = (REPO / "shadowcypher" / "ui" / "base_page.py").read_text()
-        assert "_SCRIPTS_DIR" in src
-        assert "scripts" in src
-
-    def test_guardian_script_reachable_from_base_page(self):
-        """Ensure guardian.py is in the scripts directory that base_page resolves."""
-        scripts_dir = REPO / "shadowcypher" / "scripts"
-        assert (scripts_dir / "guardian.py").exists()
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # SHADOW AI
 # ─────────────────────────────────────────────────────────────────────────────
@@ -700,26 +664,6 @@ class TestAIOrchestrator:
         assert len(results) == 1
 
 
-class TestAIPageImports:
-    """Verify AI-related UI pages import and are registered."""
-
-    def test_ai_page_imports(self):
-        from shadowcypher.ui.ai_page import AIPage
-        assert AIPage is not None
-
-    def test_chat_page_imports(self):
-        from shadowcypher.ui.chat_page import ChatPage
-        assert ChatPage is not None
-
-    def test_ai_page_registered(self):
-        src = (REPO / "shadowcypher" / "app.py").read_text()
-        assert "ai_page.AIPage" in src
-
-    def test_chat_page_registered(self):
-        src = (REPO / "shadowcypher" / "app.py").read_text()
-        assert "chat_page.ChatPage" in src
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # SHADOWOS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -844,7 +788,7 @@ class TestShadowOSPackages:
 
     def test_core_security_tools_present(self):
         pkgs = self._get_packages()
-        required = ["nmap", "wireshark-qt", "ufw", "fail2ban"]
+        required = ["nmap", "wireshark-qt", "nftables", "fail2ban"]
         for p in required:
             assert p in pkgs, f"Missing package: {p}"
 
@@ -856,8 +800,10 @@ class TestShadowOSPackages:
 
     def test_browser_present(self):
         pkgs = self._get_packages()
-        browsers = ["librewolf", "firefox", "chromium"]
-        assert any(b in pkgs for b in browsers), "No browser in packages"
+        firstboot = (AIRFS / "usr" / "local" / "bin" / "shadowos-firstboot").read_text()
+        browsers = ["librewolf", "chromium"]
+        assert any(b in pkgs for b in browsers) or any(b in firstboot for b in browsers), \
+            "No supported browser is shipped or installed by shadowos-firstboot"
 
     def test_service_packages_present(self):
         pkgs = self._get_packages()

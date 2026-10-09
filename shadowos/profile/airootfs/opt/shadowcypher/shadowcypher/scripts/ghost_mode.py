@@ -22,16 +22,13 @@ Usage:
 """
 
 import argparse
-import os
-import sys
-import subprocess
-import socket
-import time
-import signal
-import atexit
-import shutil
-import tempfile
 import json
+import os
+import shutil
+import socket
+import subprocess
+import sys
+import time
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}
@@ -271,7 +268,7 @@ def engage():
     print(f"\n  {C['C']}[Layer 9]{C['N']} Hysteria2 QUIC Transport (auto)")
     try:
         from shadowcypher.core.hysteria import ghost_engage_hook
-        ghost_engage_hook(on_output=lambda l: print(f"  {C['D']}{l.rstrip()}{C['N']}"))
+        ghost_engage_hook(on_output=lambda ln: print(f"  {C['D']}{ln.rstrip()}{C['N']}"))
         from shadowcypher.core.hysteria import hysteria_transport
         if hysteria_transport.connected:
             print(f"  {C['G']}●{C['N']} Hysteria2 QUIC tunnel active — SOCKS5:{_SOCKS5_PORT}")
@@ -354,7 +351,6 @@ def disengage():
     # Restore MAC addresses
     print(f"  {C['C']}[4]{C['N']} Restoring MAC addresses")
     import glob
-    import re
     for mac_file in glob.glob(f"{BACKUP_DIR}/mac_*"):
         iface = os.path.basename(mac_file).replace("mac_", "")
         with open(mac_file) as f:
@@ -375,7 +371,7 @@ def disengage():
     ram_dir = state.get("ram_workspace", "/tmp/ghost_workspace")  # nosec B108
     if os.path.isdir(ram_dir):
         # Overwrite files before removal
-        for root, dirs, files in os.walk(ram_dir):
+        for root, _, files in os.walk(ram_dir):
             for f in files:
                 fp = os.path.join(root, f)
                 try:

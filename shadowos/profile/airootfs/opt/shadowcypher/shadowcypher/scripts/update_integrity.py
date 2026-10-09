@@ -5,9 +5,9 @@ Recalculates SHA-256 hashes for all core modules and updates integrity.json.
 Use this after performing verified upgrades to the Citadel.
 """
 
-import os
-import json
 import hashlib
+import json
+import os
 
 CORE_PATHS = [
     "shadowcypher/core",
@@ -33,10 +33,10 @@ def update_baseline():
                     full_path = os.path.join(root, file)
                     rel_path = os.path.relpath(full_path, os.getcwd())
                     hashes[rel_path] = get_hash(full_path)
-    
+
     with open("integrity.json", "w") as f:
         json.dump(hashes, f, indent=4)
-    
+
     print(f"[+] Integrity Baseline Updated: {len(hashes)} files indexed.")
 
 if __name__ == "__main__":

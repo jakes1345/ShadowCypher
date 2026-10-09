@@ -13,14 +13,15 @@ except ImportError:
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 
+
 class ShadowMemory:
     """Enterprise-grade memory layer for ShadowSentinel."""
-    
+
     def __init__(self):
         self.db_path = os.path.join(config.project_root, "data", "shadow_memory")
         if not os.path.exists(self.db_path):
             os.makedirs(self.db_path)
-            
+
         # Using a local Qdrant/SQLite hybrid for privacy and offline speed
         self.config = {
             "vector_store": {
@@ -31,7 +32,7 @@ class ShadowMemory:
             },
             "history_db_path": os.path.join(self.db_path, "history.db")
         }
-        
+
         if Memory is None:
             logger.warning("ai", "MEM_OFFLINE: mem0 not installed — tactical memory disabled. Install with: pip install mem0ai")
             self.memory = None

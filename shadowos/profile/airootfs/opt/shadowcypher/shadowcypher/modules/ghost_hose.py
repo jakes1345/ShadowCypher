@@ -7,18 +7,17 @@ adaptive rate control.
 All operations are logged and gated behind scope validation.
 """
 
+import random
 import socket
+import ssl
+import string
 import threading
 import time
-import random
-import string
-import struct
-import ssl
-from typing import List, Optional, Dict, Callable
-from shadowcypher.core.module import BaseModule
-from shadowcypher.core.logger import logger
+from typing import Callable, List, Optional
+
 from shadowcypher.core.bus import bus
-from shadowcypher.core.sanitize import validate_ip, validate_port
+from shadowcypher.core.module import BaseModule
+from shadowcypher.core.sanitize import validate_ip
 from shadowcypher.core.stealth import require_stealth
 
 # Standard User-Agents for load generation profiles

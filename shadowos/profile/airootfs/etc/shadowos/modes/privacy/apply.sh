@@ -6,7 +6,9 @@ systemctl start tor
 systemctl start dnscrypt-proxy 2>/dev/null || true
 
 # MAC randomize all interfaces
-for iface in $(ls /sys/class/net/ | grep -v lo); do
+for iface in /sys/class/net/*; do
+    iface=$(basename "$iface")
+    [[ "$iface" == "lo" ]] && continue
     ip link set "$iface" down 2>/dev/null || true
     macchanger -r "$iface" 2>/dev/null || true
     ip link set "$iface" up 2>/dev/null || true
@@ -17,7 +19,12 @@ echo "  ✓ MAC addresses randomized"
 # All TCP from non-tor users → port 9040 (TransPort)
 # All DNS from non-tor users → port 5353 (DNSPort)
 TOR_UID=$(id -u tor 2>/dev/null || echo 43)
-nft flush ruleset
+# Remove any previous mode-specific overlay tables before adding ours.
+# Do NOT flush the entire ruleset — that wipes the base inet shadowos firewall.
+nft delete table inet anonsurf 2>/dev/null || true
+nft delete table ip6 anonsurf_v6 2>/dev/null || true
+nft delete table inet shadow_privacy 2>/dev/null || true
+nft delete table ip6 shadow_ipv6_block 2>/dev/null || true
 nft -f - << NFT
 table inet shadow_privacy {
     chain prerouting {
@@ -85,5 +92,4 @@ CONFIG_DIR="${HOME:-/root}/.config/waybar"
 [[ -f "$CONFIG_DIR/config.privacy.jsonc" ]] && cp "$CONFIG_DIR/config.privacy.jsonc" "$CONFIG_DIR/config.jsonc"
 pkill -SIGUSR2 waybar 2>/dev/null || true
 
-ufw default deny incoming
 echo "  ✓ Privacy mode fully active"

@@ -1,0 +1,90 @@
+# ─────────────────────────────────────────────────────
+# C++ Lesson 1 — Hello from C++
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • cpp block structure (#include, int main())
+#   • Reading JSON from stdin (no full parser — lightweight approach)
+#   • Printing output and SHADOWVAR: write-back
+#   • Why C++ in ShadowScript: raw sockets, syscalls, performance
+# ─────────────────────────────────────────────────────
+# C++ compiles with g++ -std=c++17. No external dependencies —
+# just the C++ stdlib. For network work it has access to the
+# full POSIX socket API without any wrappers.
+
+cpp greet {
+    #include <iostream>
+    #include <string>
+
+    // Lightweight JSON string extractor — no external lib needed
+    // Finds the value for "key" in a flat JSON object string
+    std::string json_get(const std::string& json, const std::string& key) {
+        std::string needle = "\"" + key + "\":";
+        auto pos = json.find(needle);
+        if (pos == std::string::npos) return "";
+        pos += needle.size();
+
+        // Skip whitespace
+        while (pos < json.size() && json[pos] == ' ') ++pos;
+
+        if (json[pos] == '"') {
+            // String value
+            ++pos;
+            auto end = json.find('"', pos);
+            return (end == std::string::npos) ? "" : json.substr(pos, end - pos);
+        } else {
+            // Number or bool — read until delimiter
+            auto end = json.find_first_of(",}", pos);
+            return json.substr(pos, end - pos);
+        }
+    }
+
+    int main() {
+        // Read all of stdin into a string
+        std::string buf(
+            std::istreambuf_iterator<char>(std::cin),
+            std::istreambuf_iterator<char>()
+        );
+
+        // Extract arguments
+        // ShadowScript sends: {"arg0": "...", "arg1": "...", ...}
+        std::string name = json_get(buf, "arg0");
+        if (name.empty()) name = "world";
+
+        // SHADOWVAR: write-back — same protocol as Rust and Go
+        std::cout << "SHADOWVAR:GREETED=" << name << "\n";
+
+        // Regular output → $LAST
+        std::cout << "Hello from C++, " << name << "!\n";
+        std::cout << "Compiled with C++17 on " << __DATE__ << "\n";
+        std::cout << "Raw JSON received: " << buf << "\n";
+
+        return 0;
+    }
+}
+
+# ── Call it ───────────────────────────────────────────
+VAR who = "Shadow Operator"
+
+UNSAFE {
+    greet $who
+}
+
+!echo("Output: $LAST")
+!echo("Greeted: $GREETED")
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • No JSON library is included by default — use the json_get()
+#     helper shown here for simple cases, or add nlohmann/json
+#     as a single-header include for complex needs
+#   • std::istreambuf_iterator reads all of stdin efficiently
+#   • std::cout goes to $LAST; std::cerr goes to terminal only
+#   • The json_get helper handles strings and primitives —
+#     copy it into any block where you need JSON parsing
+#   • Compiled with g++ -O2 -std=c++17 automatically
+#
+# CHALLENGE: add a json_get_int() helper that returns an int
+#   and print how many characters the name has
+# ─────────────────────────────────────────────────────
+
+RETURN "cpp lesson 1 complete"

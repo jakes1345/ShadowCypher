@@ -4,17 +4,21 @@ Provides dynamic CoTURN credentials, NAT traversal, and CORS-enabled protocol br
 Ported from TAZHER forensic architecture.
 """
 
-import os
-import json
 import asyncio
-import hmac
-import hashlib
-import time
 import base64
-from typing import Dict, Any, Optional, List
+import hashlib
+import hmac
+import json
+import os
+import time
+from typing import Dict, Optional
+
 from aiohttp import web
+
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
+
+
 class NexusRelay:
     """
     The Nexus Relay provides:
@@ -61,7 +65,7 @@ class NexusRelay:
         self.app.router.add_get("/api/nexus/status", self.handle_status)
         self.app.router.add_get("/api/nexus/tunnel", self.handle_tunnel)
         self.app.router.add_get("/api/nexus/nodes", self.handle_list_nodes)
-        self.app.router.add_get("/api/nexus/swarm", self.handle_swarm_sync) 
+        self.app.router.add_get("/api/nexus/swarm", self.handle_swarm_sync)
         self.app.router.add_post("/api/nexus/register", self.handle_register_node)
         self.app.router.add_options("/{tail:.*}", self.handle_options)
         self.app.middlewares.append(self.cors_middleware)
@@ -115,7 +119,7 @@ class NexusRelay:
 
     async def handle_ice_request(self, request):
         user_nick = request.query.get("nick", "anonymous")
-        timestamp = int(time.time()) + 36000  
+        timestamp = int(time.time()) + 36000
         username = f"{timestamp}:{user_nick}"
         password = hmac.HMAC(self.secret.encode(), username.encode(), hashlib.sha256).digest()
         password_b64 = base64.b64encode(password).decode()
@@ -136,7 +140,7 @@ class NexusRelay:
             node_id = data.get("id")
             if not node_id:
                 return web.json_response({"error": "Missing node ID"}, status=400)
-            
+
             self.nodes[node_id] = {
                 "addr": request.remote,
                 "info": data.get("info", {}),

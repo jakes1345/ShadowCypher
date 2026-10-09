@@ -54,6 +54,6 @@ class ShadowContext:
         return "No specific logs found for this mission."
 
 # Global context for the current workspace
-from shadowcypher.core.config import config
+from shadowcypher.core.config import config  # noqa: E402
 
 context = ShadowContext(config.project_root)

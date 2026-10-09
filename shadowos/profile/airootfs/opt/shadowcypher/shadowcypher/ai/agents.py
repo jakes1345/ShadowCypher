@@ -13,15 +13,14 @@ Architecture:
 """
 
 import json
-import re
 import threading
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
-from typing import Optional, Callable, Any
+from typing import Callable, Optional
+
 from shadowcypher.core.logger import logger
-from shadowcypher.core.config import config
 
 OLLAMA_BASE = "http://127.0.0.1:11434"
 
@@ -370,7 +369,7 @@ class AgentRouter:
         # 0. INTENT → EXECUTE → ANALYZE
         effective_query = query
         try:
-            from shadowcypher.ai.intent import detect_intent, execute_intent, build_analysis_prompt
+            from shadowcypher.ai.intent import build_analysis_prompt, detect_intent, execute_intent
             intent = detect_intent(query)
             if intent["type"] != "general" and intent.get("target") and tools_enabled:
                 if callback:
@@ -496,7 +495,7 @@ class AgentRouter:
                    callback: Callable = None, tools_enabled: bool = True,
                    max_cycles: int = 15) -> str:
         """Execute an agent. MetaChain when available, direct provider otherwise."""
-        from shadowcypher.ai.orchestrator import orchestrator, _AUTOAGENT_AVAILABLE
+        from shadowcypher.ai.orchestrator import _AUTOAGENT_AVAILABLE, orchestrator
 
         result: list[str] = [None]
         event = threading.Event()

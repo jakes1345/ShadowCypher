@@ -50,7 +50,7 @@ class GhostMission(ABC):
 
 class SovereignGhostMission(GhostMission):
     """
-    Sovereign Apex Build — A truly autonomous mission engine that 
+    Sovereign Apex Build — A truly autonomous mission engine that
     executes real tools instead of just planning.
     """
     def __init__(self, target: str):

@@ -1,9 +1,10 @@
-import sys
 import os
+import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import gi
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
 
 print("[SYSTEM] INITIATING_UI_INTEGRITY_TEST_V26.5...")
 
@@ -16,7 +17,6 @@ pages = {
     "Network": ("shadowcypher.ui.network_page", "NetworkPage"),
     "Forensics": ("shadowcypher.ui.forensics_page", "ForensicsPage"),
     "OSINT": ("shadowcypher.ui.osint_page", "OSINTPage"),
-    "Credentials": ("shadowcypher.ui.secrets_page", "SecretsPage"),
     "Firewall": ("shadowcypher.ui.firewall_page", "FirewallPage"),
     "Wireless": ("shadowcypher.ui.wireless_page", "WirelessPage"),
     "Session": ("shadowcypher.ui.session_page", "SessionPage")

@@ -34,7 +34,7 @@ REPORT_FILE="security-report-$(date +%Y%m%d).md"
     echo "## System Security Settings"
     echo ""
     echo "- SELinux: $(getenforce 2>/dev/null || echo 'Not available')"
-    echo "- Firewall: $(systemctl is-enabled ufw 2>/dev/null || echo 'Disabled')"
+    echo "- Firewall: $(systemctl is-enabled nftables 2>/dev/null || echo 'Disabled')"
     echo "- Audit: $(systemctl is-active auditd 2>/dev/null || echo 'Inactive')"
     echo ""
 

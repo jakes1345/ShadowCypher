@@ -4,8 +4,7 @@ Allows AI Agents to read project files, system state, and mission data.
 """
 
 import os
-import mimetypes
-from shadowcypher.core.logger import logger
+
 
 class ShadowContext:
     """Provides deep architectural and mission context to the AI Swarm."""
@@ -16,11 +15,11 @@ class ShadowContext:
     def list_project_tree(self, depth: int = 2) -> str:
         """Returns a summarized tree of the project for the AI's mental map."""
         tree = []
-        for root, dirs, files in os.walk(self.root):
+        for root, _, files in os.walk(self.root):
             level = root.replace(str(self.root), '').count(os.sep)
             if level >= depth:
                 continue
-            
+
             indent = ' ' * 4 * level
             tree.append(f"{indent}{os.path.basename(root)}/")
             sub_indent = ' ' * 4 * (level + 1)
@@ -36,7 +35,7 @@ class ShadowContext:
             return "ERROR: Access denied — path traversal blocked."
         if not os.path.exists(abs_path):
             return f"ERROR: File {relative_path} not found."
-        
+
         try:
             with open(abs_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -56,4 +55,5 @@ class ShadowContext:
 
 # Global context for the current workspace
 from shadowcypher.core.config import config
+
 context = ShadowContext(config.project_root)

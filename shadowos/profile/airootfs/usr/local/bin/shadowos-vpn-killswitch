@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# Kill switch: block all non-VPN traffic when VPN is active
+# Kill switch: block all non-VPN traffic when VPN is active.
+# Uses a high-priority (priority -100) table that sits above the base firewall,
+# so the base inet shadowos table stays loaded and is restored automatically
+# when the kill switch is disabled.
 set -e
 ACTION="${1:-enable}"
 
 if [[ "$ACTION" == "enable" ]]; then
-    nft flush ruleset
+    # Remove any stale killswitch table before adding fresh rules
+    nft delete table inet killswitch 2>/dev/null || true
     nft -f - << 'NFT'
 table inet killswitch {
     chain output {
@@ -30,6 +34,7 @@ table inet killswitch {
 NFT
     echo "✓ Kill switch ACTIVE — all traffic blocked except VPN tunnel"
 elif [[ "$ACTION" == "disable" ]]; then
-    nft flush table inet killswitch 2>/dev/null || true
-    echo "✓ Kill switch DISABLED"
+    # Remove only the killswitch table; base firewall (inet shadowos) remains intact
+    nft delete table inet killswitch 2>/dev/null || true
+    echo "✓ Kill switch DISABLED — base firewall restored"
 fi

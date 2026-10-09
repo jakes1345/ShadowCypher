@@ -21,7 +21,8 @@
 set -euo pipefail
 
 # Global configuration
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 readonly POLICY_FILE="${SCRIPT_DIR}/secureboot-policy.json"
 readonly LOG_FILE="/var/log/secureboot-setup.log"
 readonly STATE_DIR="/var/lib/secureboot"
@@ -38,14 +39,13 @@ VERBOSE=0
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
 readonly NC='\033[0m' # No Color
 
 # Logging functions
 log() {
     local level="$1"
     shift
-    local message="$@"
+    local message="$*"
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[${timestamp}] [${level}] ${message}" | tee -a "${LOG_FILE}"
@@ -57,17 +57,17 @@ log_info() {
 
 log_warn() {
     log "WARN" "$@"
-    echo -e "${YELLOW}[WARNING]${NC} $@" >&2
+    echo -e "${YELLOW}[WARNING]${NC} $*" >&2
 }
 
 log_error() {
     log "ERROR" "$@"
-    echo -e "${RED}[ERROR]${NC} $@" >&2
+    echo -e "${RED}[ERROR]${NC} $*" >&2
 }
 
 log_success() {
     log "SUCCESS" "$@"
-    echo -e "${GREEN}[OK]${NC} $@"
+    echo -e "${GREEN}[OK]${NC} $*"
 }
 
 log_debug() {
@@ -223,7 +223,8 @@ check_requirements() {
 backup_efi_vars() {
     log_info "Backing up current EFI variables..."
 
-    local backup_dir="${EFI_BACKUP_DIR}/backup-$(date +%Y%m%d-%H%M%S)"
+    local backup_dir
+    backup_dir="${EFI_BACKUP_DIR}/backup-$(date +%Y%m%d-%H%M%S)"
     mkdir -p "${backup_dir}"
 
     if [[ ${DRY_RUN} -eq 1 ]]; then
@@ -388,9 +389,11 @@ verify_secureboot_status() {
     log_info "Verifying Secure Boot status..."
 
     # Check SecureBoot variable
-    if [[ -f /sys/firmware/efi/efivars/SecureBoot-* ]]; then
+    local sb_var
+    sb_var=$(ls /sys/firmware/efi/efivars/SecureBoot-* 2>/dev/null | head -1 || true)
+    if [[ -f "${sb_var:-}" ]]; then
         local sb_status
-        sb_status=$(od -An -tx1 /sys/firmware/efi/efivars/SecureBoot-* | awk '{print $NF}')
+        sb_status=$(od -An -tx1 "${sb_var}" | awk '{print $NF}')
 
         if [[ "${sb_status}" == "01" ]]; then
             log_success "Secure Boot is ENABLED"
@@ -440,8 +443,10 @@ audit_boot_chain() {
     echo "Firmware: $(cat /sys/firmware/efi/fw_platform_size)" | tee -a "${LOG_FILE}"
 
     # Check Secure Boot status
-    if [[ -f /sys/firmware/efi/efivars/SecureBoot-* ]]; then
-        echo "Secure Boot: $(od -An -tx1 /sys/firmware/efi/efivars/SecureBoot-*)" | tee -a "${LOG_FILE}"
+    local _sb_var
+    _sb_var=$(ls /sys/firmware/efi/efivars/SecureBoot-* 2>/dev/null | head -1 || true)
+    if [[ -f "${_sb_var:-}" ]]; then
+        echo "Secure Boot: $(od -An -tx1 "${_sb_var}")" | tee -a "${LOG_FILE}"
     fi
 
     # Check EFI boot variables
@@ -479,7 +484,8 @@ setup_rollback_protection() {
         return 0
     fi
 
-    local version="1.0.0-$(date +%Y%m%d)"
+    local version
+    version="1.0.0-$(date +%Y%m%d)"
     echo "${version}" > "${rollback_file}"
     chmod 600 "${rollback_file}"
 
@@ -491,7 +497,8 @@ setup_rollback_protection() {
 generate_audit_report() {
     log_info "Generating audit report..."
 
-    local report_file="${STATE_DIR}/audit-report-$(date +%Y%m%d-%H%M%S).txt"
+    local report_file
+    report_file="${STATE_DIR}/audit-report-$(date +%Y%m%d-%H%M%S).txt"
 
     {
         echo "=== ShadowCypher Secure Boot Audit Report ==="
@@ -504,8 +511,10 @@ generate_audit_report() {
         [[ -d /sys/firmware/efi ]] && echo "UEFI: YES" || echo "UEFI: NO"
         echo ""
         echo "=== Secure Boot Status ==="
-        if [[ -f /sys/firmware/efi/efivars/SecureBoot-* ]]; then
-            od -An -tx1 /sys/firmware/efi/efivars/SecureBoot-* | awk '{print $NF}'
+        local _sb
+        _sb=$(ls /sys/firmware/efi/efivars/SecureBoot-* 2>/dev/null | head -1 || true)
+        if [[ -f "${_sb:-}" ]]; then
+            od -An -tx1 "${_sb}" | awk '{print $NF}'
         fi
         echo ""
         echo "=== Key Information ==="

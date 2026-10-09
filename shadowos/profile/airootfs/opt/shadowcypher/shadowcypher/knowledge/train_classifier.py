@@ -17,8 +17,8 @@ import json
 import math
 import re
 import time
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 # ── Training data ────────────────────────────────────────────────────────────
 # 80-100 natural-language examples per intent.

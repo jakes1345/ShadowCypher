@@ -46,6 +46,7 @@ class DeepOSINT:
         """
         require_stealth(on_output=on_output)
         from shadowcypher.core.config import config
+
         sherlock_root = os.path.join(str(config.project_root), "tools", "sherlock")
         if not os.path.exists(sherlock_root):
             if on_output:

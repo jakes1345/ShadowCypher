@@ -41,7 +41,6 @@ dnscrypt-proxy
 tor
 firejail
 apparmor
-ufw
 nftables
 conntrack-tools
 fail2ban
@@ -80,15 +79,20 @@ sleuthkit
 radare2
 proxychains-ng
 
+# Qt6 runtime — required by shadowos-installer and shadowcypher-qt desktop app
+qt6-base
+qt6-wayland
+qt6-declarative
+qt6-websockets
+qt6-svg
+qt6-5compat
+
 # === Modern desktop: Hyprland ===
 hyprland
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
-qt6-wayland
+# qt6-wayland, qt6-declarative, qt6-5compat, qt6-svg already listed above (Qt6 runtime block)
 qt5-wayland
-qt6-declarative
-qt6-5compat
-qt6-svg
 waybar
 wofi
 hyprpaper
@@ -97,6 +101,9 @@ hyprlock
 hypridle
 hyprcursor
 mako
+libnotify
+wlr-randr
+pacman-contrib
 foot
 xterm
 thunar
@@ -150,6 +157,7 @@ bluez-utils
 # Installer (bare-metal install support) — Calamares is AUR-only so we ship
 # archinstall (official Arch TUI installer) + a friendlier wrapper.
 archinstall
+calamares
 
 # ShadowCypher runtime deps (GTK app)
 gtk3
@@ -179,14 +187,11 @@ python-scikit-learn
 python-matplotlib
 
 # Apps
-# Browsers — privacy-first: LibreWolf default, Mullvad for anti-fingerprint,
-# Tor Browser via launcher. Firefox/Mozilla products are NOT shipped because
-# Mozilla telemetry + recent policy changes contradict the distro's brand.
+# Browsers — LibreWolf, Mullvad Browser, and Tor Browser are AUR-only (Chaotic-AUR).
+# They are installed by shadowos-firstboot after Chaotic-AUR is added.
+# librewolf: hardened Firefox fork — no telemetry, no auto-update, Tor-compatible
+# chaotic-keyring/mirrorlist installed by build script via URL, not via pacstrap
 librewolf
-mullvad-browser-bin
-# firefox removed — contradicts brand (no Mozilla telemetry); use librewolf or mullvad-browser
-chaotic-keyring
-chaotic-mirrorlist
 mpv
 imv
 yt-dlp
@@ -246,7 +251,6 @@ python-pipx
 #   pipx install bloodhound       → AD path analysis
 # responder — AUR; install via: sudo pacman -S python-responder (chaotic-aur after first-boot)
 sshuttle
-# chisel is AUR-only — installed via go install at first-boot if needed
 seclists
 dnsenum
 whatweb
@@ -277,7 +281,7 @@ ligolo-ng
 ghidra
 
 # === Memory forensics ===
-python-volatility3
+# python-volatility3  # AUR only — install post-boot via pipx
 
 # === Anonymity++ (beats Parrot's AnonSurf cold) ===
 i2pd
@@ -354,7 +358,6 @@ xdg-user-dirs
 xdg-utils
 zathura
 zathura-pdf-mupdf
-gufw
 gnome-keyring
 libsecret
 seahorse
@@ -408,6 +411,39 @@ ntfs-3g
 exfatprogs
 cryptsetup
 
+# === Omarchy-inspired polish ===
+# File navigation
+yazi                        # TUI file manager (replaces thunar for power users)
+zoxide                      # smart cd — learns your most-visited dirs
+atuin                       # shell history search with sync (omarchy-style ctrl+r)
+# Dev productivity
+zellij                      # multiplexer alternative to tmux (modern, splits built-in)
+# Terminal experience
+sd                          # sed alternative with simpler syntax
+choose                      # human-friendly cut/awk alternative
+bottom                      # btop alternative (cross-platform)
+procs                       # modern ps replacement
+tokei                       # code statistics counter
+hyperfine                   # command benchmarking tool
+gdu                         # fast disk usage analyzer
+
+# === Qubes OS-inspired VM compartmentalization ===
+libvirt                     # VM management API
+virt-manager                # GUI VM manager
+qemu-system-x86             # x86/x64 guest emulation
+qemu-img                    # disk image tools (qcow2, raw, etc.)
+edk2-ovmf                   # UEFI firmware for VMs
+swtpm                       # TPM 2.0 emulator for VMs
+virt-viewer                 # SPICE/VNC viewer for VM displays
+spice-vdagent               # clipboard/file sharing between host and VM
+dnsmasq                     # DHCP/DNS for libvirt isolated networks
+bridge-utils                # network bridge management for VMs
+dmidecode                   # BIOS/hardware info used by VMs
+
+# === Tails OS-inspired amnesia ===
+# secure-delete is already listed above (security section)
+memtester                   # memory testing (also used for secure wipe verification)
+
 # === Gaming — additions ===
 # xpadneo-dkms — AUR only; install via yay post-boot
 corectrl
@@ -450,11 +486,10 @@ system-config-printer
 # === Privacy / comms ===
 nheko
 
-# === Enterprise Features (FreeIPA, FIPS, TPM, SELinux, Compliance) ===
-# Identity Management
-freeipa-client
-krb5
-openldap
+# === Enterprise Features (TPM, Compliance) ===
+# freeipa-client  # AUR only — unresolvable deps (authselect, certmonger, oddjob-selinux)
+# krb5            # pulled in as dep if needed
+# openldap        # pulled in as dep if needed
 
 # Encryption & Hardware Security
 # (dedup) cryptsetup
@@ -464,11 +499,14 @@ tpm2-tss
 tpm2-pkcs11
 # (dedup) efibootmgr
 shim-signed
+sbctl                       # Secure Boot key manager (enroll, sign, verify)
+efivar                      # EFI variable access (required by secureboot-enable.sh)
+mokutil                     # MOK key enrollment for Secure Boot
 
 # SELinux & Mandatory Access Control
-selinux-policy
-selinux-policy-default
-selinux-python
+# selinux-policy        # not in standard Arch repos
+# selinux-policy-default
+# selinux-python
 
 # FIPS 140-2 Compliance
 openssl
@@ -477,10 +515,49 @@ libsodium
 
 # Audit & Compliance
 # (dedup) audit
-systemd-journal-remote
-aide
+# systemd-journal-remote  # not a separate Arch package (part of systemd)
+# aide                    # AUR only
 
 # DNSSEC & Network Security
 bind-tools
 unbound
 ldns
+
+# === Missing system deps (found in package audit) ===
+
+# Bluetooth extras
+bluez-obex                  # OBEX push for Bluetooth file transfer
+
+# Audio — GStreamer integration with PipeWire
+gst-plugin-pipewire         # makes media players (vlc, etc.) use pipewire
+libpulse                    # PulseAudio compatibility layer (many apps link against it)
+
+# Network service discovery (required for printer discovery, avahi-browse)
+avahi
+nss-mdns                    # mDNS hostname resolution (.local domains)
+
+# Hardware sensors & power
+lm_sensors                  # CPU/GPU temperature monitoring (used by waybar)
+acpi                        # battery/power event CLI
+acpid                       # ACPI event daemon (lid close, power button)
+
+# Filesystem
+fuse2                       # FUSE 2.x compat (AppImage, VeraCrypt containers)
+fuse3                       # FUSE 3.x (already pulled by many packages, explicit is safe)
+
+# Boot — GRUB EFI target
+grub-efi-x86_64-signed      # pre-signed GRUB EFI binary for Secure Boot systems
+os-prober                   # detect other OSes for GRUB menu
+
+# Mirror ranking at install/first-boot
+reflector                   # update pacman mirrorlist by speed
+
+# GTK4 (required by newer apps — ghostty, some GNOME-based tools)
+gtk4
+
+# Zsh quality-of-life plugins (loaded by /etc/zsh/zshrc or user .zshrc)
+zsh-autosuggestions
+zsh-syntax-highlighting
+
+# sbsign is from AUR package 'sbsigntools' — installed via firstboot if online
+# ghostty is installed via Chaotic-AUR in firstboot (GPU-accelerated terminal)

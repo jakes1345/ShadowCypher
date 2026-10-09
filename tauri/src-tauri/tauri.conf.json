@@ -24,6 +24,17 @@
       "csp": "default-src 'self'; connect-src https://api.shadowcypher.site wss://api.shadowcypher.site https://supabase.co; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:"
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://releases.shadowcypher.site/api/tauri/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "dialog": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

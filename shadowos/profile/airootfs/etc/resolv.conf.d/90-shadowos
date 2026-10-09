@@ -1,5 +1,5 @@
-# ShadowOS DNS Security Configuration
-
-# Use systemd-resolved
-nameserver 127.0.0.53
-options edns0 trust-ad
+# ShadowOS DNS — all queries go to dnscrypt-proxy on 127.0.0.1:53
+# dnscrypt-proxy encrypts every request with DNSCrypt or DoH.
+# AnonSurf overrides this with Tor's DNSPort when active.
+nameserver 127.0.0.1
+options edns0

@@ -21,11 +21,9 @@ Usage:
 
 import argparse
 import os
-import sys
-import subprocess
-import time
 import random
-import struct
+import subprocess
+import sys
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m",
      "M":"\033[1;35m","N":"\033[0m","B":"\033[1m","D":"\033[0;37m"}
@@ -112,7 +110,7 @@ def cmd_shred(target):
         targets = [target]
     else:
         targets = []
-        for root, dirs, files in os.walk(target, topdown=False):
+        for root, _, files in os.walk(target, topdown=False):
             for f in files:
                 targets.append(os.path.join(root, f))
 
@@ -133,7 +131,7 @@ def cmd_shred(target):
 
     # Remove empty directories
     if os.path.isdir(target):
-        for root, dirs, files in os.walk(target, topdown=False):
+        for root, dirs, _ in os.walk(target, topdown=False):
             for d in dirs:
                 try:
                     os.rmdir(os.path.join(root, d))
@@ -328,8 +326,8 @@ def cmd_panic():
     print(f"\n  {C['R']}EXECUTING PANIC PROTOCOL{C['N']}\n")
     destroyed = 0
 
-    import shutil
     import glob
+    import shutil
 
     # Project root
     proj = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -360,7 +358,7 @@ def cmd_panic():
                 f"{proj}/payloads", f"{proj}/projects"]
     for ld in log_dirs:
         if os.path.isdir(ld):
-            for root, dirs, files in os.walk(ld):
+            for root, _, files in os.walk(ld):
                 for f in files:
                     fp = os.path.join(root, f)
                     secure_shred_file(fp, passes=3)

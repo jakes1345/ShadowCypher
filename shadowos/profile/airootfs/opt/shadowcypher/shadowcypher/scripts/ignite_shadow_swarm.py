@@ -5,10 +5,10 @@
 # Initializes the encrypted UDP relay hub and provisions connection identities
 # for authorized external client devices.
 
-import sys
-import os
-import time
 import logging
+import os
+import sys
+import time
 
 # 1. Environment Sync
 sys.path.insert(0, os.getcwd())

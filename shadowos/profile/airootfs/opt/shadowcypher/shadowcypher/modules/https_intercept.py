@@ -6,13 +6,11 @@ Orchestrates mitmproxy, sslstrip, and arpspoof for full HTTPS interception pipel
 import os
 import subprocess
 import tempfile
-import threading
 from typing import Optional
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
-from shadowcypher.core.sanitize import validate_ip, validate_port, validate_interface
-
+from shadowcypher.core.sanitize import validate_ip, validate_port
 
 # ── mitmproxy inline addon: credential extraction ──
 

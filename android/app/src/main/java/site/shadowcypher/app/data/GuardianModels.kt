@@ -71,3 +71,7 @@ data class Mission(
 data class CreateMissionRequest(val script: String, val label: String? = null)
 data class CreateMissionResponse(val mission_id: String, val status: String)
 data class MissionListResponse(val missions: List<Mission>)
+
+data class AiChatMessage(val role: String, val content: String)
+data class AiQueryRequest(val question: String, val tier: String = "fast", val history: List<AiChatMessage> = emptyList())
+data class AiQueryResponse(val answer: String?, val model: String?, val provider: String?, val error: String?)

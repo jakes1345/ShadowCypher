@@ -1,0 +1,184 @@
+# ShadowScript: Native Language Block Demo
+# Shows how to mix Rust, Go, C++, and ShadowScript in one mission.
+# This is the polyglot model — each block is a full program that reads
+# JSON from stdin and writes results to stdout.
+# Variable injection: $VAR refs in native source are replaced at compile time.
+# Write-back: print "SHADOWVAR:NAME=value" to update ShadowScript variables.
+
+VAR target = "192.168.1.1"
+VAR timeout_ms = "500"
+
+!echo("=== NATIVE POLYGLOT DEMO ===")
+!echo("Target: $target")
+
+
+# ─── Rust block: fast ICMP-style reachability check ──────────────────────────
+# Full Rust program. Reads {"host": "..."} from stdin.
+# Prints SHADOWVAR:REACHABLE=true/false so ShadowScript can branch on it.
+# serde_json is auto-included in the generated Cargo.toml.
+
+rust ping_host {
+    use std::io::Read;
+    use std::process::Command;
+
+    fn main() {
+        let mut buf = String::new();
+        std::io::stdin().read_to_string(&mut buf).unwrap();
+        let args: serde_json::Value = serde_json::from_str(&buf).unwrap_or_default();
+
+        let host = args["arg0"].as_str().unwrap_or("127.0.0.1");
+
+        // platform ping — 1 packet, short timeout
+        let out = Command::new("ping")
+            .args(["-c", "1", "-W", "1", host])
+            .output();
+
+        match out {
+            Ok(o) if o.status.success() => {
+                println!("SHADOWVAR:REACHABLE=true");
+                println!("{} is up", host);
+            }
+            _ => {
+                println!("SHADOWVAR:REACHABLE=false");
+                println!("{} did not respond", host);
+            }
+        }
+    }
+}
+
+
+# ─── Go block: fast TCP port checker ─────────────────────────────────────────
+# Tries to connect to common ports on the target.
+# Outputs open ports one per line, sets SHADOWVAR:OPEN_PORTS.
+
+go check_ports {
+    package main
+
+    import (
+        "encoding/json"
+        "fmt"
+        "net"
+        "os"
+        "strings"
+        "time"
+    )
+
+    func main() {
+        var args map[string]interface{}
+        json.NewDecoder(os.Stdin).Decode(&args)
+
+        host, _ := args["arg0"].(string)
+        if host == "" {
+            host = "127.0.0.1"
+        }
+
+        ports := []string{"22", "80", "443", "8080", "3306", "5432", "6379", "27017"}
+        var open []string
+
+        timeout := 500 * time.Millisecond
+        for _, p := range ports {
+            conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, p), timeout)
+            if err == nil {
+                conn.Close()
+                open = append(open, p)
+                fmt.Println("open:", p)
+            }
+        }
+
+        if len(open) > 0 {
+            fmt.Println("SHADOWVAR:OPEN_PORTS=" + strings.Join(open, ","))
+        } else {
+            fmt.Println("SHADOWVAR:OPEN_PORTS=none")
+        }
+    }
+}
+
+
+# ─── C++ block: banner grab on a given port ───────────────────────────────────
+# Reads {"arg0": "host", "arg1": "port"} from stdin.
+# Connects, reads the first 256 bytes, prints the banner.
+
+cpp grab_banner {
+    #include <iostream>
+    #include <string>
+    #include <cstring>
+    #include <sys/socket.h>
+    #include <netdb.h>
+    #include <unistd.h>
+
+    int main() {
+        // Read one JSON line: {"arg0":"host","arg1":"port"}
+        std::string line;
+        std::getline(std::cin, line);
+
+        // Simple key extraction (no full JSON parser in stdlib)
+        auto extract = [&](const std::string& key) -> std::string {
+            std::string needle = "\"" + key + "\":\"";
+            auto pos = line.find(needle);
+            if (pos == std::string::npos) return "";
+            pos += needle.size();
+            auto end = line.find("\"", pos);
+            return (end == std::string::npos) ? "" : line.substr(pos, end - pos);
+        };
+
+        std::string host = extract("arg0");
+        std::string port = extract("arg1");
+        if (port.empty()) port = "80";
+
+        struct addrinfo hints{}, *res;
+        hints.ai_socktype = SOCK_STREAM;
+        if (getaddrinfo(host.c_str(), port.c_str(), &hints, &res) != 0) {
+            std::cout << "SHADOWVAR:BANNER=connection_failed" << std::endl;
+            return 1;
+        }
+
+        int fd = socket(res->ai_family, SOCK_STREAM, 0);
+        struct timeval tv{ .tv_sec = 2, .tv_usec = 0 };
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+        if (connect(fd, res->ai_addr, res->ai_addrlen) == 0) {
+            char buf[257]{};
+            read(fd, buf, 256);
+            std::string banner(buf);
+            // trim newlines
+            while (!banner.empty() && (banner.back() == '\n' || banner.back() == '\r'))
+                banner.pop_back();
+            std::cout << "SHADOWVAR:BANNER=" << banner << std::endl;
+            std::cout << "Banner: " << banner << std::endl;
+        } else {
+            std::cout << "SHADOWVAR:BANNER=no_banner" << std::endl;
+        }
+
+        close(fd);
+        freeaddrinfo(res);
+        return 0;
+    }
+}
+
+
+# ─── Run the mission ──────────────────────────────────────────────────────────
+
+TARGET($target)
+
+UNSAFE {
+    !echo("[*] Checking if $target is reachable ...")
+    ping_host $target
+
+    IF $REACHABLE == "true" {
+        !echo("[+] $target is up — scanning ports ...")
+        check_ports $target
+        !echo("[*] Open ports: $OPEN_PORTS")
+
+        AI("I found these open ports on $target: $OPEN_PORTS. What services are likely running and what should I check first?")
+
+        !echo("[*] Grabbing banner on port 80 ...")
+        grab_banner $target 80
+        !echo("[*] Banner: $BANNER")
+
+    } ELSE {
+        !echo("[-] $target did not respond — might be firewalled or offline")
+    }
+}
+
+!echo("=== DEMO COMPLETE ===")
+RETURN "ok"

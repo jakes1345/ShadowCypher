@@ -75,7 +75,7 @@ ok "Systemd units checked"
 echo "==> Checking package list..."
 required=(
     hyprland waybar foot mako hypridle hyprlock hyprpaper wofi
-    nftables conntrack-tools ufw apparmor fail2ban macchanger
+    nftables conntrack-tools apparmor fail2ban macchanger
     networkmanager bluez blueman pipewire wireplumber
     grim slurp swappy wl-clipboard cliphist
     polkit-gnome

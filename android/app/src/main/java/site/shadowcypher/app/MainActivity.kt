@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -30,6 +31,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import site.shadowcypher.app.service.BackgroundSyncWorker
 import site.shadowcypher.app.service.NotificationHelper
+import site.shadowcypher.app.ui.screen.AiChatScreen
 import site.shadowcypher.app.ui.screen.CveScreen
 import site.shadowcypher.app.ui.screen.DashboardScreen
 import site.shadowcypher.app.ui.screen.DevicesScreen
@@ -43,8 +45,9 @@ sealed class NavRoute(val route: String, val label: String, val icon: ImageVecto
     object Dashboard : NavRoute("dashboard", "Dashboard", Icons.Default.Dashboard)
     object Devices : NavRoute("devices", "Devices", Icons.Default.Devices)
     object Incidents : NavRoute("incidents", "Incidents", Icons.Default.Warning)
-    object Missions : NavRoute("missions", "Missions", Icons.Default.PlayArrow)
     object Cve : NavRoute("cve", "CVEs", Icons.Default.BugReport)
+    object AiChat : NavRoute("ai_chat", "Shadow AI", Icons.Default.Psychology)
+    object Missions : NavRoute("missions", "Missions", Icons.Default.PlayArrow)
     object Settings : NavRoute("settings", "Settings", Icons.Default.Settings)
 }
 
@@ -52,8 +55,8 @@ private val navItems = listOf(
     NavRoute.Dashboard,
     NavRoute.Devices,
     NavRoute.Incidents,
-    NavRoute.Missions,
     NavRoute.Cve,
+    NavRoute.AiChat,
     NavRoute.Settings
 )
 
@@ -150,11 +153,14 @@ fun ShadowGuardianApp() {
                 composable(NavRoute.Incidents.route) {
                     IncidentsScreen(viewModel = viewModel)
                 }
-                composable(NavRoute.Missions.route) {
-                    MissionsScreen(viewModel = viewModel)
-                }
                 composable(NavRoute.Cve.route) {
                     CveScreen(viewModel = viewModel)
+                }
+                composable(NavRoute.AiChat.route) {
+                    AiChatScreen(viewModel = viewModel)
+                }
+                composable(NavRoute.Missions.route) {
+                    MissionsScreen(viewModel = viewModel)
                 }
                 composable(NavRoute.Settings.route) {
                     SettingsScreen(viewModel = viewModel)

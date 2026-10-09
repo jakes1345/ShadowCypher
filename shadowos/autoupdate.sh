@@ -26,7 +26,7 @@ for pkg in $SECURITY_PKGS; do
 
         if [ "$UPDATE" != "$CURRENT" ]; then
             log "Security update available: $pkg ($CURRENT -> $UPDATE)"
-            sudo pacman -S --noconfirm "$pkg" >> "$LOG_FILE" 2>&1
+            sudo pacman -S --noconfirm "$pkg" 2>&1 | sudo tee -a "$LOG_FILE" > /dev/null
         fi
     fi
 done

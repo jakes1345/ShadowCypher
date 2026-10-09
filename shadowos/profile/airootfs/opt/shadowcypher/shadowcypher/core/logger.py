@@ -8,7 +8,7 @@ import threading
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 def _resolve_writable_log_dir(preferred: Optional[str]) -> Path:

@@ -18,14 +18,14 @@ Start:   python3 mcp_server.py
 Config:  Add to ~/.claude/settings.json under mcpServers
 """
 
-import sys
-import os
 import json
-import subprocess
-import socket
+import os
 import re
-import time
 import shutil
+import socket
+import subprocess
+import sys
+import time
 
 # MCP protocol constants
 JSONRPC_VERSION = "2.0"

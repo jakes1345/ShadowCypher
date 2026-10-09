@@ -1,0 +1,66 @@
+# ─────────────────────────────────────────────────────
+# ShadowScript Lesson 4 — Core Directives
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   TARGET    — lock a host as the current target
+#   STRIKE    — call a module's method against the target
+#   SCAN      — network port scan
+#   AI        — ask the local AI, get answer in $AI_RESULT
+#   SWARM     — broadcast a task to linked Shadow Nodes
+#   LOAD      — run another .shadow file
+# ─────────────────────────────────────────────────────
+
+# 1. TARGET sets $CURRENT_TARGET — every directive after uses it
+VAR domain = "example.com"
+TARGET($domain)
+!echo("Locked onto: $CURRENT_TARGET")
+
+# 2. STRIKE calls a Python module method against the target
+#    Pattern:  STRIKE(module_name, method_name)
+#    The module list:  recon  network  osint  vuln  web  forensics  ...
+#    Check .modules in the REPL for the full list
+
+STRIKE(osint, ssl_cert_info)
+#   → output lands in $LAST automatically
+!echo("SSL info: $LAST")
+
+STRIKE(recon, subdomain_enum)
+!echo("Subdomains: $LAST")
+
+# 3. SCAN runs a port scan — uses $CURRENT_TARGET
+#    Specify ports as ranges or comma-separated
+SCAN("22,80,443,8080")
+!echo("Scan result: $LAST")
+
+# 4. AI sends a prompt to the local Ollama model
+#    $VAR interpolation works in the prompt — embed your findings
+AI("I just found these subdomains on $domain: $LAST. Which look riskiest?")
+!echo("AI says: $AI_RESULT")
+
+# 5. Chain them together — real recon workflow
+VAR target = "10.0.0.1"
+TARGET($target)
+
+STRIKE(network, arp_scan)
+!echo("Network hosts: $LAST")
+
+AI("I found these live hosts: $LAST. What should I probe first and why?")
+
+# 6. LOAD — pull in a shared mission or utility script
+#    Paths are relative to shadowscript/missions/ by default
+#    LOAD("ghost_recon.shadow")   — uncomment to try it
+
+# 7. SWARM — if you have Shadow Nodes deployed, push work to them
+#    Without nodes this just reports "no nodes linked"
+SWARM("check_connectivity")
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • TARGET is sticky — set it once, all STRIKEs use it
+#   • STRIKE output always updates $LAST
+#   • AI uses the local Ollama model — it's offline, no data leaves
+#   • SCAN runs async — results appear as they come in
+#   • LOAD shares the current variable scope (same runtime)
+# ─────────────────────────────────────────────────────
+
+RETURN "lesson 4 complete"

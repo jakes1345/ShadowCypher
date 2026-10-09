@@ -1,0 +1,48 @@
+# ShadowScript Mission: AD Recon
+# Active Directory enumeration — users, groups, GPOs, SPNs, trusts.
+# Run only inside your own AD environment or an authorized engagement.
+
+VAR dc = "dc.corp.local"
+VAR domain = "corp.local"
+
+!echo("=== AD RECON — $domain ===")
+
+TARGET($dc)
+
+!echo("[*] Phase 1: DC discovery")
+STRIKE(ad, dc_discovery)
+!echo("[*] Domain controllers: $LAST")
+
+!echo("[*] Phase 2: User enumeration")
+STRIKE(ad, user_enum)
+AI("From this user list, flag accounts that look like service accounts or privileged users based on naming: $LAST")
+
+!echo("[*] Phase 3: SPN hunting (Kerberoastable accounts)")
+STRIKE(ad, spn_enum)
+IF $LAST != "" {
+    !echo("[!] SPNs found — Kerberoastable: $LAST")
+    AI("Which of these SPNs are highest-value Kerberoasting targets? $LAST")
+} ELSE {
+    !echo("[+] No SPNs found")
+}
+
+!echo("[*] Phase 4: AS-REP roasting candidates")
+STRIKE(ad, asrep_enum)
+!echo("[*] Pre-auth disabled accounts: $LAST")
+
+!echo("[*] Phase 5: Group memberships")
+STRIKE(ad, group_enum)
+!echo("[*] Groups: $LAST")
+
+!echo("[*] Phase 6: GPO enumeration")
+STRIKE(ad, gpo_enum)
+AI("Identify any GPOs that weaken security (disable Defender, allow WDigest, set weak password policy): $LAST")
+
+!echo("[*] Phase 7: Domain trusts")
+STRIKE(ad, trust_enum)
+!echo("[*] Trust relationships: $LAST")
+
+AI("Provide an attack path summary for $domain: SPN targets, AS-REP candidates, trust abuse vectors. $LAST")
+
+!echo("=== AD RECON COMPLETE ===")
+RETURN "ok"

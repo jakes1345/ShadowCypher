@@ -4,10 +4,11 @@ Handles Aircrack-ng suite integration, WPA/WPA2 audits, and deauth attacks.
 """
 
 import shutil
-import subprocess
+import subprocess  # noqa: F401 — required for test patching via @patch("...wireless.subprocess.*")
+
 from shadowcypher.core.module import BaseModule
-from shadowcypher.core.sanitize import validate_interface
 from shadowcypher.core.platform import platform_engine
+from shadowcypher.core.sanitize import validate_interface
 from shadowcypher.core.stealth import require_stealth
 
 
@@ -134,7 +135,7 @@ class Wireless(BaseModule):
         from shadowcypher.modules.deephat import deephat
         if on_output:
             on_output(f"[SIGNAL] deauth swarm on {len(bssid_list)} targets...\n")
-        
+
         desc = f"Generate a coordinated deauth/jamming payload for the following BSSIDs: {', '.join(bssid_list)}. Use opportunistic signal-overlapping for max efficiency."
         filename = deephat.forge_weapon(desc, category="jamming")
         return deephat.execute_payload(filename, on_output=on_output)

@@ -5,9 +5,11 @@ Integrates with the ShadowHub mission-dispatch for high-fidelity planning.
 
 import json
 import re
+
 from shadowcypher.core.hub import hub
-from shadowcypher.core.session import session
 from shadowcypher.core.logger import logger
+from shadowcypher.core.session import session
+
 
 class UltraPlan:
     """Manages the multi-step engagement roadmap using Apex Swarm intelligence."""
@@ -24,13 +26,13 @@ class UltraPlan:
         if use_ai:
             # We dispatch a mission to the AI to generate the roadmap
             query = f"PROJECT: {project.name}\nTARGETS: {project.targets}\nSCOPE: {project.scope}\nGenerate a 5-step tactical roadmap (Recon, Discovery, Exploitation, Post-Ex, Reporting) in JSON format."
-            
+
             # Using synchronous mission call for the plan generation logic
             result = hub.orchestrator.execute_query_sync(
                 query,
                 agent_role="commander",  # Force the commander role for planning
             )
-            
+
             # Extract JSON array
             match = re.search(r'\[.*\]', result, re.DOTALL)
             if match:

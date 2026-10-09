@@ -16,8 +16,10 @@
 set -euo pipefail
 
 # Script configuration
-readonly SCRIPT_NAME="$(basename "$0")"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 readonly DEFAULT_CONFIG="${SCRIPT_DIR}/encrypt-config.json"
 
 # Color output for better readability

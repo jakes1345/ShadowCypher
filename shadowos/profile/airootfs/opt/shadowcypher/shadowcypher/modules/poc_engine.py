@@ -3,15 +3,16 @@ PocEngine Module — Enterprise Intelligence Build.
 Handles Metasploit, Searchsploit, and custom payload delivery.
 """
 
+import shutil
+
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.stealth import require_stealth
-import shutil
-import json
+
 
 class PocEngine(BaseModule):
     """The 'Dagger' engine for offensive operations."""
-    
+
     def __init__(self):
         super().__init__(module_name="exploit")
 
@@ -30,11 +31,11 @@ class PocEngine(BaseModule):
             return
         self.log(f"LAUNCHING_MSF_EXPLOIT: {module} ON {target}")
         msf = self.get_tool_path("msfconsole")
-        
+
         # Build MSF inline command
         opts = " ".join([f"set {k} {v}" for k, v in (options or {}).items()])
         cmd_str = f"use {module}; set RHOSTS {target}; {opts}; run; exit"
-        
+
         return self.execute(f"MSF_{target}", [msf, "-x", cmd_str], callback=on_output)
 
     def generate_payload(self, ptype, lhost, lport, on_output=None):

@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2026-04-26"
 compatibility_flags = ["nodejs_compat"]
 
-workers_dev = true
+workers_dev = false
 
 routes = [{ pattern = "api.shadowcypher.site", custom_domain = true }]
 
@@ -19,11 +19,17 @@ SITE_URL = "https://shadowcypher.site"
 RESEND_FROM_EMAIL = "ShadowCypher <noreply@shadowcypher.site>"
 AGENT_VERSION = "0.3.0"
 AGENT_SHA256 = "6590fee3f95e24a9a14a968feb598327eeb2daece83654fffe5e7cf974e13d4f"
+ANTHROPIC_MODEL = "claude-sonnet-4-6"
 
 [[kv_namespaces]]
 binding = "SHADOW_OTA"
 id = "d16349c7f8194a6f9247a20a962f60d1"
 preview_id = "806c715c0dbd4e8aadd072a75e87bbc6"
+
+[[kv_namespaces]]
+binding = "SHADOW_RL"
+id = "e2f5c9e600a84db8896f0593f11ed775"
+preview_id = "0d90869f0fef46ba83019221285315d1"
 
 [[r2_buckets]]
 binding = "SHADOW_FILES"
@@ -37,12 +43,14 @@ class_name = "ChatRoom"
 tag = "v1"
 new_sqlite_classes = ["ChatRoom"]
 
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["VideoRoom"]
+
+[[migrations]]
+tag = "v3"
+deleted_classes = ["VideoRoom"]
+
 [triggers]
 crons = ["0 * * * *"]
 
-# Shadow Mail — inbound email setup (one-time, in Cloudflare dashboard):
-#   1. Cloudflare Dashboard → Email → Email Routing → Enable on shadowcypher.site
-#   2. Add MX records as instructed (route1.mx.cloudflare.net / route2.mx.cloudflare.net)
-#   3. Create a catch-all rule: "*@shadowcypher.site" → Send to Worker → shadowcypher-api
-#   4. Optionally add DMARC: _dmarc.shadowcypher.site TXT "v=DMARC1; p=quarantine; rua=mailto:dmarc@shadowcypher.site"
-# No wrangler.toml changes needed — the email() handler in index.ts receives all routed mail.

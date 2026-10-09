@@ -3,7 +3,9 @@ Handles sovereign messaging and operator notifications.
 """
 
 import requests
+
 from shadowcypher.core.logger import logger
+
 
 class CommsEngine:
     def __init__(self, resend_api_key=None):
@@ -20,7 +22,7 @@ class CommsEngine:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        
+
         payload = {
             "from": "ShadowCypher <onboarding@resend.dev>",
             "to": to_email,

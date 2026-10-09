@@ -3,7 +3,7 @@
 # Bound to Super+Space in Hyprland.
 set -e
 
-MODEL="${SHADOWOS_AI_MODEL:-llama3.2}"
+MODEL="${SHADOWOS_AI_MODEL:-mistral:7b}"
 
 prompt=$(wofi --dmenu --prompt="shadow-ai →" --width=620 --height=80 --lines=1 || true)
 [[ -z "$prompt" ]] && exit 0

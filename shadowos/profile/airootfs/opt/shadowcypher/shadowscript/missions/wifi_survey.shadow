@@ -1,0 +1,32 @@
+# ShadowScript Mission: WiFi Survey
+# Scan nearby wireless networks and report on security posture.
+# Requires a WiFi adapter capable of monitor mode (e.g. wlan0).
+# Only survey networks you own or have explicit permission to analyse.
+
+VAR iface = "wlan0"
+
+!echo("=== WIFI SURVEY ===")
+
+!echo("[*] Available interfaces:")
+STRIKE(wireless, list_interfaces)
+!echo("$LAST")
+
+!echo("[*] Surveying networks on $iface (30s)...")
+STRIKE(wireless, scan_networks)
+IF $LAST != "" {
+    AI("Analyse this WiFi survey. Flag open networks, WEP, weak WPA-TKIP, or default SSIDs: $LAST")
+    !echo("[*] Networks found: $LAST")
+} ELSE {
+    !echo("[!] No networks found — check interface and adapter support")
+    RETURN "no_networks"
+}
+
+!echo("[*] Detailed per-adapter scan...")
+STRIKE(wireless, scan_wifi)
+!echo("[*] Detailed results: $LAST")
+
+AI("Based on the wireless survey, what are the top three security recommendations for this environment?")
+!echo("[*] AI recommendations: $AI_RESULT")
+
+!echo("=== WIFI SURVEY COMPLETE ===")
+RETURN "ok"

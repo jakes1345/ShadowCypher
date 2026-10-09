@@ -1,5 +1,4 @@
-PyGObject>=3.42.0,<3.50.0
-pycairo>=1.20.0
+scrapling>=0.4.15
 psutil>=5.8.0
 requests>=2.31.0
 python-dotenv>=0.19.0
@@ -18,6 +17,10 @@ inquirer>=3.1.0
 rich>=13.0.0
 prompt_toolkit>=3.0.0
 huggingface-hub<1.0
+paramiko>=3.0.0
+impacket>=0.11.0
+scapy>=2.5.0
+mitmproxy>=10.0.0
 
 treequest>=0.3.2
 ulid-py>=1.1.0

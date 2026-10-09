@@ -5,13 +5,14 @@ Commands are written to a private Gist as AES-GCM encrypted blobs.
 The Ghost agent polls the Gist, decrypts, and executes.
 Traffic looks like normal GitHub API calls — extremely hard to block.
 """
-import os
-import json
-import time
 import base64
+import json
+import os
 import secrets
 import threading
-from typing import Optional, Callable
+import time
+from typing import Callable, Optional
+
 from shadowcypher.core.logger import logger
 
 try:

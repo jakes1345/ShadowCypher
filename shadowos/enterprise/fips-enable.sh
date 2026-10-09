@@ -35,21 +35,24 @@ init_logging() {
 
 log_info() {
     local msg="$1"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[${timestamp}] INFO: ${msg}" >> "${LOG_FILE}"
     echo -e "${GREEN}[INFO]${NC} ${msg}"
 }
 
 log_warn() {
     local msg="$1"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[${timestamp}] WARN: ${msg}" >> "${LOG_FILE}"
     echo -e "${YELLOW}[WARN]${NC} ${msg}"
 }
 
 log_error() {
     local msg="$1"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[${timestamp}] ERROR: ${msg}" >> "${LOG_FILE}"
     echo -e "${RED}[ERROR]${NC} ${msg}"
 }
@@ -57,7 +60,8 @@ log_error() {
 log_debug() {
     local msg="$1"
     if [[ "${DEBUG:-0}" == "1" ]]; then
-        local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+        local timestamp
+        timestamp=$(date '+%Y-%m-%d %H:%M:%S')
         echo "[${timestamp}] DEBUG: ${msg}" >> "${LOG_FILE}"
         echo -e "${BLUE}[DEBUG]${NC} ${msg}"
     fi
@@ -279,22 +283,6 @@ run_fips_self_tests() {
 validate_approved_algorithms() {
     log_info "Validating approved algorithm restrictions..."
 
-    # List of forbidden algorithms
-    local forbidden_algorithms=(
-        "md5"
-        "md4"
-        "md2"
-        "des"
-        "rc2"
-        "rc4"
-        "sha0"
-    )
-
-    # Test that forbidden algorithms are not available in FIPS mode
-    local validation_passed=1
-
-    # Note: In full FIPS mode, these should fail or be unavailable
-    # This is a simplified check
     log_info "Approved algorithms in use: AES, SHA-256/384/512, RSA, ECDSA, PBKDF2"
     log_info "Forbidden algorithms restricted: MD5, DES, RC4, SHA-0"
 
@@ -327,12 +315,12 @@ validate_key_sizes() {
 generate_compliance_report() {
     log_info "Generating FIPS compliance report..."
 
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    local hostname=$(hostname)
-    local kernel_version=$(uname -r)
-    local openssl_version=$(get_openssl_version)
-    local fips_status=$(get_fips_status)
-
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')    local hostname
+    hostname=$(hostname)    local kernel_version
+    kernel_version=$(uname -r)    local openssl_version
+    openssl_version=$(get_openssl_version)    local fips_status
+    fips_status=$(get_fips_status)
     cat > "${COMPLIANCE_REPORT}" << EOF
 ================================================================================
 FIPS 140-2 Compliance Report - ShadowCypher Enterprise

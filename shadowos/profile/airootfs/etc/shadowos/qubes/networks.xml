@@ -1,0 +1,14 @@
+<!-- ShadowOS Qubes-mode libvirt network definitions -->
+<!-- Applied by /etc/shadowos/modes/qubes/apply.sh -->
+<!-- Each network provides a different trust-level isolation zone -->
+
+<!--
+  Trust levels (Qubes color scheme):
+    default (personal)  — NAT, full internet, green bar
+    isolated-net        — NAT, full internet, isolated DHCP range, red bar
+    disposable-net      — NAT, separate subnet, grey bar, VMs auto-delete
+    work-net            — NAT, yellow bar, corporate VLAN ready
+-->
+
+<!-- NOTE: These are applied dynamically by shadow-qube.
+     This file documents the network layout. -->

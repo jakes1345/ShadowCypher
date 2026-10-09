@@ -3,9 +3,14 @@ Firewall Module — Enterprise Sovereign Build.
 High-fidelity cross-platform defense (iptables / pfctl / netsh).
 """
 
+import logging
+
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_ip, validate_port
+
+logger = logging.getLogger(__name__)
+
 
 
 class Firewall(BaseModule):
@@ -58,6 +63,7 @@ class Firewall(BaseModule):
     def ipt_flush(on_output=None, on_complete=None):
         """Flush ALL firewall rules (dangerous)."""
         from shadowcypher.core.runner import runner
+
         if platform_engine.IS_LINUX:
             cmd = ["sudo", "iptables", "-F"]
         elif platform_engine.IS_MACOS:

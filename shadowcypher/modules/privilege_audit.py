@@ -4,10 +4,14 @@ SUID binaries, kernel exploits, sudo misconfigs, cron abuse, capabilities,
 and automated LinPEAS integration.
 """
 
+import logging
 from typing import Callable, Optional
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
+
+logger = logging.getLogger(__name__)
+
 
 
 class PrivAudit(BaseModule):

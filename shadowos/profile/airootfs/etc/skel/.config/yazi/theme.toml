@@ -1,0 +1,93 @@
+# ShadowOS yazi theme — matches the dark ShadowOS palette
+[manager]
+cwd = { fg = "#00E0A4" }
+
+hovered         = { bg = "#1A2840", bold = true }
+preview_hovered = { underline = true }
+
+find_keyword  = { fg = "#00B988", bold = true, italic = true, underline = true }
+find_position = { fg = "#FF8C42", bold = true, underline = true }
+
+marker_copied  = { fg = "#00B988", bg = "#00B988" }
+marker_cut     = { fg = "#FF4444", bg = "#FF4444" }
+marker_marked  = { fg = "#FFDD00", bg = "#FFDD00" }
+marker_selected = { fg = "#00E0A4", bg = "#00E0A4" }
+
+tab_active   = { fg = "#0D1B2A", bg = "#00E0A4", bold = true }
+tab_inactive = { fg = "#7A8899", bg = "#11161D" }
+tab_width    = 1
+
+count_copied   = { fg = "#0D1B2A", bg = "#00B988" }
+count_cut      = { fg = "#FFFFFF", bg = "#FF4444" }
+count_selected = { fg = "#0D1B2A", bg = "#00E0A4" }
+
+border_symbol = "│"
+border_style  = { fg = "#1E2D40" }
+
+[status]
+separator_open  = ""
+separator_close = ""
+separator_style = { fg = "#11161D", bg = "#11161D" }
+
+mode_normal = { fg = "#0D1B2A", bg = "#00E0A4", bold = true }
+mode_select = { fg = "#0D1B2A", bg = "#FFDD00", bold = true }
+mode_unset  = { fg = "#0D1B2A", bg = "#FF8C42", bold = true }
+
+progress_label  = { bold = true }
+progress_normal = { fg = "#00E0A4", bg = "#11161D" }
+progress_error  = { fg = "#FF4444", bg = "#11161D" }
+
+permissions_t = { fg = "#00E0A4" }
+permissions_r = { fg = "#FFDD00" }
+permissions_w = { fg = "#FF4444" }
+permissions_x = { fg = "#00B988" }
+permissions_s = { fg = "#7A8899" }
+
+[input]
+border   = { fg = "#00E0A4" }
+title    = {}
+value    = {}
+selected = { reversed = true }
+
+[select]
+border   = { fg = "#00E0A4" }
+active   = { fg = "#FF8C42" }
+inactive = {}
+
+[tasks]
+border  = { fg = "#00E0A4" }
+title   = {}
+hovered = { underline = true }
+
+[which]
+cols     = 3
+mask     = { bg = "#11161D" }
+cand     = { fg = "#00E0A4" }
+rest     = { fg = "#7A8899" }
+desc     = { fg = "#B0BEC5" }
+separator        = "  "
+separator_style  = { fg = "#1E2D40" }
+
+[help]
+on      = { fg = "#00E0A4" }
+exec    = { fg = "#00B988" }
+desc    = { fg = "#B0BEC5" }
+hovered = { bg = "#1A2840", bold = true }
+footer  = { fg = "#7A8899", bg = "#11161D" }
+
+[filetype]
+rules = [
+  { mime = "image/*",        fg = "#FF8C42" },
+  { mime = "video/*",        fg = "#FF4444" },
+  { mime = "audio/*",        fg = "#FFDD00" },
+  { mime = "application/*zip*",  fg = "#00B988" },
+  { mime = "application/*tar*",  fg = "#00B988" },
+  { mime = "text/x-script*",     fg = "#00E0A4" },
+  { name = "*.toml",             fg = "#7A8899" },
+  { name = "*.yml",              fg = "#7A8899" },
+  { name = "*.yaml",             fg = "#7A8899" },
+  { name = "*.json",             fg = "#7A8899" },
+  { name = "*.md",               fg = "#B0BEC5" },
+  { name = ".gitignore",         fg = "#7A8899" },
+  { name = "*.sh",               fg = "#00E0A4" },
+]

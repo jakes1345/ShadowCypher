@@ -38,4 +38,7 @@ interface GuardianApi {
 
     @GET("/v1/missions")
     suspend fun listMissions(@Query("agent_id") agentId: String? = null): MissionListResponse
+
+    @POST("/v1/assistant/query")
+    suspend fun queryAssistant(@Body body: AiQueryRequest): AiQueryResponse
 }

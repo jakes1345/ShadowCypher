@@ -5,8 +5,9 @@ Stores PBKDF2-salted user hashes and a single SHA-256-hashed admin key.
 
 import hashlib
 import hmac
-import os
 import json
+import os
+
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 

@@ -562,7 +562,7 @@ def predict(text: str, model: dict) -> tuple[str, float]:
 
 def evaluate(X, y, weights, bias, n_classes):
   correct = 0
-  for x, y_true in zip(X, y):
+  for x, y_true in zip(X, y, strict=False):
     logits = [sum(weights[c][j] * x[j] for j in range(len(x))) + bias[c]
               for c in range(n_classes)]
     pred = logits.index(max(logits))

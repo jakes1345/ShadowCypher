@@ -3,12 +3,16 @@ Network Module — Enterprise Intelligence Build.
 Handles packet-level operations, ARP sweeps, service fingerprinting, and OS detection.
 """
 
+import logging
 import shutil
 import subprocess
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_interface, validate_target
+
+logger = logging.getLogger(__name__)
+
 
 
 def _require_tool(name: str) -> str:
@@ -58,6 +62,7 @@ class Network(BaseModule):
         if not validate_target(target):
             return
         from shadowcypher.core.runner import runner
+
         args = ["nmap", "-sT", "-p", ports, "-T4", target]
         return runner.execute_task(f"TCP_SCAN_{target}", args, callback=on_output)
 

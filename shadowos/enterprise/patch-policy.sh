@@ -63,7 +63,8 @@ get_config_value() {
 
 scan_vulnerabilities() {
     log_info "Starting vulnerability scan..."
-    local scan_file="${LOG_DIR}/vulnerability-scan-$(date +%s).json"
+    local scan_file
+    scan_file="${LOG_DIR}/vulnerability-scan-$(date +%s).json"
 
     # Check for available CVE databases and scan
     if command -v trivy &> /dev/null; then
@@ -78,17 +79,16 @@ scan_vulnerabilities() {
     fi
 
     # Parse and report critical vulnerabilities
-    local critical_count=$(jq '[.Results[]? | select(.Severity=="CRITICAL")] | length' "${scan_file}" 2>/dev/null || echo 0)
-    local high_count=$(jq '[.Results[]? | select(.Severity=="HIGH")] | length' "${scan_file}" 2>/dev/null || echo 0)
-
+    local critical_count
+    critical_count=$(jq '[.Results[]? | select(.Severity=="CRITICAL")] | length' "${scan_file}" 2>/dev/null || echo 0)
+    local high_count
+    high_count=$(jq '[.Results[]? | select(.Severity=="HIGH")] | length' "${scan_file}" 2>/dev/null || echo 0)
     log_info "Scan Results: Critical=${critical_count}, High=${high_count}"
     return 0
 }
 
 check_cve_severity() {
     local cve_id="$1"
-    local threshold="${2:-7.0}"
-
     log_info "Checking CVE severity for ${cve_id}..."
     # This would typically query NVD or similar database
     # Placeholder: return mock CVSS score
@@ -101,7 +101,8 @@ check_cve_severity() {
 
 download_patches_securely() {
     local patch_source="$1"
-    local destination="${BACKUP_DIR}/patches-$(date +%s)"
+    local destination
+    destination="${BACKUP_DIR}/patches-$(date +%s)"
 
     mkdir -p "${destination}"
     log_info "Downloading patches from ${patch_source}..."
@@ -165,7 +166,8 @@ verify_patch_signatures() {
 
 stage_patches() {
     local patch_dir="$1"
-    local staging_env="${STATE_DIR}/staging-$(date +%s)"
+    local staging_env
+    staging_env="${STATE_DIR}/staging-$(date +%s)"
 
     mkdir -p "${staging_env}"
     log_info "Staging patches to ${staging_env}..."
@@ -187,7 +189,8 @@ run_functional_tests() {
     local staging_env="$1"
 
     log_info "Running functional tests in staging environment..."
-    local test_results="${LOG_DIR}/test-results-$(date +%s).json"
+    local test_results
+    test_results="${LOG_DIR}/test-results-$(date +%s).json"
 
     # Execute test suite (placeholder)
     local tests_passed=0
@@ -230,7 +233,8 @@ run_performance_tests() {
     log_info "Running performance tests in staging environment..."
 
     # Monitor CPU, memory, disk I/O
-    local perf_results="${LOG_DIR}/perf-results-$(date +%s).json"
+    local perf_results
+    perf_results="${LOG_DIR}/perf-results-$(date +%s).json"
 
     # Baseline metrics collection
     {
@@ -280,9 +284,10 @@ deploy_to_production() {
     log_info "Deploying patches to production (${rollout_percentage}% rollout)..."
 
     # Calculate target node count based on rollout percentage
-    local total_nodes=$(get_config_value "deployment.total_nodes" || echo 100)
-    local target_nodes=$((total_nodes * rollout_percentage / 100))
-
+    local total_nodes
+    total_nodes=$(get_config_value "deployment.total_nodes" || echo 100)
+    local target_nodes
+    target_nodes=$((total_nodes * rollout_percentage / 100))
     log_info "Target nodes for deployment: ${target_nodes} (${rollout_percentage}%)"
 
     # Deploy to target nodes
@@ -356,7 +361,8 @@ graceful_shutdown() {
 
 create_node_backup() {
     local node_name="$1"
-    local backup_path="${BACKUP_DIR}/${node_name}-$(date +%s)"
+    local backup_path
+    backup_path="${BACKUP_DIR}/${node_name}-$(date +%s)"
 
     mkdir -p "${backup_path}"
     log_info "Creating backup for ${node_name} at ${backup_path}..."
@@ -409,8 +415,8 @@ restore_from_backup() {
     log_error "Restoring from backup on ${node_name}..."
 
     # Find most recent backup
-    local backup_path=$(find "${BACKUP_DIR}" -maxdepth 1 -type d -name "${node_name}-*" -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
-
+    local backup_path
+    backup_path=$(find "${BACKUP_DIR}" -maxdepth 1 -type d -name "${node_name}-*" -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
     if [[ -z "${backup_path}" ]]; then
         log_error "No backup found for restore on ${node_name}"
         return 1
@@ -444,7 +450,8 @@ apply_kernel_live_patch() {
 
     # Verify patch status
     if [[ -f /sys/kernel/debug/livepatch/status ]]; then
-        local status=$(cat /sys/kernel/debug/livepatch/status 2>/dev/null || echo "unknown")
+        local status
+        status=$(cat /sys/kernel/debug/livepatch/status 2>/dev/null || echo "unknown")
         log_info "Live patch status: ${status}"
     fi
 
@@ -476,8 +483,10 @@ monitor_post_deployment() {
 
     log_info "Monitoring post-deployment metrics for ${duration} seconds..."
 
-    local start_time=$(date +%s)
-    local end_time=$((start_time + duration))
+    local start_time
+    start_time=$(date +%s)
+    local end_time
+    end_time=$((start_time + duration))
     local current_time
 
     while true; do
@@ -488,10 +497,13 @@ monitor_post_deployment() {
         fi
 
         # Collect metrics
-        local cpu=$(grep 'cpu ' /proc/stat | awk '{print int(($2+$3)*100/($2+$3+$4))}')
-        local mem=$(free -m | awk 'NR==2 {print int($3*100/$2)}')
-        local error_rate=$(echo "1.2" | bc)  # Mock error rate
-
+        local cpu
+        cpu=$(grep 'cpu ' /proc/stat | awk '{print int(($2+$3)*100/($2+$3+$4))}')
+        local mem
+        mem=$(free -m | awk 'NR==2 {print int($3*100/$2)}')
+        local error_rate
+        error_rate=$(echo "1.2" | bc)
+        # Mock error rate
         log_info "Metrics - CPU: ${cpu}%, Memory: ${mem}%, Error Rate: ${error_rate}%"
 
         # Check rollback triggers
@@ -532,8 +544,8 @@ run_post_patch_validation() {
     log_info "Running post-patch validation commands..."
 
     # Get validation commands from config
-    local validation_cmds=$(get_config_value "validation.post_patch_commands" || echo "")
-
+    local validation_cmds
+    validation_cmds=$(get_config_value "validation.post_patch_commands" || echo "")
     if [[ -z "${validation_cmds}" ]]; then
         log_info "No post-patch validation commands configured"
         return 0
@@ -557,12 +569,14 @@ automatic_rollback() {
     # Stop current rollout
     local patch_state="${STATE_DIR}/patch-deployment"
     if [[ -f "${patch_state}" ]]; then
-        local current_state=$(cat "${patch_state}")
+        local current_state
+        current_state=$(cat "${patch_state}")
         log_info "Current deployment state: ${current_state}"
     fi
 
     # Rollback all affected nodes
-    local nodes=$(get_config_value "deployment.nodes" || echo "")
+    local nodes
+    nodes=$(get_config_value "deployment.nodes" || echo "")
     for node in ${nodes}; do
         restore_from_backup "${node}" || log_error "Rollback failed for ${node}"
     done
@@ -591,7 +605,8 @@ manual_rollback() {
 ################################################################################
 
 generate_patch_report() {
-    local report_file="${LOG_DIR}/patch-report-$(date +%Y%m%d-%H%M%S).json"
+    local report_file
+    report_file="${LOG_DIR}/patch-report-$(date +%Y%m%d-%H%M%S).json"
 
     log_info "Generating patch report: ${report_file}..."
 
@@ -659,7 +674,8 @@ main() {
             ;;
         download)
             load_config
-            local source=$(get_config_value "patch.source")
+            local source
+            source=$(get_config_value "patch.source")
             download_patches_securely "${source}"
             ;;
         verify)

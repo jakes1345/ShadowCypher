@@ -6,8 +6,6 @@ Performs deep-spectrum analysis of UI, Logic, and Offensive modules.
 import os
 import re
 
-from shadowcypher.core.logger import logger
-
 
 class SelfAudit:
     """The 'Inquisitor'. Finds stubs, broken imports, and UI alignment issues."""
@@ -39,7 +37,7 @@ class SelfAudit:
             "packaging",
             os.sep + "opt" + os.sep,
         )
-        for root, dirs, files in os.walk(root_dir):
+        for root, _, files in os.walk(root_dir):
             if any(x in root for x in _SKIP):
                 continue
 

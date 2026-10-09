@@ -25,17 +25,17 @@ Syntax overview:
 Conditions:  $VAR == value  |  $VAR != value  |  $VAR > n  |  $VAR < n  |  $VAR
 """
 
-import sys
 import os
-import subprocess
 import shlex
+import subprocess
+import sys
 import threading
 import time
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
 from shadowcypher.compiler.lexer import ShadowLexer, Token
-from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
+from shadowcypher.core.logger import logger
 
 
 # Sentinel to stop execution early (RETURN / BREAK)
@@ -117,8 +117,6 @@ class ShadowRuntime:
             "web":         ("shadowcypher.modules.web_security",     "WebSecurity"),
             "osint":       ("shadowcypher.modules.osint",            "OSINT"),
             "ghost_hose":  ("shadowcypher.modules.ghost_hose",       "ghost_hose"),
-            "credentials": ("shadowcypher.modules.secret_audit",     "Credentials"),
-            "secrets":     ("shadowcypher.modules.secret_audit",     "Credentials"),
             "forensics":   ("shadowcypher.modules.forensics",        "Forensics"),
             "vuln":        ("shadowcypher.modules.vuln_scanner",     "VulnScanner"),
         }
@@ -547,7 +545,7 @@ class ShadowInterpreter:
                 for k, v in self.runtime.variables.items():
                     print(f"  {k} = {v}")
             elif line == ".modules":
-                for name in self.runtime._get_module.__func__.__code__.co_consts:
+                for _ in self.runtime._get_module.__func__.__code__.co_consts:
                     pass
                 mods = ["recon", "network", "wireless", "exploit", "poc", "privesc",
                         "c2", "payload", "craft", "web", "osint", "credentials",

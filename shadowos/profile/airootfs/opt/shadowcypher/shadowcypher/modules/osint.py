@@ -1,9 +1,10 @@
 """ShadowCypher OSINT (Identity) Engine — Absolute Sync (Build V30)."""
 
-import subprocess
 import shlex
-from shadowcypher.core.runner import runner
+import subprocess
+
 from shadowcypher.core.logger import logger
+from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.stealth import require_stealth
 
@@ -109,7 +110,7 @@ class OSINT:
         if on_output:
             on_output(f"[AI] searching: {query}")
             on_output("[AI] correlating metadata...")
-        
+
         orch = AIOrchestrator()
         # Uses the local reasoning model to synthesize OSINT findings.
         response = orch.execute_query_sync(
@@ -117,7 +118,7 @@ class OSINT:
             "Summarize key findings and technical footprints. "
             "Use stealth check for all web requests."
         )
-        
+
         if on_output:
             on_output(f"[AI] INTEL_SYNTHESIS_COMPLETE: {response[:200]}...")
         return response

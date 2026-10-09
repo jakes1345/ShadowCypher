@@ -1,0 +1,113 @@
+# ─────────────────────────────────────────────────────
+# Rust Lesson 4 — TCP Connectivity in Rust
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • std::net::TcpStream — Rust's built-in TCP
+#   • Setting a connect timeout (Duration)
+#   • Checking multiple ports and reporting status
+#   • Measuring response time with std::time::Instant
+# ─────────────────────────────────────────────────────
+# Why Rust for TCP? The stdlib TcpStream is fast, correct,
+# and safe. No external deps beyond serde_json (always included).
+
+rust tcp_probe {
+    use std::io::Read;
+    use std::net::{TcpStream, ToSocketAddrs};
+    use std::time::{Duration, Instant};
+
+    fn check_port(host: &str, port: u16, timeout_ms: u64) -> Option<u128> {
+        let addr_str = format!("{}:{}", host, port);
+
+        // Resolve hostname (handles both IPs and DNS names)
+        let mut addrs = match addr_str.to_socket_addrs() {
+            Ok(a) => a,
+            Err(_) => return None,
+        };
+        let addr = match addrs.next() {
+            Some(a) => a,
+            None    => return None,
+        };
+
+        let timeout = Duration::from_millis(timeout_ms);
+        let start   = Instant::now();
+
+        match TcpStream::connect_timeout(&addr, timeout) {
+            Ok(_)  => Some(start.elapsed().as_millis()),
+            Err(_) => None,
+        }
+    }
+
+    fn main() {
+        let mut buf = String::new();
+        std::io::stdin().read_to_string(&mut buf).unwrap();
+        let args: serde_json::Value = serde_json::from_str(&buf)
+            .unwrap_or(serde_json::Value::Null);
+
+        let host    = args["arg0"].as_str().unwrap_or("localhost");
+        let timeout = args["arg1"].as_str()
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(500);
+
+        // Ports to check — common services
+        let ports: Vec<u16> = vec![
+            21, 22, 23, 25, 53, 80, 110, 143,
+            443, 445, 993, 995, 1433, 3306, 3389,
+            5432, 5900, 6379, 8080, 8443, 27017,
+        ];
+
+        let mut open:   Vec<String> = Vec::new();
+        let mut closed: Vec<String> = Vec::new();
+
+        for port in &ports {
+            match check_port(host, *port, timeout) {
+                Some(ms) => {
+                    println!("OPEN  {:>5}  {}ms", port, ms);
+                    open.push(port.to_string());
+                }
+                None => {
+                    closed.push(port.to_string());
+                }
+            }
+        }
+
+        println!("SHADOWVAR:OPEN_PORTS={}", open.join(","));
+        println!("SHADOWVAR:OPEN_COUNT={}", open.len());
+        println!("SHADOWVAR:CLOSED_COUNT={}", closed.len());
+        println!("--- {} open / {} closed on {} ---",
+            open.len(), closed.len(), host);
+    }
+}
+
+# ── Run the probe ─────────────────────────────────────
+VAR target  = "scanme.nmap.org"   # Nmap's public scan-me host
+VAR timeout = "800"               # ms per port
+
+!echo("Probing $target (timeout: ${timeout}ms per port) ...")
+
+UNSAFE {
+    tcp_probe $target $timeout
+}
+
+!echo($LAST)
+!echo("Open ports: $OPEN_PORTS")
+!echo("$OPEN_COUNT open, $CLOSED_COUNT closed")
+
+IF $OPEN_COUNT > "0" {
+    AI("Open ports found on $target: $OPEN_PORTS — what services run here and what should I test?")
+} ELSE {
+    !echo("All probed ports closed — might be firewalled or offline")
+}
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • TcpStream::connect_timeout is the right primitive — never use
+#     a raw connect() without a timeout in security tools
+#   • to_socket_addrs() handles DNS resolution automatically
+#   • Rust's type system prevents many off-by-one errors in port math
+#   • This runs sequentially — Lesson 5 makes it concurrent with threads
+#
+# CHALLENGE: add a flag to also grab the first 256 bytes of banner
+#   if the port responds. Hint: use stream.read(&mut buf) after connect.
+# ─────────────────────────────────────────────────────
+
+RETURN "rust lesson 4 complete"

@@ -1,9 +1,9 @@
 """Core utilities — configuration, logging, async command execution, and input sanitization."""
 
 from shadowcypher.core.config import config
+from shadowcypher.core.knowledge_graph import kg
 from shadowcypher.core.logger import logger
 from shadowcypher.core.runner import runner
-from shadowcypher.core.knowledge_graph import kg
 
 # Auto-apply Stealth v2 patches (domain fronting, JA3 spoof, tc jitter, geofencing)
 try:

@@ -13,11 +13,10 @@ import subprocess
 import threading
 import time
 import uuid
-from typing import Dict, List, Optional, Callable
+from typing import Callable, Dict, List, Optional
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
-from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_ip, validate_port
 
 

@@ -11,6 +11,7 @@ Usage:
     tags = mitre.from_finding("sql injection") # → technique list
 """
 from __future__ import annotations
+
 import re
 from typing import Optional
 
@@ -214,7 +215,7 @@ class MitreMapper:
             lines.append("")
         return "\n".join(lines)
 
-    def annotate(self, line: str, tool_key: str = None) -> str:
+    def annotate(self, line: str, tool_key: Optional[str] = None) -> str:
         """
         Return an annotation suffix for a log line.
         Combines tool_key tags (if given) + pattern-matched tags from the text.

@@ -131,7 +131,7 @@ export async function createPortal(req: Request, env: Env, user: AuthedUser, cor
 
 // ─── Webhook signature verification (HMAC-SHA256, no deps) ──────────────────
 
-async function verifyStripeSignature(
+export async function verifyStripeSignature(
   payload: string,
   header: string,
   secret: string,
@@ -172,7 +172,7 @@ async function verifyStripeSignature(
   return diff === 0;
 }
 
-function planFromPriceId(env: Env, priceId: string): { plan: string; interval: "month" | "year" } {
+export function planFromPriceId(env: Env, priceId: string): { plan: string; interval: "month" | "year" } {
   if (priceId === env.STRIPE_PRICE_GUARDIAN_PRO) return { plan: "guardian_pro", interval: "month" };
   if (priceId === env.STRIPE_PRICE_OPERATOR) return { plan: "operator", interval: "month" };
   if (priceId === env.STRIPE_PRICE_GUARDIAN_PRO_ANNUAL) return { plan: "guardian_pro", interval: "year" };

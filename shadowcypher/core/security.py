@@ -206,7 +206,7 @@ class IdentityHardener:
     @staticmethod
     def setup_cloudflare_bridge(port: int, proto: str = "http"):
         """
-        Engages a Cloudflare Tunnel (Argo) for automated HTTPS/SSL 
+        Engages a Cloudflare Tunnel (Argo) for automated HTTPS/SSL
         without domain registration or firewall exposure.
         """
         from shadowcypher.core.runner import runner

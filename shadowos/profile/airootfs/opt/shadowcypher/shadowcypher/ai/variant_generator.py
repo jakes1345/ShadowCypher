@@ -5,9 +5,8 @@ rename variables, restructure logic, add junk code — to evade AV signatures
 without breaking functionality. Works on Python, C, Go, PowerShell.
 """
 import re
-import time
-from shadowcypher.core.logger import logger
 
+from shadowcypher.core.logger import logger
 
 MUTATION_SYSTEM = """You are an expert malware obfuscation engine for authorized red team operations.
 Your job is to mutate the given code to evade AV/EDR signature detection while preserving 100% functionality.
@@ -113,8 +112,8 @@ class VariantGenerator:
     # ── Internals ────────────────────────────────────────────────────────────
 
     def _call_ollama(self, code: str, language: str) -> str:
-        import urllib.request
         import json
+        import urllib.request
         prompt = (f"Language: {language}\n\n"
                   f"Mutate this code to evade AV signature detection:\n\n{code}")
         try:
@@ -143,8 +142,8 @@ class VariantGenerator:
             return ""
 
     def _select_model(self) -> str:
-        import urllib.request
         import json
+        import urllib.request
         try:
             with urllib.request.urlopen(  # nosec B310
                 f"{self._ollama_base}/api/tags", timeout=3

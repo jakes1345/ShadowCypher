@@ -1,0 +1,152 @@
+# ─────────────────────────────────────────────────────
+# Go Lesson 3 — Goroutines & Parallel Work
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • go func() — fire a goroutine (think: lightweight thread)
+#   • sync.WaitGroup — wait for a batch of goroutines to finish
+#   • sync.Mutex — safe shared state across goroutines
+#   • Why Go goroutines beat Python threads for I/O-heavy work
+# ─────────────────────────────────────────────────────
+# Real use case: you have a list of hosts and want to check
+# if each one responds to HTTP — in parallel, not one by one.
+# With goroutines you can probe 100 hosts in the same time
+# a single sequential check takes for 1.
+
+go http_check_many {
+    package main
+
+    import (
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "os"
+        "strings"
+        "sync"
+        "time"
+    )
+
+    type Result struct {
+        Host   string
+        Status int
+        Title  string
+        Err    string
+    }
+
+    func checkHost(host string, timeout time.Duration) Result {
+        // Build a URL — try https first, fall back to http
+        for _, scheme := range []string{"https", "http"} {
+            url := scheme + "://" + host
+
+            client := &http.Client{
+                Timeout: timeout,
+                // Don't follow redirects — we want the raw response
+                CheckRedirect: func(req *http.Request, via []*http.Request) error {
+                    return http.ErrUseLastResponse
+                },
+            }
+
+            resp, err := client.Get(url)
+            if err != nil {
+                continue  // try next scheme
+            }
+            defer resp.Body.Close()
+
+            return Result{Host: host, Status: resp.StatusCode}
+        }
+
+        return Result{Host: host, Err: "unreachable"}
+    }
+
+    func main() {
+        var args map[string]interface{}
+        json.NewDecoder(os.Stdin).Decode(&args)
+
+        // arg0 is a newline-separated list of hosts
+        raw, _ := args["arg0"].(string)
+        hosts := []string{}
+        for _, h := range strings.Split(raw, "\n") {
+            h = strings.TrimSpace(h)
+            if h != "" {
+                hosts = append(hosts, h)
+            }
+        }
+
+        if len(hosts) == 0 {
+            fmt.Println("No hosts provided")
+            return
+        }
+
+        timeout := 3 * time.Second
+        results := make([]Result, len(hosts))
+
+        // WaitGroup tracks when all goroutines finish
+        var wg sync.WaitGroup
+        // Mutex protects the results slice from concurrent writes
+        var mu sync.Mutex
+
+        for i, host := range hosts {
+            wg.Add(1)
+            go func(idx int, h string) {
+                defer wg.Done()
+                r := checkHost(h, timeout)
+                mu.Lock()
+                results[idx] = r
+                mu.Unlock()
+            }(i, host)
+        }
+
+        wg.Wait()  // block until all goroutines complete
+
+        var alive []string
+        var dead  []string
+
+        for _, r := range results {
+            if r.Err != "" {
+                dead = append(dead, r.Host)
+                fmt.Printf("DEAD   %s\n", r.Host)
+            } else {
+                alive = append(alive, fmt.Sprintf("%s(%d)", r.Host, r.Status))
+                fmt.Printf("ALIVE  %s  HTTP %d\n", r.Host, r.Status)
+            }
+        }
+
+        fmt.Printf("SHADOWVAR:ALIVE_HOSTS=%s\n", strings.Join(alive, ","))
+        fmt.Printf("SHADOWVAR:ALIVE_COUNT=%d\n", len(alive))
+        fmt.Printf("SHADOWVAR:DEAD_COUNT=%d\n", len(dead))
+        fmt.Printf("--- %d/%d responded ---\n", len(alive), len(hosts))
+    }
+}
+
+# ── Feed it a list of hosts ───────────────────────────
+VAR hosts = "example.com\ngoogle.com\nnonexistent-zxqjf.invalid\ngithub.com\ncloudflare.com"
+
+!echo("Checking all hosts in parallel ...")
+
+UNSAFE {
+    http_check_many $hosts
+}
+
+!echo($LAST)
+!echo("Alive: $ALIVE_COUNT  Dead: $DEAD_COUNT")
+!echo("Responding hosts: $ALIVE_HOSTS")
+
+IF $ALIVE_COUNT > "0" {
+    AI("These web servers responded: $ALIVE_HOSTS — which HTTP status codes are interesting from an attacker's view?")
+}
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • goroutines are ~2KB each — you can spawn thousands
+#   • sync.WaitGroup is the right primitive for "fan out, fan in"
+#   • sync.Mutex protects shared state — no goroutines write
+#     to the same memory at the same time
+#   • http.ErrUseLastResponse stops redirect following —
+#     important for recon (you want the raw response code)
+#   • All goroutines run inside the subprocess — they can't
+#     crash the ShadowScript runtime no matter what they do
+#
+# CHALLENGE: also grab the server header and set
+#   SHADOWVAR:SERVER_HEADERS=host:value,host:value,...
+# ─────────────────────────────────────────────────────
+
+RETURN "go lesson 3 complete"

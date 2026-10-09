@@ -101,6 +101,7 @@ class Config(BaseSettings):
     # Core metadata
     app_name: str = "ShadowCypher Apex"
     version: str = "3.0.0-enterprise"
+    api_base_url: str = "https://api.shadowcypher.site"
 
     # Sub-settings
     ai: AISettings = AISettings()
@@ -112,7 +113,7 @@ class Config(BaseSettings):
     # Path Resolution
     project_root: Path = Field(default_factory=lambda: Path(__file__).resolve().parent.parent.parent)
 
-    def load_from_json(self, path: Path):
+    def load_from_json(self, path: Path) -> None:
         """Backwards compatibility for legacy config.json."""
         if not path.exists():
             return
@@ -209,7 +210,7 @@ class Config(BaseSettings):
             except Exception:
                 pass
 
-    def set(self, *args: Any):
+    def set(self, *args: Any) -> None:
         """
         Enterprise-grade nested configuration updates.
         Usage: config.set("ai", "active_provider", "anthropic")
@@ -312,6 +313,6 @@ except Exception as e:
     print(f"WARNING: config startup failed: {e}", file=sys.stderr)
 
 # Import logger AFTER singleton for enterprise bootstrap
-from shadowcypher.core.logger import logger
+from shadowcypher.core.logger import logger  # noqa: E402
 
 logger.info("config", f"ENTERPRISE_CORE_LOADED: {config.app_name} v{config.version}")

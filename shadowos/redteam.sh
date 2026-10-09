@@ -27,7 +27,6 @@ HERE_REDTEAM="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ISO="${1:-$(ls -t "${HERE_REDTEAM}/out/shadowos-"*.iso 2>/dev/null | head -1)}"
 [[ -f "$ISO" ]] || { echo "ISO not found: $ISO" >&2; exit 1; }
 
-HERE="$(cd "$(dirname "$0")" && pwd)"
 SHOTS="/tmp/shadowos-redteam-shots"
 LOG="/tmp/shadowos-redteam.log"
 QMP="/tmp/qemu-redteam-qmp.sock"
@@ -82,7 +81,7 @@ fi
 section "2. BOOT TIMELINE SCREENSHOTS"
 shot() {
     local n="$1" label="$2"
-    local out="$SHOTS/$(printf '%02d' "$n")-${label}.ppm"
+    local out; out="$SHOTS/$(printf '%02d' "$n")-${label}.ppm"
     { echo '{"execute":"qmp_capabilities"}'
       echo "{\"execute\":\"screendump\",\"arguments\":{\"filename\":\"$out\"}}"
       sleep 1
@@ -149,7 +148,7 @@ SR 'uname -r' | grep -q 'hardened' && pass "kernel: linux-hardened active" || wa
 
 # ── 5. KEY SERVICES ───────────────────────────────────────────────────────
 section "5. KEY SERVICES"
-for svc in sddm NetworkManager ufw fail2ban dnscrypt-proxy sshd shadowos-mac-randomize shadowos-firstboot; do
+for svc in sddm NetworkManager nftables fail2ban dnscrypt-proxy sshd shadowos-mac-randomize shadowos-firstboot; do
     state=$(SR "systemctl is-active $svc 2>/dev/null || echo missing")
     result=$(SR "systemctl show -p Result --value $svc 2>/dev/null")
     case "$state" in
@@ -294,11 +293,11 @@ done
 
 # ── 12. FIREWALL POSTURE ──────────────────────────────────────────────────
 section "12. FIREWALL POSTURE"
-ufw_status=$(SRT 'echo shadow | sudo -S ufw status verbose 2>&1' | head -5)
-echo "$ufw_status" | grep -q 'Status: active' && pass "ufw active" || warn "ufw — $ufw_status"
 nft_rules=$(SRT 'echo shadow | sudo -S nft list ruleset 2>&1' | wc -l)
 info "nftables ruleset: $nft_rules lines"
-[[ "$nft_rules" -gt 0 ]] && pass "nftables has rules ($nft_rules lines)" || warn "nftables ruleset empty"
+[[ "$nft_rules" -gt 5 ]] && pass "nftables has rules ($nft_rules lines)" || warn "nftables ruleset empty or minimal"
+nft_tables=$(SRT 'echo shadow | sudo -S nft list tables 2>&1')
+echo "$nft_tables" | grep -q 'inet shadowos' && pass "base inet shadowos table loaded" || warn "inet shadowos table missing"
 
 # ── 13. DNS LEAK CHECK ────────────────────────────────────────────────────
 section "13. DNS BEHAVIOR"

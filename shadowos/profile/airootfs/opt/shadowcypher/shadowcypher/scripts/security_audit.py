@@ -6,9 +6,7 @@ Focuses on MAC randomization, DNS leaks, and firewall isolation.
 """
 
 import subprocess
-import socket
-import os
-import sys
+
 
 def check_mac_randomization():
     print("[*] Checking MAC Randomization Status...")
@@ -46,11 +44,11 @@ def check_firewall():
 
 def main():
     print("\033[1;34m[SECURITY_AUDIT] Initiating Host-Hardening Audit...\033[0m")
-    
+
     check_mac_randomization()
     check_dns_hardening()
     check_firewall()
-    
+
     print("\n\033[1;34m[SECURITY_AUDIT] Recommendations:\033[0m")
     print("1. Use 'macchanger' to rotate HW identifiers.")
     print("2. Enable DNS-over-HTTPS in your browser (Librewolf/Firefox).")

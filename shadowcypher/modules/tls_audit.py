@@ -5,12 +5,16 @@ and known TLS vulnerabilities (Heartbleed, POODLE, BEAST, etc.) on your own
 externally-facing services — the same audit a pentester runs before you do.
 """
 
+import logging
 import shutil
 from typing import Callable, Optional
 
 from shadowcypher.core.mitre import mitre
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target
+
+logger = logging.getLogger(__name__)
+
 
 
 class TlsAudit(BaseModule):

@@ -3,18 +3,20 @@ Apex Runner — High-Performance Cross-Platform Execution Engine.
 Standardizes command execution across Linux, macOS, and Windows.
 """
 
+import os
+import shlex
 import subprocess
 import threading
 import uuid
-import os
-import shlex
-from typing import Dict, List, Optional, Any, Callable, Union, Final
+from typing import Callable, Dict, Final, List, Optional, Union
+
 from shadowcypher.core.bus import bus
 from shadowcypher.core.config import config
 from shadowcypher.core.platform import platform_engine
 
+
 class Runner:
-    
+
     def __init__(self) -> None:
         self.active_processes: Dict[str, subprocess.Popen[str]] = {}
         self._lock: Final[threading.Lock] = threading.Lock()
@@ -35,7 +37,7 @@ class Runner:
             env["HTTPS_PROXY"] = proxy
             env["ALL_PROXY"] = proxy
             env["NO_PROXY"] = "localhost,127.0.0.1"
-            
+
         return env
 
     def stop_task(self, task_id: str) -> None:
@@ -52,13 +54,13 @@ class Runner:
                 except Exception:
                     pass
 
-    def execute_task(self, name: str, command: Union[str, List[str]], 
-                     callback: Optional[Callable[[str], None]] = None, 
+    def execute_task(self, name: str, command: Union[str, List[str]],
+                     callback: Optional[Callable[[str], None]] = None,
                      cwd: Optional[str] = None) -> str:
         task_id = f"{name[:4]}_{str(uuid.uuid4())[:4]}"
         threading.Thread(
-            target=self._run, 
-            args=(task_id, name, command, callback, cwd, False), 
+            target=self._run,
+            args=(task_id, name, command, callback, cwd, False),
             daemon=True
         ).start()
         return task_id
@@ -68,13 +70,13 @@ class Runner:
         threading.Thread(target=self._run, args=(task_id, name, command, callback, None, True), daemon=True).start()
         return task_id
 
-    def _run(self, task_id: str, name: str, command: Union[str, List[str]], 
-             callback: Optional[Callable[[str], None]], 
+    def _run(self, task_id: str, name: str, command: Union[str, List[str]],
+             callback: Optional[Callable[[str], None]],
              cwd: Optional[str], is_shell: bool) -> None:
         try:
             # 1. Argument Normalization
             args = command if is_shell else (shlex.split(command) if isinstance(command, str) else command)
-            
+
             # 2. Polyglot Runtime Bridge (Python 2 vs 3 vs Native)
             if not is_shell and isinstance(args, list) and args:
                 potential_script = args[0]
@@ -84,11 +86,11 @@ class Runner:
                     tool_path = os.path.join(proj_root, 'tools', potential_script)
                     if os.path.exists(tool_path):
                         potential_script = tool_path
-                
+
                 prefix = self.platform.resolve_runtime(potential_script)
                 if prefix:
                     args = prefix + args
-            
+
             # 3. Platform-Aware Elevation
             if not is_shell and isinstance(args, list) and args and args[0] == "sudo":
                 if self.platform.IS_LINUX:
@@ -121,17 +123,17 @@ class Runner:
                 text=True, bufsize=1, env=self._perf_env, cwd=cwd,
                 start_new_session=True
             )
-            
+
             with self._lock:
                 self.active_processes[task_id] = proc
-            
+
             # 4. Stream Management
             if proc.stdout:
                 for line in iter(proc.stdout.readline, ""):
                     if callback:
                         callback(line)
                     bus.publish("mission_output", {"task": task_id, "text": line})
-            
+
             proc.wait(timeout=1800)
             if callback:
                 callback(f"\n[done: exit {proc.returncode}]")

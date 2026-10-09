@@ -16,19 +16,16 @@ Each level addresses a specific detection vector:
   L4 → Full JS rendering + behavioral analysis (Turnstile, reCAPTCHA)
 """
 
-import os
-import re
-import json
-import time
 import random
+import re
 import socket
-import threading
 import subprocess
-from typing import Optional, Callable
-from urllib.parse import urlparse
+import threading
+import time
+from typing import Callable, Optional
 
-from shadowcypher.core.undercover import Undercover
 from shadowcypher.core.logger import logger
+from shadowcypher.core.undercover import Undercover
 
 # ══════════════════════════════════════════════════════════════
 # Configuration
@@ -79,7 +76,6 @@ class StealthFetcher:
 
     def fetch_l0(self, url: str, timeout: int = 15, **kwargs) -> Optional[str]:
         """L0: Standard requests with rotated headers."""
-        import requests
         session = self._get_session()
         try:
             resp = session.get(url, timeout=timeout, allow_redirects=True, **kwargs)
@@ -97,11 +93,8 @@ class StealthFetcher:
 
     @staticmethod
     def _has_curl_cffi() -> bool:
-        try:
-            import curl_cffi
-            return True
-        except ImportError:
-            return False
+        import importlib.util
+        return importlib.util.find_spec("curl_cffi") is not None
 
     def fetch_l1(self, url: str, timeout: int = 20,
                  impersonate: Optional[str] = None, **kwargs) -> Optional[str]:
@@ -489,13 +482,7 @@ class StealthFetcher:
             "L1_curl_cffi": self._has_curl_cffi(),
             "L2_tor": self.tor_available(),
             "L3_proxy_pool": len(self._proxy_pool),
-            "L4_playwright": False,
         }
-        try:
-            import playwright
-            caps["L4_playwright"] = True
-        except ImportError:
-            pass
         return caps
 
 

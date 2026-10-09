@@ -18,7 +18,6 @@ readonly TPM_AUDIT_LOG="/var/log/shadowcypher-tpm.log"
 readonly CONFIG_FILE="/etc/tpm2-sealing.json"
 
 # Script directories
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Color codes for output
 readonly RED='\033[0;31m'
@@ -165,8 +164,10 @@ create_sealing_policy() {
     fi
 
     # Extract PCR indices from config
-    local pcr_spec=$(jq -r '.sealing_policy.pcr_selection | join(",")' "${config_file}")
-    local pcr_array=($(echo "$pcr_spec" | tr ',' ' '))
+    local pcr_spec
+    pcr_spec=$(jq -r '.sealing_policy.pcr_selection | join(",")' "${config_file}")
+    local pcr_array=()
+    mapfile -t pcr_array < <(echo "$pcr_spec" | tr ',' '\n')
 
     log_info "PCR selection: ${pcr_array[*]}"
 
@@ -279,19 +280,19 @@ verify_pcrs() {
     fi
 
     # Get expected PCR selection from config
-    local pcr_spec=$(jq -r '.sealing_policy.pcr_selection | join(",")' "${config_file}" 2>/dev/null || echo "")
-
+    local pcr_spec
+    pcr_spec=$(jq -r '.sealing_policy.pcr_selection | join(",")' "${config_file}" 2>/dev/null || echo "")
     if [[ -z "${pcr_spec}" ]]; then
         log_warning "No PCR selection in config, skipping verification"
         return 0
     fi
 
-    local pcr_array=($(echo "$pcr_spec" | tr ',' ' '))
+    local pcr_array=()
+    mapfile -t pcr_array < <(echo "$pcr_spec" | tr ',' '\n')
 
     # Read current PCR values
     log_info "Reading current PCR values..."
-    local current_pcrs
-    current_pcrs=$(tpm2_pcrread -o /tmp/current-pcr.dat "${pcr_array[@]}" 2>/dev/null)
+    tpm2_pcrread -o /tmp/current-pcr.dat "${pcr_array[@]}" 2>/dev/null || true
 
     # Compare with sealing policy PCR values
     if [[ -f "${TPM_CONFIG_DIR}/pcr.dat" ]]; then
@@ -370,8 +371,8 @@ log_audit_event() {
     local result="$2"
     local details="$3"
 
-    local timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
-
+    local timestamp
+    timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
     local audit_json
     audit_json=$(jq -n \
         --arg ts "$timestamp" \
@@ -444,10 +445,12 @@ recovery_unlock() {
 test_seal_unseal() {
     log_info "Running seal/unseal test..."
 
-    local test_key="test-key-$(openssl rand -hex 16)"
+    local test_key
+    test_key="test-key-$(openssl rand -hex 16)"
 
     # Create temporary sealing policy
-    local temp_dir=$(mktemp -d)
+    local temp_dir
+    temp_dir=$(mktemp -d)
     tpm2_pcrread -o "${temp_dir}/pcr.dat" sha256:0,1,7 2>/dev/null
     tpm2_createpolicy --policy-pcr -l "sha256:0,1,7" \
         -f "${temp_dir}/pcr.dat" \

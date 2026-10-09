@@ -4,6 +4,7 @@ Handles local/remote forwarding, dynamic SOCKS proxies, reverse shells,
 multi-hop proxy chaining, and session cleanup.
 """
 
+import logging
 import subprocess
 import threading
 from typing import List, Optional
@@ -11,6 +12,9 @@ from typing import List, Optional
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
 from shadowcypher.core.sanitize import validate_port, validate_target
+
+logger = logging.getLogger(__name__)
+
 
 
 class SSHTunnel(BaseModule):

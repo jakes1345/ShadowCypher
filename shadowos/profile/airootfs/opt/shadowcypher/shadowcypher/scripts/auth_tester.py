@@ -13,15 +13,12 @@ Examples:
 """
 
 import argparse
+import ftplib  # nosec B402
+import os
 import sys
 import time
-import socket
-import ftplib  # nosec B402
-import threading
-import os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from queue import Queue
 
 C = {"R":"\033[1;31m","G":"\033[1;32m","Y":"\033[1;33m","C":"\033[1;36m","N":"\033[0m","B":"\033[1m"}
 
@@ -57,8 +54,8 @@ def try_ftp(host, port, user, password, timeout=5):
         return False
 
 def try_http_basic(url, user, password, timeout=5):
-    import urllib.request
     import base64
+    import urllib.request
     try:
         req = urllib.request.Request(url)
         cred = base64.b64encode(f"{user}:{password}".encode()).decode()
@@ -74,8 +71,8 @@ def try_http_basic(url, user, password, timeout=5):
         return False
 
 def try_http_post(url, user, password, data_template, fail_string, timeout=5):
-    import urllib.request
     import urllib.parse
+    import urllib.request
     try:
         data = data_template.replace("^USER^", user).replace("^PASS^", password)
         req = urllib.request.Request(url, data=data.encode(), method="POST")

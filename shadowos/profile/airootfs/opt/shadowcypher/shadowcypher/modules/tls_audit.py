@@ -8,9 +8,9 @@ externally-facing services — the same audit a pentester runs before you do.
 import shutil
 from typing import Callable, Optional
 
+from shadowcypher.core.mitre import mitre
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.sanitize import validate_target
-from shadowcypher.core.mitre import mitre
 
 
 class TlsAudit(BaseModule):

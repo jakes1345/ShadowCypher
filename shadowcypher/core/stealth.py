@@ -154,17 +154,16 @@ class StealthEngine:
     def rotate_tor_circuit(self) -> bool:
         """Send NEWNYM signal to Tor control port to get a new exit node."""
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(("127.0.0.1", 9051))
-            s.send(b'AUTHENTICATE ""\r\n')
-            resp = s.recv(1024).decode()
-            if "250 OK" not in resp:
-                s.send(b"AUTHENTICATE\r\n")
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect(("127.0.0.1", 9051))
+                s.send(b'AUTHENTICATE ""\r\n')
                 resp = s.recv(1024).decode()
-            s.send(b"SIGNAL NEWNYM\r\n")
-            resp = s.recv(1024).decode()
-            s.close()
-            return "250 OK" in resp
+                if "250 OK" not in resp:
+                    s.send(b"AUTHENTICATE\r\n")
+                    resp = s.recv(1024).decode()
+                s.send(b"SIGNAL NEWNYM\r\n")
+                resp = s.recv(1024).decode()
+                return "250 OK" in resp
         except Exception:
             return False
 

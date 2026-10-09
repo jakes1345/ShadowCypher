@@ -5,11 +5,10 @@ Tracks nearby devices, their signal strength, manufacturer, and movement.
 Requires: pip install bleak
 """
 import asyncio
-import time
 import threading
+import time
 from dataclasses import dataclass, field
-from typing import Optional, Callable
-from shadowcypher.core.logger import logger
+from typing import Callable, Optional
 
 try:
     from bleak import BleakScanner

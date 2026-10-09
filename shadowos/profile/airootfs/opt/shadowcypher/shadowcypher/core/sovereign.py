@@ -5,11 +5,13 @@ WebSocket-based JSON protocol for the native Swarm Relay and Ergo bridge.
 
 import asyncio
 import json
-import websockets
-import threading
 import time
-from typing import Dict, List, Callable, Any, Optional
+from typing import Any, Callable, Dict, List, Optional
+
+import websockets
+
 from shadowcypher.core.logger import logger
+
 
 class SovereignClient:
     """
@@ -47,27 +49,27 @@ class SovereignClient:
         """Main connection loop with automated handshake and recovery."""
         self._running = True
         self._loop = asyncio.get_running_loop()
-        
+
         while self._running:
             try:
                 logger.info("sovereign", f"Connecting to signal plane at {self.uri}...")
                 async with websockets.connect(self.uri, ping_interval=20, ping_timeout=10) as ws:
                     self._websocket = ws
-                    
+
                     # Sovereign Handshake
                     await self.send({
                         "type": "auth",
                         "nick": self.nick,
                         "timestamp": time.time()
                     })
-                    
+
                     self._trigger("sys", {"text": "SOVEREIGN_LINK_ESTABLISHED: Synchronized with signal plane."})
-                    
+
                     async for message in ws:
                         try:
                             data = json.loads(message)
                             typ = data.get("type", "chat")
-                            
+
                             # Update local state if it's a protocol message
                             if typ == "userlist":
                                 users = data.get("users", [])
@@ -80,7 +82,7 @@ class SovereignClient:
                                 nick = data.get("nick")
                                 if nick in self._user_modes:
                                     del self._user_modes[nick]
-                            
+
                             elif typ == "unmask_report":
                                 # Forensic ingest: Unmasked node metadata
                                 nick = data.get("nick")
@@ -95,7 +97,7 @@ class SovereignClient:
                                     "risk_level": "HIGH",
                                     "status": "UNMASKED"
                                 })
-                            
+
                             self._trigger(typ, data)
                         except json.JSONDecodeError:
                             logger.warning("sovereign", f"Received malformed signal: {message}")

@@ -51,6 +51,7 @@ class OSINT:
                 on_output(f"[ERROR] Invalid target: {target}")
             return
         import shutil
+
         url = target if target.startswith("http") else f"https://{target}"
         if shutil.which("whatweb"):
             return runner.execute_task(f"TECH_{target}", ["whatweb", url], callback=on_output)

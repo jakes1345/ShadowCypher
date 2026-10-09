@@ -150,8 +150,8 @@ class ShinkaEvolver:
 
     def _init_shinka_populations(self):
         # ShinkaEvolve API: se.Population(gene_space, pop_size)
-        self._scan_pop_se = se.Population(DEFAULT_SCAN_GENES, pop_size=8)
-        self._prompt_pop_se = se.Population(DEFAULT_PROMPT_GENES, pop_size=6)
+        self._scan_pop_se = se.Population(DEFAULT_SCAN_GENES, pop_size=8)  # noqa: F821
+        self._prompt_pop_se = se.Population(DEFAULT_PROMPT_GENES, pop_size=6)  # noqa: F821
         self._using_shinka = True
         logger.info("shinka_evolver", "Using native ShinkaEvolve populations")
 

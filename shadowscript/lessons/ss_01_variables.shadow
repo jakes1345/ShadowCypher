@@ -1,0 +1,45 @@
+# ─────────────────────────────────────────────────────
+# ShadowScript Lesson 1 — Variables & Output
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   VAR / SET     — create and update a variable
+#   $name         — read a variable anywhere in code
+#   !echo         — print with variable interpolation
+#   $LAST         — the automatic "last result" variable
+#
+# Run it:  python -m shadowscript ss_01_variables.shadow
+# Or REPL: paste each block line by line at  shadow>
+# ─────────────────────────────────────────────────────
+
+# 1. Declare a variable with VAR
+VAR name = "ShadowCypher"
+!echo("Hello from $name")
+
+# 2. SET is identical to VAR — use whichever reads better
+SET target = "192.168.1.1"
+!echo("Target is: $target")
+
+# 3. Variables can hold anything: IPs, paths, numbers, flags
+VAR port = "443"
+VAR protocol = "https"
+!echo("Connecting: $protocol://$target:$port")
+
+# 4. Reassign by calling VAR again with the same name
+VAR target = "10.0.0.1"
+!echo("Target changed to: $target")
+
+# 5. $LAST holds whatever the last directive produced
+VAR greeting = "mission ready"
+!echo($greeting)
+!echo("LAST holds: $LAST")
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • Variable names are case-sensitive: $target ≠ $TARGET
+#   • ALL-CAPS names are reserved for ShadowScript internals
+#     ($LAST, $RESULT, $AI_RESULT, $PIPE_OUT, etc.)
+#   • $VAR inside strings is interpolated automatically
+#   • No type system — everything is a string at runtime
+# ─────────────────────────────────────────────────────
+
+RETURN "lesson 1 complete"

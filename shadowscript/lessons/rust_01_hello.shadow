@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────
+# Rust Lesson 1 — Hello from Rust
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • How to declare a rust block with a name
+#   • The JSON stdin → stdout protocol every block follows
+#   • How to read your input args (arg0, arg1, ...)
+#   • How to call the block from ShadowScript
+#   • The serde_json crate (auto-included in Cargo.toml)
+#
+# The block is compiled once and cached. First run is slow
+# (~30s for Rust cold build), every run after is instant.
+# ─────────────────────────────────────────────────────
+
+# ── The Rust block ────────────────────────────────────
+# Declare it with:  rust <name> { ... }
+# The name becomes a callable function in ShadowScript.
+# The block must be a complete Rust program with fn main().
+
+rust greet {
+    // serde_json is always available — it's in the auto-generated Cargo.toml
+    use std::io::Read;
+
+    fn main() {
+        // Step 1: read everything from stdin into a string
+        let mut buf = String::new();
+        std::io::stdin().read_to_string(&mut buf).unwrap();
+
+        // Step 2: parse it as JSON
+        // ShadowScript passes args as: {"arg0": "first", "arg1": "second", ...}
+        // Plus ALL current $variables are also included in the JSON payload.
+        let args: serde_json::Value = serde_json::from_str(&buf)
+            .unwrap_or(serde_json::Value::Null);
+
+        // Step 3: pull out your arguments
+        let name = args["arg0"].as_str().unwrap_or("stranger");
+
+        // Step 4: print your output — each println! becomes a line in $LAST
+        println!("Hello from Rust, {}!", name);
+        println!("I received {} bytes of JSON", buf.len());
+        println!("The full payload was: {}", buf);
+    }
+}
+
+# ── Call it from ShadowScript ─────────────────────────
+# Native calls require UNSAFE { } — it's your explicit acknowledgment
+# that you're running compiled code, not the interpreter.
+
+VAR who = "ShadowCypher"
+
+UNSAFE {
+    greet $who
+}
+
+# The output lands in $LAST automatically
+!echo("Rust said: $LAST")
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • fn main() is the entry point — always required
+#   • read_to_string gets the full JSON payload from stdin
+#   • args["arg0"] is the first argument you pass after the name
+#   • args["who"] would also work — ShadowScript vars are in the payload too
+#   • println! output becomes lines in $LAST
+#   • Compile errors print in the terminal — fix them like any Rust error
+# ─────────────────────────────────────────────────────
+
+RETURN "rust lesson 1 complete"

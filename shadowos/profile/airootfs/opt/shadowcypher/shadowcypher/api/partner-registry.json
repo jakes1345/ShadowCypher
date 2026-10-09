@@ -1,0 +1,359 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-07-05T14:30:00Z",
+  "registry_maintainer": "ShadowCypher Development Team",
+  "partners": {
+    "otx-alienvault": {
+      "tier": "tier_1_threat_intel",
+      "name": "OTX AlienVault",
+      "endpoint": "https://otx.alienvault.com/api/v1",
+      "auth_type": "api_key",
+      "rate_limit": "10000 requests/day",
+      "data_freshness": "updated every 6 hours",
+      "last_sync": "2026-07-05T14:30:00Z",
+      "status": "active",
+      "agreement_date": "2026-01-15T00:00:00Z",
+      "sla_uptime": 99.5,
+      "contact": {
+        "name": "OTX Support",
+        "email": "support@alienvault.com",
+        "support_url": "https://otx.alienvault.com/support"
+      },
+      "capabilities": [
+        {
+          "name": "ip_reputation",
+          "description": "IP address reputation and threat indicators",
+          "data_type": "ip_reputation",
+          "supported": true
+        },
+        {
+          "name": "domain_reputation",
+          "description": "Domain reputation and malicious domain detection",
+          "data_type": "domain_reputation",
+          "supported": true
+        },
+        {
+          "name": "malware_samples",
+          "description": "Malware hash signatures and samples",
+          "data_type": "malware_samples",
+          "supported": true
+        },
+        {
+          "name": "file_hashes",
+          "description": "Malicious file hashes (MD5, SHA1, SHA256)",
+          "data_type": "file_hashes",
+          "supported": true
+        }
+      ]
+    },
+    "abuseipdb": {
+      "tier": "tier_1_threat_intel",
+      "name": "AbuseIPDB",
+      "endpoint": "https://api.abuseipdb.com/api/v2",
+      "auth_type": "api_key",
+      "rate_limit": "4500 requests/day",
+      "data_freshness": "updated in real-time",
+      "last_sync": "2026-07-05T14:25:00Z",
+      "status": "active",
+      "agreement_date": "2026-02-01T00:00:00Z",
+      "sla_uptime": 99.7,
+      "contact": {
+        "name": "AbuseIPDB Support",
+        "email": "support@abuseipdb.com",
+        "support_url": "https://www.abuseipdb.com/contact"
+      },
+      "capabilities": [
+        {
+          "name": "ip_abuse_score",
+          "description": "IP address abuse/threat confidence score (0-100)",
+          "data_type": "abuse_score",
+          "supported": true
+        },
+        {
+          "name": "blacklist_status",
+          "description": "Check if IP is on abuse blacklist",
+          "data_type": "blacklist",
+          "supported": true
+        },
+        {
+          "name": "report_history",
+          "description": "Historical abuse reports for IP address",
+          "data_type": "report_history",
+          "supported": true
+        }
+      ]
+    },
+    "urlhaus": {
+      "tier": "tier_1_threat_intel",
+      "name": "URLhaus - Abuse.ch",
+      "endpoint": "https://urlhaus-api.abuse.ch/v1",
+      "auth_type": "custom_header",
+      "rate_limit": "unlimited (no auth required)",
+      "data_freshness": "updated hourly",
+      "last_sync": "2026-07-05T14:15:00Z",
+      "status": "active",
+      "agreement_date": "2025-12-10T00:00:00Z",
+      "sla_uptime": 99.9,
+      "contact": {
+        "name": "Abuse.ch Team",
+        "email": "contact@abuse.ch",
+        "support_url": "https://abuse.ch"
+      },
+      "capabilities": [
+        {
+          "name": "malware_urls",
+          "description": "Malware distribution URLs",
+          "data_type": "malware_urls",
+          "supported": true
+        },
+        {
+          "name": "phishing_urls",
+          "description": "Phishing attack URLs",
+          "data_type": "phishing_urls",
+          "supported": true
+        },
+        {
+          "name": "url_status",
+          "description": "Query status of suspicious URL",
+          "data_type": "url_status",
+          "supported": true
+        }
+      ]
+    },
+    "cisa-kev": {
+      "tier": "tier_1_threat_intel",
+      "name": "CISA Known Exploited Vulnerabilities (KEV)",
+      "endpoint": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+      "auth_type": "api_key",
+      "rate_limit": "unlimited",
+      "data_freshness": "updated daily",
+      "last_sync": "2026-07-05T00:00:00Z",
+      "status": "active",
+      "agreement_date": "2026-01-01T00:00:00Z",
+      "sla_uptime": 99.8,
+      "contact": {
+        "name": "CISA Vulnerability Management",
+        "email": "vulnerability@cisa.dhs.gov",
+        "support_url": "https://www.cisa.gov/known-exploited-vulnerabilities"
+      },
+      "capabilities": [
+        {
+          "name": "known_exploited_cves",
+          "description": "CVEs with confirmed exploitation in the wild",
+          "data_type": "cves",
+          "supported": true
+        },
+        {
+          "name": "remediation_dates",
+          "description": "Due dates for remediation by federal agencies",
+          "data_type": "remediation",
+          "supported": true
+        },
+        {
+          "name": "threat_actor_info",
+          "description": "Attribution and threat actor details",
+          "data_type": "threat_actor",
+          "supported": true
+        }
+      ]
+    },
+    "nvd-nist": {
+      "tier": "tier_1_threat_intel",
+      "name": "National Vulnerability Database (NVD)",
+      "endpoint": "https://services.nvd.nist.gov/rest/json/cves/2.0",
+      "auth_type": "api_key",
+      "rate_limit": "120 requests per minute (with key)",
+      "data_freshness": "updated every 6 hours",
+      "last_sync": "2026-07-05T12:00:00Z",
+      "status": "active",
+      "agreement_date": "2025-11-20T00:00:00Z",
+      "sla_uptime": 99.9,
+      "contact": {
+        "name": "NVD Support",
+        "email": "nvd@nist.gov",
+        "support_url": "https://nvd.nist.gov"
+      },
+      "capabilities": [
+        {
+          "name": "cve_details",
+          "description": "Complete CVE records with CVSS scores",
+          "data_type": "cves",
+          "supported": true
+        },
+        {
+          "name": "cvss_metrics",
+          "description": "CVSS v2 and v3 severity scores",
+          "data_type": "cvss",
+          "supported": true
+        },
+        {
+          "name": "cpe_matching",
+          "description": "CPE to CVE matching for vulnerability assessment",
+          "data_type": "cpe_match",
+          "supported": true
+        },
+        {
+          "name": "reference_data",
+          "description": "References, advisory links, and vendor information",
+          "data_type": "references",
+          "supported": true
+        }
+      ]
+    },
+    "tor-exit-nodes": {
+      "tier": "tier_1_threat_intel",
+      "name": "Tor Exit Node List",
+      "endpoint": "https://check.torproject.org/exit-addresses",
+      "auth_type": "api_key",
+      "rate_limit": "unlimited",
+      "data_freshness": "updated hourly",
+      "last_sync": "2026-07-05T14:00:00Z",
+      "status": "active",
+      "agreement_date": "2026-01-10T00:00:00Z",
+      "sla_uptime": 99.8,
+      "contact": {
+        "name": "Tor Project",
+        "email": "bad-relays@torproject.org",
+        "support_url": "https://www.torproject.org"
+      },
+      "capabilities": [
+        {
+          "name": "exit_node_ips",
+          "description": "Current list of Tor exit node IP addresses",
+          "data_type": "exit_nodes",
+          "supported": true
+        },
+        {
+          "name": "exit_node_details",
+          "description": "Detailed metadata about exit nodes",
+          "data_type": "exit_metadata",
+          "supported": true
+        }
+      ]
+    },
+    "exploit-db": {
+      "tier": "tier_1_threat_intel",
+      "name": "Exploit Database (Exploit-DB)",
+      "endpoint": "https://www.exploit-db.com/api",
+      "auth_type": "api_key",
+      "rate_limit": "100 requests/hour",
+      "data_freshness": "updated daily",
+      "last_sync": "2026-07-04T23:00:00Z",
+      "status": "active",
+      "agreement_date": "2026-03-01T00:00:00Z",
+      "sla_uptime": 99.5,
+      "contact": {
+        "name": "Exploit-DB Team",
+        "email": "contact@exploit-db.com",
+        "support_url": "https://www.exploit-db.com"
+      },
+      "capabilities": [
+        {
+          "name": "exploit_search",
+          "description": "Search public exploits by CVE, keyword, or type",
+          "data_type": "exploits",
+          "supported": true
+        },
+        {
+          "name": "poc_availability",
+          "description": "Check if proof-of-concept code exists for CVE",
+          "data_type": "poc",
+          "supported": true
+        }
+      ]
+    },
+    "epss-first-io": {
+      "tier": "tier_1_threat_intel",
+      "name": "EPSS (Exploit Prediction Scoring System)",
+      "endpoint": "https://api.first.org/data/v1/epss",
+      "auth_type": "api_key",
+      "rate_limit": "unlimited",
+      "data_freshness": "updated daily",
+      "last_sync": "2026-07-05T08:00:00Z",
+      "status": "active",
+      "agreement_date": "2026-02-15T00:00:00Z",
+      "sla_uptime": 99.9,
+      "contact": {
+        "name": "FIRST.org",
+        "email": "epss@first.org",
+        "support_url": "https://www.first.org/epss"
+      },
+      "capabilities": [
+        {
+          "name": "exploit_probability",
+          "description": "Probability of CVE exploitation in next 30 days (0-1 score)",
+          "data_type": "exploit_score",
+          "supported": true
+        },
+        {
+          "name": "historical_scores",
+          "description": "Historical EPSS scores for trend analysis",
+          "data_type": "score_history",
+          "supported": true
+        }
+      ]
+    },
+    "shodan": {
+      "tier": "tier_2_hardware",
+      "name": "Shodan",
+      "endpoint": "https://api.shodan.io",
+      "auth_type": "api_key",
+      "rate_limit": "1 request/second (free tier)",
+      "data_freshness": "updated in real-time",
+      "last_sync": null,
+      "status": "inactive",
+      "agreement_date": "2026-06-01T00:00:00Z",
+      "sla_uptime": 99.9,
+      "contact": {
+        "name": "Shodan Support",
+        "email": "support@shodan.io",
+        "support_url": "https://www.shodan.io"
+      },
+      "capabilities": [
+        {
+          "name": "internet_scan_database",
+          "description": "Internet-wide device scanning and vulnerability detection",
+          "data_type": "devices",
+          "supported": false
+        },
+        {
+          "name": "network_discovery",
+          "description": "Discover exposed devices and services",
+          "data_type": "services",
+          "supported": false
+        }
+      ]
+    },
+    "censys": {
+      "tier": "tier_2_hardware",
+      "name": "Censys",
+      "endpoint": "https://api.censys.io/v2",
+      "auth_type": "api_key",
+      "rate_limit": "600 requests/hour",
+      "data_freshness": "updated daily",
+      "last_sync": null,
+      "status": "inactive",
+      "agreement_date": "2026-06-15T00:00:00Z",
+      "sla_uptime": 99.8,
+      "contact": {
+        "name": "Censys Support",
+        "email": "support@censys.io",
+        "support_url": "https://censys.io"
+      },
+      "capabilities": [
+        {
+          "name": "certificate_search",
+          "description": "Search SSL/TLS certificates",
+          "data_type": "certificates",
+          "supported": false
+        },
+        {
+          "name": "host_scanning",
+          "description": "Large-scale host and service scanning",
+          "data_type": "hosts",
+          "supported": false
+        }
+      ]
+    }
+  }
+}

@@ -17,7 +17,21 @@ from shadowcypher.ai.providers import provider_registry
 from shadowcypher.core.config import config
 from shadowcypher.core.logger import logger
 
-OLLAMA_BASE = getattr(config.ai, 'api_base', 'http://127.0.0.1:11434')
+
+def _read_ollama_endpoint() -> str:
+    """Read Ollama endpoint — Qt6 config.ini takes precedence over pydantic default."""
+    try:
+        import configparser
+        cfg = configparser.ConfigParser()
+        cfg.read(str(Path.home() / ".config" / "shadowcypher" / "config.ini"))
+        ep = cfg.get("ollama", "endpoint", fallback="").strip()
+        if ep:
+            return ep.rstrip("/")
+    except Exception:
+        pass
+    return getattr(config.ai, 'api_base', 'http://127.0.0.1:11434').rstrip("/")
+
+OLLAMA_BASE = _read_ollama_endpoint()
 
 
 class AIEngine:
@@ -394,6 +408,47 @@ class AIEngine:
             if on_complete:
                 on_complete(success)
         threading.Thread(target=_worker, daemon=True).start()
+
+    # ──────────────────────────────────────────────────────────────────
+    # High-level chat interface (used by daemon handle_ai_chat)
+    # ──────────────────────────────────────────────────────────────────
+
+    def chat(self, message: str, team: str = "shadowai",
+             inject_context: bool = True) -> str:
+        """Single-turn chat: enriches the team prompt with live security context + RAG."""
+        from shadowcypher.ai.prompts import get_team_prompt
+        base_prompt = get_team_prompt(team)
+
+        if inject_context:
+            try:
+                from shadowcypher.ai.context_builder import enrich_system_prompt
+                system_prompt = enrich_system_prompt(base_prompt, user_query=message)
+            except Exception as e:
+                logger.warning("ai", f"Context enrichment failed, using base prompt: {e}")
+                system_prompt = base_prompt
+        else:
+            system_prompt = base_prompt
+
+        return self.generate(message, system_prompt=system_prompt)
+
+    def chat_stream(self, message: str, team: str = "shadowai",
+                    inject_context: bool = True,
+                    on_token: Callable[[str], None] = None) -> str:
+        """Streaming chat: enriches the team prompt with live security context + RAG."""
+        from shadowcypher.ai.prompts import get_team_prompt
+        base_prompt = get_team_prompt(team)
+
+        if inject_context:
+            try:
+                from shadowcypher.ai.context_builder import enrich_system_prompt
+                system_prompt = enrich_system_prompt(base_prompt, user_query=message)
+            except Exception as e:
+                logger.warning("ai", f"Context enrichment failed, using base prompt: {e}")
+                system_prompt = base_prompt
+        else:
+            system_prompt = base_prompt
+
+        return self.generate_stream(message, system_prompt=system_prompt, on_token=on_token)
 
     # ──────────────────────────────────────────────────────────────────
     # Generation

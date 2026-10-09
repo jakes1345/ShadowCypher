@@ -3,12 +3,13 @@ Recon Module — Enterprise Sovereign Build.
 High-fidelity cross-platform discovery and service mapping.
 """
 
-import re
 import os
+import re
 import shutil
 import subprocess
-from shadowcypher.core.module import BaseModule
+
 from shadowcypher.core.mitre import mitre
+from shadowcypher.core.module import BaseModule
 from shadowcypher.core.platform import platform_engine
 from shadowcypher.core.sanitize import validate_target
 from shadowcypher.core.stealth import require_stealth

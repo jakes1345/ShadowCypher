@@ -401,15 +401,16 @@ def check_dns_leak() -> dict[str, Any]:
 
 
 def check_firewall() -> dict[str, Any]:
-    """Check local firewall status (ufw or iptables)."""
+    """Check local firewall status (nftables preferred; iptables fallback)."""
     result: dict[str, Any] = {"active": False, "tool": None, "details": ""}
 
-    # Try ufw first
+    # Try nftables first
     try:
-        out = subprocess.check_output(["ufw", "status"], text=True, timeout=5, stderr=subprocess.DEVNULL)
-        result["tool"] = "ufw"
-        result["active"] = "Status: active" in out
-        result["details"] = out.splitlines()[0] if out else ""
+        out = subprocess.check_output(["nft", "list", "tables"], text=True, timeout=5, stderr=subprocess.DEVNULL)
+        tables = [t.strip() for t in out.splitlines() if t.strip()]
+        result["tool"] = "nftables"
+        result["active"] = len(tables) > 0
+        result["details"] = f"{len(tables)} table(s): {', '.join(tables)}"
         return result
     except (subprocess.SubprocessError, FileNotFoundError):
         pass
@@ -644,7 +645,7 @@ def cycle(cfg: dict[str, Any], api: ApiClient, state: dict[str, Any]) -> None:
             "severity": "warning",
             "category": "firewall_disabled",
             "title": "No active firewall detected on this machine",
-            "detail": f"Checked: ufw, iptables — neither appears active",
+            "detail": f"Checked: nftables, iptables — neither appears active",
             "data": fw,
         })
         print("[!] firewall: not active")

@@ -1,0 +1,89 @@
+# ─────────────────────────────────────────────────────
+# Rust Lesson 3 — String Processing & Data Munging
+# ─────────────────────────────────────────────────────
+# What you'll learn:
+#   • Working with multi-line input (newline-separated lists)
+#   • String filtering, searching, sorting in Rust
+#   • Passing a list from ShadowScript → Rust → back
+#   • Using serde_json for structured output
+# ─────────────────────────────────────────────────────
+# Real use case: you ran a subdomain enum and got 200 subdomains.
+# You want to filter to just the ones that look like admin panels,
+# APIs, or dev environments — the high-value targets.
+
+rust filter_hosts {
+    use std::io::Read;
+
+    fn main() {
+        let mut buf = String::new();
+        std::io::stdin().read_to_string(&mut buf).unwrap();
+        let args: serde_json::Value = serde_json::from_str(&buf)
+            .unwrap_or(serde_json::Value::Null);
+
+        // arg0 is a newline-separated list of hostnames
+        let raw = args["arg0"].as_str().unwrap_or("");
+
+        // Keywords that suggest high-value targets
+        let keywords = ["admin", "api", "dev", "staging", "internal",
+                        "vpn", "mail", "jenkins", "jira", "confluence",
+                        "gitlab", "github", "dashboard", "portal", "mgmt"];
+
+        let mut hits: Vec<&str>  = Vec::new();
+        let mut other: Vec<&str> = Vec::new();
+
+        for line in raw.lines() {
+            let lower = line.to_lowercase();
+            if keywords.iter().any(|k| lower.contains(k)) {
+                hits.push(line);
+            } else {
+                other.push(line);
+            }
+        }
+
+        // Write counts back as ShadowScript vars
+        println!("SHADOWVAR:HIGH_VALUE_COUNT={}", hits.len());
+        println!("SHADOWVAR:TOTAL_COUNT={}", hits.len() + other.len());
+
+        // High-value list → newline separated, goes to $LAST
+        println!("--- HIGH-VALUE TARGETS ({}) ---", hits.len());
+        for h in &hits {
+            println!("{}", h);
+        }
+
+        if !other.is_empty() {
+            println!("--- OTHER ({}) ---", other.len());
+            for h in &other {
+                println!("{}", h);
+            }
+        }
+    }
+}
+
+# ── Feed it a realistic subdomain list ───────────────
+# In a real mission this would come from STRIKE(recon, subdomain_enum)
+# and land in $LAST — here we build it manually to keep the lesson self-contained
+
+VAR subdomains = "www.example.com\napi.example.com\nmail.example.com\ndev.example.com\nblog.example.com\nadmin.example.com\nstaging.example.com\nshop.example.com\njenkins.example.com\nstatus.example.com"
+
+UNSAFE {
+    filter_hosts $subdomains
+}
+
+!echo($LAST)
+!echo("High-value: $HIGH_VALUE_COUNT of $TOTAL_COUNT subdomains")
+
+# Pipe the filtered list straight to AI for prioritisation
+AI("These are the high-value subdomains I found: $LAST — rank them by likely attack surface")
+
+# ─────────────────────────────────────────────────────
+# KEY POINTS:
+#   • Pass lists as newline-separated strings — it's the ShadowScript idiom
+#   • line.to_lowercase() before keyword search avoids case issues
+#   • $LAST gets all the regular println! lines concatenated
+#   • You can restructure the output however AI / downstream steps need it
+#
+# CHALLENGE: add a third bucket for out-of-scope domains
+#   e.g. anything not ending in .example.com goes to SHADOWVAR:OUT_OF_SCOPE
+# ─────────────────────────────────────────────────────
+
+RETURN "rust lesson 3 complete"

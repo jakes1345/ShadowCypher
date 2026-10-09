@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from shadowcypher.core.module import BaseModule
 from shadowcypher.core.runner import runner
-from shadowcypher.core.sanitize import validate_ip, validate_port, validate_target
+from shadowcypher.core.sanitize import validate_port, validate_target
 
 
 class SSHTunnel(BaseModule):

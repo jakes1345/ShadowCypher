@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+# shadow-gamescope — SteamOS Big Picture mode for ShadowOS
+# Launches a proper gamescope session with Steam in Big Picture mode,
+# mimicking SteamOS's gaming experience on any ShadowOS machine.
+#
+# Features:
+#   • Auto-detects display resolution and refresh rate
+#   • Sets CPU/GPU governor to performance
+#   • Enables MangoHud overlay
+#   • Launches gamescope with optimal flags per GPU vendor
+#   • Restores all settings on exit
+#
+# Usage: shadow-gamescope [--resolution WxH] [--hz HZ] [--app APP]
+
+set -euo pipefail
+
+RESOLUTION=""
+REFRESH_HZ=""
+TARGET_APP="steam"
+MANGOHUD=1
+
+# Parse args
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --resolution) RESOLUTION="$2"; shift 2 ;;
+        --hz)         REFRESH_HZ="$2";  shift 2 ;;
+        --app)        TARGET_APP="$2";  shift 2 ;;
+        --no-mangohud) MANGOHUD=0;      shift   ;;
+        *) shift ;;
+    esac
+done
+
+detect_gpu_vendor() {
+    if lspci 2>/dev/null | grep -qi 'amd\|radeon'; then
+        echo "amd"
+    elif lspci 2>/dev/null | grep -qi 'nvidia'; then
+        echo "nvidia"
+    elif lspci 2>/dev/null | grep -qi 'intel'; then
+        echo "intel"
+    else
+        echo "unknown"
+    fi
+}
+
+detect_display() {
+    # Try to get current resolution from Wayland/X
+    local res
+    if command -v wlr-randr &>/dev/null; then
+        res=$(wlr-randr 2>/dev/null | grep "current" | grep -oP '\d+x\d+' | head -1)
+    elif command -v xrandr &>/dev/null; then
+        res=$(xrandr 2>/dev/null | grep '\*' | grep -oP '\d+x\d+' | head -1)
+    fi
+    # Fallback to reading from /sys
+    if [[ -z "${res:-}" ]]; then
+        local modes_file
+        modes_file=$(find /sys/class/drm -name "modes" 2>/dev/null | head -1)
+        if [[ -f "${modes_file:-}" ]]; then
+            res=$(head -1 "$modes_file" 2>/dev/null || echo "")
+        fi
+    fi
+    echo "${res:-1920x1080}"
+}
+
+detect_refresh() {
+    local hz
+    if command -v wlr-randr &>/dev/null; then
+        hz=$(wlr-randr 2>/dev/null | grep "current" | grep -oP '\d+\.\d+' | head -1 | cut -d. -f1)
+    fi
+    echo "${hz:-60}"
+}
+
+set_performance_mode() {
+    # CPU governor → performance
+    for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+        echo "performance" > "$cpu" 2>/dev/null || true
+    done
+
+    # GPU power profile (AMD)
+    local gpu_pwr
+    gpu_pwr=$(find /sys/class/drm -name "power_dpm_force_performance_level" 2>/dev/null | head -1)
+    if [[ -n "${gpu_pwr:-}" ]]; then
+        echo "high" > "$gpu_pwr" 2>/dev/null || true
+    fi
+
+    # GameMode daemon
+    if command -v gamemoded &>/dev/null; then
+        systemctl start gamemoded 2>/dev/null || gamemoded -d 2>/dev/null || true
+    fi
+}
+
+restore_performance_mode() {
+    for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+        echo "schedutil" > "$cpu" 2>/dev/null || true
+    done
+    local gpu_pwr
+    gpu_pwr=$(find /sys/class/drm -name "power_dpm_force_performance_level" 2>/dev/null | head -1)
+    if [[ -n "${gpu_pwr:-}" ]]; then
+        echo "auto" > "$gpu_pwr" 2>/dev/null || true
+    fi
+}
+
+build_gamescope_cmd() {
+    local res="${1:-1920x1080}"
+    local hz="${2:-60}"
+    local width="${res%%x*}"
+    local height="${res##*x}"
+    local vendor
+    vendor=$(detect_gpu_vendor)
+
+    local flags=(
+        --width "$width"
+        --height "$height"
+        --refresh "$hz"
+        --fullscreen
+        --steam                  # enables Steam-specific optimizations
+        --hdr-enabled            # enable HDR passthrough if display supports it
+        --adaptive-sync          # VRR/FreeSync/G-Sync
+        --expose-wayland
+        -e                       # force grab keyboard/mouse in fullscreen
+    )
+
+    # Vendor-specific flags
+    case "$vendor" in
+        amd)
+            flags+=(--prefer-vk-device "AMD")
+            ;;
+        nvidia)
+            # NVIDIA needs explicit Vulkan ICD
+            export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
+            ;;
+        intel)
+            flags+=(--prefer-vk-device "Intel")
+            ;;
+    esac
+
+    echo "gamescope ${flags[*]}"
+}
+
+main() {
+    # Check dependencies
+    if ! command -v gamescope &>/dev/null; then
+        echo "✗ gamescope not installed — run: sudo pacman -S gamescope" >&2
+        exit 1
+    fi
+    if ! command -v steam &>/dev/null; then
+        echo "✗ Steam not installed" >&2
+        exit 1
+    fi
+
+    # Auto-detect if not specified
+    [[ -z "$RESOLUTION" ]] && RESOLUTION=$(detect_display)
+    [[ -z "$REFRESH_HZ" ]] && REFRESH_HZ=$(detect_refresh)
+
+    echo ""
+    echo "  ▶ shadow-gamescope — SteamOS mode"
+    echo "    Resolution: ${RESOLUTION} @ ${REFRESH_HZ}Hz"
+    echo "    GPU: $(detect_gpu_vendor)"
+    echo "    App: $TARGET_APP"
+    echo ""
+
+    set_performance_mode
+    trap restore_performance_mode EXIT
+
+    local gamescope_cmd
+    gamescope_cmd=$(build_gamescope_cmd "$RESOLUTION" "$REFRESH_HZ")
+
+    local steam_flags=("-tenfoot" "-gamepadui")    # Big Picture mode
+    if [[ $MANGOHUD -eq 1 ]] && command -v mangohud &>/dev/null; then
+        export MANGOHUD=1
+        export MANGOHUD_CONFIG="fps_limit=0,cpu_stats,gpu_stats,ram,vram,fps,frametime,arch"
+    fi
+
+    case "$TARGET_APP" in
+        steam)
+            # shellcheck disable=SC2086
+            exec $gamescope_cmd -- steam "${steam_flags[@]}"
+            ;;
+        *)
+            # Launch arbitrary app inside gamescope
+            # shellcheck disable=SC2086
+            exec $gamescope_cmd -- "$TARGET_APP"
+            ;;
+    esac
+}
+
+main "$@"

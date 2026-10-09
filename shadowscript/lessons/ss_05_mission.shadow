@@ -1,0 +1,91 @@
+# ─────────────────────────────────────────────────────
+# ShadowScript Lesson 5 — Building a Real Mission
+# ─────────────────────────────────────────────────────
+# This lesson puts everything together into a working
+# recon mission with phases, decisions, and reporting.
+#
+# What you'll see:
+#   • Variable setup and config at the top
+#   • Phased execution with clear comments
+#   • Conditional branching based on findings
+#   • AI analysis at each phase
+#   • RETURN with a summary
+# ─────────────────────────────────────────────────────
+
+# ── Config ────────────────────────────────────────────
+VAR target   = "example.com"
+VAR depth    = "passive"       # passive | active
+VAR report   = ""              # accumulates findings
+
+!echo("====================================")
+!echo("  MISSION START: $target")
+!echo("  Mode: $depth")
+!echo("====================================")
+
+# ── Phase 1: Surface intel ────────────────────────────
+!echo("[1] Surface intelligence ...")
+TARGET($target)
+
+STRIKE(osint, ssl_cert_info)
+VAR ssl_info = $LAST
+!echo("SSL: $ssl_info")
+
+STRIKE(osint, http_headers)
+VAR headers = $LAST
+
+AI("Security headers analysis for $target: $headers")
+VAR report = "$report\n[SSL+HEADERS] $AI_RESULT"
+
+# ── Phase 2: DNS ──────────────────────────────────────
+!echo("[2] DNS recon ...")
+
+STRIKE(osint, email_mx_check)
+VAR mx = $LAST
+
+STRIKE(osint, zone_transfer)
+IF $LAST != "" {
+    !echo("[!] Zone transfer succeeded — this is bad for them")
+    AI("Zone transfer data exposed: $LAST — what does an attacker learn from this?")
+    VAR report = "$report\n[ZONE XFR] $AI_RESULT"
+} ELSE {
+    !echo("[+] Zone transfer blocked — good hygiene")
+}
+
+# ── Phase 3: Subdomain enum ───────────────────────────
+!echo("[3] Subdomain discovery ...")
+
+STRIKE(recon, subdomain_enum)
+VAR subdomains = $LAST
+!echo("Subdomains: $subdomains")
+
+AI("Given these subdomains for $target: $subdomains — rank by attack surface")
+VAR report = "$report\n[SUBDOMAINS] $AI_RESULT"
+
+# ── Phase 4: Active scan (only if mode is active) ─────
+IF $depth == "active" {
+    !echo("[4] Active scan (you set depth=active) ...")
+    SCAN("22,80,443,8080,3306,5432,6379")
+    VAR open_ports = $LAST
+    AI("Open ports on $target: $open_ports. What services and what should I test?")
+    VAR report = "$report\n[PORTS] $AI_RESULT"
+} ELSE {
+    !echo("[4] Skipping active scan — depth is passive")
+}
+
+# ── Phase 5: Final summary ────────────────────────────
+!echo("====================================")
+!echo("  MISSION COMPLETE: $target")
+!echo("====================================")
+!echo($report)
+
+AI("Summarise the entire recon for $target in 3 bullet points: $report")
+!echo("EXECUTIVE SUMMARY:\n$AI_RESULT")
+
+# ─────────────────────────────────────────────────────
+# CHALLENGE: Extend this mission
+#   1. Add a phase that checks $target against a known-vuln CVE feed
+#   2. Loop over multiple targets with FOR
+#   3. Use LOAD to pull in a shared reporting module
+# ─────────────────────────────────────────────────────
+
+RETURN "mission complete"

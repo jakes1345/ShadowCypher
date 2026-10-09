@@ -19,7 +19,8 @@ log() {
     local level="$1"
     shift
     local msg="$*"
-    local timestamp=$(date +'%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date +'%Y-%m-%d %H:%M:%S')
     echo -e "${BLUE}[${timestamp}]${NC} ${level}: ${msg}" | tee -a "$LOG_FILE"
 }
 
@@ -56,31 +57,26 @@ detect_hardware() {
     # Check for NVIDIA
     if lspci | grep -q NVIDIA; then
         log_info "NVIDIA GPU detected"
-        NVIDIA_DETECTED=1
     fi
 
     # Check for AMD
     if lspci | grep -q "AMD\|Advanced Micro Devices"; then
         log_info "AMD GPU/APU detected"
-        AMD_DETECTED=1
     fi
 
     # Check for Intel
     if lspci | grep -q Intel; then
         log_info "Intel GPU/CPU detected"
-        INTEL_DETECTED=1
     fi
 
     # Check for wireless
     if ip link show | grep -q "wlan\|wlp"; then
         log_info "Wireless device detected"
-        WIRELESS_DETECTED=1
     fi
 
     # Check for NVMe
     if lsblk | grep -q nvme; then
         log_info "NVMe storage detected"
-        NVME_DETECTED=1
     fi
 }
 
@@ -258,7 +254,8 @@ install_storage() {
 
     # Verify storage devices
     log_info "Verifying storage devices..."
-    local storage_devices=$(lsblk -nd -o NAME,TYPE | awk '{print $1}')
+    local storage_devices
+    storage_devices=$(lsblk -nd -o NAME,TYPE | awk '{print $1}')
     if [[ -n "$storage_devices" ]]; then
         log_success "Storage device(s) detected: $storage_devices"
     else
@@ -345,9 +342,10 @@ main() {
             ;;
     esac
 
+    local exit_code=$?
     {
         echo "Completed: $(date)"
-        echo "Exit code: $?"
+        echo "Exit code: $exit_code"
     } >> "$LOG_FILE"
 
     log_success "Driver installation process completed"

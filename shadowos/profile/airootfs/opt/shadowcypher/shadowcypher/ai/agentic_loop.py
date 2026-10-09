@@ -5,14 +5,13 @@ This module implements the 'Observe-Think-Act' loop, allowing ShadowCypher to
 chain security tools autonomously to achieve a high-level goal.
 """
 
-import json
 import threading
-from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List
 
-from shadowcypher.ai.intent import TOOL_REGISTRY, _register_tools, _TASK_ID_RE
-from shadowcypher.core.logger import logger
+from shadowcypher.ai.intent import _TASK_ID_RE, TOOL_REGISTRY, _register_tools
 from shadowcypher.ai.providers import provider_registry
+
 
 @dataclass
 class Step:
@@ -32,7 +31,7 @@ class ShadowLoopSession:
         """Formats the tool history for the AI."""
         if not self.history:
             return "No tools have been executed yet."
-        
+
         lines = []
         for i, step in enumerate(self.history):
             lines.append(f"Step {i+1}: [{step.tool_name}] on {step.target}")
@@ -53,7 +52,7 @@ class ShadowLoop:
             on_step_update: Callback for streaming updates to UI/Hub
         """
         session = ShadowLoopSession(goal=goal, target=target)
-        
+
         # 1. Initial tool registration
         _register_tools()
         available_tools = [f"{t.name}: {t.description}" for t in TOOL_REGISTRY.values()]
@@ -62,19 +61,19 @@ class ShadowLoop:
         for step_idx in range(self.max_steps):
             if session.status != "ACTIVE":
                 break
-            
+
             if on_step_update:
                 on_step_update(f"Thinking... (Step {step_idx + 1}/{self.max_steps})")
 
             # 2. THINK: Ask AI what to do next
             action = self._decide_next_action(session, tools_desc)
-            
+
             if action["status"] == "COMPLETED":
                 session.status = "COMPLETED"
                 if on_step_update:
                     on_step_update(f"Goal achieved: {action['summary']}")
                 return action['summary']
-            
+
             if action["status"] == "FAILED":
                 session.status = "FAILED"
                 if on_step_update:
@@ -124,9 +123,9 @@ class ShadowLoop:
 
             # 4. OBSERVE: Record the result
             session.history.append(Step(
-                tool_name=tool_name, 
-                target=tool_target, 
-                output=output, 
+                tool_name=tool_name,
+                target=tool_target,
+                output=output,
                 thought=thought
             ))
 
@@ -162,7 +161,7 @@ TOOL: [tool_name]
 TARGET: [specific target or 'same' for primary target]
 SUMMARY: [Summary if COMPLETED, Reason if FAILED]
 """
-        
+
         # We use a non-streaming call here to get the full decision
         response = provider_registry.generate(
             prompt,
@@ -178,7 +177,7 @@ SUMMARY: [Summary if COMPLETED, Reason if FAILED]
         Simple parser for the agent's formatted response.
         """
         data = {"status": "FAILED", "thought": "", "tool": None, "target": None, "summary": ""}
-        
+
         for line in response.splitlines():
             line = line.strip()
             if line.startswith("STATUS:"):
@@ -191,12 +190,12 @@ SUMMARY: [Summary if COMPLETED, Reason if FAILED]
                 data["target"] = line.replace("TARGET:", "").strip()
             elif line.startswith("SUMMARY:"):
                 data["summary"] = line.replace("SUMMARY:", "").strip()
-        
+
         # Validation
         if data["status"] == "CONTINUE" and not data["tool"]:
             data["status"] = "FAILED"
             data["summary"] = "Agent failed to specify a tool for CONTINUE status."
-            
+
         return data
 
 # Global singleton

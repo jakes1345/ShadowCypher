@@ -210,7 +210,7 @@ set_selinux_mode() {
 	check_selinux
 	require_commands semanage getenforce
 
-	if [[ ! " ${valid_modes[@]} " =~ " ${mode} " ]]; then
+	if [[ ! " ${valid_modes[*]} " =~ " ${mode} " ]]; then
 		log_error "Invalid mode: $mode (valid: ${valid_modes[*]})"
 		return 1
 	fi

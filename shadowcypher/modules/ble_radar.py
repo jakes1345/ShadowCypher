@@ -5,15 +5,20 @@ Tracks nearby devices, their signal strength, manufacturer, and movement.
 Requires: pip install bleak
 """
 import asyncio
+import logging
 import threading
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
+logger = logging.getLogger(__name__)
+
+
 try:
     from bleak import BleakScanner
     from bleak.backends.device import BLEDevice
     from bleak.backends.scanner import AdvertisementData
+
     HAS_BLEAK = True
 except ImportError:
     HAS_BLEAK = False

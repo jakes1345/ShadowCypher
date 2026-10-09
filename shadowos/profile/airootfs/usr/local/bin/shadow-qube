@@ -1,0 +1,375 @@
+#!/usr/bin/env bash
+# shadow-qube — Qubes OS-inspired VM compartmentalization for ShadowOS
+# Creates and manages isolated VMs by trust level using libvirt/KVM.
+#
+# Trust levels (matching Qubes color coding):
+#   vault      — OFFLINE, encrypted, no network ever (red border)
+#   work       — Corporate/trusted network only (yellow border)
+#   personal   — Personal browsing, isolated from work (orange border)
+#   untrusted  — Untrusted sites, downloads, malware analysis (red border)
+#   disposable — One-shot VM: auto-deletes on shutdown (grey border)
+#
+# Usage:
+#   shadow-qube start   <name> [--trust vault|work|personal|untrusted]
+#   shadow-qube stop    <name>
+#   shadow-qube destroy <name>         # delete VM entirely
+#   shadow-qube list
+#   shadow-qube disposable [app]       # launch disposable browser/terminal VM
+#   shadow-qube new-vault <name>       # create offline vault for secrets
+
+set -euo pipefail
+
+BASE_DIR=/var/lib/shadowos/qubes
+IMG_DIR=$BASE_DIR/images
+TMPL_DIR=$BASE_DIR/templates
+STATE_DIR=$BASE_DIR/state
+
+TEMPLATE_DEBIAN_URL=""   # populated from local cache only — no auto-download
+TEMPLATE_SIZE_GB=20
+
+_die()  { echo "✗ $*" >&2; exit 1; }
+_ok()   { echo "  ✓ $*"; }
+_info() { echo "  • $*"; }
+
+require_root() { [[ $EUID -eq 0 ]] || _die "Must run as root"; }
+
+ensure_libvirt() {
+    if ! systemctl is-active --quiet libvirtd; then
+        systemctl start libvirtd
+        systemctl start virtlogd 2>/dev/null || true
+        _ok "libvirtd started"
+    fi
+    # Ensure default network is up
+    if ! virsh net-info default &>/dev/null || [[ "$(virsh net-info default | grep Active | awk '{print $2}')" == "no" ]]; then
+        virsh net-start default 2>/dev/null || true
+    fi
+}
+
+trust_to_color() {
+    case "${1:-untrusted}" in
+        vault)      echo "red"    ;;
+        work)       echo "yellow" ;;
+        personal)   echo "orange" ;;
+        untrusted)  echo "red"    ;;
+        disposable) echo "grey"   ;;
+        *)          echo "grey"   ;;
+    esac
+}
+
+trust_to_network() {
+    case "${1:-untrusted}" in
+        vault)      echo "none"    ;;
+        work)       echo "work-net" ;;
+        personal)   echo "default" ;;
+        untrusted)  echo "isolated-net" ;;
+        disposable) echo "disposable-net" ;;
+        *)          echo "isolated-net" ;;
+    esac
+}
+
+trust_to_border_rgb() {
+    case "${1:-untrusted}" in
+        vault)      echo "ff2222" ;;
+        work)       echo "ffdd00" ;;
+        personal)   echo "ff8800" ;;
+        untrusted)  echo "ff2222" ;;
+        disposable) echo "888888" ;;
+        *)          echo "888888" ;;
+    esac
+}
+
+ensure_isolated_networks() {
+    # isolated-net: internet access but no host access, no cross-VM traffic
+    if ! virsh net-info isolated-net &>/dev/null; then
+        virsh net-define --file /dev/stdin << 'XML'
+<network>
+  <name>isolated-net</name>
+  <bridge name="virbr-iso" stp="on" delay="0"/>
+  <ip address="192.168.200.1" netmask="255.255.255.0">
+    <dhcp><range start="192.168.200.2" end="192.168.200.254"/></dhcp>
+  </ip>
+  <forward mode="nat"><nat><port start="1024" end="65535"/></nat></forward>
+</network>
+XML
+        virsh net-start isolated-net
+        virsh net-autostart isolated-net
+    fi
+
+    # disposable-net: same as isolated, separate DHCP range for accounting
+    if ! virsh net-info disposable-net &>/dev/null; then
+        virsh net-define --file /dev/stdin << 'XML'
+<network>
+  <name>disposable-net</name>
+  <bridge name="virbr-disp" stp="on" delay="0"/>
+  <ip address="192.168.201.1" netmask="255.255.255.0">
+    <dhcp><range start="192.168.201.2" end="192.168.201.254"/></dhcp>
+  </ip>
+  <forward mode="nat"><nat><port start="1024" end="65535"/></nat></forward>
+</network>
+XML
+        virsh net-start disposable-net
+        virsh net-autostart disposable-net
+    fi
+}
+
+create_disk_image() {
+    local name="$1"
+    local size="${2:-$TEMPLATE_SIZE_GB}"
+    local img="$IMG_DIR/${name}.qcow2"
+    mkdir -p "$IMG_DIR"
+    if [[ ! -f "$img" ]]; then
+        qemu-img create -f qcow2 "$img" "${size}G" >/dev/null
+        _ok "Created disk image: $img (${size}GB)"
+    fi
+    echo "$img"
+}
+
+define_vm() {
+    local name="$1"
+    local trust="${2:-untrusted}"
+    local img="$3"
+    local network
+    network=$(trust_to_network "$trust")
+    local ram_mb=2048
+    local vcpus=2
+
+    # Build network XML fragment
+    local net_xml
+    if [[ "$network" == "none" ]]; then
+        net_xml=""
+    else
+        net_xml="<interface type='network'><source network='$network'/><model type='virtio'/></interface>"
+    fi
+
+    # UEFI boot via OVMF
+    local ovmf_code=/usr/share/edk2/x64/OVMF_CODE.fd
+    local firmware_xml=""
+    if [[ -f "$ovmf_code" ]]; then
+        firmware_xml="<loader readonly='yes' type='pflash'>$ovmf_code</loader>
+    <nvram template='/usr/share/edk2/x64/OVMF_VARS.fd'>$STATE_DIR/${name}.nvram</nvram>"
+        cp -n /usr/share/edk2/x64/OVMF_VARS.fd "$STATE_DIR/${name}.nvram" 2>/dev/null || true
+    fi
+
+    virsh define /dev/stdin << XML
+<domain type='kvm'>
+  <name>${name}</name>
+  <metadata>
+    <shadowos:trust xmlns:shadowos="https://shadowcypher.site/qube">${trust}</shadowos:trust>
+  </metadata>
+  <memory unit='MiB'>${ram_mb}</memory>
+  <vcpu>${vcpus}</vcpu>
+  <os>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    ${firmware_xml}
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/><apic/>
+    <vmport state='off'/>
+    <smm state='on'/>
+  </features>
+  <cpu mode='host-passthrough' check='none' migratable='on'/>
+  <clock offset='utc'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' discard='unmap'/>
+      <source file='${img}'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    ${net_xml}
+    <graphics type='spice' autoport='yes'>
+      <image compression='off'/>
+      <gl enable='no'/>
+    </graphics>
+    <video>
+      <model type='qxl' ram='131072' vram='131072' vgamem='32768' heads='1'/>
+    </video>
+    <channel type='spicevmc'>
+      <target type='virtio' name='com.redhat.spice.0'/>
+    </channel>
+    <input type='tablet' bus='usb'/>
+    <sound model='ich9'/>
+    <rng model='virtio'>
+      <backend model='random'>/dev/urandom</backend>
+    </rng>
+    <memballoon model='virtio'/>
+    <tpm model='tpm-crb'>
+      <backend type='emulator' version='2.0'/>
+    </tpm>
+  </devices>
+  <seclabel type='dynamic' model='dac' relabel='yes'/>
+</domain>
+XML
+    _ok "VM '${name}' defined (trust: ${trust}, network: ${network})"
+}
+
+set_hyprland_border() {
+    local name="$1"
+    local trust="${2:-untrusted}"
+    local color
+    color=$(trust_to_border_rgb "$trust")
+    # Apply colored border to the VM's virt-viewer window title pattern
+    # This uses Hyprland's windowrulev2 to color-code by trust level
+    local rule_file="${HOME:-/root}/.config/hypr/qube-borders.conf"
+    mkdir -p "$(dirname "$rule_file")"
+
+    # Remove any existing rule for this VM
+    grep -v "qube:${name}" "$rule_file" 2>/dev/null > "${rule_file}.tmp" || true
+    mv "${rule_file}.tmp" "$rule_file" 2>/dev/null || true
+
+    # Add new rule — matches the VM window by title (virt-viewer uses "VM name" as title)
+    cat >> "$rule_file" << RULE
+# qube:${name} trust=${trust}
+windowrulev2 = bordercolor rgba(${color}FF) rgba(${color}AA) 45deg, title:^(${name})$
+windowrulev2 = bordersize 4, title:^(${name})$
+RULE
+    _ok "Hyprland border set to #${color} for '${name}' (${trust})"
+}
+
+cmd_start() {
+    local name="${1:?Usage: shadow-qube start <name>}"
+    require_root
+    ensure_libvirt
+    ensure_isolated_networks
+    local trust="${TRUST:-untrusted}"
+    mkdir -p "$STATE_DIR"
+
+    if ! virsh dominfo "$name" &>/dev/null; then
+        local img
+        img=$(create_disk_image "$name")
+        define_vm "$name" "$trust" "$img"
+    fi
+
+    if [[ "$(virsh domstate "$name" 2>/dev/null | tr -d ' ')" != "running" ]]; then
+        virsh start "$name"
+        _ok "VM '$name' started"
+    else
+        _info "VM '$name' already running"
+    fi
+
+    set_hyprland_border "$name" "$trust"
+
+    # Open SPICE viewer
+    if command -v virt-viewer &>/dev/null; then
+        virt-viewer --connect qemu:///system --wait "$name" &
+    elif command -v remote-viewer &>/dev/null; then
+        remote-viewer spice://127.0.0.1:$(virsh domdisplay "$name" 2>/dev/null | grep -oP '(?<=:)\d+' | head -1) &
+    fi
+}
+
+cmd_stop() {
+    local name="${1:?Usage: shadow-qube stop <name>}"
+    require_root
+    virsh shutdown "$name" 2>/dev/null || virsh destroy "$name" 2>/dev/null || true
+    _ok "VM '$name' stopped"
+}
+
+cmd_destroy() {
+    local name="${1:?Usage: shadow-qube destroy <name>}"
+    require_root
+    virsh destroy "$name" 2>/dev/null || true
+    virsh undefine "$name" --nvram --remove-all-storage 2>/dev/null || \
+        virsh undefine "$name" 2>/dev/null || true
+    rm -f "$IMG_DIR/${name}.qcow2" "$STATE_DIR/${name}.nvram"
+    # Remove Hyprland rule
+    local rule_file="${HOME:-/root}/.config/hypr/qube-borders.conf"
+    grep -v "qube:${name}" "$rule_file" 2>/dev/null > "${rule_file}.tmp" || true
+    mv "${rule_file}.tmp" "$rule_file" 2>/dev/null || true
+    _ok "VM '$name' destroyed and removed"
+}
+
+cmd_disposable() {
+    local app="${1:-browser}"
+    require_root
+    local name="disp-$(tr -dc 'a-z0-9' </dev/urandom | head -c6)"
+    local img
+    ensure_libvirt
+    ensure_isolated_networks
+    mkdir -p "$STATE_DIR"
+    img=$(create_disk_image "$name" 10)   # 10GB disposable
+
+    export TRUST=disposable
+    define_vm "$name" "disposable" "$img"
+    virsh start "$name"
+    set_hyprland_border "$name" "disposable"
+
+    _ok "Disposable VM '$name' started — will auto-delete on shutdown"
+    _info "Open virt-viewer to interact with it"
+    _info "When done: shadow-qube destroy $name"
+
+    # Auto-cleanup hook: watch for VM shutdown and destroy
+    (
+        while virsh domstate "$name" 2>/dev/null | grep -q running; do sleep 5; done
+        virsh undefine "$name" --nvram --remove-all-storage 2>/dev/null || \
+            virsh undefine "$name" 2>/dev/null || true
+        rm -f "$IMG_DIR/${name}.qcow2" "$STATE_DIR/${name}.nvram"
+        notify-send "shadow-qube" "Disposable VM '$name' destroyed." 2>/dev/null || true
+    ) &
+
+    if command -v virt-viewer &>/dev/null; then
+        virt-viewer --connect qemu:///system --wait "$name" &
+    fi
+}
+
+cmd_new_vault() {
+    local name="${1:?Usage: shadow-qube new-vault <name>}"
+    require_root
+    ensure_libvirt
+    mkdir -p "$STATE_DIR"
+    local img
+    img=$(create_disk_image "$name" 20)
+    export TRUST=vault
+    define_vm "$name" "vault" "$img"
+    _ok "Vault VM '$name' created (OFFLINE — no network interface)"
+    _ok "Use: shadow-qube start $name  (then install an OS)"
+}
+
+cmd_list() {
+    ensure_libvirt 2>/dev/null || true
+    echo ""
+    echo "  Shadow Qubes:"
+    echo "  ─────────────────────────────────────────────────"
+    virsh list --all 2>/dev/null | tail -n +3 | grep -v '^$' | while read -r id name state; do
+        [[ -z "$name" ]] && continue
+        local trust
+        trust=$(virsh dumpxml "$name" 2>/dev/null | grep -oP '(?<=<shadowos:trust>)[^<]+' | head -1)
+        trust="${trust:-unknown}"
+        local color
+        color=$(trust_to_color "$trust")
+        printf "  %-20s %-12s [%s]\n" "$name" "$state" "$trust"
+    done
+    echo ""
+}
+
+case "${1:-}" in
+    start)      shift; cmd_start "$@"      ;;
+    stop)       shift; cmd_stop "$@"       ;;
+    destroy)    shift; cmd_destroy "$@"    ;;
+    disposable) shift; cmd_disposable "$@" ;;
+    new-vault)  shift; cmd_new_vault "$@"  ;;
+    list)       cmd_list                   ;;
+    *)
+        echo "shadow-qube — Qubes-inspired VM isolation for ShadowOS"
+        echo ""
+        echo "  Usage:"
+        echo "    shadow-qube start   <name> [TRUST=vault|work|personal|untrusted]"
+        echo "    shadow-qube stop    <name>"
+        echo "    shadow-qube destroy <name>"
+        echo "    shadow-qube list"
+        echo "    shadow-qube disposable [app]   # one-shot VM, auto-deletes"
+        echo "    shadow-qube new-vault  <name>  # offline secret vault VM"
+        echo ""
+        echo "  Trust levels (Qubes-style color coding):"
+        echo "    vault       — OFFLINE, red border — secrets/passwords"
+        echo "    work        — Yellow border — corporate work"
+        echo "    personal    — Orange border — personal browsing"
+        echo "    untrusted   — Red border — malware/untrusted downloads"
+        echo "    disposable  — Grey border — one-shot, auto-deleted"
+        exit 1
+        ;;
+esac

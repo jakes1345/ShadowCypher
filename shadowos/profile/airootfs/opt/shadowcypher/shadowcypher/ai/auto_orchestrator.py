@@ -10,8 +10,6 @@ This module exists for backwards compatibility — new code should call
 agent_router.dispatch_async() directly.
 """
 
-import threading
-from shadowcypher.core.logger import logger
 from shadowcypher.core.bus import bus
 
 

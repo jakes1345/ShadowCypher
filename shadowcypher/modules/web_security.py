@@ -49,6 +49,7 @@ class WebSecurity:
         """Virtual Host (VHost) fuzzing with Ffuf."""
         require_stealth(on_output=on_output)
         from shadowcypher.core.config import config
+
         ffuf = config.get_tool_path("ffuf")
 
         if not validate_target(url):
@@ -203,7 +204,7 @@ class WebSecurity:
 
 class Bypass403Tool:
     """
-    A multi-vector tool designed to bypass HTTP 403 Forbidden errors 
+    A multi-vector tool designed to bypass HTTP 403 Forbidden errors
     by manipulating headers, paths, and request structure.
     """
     def __init__(self, base_url: str, headers: dict = None):

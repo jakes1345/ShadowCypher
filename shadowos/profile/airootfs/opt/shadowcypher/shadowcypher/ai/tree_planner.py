@@ -24,10 +24,12 @@ Usage:
 """
 
 from __future__ import annotations
+
 import re
 import threading
-from typing import Optional, Callable
 from dataclasses import dataclass, field
+from typing import Callable, Optional
+
 from shadowcypher.core.logger import logger
 
 # ── Available security actions ────────────────────────────────────────────────
@@ -214,12 +216,9 @@ class AttackChainPlanner:
                 )
                 return new_state, score
 
-            # Build generate_fn mapping: one function per action
-            generate_fns = {action: lambda s, a=action: _generate(a, s) for action in available}
-
             # Run tree search
             state = algo.init_tree()
-            for step in range(self.budget):
+            for _ in range(self.budget):
                 state, trial = algo.ask(state, actions=available)
                 parent_state: Optional[PlanState] = trial.parent_state
                 new_state, score = _generate(trial.action, parent_state)

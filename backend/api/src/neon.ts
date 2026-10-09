@@ -52,6 +52,7 @@ export async function neonRegisterUser(env: Env, userId: string, email: string, 
   if (!env.NEON_DATABASE_URL) return;
   try {
     const db = sql(env);
+    // password_hash is intentionally empty — Supabase Auth owns authentication; Neon mirrors user metadata only
     await db`INSERT INTO public.users (id, email, password_hash) VALUES (${userId}, ${email}, '') ON CONFLICT (id) DO NOTHING`;
     await db`INSERT INTO public.profiles (user_id, email, handle, plan) VALUES (${userId}, ${email}, ${email.split("@")[0]}, 'community') ON CONFLICT (user_id) DO NOTHING`;
     await db`INSERT INTO public.api_keys (key, user_id) VALUES (${apiKey}, ${userId}) ON CONFLICT DO NOTHING`;

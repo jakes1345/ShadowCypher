@@ -15,7 +15,6 @@ import json
 import os
 import sqlite3
 import threading
-import time
 from typing import Optional
 
 from shadowcypher.core.logger import logger
@@ -298,7 +297,8 @@ class KnowledgeGraph:
             # Tag CVE with ATT&CK techniques
             for t in _mitre.from_finding(cve.description):
                 self.add_node(
-                    t["id"], "TECHNIQUE", label=t["name"], tactic=t["tactic"], tactic_id=t["tactic_id"], url=t["url"]
+                    t["id"], "TECHNIQUE", label=t["name"],
+                    props={"tactic": t["tactic"], "tactic_id": t["tactic_id"], "url": t["url"]},
                 )
                 self.link(cve.cve_id, t["id"], "MAPS_TO")
             count += 1
@@ -307,7 +307,8 @@ class KnowledgeGraph:
         for finding in getattr(ctx, "vuln_findings", []):
             for t in _mitre.from_finding(finding):
                 self.add_node(
-                    t["id"], "TECHNIQUE", label=t["name"], tactic=t["tactic"], tactic_id=t["tactic_id"], url=t["url"]
+                    t["id"], "TECHNIQUE", label=t["name"],
+                    props={"tactic": t["tactic"], "tactic_id": t["tactic_id"], "url": t["url"]},
                 )
                 self.link(ctx.target, t["id"], "MAPS_TO")
 
@@ -321,9 +322,7 @@ class KnowledgeGraph:
                         t["id"],
                         "TECHNIQUE",
                         label=t["name"],
-                        tactic=t["tactic"],
-                        tactic_id=t["tactic_id"],
-                        url=t["url"],
+                        props={"tactic": t["tactic"], "tactic_id": t["tactic_id"], "url": t["url"]},
                     )
                     self.link(ctx.mission_id, t["id"], "MAPS_TO")
                     seen_techniques.add(t["id"])
