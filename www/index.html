@@ -31,46 +31,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Schema.org structured data -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "ShadowCypher",
-      "url": "https://shadowcypher.site",
-      "description": "Sovereign personal security platform — network monitoring, CVE threat feed, encrypted chat, and sovereign email. Self-hostable, no telemetry, no VPN company in the middle.",
-      "applicationCategory": "SecurityApplication",
-      "operatingSystem": "Linux, Windows, macOS",
-      "offers": [
-        {
-          "@type": "Offer",
-          "name": "Community",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
-        {
-          "@type": "Offer",
-          "name": "Guardian Pro",
-          "price": "9.99",
-          "priceCurrency": "USD"
-        }
-      ],
-      "featureList": [
-        "Network monitoring and Guardian agent",
-        "CVE threat feed and vulnerability alerts",
-        "End-to-end encrypted chat",
-        "Sovereign email",
-        "Self-hostable infrastructure",
-        "Zero telemetry"
-      ],
-      "license": "https://github.com/jakes1345/ShadowCypher/blob/main/LICENSE",
-      "creator": {
-        "@type": "Organization",
-        "name": "ShadowCypher",
-        "url": "https://shadowcypher.site"
-      }
-    }
-    </script>
 </head>
 <body>
     <canvas id="bg-canvas"></canvas>
@@ -89,16 +49,20 @@
         </div>
         <div class="nav-tabs" id="navTabs">
             <div class="nav-indicator" id="navIndicator"></div>
-            <a onclick="navTo('home',this)" id="nav-home" class="nav-tab active">Dashboard</a>
-            <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
+            <a onclick="navTo('home',this)" id="nav-home" class="nav-tab active">Overview</a>
             <a onclick="navTo('arsenal',this)" id="nav-arsenal" class="nav-tab">Arsenal</a>
             <a onclick="navTo('ghost',this)" id="nav-ghost" class="nav-tab">Privacy</a>
-            <a onclick="navTo('mail',this)" id="nav-mail" class="nav-tab">Mail <span id="mail-unread-badge" style="display:none;background:var(--accent-primary);color:#000;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle;"></span></a>
-            <a onclick="navTo('chat',this)" id="nav-chat" class="nav-tab">Chat</a>
-            <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Downloads</a>
+            <a onclick="navTo('guardian',this)" id="nav-guardian" class="nav-tab">Guardian</a>
+            <a onclick="navTo('chat',this)" id="nav-chat" class="nav-tab">💬 Chat</a>
+            <a onclick="navTo('mail',this)" id="nav-mail" class="nav-tab">📧 Mail <span id="mail-unread-badge" style="display:none;background:var(--accent-primary);color:#000;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px;vertical-align:middle;"></span></a>
+            <a onclick="navTo('office',this)" id="nav-office" class="nav-tab">📄 Office</a>
+            <a onclick="navTo('drive',this)" id="nav-drive" class="nav-tab">🗂 Drive</a>
+            <a onclick="navTo('download',this)" id="nav-download" class="nav-tab">Download</a>
+            <a onclick="navTo('shadowos',this)" id="nav-shadowos" class="nav-tab">ShadowOS</a>
+            <a href="/shadow.html" class="nav-tab" style="color:#b44aff;">Shadow</a>
             <a onclick="navTo('pricing',this)" id="nav-pricing" class="nav-tab">Pro</a>
             <a onclick="navTo('account',this)" id="nav-account" class="nav-tab">Account</a>
-            <a onclick="navTo('admin',this)" id="nav-admin" class="nav-tab" style="display:none;color:var(--accent-primary);">Admin</a>
+            <a onclick="signOut()" id="nav-signout" class="nav-tab" style="display:none;color:var(--accent-secondary);">Sign out</a>
         </div>
     </nav>
 
@@ -469,120 +433,310 @@
     <!-- ARSENAL -->
     <div id="page-arsenal" class="page">
         <div class="content-section">
-            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Intel Tools</h2>
-            <p style="color:var(--text-secondary);margin-bottom:32px;max-width:700px;">Live OSINT and reconnaissance tools. All queries route through the ShadowCypher API — no third-party calls from your browser.</p>
-            <!-- Tool grid -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:32px;">
-
-                <!-- IP Reputation -->
-                <div class="arsenal-card">
-                    <div class="arsenal-card-header"><span class="arsenal-tag">RECON</span><span class="arsenal-title">IP Reputation</span></div>
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
-                        <input id="ar-ip-input" type="text" placeholder="1.2.3.4" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
-                        <button onclick="arRunIp()" class="arsenal-run-btn">Run</button>
-                    </div>
-                    <pre id="ar-ip-out" class="arsenal-out"></pre>
-                </div>
-
-                <!-- DNS Lookup -->
-                <div class="arsenal-card">
-                    <div class="arsenal-card-header"><span class="arsenal-tag">RECON</span><span class="arsenal-title">DNS Lookup</span></div>
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
-                        <input id="ar-dns-input" type="text" placeholder="example.com" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
-                        <select id="ar-dns-type" style="padding:8px 8px;background:#080810;border:1px solid #222;color:#aaa;border-radius:4px;font-size:0.75rem;font-family:var(--font-mono);">
-                            <option>A</option><option>AAAA</option><option>MX</option><option>NS</option><option>TXT</option><option>CNAME</option>
-                        </select>
-                        <button onclick="arRunDns()" class="arsenal-run-btn">Run</button>
-                    </div>
-                    <pre id="ar-dns-out" class="arsenal-out"></pre>
-                </div>
-
-                <!-- Breach Check -->
-                <div class="arsenal-card">
-                    <div class="arsenal-card-header"><span class="arsenal-tag">OSINT</span><span class="arsenal-title">Breach Check</span></div>
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
-                        <input id="ar-breach-input" type="email" placeholder="user@example.com" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
-                        <button onclick="arRunBreach()" class="arsenal-run-btn">Run</button>
-                    </div>
-                    <pre id="ar-breach-out" class="arsenal-out"></pre>
-                </div>
-
-                <!-- CVE Search -->
-                <div class="arsenal-card">
-                    <div class="arsenal-card-header"><span class="arsenal-tag">INTEL</span><span class="arsenal-title">CVE Search</span></div>
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
-                        <input id="ar-cve-input" type="text" placeholder="openssl 3.0" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
-                        <button onclick="arRunCve()" class="arsenal-run-btn">Run</button>
-                    </div>
-                    <pre id="ar-cve-out" class="arsenal-out"></pre>
-                </div>
-
-                <!-- Web Search -->
-                <div class="arsenal-card">
-                    <div class="arsenal-card-header"><span class="arsenal-tag">OSINT</span><span class="arsenal-title">Web Search</span></div>
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
-                        <input id="ar-search-input" type="text" placeholder="search query" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
-                        <button onclick="arRunSearch()" class="arsenal-run-btn">Run</button>
-                    </div>
-                    <pre id="ar-search-out" class="arsenal-out"></pre>
-                </div>
-
-                <!-- Wiki Summary -->
-                <div class="arsenal-card">
-                    <div class="arsenal-card-header"><span class="arsenal-tag">INTEL</span><span class="arsenal-title">Wiki Summary</span></div>
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
-                        <input id="ar-wiki-input" type="text" placeholder="topic or person" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
-                        <button onclick="arRunWiki()" class="arsenal-run-btn">Run</button>
-                    </div>
-                    <pre id="ar-wiki-out" class="arsenal-out"></pre>
-                </div>
-
-                <!-- Weather -->
-                <div class="arsenal-card">
-                    <div class="arsenal-card-header"><span class="arsenal-tag">SITUATIONAL</span><span class="arsenal-title">Weather</span></div>
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
-                        <input id="ar-weather-input" type="text" placeholder="city name" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
-                        <button onclick="arRunWeather()" class="arsenal-run-btn">Run</button>
-                    </div>
-                    <pre id="ar-weather-out" class="arsenal-out"></pre>
-                </div>
-
-                <!-- Currency -->
-                <div class="arsenal-card">
-                    <div class="arsenal-card-header"><span class="arsenal-tag">SITUATIONAL</span><span class="arsenal-title">Currency Convert</span></div>
-                    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
-                        <input id="ar-fx-amount" type="number" placeholder="100" value="100" style="width:70px;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
-                        <input id="ar-fx-from" type="text" placeholder="USD" value="USD" style="width:60px;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);text-transform:uppercase;">
-                        <span style="line-height:36px;color:#555;font-size:0.8rem;">→</span>
-                        <input id="ar-fx-to" type="text" placeholder="EUR" value="EUR" style="width:60px;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);text-transform:uppercase;">
-                        <button onclick="arRunFx()" class="arsenal-run-btn">Run</button>
-                    </div>
-                    <pre id="ar-fx-out" class="arsenal-out"></pre>
-                </div>
-
-                <!-- Instant Answer -->
-                <div class="arsenal-card">
-                    <div class="arsenal-card-header"><span class="arsenal-tag">INTEL</span><span class="arsenal-title">Instant Answer</span></div>
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
-                        <input id="ar-instant-input" type="text" placeholder="what is 42 in binary" style="flex:1;padding:8px 10px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.8rem;font-family:var(--font-mono);">
-                        <button onclick="arRunInstant()" class="arsenal-run-btn">Run</button>
-                    </div>
-                    <pre id="ar-instant-out" class="arsenal-out"></pre>
-                </div>
-
+            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Tactical Arsenal</h2>
+            <p style="color:var(--text-secondary);margin-bottom:16px;max-width:700px;">29 purpose-built offensive and defensive modules across six mission areas. Every tool was built because it was needed in the field — no fluff, no overlap.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:48px;">
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">RECON</span>
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">EXPLOIT</span>
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">GHOST</span>
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">C2</span>
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">COMMS</span>
+                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">DSL</span>
             </div>
 
-            <style>
-            .arsenal-card{border:1px solid var(--glass-border);border-radius:8px;padding:20px;background:rgba(180,74,255,0.02);}
-            .arsenal-card-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
-            .arsenal-tag{font-family:var(--font-mono);font-size:0.55rem;letter-spacing:2px;color:var(--accent-primary);border:1px solid rgba(180,74,255,0.3);padding:2px 8px;border-radius:2px;}
-            .arsenal-title{font-size:0.9rem;font-weight:600;color:#fff;}
-            .arsenal-run-btn{padding:8px 14px;background:var(--accent-primary);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;font-weight:700;font-family:var(--font-mono);white-space:nowrap;}
-            .arsenal-run-btn:disabled{opacity:0.5;cursor:not-allowed;}
-            .arsenal-out{margin:0;font-size:0.72rem;font-family:var(--font-mono);color:#aaa;line-height:1.6;white-space:pre-wrap;word-break:break-all;max-height:160px;overflow-y:auto;min-height:24px;}
-            .arsenal-out.loading{color:#555;}
-            .arsenal-out.error{color:#ef4444;}
-            </style>
+            <!-- Category: Command & Control -->
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,var(--accent-primary),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 01</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Command &amp; Control</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(180,74,255,0.15),transparent);"></div>
+            </div>
+
+            <!-- Module 1: NEXUS-COMMAND -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 01</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">NEXUS-COMMAND</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">The main desktop HUD. Real-time Cairo gauges for CPU, RAM, network I/O. AI inference via local Ollama. Network topology war-map with live host discovery.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · GTK3 · CAIRO · OLLAMA</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Capabilities</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ Live system telemetry dashboard</li>
+                                    <li>→ Quantum-Core AI deep analysis</li>
+                                    <li>→ Network war-map (Nmap + Cairo)</li>
+                                    <li>→ Admin god panel (encrypted)</li>
+                                    <li>→ Lazy-loaded page architecture</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">AI Integration</div>
+                                <div style="background:#000;border:1px solid #222;border-radius:4px;padding:12px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;line-height:2;">
+                                    <div style="color:#555;"># Natural language security ops</div>
+                                    <div>shadow &gt; scan my network</div>
+                                    <div>shadow &gt; am I anonymous?</div>
+                                    <div>shadow &gt; engage ghost mode</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category: Intelligence -->
+            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(34,197,94),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 02</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Reconnaissance &amp; Intelligence</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(34,197,94,0.15),transparent);"></div>
+            </div>
+
+            <!-- Module 2: COVERT-INTEL -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 02</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">COVERT-INTEL</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Reconnaissance and OSINT. Fingerprint targets, discover infrastructure, sweep for vulnerabilities, and correlate findings with ExploitDB.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">NMAP · SHERLOCK · NUCLEI · EXPLOITDB</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Tools</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ Nmap service + OS fingerprinting</li>
+                                    <li>→ Sherlock — 300+ platform OSINT</li>
+                                    <li>→ Nuclei vulnerability sweep</li>
+                                    <li>→ Infrastructure recon (DNS, SSL)</li>
+                                    <li>→ ExploitDB CVE correlation</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Output</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ JSON + Markdown reports</li>
+                                    <li>→ Severity-ranked findings</li>
+                                    <li>→ CVE IDs with CVSS scores</li>
+                                    <li>→ Exportable to ShadowScript</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category: Offensive -->
+            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(239,68,68),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 03</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Offensive Operations</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(239,68,68,0.15),transparent);"></div>
+            </div>
+
+            <!-- Module 3: OFFENSIVE-LAB -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 03</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">OFFENSIVE-LAB</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Full red-team lab. AI-powered payload gen, web app attacks, wireless auditing, credential cracking, and the Phishing Forge with 35 enterprise templates.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">HYDRA · HASHCAT · AIRCRACK · PHP</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Offensive</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ DeepHat Apex (AI payload gen)</li>
+                                    <li>→ SQL injection, XSS, SSRF, IDOR</li>
+                                    <li>→ Hydra credential brute-force</li>
+                                    <li>→ Hashcat GPU hash cracking</li>
+                                    <li>→ Aircrack-ng wireless attacks</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Phishing Forge</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ 35 enterprise phishing templates</li>
+                                    <li>→ Live PHP server on custom port</li>
+                                    <li>→ Real-time credential capture</li>
+                                    <li>→ Office365, Google, Outlook, AWS</li>
+                                    <li>→ One-click stop/start control</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category: Cryptography -->
+            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(59,130,246),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 04</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Cryptography &amp; Secure Comms</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(59,130,246,0.15),transparent);"></div>
+            </div>
+
+            <!-- Module 4: SOVEREIGN-OPS -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 04</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">SOVEREIGN-OPS</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Encrypted communications and integrity assurance. Zero-knowledge chat, binary integrity verification, and RSA-4096 cryptographic identity.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">AES-256-GCM · X25519 · RSA-4096 · GO</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Cryptography</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ AES-256-GCM encrypted chat</li>
+                                    <li>→ X25519 forward secrecy</li>
+                                    <li>→ RSA-4096 admin identity keys</li>
+                                    <li>→ Go WebSocket relay node</li>
+                                    <li>→ Zero message persistence</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Integrity</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ Sisyphus integrity sentinel</li>
+                                    <li>→ Binary hash verification</li>
+                                    <li>→ Honeypot trap deployment</li>
+                                    <li>→ Canary token generator</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category: AI & Automation -->
+            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(249,115,22),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 05</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">AI Operations &amp; Automation</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(249,115,22,0.15),transparent);"></div>
+            </div>
+
+            <!-- Module 5: SHADOW-CLI -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 05</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">SHADOW-CLI</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Natural language AI terminal. Type what you want to do; Shadow figures out the toolchain and executes it. 9 MCP tools wired to the full arsenal.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · ANTHROPIC API · MCP · OAUTH2</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">9 MCP Tools</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ network_scan (Nmap)</li>
+                                    <li>→ ghost_mode (toggle)</li>
+                                    <li>→ osint_lookup (Sherlock)</li>
+                                    <li>→ anonymity_check</li>
+                                    <li>→ payload_gen + vuln_scan</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Auth</div>
+                                <div style="background:#000;border:1px solid #222;border-radius:4px;padding:12px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;line-height:2;">
+                                    <div>shadow-agent init</div>
+                                    <div style="color:#555;"># OAuth2 device flow</div>
+                                    <div style="color:#555;"># no copy-paste keys</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module 6: SHADOWSCRIPT -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 06</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">SHADOWSCRIPT</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">A purpose-built tactical scripting DSL. Hand-written lexer, recursive descent parser, and tree-walking interpreter. Orchestrate multi-tool missions in a single <code style="font-size:0.75rem;color:var(--accent-primary);">.shadow</code> file.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · CUSTOM LEXER · CUSTOM PARSER</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div>
+                            <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:12px;">Example mission file</div>
+                            <div style="background:#000;border:1px solid #222;border-radius:4px;padding:16px 18px;font-family:var(--font-mono);font-size:0.72rem;color:#cbd5e1;line-height:2;">
+                                <div><span style="color:#b44aff;">TARGET</span> 192.168.1.0/24</div>
+                                <div><span style="color:#b44aff;">SWARM</span> recon.nmap <span style="color:#555;">→ fingerprint all live hosts</span></div>
+                                <div><span style="color:#b44aff;">STRIKE</span> exploit.nuclei <span style="color:#555;">→ sweep for CVEs</span></div>
+                                <div><span style="color:#b44aff;">AI</span> <span style="color:#0f0;">"Summarize critical findings"</span></div>
+                                <div><span style="color:#b44aff;">!echo</span> Mission complete</div>
+                            </div>
+                            <div style="margin-top:16px;font-size:0.78rem;color:var(--text-secondary);line-height:1.8;">Runs with <code style="color:var(--accent-primary);font-size:0.75rem;">python3 engine.py mission.shadow</code>. Modules bridge directly to the arsenal — no glue code needed.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category: C2 Framework -->
+            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
+                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(168,85,247),transparent);border-radius:2px;flex-shrink:0;"></div>
+                <div>
+                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 06</div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">C2 Framework</div>
+                </div>
+                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(168,85,247,0.15),transparent);"></div>
+            </div>
+
+            <!-- C2 Command Center -->
+            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
+                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
+                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 07</div>
+                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">C2 COMMAND CENTER</h3>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Multi-listener C2 controller with session management and payload generation. Start, stop, and monitor listeners across ports and protocols from a single panel.</p>
+                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · METASPLOIT BRIDGE · GTK3</div>
+                    </div>
+                    <div style="padding:32px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Listener control</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ TCP / HTTP / HTTPS listeners</li>
+                                    <li>→ Live session table</li>
+                                    <li>→ Per-session interaction</li>
+                                    <li>→ One-click start / stop / kill</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Payloads</div>
+                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
+                                    <li>→ Windows / Linux / macOS / Android</li>
+                                    <li>→ Meterpreter + raw shell</li>
+                                    <li>→ Staged + stageless</li>
+                                    <li>→ Custom LHOST / LPORT</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Source note -->
             <div style="padding:24px;border:1px dashed rgba(180,74,255,0.2);border-radius:6px;text-align:center;">
@@ -850,8 +1004,7 @@
                     <div style="display:flex;gap:8px;align-items:center;">
                         <span id="threat-stat-critical" style="font-size:0.7rem;font-family:var(--font-mono);padding:3px 8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:3px;">— CRITICAL</span>
                         <span id="threat-stat-high" style="font-size:0.7rem;font-family:var(--font-mono);padding:3px 8px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);color:#f97316;border-radius:3px;">— HIGH</span>
-                        <input id="threat-search" type="text" placeholder="Search CVEs…" oninput="window._threatPage=1;loadThreats();" style="font-size:0.7rem;font-family:var(--font-mono);background:#111;color:#aaa;border:1px solid #333;padding:3px 8px;border-radius:3px;width:130px;outline:none;">
-                        <select id="threat-severity-filter" onchange="window._threatPage=1;loadThreats();" style="font-size:0.7rem;font-family:var(--font-mono);background:#111;color:#aaa;border:1px solid #333;padding:3px 8px;border-radius:3px;cursor:pointer;">
+                        <select id="threat-severity-filter" onchange="loadThreats()" style="font-size:0.7rem;font-family:var(--font-mono);background:#111;color:#aaa;border:1px solid #333;padding:3px 8px;border-radius:3px;cursor:pointer;">
                             <option value="">All severities</option>
                             <option value="CRITICAL">Critical only</option>
                             <option value="HIGH">High only</option>
@@ -863,53 +1016,6 @@
                     <span style="color:#666;font-size:0.82rem;">Loading CVE feed…</span>
                 </div>
                 <div id="threat-feed-error" style="display:none;color:#666;font-size:0.82rem;margin-top:8px;"></div>
-                <div id="threat-pagination" style="display:none;align-items:center;gap:10px;margin-top:12px;font-family:var(--font-mono);font-size:0.72rem;">
-                    <button onclick="threatChangePage(-1)" style="background:#111;border:1px solid #333;color:#aaa;padding:3px 10px;border-radius:3px;cursor:pointer;">← prev</button>
-                    <span id="threat-page-label" style="color:#555;"></span>
-                    <button onclick="threatChangePage(1)" style="background:#111;border:1px solid #333;color:#aaa;padding:3px 10px;border-radius:3px;cursor:pointer;">next →</button>
-                </div>
-            </div>
-
-            <!-- Missions -->
-            <div id="missions-section" style="display:none;margin-bottom:40px;">
-                <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:6px;">// Remote Missions <span style="color:#555;font-size:0.7rem;margin-left:8px;">operator plan</span></h3>
-                <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:16px;">Dispatch ShadowScript to a Guardian agent. The agent executes it locally and posts results back here.</p>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
-                    <div>
-                        <label style="font-size:0.7rem;font-family:var(--font-mono);color:#666;letter-spacing:1px;display:block;margin-bottom:6px;">TARGET AGENT</label>
-                        <select id="mission-agent-select" style="width:100%;padding:9px 12px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.82rem;font-family:var(--font-mono);">
-                            <option value="">— select agent —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:0.7rem;font-family:var(--font-mono);color:#666;letter-spacing:1px;display:block;margin-bottom:6px;">LABEL (optional)</label>
-                        <input id="mission-label" type="text" placeholder="e.g. check disk usage" style="width:100%;padding:9px 12px;background:#080810;border:1px solid #222;color:#fff;border-radius:4px;font-size:0.82rem;font-family:var(--font-mono);box-sizing:border-box;">
-                    </div>
-                </div>
-                <label style="font-size:0.7rem;font-family:var(--font-mono);color:#666;letter-spacing:1px;display:block;margin-bottom:6px;">SCRIPT</label>
-                <textarea id="mission-script" rows="6" placeholder="df -h&#10;uname -a&#10;whoami" style="width:100%;padding:10px 12px;background:#080810;border:1px solid #222;color:#0f0;border-radius:4px;font-size:0.78rem;font-family:var(--font-mono);box-sizing:border-box;resize:vertical;"></textarea>
-                <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
-                    <button onclick="missionDispatch()" id="mission-dispatch-btn" class="btn-primary" style="padding:9px 20px;font-size:0.8rem;">Dispatch</button>
-                    <button onclick="missionLoadHistory()" style="padding:9px 16px;background:transparent;border:1px solid #333;color:#888;border-radius:4px;cursor:pointer;font-size:0.8rem;">Refresh history</button>
-                    <span id="mission-dispatch-status" style="font-size:0.78rem;color:var(--text-secondary);font-family:var(--font-mono);"></span>
-                </div>
-
-                <!-- Result viewer -->
-                <div id="mission-result-panel" style="display:none;margin-top:16px;border:1px solid var(--glass-border);border-radius:6px;overflow:hidden;">
-                    <div style="padding:10px 16px;background:rgba(180,74,255,0.06);border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;">
-                        <span id="mission-result-label" class="mono" style="font-size:0.75rem;color:var(--accent-primary);"></span>
-                        <span id="mission-result-status" class="mono" style="font-size:0.7rem;"></span>
-                    </div>
-                    <pre id="mission-result-output" style="margin:0;padding:16px;font-size:0.75rem;font-family:var(--font-mono);color:#aaa;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto;"></pre>
-                </div>
-
-                <!-- History -->
-                <div style="margin-top:24px;">
-                    <div class="mono" style="font-size:0.65rem;color:#555;letter-spacing:2px;margin-bottom:10px;">MISSION HISTORY</div>
-                    <div id="mission-history" style="display:flex;flex-direction:column;gap:6px;font-size:0.8rem;color:var(--text-secondary);">
-                        <span style="color:#555;">No missions yet.</span>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -991,6 +1097,128 @@
         </div>
     </div>
 
+    <!-- ── Shadow Mail page ───────────────────────────────────────────────── -->
+    <div id="page-mail" class="page">
+        <div style="display:flex;height:calc(100vh - 60px);overflow:hidden;">
+            <!-- Sidebar -->
+            <div style="width:280px;min-width:220px;border-right:1px solid rgba(180,74,255,0.1);display:flex;flex-direction:column;background:rgba(180,74,255,0.02);">
+                <div style="padding:16px;border-bottom:1px solid rgba(180,74,255,0.1);">
+                    <button onclick="mailShowCompose()" class="btn-primary" style="width:100%;padding:9px;font-size:0.72rem;letter-spacing:1px;">✉ COMPOSE</button>
+                    <input id="mail-search-input" type="text" placeholder="Search…" oninput="mailSearch(this.value)"
+                           style="width:100%;margin-top:10px;padding:8px 10px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;font-size:0.8rem;box-sizing:border-box;">
+                </div>
+                <div style="padding:10px 16px 6px;display:flex;gap:6px;">
+                    <button id="mail-tab-inbox"  onclick="mailSetFolder('inbox')"  style="flex:1;padding:5px;font-size:0.65rem;font-family:var(--font-mono);background:var(--accent-primary);color:#000;border:none;cursor:pointer;letter-spacing:1px;">INBOX</button>
+                    <button id="mail-tab-sent"   onclick="mailSetFolder('sent')"   style="flex:1;padding:5px;font-size:0.65rem;font-family:var(--font-mono);background:transparent;border:1px solid #333;color:#888;cursor:pointer;letter-spacing:1px;">SENT</button>
+                </div>
+                <div id="mail-list" style="flex:1;overflow-y:auto;font-size:0.8rem;">
+                    <div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:30px 16px;">Sign in to access Shadow Mail</div>
+                </div>
+            </div>
+            <!-- Reader pane -->
+            <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+                <div id="mail-reader-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:0.8rem;flex-direction:column;gap:10px;">
+                    <div style="font-size:2rem;opacity:0.3;">📧</div>
+                    <div class="mono" style="font-size:0.7rem;letter-spacing:2px;color:#444;">NO MESSAGE SELECTED</div>
+                </div>
+                <div id="mail-reader" style="display:none;flex:1;display:flex;flex-direction:column;overflow:hidden;">
+                    <div style="padding:20px 24px;border-bottom:1px solid rgba(180,74,255,0.1);">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                            <h2 id="mail-reader-subject" style="font-size:1rem;color:#fff;margin:0;font-weight:600;flex:1;word-break:break-word;"></h2>
+                            <div style="display:flex;gap:8px;flex-shrink:0;">
+                                <button onclick="mailReply()" style="padding:6px 14px;font-size:0.65rem;font-family:var(--font-mono);background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);cursor:pointer;letter-spacing:1px;">REPLY</button>
+                                <button onclick="mailDelete()" style="padding:6px 14px;font-size:0.65rem;font-family:var(--font-mono);background:transparent;border:1px solid #444;color:#888;cursor:pointer;letter-spacing:1px;">DELETE</button>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:24px;margin-top:10px;font-size:0.75rem;color:var(--text-secondary);flex-wrap:wrap;">
+                            <span>From: <strong id="mail-reader-from" style="color:#ccc;"></strong></span>
+                            <span>To: <strong id="mail-reader-to" style="color:#ccc;"></strong></span>
+                            <span id="mail-reader-date" style="margin-left:auto;color:#555;"></span>
+                        </div>
+                    </div>
+                    <div id="mail-reader-body" style="flex:1;overflow-y:auto;padding:24px;font-size:0.85rem;line-height:1.7;color:#ccc;white-space:pre-wrap;word-break:break-word;"></div>
+                </div>
+            </div>
+        </div>
+        <!-- Create Room modal -->
+        <div id="chat-create-room-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9000;align-items:center;justify-content:center;padding:20px;">
+            <div style="background:#0d0d14;border:1px solid rgba(180,74,255,0.3);border-radius:8px;padding:28px;width:100%;max-width:420px;box-shadow:0 0 40px rgba(180,74,255,0.15);">
+                <h3 style="margin:0 0 20px 0;font-size:1rem;color:#fff;font-family:var(--font-mono);letter-spacing:1px;">CREATE NEW ROOM</h3>
+                <label style="font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;font-family:var(--font-mono);">ROOM ID (slug)</label>
+                <input id="cr-name" type="text" placeholder="e.g. gaming-talk" maxlength="30"
+                       oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')"
+                       style="width:100%;margin:6px 0 14px 0;padding:9px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:4px;font-size:0.85rem;box-sizing:border-box;font-family:var(--font-mono);">
+                <label style="font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;font-family:var(--font-mono);">DISPLAY NAME</label>
+                <input id="cr-display" type="text" placeholder="e.g. #Gaming Talk" maxlength="50"
+                       style="width:100%;margin:6px 0 14px 0;padding:9px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:4px;font-size:0.85rem;box-sizing:border-box;">
+                <label style="font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;font-family:var(--font-mono);">TOPIC (optional)</label>
+                <input id="cr-topic" type="text" placeholder="What's this room about?" maxlength="200"
+                       style="width:100%;margin:6px 0 20px 0;padding:9px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:4px;font-size:0.85rem;box-sizing:border-box;">
+                <p id="cr-error" style="display:none;color:#ff4d6d;font-size:0.78rem;margin:0 0 14px 0;"></p>
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button onclick="chatHideCreateRoom()" style="padding:8px 18px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;border-radius:4px;cursor:pointer;font-size:0.8rem;">Cancel</button>
+                    <button id="cr-submit-btn" onclick="chatSubmitCreateRoom()" style="padding:8px 20px;background:var(--accent-primary);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;font-weight:700;font-family:var(--font-mono);">CREATE</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Room Settings modal -->
+        <div id="chat-room-settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9000;align-items:center;justify-content:center;padding:20px;">
+            <div style="background:#0d0d14;border:1px solid rgba(180,74,255,0.3);border-radius:8px;padding:28px;width:100%;max-width:420px;box-shadow:0 0 40px rgba(180,74,255,0.15);">
+                <h3 style="margin:0 0 4px 0;font-size:1rem;color:#fff;font-family:var(--font-mono);letter-spacing:1px;">ROOM SETTINGS</h3>
+                <p id="rs-room-slug" style="font-size:0.72rem;color:var(--text-secondary);margin:0 0 20px 0;font-family:var(--font-mono);"></p>
+                <label style="font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;font-family:var(--font-mono);">DISPLAY NAME</label>
+                <input id="rs-display" type="text" maxlength="50"
+                       style="width:100%;margin:6px 0 14px 0;padding:9px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:4px;font-size:0.85rem;box-sizing:border-box;">
+                <label style="font-size:0.72rem;color:var(--text-secondary);letter-spacing:1px;font-family:var(--font-mono);">TOPIC</label>
+                <input id="rs-topic" type="text" maxlength="200"
+                       style="width:100%;margin:6px 0 20px 0;padding:9px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:4px;font-size:0.85rem;box-sizing:border-box;">
+                <p id="rs-error" style="display:none;color:#ff4d6d;font-size:0.78rem;margin:0 0 14px 0;"></p>
+                <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;">
+                    <button onclick="chatDeleteRoom()" style="padding:8px 16px;background:rgba(255,77,109,0.12);border:1px solid rgba(255,77,109,0.3);color:#ff4d6d;border-radius:4px;cursor:pointer;font-size:0.78rem;font-family:var(--font-mono);">DELETE ROOM</button>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="chatHideRoomSettings()" style="padding:8px 18px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;border-radius:4px;cursor:pointer;font-size:0.8rem;">Cancel</button>
+                        <button id="rs-submit-btn" onclick="chatSubmitRoomSettings()" style="padding:8px 20px;background:var(--accent-primary);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;font-weight:700;font-family:var(--font-mono);">SAVE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compose modal -->
+        <div id="mail-compose-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9000;align-items:center;justify-content:center;padding:20px;">
+            <div style="background:#0d0d0d;border:1px solid #222;width:100%;max-width:580px;border-radius:6px;overflow:hidden;">
+                <div style="padding:16px 20px;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center;">
+                    <span class="mono" style="font-size:0.7rem;color:var(--accent-primary);letter-spacing:2px;">// NEW MESSAGE</span>
+                    <button onclick="mailHideCompose()" style="background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+                </div>
+                <div style="padding:16px 20px;display:grid;gap:10px;">
+                    <input id="mail-compose-to"      type="email" placeholder="To"      style="width:100%;padding:9px 12px;background:#080810;border:1px solid #222;color:#fff;font-size:0.83rem;box-sizing:border-box;">
+                    <input id="mail-compose-subject" type="text"  placeholder="Subject" style="width:100%;padding:9px 12px;background:#080810;border:1px solid #222;color:#fff;font-size:0.83rem;box-sizing:border-box;">
+                    <textarea id="mail-compose-body" rows="10" placeholder="Message…" style="width:100%;padding:9px 12px;background:#080810;border:1px solid #222;color:#ccc;font-size:0.83rem;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+                    <div style="display:flex;justify-content:flex-end;gap:8px;">
+                        <button onclick="mailHideCompose()" style="padding:9px 18px;font-size:0.7rem;background:transparent;border:1px solid #333;color:#888;cursor:pointer;font-family:var(--font-mono);">CANCEL</button>
+                        <button onclick="mailSend()" class="btn-primary" style="padding:9px 18px;font-size:0.7rem;">SEND</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Reply modal -->
+        <div id="mail-reply-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9000;align-items:center;justify-content:center;padding:20px;">
+            <div style="background:#0d0d0d;border:1px solid #222;width:100%;max-width:580px;border-radius:6px;overflow:hidden;">
+                <div style="padding:16px 20px;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center;">
+                    <span id="mail-reply-title" class="mono" style="font-size:0.7rem;color:var(--accent-primary);letter-spacing:2px;">// REPLY</span>
+                    <button onclick="mailHideReply()" style="background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+                </div>
+                <div style="padding:16px 20px;display:grid;gap:10px;">
+                    <textarea id="mail-reply-body" rows="8" placeholder="Write your reply…" style="width:100%;padding:9px 12px;background:#080810;border:1px solid #222;color:#ccc;font-size:0.83rem;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+                    <div style="display:flex;justify-content:flex-end;gap:8px;">
+                        <button onclick="mailHideReply()" style="padding:9px 18px;font-size:0.7rem;background:transparent;border:1px solid #333;color:#888;cursor:pointer;font-family:var(--font-mono);">CANCEL</button>
+                        <button onclick="mailSendReply()" class="btn-primary" style="padding:9px 18px;font-size:0.7rem;">SEND REPLY</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- PRICING -->
     <!-- ── Download page ─────────────────────────────────────────────────── -->
@@ -1220,6 +1448,157 @@
         </div>
     </div>
 
+    <!-- ── Shadow Office page ────────────────────────────────────────────── -->
+    <div id="page-office" class="page" style="display:none;">
+        <div style="display:flex;height:calc(100vh - 60px);overflow:hidden;flex-direction:column;">
+            <!-- Sub-nav -->
+            <div style="display:flex;gap:0;border-bottom:1px solid rgba(180,74,255,0.15);background:rgba(180,74,255,0.02);flex-shrink:0;">
+                <button id="office-tab-docs"   onclick="officeShowTab('docs')"   style="padding:12px 24px;background:var(--accent-primary);color:#000;border:none;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);letter-spacing:2px;font-weight:700;">📄 DOCS</button>
+                <button id="office-tab-sheets" onclick="officeShowTab('sheets')" style="padding:12px 24px;background:transparent;border:none;border-right:1px solid rgba(180,74,255,0.15);cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);letter-spacing:2px;color:#888;">📊 SHEETS</button>
+                <button id="office-tab-slides" onclick="officeShowTab('slides')" style="padding:12px 24px;background:transparent;border:none;border-right:1px solid rgba(180,74,255,0.15);cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);letter-spacing:2px;color:#888;">🎞 SLIDES</button>
+                <div style="flex:1;"></div>
+                <div id="office-save-status" style="padding:12px 20px;font-size:0.68rem;font-family:var(--font-mono);color:#555;align-self:center;letter-spacing:1px;">AUTO-SAVE OFF</div>
+            </div>
+
+            <!-- ─── DOCS ─── -->
+            <div id="office-docs" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+                <!-- Toolbar -->
+                <div id="doc-toolbar" style="display:flex;flex-wrap:wrap;gap:2px;padding:6px 12px;border-bottom:1px solid rgba(180,74,255,0.1);background:rgba(0,0,0,0.3);flex-shrink:0;align-items:center;">
+                    <!-- File ops -->
+                    <button onclick="docNew()" title="New" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">NEW</button>
+                    <button onclick="docSave()" title="Save" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">SAVE</button>
+                    <button onclick="docLoad()" title="Open" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">OPEN</button>
+                    <button onclick="docExport('html')" title="Export HTML" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">EXPORT</button>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Text format -->
+                    <button id="doc-btn-bold"   onclick="docCmd('bold')"   title="Bold"          style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-weight:bold;font-size:0.85rem;">B</button>
+                    <button id="doc-btn-italic" onclick="docCmd('italic')" title="Italic"         style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-style:italic;font-size:0.85rem;">I</button>
+                    <button id="doc-btn-underline" onclick="docCmd('underline')" title="Underline" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;text-decoration:underline;font-size:0.85rem;">U</button>
+                    <button onclick="docCmd('strikeThrough')" title="Strikethrough" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;text-decoration:line-through;font-size:0.85rem;">S</button>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Block format -->
+                    <select onchange="docFormatBlock(this.value);this.value=''" style="padding:4px 6px;background:#111;border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;font-size:0.72rem;font-family:var(--font-mono);cursor:pointer;">
+                        <option value="">Format…</option>
+                        <option value="p">Paragraph</option>
+                        <option value="h1">Heading 1</option>
+                        <option value="h2">Heading 2</option>
+                        <option value="h3">Heading 3</option>
+                        <option value="blockquote">Quote</option>
+                        <option value="pre">Code</option>
+                    </select>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Lists -->
+                    <button onclick="docCmd('insertUnorderedList')" title="Bullet list" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.85rem;">≡</button>
+                    <button onclick="docCmd('insertOrderedList')"   title="Numbered list" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.85rem;">#</button>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Align -->
+                    <button onclick="docCmd('justifyLeft')"   title="Left"   style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.8rem;">⫷</button>
+                    <button onclick="docCmd('justifyCenter')" title="Center" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.8rem;">≡</button>
+                    <button onclick="docCmd('justifyRight')"  title="Right"  style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.8rem;">⫸</button>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Color -->
+                    <input type="color" id="doc-fgcolor" value="#ffffff" onchange="docCmd('foreColor',this.value)" title="Text color" style="width:28px;height:28px;padding:0;border:1px solid rgba(180,74,255,0.2);background:none;cursor:pointer;border-radius:3px;">
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <!-- Undo/redo -->
+                    <button onclick="docCmd('undo')" title="Undo" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.85rem;">↩</button>
+                    <button onclick="docCmd('redo')" title="Redo" style="padding:4px 8px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.15);color:#ccc;border-radius:3px;cursor:pointer;font-size:0.85rem;">↪</button>
+                    <!-- Doc name -->
+                    <div style="flex:1;"></div>
+                    <input id="doc-name" type="text" value="Untitled Document" style="padding:4px 10px;background:rgba(0,0,0,0.4);border:1px solid rgba(180,74,255,0.15);color:#fff;border-radius:3px;font-size:0.78rem;width:200px;">
+                </div>
+                <!-- Editor area -->
+                <div style="flex:1;overflow-y:auto;display:flex;justify-content:center;padding:40px 20px;background:rgba(0,0,0,0.2);">
+                    <div id="doc-editor"
+                         contenteditable="true" spellcheck="true"
+                         oninput="docOnInput()"
+                         style="width:100%;max-width:760px;min-height:100%;background:#0c0c14;border:1px solid rgba(180,74,255,0.1);border-radius:4px;padding:60px 72px;color:#e0e0e0;font-size:1rem;line-height:1.8;outline:none;box-sizing:border-box;font-family:'Georgia',serif;">
+                        <p>Start writing…</p>
+                    </div>
+                </div>
+                <!-- Status bar -->
+                <div id="doc-status" style="padding:4px 16px;background:rgba(0,0,0,0.4);border-top:1px solid rgba(180,74,255,0.08);font-size:0.65rem;color:#555;font-family:var(--font-mono);letter-spacing:1px;">
+                    0 words · 0 chars
+                </div>
+            </div>
+
+            <!-- ─── SHEETS ─── -->
+            <div id="office-sheets" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+                <!-- Sheet toolbar -->
+                <div style="display:flex;gap:6px;padding:6px 12px;border-bottom:1px solid rgba(180,74,255,0.1);background:rgba(0,0,0,0.3);flex-shrink:0;align-items:center;">
+                    <button onclick="sheetNew()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">NEW</button>
+                    <button onclick="sheetExportCsv()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">EXPORT CSV</button>
+                    <button onclick="sheetImportCsv()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">IMPORT CSV</button>
+                    <input type="file" id="sheet-csv-input" accept=".csv" style="display:none;" onchange="sheetLoadCsv(this)">
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <span style="font-size:0.7rem;color:#555;font-family:var(--font-mono);">CELL:</span>
+                    <input id="sheet-cell-ref" type="text" value="A1" readonly style="width:48px;padding:3px 6px;background:#111;border:1px solid rgba(180,74,255,0.2);color:var(--accent-primary);font-family:var(--font-mono);font-size:0.72rem;border-radius:3px;">
+                    <input id="sheet-formula-bar" type="text" placeholder="Value or =formula" oninput="sheetFormulaBarInput()" onkeydown="sheetFormulaKeydown(event)" style="flex:1;padding:3px 8px;background:#111;border:1px solid rgba(180,74,255,0.2);color:#e0e0e0;font-family:var(--font-mono);font-size:0.8rem;border-radius:3px;">
+                </div>
+                <!-- Grid container -->
+                <div style="flex:1;overflow:auto;position:relative;">
+                    <table id="sheet-grid" style="border-collapse:collapse;font-size:0.78rem;font-family:var(--font-mono);white-space:nowrap;min-width:100%;"></table>
+                </div>
+            </div>
+
+            <!-- ─── SLIDES ─── -->
+            <div id="office-slides" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+                <!-- Slides toolbar -->
+                <div style="display:flex;gap:6px;padding:6px 12px;border-bottom:1px solid rgba(180,74,255,0.1);background:rgba(0,0,0,0.3);flex-shrink:0;align-items:center;flex-wrap:wrap;">
+                    <button onclick="slideAddSlide()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">+ SLIDE</button>
+                    <button onclick="slideDuplicateCurrent()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">DUPLICATE</button>
+                    <button onclick="slideDeleteCurrent()" style="padding:4px 10px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);color:#ff4d6d;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">DELETE</button>
+                    <div style="width:1px;height:20px;background:rgba(255,255,255,0.08);margin:0 4px;"></div>
+                    <span style="font-size:0.7rem;color:#555;font-family:var(--font-mono);">THEME:</span>
+                    <select id="slide-theme-picker" onchange="slideSetTheme(this.value)" style="padding:4px 6px;background:#111;border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;font-size:0.72rem;font-family:var(--font-mono);">
+                        <option value="dark">Shadow Dark</option>
+                        <option value="purple">Purple Haze</option>
+                        <option value="matrix">Matrix</option>
+                        <option value="light">Clean Light</option>
+                        <option value="ocean">Deep Ocean</option>
+                    </select>
+                    <div style="flex:1;"></div>
+                    <button onclick="slideExportJson()" style="padding:4px 10px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.2);color:#aaa;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);">EXPORT</button>
+                    <button onclick="slidePresent()" style="padding:4px 14px;background:var(--accent-primary);border:none;color:#000;border-radius:3px;cursor:pointer;font-size:0.72rem;font-family:var(--font-mono);font-weight:700;">▶ PRESENT</button>
+                </div>
+                <div style="flex:1;display:flex;overflow:hidden;">
+                    <!-- Slide panel -->
+                    <div id="slide-panel" style="width:160px;min-width:140px;border-right:1px solid rgba(180,74,255,0.12);overflow-y:auto;background:rgba(0,0,0,0.2);flex-shrink:0;padding:8px;display:flex;flex-direction:column;gap:6px;">
+                    </div>
+                    <!-- Slide canvas -->
+                    <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:20px;background:rgba(0,0,0,0.15);">
+                        <div id="slide-canvas" style="width:640px;height:360px;position:relative;box-shadow:0 8px 40px rgba(0,0,0,0.6);flex-shrink:0;overflow:hidden;">
+                            <div id="slide-bg" style="position:absolute;inset:0;"></div>
+                            <div id="slide-content" style="position:absolute;inset:0;padding:48px 56px;display:flex;flex-direction:column;justify-content:center;">
+                                <div id="slide-title-el" contenteditable="true" spellcheck="false"
+                                     oninput="slideSyncCurrent()"
+                                     style="font-size:2rem;font-weight:700;margin-bottom:18px;outline:none;min-height:1.2em;"></div>
+                                <div id="slide-body-el" contenteditable="true" spellcheck="false"
+                                     oninput="slideSyncCurrent()"
+                                     style="font-size:1rem;line-height:1.7;outline:none;flex:1;overflow:hidden;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Present mode overlay -->
+        <div id="slide-present-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#000;align-items:center;justify-content:center;flex-direction:column;">
+            <div id="present-canvas" style="width:100%;max-width:calc(100vh * 16/9);aspect-ratio:16/9;position:relative;overflow:hidden;">
+                <div id="present-bg" style="position:absolute;inset:0;"></div>
+                <div id="present-content" style="position:absolute;inset:0;padding:8vh 10vw;display:flex;flex-direction:column;justify-content:center;">
+                    <div id="present-title" style="font-size:clamp(1.5rem,4vw,3.5rem);font-weight:700;margin-bottom:3vh;"></div>
+                    <div id="present-body" style="font-size:clamp(0.9rem,2vw,1.8rem);line-height:1.7;"></div>
+                </div>
+            </div>
+            <div style="position:fixed;bottom:24px;display:flex;gap:16px;align-items:center;">
+                <button onclick="presentNav(-1)" style="padding:10px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:4px;cursor:pointer;font-size:1rem;">◀</button>
+                <span id="present-counter" style="color:#555;font-family:var(--font-mono);font-size:0.8rem;"></span>
+                <button onclick="presentNav(1)"  style="padding:10px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:4px;cursor:pointer;font-size:1rem;">▶</button>
+                <button onclick="slideEndPresent()" style="padding:10px 20px;background:rgba(255,77,109,0.15);border:1px solid rgba(255,77,109,0.3);color:#ff4d6d;border-radius:4px;cursor:pointer;font-size:0.8rem;margin-left:20px;">✕ EXIT</button>
+            </div>
+        </div>
+    </div>
 
     <div id="page-pricing" class="page">
         <div class="content-section" style="text-align:center;">
@@ -1359,11 +1738,11 @@
                     <h2 style="font-size: 2rem; margin-bottom: 30px;">Set new password</h2>
                     <div style="margin-bottom: 20px;">
                         <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">New password</label>
-                        <input type="password" id="reset-password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;" autocomplete="new-password">
+                        <input type="password" id="reset-password" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
                     </div>
                     <div style="margin-bottom: 30px;">
                         <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Confirm</label>
-                        <input type="password" id="reset-password-confirm" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;" autocomplete="new-password">
+                        <input type="password" id="reset-password-confirm" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
                     </div>
                     <button type="submit" class="btn-primary" style="width: 100%;">Update password</button>
                     </form>
@@ -1659,7 +2038,6 @@
                             <div style="margin-bottom:12px;">
                                 <label class="mono" style="font-size:0.65rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Your Anthropic API key (sk-ant-…)</label>
                                 <form onsubmit="saveByok(); return false;" style="display:flex; gap:8px;">
-                                    <input type="text" autocomplete="username" style="display:none;" aria-hidden="true">
                                     <input type="password" id="byok-input" placeholder="sk-ant-…" style="flex:1;padding:8px 12px;border:1px solid #333;background:#000;color:#fff;font-size:0.8rem;" autocomplete="new-password">
                                     <button type="submit" class="btn-primary" style="padding:8px 16px;font-size:0.7rem;">Save</button>
                                     <button type="button" onclick="clearByok()" style="padding:8px 16px;font-size:0.7rem;background:transparent;border:1px solid #444;color:#aaa;cursor:pointer;">Clear</button>
@@ -1706,33 +2084,6 @@
                     <p style="font-size:0.75rem;color:var(--text-secondary);margin-top:10px;">Use any TOTP app (Authy, Google Authenticator, 1Password, Bitwarden). Enrollment is handled by Supabase — paste your account password to enroll.</p>
                 </div>
 
-                <!-- ── Profile ───────────────────────────────────────────── -->
-                <div id="profile-edit-section" style="margin-bottom:40px;padding-bottom:40px;border-bottom:1px solid var(--glass-border);">
-                    <h3 class="mono" style="font-size:1rem;color:var(--accent-primary);margin-bottom:6px;">// Your profile</h3>
-                    <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:20px;">Visible to teammates. Click any handle in chat to view someone's profile.</p>
-                    <div style="display:grid;gap:14px;max-width:480px;">
-                        <div style="display:flex;align-items:center;gap:16px;">
-                            <div id="profile-avatar-preview" style="width:56px;height:56px;border-radius:50%;background:rgba(180,74,255,0.2);border:2px solid rgba(180,74,255,0.4);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;"></div>
-                            <input id="profile-avatar-url" type="url" class="cli-input" placeholder="Avatar URL (https://...)" oninput="profileAvatarPreview(this.value)" style="flex:1;padding:10px 14px;border:1px solid #333;background:#000;font-size:0.82rem;">
-                        </div>
-                        <textarea id="profile-bio" class="cli-input" placeholder="Bio — tell your team who you are (max 280 chars)" maxlength="280" rows="3" style="padding:10px 14px;border:1px solid #333;background:#000;font-size:0.82rem;resize:vertical;font-family:var(--font-body);"></textarea>
-                        <input id="profile-website" type="url" class="cli-input" placeholder="Website" style="padding:10px 14px;border:1px solid #333;background:#000;font-size:0.82rem;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                            <input id="profile-twitter" class="cli-input" placeholder="Twitter (no @)" style="padding:10px 14px;border:1px solid #333;background:#000;font-size:0.82rem;">
-                            <input id="profile-github" class="cli-input" placeholder="GitHub username" style="padding:10px 14px;border:1px solid #333;background:#000;font-size:0.82rem;">
-                        </div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                            <input id="profile-discord" class="cli-input" placeholder="Discord username" style="padding:10px 14px;border:1px solid #333;background:#000;font-size:0.82rem;">
-                            <input id="profile-location" class="cli-input" placeholder="Location" style="padding:10px 14px;border:1px solid #333;background:#000;font-size:0.82rem;">
-                        </div>
-                        <label style="display:flex;align-items:center;gap:10px;font-size:0.82rem;color:var(--text-secondary);cursor:pointer;">
-                            <input type="checkbox" id="profile-is-public" checked style="accent-color:var(--accent-primary);width:16px;height:16px;">
-                            Public profile (visible to all team members)
-                        </label>
-                        <button onclick="profileSave()" id="profile-save-btn" style="padding:10px 20px;font-size:0.7rem;background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);cursor:pointer;font-family:var(--font-mono);letter-spacing:1px;align-self:start;">SAVE PROFILE</button>
-                    </div>
-                </div>
-
                 <div style="margin-bottom: 40px;">
                     <h3 class="mono" style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 14px;">// Your data</h3>
                     <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Export everything ShadowCypher has on you as a single JSON file (GDPR portability).</p>
@@ -1771,66 +2122,6 @@
         </div>
     </div>
 
-    <!-- ADMIN -->
-    <div id="page-admin" class="page">
-      <div class="content-section" style="max-width:900px;">
-        <h2 style="font-family:var(--font-heading);font-size:1.6rem;font-weight:700;margin-bottom:6px;">Admin</h2>
-        <p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:28px;">Platform overview — shadow only</p>
-
-        <!-- Stat cards -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px;" id="admin-stats-grid">
-          <div class="module-card" style="padding:20px 24px;">
-            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Total Users</div>
-            <div id="admin-stat-users" style="font-size:2rem;font-weight:700;font-family:var(--font-heading);">—</div>
-          </div>
-          <div class="module-card" style="padding:20px 24px;">
-            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Operators</div>
-            <div id="admin-stat-operators" style="font-size:2rem;font-weight:700;font-family:var(--font-heading);color:var(--accent-primary);">—</div>
-          </div>
-          <div class="module-card" style="padding:20px 24px;">
-            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Agents Online</div>
-            <div id="admin-stat-agents" style="font-size:2rem;font-weight:700;font-family:var(--font-heading);">—</div>
-          </div>
-          <div class="module-card" style="padding:20px 24px;">
-            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Missions (7d)</div>
-            <div id="admin-stat-missions" style="font-size:2rem;font-weight:700;font-family:var(--font-heading);">—</div>
-          </div>
-          <div class="module-card" style="padding:20px 24px;">
-            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Total Agents</div>
-            <div id="admin-stat-agents-total" style="font-size:2rem;font-weight:700;font-family:var(--font-heading);">—</div>
-          </div>
-        </div>
-
-        <!-- User table -->
-        <div class="module-card" style="padding:0;overflow:hidden;">
-          <div style="padding:16px 24px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-weight:600;font-size:0.9rem;">Users</span>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <button id="admin-users-prev" onclick="adminUsersPage(-1)" class="btn-secondary" style="padding:4px 12px;font-size:0.75rem;">← Prev</button>
-              <span id="admin-users-page-label" style="font-size:0.75rem;color:var(--text-muted);">Page 1</span>
-              <button id="admin-users-next" onclick="adminUsersPage(1)" class="btn-secondary" style="padding:4px 12px;font-size:0.75rem;">Next →</button>
-            </div>
-          </div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-              <thead>
-                <tr style="border-bottom:1px solid var(--glass-border);">
-                  <th style="text-align:left;padding:10px 24px;color:var(--text-muted);font-weight:500;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">Handle</th>
-                  <th style="text-align:left;padding:10px 16px;color:var(--text-muted);font-weight:500;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">Email</th>
-                  <th style="text-align:left;padding:10px 16px;color:var(--text-muted);font-weight:500;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">Plan</th>
-                  <th style="text-align:left;padding:10px 16px;color:var(--text-muted);font-weight:500;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">Joined</th>
-                  <th style="text-align:left;padding:10px 16px;color:var(--text-muted);font-weight:500;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;">Last Seen</th>
-                </tr>
-              </thead>
-              <tbody id="admin-users-tbody">
-                <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">Loading…</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <footer style="text-align:center;padding:60px 20px;border-top:1px solid var(--glass-border);margin-top:60px;">
         <p style="font-family:var(--font-heading);font-size:1rem;font-weight:700;letter-spacing:0.05em;margin-bottom:8px;">ShadowCypher</p>
         <p style="color:var(--text-muted);font-size:0.78rem;">v3.0.0 · Go · Python · GTK3 · Arch Linux</p>
@@ -1854,8 +2145,6 @@
         const indicator=document.getElementById('navIndicator');
         function updateIndicator(el){if(!el)return;indicator.style.width=el.offsetWidth+'px';indicator.style.left=el.offsetLeft+'px';}
         async function navTo(pageId,el){
-            // Merged pages — redirect to their new home
-            if(pageId==='shadowos'){pageId='download';el=el||document.getElementById('nav-download');}
             const target=document.getElementById('page-'+pageId);
             if(!target||target.classList.contains('active'))return;
             shutter.classList.add('active');
@@ -1868,7 +2157,6 @@
             window.scrollTo({top:0});
             await new Promise(r=>setTimeout(r,100));
             shutter.classList.remove('active');
-            if(pageId==='admin' && window._adminLoad) window._adminLoad();
         }
 
         // THREE.JS Background
@@ -2018,14 +2306,12 @@
             if (log) {
                 log.prepend(line);
                 while (log.childElementCount > 12) log.removeChild(log.lastChild);
-            } else {
-                console.log('[shadowcypher]', msg);
             }
         }
 
         function showToast(msg, type = 'info') {
             const container = document.getElementById('toast-container');
-            if (!container) { console.log('[toast]', type, msg); return; }
+            if (!container) return;
             const palette = {
                 success: ['rgba(0,200,100,0.12)', 'rgba(0,200,100,0.3)', '#00c864'],
                 warning: ['rgba(255,184,77,0.12)', 'rgba(255,184,77,0.3)', '#ffb84d'],
@@ -2168,7 +2454,7 @@
             if (!supabaseClient) { cliPrint("Auth offline — try again in a moment.", "var(--warning)"); return; }
 
             if (mode === 'login') {
-                const rawHandle = document.getElementById('login-handle').value.trim().replace(/^@/, '').toLowerCase();
+                const rawHandle = document.getElementById('login-handle').value.trim().replace(/^@/, '');
                 const password = document.getElementById('login-password').value;
                 if (!rawHandle || !password) { showAuthBanner('Handle and password required.', 'error'); return; }
                 const email = `${rawHandle}@shadowcypher.site`;
@@ -2308,13 +2594,12 @@
         async function updateUIForUser(user) {
             document.getElementById('account-auth').style.display = 'none';
             document.getElementById('account-dashboard').style.display = 'block';
-            // Derive nick the same way the server does — handle first, email prefix fallback
-            _myNick = (user.user_metadata?.handle || user.email.split('@')[0]).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20) || 'user';
+            const signoutLink = document.getElementById('nav-signout');
+            if (signoutLink) signoutLink.style.display = '';
+            // Derive nick the same way the server does (email handle, sanitized)
+            _myNick = user.email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20) || 'user';
             _currentUserId = user.id || null;
             const name = user.user_metadata?.handle || user.email.split('@')[0];
-            // Show admin link only for the shadow handle
-            const adminLink = document.getElementById('nav-admin');
-            if (adminLink) adminLink.style.display = (name === 'shadow') ? '' : 'none';
             const h2 = document.querySelector('#account-dashboard h2');
             if (h2) h2.innerText = `Welcome, ${name}`;
 
@@ -2354,10 +2639,6 @@
                     showApiBanner(`Your Pro trial ends in ${me.trial_days_remaining} day(s). Subscribe to keep alerts, multi-device monitoring, and history.`);
                 }
 
-                // Show missions section for operator plan
-                const missionsSection = document.getElementById('missions-section');
-                if (missionsSection) missionsSection.style.display = (effective === 'operator') ? 'block' : 'none';
-
                 // If user has a paid subscription, show "Manage subscription" button
                 if (me.plan && me.plan !== 'community') {
                     let btn = document.getElementById('manage-sub-btn');
@@ -2384,12 +2665,17 @@
                 cliPrint('Checkout canceled.', 'var(--warning)');
                 history.replaceState(null, '', window.location.pathname);
             }
-            // Deep-link: ?nav=chat (used by push notifications)
+            // Deep-link: ?nav=mail or ?nav=chat (used by push notifications)
             const navParam = params.get('nav');
-            if (navParam === 'chat') {
+            if (navParam === 'mail') {
+                navTo('mail', document.getElementById('nav-mail'));
+                history.replaceState(null, '', window.location.pathname);
+            } else if (navParam === 'chat') {
                 navTo('chat', document.getElementById('nav-chat'));
                 history.replaceState(null, '', window.location.pathname);
             }
+            // Poll unread count when logged in
+            mailPollUnread();
 
             // Hide the logged-out teaser once authenticated
             const previewTeaser = document.getElementById('guardian-preview-teaser');
@@ -2409,9 +2695,6 @@
             loadCveAlerts().catch(() => {});
             if (window._cveAlertTimer) clearInterval(window._cveAlertTimer);
             window._cveAlertTimer = setInterval(() => loadCveAlerts().catch(() => {}), 60 * 60 * 1000);
-
-            // Load user profile for edit form
-            if (window.profileLoad) profileLoad().catch(() => {});
 
             // Load notification prefs + teams + AI usage + webhooks + stats + audit + mfa + referrals
             loadNotifPrefs().catch(() => {});
@@ -2454,7 +2737,6 @@
         }
 
         async function refreshGuardian() {
-            if (!_sessionApiKey) return;
             const indicator = document.getElementById('guardian-refresh-indicator');
             if (indicator) indicator.style.opacity = '1';
             try {
@@ -2468,7 +2750,6 @@
                 renderDevices(devicesResp.devices || []);
                 renderIncidents(incidentsResp.incidents || []);
                 renderScans(scansResp.scans || []);
-                if (window._missionPopulateAgents) _missionPopulateAgents(agentsResp.agents || []);
                 showApiBanner(null);
             } catch (err) {
                 console.warn('[guardian] refresh failed', err.message);
@@ -2612,40 +2893,27 @@
             }).join('');
         }
 
-        async function showDevice(id) {
+        function showDevice(id) {
             const d = _deviceCache.find(x => x.id === id);
             if (!d) return;
-
-            // Show modal immediately with cached data, then enrich from API
-            const modal = document.getElementById('device-modal');
-            const body = document.getElementById('device-modal-body');
-            modal.style.display = 'flex';
-            body.innerHTML = '<div style="color:#555;font-size:0.85rem;padding:40px 0;text-align:center;">Loading device details…</div>';
-
-            let detail = null;
-            try { detail = await callApi(`/v1/devices/${id}`); } catch(_) {}
-
-            const device = (detail && detail.device) ? detail.device : d;
-            const seen = new Date(device.last_seen_at || d.last_seen_at).toLocaleString();
-            const first = (device.first_seen_at || d.first_seen_at) ? new Date(device.first_seen_at || d.first_seen_at).toLocaleString() : '—';
-            const ports = (device.open_ports || d.open_ports || []);
+            const seen = new Date(d.last_seen_at).toLocaleString();
+            const first = d.first_seen_at ? new Date(d.first_seen_at).toLocaleString() : '—';
+            const ports = (d.open_ports || []);
             const portsHtml = ports.length
                 ? ports.map(p => `<span style="font-family:var(--font-mono);font-size:0.75rem;padding:2px 8px;background:rgba(99,179,237,0.08);border:1px solid rgba(99,179,237,0.2);border-radius:3px;color:var(--accent-primary);">${p}</span>`).join('')
                 : '<span style="color:#555;font-size:0.75rem;">No open ports detected</span>';
 
-            // CVE alerts — prefer API response, fall back to cached
-            const cves = (detail && detail.cve_alerts) ? detail.cve_alerts
-                : (window._cveAlertCache ? (window._cveAlertCache[id] || []) : []);
+            // CVE alerts for this device
+            const cves = window._cveAlertCache ? (window._cveAlertCache[id] || []) : [];
             const cvesHtml = cves.length
                 ? cves.map(a => `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
                     <span style="font-family:var(--font-mono);font-size:0.75rem;color:#ef4444;">${escapeHtml(a.cve_id)}</span>
-                    <span style="color:#555;font-size:0.65rem;margin-left:auto;">${new Date(a.fired_at || a.sent_at).toLocaleDateString()}</span>
+                    <span style="color:#555;font-size:0.65rem;margin-left:auto;">${new Date(a.sent_at).toLocaleDateString()}</span>
                   </div>`).join('')
                 : '<span style="color:#555;font-size:0.75rem;">No CVE matches</span>';
 
-            // Incidents — prefer API response, fall back to incident cache
-            const incs = (detail && detail.incidents) ? detail.incidents
-                : _incidentCache.filter(i => i.device_id === id);
+            // Incidents linked to this device
+            const incs = _incidentCache.filter(i => i.device_id === id);
             const sevColor = { info: 'var(--success)', warning: 'var(--warning)', critical: 'var(--critical)' };
             const incsHtml = incs.length
                 ? incs.slice(0, 20).map(inc => {
@@ -2658,56 +2926,22 @@
                   }).join('')
                 : '<span style="color:#555;font-size:0.75rem;">No incidents linked to this device</span>';
 
-            // Scan timeline
-            const scans = (detail && detail.scans) ? detail.scans : [];
-            const scanTypeColor = { network:'var(--accent-primary)', router:'var(--warning)', dns:'var(--success)', firewall:'var(--success)', system:'var(--warning)', port:'#888', arp:'var(--critical)' };
-            const scansHtml = scans.length
-                ? scans.map(s => {
-                    const c = scanTypeColor[s.scan_type] || '#888';
-                    const t = new Date(s.started_at).toLocaleString(undefined, {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-                    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
-                        <span style="font-family:var(--font-mono);font-size:0.65rem;color:${c};text-transform:uppercase;min-width:58px;">${escapeHtml(s.scan_type)}</span>
-                        ${s.device_count != null ? `<span style="color:var(--text-secondary);font-size:0.7rem;">${s.device_count} devices</span>` : ''}
-                        ${s.duration_ms != null ? `<span style="color:#444;font-size:0.65rem;">${s.duration_ms}ms</span>` : ''}
-                        <span style="color:#444;font-size:0.62rem;margin-left:auto;">${escapeHtml(t)}</span>
-                    </div>`;
-                  }).join('')
-                : '<span style="color:#555;font-size:0.75rem;">No scans in plan history window</span>';
+            const trustBadge = d.trusted
+                ? `<span style="font-size:0.65rem;padding:2px 8px;background:rgba(72,199,142,0.1);border:1px solid rgba(72,199,142,0.3);color:var(--success);border-radius:3px;">TRUSTED</span>`
+                : `<span style="font-size:0.65rem;padding:2px 8px;background:rgba(255,255,255,0.04);border:1px solid #333;color:#555;border-radius:3px;">UNTRUSTED</span>`;
 
-            // Risk score: CVEs 12pts ea (cap 36), open incidents crit=20/warn=10/info=4, risky ports 8pts ea, cap 100
-            const RISKY_PORTS = new Set([21, 23, 445, 1900, 3389, 7547]);
-            let risk = 0;
-            risk += Math.min(cves.length * 12, 36);
-            for (const inc of incs) {
-                if (inc.status === 'open') {
-                    if (inc.severity === 'critical') risk += 20;
-                    else if (inc.severity === 'warning') risk += 10;
-                    else risk += 4;
-                }
-            }
-            for (const p of ports) { if (RISKY_PORTS.has(Number(p))) risk += 8; }
-            risk = Math.min(risk, 100);
-            const riskColor = risk >= 60 ? 'var(--critical)' : risk >= 30 ? 'var(--warning)' : 'var(--success)';
-            const riskLabel = risk >= 60 ? 'HIGH' : risk >= 30 ? 'MEDIUM' : 'LOW';
-
-            const trustBtn = device.trusted
-                ? `<button onclick="toggleDeviceTrust('${escapeHtml(id)}', false)" style="font-size:0.65rem;padding:2px 10px;background:rgba(72,199,142,0.1);border:1px solid rgba(72,199,142,0.3);color:var(--success);border-radius:3px;cursor:pointer;font-family:var(--font-mono);">TRUSTED ✕</button>`
-                : `<button onclick="toggleDeviceTrust('${escapeHtml(id)}', true)" style="font-size:0.65rem;padding:2px 10px;background:rgba(255,255,255,0.04);border:1px solid #333;color:#aaa;border-radius:3px;cursor:pointer;font-family:var(--font-mono);">MARK TRUSTED</button>`;
-
-            body.innerHTML = `
+            document.getElementById('device-modal-body').innerHTML = `
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
-                    <span style="font-size:0.95rem;font-weight:700;color:#fff;">${escapeHtml(device.hostname || device.ip || device.mac || d.hostname || d.mac)}</span>
-                    ${trustBtn}
-                    <span style="font-size:0.65rem;font-family:var(--font-mono);color:var(--accent-primary);padding:2px 8px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.25);border-radius:3px;">${escapeHtml(device.device_type || d.device_type || 'unknown')}</span>
-                    <span style="font-size:0.65rem;font-family:var(--font-mono);color:${riskColor};padding:2px 8px;background:rgba(0,0,0,0.2);border:1px solid ${riskColor};border-radius:3px;margin-left:auto;">RISK ${risk}/100 · ${riskLabel}</span>
+                    <span style="font-size:0.95rem;font-weight:700;color:#fff;">${escapeHtml(d.hostname || d.ip || d.mac)}</span>
+                    ${trustBadge}
+                    <span style="font-size:0.65rem;font-family:var(--font-mono);color:var(--accent-primary);padding:2px 8px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.25);border-radius:3px;">${escapeHtml(d.device_type || 'unknown')}</span>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;font-size:0.78rem;">
-                    <div><span style="color:#555;">MAC</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(device.mac || d.mac)}</span></div>
-                    <div><span style="color:#555;">IP</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(device.ip || d.ip || '—')}</span></div>
-                    <div><span style="color:#555;">Vendor</span><br><span style="color:var(--text-primary);">${escapeHtml(device.vendor || d.vendor || '—')}</span></div>
-                    <div><span style="color:#555;">OS</span><br><span style="color:var(--text-primary);">${escapeHtml(device.os_fingerprint || '—')}</span></div>
-                    <div><span style="color:#555;">First seen</span><br><span style="color:var(--text-primary);">${escapeHtml(first)}</span></div>
+                    <div><span style="color:#555;">MAC</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(d.mac)}</span></div>
+                    <div><span style="color:#555;">IP</span><br><span class="mono" style="color:var(--text-primary);">${escapeHtml(d.ip || '—')}</span></div>
+                    <div><span style="color:#555;">Vendor</span><br><span style="color:var(--text-primary);">${escapeHtml(d.vendor || '—')}</span></div>
                     <div><span style="color:#555;">Last seen</span><br><span style="color:var(--text-primary);">${escapeHtml(seen)}</span></div>
+                    <div><span style="color:#555;">First seen</span><br><span style="color:var(--text-primary);">${escapeHtml(first)}</span></div>
                 </div>
                 <div style="margin-bottom:20px;">
                     <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-secondary);margin-bottom:8px;">// OPEN_PORTS</div>
@@ -2717,27 +2951,16 @@
                     <div style="font-family:var(--font-mono);font-size:0.65rem;color:#ef4444;margin-bottom:8px;">// CVE_MATCHES (${cves.length})</div>
                     ${cvesHtml}
                 </div>
-                <div style="margin-bottom:20px;">
+                <div>
                     <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--warning);margin-bottom:8px;">// LINKED_INCIDENTS (${incs.length})</div>
                     ${incsHtml}
                 </div>
-                <div>
-                    <div style="font-family:var(--font-mono);font-size:0.65rem;color:#888;margin-bottom:8px;">// SCAN_TIMELINE (${scans.length} scans since device first seen)</div>
-                    ${scansHtml}
-                </div>
             `;
+            document.getElementById('device-modal').style.display = 'flex';
         }
 
         function closeDeviceModal() {
             document.getElementById('device-modal').style.display = 'none';
-        }
-
-        async function toggleDeviceTrust(id, trusted) {
-            try {
-                await callApi(`/v1/devices/${id}`, { method: 'PATCH', body: JSON.stringify({ trusted }) });
-                const d = _deviceCache.find(x => x.id === id);
-                if (d) { d.trusted = trusted; showDevice(id); }
-            } catch (e) { alert('Failed: ' + e.message); }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -2832,33 +3055,20 @@
             NONE:     'color:#555;background:rgba(255,255,255,0.02);border-color:#333',
         };
 
-        window._threatPage = window._threatPage || 1;
-        const _THREAT_LIMIT = 20;
-
-        function threatChangePage(dir) {
-            window._threatPage = Math.max(1, (window._threatPage || 1) + dir);
-            loadThreats();
-        }
-
         async function loadThreats() {
             const feed = document.getElementById('threat-feed');
             const errEl = document.getElementById('threat-feed-error');
-            const pagEl = document.getElementById('threat-pagination');
             const sev = document.getElementById('threat-severity-filter')?.value || '';
-            const q = document.getElementById('threat-search')?.value?.trim() || '';
-            const page = window._threatPage || 1;
             if (!feed) return;
             feed.innerHTML = '<span style="color:#555;font-size:0.82rem;">Fetching CVE data…</span>';
             errEl.style.display = 'none';
-            if (pagEl) pagEl.style.display = 'none';
             try {
-                const params = new URLSearchParams({ limit: String(_THREAT_LIMIT), page: String(page) });
-                if (sev) params.set('severity', sev);
-                if (q) params.set('q', q);
+                const qs = sev ? `?severity=${sev}&limit=20` : '?limit=20';
                 const [data, stats] = await Promise.all([
-                    callApi(`/v1/threats?${params}`),
+                    callApi(`/v1/threats${qs}`),
                     callApi('/v1/threats/stats'),
                 ]);
+                // Update stat badges
                 const critEl = document.getElementById('threat-stat-critical');
                 const highEl = document.getElementById('threat-stat-high');
                 const asOf = document.getElementById('threat-as-of');
@@ -2884,16 +3094,6 @@
                         <p style="font-size:0.78rem;margin:0;opacity:0.85;line-height:1.5;">${escapeHtml(cve.description)}</p>
                     </div>`;
                 }).join('');
-
-                // Pagination controls
-                const total = data.total_results || 0;
-                const totalPages = Math.max(1, Math.ceil(total / _THREAT_LIMIT));
-                if (pagEl && totalPages > 1) {
-                    pagEl.style.display = 'flex';
-                    document.getElementById('threat-page-label').textContent = `page ${page} of ${totalPages} (${total} total)`;
-                    pagEl.querySelector('button:first-child').disabled = page <= 1;
-                    pagEl.querySelector('button:last-child').disabled = page >= totalPages;
-                }
             } catch (err) {
                 feed.innerHTML = '';
                 errEl.style.display = 'block';
@@ -2974,6 +3174,7 @@
                         cliPrint('Push permission denied by browser.', 'var(--warning)');
                     } else {
                         const keyResp = await fetch(API_BASE + '/v1/notifications/vapid-public-key');
+                        if (!keyResp.ok) throw new Error(`VAPID key fetch failed (${keyResp.status})`);
                         const { public_key: vapidKey } = await keyResp.json();
                         if (vapidKey) {
                             const reg = await navigator.serviceWorker.ready;
@@ -3273,7 +3474,7 @@
         async function testWebhook(id) {
             try {
                 const r = await callApi('/v1/webhooks/test', { method: 'POST', body: JSON.stringify({ id }) });
-                cliPrint(r.ok ? `Test delivered (${r.status})` : `Test failed (${r.status})`, r.ok ? 'var(--success)' : 'var(--critical)');
+                cliPrint('Test delivered', 'var(--success)');
             } catch (err) {
                 cliPrint(`Test failed: ${err.message}`, 'var(--critical)');
             }
@@ -3641,8 +3842,8 @@
                 } else {
                     document.getElementById('account-auth').style.display = 'block';
                     document.getElementById('account-dashboard').style.display = 'none';
-                    const adminLink2 = document.getElementById('nav-admin');
-                    if (adminLink2) adminLink2.style.display = 'none';
+                    const signoutLink = document.getElementById('nav-signout');
+                    if (signoutLink) signoutLink.style.display = 'none';
                     if (window._guardianTimer) { clearInterval(window._guardianTimer); window._guardianTimer = null; }
                     document.getElementById('api-banner')?.remove();
                 }
@@ -3690,7 +3891,7 @@
 
         function copyKey() {
             const keyEl = document.getElementById('api-key');
-            const real = _sessionApiKey;
+            const real = keyEl?.dataset?.realKey;
             if (!real) { cliPrint('No API key available — sign in first.', 'var(--warning)'); return; }
             navigator.clipboard.writeText(real).then(() => {
                 const original = keyEl.innerText;
@@ -3708,7 +3909,7 @@
         }
 
         window.addEventListener('load',()=>{
-            wireAuthState();
+            // wireAuthState();  // Disabled: using JWT auth instead of Supabase
             checkSession();
             updateIndicator(document.querySelector('.nav-tab.active'));
             // Hex dump — paused when app is backgrounded
@@ -3806,7 +4007,6 @@
         let _wsReconnectAttempts = 0;
         let _myNick = null;
         let _dmPartnerReadAt = null;
-        let _dmPollInterval = null;
 
         function chatShowReconnectBanner(delayMs) {
             const banner = document.getElementById('chat-reconnect-banner');
@@ -3840,7 +4040,7 @@
                 }
             };
             if (body) opts.body = JSON.stringify(body);
-            const resp = await fetch(`https://api.shadowcypher.site${path}`, opts);
+            const resp = await fetch(`${API_BASE}${path}`, opts);
             if (resp.status === 401) {
                 cliPrint('Chat session expired — sign in again.', 'var(--warning)');
                 return null;
@@ -3984,7 +4184,7 @@
         function chatFormatContent(content) {
             // Render [attachment:key:filename] tokens as download links
             return content.replace(/\[attachment:([^\]:]+):([^\]]*)\]/g, (_, key, name) => {
-                const url = `https://api.shadowcypher.site/v1/files/${encodeURIComponent(key)}?key=${encodeURIComponent(_sessionApiKey)}`;
+                const url = `${API_BASE}/v1/files/${encodeURIComponent(key)}?key=${encodeURIComponent(_sessionApiKey)}`;
                 const safeName = escapeHtml(name || 'file');
                 return `<a href="${url}" target="_blank" rel="noopener" download="${safeName}" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(180,74,255,0.12);border:1px solid rgba(180,74,255,0.3);border-radius:4px;color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">📎 ${safeName}</a>`;
             });
@@ -4013,7 +4213,7 @@
                 </div>
                 <div style="flex:1;min-width:0;">
                     <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:4px;">
-                        <div style="font-weight:600;color:#fff;font-size:0.85rem;cursor:pointer;" onclick="profileShowModal('${escapeHtml(msg.nick||'')}')" title="View profile">${escapeHtml(msg.nick||'unknown')}</div>
+                        <div style="font-weight:600;color:#fff;font-size:0.85rem;">${escapeHtml(msg.nick||'unknown')}</div>
                         <div style="font-size:0.65rem;color:var(--text-secondary);">${time}</div>
                     </div>
                     <div class="msg-body" style="color:var(--text-secondary);word-wrap:break-word;white-space:pre-wrap;">${bodyHtml}</div>
@@ -4375,23 +4575,6 @@
             }
         }
 
-        function _chatSetNavBadge(count) {
-            const navChat = document.getElementById('nav-chat');
-            if (!navChat) return;
-            let badge = navChat.querySelector('.dm-badge');
-            if (count > 0) {
-                if (!badge) {
-                    badge = document.createElement('span');
-                    badge.className = 'dm-badge';
-                    badge.style.cssText = 'background:var(--accent-primary);color:#000;border-radius:9px;font-size:0.6rem;padding:1px 5px;margin-left:4px;font-weight:700;vertical-align:middle;';
-                    navChat.appendChild(badge);
-                }
-                badge.textContent = count;
-            } else if (badge) {
-                badge.remove();
-            }
-        }
-
         async function chatLoadDms() {
             if (!_sessionApiKey) return;
             try {
@@ -4400,27 +4583,16 @@
                 const dmsDiv = document.getElementById('chat-dms');
                 if (!data.dms?.length) {
                     dmsDiv.innerHTML = '<div style="padding:12px;font-size:0.75rem;color:var(--text-secondary);">No DMs yet</div>';
-                    _chatSetNavBadge(0);
                     return;
                 }
                 dmsDiv.innerHTML = '';
-                let totalUnread = 0;
                 for (const dm of data.dms) {
-                    const isUnread = !!dm.unread;
-                    if (isUnread) totalUnread++;
                     const btn = document.createElement('button');
-                    btn.dataset.dmRoom = dm.name;
-                    btn.style.cssText = 'width:100%;text-align:left;padding:10px 12px;background:rgba(0,242,255,0.04);border:1px solid rgba(0,242,255,0.15);color:#fff;border-radius:4px;margin-bottom:6px;cursor:pointer;font-size:0.82rem;position:relative;';
-                    btn.innerHTML = `<div style="font-weight:600;color:#00f2ff;">${escapeHtml(dm.display_name)}${isUnread ? ' <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent-primary);margin-left:6px;vertical-align:middle;"></span>' : ''}</div>`;
-                    btn.onclick = () => {
-                        btn.querySelector('span[style*="border-radius:50%"]')?.remove();
-                        totalUnread = Math.max(0, totalUnread - (isUnread ? 1 : 0));
-                        _chatSetNavBadge(totalUnread);
-                        chatSelectRoom(dm);
-                    };
+                    btn.style.cssText = 'width:100%;text-align:left;padding:10px 12px;background:rgba(0,242,255,0.04);border:1px solid rgba(0,242,255,0.15);color:#fff;border-radius:4px;margin-bottom:6px;cursor:pointer;font-size:0.82rem;';
+                    btn.innerHTML = `<div style="font-weight:600;color:#00f2ff;">${escapeHtml(dm.display_name)}</div>`;
+                    btn.onclick = () => chatSelectRoom(dm);
                     dmsDiv.appendChild(btn);
                 }
-                _chatSetNavBadge(totalUnread);
             } catch (e) {
                 console.error('chatLoadDms:', e);
             }
@@ -4458,7 +4630,7 @@
             try {
                 const form = new FormData();
                 form.append('file', file);
-                const res = await fetch('https://api.shadowcypher.site/v1/files/upload', {
+                const res = await fetch(API_BASE + '/v1/files/upload', {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${_sessionApiKey}` },
                     body: form,
@@ -4483,6 +4655,209 @@
             }
         }
 
+        // ─── Shadow Mail ──────────────────────────────────────────────────────────
+
+        let _mailFolder = 'inbox';  // 'inbox' | 'sent'
+        let _mailMessages = [];
+        let _mailSelectedId = null;
+        let _mailSelected = null;
+
+        async function mailCallApi(method, path, body) {
+            const opts = { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_sessionApiKey}` } };
+            if (body) opts.body = JSON.stringify(body);
+            const resp = await fetch(`${API_BASE}${path}`, opts);
+            if (resp.status === 401) { showToast('Session expired — sign in again.', 'warning'); return null; }
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+            return data;
+        }
+
+        function mailFmtDate(iso) {
+            if (!iso) return '';
+            try {
+                const d = new Date(iso);
+                const now = new Date();
+                if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            } catch { return ''; }
+        }
+
+        function mailSetFolder(folder) {
+            _mailFolder = folder;
+            ['inbox','sent'].forEach(f => {
+                const btn = document.getElementById(`mail-tab-${f}`);
+                if (btn) { btn.style.background = f === folder ? 'var(--accent-primary)' : 'transparent'; btn.style.color = f === folder ? '#000' : '#888'; btn.style.border = f === folder ? 'none' : '1px solid #333'; }
+            });
+            mailLoadList();
+        }
+
+        async function mailLoadList(q = '') {
+            const list = document.getElementById('mail-list');
+            if (!list) return;
+            if (!_sessionApiKey) { list.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.75rem;padding:30px 16px;">Sign in to access Shadow Mail</div>'; return; }
+            list.innerHTML = '<div style="text-align:center;color:#444;font-size:0.7rem;padding:20px;">Loading…</div>';
+            try {
+                const params = new URLSearchParams({ limit: '50' });
+                if (q) params.set('q', q);
+                const data = await mailCallApi('GET', `/v1/mail/inbox?${params}`);
+                if (!data) return;
+                let msgs = data.messages || [];
+                if (_mailFolder === 'sent') msgs = msgs.filter(m => m.direction === 'outbound');
+                else msgs = msgs.filter(m => m.direction === 'inbound');
+                _mailMessages = msgs;
+
+                // Update unread badge
+                const unread = msgs.filter(m => !m.is_read && m.direction === 'inbound').length;
+                const badge = document.getElementById('mail-unread-badge');
+                if (badge) { badge.textContent = unread || ''; badge.style.display = unread ? 'inline' : 'none'; }
+
+                if (!msgs.length) { list.innerHTML = `<div style="text-align:center;color:#444;font-size:0.72rem;padding:30px 16px;">${q ? 'No results.' : _mailFolder === 'sent' ? 'No sent messages.' : 'Inbox empty.'}</div>`; return; }
+                list.innerHTML = '';
+                msgs.forEach(msg => {
+                    const el = document.createElement('div');
+                    el.style.cssText = `padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.1s;${_mailSelectedId === msg.id ? 'background:rgba(180,74,255,0.1);' : ''}`;
+                    el.onmouseenter = () => { if (_mailSelectedId !== msg.id) el.style.background = 'rgba(180,74,255,0.04)'; };
+                    el.onmouseleave = () => { if (_mailSelectedId !== msg.id) el.style.background = ''; };
+                    const from = _mailFolder === 'sent' ? msg.to_addr : msg.from_addr;
+                    const fromShort = from.replace(/^[^<]*<([^>]+)>$/, '$1');
+                    el.innerHTML = `
+                        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:4px;">
+                            <span style="font-size:0.78rem;color:${!msg.is_read && _mailFolder==='inbox'?'#fff':'#888'};font-weight:${!msg.is_read && _mailFolder==='inbox'?'600':'400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${escapeHtml(fromShort)}</span>
+                            <span style="font-size:0.65rem;color:#444;flex-shrink:0;">${mailFmtDate(msg.received_at)}</span>
+                        </div>
+                        <div style="font-size:0.76rem;color:${!msg.is_read && _mailFolder==='inbox'?'#ddd':'#666'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(msg.subject || '(no subject)')}</div>
+                        ${!msg.is_read && _mailFolder==='inbox' ? '<span style="display:inline-block;width:6px;height:6px;background:var(--accent-primary);border-radius:50%;margin-top:4px;"></span>' : ''}
+                    `;
+                    el.onclick = () => mailOpenMessage(msg.id);
+                    list.appendChild(el);
+                });
+            } catch (e) { list.innerHTML = `<div style="padding:16px;color:var(--critical);font-size:0.72rem;">${escapeHtml(e.message)}</div>`; }
+        }
+
+        function mailSearch(q) {
+            clearTimeout(window._mailSearchTimer);
+            window._mailSearchTimer = setTimeout(() => mailLoadList(q.trim()), 300);
+        }
+
+        async function mailOpenMessage(id) {
+            _mailSelectedId = id;
+            // Highlight selected row
+            document.querySelectorAll('#mail-list > div').forEach(el => { el.style.background = ''; });
+            const placeholder = document.getElementById('mail-reader-placeholder');
+            const reader = document.getElementById('mail-reader');
+            if (placeholder) placeholder.style.display = 'none';
+            if (reader) reader.style.display = 'flex';
+            document.getElementById('mail-reader-subject').textContent = 'Loading…';
+            document.getElementById('mail-reader-from').textContent = '';
+            document.getElementById('mail-reader-to').textContent = '';
+            document.getElementById('mail-reader-date').textContent = '';
+            document.getElementById('mail-reader-body').textContent = '';
+            try {
+                const msg = await mailCallApi('GET', `/v1/mail/${id}`);
+                if (!msg) return;
+                _mailSelected = msg;
+                document.getElementById('mail-reader-subject').textContent = msg.subject || '(no subject)';
+                document.getElementById('mail-reader-from').textContent = msg.from_addr || '';
+                document.getElementById('mail-reader-to').textContent = msg.to_addr || '';
+                document.getElementById('mail-reader-date').textContent = msg.received_at ? new Date(msg.received_at).toLocaleString() : '';
+                const bodyEl = document.getElementById('mail-reader-body');
+                if (msg.body_html) {
+                    const iframe = document.createElement('iframe');
+                    iframe.sandbox = 'allow-same-origin';
+                    iframe.style.cssText = 'width:100%;flex:1;border:none;background:#fff;';
+                    bodyEl.innerHTML = '';
+                    bodyEl.style.padding = '0';
+                    bodyEl.appendChild(iframe);
+                    iframe.onload = () => { iframe.contentDocument.open(); iframe.contentDocument.write(msg.body_html); iframe.contentDocument.close(); };
+                    iframe.src = 'about:blank';
+                } else {
+                    bodyEl.style.padding = '24px';
+                    bodyEl.textContent = msg.body_text || '(no body)';
+                }
+                // Refresh list to show as read
+                const searchQ = document.getElementById('mail-search-input')?.value?.trim() || '';
+                mailLoadList(searchQ);
+            } catch (e) { document.getElementById('mail-reader-subject').textContent = `Error: ${e.message}`; }
+        }
+
+        function mailShowCompose() {
+            if (!_sessionApiKey) { showToast('Sign in first.', 'warning'); return; }
+            document.getElementById('mail-compose-to').value = '';
+            document.getElementById('mail-compose-subject').value = '';
+            document.getElementById('mail-compose-body').value = '';
+            const modal = document.getElementById('mail-compose-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('mail-compose-to').focus(), 50);
+        }
+
+        function mailHideCompose() { document.getElementById('mail-compose-modal').style.display = 'none'; }
+
+        async function mailSend() {
+            const to      = document.getElementById('mail-compose-to').value.trim();
+            const subject = document.getElementById('mail-compose-subject').value.trim();
+            const text    = document.getElementById('mail-compose-body').value.trim();
+            if (!to || !subject) { showToast('To and Subject are required.', 'warning'); return; }
+            const btn = document.querySelector('#mail-compose-modal .btn-primary');
+            btn.disabled = true; btn.textContent = 'SENDING…';
+            try {
+                await mailCallApi('POST', '/v1/mail/send', { to, subject, text });
+                mailHideCompose();
+                showToast('Email sent.', 'success');
+                if (_mailFolder === 'sent') mailLoadList();
+            } catch (e) { showToast(`Send failed: ${e.message}`, 'error'); }
+            finally { btn.disabled = false; btn.textContent = 'SEND'; }
+        }
+
+        function mailReply() {
+            if (!_mailSelected) return;
+            document.getElementById('mail-reply-title').textContent = `// REPLY TO ${_mailSelected.from_addr}`;
+            document.getElementById('mail-reply-body').value = '';
+            const modal = document.getElementById('mail-reply-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('mail-reply-body').focus(), 50);
+        }
+
+        function mailHideReply() { document.getElementById('mail-reply-modal').style.display = 'none'; }
+
+        async function mailSendReply() {
+            if (!_mailSelected) return;
+            const text = document.getElementById('mail-reply-body').value.trim();
+            if (!text) { showToast('Reply body is required.', 'warning'); return; }
+            const btn = document.querySelector('#mail-reply-modal .btn-primary');
+            btn.disabled = true; btn.textContent = 'SENDING…';
+            try {
+                await mailCallApi('POST', `/v1/mail/${_mailSelected.id}/reply`, { text });
+                mailHideReply();
+                showToast('Reply sent.', 'success');
+            } catch (e) { showToast(`Reply failed: ${e.message}`, 'error'); }
+            finally { btn.disabled = false; btn.textContent = 'SEND REPLY'; }
+        }
+
+        async function mailDelete() {
+            if (!_mailSelectedId) return;
+            if (!confirm(`Delete this message?`)) return;
+            try {
+                await mailCallApi('DELETE', `/v1/mail/${_mailSelectedId}`);
+                _mailSelectedId = null;
+                _mailSelected = null;
+                document.getElementById('mail-reader-placeholder').style.display = 'flex';
+                document.getElementById('mail-reader').style.display = 'none';
+                showToast('Message deleted.', 'success');
+                mailLoadList(document.getElementById('mail-search-input')?.value?.trim() || '');
+            } catch (e) { showToast(`Delete failed: ${e.message}`, 'error'); }
+        }
+
+        // Poll for unread count even when mail page isn't active
+        async function mailPollUnread() {
+            if (!_sessionApiKey) return;
+            try {
+                const data = await callApi('/v1/mail/count');
+                if (!data) return;
+                const badge = document.getElementById('mail-unread-badge');
+                if (badge) { badge.textContent = data.unread || ''; badge.style.display = data.unread ? 'inline' : 'none'; }
+            } catch { /* non-critical */ }
+        }
+        setInterval(mailPollUnread, 60_000);
 
         // ─── Chat page nav init ───────────────────────────────────────────────────
 
@@ -4497,360 +4872,488 @@
                 }
                 chatLoadRooms();
                 chatLoadDms();
-                // Start 30s DM unread poll while chat page is visible
-                if (_dmPollInterval) clearInterval(_dmPollInterval);
-                _dmPollInterval = setInterval(chatLoadDms, 30_000);
-            } else {
-                // Leaving chat page — stop the DM poll
-                if (_dmPollInterval) { clearInterval(_dmPollInterval); _dmPollInterval = null; }
             }
-        };
-    </script>
-
-    <!-- ── Arsenal Intel Tools JavaScript ──────────────────────────────────── -->
-    <script>
-    (function() {
-        function arSet(id, text, cls) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.textContent = text;
-            el.className = 'arsenal-out' + (cls ? ' ' + cls : '');
-        }
-        function arBusy(id, btn) {
-            arSet(id, 'Running…', 'loading');
-            if (btn) btn.disabled = true;
-        }
-        function arDone(btn) { if (btn) btn.disabled = false; }
-        function arFmt(data) { return JSON.stringify(data, null, 2); }
-        async function arCall(path) {
-            if (!_sessionApiKey) { return { error: 'Sign in first.' }; }
-            const r = await fetch(API_BASE + path, { headers: { Authorization: 'Bearer ' + _sessionApiKey } });
-            return r.json();
-        }
-
-        window.arRunIp = async function() {
-            const ip = document.getElementById('ar-ip-input').value.trim();
-            const btn = document.querySelector('[onclick="arRunIp()"]');
-            if (!ip) { arSet('ar-ip-out', 'Enter an IP address.', 'error'); return; }
-            arBusy('ar-ip-out', btn);
-            const d = await arCall('/v1/shadow/ip?addr=' + encodeURIComponent(ip));
-            arDone(btn);
-            if (d.error) { arSet('ar-ip-out', d.error, 'error'); return; }
-            const lines = [];
-            if (d.ip) lines.push('IP: ' + d.ip);
-            if (d.country_code) lines.push('Country: ' + d.country_name + ' (' + d.country_code + ')');
-            if (d.isp) lines.push('ISP: ' + d.isp);
-            if (typeof d.abuse_score === 'number') lines.push('Abuse score: ' + d.abuse_score + '/100');
-            if (typeof d.total_reports === 'number') lines.push('Total reports: ' + d.total_reports);
-            if (d.usage_type) lines.push('Usage: ' + d.usage_type);
-            if (typeof d.is_tor === 'boolean') lines.push('Tor exit: ' + (d.is_tor ? 'YES' : 'no'));
-            if (typeof d.is_vpn === 'boolean') lines.push('VPN: ' + (d.is_vpn ? 'YES' : 'no'));
-            arSet('ar-ip-out', lines.length ? lines.join('\n') : arFmt(d));
-        };
-
-        window.arRunDns = async function() {
-            const q = document.getElementById('ar-dns-input').value.trim();
-            const type = document.getElementById('ar-dns-type').value;
-            const btn = document.querySelector('[onclick="arRunDns()"]');
-            if (!q) { arSet('ar-dns-out', 'Enter a domain.', 'error'); return; }
-            arBusy('ar-dns-out', btn);
-            const d = await arCall('/v1/shadow/dns?q=' + encodeURIComponent(q) + '&type=' + type);
-            arDone(btn);
-            if (d.error) { arSet('ar-dns-out', d.error, 'error'); return; }
-            if (d.records && d.records.length) {
-                arSet('ar-dns-out', d.records.map(r => type + '\t' + (r.data || r.name || JSON.stringify(r))).join('\n'));
-            } else {
-                arSet('ar-dns-out', 'No records found.');
-            }
-        };
-
-        window.arRunBreach = async function() {
-            const email = document.getElementById('ar-breach-input').value.trim();
-            const btn = document.querySelector('[onclick="arRunBreach()"]');
-            if (!email) { arSet('ar-breach-out', 'Enter an email address.', 'error'); return; }
-            arBusy('ar-breach-out', btn);
-            const d = await arCall('/v1/shadow/breach?email=' + encodeURIComponent(email));
-            arDone(btn);
-            if (d.error) { arSet('ar-breach-out', d.error, 'error'); return; }
-            if (d.breaches && d.breaches.length) {
-                arSet('ar-breach-out', d.breaches.length + ' breach(es) found:\n' + d.breaches.map(b => '• ' + (b.name || b.Name || b)).join('\n'));
-            } else {
-                arSet('ar-breach-out', 'No breaches found.');
-            }
-        };
-
-        window.arRunCve = async function() {
-            const q = document.getElementById('ar-cve-input').value.trim();
-            const btn = document.querySelector('[onclick="arRunCve()"]');
-            if (!q) { arSet('ar-cve-out', 'Enter a keyword.', 'error'); return; }
-            arBusy('ar-cve-out', btn);
-            const d = await arCall('/v1/shadow/cve?q=' + encodeURIComponent(q) + '&limit=5');
-            arDone(btn);
-            if (d.error) { arSet('ar-cve-out', d.error, 'error'); return; }
-            if (d.cves && d.cves.length) {
-                arSet('ar-cve-out', d.cves.map(c => c.id + ' [' + (c.severity||'?') + '] ' + (c.description||'').slice(0,120)).join('\n\n'));
-            } else {
-                arSet('ar-cve-out', 'No CVEs found.');
-            }
-        };
-
-        window.arRunSearch = async function() {
-            const q = document.getElementById('ar-search-input').value.trim();
-            const btn = document.querySelector('[onclick="arRunSearch()"]');
-            if (!q) { arSet('ar-search-out', 'Enter a search query.', 'error'); return; }
-            arBusy('ar-search-out', btn);
-            const d = await arCall('/v1/shadow/search?q=' + encodeURIComponent(q));
-            arDone(btn);
-            if (d.error) { arSet('ar-search-out', d.error, 'error'); return; }
-            if (d.results && d.results.length) {
-                arSet('ar-search-out', d.results.slice(0,5).map(r => (r.title||r.href||'') + '\n' + (r.body||r.snippet||'').slice(0,120)).join('\n\n'));
-            } else {
-                arSet('ar-search-out', 'No results.');
-            }
-        };
-
-        window.arRunWiki = async function() {
-            const q = document.getElementById('ar-wiki-input').value.trim();
-            const btn = document.querySelector('[onclick="arRunWiki()"]');
-            if (!q) { arSet('ar-wiki-out', 'Enter a topic.', 'error'); return; }
-            arBusy('ar-wiki-out', btn);
-            const d = await arCall('/v1/shadow/wiki?q=' + encodeURIComponent(q));
-            arDone(btn);
-            if (d.error) { arSet('ar-wiki-out', d.error, 'error'); return; }
-            arSet('ar-wiki-out', (d.title ? d.title + '\n\n' : '') + (d.summary || arFmt(d)));
-        };
-
-        window.arRunWeather = async function() {
-            const q = document.getElementById('ar-weather-input').value.trim();
-            const btn = document.querySelector('[onclick="arRunWeather()"]');
-            if (!q) { arSet('ar-weather-out', 'Enter a city.', 'error'); return; }
-            arBusy('ar-weather-out', btn);
-            const d = await arCall('/v1/shadow/weather?q=' + encodeURIComponent(q));
-            arDone(btn);
-            if (d.error) { arSet('ar-weather-out', d.error, 'error'); return; }
-            const c = d.current || {};
-            const loc = d.location || {};
-            const lines = [];
-            if (loc.name) lines.push(loc.name + ', ' + loc.country);
-            if (c.condition) lines.push(c.condition);
-            if (typeof c.temp_c === 'number') lines.push(c.temp_c + '°C / ' + c.temp_f + '°F  (feels ' + c.feels_like_c + '°C)');
-            if (typeof c.humidity_pct === 'number') lines.push('Humidity: ' + c.humidity_pct + '%');
-            if (typeof c.wind_speed_kmh === 'number') lines.push('Wind: ' + c.wind_speed_kmh + ' km/h');
-            arSet('ar-weather-out', lines.length ? lines.join('\n') : arFmt(d));
-        };
-
-        window.arRunFx = async function() {
-            const amount = document.getElementById('ar-fx-amount').value || '1';
-            const from = document.getElementById('ar-fx-from').value.trim().toUpperCase();
-            const to = document.getElementById('ar-fx-to').value.trim().toUpperCase();
-            const btn = document.querySelector('[onclick="arRunFx()"]');
-            if (!from || !to) { arSet('ar-fx-out', 'Enter both currencies.', 'error'); return; }
-            arBusy('ar-fx-out', btn);
-            const d = await arCall('/v1/shadow/currency?from=' + from + '&to=' + to + '&amount=' + amount);
-            arDone(btn);
-            if (d.error) { arSet('ar-fx-out', d.error, 'error'); return; }
-            if (d.result) {
-                arSet('ar-fx-out', amount + ' ' + from + ' = ' + d.result + ' ' + to + '\nRate: ' + d.rate + '\nDate: ' + (d.date || ''));
-            } else {
-                arSet('ar-fx-out', arFmt(d));
-            }
-        };
-
-        window.arRunInstant = async function() {
-            const q = document.getElementById('ar-instant-input').value.trim();
-            const btn = document.querySelector('[onclick="arRunInstant()"]');
-            if (!q) { arSet('ar-instant-out', 'Enter a query.', 'error'); return; }
-            arBusy('ar-instant-out', btn);
-            const d = await arCall('/v1/shadow/instant?q=' + encodeURIComponent(q));
-            arDone(btn);
-            if (d.error) { arSet('ar-instant-out', d.error, 'error'); return; }
-            arSet('ar-instant-out', (d.heading ? d.heading + '\n' : '') + (d.abstract || d.answer || arFmt(d)));
-        };
-
-        // Enter key support for all arsenal inputs
-        document.querySelectorAll('.arsenal-card input').forEach(inp => {
-            inp.addEventListener('keydown', e => { if (e.key === 'Enter') { inp.closest('.arsenal-card').querySelector('.arsenal-run-btn').click(); } });
-        });
-    })();
-    </script>
-
-    <!-- ── Missions JavaScript ──────────────────────────────────────────────── -->
-    <script>
-    (function() {
-        let _activeMissionId = null;
-        let _missionPollInterval = null;
-
-        function missionStatus(txt, color) {
-            const el = document.getElementById('mission-dispatch-status');
-            if (el) { el.textContent = txt; el.style.color = color || 'var(--text-secondary)'; }
-        }
-
-        function missionShowResult(label, status, output) {
-            const panel = document.getElementById('mission-result-panel');
-            const lbl = document.getElementById('mission-result-label');
-            const st = document.getElementById('mission-result-status');
-            const out = document.getElementById('mission-result-output');
-            if (!panel) return;
-            panel.style.display = 'block';
-            if (lbl) lbl.textContent = label || '';
-            if (st) {
-                const colorMap = { pending: '#888', running: '#f59e0b', completed: '#22c55e', failed: '#ef4444' };
-                st.textContent = status;
-                st.style.color = colorMap[status] || '#888';
-            }
-            if (out) out.textContent = output || '(no output)';
-        }
-
-        window.missionLoadHistory = async function() {
-            if (!_sessionApiKey) return;
-            const agentId = document.getElementById('mission-agent-select')?.value;
-            const qs = agentId ? '?agent_id=' + encodeURIComponent(agentId) : '';
-            const d = await fetch(API_BASE + '/v1/missions' + qs, { headers: { Authorization: 'Bearer ' + _sessionApiKey } }).then(r => r.json()).catch(() => ({}));
-            const hist = document.getElementById('mission-history');
-            if (!hist || !d.missions) return;
-            if (!d.missions.length) { hist.innerHTML = '<span style="color:#555;">No missions yet.</span>'; return; }
-            hist.innerHTML = d.missions.map(m => {
-                const colorMap = { pending: '#888', running: '#f59e0b', completed: '#22c55e', failed: '#ef4444' };
-                const t = new Date(m.created_at).toLocaleTimeString();
-                return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #1a1a1a;border-radius:4px;cursor:pointer;" onclick="missionLoadOne('${m.id}')">
-                    <span class="mono" style="font-size:0.65rem;color:#555;">${t}</span>
-                    <span class="mono" style="font-size:0.65rem;color:${colorMap[m.status]||'#888'};width:70px;">${m.status}</span>
-                    <span style="font-size:0.75rem;color:#aaa;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.id}</span>
-                    ${m.exit_code !== null ? `<span class="mono" style="font-size:0.65rem;color:#555;">exit ${m.exit_code}</span>` : ''}
-                </div>`;
-            }).join('');
-        };
-
-        window.missionLoadOne = async function(missionId) {
-            if (!_sessionApiKey) return;
-            const d = await fetch(API_BASE + '/v1/missions/' + missionId, { headers: { Authorization: 'Bearer ' + _sessionApiKey } }).then(r => r.json()).catch(() => ({}));
-            missionShowResult(missionId, d.status, d.result_output);
-        };
-
-        window.missionDispatch = async function() {
-            if (!_sessionApiKey) { missionStatus('Sign in first.', '#ef4444'); return; }
-            const agentId = document.getElementById('mission-agent-select')?.value;
-            const script = document.getElementById('mission-script')?.value.trim();
-            const label = document.getElementById('mission-label')?.value.trim();
-            const btn = document.getElementById('mission-dispatch-btn');
-            if (!agentId) { missionStatus('Select a target agent.', '#f59e0b'); return; }
-            if (!script) { missionStatus('Script is empty.', '#f59e0b'); return; }
-            if (btn) btn.disabled = true;
-            missionStatus('Dispatching…', '#888');
-            const resp = await fetch(API_BASE + '/v1/agents/' + agentId + '/missions', {
-                method: 'POST',
-                headers: { Authorization: 'Bearer ' + _sessionApiKey, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ script, label: label || undefined }),
-            }).then(r => r.json()).catch(() => ({ error: 'network error' }));
-            if (btn) btn.disabled = false;
-            if (resp.error) { missionStatus(resp.error, '#ef4444'); return; }
-            _activeMissionId = resp.mission_id;
-            missionStatus('Dispatched — polling…', '#f59e0b');
-            missionShowResult(_activeMissionId, 'pending', '');
-            missionLoadHistory();
-            // Poll for completion
-            if (_missionPollInterval) clearInterval(_missionPollInterval);
-            _missionPollInterval = setInterval(async () => {
-                const r = await fetch(API_BASE + '/v1/missions/' + _activeMissionId, { headers: { Authorization: 'Bearer ' + _sessionApiKey } }).then(x => x.json()).catch(() => ({}));
-                missionShowResult(_activeMissionId, r.status, r.result_output);
-                if (r.status === 'completed' || r.status === 'failed') {
-                    clearInterval(_missionPollInterval);
-                    missionStatus(r.status === 'completed' ? 'Completed.' : 'Failed.', r.status === 'completed' ? '#22c55e' : '#ef4444');
-                    missionLoadHistory();
-                }
-            }, 3000);
-        };
-
-        // Populate agent selector from guardian data when missions section is shown
-        window._missionPopulateAgents = function(agents) {
-            const sel = document.getElementById('mission-agent-select');
-            if (!sel || !agents) return;
-            const cur = sel.value;
-            sel.innerHTML = '<option value="">— select agent —</option>' + agents.map(a =>
-                `<option value="${a.id}" ${a.id === cur ? 'selected' : ''}>${a.hostname || a.id} (${a.status || 'unknown'})</option>`
-            ).join('');
-        };
-    })();
-    </script>
-
-    <!-- ── Admin JavaScript ──────────────────────────────────────────────── -->
-    <script>
-    (function() {
-        let _adminUsersCurrentPage = 1;
-        let _adminUsersTotal = 0;
-        const PER_PAGE = 25;
-
-        async function adminLoadOverview() {
-            if (!_sessionApiKey) return;
-            try {
-                const r = await fetch(API_BASE + '/v1/admin/overview', {
-                    headers: { Authorization: 'Bearer ' + _sessionApiKey }
-                });
-                if (!r.ok) return;
-                const d = await r.json();
-                document.getElementById('admin-stat-users').textContent = d.users?.total ?? '—';
-                document.getElementById('admin-stat-operators').textContent = d.users?.operator ?? '—';
-                document.getElementById('admin-stat-agents').textContent = d.agents?.online ?? '—';
-                document.getElementById('admin-stat-agents-total').textContent = d.agents?.total ?? '—';
-                document.getElementById('admin-stat-missions').textContent = d.missions?.last_7d ?? '—';
-            } catch (_) {}
-        }
-
-        async function adminLoadUsers(page) {
-            if (!_sessionApiKey) return;
-            _adminUsersCurrentPage = page;
-            const tbody = document.getElementById('admin-users-tbody');
-            tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">Loading…</td></tr>';
-            try {
-                const r = await fetch(`${API_BASE}/v1/admin/users?page=${page}&per_page=${PER_PAGE}`, {
-                    headers: { Authorization: 'Bearer ' + _sessionApiKey }
-                });
-                if (!r.ok) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#f87171;">Access denied</td></tr>';
+            if (pageId === 'mail') {
+                if (!_sessionApiKey) {
+                    showToast('Sign in to access Shadow Mail.', 'warning');
+                    await _origNavTo.call(this, 'account', document.getElementById('nav-account'));
                     return;
                 }
-                const d = await r.json();
-                _adminUsersTotal = d.total ?? 0;
-                document.getElementById('admin-users-page-label').textContent =
-                    `Page ${page} of ${Math.ceil(_adminUsersTotal / PER_PAGE) || 1} (${_adminUsersTotal} users)`;
-                document.getElementById('admin-users-prev').disabled = page <= 1;
-                document.getElementById('admin-users-next').disabled = page >= Math.ceil(_adminUsersTotal / PER_PAGE);
-
-                const PLAN_COLOR = { operator: '#00e0a4', trial: '#f59e0b', free: '#64748b' };
-                tbody.innerHTML = (d.users || []).map(u => {
-                    const planColor = PLAN_COLOR[u.plan] || PLAN_COLOR.free;
-                    const joined = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
-                    const lastSeen = u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString() : '—';
-                    return `<tr style="border-bottom:1px solid var(--glass-border);">
-                        <td style="padding:10px 24px;font-family:var(--font-mono);font-size:0.82rem;">${esc(u.handle)}</td>
-                        <td style="padding:10px 16px;color:var(--text-muted);font-size:0.78rem;">${esc(u.email)}</td>
-                        <td style="padding:10px 16px;"><span style="font-size:0.7rem;font-weight:600;color:${planColor};text-transform:uppercase;letter-spacing:0.06em;">${esc(u.plan)}</span></td>
-                        <td style="padding:10px 16px;color:var(--text-muted);font-size:0.78rem;">${joined}</td>
-                        <td style="padding:10px 16px;color:var(--text-muted);font-size:0.78rem;">${lastSeen}</td>
-                    </tr>`;
-                }).join('') || '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">No users</td></tr>';
-            } catch (_) {
-                tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#f87171;">Failed to load</td></tr>';
+                mailLoadList();
             }
-        }
-
-        function esc(s) {
-            return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        }
-
-        window.adminUsersPage = function(delta) {
-            const newPage = _adminUsersCurrentPage + delta;
-            if (newPage < 1) return;
-            adminLoadUsers(newPage);
+            if (pageId === 'drive') {
+                if (!_sessionApiKey) {
+                    showToast('Sign in to access Shadow Drive.', 'warning');
+                    await _origNavTo.call(this, 'account', document.getElementById('nav-account'));
+                    return;
+                }
+                driveLoad();
+            }
         };
-
-        window._adminLoad = function() {
-            adminLoadOverview();
-            adminLoadUsers(1);
-        };
-    })();
     </script>
 
+    <!-- ── Shadow Office JavaScript ────────────────────────────────────────── -->
+    <script>
+    // ─── Office tab switcher ──────────────────────────────────────────────────
+
+    const _OFFICE_TABS = ['docs', 'sheets', 'slides'];
+
+    function officeShowTab(name) {
+        for (const t of _OFFICE_TABS) {
+            document.getElementById(`office-${t}`).style.display = 'none';
+            const btn = document.getElementById(`office-tab-${t}`);
+            btn.style.background = 'transparent';
+            btn.style.color = '#888';
+        }
+        document.getElementById(`office-${name}`).style.display = 'flex';
+        const active = document.getElementById(`office-tab-${name}`);
+        active.style.background = 'var(--accent-primary)';
+        active.style.color = '#000';
+        if (name === 'sheets' && !_sheetInited) sheetInit();
+        if (name === 'slides' && !_slideInited) slideInit();
+    }
+
+    // ─── DOCUMENT EDITOR ─────────────────────────────────────────────────────
+
+    let _docDirty = false;
+    let _docAutoSaveTimer = null;
+
+    function docCmd(cmd, val) {
+        document.getElementById('doc-editor').focus();
+        document.execCommand(cmd, false, val ?? null);
+        docUpdateToolbar();
+    }
+
+    function docFormatBlock(tag) {
+        if (!tag) return;
+        document.getElementById('doc-editor').focus();
+        document.execCommand('formatBlock', false, tag);
+    }
+
+    function docUpdateToolbar() {
+        const cmds = ['bold','italic','underline'];
+        const ids  = ['doc-btn-bold','doc-btn-italic','doc-btn-underline'];
+        for (let i = 0; i < cmds.length; i++) {
+            const active = document.queryCommandState(cmds[i]);
+            document.getElementById(ids[i]).style.background = active
+                ? 'rgba(180,74,255,0.4)' : 'rgba(180,74,255,0.06)';
+            document.getElementById(ids[i]).style.color = active ? '#fff' : '#ccc';
+        }
+    }
+
+    function docOnInput() {
+        _docDirty = true;
+        const editor = document.getElementById('doc-editor');
+        const text = editor.innerText || '';
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        document.getElementById('doc-status').textContent =
+            `${words} word${words !== 1 ? 's' : ''} · ${text.length} chars · Unsaved`;
+        clearTimeout(_docAutoSaveTimer);
+        _docAutoSaveTimer = setTimeout(docAutoSave, 30_000);
+    }
+
+    function docAutoSave() {
+        const name = document.getElementById('doc-name').value.trim() || 'Untitled Document';
+        const html = document.getElementById('doc-editor').innerHTML;
+        try {
+            const docs = JSON.parse(localStorage.getItem('sc_office_docs') || '{}');
+            docs[name] = { html, saved: new Date().toISOString() };
+            localStorage.setItem('sc_office_docs', JSON.stringify(docs));
+            _docDirty = false;
+            const text = document.getElementById('doc-editor').innerText || '';
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            document.getElementById('doc-status').textContent =
+                `${words} word${words !== 1 ? 's' : ''} · ${text.length} chars · Saved locally`;
+            document.getElementById('office-save-status').textContent = 'SAVED ' + new Date().toLocaleTimeString();
+        } catch {}
+    }
+
+    function docNew() {
+        if (_docDirty && !confirm('Discard unsaved changes?')) return;
+        document.getElementById('doc-editor').innerHTML = '<p>Start writing…</p>';
+        document.getElementById('doc-name').value = 'Untitled Document';
+        document.getElementById('doc-status').textContent = '0 words · 0 chars';
+        _docDirty = false;
+    }
+
+    function docSave() {
+        docAutoSave();
+        showToast('Document saved locally', 'success');
+    }
+
+    function docLoad() {
+        try {
+            const docs = JSON.parse(localStorage.getItem('sc_office_docs') || '{}');
+            const names = Object.keys(docs);
+            if (!names.length) { showToast('No saved documents', 'info'); return; }
+            const choice = prompt(`Open which document?\n${names.map((n,i) => `${i+1}. ${n}`).join('\n')}\n\nEnter number or name:`);
+            if (!choice) return;
+            const idx = parseInt(choice) - 1;
+            const name = !isNaN(idx) && idx >= 0 ? names[idx] : choice.trim();
+            if (!docs[name]) { showToast('Document not found', 'error'); return; }
+            document.getElementById('doc-editor').innerHTML = docs[name].html;
+            document.getElementById('doc-name').value = name;
+            _docDirty = false;
+            docOnInput();
+        } catch (e) { showToast('Failed to load: ' + e.message, 'error'); }
+    }
+
+    function docExport(fmt) {
+        const name = document.getElementById('doc-name').value.trim() || 'document';
+        const html = document.getElementById('doc-editor').innerHTML;
+        const text = document.getElementById('doc-editor').innerText;
+        let content, mime, ext;
+        if (fmt === 'html') {
+            content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(name)}</title><style>body{max-width:760px;margin:60px auto;font-family:Georgia,serif;font-size:1rem;line-height:1.8;color:#222;}h1,h2,h3{color:#000;}pre{background:#f4f4f4;padding:16px;overflow-x:auto;}</style></head><body>${html}</body></html>`;
+            mime = 'text/html'; ext = 'html';
+        } else {
+            content = text; mime = 'text/plain'; ext = 'txt';
+        }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+        a.download = `${name}.${ext}`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+
+    document.addEventListener('selectionchange', () => {
+        if (document.getElementById('office-docs')?.style.display !== 'none') {
+            docUpdateToolbar();
+        }
+    });
+
+    // ─── SPREADSHEET ─────────────────────────────────────────────────────────
+
+    const SHEET_COLS = 26;
+    const SHEET_ROWS = 100;
+    let _sheetData = {};       // { 'A1': '=SUM(A2:A5)', ... }
+    let _sheetSelected = 'A1';
+    let _sheetInited = false;
+
+    function sheetColLetter(i) { return String.fromCharCode(65 + i); }
+
+    function sheetCellId(col, row) { return `${sheetColLetter(col)}${row + 1}`; }
+
+    function sheetInit() {
+        _sheetInited = true;
+        _sheetData = {};
+        sheetRender();
+    }
+
+    function sheetNew() {
+        if (Object.keys(_sheetData).length && !confirm('Clear the sheet?')) return;
+        _sheetData = {};
+        sheetRender();
+    }
+
+    function sheetRender() {
+        const grid = document.getElementById('sheet-grid');
+        let html = '<thead><tr><th style="width:40px;background:#111;border:1px solid #1a1a1a;"></th>';
+        for (let c = 0; c < SHEET_COLS; c++) {
+            html += `<th style="min-width:80px;max-width:160px;padding:3px 6px;background:#111;border:1px solid #1a1a1a;color:var(--accent-primary);font-size:0.68rem;letter-spacing:1px;font-weight:500;text-align:center;">${sheetColLetter(c)}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+        for (let r = 0; r < SHEET_ROWS; r++) {
+            html += `<tr><td style="padding:3px 8px;background:#0a0a12;border:1px solid #141420;color:#444;font-size:0.65rem;text-align:right;user-select:none;">${r + 1}</td>`;
+            for (let c = 0; c < SHEET_COLS; c++) {
+                const id = sheetCellId(c, r);
+                const val = sheetDisplayValue(id);
+                const isSel = id === _sheetSelected;
+                html += `<td id="sc-${id}"
+                    onclick="sheetSelectCell('${id}')"
+                    ondblclick="sheetStartEdit('${id}')"
+                    style="padding:2px 6px;border:1px solid ${isSel ? 'rgba(180,74,255,0.5)' : '#141420'};background:${isSel ? 'rgba(180,74,255,0.08)' : 'transparent'};color:#ddd;font-size:0.78rem;white-space:nowrap;overflow:hidden;max-width:160px;cursor:default;"
+                    title="${escapeHtml(String(val))}">${escapeHtml(String(val))}</td>`;
+            }
+            html += '</tr>';
+        }
+        html += '</tbody>';
+        grid.innerHTML = html;
+    }
+
+    function sheetRefreshCell(id) {
+        const el = document.getElementById(`sc-${id}`);
+        if (!el) return;
+        const val = sheetDisplayValue(id);
+        el.textContent = String(val);
+        el.title = String(val);
+    }
+
+    function sheetSelectCell(id) {
+        const prev = _sheetSelected;
+        _sheetSelected = id;
+        const prevEl = document.getElementById(`sc-${prev}`);
+        if (prevEl) { prevEl.style.border = '1px solid #141420'; prevEl.style.background = 'transparent'; }
+        const el = document.getElementById(`sc-${id}`);
+        if (el) { el.style.border = '1px solid rgba(180,74,255,0.5)'; el.style.background = 'rgba(180,74,255,0.08)'; }
+        document.getElementById('sheet-cell-ref').value = id;
+        document.getElementById('sheet-formula-bar').value = _sheetData[id] ?? '';
+        document.getElementById('sheet-formula-bar').focus();
+    }
+
+    function sheetStartEdit(id) {
+        sheetSelectCell(id);
+        const bar = document.getElementById('sheet-formula-bar');
+        bar.focus();
+        bar.select();
+    }
+
+    function sheetFormulaBarInput() {
+        const val = document.getElementById('sheet-formula-bar').value;
+        _sheetData[_sheetSelected] = val;
+        sheetRefreshCell(_sheetSelected);
+    }
+
+    function sheetFormulaKeydown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // Move down one row
+            const [col, ...rowParts] = _sheetSelected.split('');
+            const row = parseInt(rowParts.join(''));
+            const nextId = `${col}${Math.min(row + 1, SHEET_ROWS)}`;
+            sheetSelectCell(nextId);
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            const col = _sheetSelected.charCodeAt(0) - 65;
+            const row = parseInt(_sheetSelected.slice(1)) - 1;
+            const nextCol = (col + 1) % SHEET_COLS;
+            sheetSelectCell(`${sheetColLetter(nextCol)}${row + 1}`);
+        }
+    }
+
+    function sheetDisplayValue(id) {
+        const raw = _sheetData[id] ?? '';
+        if (!raw || !String(raw).startsWith('=')) return raw;
+        try { return sheetEval(String(raw).slice(1)); }
+        catch { return '#ERR'; }
+    }
+
+    function sheetGetNum(id) {
+        const v = sheetDisplayValue(id);
+        return isNaN(parseFloat(v)) ? 0 : parseFloat(v);
+    }
+
+    function sheetRange(startId, endId) {
+        const startCol = startId.charCodeAt(0) - 65;
+        const startRow = parseInt(startId.slice(1)) - 1;
+        const endCol   = endId.charCodeAt(0) - 65;
+        const endRow   = parseInt(endId.slice(1)) - 1;
+        const cells = [];
+        for (let r = Math.min(startRow, endRow); r <= Math.max(startRow, endRow); r++) {
+            for (let c = Math.min(startCol, endCol); c <= Math.max(startCol, endCol); c++) {
+                cells.push(sheetCellId(c, r));
+            }
+        }
+        return cells;
+    }
+
+    function sheetEval(expr) {
+        const upper = expr.toUpperCase();
+        // Range function: SUM(A1:A5)
+        const fnMatch = upper.match(/^(SUM|AVG|COUNT|MIN|MAX|COUNTA)\(([A-Z]+\d+):([A-Z]+\d+)\)$/);
+        if (fnMatch) {
+            const [, fn, a, b] = fnMatch;
+            const nums = sheetRange(a, b).map(id => sheetGetNum(id));
+            if (fn === 'SUM')   return nums.reduce((a, b) => a + b, 0);
+            if (fn === 'MIN')   return Math.min(...nums);
+            if (fn === 'MAX')   return Math.max(...nums);
+            if (fn === 'COUNT') return nums.filter(n => n !== 0).length;
+            if (fn === 'COUNTA') return sheetRange(a, b).filter(id => (_sheetData[id] ?? '') !== '').length;
+            if (fn === 'AVG')   return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+        }
+        // Substitute cell refs then eval arithmetic
+        const subst = upper.replace(/([A-Z]+)(\d+)/g, (_, col, row) => {
+            const num = sheetGetNum(`${col}${row}`);
+            return String(num);
+        });
+        // Safe eval: only digits, operators, parens, spaces, dots
+        if (!/^[\d\s+\-*/().%,^]+$/.test(subst)) return '#INVALID';
+        // eslint-disable-next-line no-new-func
+        return Function('"use strict";return(' + subst + ')')();
+    }
+
+    function sheetExportCsv() {
+        let csv = '';
+        for (let r = 0; r < SHEET_ROWS; r++) {
+            const row = [];
+            for (let c = 0; c < SHEET_COLS; c++) {
+                const v = sheetDisplayValue(sheetCellId(c, r));
+                row.push(String(v).includes(',') ? `"${String(v).replace(/"/g,'""')}"` : String(v));
+            }
+            // Trim trailing empty cells
+            while (row.length && !row[row.length - 1]) row.pop();
+            csv += row.join(',') + '\n';
+        }
+        // Trim trailing empty rows
+        const lines = csv.trimEnd().split('\n');
+        while (lines.length && !lines[lines.length-1].trim()) lines.pop();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+        a.download = 'sheet.csv';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+
+    function sheetImportCsv() { document.getElementById('sheet-csv-input').click(); }
+
+    function sheetLoadCsv(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            _sheetData = {};
+            const lines = e.target.result.split(/\r?\n/);
+            for (let r = 0; r < Math.min(lines.length, SHEET_ROWS); r++) {
+                const cells = lines[r].split(',');
+                for (let c = 0; c < Math.min(cells.length, SHEET_COLS); c++) {
+                    const v = cells[c].replace(/^"(.*)"$/, '$1').replace(/""/g, '"');
+                    if (v) _sheetData[sheetCellId(c, r)] = v;
+                }
+            }
+            sheetRender();
+        };
+        reader.readAsText(file);
+        input.value = '';
+    }
+
+    // ─── PRESENTATIONS ───────────────────────────────────────────────────────
+
+    const SLIDE_THEMES = {
+        dark:   { bg: '#0d0d1a', titleColor: '#ffffff', bodyColor: '#a0a0c0', accent: '#b44aff' },
+        purple: { bg: '#1a0a2e', titleColor: '#e0c0ff', bodyColor: '#c0a0e0', accent: '#c060ff' },
+        matrix: { bg: '#001100', titleColor: '#00ff41', bodyColor: '#00cc33', accent: '#00ff00' },
+        light:  { bg: '#ffffff', titleColor: '#1a1a1a', bodyColor: '#444444', accent: '#6600cc' },
+        ocean:  { bg: '#020b18', titleColor: '#90d0ff', bodyColor: '#6090b0', accent: '#00aaff' },
+    };
+
+    let _slides = [];
+    let _currentSlide = 0;
+    let _slideTheme = 'dark';
+    let _slideInited = false;
+    let _presentIdx = 0;
+
+    function slideInit() {
+        _slideInited = true;
+        _slides = [
+            { title: 'Shadow Office', body: 'Click to edit this slide\nUse the toolbar to add slides and change themes' },
+        ];
+        _currentSlide = 0;
+        slidePanelRender();
+        slideShowCurrent();
+    }
+
+    function slidePanelRender() {
+        const panel = document.getElementById('slide-panel');
+        panel.innerHTML = '';
+        const theme = SLIDE_THEMES[_slideTheme];
+        _slides.forEach((s, i) => {
+            const div = document.createElement('div');
+            div.style.cssText = `background:${theme.bg};border:2px solid ${i === _currentSlide ? 'var(--accent-primary)' : 'rgba(180,74,255,0.1)'};border-radius:4px;padding:6px;cursor:pointer;position:relative;aspect-ratio:16/9;overflow:hidden;flex-shrink:0;`;
+            div.innerHTML = `
+                <div style="font-size:0.55rem;font-weight:700;color:${theme.titleColor};overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${escapeHtml(s.title||'')}</div>
+                <div style="font-size:0.4rem;color:${theme.bodyColor};margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;">${escapeHtml(s.body||'')}</div>
+                <div style="position:absolute;bottom:3px;right:4px;font-size:0.45rem;color:rgba(255,255,255,0.25);">${i+1}</div>`;
+            div.onclick = () => { _currentSlide = i; slidePanelRender(); slideShowCurrent(); };
+            panel.appendChild(div);
+        });
+    }
+
+    function slideShowCurrent() {
+        const s = _slides[_currentSlide];
+        if (!s) return;
+        const theme = SLIDE_THEMES[_slideTheme];
+        document.getElementById('slide-bg').style.background = theme.bg;
+        const titleEl = document.getElementById('slide-title-el');
+        const bodyEl  = document.getElementById('slide-body-el');
+        titleEl.style.color = theme.titleColor;
+        bodyEl.style.color  = theme.bodyColor;
+        titleEl.innerText = s.title || '';
+        bodyEl.innerText  = s.body  || '';
+    }
+
+    function slideSyncCurrent() {
+        if (!_slides[_currentSlide]) return;
+        _slides[_currentSlide].title = document.getElementById('slide-title-el').innerText;
+        _slides[_currentSlide].body  = document.getElementById('slide-body-el').innerText;
+        // Refresh thumbnail
+        slidePanelRender();
+    }
+
+    function slideAddSlide() {
+        _slides.splice(_currentSlide + 1, 0, { title: 'New Slide', body: '' });
+        _currentSlide++;
+        slidePanelRender();
+        slideShowCurrent();
+    }
+
+    function slideDuplicateCurrent() {
+        const s = _slides[_currentSlide];
+        _slides.splice(_currentSlide + 1, 0, { ...s });
+        _currentSlide++;
+        slidePanelRender();
+        slideShowCurrent();
+    }
+
+    function slideDeleteCurrent() {
+        if (_slides.length <= 1) { showToast('Cannot delete the only slide', 'warning'); return; }
+        _slides.splice(_currentSlide, 1);
+        _currentSlide = Math.max(0, _currentSlide - 1);
+        slidePanelRender();
+        slideShowCurrent();
+    }
+
+    function slideSetTheme(name) {
+        _slideTheme = name;
+        slidePanelRender();
+        slideShowCurrent();
+    }
+
+    function slidePresent() {
+        _presentIdx = _currentSlide;
+        presentShowSlide(_presentIdx);
+        document.getElementById('slide-present-overlay').style.display = 'flex';
+    }
+
+    function slideEndPresent() {
+        document.getElementById('slide-present-overlay').style.display = 'none';
+    }
+
+    function presentShowSlide(idx) {
+        const s = _slides[idx];
+        if (!s) return;
+        const theme = SLIDE_THEMES[_slideTheme];
+        document.getElementById('present-bg').style.background = theme.bg;
+        document.getElementById('present-title').style.color = theme.titleColor;
+        document.getElementById('present-body').style.color  = theme.bodyColor;
+        document.getElementById('present-title').innerText = s.title || '';
+        document.getElementById('present-body').innerText  = s.body  || '';
+        document.getElementById('present-counter').textContent = `${idx + 1} / ${_slides.length}`;
+    }
+
+    function presentNav(dir) {
+        _presentIdx = Math.max(0, Math.min(_slides.length - 1, _presentIdx + dir));
+        presentShowSlide(_presentIdx);
+    }
+
+    document.addEventListener('keydown', e => {
+        const overlay = document.getElementById('slide-present-overlay');
+        if (overlay?.style.display === 'flex') {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); presentNav(1); }
+            if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  { e.preventDefault(); presentNav(-1); }
+            if (e.key === 'Escape') slideEndPresent();
+        }
+    });
+
+    function slideExportJson() {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify({ theme: _slideTheme, slides: _slides }, null, 2)], { type: 'application/json' }));
+        a.download = 'presentation.json';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+
+    // Initialize office when nav tab is first clicked
+    </script>
 
     <!-- Vault unlock dialog (chat) -->
     <div id="chat-vault-dialog" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:10000;align-items:center;justify-content:center;padding:20px;">
@@ -4859,7 +5362,6 @@
             <h2 style="font-size:1.1rem;color:#fff;margin:0 0 8px 0;">Override encryption key <span style="font-size:0.7rem;color:#4ade80;font-family:var(--font-mono);font-weight:400;">[optional]</span></h2>
             <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 24px 0;line-height:1.6;">Your account password already unlocks E2E encryption automatically. Enter a shared room password here if you want a group room where everyone can read each other's messages — everyone must use the same key.</p>
             <form onsubmit="chatUnlockVault(); return false;">
-            <input type="text" autocomplete="username" style="display:none;" aria-hidden="true">
             <input id="chat-vault-password" type="password" placeholder="Room password"
                    style="width:100%;padding:12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);color:#fff;border-radius:6px;font-size:0.9rem;box-sizing:border-box;margin-bottom:8px;" autocomplete="new-password">
             <div id="chat-vault-error" style="display:none;font-size:0.78rem;color:#fca5a5;margin-bottom:12px;"></div>
@@ -4873,46 +5375,267 @@
         </div>
     </div>
 
-
-
-
-
-    <!-- ── Profile viewer modal ──────────────────────────────────────────── -->
-    <!-- Device detail modal -->
-    <div id="device-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.86);z-index:8500;align-items:center;justify-content:center;padding:20px;">
-        <div style="background:#0a0a14;border:1px solid rgba(180,74,255,0.35);max-width:580px;width:100%;max-height:88vh;display:flex;flex-direction:column;border-radius:4px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
-                <span style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:2px;color:var(--text-secondary);">// DEVICE_DETAIL</span>
-                <button onclick="closeDeviceModal()" style="background:none;border:none;color:#555;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
+    <!-- ── Shadow Drive page ─────────────────────────────────────────────── -->
+    <div id="page-drive" class="page" style="display:none;">
+        <div style="display:flex;height:calc(100vh - 60px);overflow:hidden;flex-direction:column;">
+            <!-- Drive header -->
+            <div style="padding:14px 24px;border-bottom:1px solid rgba(180,74,255,0.12);display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.2);flex-shrink:0;flex-wrap:wrap;">
+                <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--accent-primary);letter-spacing:2px;flex-shrink:0;">// SHADOW_DRIVE</span>
+                <input id="drive-search" type="text" placeholder="Search files…" oninput="driveFilter(this.value)"
+                       style="flex:1;min-width:140px;padding:7px 12px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.2);color:#fff;border-radius:4px;font-size:0.8rem;">
+                <label class="btn-primary" style="padding:7px 16px;font-size:0.72rem;cursor:pointer;white-space:nowrap;">
+                    ↑ Upload
+                    <input type="file" multiple style="display:none;" onchange="driveUploadFiles(this)">
+                </label>
+                <button onclick="driveSetView('grid')" id="drive-btn-grid"
+                        style="padding:6px 10px;background:var(--accent-primary);color:#000;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;font-family:var(--font-mono);">⊞</button>
+                <button onclick="driveSetView('list')" id="drive-btn-list"
+                        style="padding:6px 10px;background:transparent;border:1px solid rgba(180,74,255,0.25);color:var(--accent-primary);border-radius:4px;cursor:pointer;font-size:0.8rem;font-family:var(--font-mono);">☰</button>
             </div>
-            <div id="device-modal-body" style="padding:18px 20px 24px;overflow-y:auto;"></div>
+            <!-- Storage bar -->
+            <div id="drive-storage-bar" style="padding:8px 24px;font-size:0.7rem;color:var(--text-secondary);font-family:var(--font-mono);border-bottom:1px solid rgba(180,74,255,0.08);flex-shrink:0;"></div>
+            <!-- Drop zone overlay -->
+            <div id="drive-drop-overlay" style="display:none;position:absolute;inset:0;background:rgba(180,74,255,0.12);border:3px dashed var(--accent-primary);z-index:50;pointer-events:none;align-items:center;justify-content:center;">
+                <div style="font-size:1.5rem;color:var(--accent-primary);font-family:var(--font-mono);">Drop files to upload</div>
+            </div>
+            <!-- Files grid/list -->
+            <div id="drive-files-grid" style="flex:1;overflow-y:auto;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;">
+                <div style="text-align:center;color:var(--text-secondary);font-size:0.8rem;padding:60px 0;grid-column:1/-1;">Loading…</div>
+            </div>
+        </div>
+        <!-- Preview modal -->
+        <div id="drive-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10002;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)driveClosePreview()">
+            <div style="background:#0d0d0d;border:1px solid rgba(180,74,255,0.3);border-radius:8px;max-width:800px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
+                <div style="padding:12px 16px;border-bottom:1px solid rgba(180,74,255,0.12);display:flex;justify-content:space-between;align-items:center;">
+                    <div id="drive-preview-name" style="font-size:0.9rem;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:12px;"></div>
+                    <div style="display:flex;gap:8px;flex-shrink:0;">
+                        <a id="drive-preview-download" href="#" download
+                           style="padding:5px 12px;background:rgba(180,74,255,0.12);border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);border-radius:4px;text-decoration:none;font-size:0.75rem;font-family:var(--font-mono);">↓ Download</a>
+                        <button onclick="driveDeleteFile(_drivePreviewFile)"
+                                style="padding:5px 12px;background:transparent;border:1px solid #7f1d1d;color:#f87171;border-radius:4px;cursor:pointer;font-size:0.75rem;font-family:var(--font-mono);">Delete</button>
+                        <button onclick="driveClosePreview()"
+                                style="padding:5px 10px;background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+                    </div>
+                </div>
+                <div id="drive-preview-body" style="flex:1;overflow:auto;padding:20px;display:flex;align-items:center;justify-content:center;min-height:300px;"></div>
+            </div>
         </div>
     </div>
+
+    <!-- ── Shadow Drive JavaScript ──────────────────────────────────────────── -->
+    <script>
+    let _driveFiles = [];
+    let _driveFiltered = [];
+    let _driveView = 'grid';
+    let _drivePreviewFile = null;
+    let _driveLoading = false;
+
+    const DRIVE_ICONS = {
+        'image/': '🖼', 'text/': '📄', 'application/pdf': '📕',
+        'audio/': '🎵', 'video/': '🎬', 'application/zip': '📦', 'default': '📎',
+    };
+    function driveIcon(type) {
+        for (const [prefix, icon] of Object.entries(DRIVE_ICONS)) {
+            if (type.startsWith(prefix) || type === prefix) return icon;
+        }
+        return DRIVE_ICONS.default;
+    }
+    function driveFmt(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+        return (bytes/(1024*1024)).toFixed(1) + ' MB';
+    }
+
+    async function driveLoad() {
+        if (!_sessionApiKey) return;
+        if (_driveLoading) return;
+        _driveLoading = true;
+        const grid = document.getElementById('drive-files-grid');
+        grid.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.8rem;padding:60px 0;grid-column:1/-1;">Loading…</div>';
+        try {
+            const data = await callApi('/v1/files');
+            _driveFiles = data.files || [];
+            _driveFiltered = [..._driveFiles];
+            const bar = document.getElementById('drive-storage-bar');
+            if (bar) bar.innerText = `${_driveFiles.length} files · ${driveFmt(data.total_bytes || 0)} used`;
+            driveFilter(document.getElementById('drive-search')?.value || '');
+        } catch (e) {
+            grid.innerHTML = `<div style="text-align:center;color:#f87171;font-size:0.8rem;padding:60px 0;grid-column:1/-1;">Error: ${escapeHtml(e.message)}</div>`;
+        } finally { _driveLoading = false; }
+    }
+
+    function driveRender() {
+        const grid = document.getElementById('drive-files-grid');
+        if (!_driveFiltered.length) {
+            grid.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.8rem;padding:60px 0;grid-column:1/-1;">No files yet — upload something!</div>';
+            return;
+        }
+        grid.style.gridTemplateColumns = _driveView === 'grid' ? 'repeat(auto-fill,minmax(150px,1fr))' : '1fr';
+        grid.innerHTML = '';
+        for (const file of _driveFiltered) {
+            const card = document.createElement('div');
+            const date = file.uploaded_at ? new Date(file.uploaded_at).toLocaleDateString() : '';
+            if (_driveView === 'grid') {
+                card.style.cssText = 'background:rgba(180,74,255,0.05);border:1px solid rgba(180,74,255,0.18);border-radius:6px;padding:14px 12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:border-color .15s;';
+                card.innerHTML = `<div style="font-size:2rem;line-height:1;">${driveIcon(file.type)}</div>
+                    <div style="font-size:0.75rem;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
+                    <div style="font-size:0.62rem;color:var(--text-secondary);">${driveFmt(file.size)}</div>
+                    <div style="font-size:0.6rem;color:#555;">${date}</div>`;
+            } else {
+                card.style.cssText = 'background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.12);border-radius:4px;padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:border-color .15s;';
+                card.innerHTML = `<span style="font-size:1.2rem;flex-shrink:0;">${driveIcon(file.type)}</span>
+                    <span style="flex:1;font-size:0.8rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(file.name)}</span>
+                    <span style="font-size:0.72rem;color:var(--text-secondary);flex-shrink:0;">${driveFmt(file.size)}</span>
+                    <span style="font-size:0.7rem;color:#555;flex-shrink:0;">${date}</span>`;
+            }
+            card.onmouseenter = () => card.style.borderColor = 'var(--accent-primary)';
+            card.onmouseleave = () => card.style.borderColor = _driveView === 'grid' ? 'rgba(180,74,255,0.18)' : 'rgba(180,74,255,0.12)';
+            card.onclick = () => driveOpenPreview(file);
+            grid.appendChild(card);
+        }
+    }
+
+    function driveFilter(q) {
+        const lq = (q || '').toLowerCase();
+        _driveFiltered = lq ? _driveFiles.filter(f => f.name.toLowerCase().includes(lq)) : [..._driveFiles];
+        driveRender();
+    }
+
+    function driveSetView(v) {
+        _driveView = v;
+        document.getElementById('drive-btn-grid').style.background = v === 'grid' ? 'var(--accent-primary)' : 'transparent';
+        document.getElementById('drive-btn-grid').style.color = v === 'grid' ? '#000' : 'var(--accent-primary)';
+        document.getElementById('drive-btn-list').style.background = v === 'list' ? 'var(--accent-primary)' : 'transparent';
+        document.getElementById('drive-btn-list').style.color = v === 'list' ? '#000' : 'var(--accent-primary)';
+        driveRender();
+    }
+
+    async function driveUploadFiles(input) {
+        const files = [...(input.files || [])];
+        if (!files.length) return;
+        input.value = '';
+        let uploaded = 0;
+        for (const file of files) {
+            const form = new FormData();
+            form.append('file', file);
+            try {
+                await fetch(API_BASE + '/v1/files/upload', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${_sessionApiKey}` },
+                    body: form,
+                });
+                uploaded++;
+            } catch (e) { showToast(`Failed to upload ${file.name}: ${e.message}`, 'error'); }
+        }
+        if (uploaded) { showToast(`${uploaded} file(s) uploaded`, 'success'); await driveLoad(); }
+    }
+
+    // Drag and drop
+    document.addEventListener('DOMContentLoaded', () => {
+        const drivePage = document.getElementById('page-drive');
+        if (!drivePage) return;
+        drivePage.addEventListener('dragover', e => {
+            e.preventDefault();
+            const overlay = document.getElementById('drive-drop-overlay');
+            if (overlay) { overlay.style.display = 'flex'; overlay.style.position = 'absolute'; }
+        });
+        drivePage.addEventListener('dragleave', e => {
+            if (!drivePage.contains(e.relatedTarget)) {
+                document.getElementById('drive-drop-overlay').style.display = 'none';
+            }
+        });
+        drivePage.addEventListener('drop', async e => {
+            e.preventDefault();
+            document.getElementById('drive-drop-overlay').style.display = 'none';
+            const files = [...e.dataTransfer.files];
+            if (!files.length || !_sessionApiKey) return;
+            let uploaded = 0;
+            for (const file of files) {
+                const form = new FormData();
+                form.append('file', file);
+                try {
+                    await fetch(API_BASE + '/v1/files/upload', {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${_sessionApiKey}` },
+                        body: form,
+                    });
+                    uploaded++;
+                } catch (e) { showToast(`Failed: ${file.name}`, 'error'); }
+            }
+            if (uploaded) { showToast(`${uploaded} file(s) uploaded`, 'success'); await driveLoad(); }
+        });
+    });
+
+    function driveOpenPreview(file) {
+        _drivePreviewFile = file;
+        document.getElementById('drive-preview-name').innerText = file.name;
+        const fileUrl = `${API_BASE}/v1/files/${encodeURIComponent(file.key)}?key=${encodeURIComponent(_sessionApiKey)}`;
+        const dlLink = document.getElementById('drive-preview-download');
+        dlLink.href = fileUrl;
+        dlLink.download = file.name;
+        const body = document.getElementById('drive-preview-body');
+        if (file.type.startsWith('image/')) {
+            body.innerHTML = `<img src="${fileUrl}" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:4px;">`;
+        } else if (file.type === 'application/pdf') {
+            body.innerHTML = `<iframe src="${fileUrl}" style="width:100%;height:60vh;border:none;border-radius:4px;"></iframe>`;
+        } else if (file.type.startsWith('audio/')) {
+            body.innerHTML = `<audio controls src="${fileUrl}" style="width:100%;"></audio>`;
+        } else if (file.type.startsWith('video/')) {
+            body.innerHTML = `<video controls src="${fileUrl}" style="max-width:100%;max-height:60vh;border-radius:4px;"></video>`;
+        } else if (file.type.startsWith('text/')) {
+            body.innerHTML = '<div style="color:var(--text-secondary);font-size:0.8rem;">Loading…</div>';
+            fetch(fileUrl).then(r => r.text()).then(t => {
+                body.innerHTML = `<pre style="color:#e0e0e0;font-size:0.8rem;white-space:pre-wrap;word-break:break-all;text-align:left;max-height:60vh;overflow:auto;padding:16px;background:rgba(0,0,0,0.3);border-radius:4px;width:100%;">${escapeHtml(t.slice(0, 50000))}</pre>`;
+            });
+        } else {
+            body.innerHTML = `<div style="text-align:center;color:var(--text-secondary);">
+                <div style="font-size:3rem;margin-bottom:16px;">${driveIcon(file.type)}</div>
+                <div style="font-size:0.9rem;color:#fff;">${escapeHtml(file.name)}</div>
+                <div style="font-size:0.75rem;margin-top:8px;">${driveFmt(file.size)} · ${file.type}</div>
+            </div>`;
+        }
+        document.getElementById('drive-preview-modal').style.display = 'flex';
+    }
+
+    function driveClosePreview() {
+        _drivePreviewFile = null;
+        document.getElementById('drive-preview-modal').style.display = 'none';
+        document.getElementById('drive-preview-body').innerHTML = '';
+    }
+
+    async function driveDeleteFile(file) {
+        if (!file || !confirm(`Delete "${file.name}"? This cannot be undone.`)) return;
+        driveClosePreview();
+        try {
+            await callApi(`/v1/files/${encodeURIComponent(file.key)}`, { method: 'DELETE' });
+            showToast(`${file.name} deleted`, 'success');
+            await driveLoad();
+        } catch (e) { showToast('Delete failed: ' + e.message, 'error'); }
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && _drivePreviewFile) driveClosePreview();
+    });
+    </script>
+
+    <!-- Device detail modal -->
+    <div id="device-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;width:100%;max-width:640px;max-height:85vh;overflow-y:auto;padding:24px;position:relative;">
+            <button onclick="closeDeviceModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+            <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--accent-primary);margin-bottom:16px;">// DEVICE_DETAIL</div>
+            <div id="device-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Global toast container -->
+    <div id="toast-container" style="position:fixed;bottom:20px;right:20px;z-index:99999;display:flex;flex-direction:column-reverse;gap:8px;pointer-events:none;max-width:320px;"></div>
 
     <!-- Incident detail modal -->
-    <div id="incident-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.86);z-index:8600;align-items:center;justify-content:center;padding:20px;">
-        <div style="background:#0a0a14;border:1px solid rgba(255,184,77,0.3);max-width:520px;width:100%;max-height:82vh;display:flex;flex-direction:column;border-radius:4px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0;">
-                <span style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:2px;color:var(--text-secondary);">// INCIDENT_DETAIL</span>
-                <button onclick="closeIncidentModal()" style="background:none;border:none;color:#555;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
-            </div>
-            <div id="incident-modal-body" style="padding:18px 20px 24px;overflow-y:auto;"></div>
-        </div>
-    </div>
-
-    <div id="profile-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(6px);" onclick="if(event.target===this)profileHideModal()">
-        <div style="background:#0a0a14;border:1px solid rgba(180,74,255,0.4);padding:32px;max-width:420px;width:92%;position:relative;border-radius:4px;">
-            <button onclick="profileHideModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;">✕</button>
-            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
-                <div id="pm-avatar" style="width:60px;height:60px;border-radius:50%;background:rgba(180,74,255,0.2);border:2px solid rgba(180,74,255,0.4);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;"></div>
-                <div>
-                    <div id="pm-handle" style="font-family:var(--font-mono);font-size:1.1rem;color:var(--accent-primary);font-weight:700;"></div>
-                    <div id="pm-location" style="font-size:0.75rem;color:var(--text-secondary);margin-top:3px;"></div>
-                </div>
-            </div>
-            <div id="pm-bio" style="font-size:0.85rem;color:var(--text-secondary);line-height:1.65;margin-bottom:16px;white-space:pre-wrap;"></div>
-            <div id="pm-socials" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;"></div>
-            <div id="pm-joined" style="font-size:0.68rem;color:#444;font-family:var(--font-mono);"></div>
+    <div id="incident-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;width:100%;max-width:600px;max-height:80vh;overflow-y:auto;padding:24px;position:relative;">
+            <button onclick="closeIncidentModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#555;font-size:1.2rem;cursor:pointer;line-height:1;">✕</button>
+            <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--accent-primary);margin-bottom:16px;">// INCIDENT_DETAIL</div>
+            <div id="incident-modal-body"></div>
         </div>
     </div>
 </body>
