@@ -129,8 +129,6 @@ class ShadowRuntime:
             "poc":         ("shadowcypher.modules.poc_engine",       "PocEngine"),
             "privesc":     ("shadowcypher.modules.privilege_audit",  "PrivAudit"),
             "c2":          ("shadowcypher.modules.agent_relay",      "AgentRelay"),
-            "payload":     ("shadowcypher.modules.craft_factory",    "CraftFactory"),
-            "craft":       ("shadowcypher.modules.craft_factory",    "CraftFactory"),
             "web":         ("shadowcypher.modules.web_security",     "WebSecurity"),
             "osint":       ("shadowcypher.modules.osint",            "OSINT"),
             "ghost_hose":  ("shadowcypher.modules.ghost_hose",       "ghost_hose"),
@@ -662,8 +660,7 @@ class ShadowInterpreter:
                     print("  No native functions compiled yet. Declare one with: rust <name> { ... }")
             elif line == ".modules":
                 mods = ["recon", "network", "wireless", "exploit", "poc", "privesc",
-                        "c2", "payload", "craft", "web", "osint",
-                        "forensics", "vuln"]
+                        "c2", "web", "osint", "forensics", "vuln"]
                 for m in mods:
                     print(f"  {m}")
             else:
