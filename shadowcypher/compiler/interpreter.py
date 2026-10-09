@@ -131,7 +131,6 @@ class ShadowRuntime:
             "c2":          ("shadowcypher.modules.agent_relay",      "AgentRelay"),
             "web":         ("shadowcypher.modules.web_security",     "WebSecurity"),
             "osint":       ("shadowcypher.modules.osint",            "OSINT"),
-            "ghost_hose":  ("shadowcypher.modules.ghost_hose",       "ghost_hose"),
             "forensics":   ("shadowcypher.modules.forensics",        "Forensics"),
             "vuln":        ("shadowcypher.modules.vuln_scanner",     "VulnScanner"),
         }
