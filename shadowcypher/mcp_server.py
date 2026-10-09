@@ -200,20 +200,6 @@ def tool_anonymity_audit():
             "passed": passed, "total": total, "checks": checks}
 
 
-def tool_trace_erase(deep=False):
-    """Erase forensic traces."""
-    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts", "trace_eraser.py")
-    if not os.path.exists(script):
-        return {"error": "trace_eraser.py not found"}
-
-    cmd = ["python3", script]
-    if deep:
-        cmd.append("--deep")
-    out, rc = run_cmd(cmd, timeout=30)
-    clean = re.sub(r"\033\[[0-9;]*m", "", out)
-    return {"output": clean, "success": rc == 0}
-
-
 def tool_port_scan(target, ports="22,80,443,8080,3389,445"):
     """Scan specific ports on a target."""
     results = []
@@ -319,17 +305,6 @@ TOOLS = {
         "description": "Run a comprehensive anonymity audit checking Tor, DNS leaks, MAC randomization, hostname exposure, and timezone leaks. Returns an anonymity score.",
         "inputSchema": {"type": "object", "properties": {}},
         "handler": lambda params: tool_anonymity_audit()
-    },
-    "shadowcypher_trace_erase": {
-        "description": "Erase forensic traces from the system: shell histories, system logs, temp files, and application traces.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "deep": {"type": "boolean", "description": "If true, also clears journal, wtmp, lastlog, kernel ring buffer",
-                          "default": False}
-            }
-        },
-        "handler": lambda params: tool_trace_erase(params.get("deep", False))
     },
     "shadowcypher_port_scan": {
         "description": "Scan specific ports on a target IP address.",

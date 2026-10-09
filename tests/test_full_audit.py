@@ -556,28 +556,6 @@ class TestOSINT:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MODULES: craft_factory
-# ─────────────────────────────────────────────────────────────────────────────
-class TestCraftFactory:
-    def test_generate_obfuscated_python(self):
-        from shadowcypher.modules.craft_factory import CraftFactory
-        result = CraftFactory.generate_obfuscated_python("127.0.0.1", "4444")
-        assert isinstance(result, str) and len(result) > 0
-
-    def test_generate_stealth_c2_python(self):
-        from shadowcypher.modules.craft_factory import CraftFactory
-        result = CraftFactory.generate_stealth_c2_python("127.0.0.1", "4444")
-        assert isinstance(result, str) and len(result) > 0
-
-    @patch("shadowcypher.modules.craft_factory.subprocess.run")
-    def test_generate_stealth_powershell(self, mock_run):
-        mock_run.return_value = MagicMock(returncode=0, stdout="")
-        from shadowcypher.modules.craft_factory import CraftFactory
-        result = CraftFactory.generate_stealth_powershell("127.0.0.1", "4444")
-        assert result is not None
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # MODULES: web_security
 # ─────────────────────────────────────────────────────────────────────────────
 class TestWebSecurity:
