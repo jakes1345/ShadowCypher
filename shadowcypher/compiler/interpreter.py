@@ -66,7 +66,6 @@ class ShadowRuntime:
 
     def __init__(self, on_output: Optional[Callable] = None):
         self.variables: Dict[str, Any] = {}
-        self.swarm_active = False
         self.output_callback = on_output or (lambda x: print(f"\033[1;32m[SHADOW]\033[0m {x}"))
         self.last_result: str = ""
         self._module_cache: Dict[str, Any] = {}
@@ -125,10 +124,7 @@ class ShadowRuntime:
             "recon":       ("shadowcypher.modules.recon",            "Recon"),
             "network":     ("shadowcypher.modules.network",          "Network"),
             "wireless":    ("shadowcypher.modules.wireless",         "Wireless"),
-            "exploit":     ("shadowcypher.modules.poc_engine",       "PocEngine"),
-            "poc":         ("shadowcypher.modules.poc_engine",       "PocEngine"),
             "privesc":     ("shadowcypher.modules.privilege_audit",  "PrivAudit"),
-            "c2":          ("shadowcypher.modules.agent_relay",      "AgentRelay"),
             "web":         ("shadowcypher.modules.web_security",     "WebSecurity"),
             "osint":       ("shadowcypher.modules.osint",            "OSINT"),
             "forensics":   ("shadowcypher.modules.forensics",        "Forensics"),
@@ -232,22 +228,6 @@ class ShadowRuntime:
                 ).start()
             except Exception as e:
                 self.emit(f"Scan failed — {e}")
-
-        elif cmd == "SWARM":
-            self.swarm_active = True
-            self.emit("Broadcasting to linked Shadow Nodes ...")
-            try:
-                from shadowcypher.core.ghost import ghost_orchestrator
-                nodes = ghost_orchestrator.get_active_nodes()
-                if nodes:
-                    cmd_str = args[0] if args else "ping"
-                    ok = sum(1 for n in nodes if ghost_orchestrator.execute(n["fp"], cmd_str))
-                    self.emit(f"Swarm response: {ok}/{len(nodes)} nodes came back")
-                else:
-                    self.emit("No Shadow Nodes linked yet — deploy an agent to a machine first.")
-            except Exception as e:
-                self.emit(f"Swarm error — {e}")
-            bus.publish("module_status", {"module": "swarm", "status": "ENGAGED"})
 
         elif cmd == "AI":
             prompt = " ".join(args) if args else "Summarise the current mission state."
@@ -544,7 +524,7 @@ class ShadowInterpreter:
 
             # ── DIRECTIVES with optional parens ───────────────────────────
             elif token.ttype == Token.TYPE_KEYWORD and token.value in (
-                "TARGET", "STRIKE", "SCAN", "SWARM", "AI", "LOAD",
+                "TARGET", "STRIKE", "SCAN", "AI", "LOAD",
                 "UNSAFE", "MAP", "FILTER",
                 "!sys", "!pipe", "!module", "!echo", "!sleep",
             ):
@@ -658,8 +638,8 @@ class ShadowInterpreter:
                 else:
                     print("  No native functions compiled yet. Declare one with: rust <name> { ... }")
             elif line == ".modules":
-                mods = ["recon", "network", "wireless", "exploit", "poc", "privesc",
-                        "c2", "web", "osint", "forensics", "vuln"]
+                mods = ["recon", "network", "wireless", "privesc",
+                        "web", "osint", "forensics", "vuln"]
                 for m in mods:
                     print(f"  {m}")
             else:
