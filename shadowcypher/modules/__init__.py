@@ -16,7 +16,6 @@ def _safe_import(name, attr):
 # ── Original modules ────────────────────────────────────────────────────────────────
 Recon          = _safe_import("shadowcypher.modules.recon",           "Recon")
 Network        = _safe_import("shadowcypher.modules.network",         "Network")
-Credentials    = _safe_import("shadowcypher.modules.secret_audit",     "Credentials")
 Wireless       = _safe_import("shadowcypher.modules.wireless",        "Wireless")
 Forensics      = _safe_import("shadowcypher.modules.forensics",       "Forensics")
 Firewall       = _safe_import("shadowcypher.modules.firewall",        "Firewall")
