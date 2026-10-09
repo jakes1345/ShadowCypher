@@ -28,15 +28,8 @@ class AISettings(BaseSettings):
 
 class ToolPaths(BaseSettings):
     nmap: str = "nmap"
-    hydra: str = "hydra"
-    john: str = "john"
-    hashcat: str = "hashcat"
     aircrack: str = "aircrack-ng"
     tcpdump: str = "tcpdump"
-    searchsploit: str = "searchsploit"
-    responder: str = "Responder.py"
-    msfconsole: str = "msfconsole"
-    msfvenom: str = "msfvenom"
     whatweb: str = "whatweb"
     dirb: str = "dirb"
     ffuf: str = "ffuf"
