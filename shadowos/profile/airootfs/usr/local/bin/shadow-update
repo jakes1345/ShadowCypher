@@ -158,8 +158,8 @@ fi
 echo
 if [[ $UPGRADE_EXIT -eq 0 ]]; then
     ok "Update complete."
-    if [[ "$CURRENT_MODE" == "pentest" ]]; then
-        echo "    ${DIM}(in pentest mode — remember to ${BOLD}shadow-mode normal${NC}${DIM} when done)${NC}"
+    if [[ "$CURRENT_MODE" == "privacy" || "$CURRENT_MODE" == "ghost" ]]; then
+        echo "    ${DIM}(in $CURRENT_MODE mode — updates routed through Tor)${NC}"
     fi
 else
     err "Update finished with exit code $UPGRADE_EXIT — review messages above."

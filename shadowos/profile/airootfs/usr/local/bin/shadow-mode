@@ -78,8 +78,8 @@ apply_mode() {
             [normal]="shadowos-01-centaurus-a-1920x1080.png"
             [privacy]="shadowos-09-seagull-1920x1080.png"
             [ghost]="shadowos-05-collision-1920x1080.png"
-            [dev]="shadowos-01-centaurus-a-1920x1080.png"
-            [gaming]="shadowos-01-centaurus-a-1920x1080.png"
+            [dev]="shadowos-04-pillars-1920x1080.png"
+            [gaming]="shadowos-07-dark-wolf-1920x1080.png"
         )
         WP_FILE="${MODE_WALLPAPER[$mode]:-}"
         WP_PATH="/usr/share/backgrounds/shadowos/${WP_FILE}"

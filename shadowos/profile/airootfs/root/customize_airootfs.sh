@@ -86,7 +86,7 @@ plymouth-set-default-theme -R shadowos 2>/dev/null \
 
 # ── GRUB theme ────────────────────────────────────────────────────────────────
 mkdir -p /etc/default
-if [ -f /etc/default/grub ]; then
+if [ -f /etc/default/grub ] && [ -f /boot/grub/themes/shadowos/theme.txt ]; then
     sed -i 's|^#\?GRUB_THEME=.*|GRUB_THEME="/boot/grub/themes/shadowos/theme.txt"|' /etc/default/grub
     grep -q '^GRUB_THEME=' /etc/default/grub \
         || echo 'GRUB_THEME="/boot/grub/themes/shadowos/theme.txt"' >> /etc/default/grub

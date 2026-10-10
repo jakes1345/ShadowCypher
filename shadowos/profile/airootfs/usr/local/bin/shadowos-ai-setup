@@ -116,13 +116,11 @@ cat > /etc/shadowcypher/ai.json << JSON
 {
   "default_model": "$DEFAULT_MODEL",
   "models": {
-    "normal":     "shadow-security",
-    "dev":        "shadow-dev",
-    "pentest":    "shadow-security",
-    "privacy":    "shadow-ghost",
-    "ghost":      "shadow-ghost",
-    "gaming":     "shadow-ghost",
-    "undercover": "shadow-ghost"
+    "normal":  "shadow-security",
+    "dev":     "shadow-dev",
+    "gaming":  "shadow-security",
+    "privacy": "shadow-ghost",
+    "ghost":   "shadow-ghost"
   },
   "ollama_url": "http://localhost:11434",
   "vram_mb": $VRAM_MB
