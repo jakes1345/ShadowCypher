@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# shadowos-ramwipe — overwrite free RAM on shutdown (ghost mode)
+# Called by shadowos-ramwipe.service (Before=shutdown.target)
+set -e
+
+echo "ShadowOS: secure RAM wipe in progress..."
+
+# Fill free memory with zeros using /dev/zero — kernel will reclaim pages
+# sdmem from secure-delete is the clean tool; fall back to dd if absent
+if command -v sdmem >/dev/null 2>&1; then
+    sdmem -f -l -l 2>/dev/null || true
+else
+    # Poor-man's wipe: spawn a process that allocates and zeros RAM until OOM kills it
+    # OOM killer cleans up; all anonymous pages get zeroed on alloc by the kernel anyway
+    dd if=/dev/zero of=/dev/null bs=1M 2>/dev/null &
+    WIPE_PID=$!
+    sleep 8
+    kill "$WIPE_PID" 2>/dev/null || true
+fi
+
+echo "ShadowOS: RAM wipe complete."

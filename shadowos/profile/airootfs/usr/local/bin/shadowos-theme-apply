@@ -21,6 +21,8 @@ mkdir -p "$hypr"
 case "$mode" in
     privacy) border="rgba(F4A261FF) rgba(E76F51FF) 45deg" ;;
     ghost)   border="rgba(E63946FF) rgba(9D0208FF) 45deg" ;;
+    dev)     border="rgba(58A6FFFF) rgba(1F6FEBFF) 45deg" ;;
+    gaming)  border="rgba(BC8CFFFF) rgba(7C3AEDFF) 45deg" ;;
     *)       mode="normal"; border="rgba(00E0A4FF) rgba(00B988FF) 45deg" ;;
 esac
 

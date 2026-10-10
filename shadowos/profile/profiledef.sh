@@ -48,6 +48,7 @@ file_permissions=(
   ["/usr/local/bin/shadowos-mac-randomize"]="0:0:0755"
   ["/usr/local/bin/shadowos-theme-apply"]="0:0:0755"
   ["/usr/local/bin/shadowcypher-autostart"]="0:0:0755"
+  ["/usr/local/bin/shadowos-ramwipe"]="0:0:0755"
   # Guardian daemon
   ["/usr/local/bin/guardian-launch"]="0:0:0755"
   ["/usr/local/bin/guardian-logs"]="0:0:0755"

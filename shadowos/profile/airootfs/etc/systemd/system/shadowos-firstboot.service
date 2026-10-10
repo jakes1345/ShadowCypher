@@ -1,5 +1,5 @@
 [Unit]
-Description=ShadowOS first-boot setup (Flatpak apps, BlackArch keyring)
+Description=ShadowOS first-boot setup (Chaotic-AUR, ghostty, librewolf, themes)
 After=graphical.target network-online.target
 Wants=network-online.target
 ConditionPathExists=!/var/lib/shadowos/firstboot.stamp

@@ -28,18 +28,15 @@ systemctl enable systemd-timesyncd.service
 systemctl enable bluetooth.service
 systemctl enable shadowos-mac-randomize.service
 systemctl enable shadowos-firstboot.service
-systemctl enable sshd.service
+systemctl disable sshd.service 2>/dev/null || true   # opt-in only — security OS
 systemctl enable dnscrypt-proxy.service 2>/dev/null || true
 systemctl disable tor.service 2>/dev/null || true
 systemctl enable udisks2.service 2>/dev/null || true
 systemctl enable power-profiles-daemon.service 2>/dev/null || true
-systemctl enable tlp.service 2>/dev/null || true
 systemctl enable auditd.service 2>/dev/null || true
 systemctl enable usbguard.service 2>/dev/null || true
 systemctl enable systemd-zram-setup@zram0.service 2>/dev/null || true
-systemctl enable ollama.service 2>/dev/null || true
 systemctl enable shadowcypher-agent.service 2>/dev/null || true
-systemctl --global enable shadowos-welcome.service 2>/dev/null || true
 systemctl set-default graphical.target
 
 # ── SSH hardening ─────────────────────────────────────────────────────────────
@@ -127,8 +124,9 @@ for bin in \
     shadow-help-me shadow-help-me-stop shadow-play shadow-score shadow-settings \
     shadow-stream shadow-update shadow-update-count shadow-wipe \
     shadowos-diag shadowos-firstboot shadowos-install shadowos-mac-randomize \
-    shadowos-session-start shadowos-theme-apply shadowos-tour shadowos-update-gui \
-    shadowos-vpn-killswitch shadowos-welcome shadowos-ai-setup \
+    shadowos-ramwipe shadowos-session-start shadowos-theme-apply shadowos-tour \
+    shadowos-update-gui shadowos-vpn-killswitch shadowos-welcome shadowos-ai-setup \
+    shadow-power-menu shadow-term \
     shadowcypher-autostart guardian-launch guardian-logs guardian-status guardian-stop
 do
     chmod +x "/usr/local/bin/${bin}" 2>/dev/null || true
@@ -184,7 +182,7 @@ cat > /etc/motd <<MOTD
    SSH: key-only (add pubkey → ~/.ssh/authorized_keys)
 
   Quick reference:
-   shadow-mode <name>    switch mode: normal | privacy | ghost
+   shadow-mode <name>    switch mode: normal | privacy | ghost | dev | gaming
    shadow-help-me [min]  SSH over Tor .onion for remote access
    shadow-leak-test      verify no identity leaks
    shadow-update         update packages (respects current mode)

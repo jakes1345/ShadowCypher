@@ -32,6 +32,7 @@ iwd
 dnscrypt-proxy
 
 # Security / privacy
+audit
 tor
 torsocks
 firejail
@@ -187,6 +188,10 @@ lm_sensors
 acpi
 acpid
 power-profiles-daemon
+zram-generator
+
+# Installer
+calamares
 
 # Desktop integration
 gnome-keyring
