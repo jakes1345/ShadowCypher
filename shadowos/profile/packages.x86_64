@@ -1,48 +1,42 @@
 # Base system
 base
 base-devel
-# Explicit providers to avoid interactive prompts during build
-iptables
-polkit
-libglvnd
-qt6-multimedia-ffmpeg
-lib32-vulkan-radeon
-tesseract-data-eng
 linux
 linux-firmware
 linux-hardened
 archiso
 mkinitcpio-archiso
 mkinitcpio
-mkinitcpio-nfs-utils
-nbd
 intel-ucode
 amd-ucode
 
-# Boot
+# Boot + Secure Boot
 grub
 efibootmgr
 syslinux
 edk2-shell
 plymouth
+grub-efi-x86_64-signed
+sbctl
+efivar
+mokutil
+tpm2-tools
 
 # Networking
 networkmanager
 nm-connection-editor
-network-manager-applet
 wireguard-tools
 openvpn
 openresolv
 iwd
-bind
 dnscrypt-proxy
 
 # Security / privacy
 tor
+torsocks
 firejail
 apparmor
 nftables
-conntrack-tools
 fail2ban
 rkhunter
 lynis
@@ -52,512 +46,153 @@ gnupg
 pass
 keepassxc
 veracrypt
-yubikey-manager
-
-# === Tactical / pentest arsenal (Kali/Parrot tier, repo-safe) ===
+usbguard
+bubblewrap
 nmap
-masscan
 wireshark-qt
-wireshark-cli
-openbsd-netcat
 tcpdump
-john
-hashcat
-hashcat-utils
-sqlmap
-hydra
-aircrack-ng
-bettercap
-nikto
-sslscan
-gobuster
-metasploit
-yara
-binwalk
-foremost
-sleuthkit
-radare2
+openbsd-netcat
 proxychains-ng
 
-# Qt6 runtime — required by shadowos-installer and shadowcypher-qt desktop app
+# Hyprland WM stack
+hyprland
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+polkit-kde-agent
+qt5-wayland
+waybar
+wofi
+hyprpaper
+hyprlock
+hypridle
+mako
+libnotify
+wl-clipboard
+cliphist
+grim
+slurp
+swappy
+brightnessctl
+playerctl
+
+# Display / graphics
+mesa
+vulkan-radeon
+vulkan-intel
+vulkan-nouveau
+vulkan-swrast
+intel-media-driver
+libglvnd
+sddm
+
+# Audio (PipeWire)
+pipewire
+pipewire-pulse
+pipewire-alsa
+pipewire-jack
+wireplumber
+pavucontrol
+sof-firmware
+alsa-firmware
+alsa-ucm-conf
+alsa-utils
+
+# Fonts
+noto-fonts
+noto-fonts-emoji
+ttf-jetbrains-mono-nerd
+
+# Qt6 (ShadowCypher desktop app)
 qt6-base
 qt6-wayland
 qt6-declarative
 qt6-websockets
 qt6-svg
 qt6-5compat
+qt6-webengine
+qt6-charts
+qt6-multimedia
+qt6-multimedia-ffmpeg
 
-# === Modern desktop: Hyprland ===
-hyprland
-xdg-desktop-portal-hyprland
-xdg-desktop-portal-gtk
-# qt6-wayland, qt6-declarative, qt6-5compat, qt6-svg already listed above (Qt6 runtime block)
-qt5-wayland
-waybar
-wofi
-hyprpaper
-swaybg
-hyprlock
-hypridle
-hyprcursor
-mako
-libnotify
-wlr-randr
-pacman-contrib
-foot
-xterm
-thunar
-thunar-archive-plugin
-file-roller
-loupe
-brightnessctl
-playerctl
-grim
-slurp
-swappy
-wl-clipboard
-cliphist
-pavucontrol
-polkit-gnome
-sddm
-ttf-jetbrains-mono-nerd
-ttf-firacode-nerd
-noto-fonts
-noto-fonts-emoji
+# GTK / theming
+gtk3
+gtk4
 papirus-icon-theme
 
-# Audio (pipewire)
-pipewire
-pipewire-pulse
-pipewire-alsa
-pipewire-jack
-wireplumber
-
-# Broad hardware compat — Wi-Fi, GPU, audio firmware
-mesa
-mesa-utils
-vulkan-radeon
-vulkan-intel
-vulkan-nouveau
-vulkan-swrast
-# libva-mesa-driver was removed from repos — mesa provides VA-API directly now
-intel-media-driver
-libva-utils
-xf86-video-amdgpu
-xf86-video-nouveau
-xorg-server
-xorg-xinit
-sof-firmware
-alsa-firmware
-alsa-ucm-conf
-alsa-utils
-bluez
-bluez-utils
-
-# Installer (bare-metal install support) — Calamares is AUR-only so we ship
-# archinstall (official Arch TUI installer) + a friendlier wrapper.
-archinstall
-calamares
-
-# ShadowCypher runtime deps (GTK app)
-gtk3
+# Python (Guardian agent + ShadowCypher app)
+python
+python-pip
+python-requests
+python-websockets
+python-cryptography
 python-gobject
 python-cairo
 python-pydantic
 python-pydantic-settings
-python-requests
-python-websockets
-python-cryptography
-python-pillow
 python-rich
-python-textual
-python-fastapi
-python-aiohttp
 python-psutil
-uvicorn
-ollama
-# Python deps not covered by pip-install step (available in Arch repos)
-python-beautifulsoup4
-python-numpy
-python-scipy
-python-dotenv
-python-prompt_toolkit
-python-huggingface-hub
-python-scikit-learn
-python-matplotlib
 
-# Apps
-# Browsers — LibreWolf, Mullvad Browser, and Tor Browser are AUR-only (Chaotic-AUR).
-# They are installed by shadowos-firstboot after Chaotic-AUR is added.
-# librewolf: hardened Firefox fork — no telemetry, no auto-update, Tor-compatible
-# chaotic-keyring/mirrorlist installed by build script via URL, not via pacstrap
-librewolf
-mpv
-imv
-yt-dlp
-
-# === Dev — full IDE/runtime stack ===
+# Dev tools
 git
-git-lfs
-github-cli
 neovim
-vim
-code
-helix
-python
-python-pip
-python-poetry
-nodejs
-npm
-pnpm
-yarn
-rustup
-go
-jdk-openjdk
-gradle
-maven
-docker
-docker-compose
-docker-buildx
-podman
-buildah
-kubectl
-helm
-terraform
-ansible
-just
-lazygit
-direnv
-
-# === Modern offensive arsenal (beyond the Kali tier above) ===
-rustscan
-ffuf
-feroxbuster
-amass
-subfinder
-httpx
-nuclei
-# katana is AUR-only — installed via `go install` in shadowos-firstboot
-# testssl.sh is not packaged for Arch — installed via git clone in shadowos-firstboot
-naabu
-mitmproxy
-exploitdb
-python-pipx
-# AD attack chain — installed via pipx at first-boot (no AUR helper needed):
-#   pipx install impacket         → full AD protocol suite (SMB/Kerberos/LDAP/DCE-RPC)
-#   pipx install netexec          → network exec / lateral movement
-#   pipx install certipy-ad       → AD certificate services attacks
-#   pipx install evil-winrm       → (needs ruby) WinRM shell
-#   pipx install bloodhound       → AD path analysis
-# responder — AUR; install via: sudo pacman -S python-responder (chaotic-aur after first-boot)
-sshuttle
-seclists
-dnsenum
-whatweb
-wfuzz
-zaproxy
-
-# === OSINT arsenal (crushing Parrot) ===
-theharvester
-recon-ng
-sherlock
-netdiscover
-
-# === Web app attack additions ===
-commix
-wpscan
-
-# === Wireless attacks (beyond Kali/Parrot) ===
-hostapd-wpe
-airgeddon
-wifiphisher
-
-# === Post-exploitation / tunneling ===
-chisel
-evil-winrm
-ligolo-ng
-
-# === Reverse engineering ===
-ghidra
-
-# === Memory forensics ===
-# python-volatility3  # AUR only — install post-boot via pipx
-
-# === Anonymity++ (beats Parrot's AnonSurf cold) ===
-i2pd
-obfs4proxy
-
-# === Gaming + multimedia ===
-steam
-steam-devices
-gamemode
-lib32-gamemode
-mangohud
-lib32-mangohud
-goverlay
-lutris
-prismlauncher
-# Heroic, Bottles, ProtonUp-Qt are AUR-only — installed via Flatpak at
-# first-boot: com.heroicgameslauncher.hgl, com.usebottles.bottles,
-# net.davidotek.pupgui2
-wine-staging
-winetricks
-# dxvk-mingw is AUR — DXVK comes bundled with Proton/Steam anyway
-vkd3d
-gamescope
-ttf-liberation
-
-# === Retro gaming / emulation (à la Batocera/Bazzite) ===
-retroarch
-libretro-beetle-psx-hw
-libretro-blastem
-libretro-bsnes
-libretro-desmume
-libretro-mgba
-libretro-mupen64plus-next
-libretro-ppsspp
-libretro-sameboy
-libretro-scummvm
-# EmulationStation-DE (flatpak) installed at first-boot: io.github.es_de.emulationstation-de
-
-# === Game streaming (Sunshine/Moonlight — Bazzite style) ===
-# sunshine is AUR-only; installed via Flatpak at first-boot: dev.lizardbyte.app.Sunshine
-# moonlight-qt is in extra
-moonlight-qt
-
-# === Controller support ===
-# xpadneo-dkms — AUR; Xbox One S/X wireless via Bluetooth (install via: yay -S xpadneo-dkms)
-# xone-dkms    — AUR; Xbox One dongle driver             (install via: yay -S xone-dkms)
-# Both need DKMS so they're post-boot installs. Steam handles most controllers natively via udev.
-# steam-devices — already listed in gaming section; udev rules for 300+ controllers included there
-
-# === Universal launchers / app management ===
-flatpak
-distrobox
-# podman is already listed under dev/runtime stack
-
-# === Theming / desktop polish ===
-# catppuccin-gtk-theme-mocha is AUR-only — installed via script at first-boot
-# bibata-cursor-theme is AUR-only — installed via script at first-boot
-xcursor-themes
-qt5ct
-qt6ct
-kvantum
-nwg-look
-
-# === Tier-1 OS essentials (added after audit) ===
-udisks2
-udiskie
-gvfs
-gvfs-mtp
-gvfs-smb
-blueman
-power-profiles-daemon
-tlp
-xdg-user-dirs
-xdg-utils
-zathura
-zathura-pdf-mupdf
-gnome-keyring
-libsecret
-seahorse
-# network-manager-applet and udev are already provided earlier / by base
-
-# === Tier-2 polish ===
-httpie
-postgresql-libs
-sqlite
-mariadb-clients
-redis
-# swww is AUR-only — use hyprpaper (already configured) for static wallpapers
-imagemagick
-ffmpeg
-
-# === Media — minimal default (creator suite is install-on-demand) ===
-# Big creator tools (gimp/inkscape/blender/krita/obs-studio/audacity) are
-# NOT shipped by default. Users who need them install via `pacman -S`
-# or via the shadowos-creator-tools meta package.
-vlc
-
-# Utilities
-htop
-btop
-fastfetch
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
 fzf
 ripgrep
 fd
 bat
 eza
-zsh
-zsh-completions
 starship
 tmux
+yazi
+zoxide
+jq
+
+# System utilities + filesystem
+htop
+btop
+fastfetch
 curl
 wget
 openssh
 rsync
-torsocks
 unzip
 zip
-jq
-yq
-which
+tar
 sudo
-parted
-gptfdisk
+less
+man-db
+man-pages
+util-linux
+e2fsprogs
 dosfstools
-btrfs-progs
 ntfs-3g
-exfatprogs
+btrfs-progs
 cryptsetup
+parted
+fuse2
+fuse3
+udisks2
+reflector
+mpv
+imv
 
-# === Omarchy-inspired polish ===
-# File navigation
-yazi                        # TUI file manager (replaces thunar for power users)
-zoxide                      # smart cd — learns your most-visited dirs
-atuin                       # shell history search with sync (omarchy-style ctrl+r)
-# Dev productivity
-zellij                      # multiplexer alternative to tmux (modern, splits built-in)
-# Terminal experience
-sd                          # sed alternative with simpler syntax
-choose                      # human-friendly cut/awk alternative
-bottom                      # btop alternative (cross-platform)
-procs                       # modern ps replacement
-tokei                       # code statistics counter
-hyperfine                   # command benchmarking tool
-gdu                         # fast disk usage analyzer
+# Hardware / power
+bluez
+bluez-utils
+lm_sensors
+acpi
+acpid
+power-profiles-daemon
 
-# === Qubes OS-inspired VM compartmentalization ===
-libvirt                     # VM management API
-virt-manager                # GUI VM manager
-qemu-system-x86             # x86/x64 guest emulation
-qemu-img                    # disk image tools (qcow2, raw, etc.)
-edk2-ovmf                   # UEFI firmware for VMs
-swtpm                       # TPM 2.0 emulator for VMs
-virt-viewer                 # SPICE/VNC viewer for VM displays
-spice-vdagent               # clipboard/file sharing between host and VM
-dnsmasq                     # DHCP/DNS for libvirt isolated networks
-bridge-utils                # network bridge management for VMs
-dmidecode                   # BIOS/hardware info used by VMs
-
-# === Tails OS-inspired amnesia ===
-# secure-delete is already listed above (security section)
-memtester                   # memory testing (also used for secure wipe verification)
-
-# === Gaming — additions ===
-# xpadneo-dkms — AUR only; install via yay post-boot
-corectrl
-# (dedup) goverlay
-# (dedup) mangohud
-# (dedup) lib32-mangohud
-# (dedup) gamescope
-vulkan-tools
-lib32-vulkan-icd-loader
-# (dedup) vkd3d
-lib32-vkd3d
-# dxvk-mingw — AUR only, ships via Steam/Proton
-# (dedup) gamemode
-# (dedup) lib32-gamemode
-# auto-cpufreq — AUR only; cpupower handles governor switching
-cpupower
-
-# === zram / memory ===
-zram-generator
-
-# === Snapshots ===
-snapper
-snap-pac
-grub-btrfs
-
-# === Security hardening additions ===
-usbguard
-# (dedup) apparmor
-# (dedup) firejail
-bubblewrap
-audit
-mat2
-gammastep
-
-# === Printing ===
-cups
-cups-filters
-system-config-printer
-
-# === Privacy / comms ===
-nheko
-
-# === Enterprise Features (TPM, Compliance) ===
-# freeipa-client  # AUR only — unresolvable deps (authselect, certmonger, oddjob-selinux)
-# krb5            # pulled in as dep if needed
-# openldap        # pulled in as dep if needed
-
-# Encryption & Hardware Security
-# (dedup) cryptsetup
-tpm2-tools
-tpm2-abrmd
-tpm2-tss
-tpm2-pkcs11
-# (dedup) efibootmgr
-shim-signed
-sbctl                       # Secure Boot key manager (enroll, sign, verify)
-efivar                      # EFI variable access (required by secureboot-enable.sh)
-mokutil                     # MOK key enrollment for Secure Boot
-
-# SELinux & Mandatory Access Control
-# selinux-policy        # not in standard Arch repos
-# selinux-policy-default
-# selinux-python
-
-# FIPS 140-2 Compliance
-openssl
-libgcrypt
-libsodium
-
-# Audit & Compliance
-# (dedup) audit
-# systemd-journal-remote  # not a separate Arch package (part of systemd)
-# aide                    # AUR only
-
-# DNSSEC & Network Security
-bind-tools
-unbound
-ldns
-
-# === Missing system deps (found in package audit) ===
-
-# Bluetooth extras
-bluez-obex                  # OBEX push for Bluetooth file transfer
-
-# Audio — GStreamer integration with PipeWire
-gst-plugin-pipewire         # makes media players (vlc, etc.) use pipewire
-libpulse                    # PulseAudio compatibility layer (many apps link against it)
-
-# Network service discovery (required for printer discovery, avahi-browse)
-avahi
-nss-mdns                    # mDNS hostname resolution (.local domains)
-
-# Hardware sensors & power
-lm_sensors                  # CPU/GPU temperature monitoring (used by waybar)
-acpi                        # battery/power event CLI
-acpid                       # ACPI event daemon (lid close, power button)
-
-# Filesystem
-fuse2                       # FUSE 2.x compat (AppImage, VeraCrypt containers)
-fuse3                       # FUSE 3.x (already pulled by many packages, explicit is safe)
-
-# Boot — GRUB EFI target
-grub-efi-x86_64-signed      # pre-signed GRUB EFI binary for Secure Boot systems
-os-prober                   # detect other OSes for GRUB menu
-
-# Mirror ranking at install/first-boot
-reflector                   # update pacman mirrorlist by speed
-
-# GTK4 (required by newer apps — ghostty, some GNOME-based tools)
-gtk4
-
-# Zsh quality-of-life plugins (loaded by /etc/zsh/zshrc or user .zshrc)
-zsh-autosuggestions
-zsh-syntax-highlighting
-
-# sbsign is from AUR package 'sbsigntools' — installed via firstboot if online
-# ghostty is installed via Chaotic-AUR in firstboot (GPU-accelerated terminal)
+# Desktop integration
+gnome-keyring
+libsecret
+polkit
+iptables
+gvfs
+gvfs-smb
+xdg-utils
+xdg-user-dirs
+flatpak

@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # ShadowOS first-boot one-shot.
-# Runs once on first boot, then stamps /var/lib/shadowos/firstboot.stamp
-# to prevent re-running.
-#
+# Runs once on first boot, then stamps /var/lib/shadowos/firstboot.stamp.
 # Wired up via /etc/systemd/system/shadowos-firstboot.service (oneshot, multi-user.target).
 #
 # What it does:
-#   1. Wait for network (up to 60s)
-#   2. Install Flatpak apps that aren't in Arch repos (Bottles, ProtonUp-Qt)
-#   3. Refresh BlackArch keyring if needed
-#   4. Stamp the marker so we don't run again
+#   1. Wait for network
+#   2. Add Chaotic-AUR (for ghostty, librewolf, themes)
+#   3. Install AUR-only packages via Chaotic-AUR
+#   4. Install Bibata cursor
+#   5. Install testssl.sh (TLS auditor)
+#   6. Update mirror list with reflector
+#   7. Install ShadowCypher pip deps
+#   8. Kick off AI model download in background
+#   9. Stamp
 
 set -u
 
@@ -19,9 +22,7 @@ STAMP=/var/lib/shadowos/firstboot.stamp
 mkdir -p /var/lib/shadowos
 exec >>"$LOG" 2>&1
 
-# Never run heavy setup on the live ISO — cowspace is RAM-backed (limited to
-# cow_spacesize) and Flatpak/model downloads will exhaust it, OOM-killing the
-# SDDM greeter before the desktop ever appears.
+# Skip on live ISO — cowspace is RAM-backed; package installs will OOM
 if [[ -f /etc/shadowos/live-iso ]]; then
     echo "[$(date -Iseconds)] live ISO detected — skipping firstboot setup."
     exit 0
@@ -36,7 +37,7 @@ echo "════════════════════════�
 echo "  ShadowOS first-boot — $(date -Iseconds)"
 echo "════════════════════════════════════════════════════════════════"
 
-# ── 1. Wait for network ─────────────────────────────────────────────────────
+# ── 1. Wait for network ──────────────────────────────────────────────────────
 echo "[*] Waiting for network..."
 for i in $(seq 1 30); do
     if getent hosts archlinux.org >/dev/null 2>&1; then
@@ -51,212 +52,86 @@ if getent hosts archlinux.org >/dev/null 2>&1; then
     ONLINE=1
 fi
 
-if [[ "$ONLINE" -eq 1 ]]; then
-    # ── 1b. Add Chaotic-AUR repo if not already present ─────────────────────
-    if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf 2>/dev/null; then
-        echo "[*] Adding Chaotic-AUR repository..."
-        pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com 2>/dev/null || true
-        pacman-key --lsign-key 3056513887B78AEB 2>/dev/null || true
-        pacman -U --noconfirm \
-            'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
-            'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst' \
-            2>&1 | tail -5 || true
-        cat >> /etc/pacman.conf << 'PACMAN'
+if [[ "$ONLINE" -eq 0 ]]; then
+    echo "[!] No network — skipping online setup."
+    exit 0
+fi
+
+# ── 2. Add Chaotic-AUR repo ──────────────────────────────────────────────────
+if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf 2>/dev/null; then
+    echo "[*] Adding Chaotic-AUR repository..."
+    pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com 2>/dev/null || true
+    pacman-key --lsign-key 3056513887B78AEB 2>/dev/null || true
+    pacman -U --noconfirm \
+        'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
+        'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst' \
+        2>&1 | tail -5 || true
+    cat >> /etc/pacman.conf << 'PACMAN'
 
 [chaotic-aur]
 Include = /etc/pacman.d/chaotic-mirrorlist
 PACMAN
-        echo "    Chaotic-AUR added"
-    fi
-
-    # ── 2. Flatpak apps (AUR-only equivalents) ──────────────────────────────
-    if command -v flatpak >/dev/null 2>&1; then
-        flatpak remote-add --if-not-exists flathub \
-            https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
-
-        echo "[*] Installing Flathub apps (Heroic, Bottles, ProtonUp-Qt, Sunshine, EmulationStation-DE)..."
-        flatpak install -y --noninteractive flathub \
-            com.heroicgameslauncher.hgl \
-            com.usebottles.bottles \
-            net.davidotek.pupgui2 \
-            dev.lizardbyte.app.Sunshine \
-            io.github.es_de.emulationstation-de \
-            2>&1 | tail -10 || echo "    flatpak install failed (will retry next boot)"
-    fi
-
-    # ── 2b. AD attack chain via pipx (no AUR helper needed) ─────────────────
-    # Gives every pentest tool its own isolated venv — no dependency hell.
-    if command -v pipx >/dev/null 2>&1; then
-        echo "[*] Installing AD attack chain via pipx..."
-        export PIPX_HOME=/opt/pipx
-        export PIPX_BIN_DIR=/usr/local/bin
-
-        # Core AD / protocol suite
-        pipx install impacket            2>&1 | tail -3 || echo "    impacket failed"
-        pipx install netexec             2>&1 | tail -3 || echo "    netexec failed"
-        pipx install certipy-ad          2>&1 | tail -3 || echo "    certipy-ad failed"
-        pipx install bloodhound          2>&1 | tail -3 || echo "    bloodhound failed"
-        # Web / recon additions
-        pipx install dirsearch           2>&1 | tail -3 || echo "    dirsearch failed"
-        pipx install git+https://github.com/Tib3rius/AutoRecon.git \
-                                         2>&1 | tail -3 || echo "    AutoRecon failed"
-        # Post-exploitation
-        pipx install pwncat-cs           2>&1 | tail -3 || echo "    pwncat-cs failed"
-        # Cloud attack frameworks
-        pipx install pacu                2>&1 | tail -3 || echo "    pacu (AWS) failed"
-        pipx install scoutsuite          2>&1 | tail -3 || echo "    ScoutSuite failed"
-        echo "    AD toolchain installed → /usr/local/bin/{impacket-*,netexec,certipy,bloodhound,...}"
-    fi
-
-    # ── 2c. Responder + Chaotic-AUR packages ────────────────────────────────
-    if grep -q "\[chaotic-aur\]" /etc/pacman.conf 2>/dev/null; then
-        pacman -S --noconfirm --needed python-responder 2>&1 | tail -5 \
-            || echo "    responder not in chaotic-aur yet — install manually: pipx install responder"
-
-        # ghostty — modern GPU-accelerated terminal (omarchy's preferred terminal)
-        echo "[*] Installing ghostty (GPU-accelerated terminal)..."
-        pacman -S --noconfirm --needed ghostty 2>&1 | tail -5 \
-            || echo "    ghostty not in chaotic-aur yet — try: yay -S ghostty"
-
-        # catppuccin-gtk-theme-mocha — ShadowOS default GTK theme
-        pacman -S --noconfirm --needed catppuccin-gtk-theme-mocha 2>&1 | tail -5 || true
-
-        # bibata-cursor-theme
-        pacman -S --noconfirm --needed bibata-cursor-theme 2>&1 | tail -5 || true
-
-        # wl-screenrec — wayland screen recording
-        pacman -S --noconfirm --needed wl-screenrec 2>&1 | tail -5 || true
-
-        # Privacy browsers (AUR-only — must come from Chaotic-AUR)
-        echo "[*] Installing privacy browsers (LibreWolf, Mullvad Browser, Tor Browser)..."
-        pacman -S --noconfirm --needed librewolf 2>&1 | tail -5 \
-            || echo "    librewolf not in chaotic-aur — try: yay -S librewolf"
-        pacman -S --noconfirm --needed mullvad-browser-bin 2>&1 | tail -5 \
-            || echo "    mullvad-browser-bin not in chaotic-aur — try: yay -S mullvad-browser-bin"
-        pacman -S --noconfirm --needed torbrowser-launcher 2>&1 | tail -5 \
-            || echo "    torbrowser-launcher not in chaotic-aur — try: yay -S torbrowser-launcher"
-        echo "    Browsers installed: librewolf, mullvad-browser-bin, torbrowser-launcher"
-    fi
-
-    # ── 2b. AUR-only goodies installed without an AUR helper ────────────────
-    # Bibata cursor (extracted from github release tarball)
-    if [[ ! -d /usr/share/icons/Bibata-Modern-Classic ]]; then
-        echo "[*] Installing Bibata cursor theme..."
-        TMPCUR=$(mktemp -d)
-        if curl -fsSL -o "$TMPCUR/bibata.tar.xz" \
-            "https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-Classic.tar.xz" 2>/dev/null; then
-            tar -xJf "$TMPCUR/bibata.tar.xz" -C /usr/share/icons/ 2>/dev/null && echo "    Bibata installed"
-        fi
-        rm -rf "$TMPCUR"
-    fi
-
-    # Hysteria2 — QUIC stealth tunnel (not in any Arch repo; install from GitHub releases)
-    if ! command -v hysteria2 >/dev/null && ! command -v hysteria >/dev/null; then
-        echo "[*] Installing hysteria2 (QUIC stealth transport)..."
-        HY_URL="https://github.com/apernet/hysteria/releases/latest/download/hysteria-linux-amd64"
-        if curl -fsSL -o /usr/local/bin/hysteria2 "$HY_URL" 2>/dev/null; then
-            chmod +x /usr/local/bin/hysteria2
-            ln -sf /usr/local/bin/hysteria2 /usr/local/bin/hysteria
-            echo "    hysteria2 installed"
-        else
-            echo "    hysteria2 download failed (skipping)"
-        fi
-    fi
-
-    # Go-based tools (ProjectDiscovery suite + extras)
-    if command -v go >/dev/null; then
-        echo "[*] Installing Go-based tools..."
-        GOBIN=/usr/local/bin
-
-        # ProjectDiscovery crawler
-        ! command -v katana >/dev/null && \
-            GOBIN=$GOBIN go install github.com/projectdiscovery/katana/cmd/katana@latest 2>&1 | tail -2 || true
-
-        # OOB interaction server client (blind SSRF / XXE / injection detection)
-        ! command -v interactsh-client >/dev/null && \
-            GOBIN=$GOBIN go install github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest 2>&1 | tail -2 || true
-
-        # DNS toolkit
-        ! command -v dnsx >/dev/null && \
-            GOBIN=$GOBIN go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest 2>&1 | tail -2 || true
-
-        # Git secret scanning
-        ! command -v gitleaks >/dev/null && \
-            GOBIN=$GOBIN go install github.com/gitleaks/gitleaks/v8@latest 2>&1 | tail -2 || true
-
-        # Secret scanning across code/git history
-        ! command -v trufflehog >/dev/null && \
-            GOBIN=$GOBIN go install github.com/trufflesecurity/trufflehog/v3@latest 2>&1 | tail -2 || true
-
-        # HTTP/HTTPS tunneling pivot
-        ! command -v chisel >/dev/null && \
-            GOBIN=$GOBIN go install github.com/jpillora/chisel@latest 2>&1 | tail -2 || true
-
-        echo "    Go tools installed → katana, interactsh-client, dnsx, gitleaks, trufflehog, chisel"
-    fi
-
-    # testssl.sh (TLS/SSL config + vuln auditor — not in any Arch repo; pure
-    # bash + openssl, no build step needed, just clone and symlink)
-    if ! command -v testssl.sh >/dev/null; then
-        echo "[*] Installing testssl.sh..."
-        if git clone --depth 1 https://github.com/drwetter/testssl.sh.git \
-            /opt/testssl.sh 2>&1 | tail -3; then
-            ln -sf /opt/testssl.sh/testssl.sh /usr/local/bin/testssl.sh
-            echo "    testssl.sh installed"
-        else
-            echo "    testssl.sh clone failed (skipping)"
-        fi
-    fi
-
-    # ── 3. BlackArch keyring (if it failed at build time) ──────────────────
-    if ! pacman-key --list-keys 2>/dev/null | grep -qi blackarch && command -v pacman >/dev/null 2>&1; then
-        echo "[*] Importing BlackArch keyring..."
-        if curl -fsSL https://blackarch.org/keyring/blackarch-keyring.pkg.tar.zst \
-            -o /tmp/blackarch-keyring.pkg.tar.zst; then
-            pacman -U --noconfirm /tmp/blackarch-keyring.pkg.tar.zst 2>&1 | tail -5
-            rm -f /tmp/blackarch-keyring.pkg.tar.zst
-        fi
-    fi
-
-    # ── 4. Refresh package databases ────────────────────────────────────────
-    pacman -Sy --noconfirm 2>&1 | tail -3 || true
-
-    # ── 5. Rustup: pick a stable toolchain so `rustc` actually works ────────
-    if command -v rustup >/dev/null && ! rustup show active-toolchain 2>/dev/null | grep -q stable; then
-        echo "[*] Setting rustup default toolchain to stable…"
-        rustup default stable 2>&1 | tail -3 || true
-        # Mirror to the system user `shadow` as well, since rustup is per-user
-        if id shadow >/dev/null 2>&1; then
-            su - shadow -c 'rustup default stable' 2>&1 | tail -3 || true
-        fi
-    fi
-else
-    echo "[!] No network — skipping online setup. Will re-run next boot."
-    exit 0
+    echo "    Chaotic-AUR added"
 fi
 
-# ── 6. ShadowCypher Python deps not packaged in Arch ───────────────────────
-# Most deps come from packages.x86_64. These six are pip-only:
-#   scrapling   — stealth web fetcher (curl_cffi + Camoufox) for recon tools
-#   litellm     — unified LLM API client for the AI assistant
-#   argon2-cffi — Argon2 KDF for key derivation
-#   ulid-py     — ULID unique IDs used in mission/event tracking
-#   treequest   — tree-of-thought search used by AI planner
-#   paramiko    — SSH client for remote shell operations
-echo "[*] Installing ShadowCypher pip-only dependencies..."
+pacman -Sy --noconfirm 2>&1 | tail -3 || true
+
+# ── 3. AUR-only packages via Chaotic-AUR ────────────────────────────────────
+echo "[*] Installing AUR packages..."
+
+# Ghostty — GPU-accelerated terminal
+pacman -S --noconfirm --needed ghostty 2>&1 | tail -5 \
+    || echo "    ghostty not in Chaotic-AUR yet — install manually: yay -S ghostty"
+
+# Privacy browser
+pacman -S --noconfirm --needed librewolf 2>&1 | tail -5 \
+    || echo "    librewolf not in Chaotic-AUR — try: yay -S librewolf"
+
+# ShadowOS theme stack
+pacman -S --noconfirm --needed catppuccin-gtk-theme-mocha 2>&1 | tail -5 || true
+pacman -S --noconfirm --needed wl-screenrec 2>&1 | tail -5 || true
+
+# ── 4. Bibata cursor theme ───────────────────────────────────────────────────
+if [[ ! -d /usr/share/icons/Bibata-Modern-Classic ]]; then
+    echo "[*] Installing Bibata cursor theme..."
+    TMPCUR=$(mktemp -d)
+    if curl -fsSL -o "$TMPCUR/bibata.tar.xz" \
+        "https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-Classic.tar.xz" 2>/dev/null; then
+        tar -xJf "$TMPCUR/bibata.tar.xz" -C /usr/share/icons/ 2>/dev/null && echo "    Bibata installed"
+    fi
+    rm -rf "$TMPCUR"
+fi
+
+# ── 5. testssl.sh — TLS/SSL config auditor ──────────────────────────────────
+if ! command -v testssl.sh >/dev/null; then
+    echo "[*] Installing testssl.sh..."
+    if git clone --depth 1 https://github.com/drwetter/testssl.sh.git \
+        /opt/testssl.sh 2>&1 | tail -3; then
+        ln -sf /opt/testssl.sh/testssl.sh /usr/local/bin/testssl.sh
+        echo "    testssl.sh installed"
+    else
+        echo "    testssl.sh clone failed (skipping)"
+    fi
+fi
+
+# ── 6. Update mirror list ────────────────────────────────────────────────────
+echo "[*] Updating pacman mirrors..."
+reflector --latest 20 --sort rate --save /etc/pacman.d/mirrorlist 2>&1 | tail -3 || true
+
+# ── 7. ShadowCypher pip dependencies ────────────────────────────────────────
+echo "[*] Installing ShadowCypher pip dependencies..."
 pip install --break-system-packages --quiet --no-warn-script-location \
-    "scrapling>=0.4.15" \
     "litellm>=1.0.0" \
     "argon2-cffi>=23.0.0" \
-    "ulid-py>=1.1.0" \
-    "treequest>=0.3.2" \
     "paramiko>=3.0.0" \
-    2>&1 | tail -5 || echo "    pip install failed — ShadowCypher AI/recon features may be limited"
+    2>&1 | tail -5 || echo "    pip install failed — some ShadowCypher features may be limited"
 echo "    pip deps done"
 
-# ── 7. Stamp ────────────────────────────────────────────────────────────────
-date -Iseconds > "$STAMP"
-# ── AI models (background download after everything else) ──
-/usr/local/bin/shadowos-ai-setup &
+# ── 8. AI model setup (background) ──────────────────────────────────────────
+if [[ -x /usr/local/bin/shadowos-ai-setup ]]; then
+    /usr/local/bin/shadowos-ai-setup &
+fi
 
+# ── 9. Stamp ─────────────────────────────────────────────────────────────────
+date -Iseconds > "$STAMP"
 echo "[✓] First-boot setup complete."

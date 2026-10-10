@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shadow-mode — ShadowOS personality switcher.
-# Hot-swap firewall, DNS, autostart, theme accent, default browser.
-# Usage: shadow-mode <pentest|privacy|dev|ghost|normal|undercover|toggle-tor|picker|status>
+# Hot-swap firewall, DNS, autostart, theme accent.
+# Usage: shadow-mode <normal|privacy|ghost|toggle-tor|picker|status>
 
 set -euo pipefail
 
@@ -17,20 +17,12 @@ usage() {
     cat <<EOF
 ${BOLD}shadow-mode${RESET} — ShadowOS personality switcher
 
-  ${GREEN}normal${RESET}     Default daily-driver
-  ${GREEN}dev${RESET}        Dev daemons up, firewall normal, full editor + container stack
-  ${GREEN}gaming${RESET}     Max performance: CPU boost, GPU clocks, RAM tuned, GameMode active
-  ${GREEN}steamos${RESET}    SteamOS Big Picture: gamescope fullscreen gaming session
-  ${GREEN}pentest${RESET}    Recon + exploit tools live, firewall opens for scanning, no Tor
-  ${GREEN}privacy${RESET}    All egress via Tor, MAC randomized, DNS encrypted, firejail wraps browsers
-  ${GREEN}ghost${RESET}      Maximum lockdown: Tor + Signal only, every other app blocked, ephemeral
-  ${GREEN}amnesia${RESET}    Tails-inspired: ephemeral home + transparent Tor + RAM wipe on shutdown
-  ${GREEN}qubes${RESET}      Qubes-inspired: VM compartmentalization via libvirt/KVM, trust borders
-  ${GREEN}undercover${RESET} Windows-style theme + flat bar for low-profile environments
-  ${GREEN}toggle-tor${RESET} Flip Tor system-wide regardless of current mode
-  ${GREEN}anon${RESET}       Quick alias: start AnonSurf (Parrot-inspired system-wide Tor)
-  ${GREEN}picker${RESET}     Show wofi mode picker
-  ${GREEN}status${RESET}     Show current mode + active rules
+  ${GREEN}normal${RESET}      Default daily-driver
+  ${GREEN}privacy${RESET}     Tor routing, MAC randomized, DNS encrypted, firejail wraps browsers
+  ${GREEN}ghost${RESET}       Maximum lockdown: Tor only, every other app blocked, ephemeral
+  ${GREEN}toggle-tor${RESET}  Flip Tor system-wide regardless of current mode
+  ${GREEN}picker${RESET}      Show wofi mode picker
+  ${GREEN}status${RESET}      Show current mode + active rules
 EOF
 }
 
@@ -66,7 +58,7 @@ apply_mode() {
 
     echo -e "${GREEN}▸${RESET} switching to ${BOLD}$mode${RESET}"
 
-    # Run mode's apply.sh — each mode owns its own implementation.
+    # Run mode's apply.sh — each mode owns its own implementation
     [[ -x "$profile/apply.sh" ]] && "$profile/apply.sh"
 
     echo "$mode" > "$STATE_FILE"
@@ -79,18 +71,11 @@ apply_mode() {
             DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
             /usr/local/bin/shadowos-theme-apply "$mode" 2>/dev/null || true
 
-        # Swap wallpaper to match mode personality
+        # Swap wallpaper to match mode
         declare -A MODE_WALLPAPER=(
             [normal]="shadowos-01-centaurus-a-1920x1080.png"
-            [dev]="shadowos-12-deep-field-1920x1080.png"
-            [pentest]="shadowos-08-rho-ophiuchi-1920x1080.png"
             [privacy]="shadowos-09-seagull-1920x1080.png"
             [ghost]="shadowos-05-collision-1920x1080.png"
-            [undercover]="shadowos-03-ngc253-1920x1080.png"
-            [gaming]="shadowos-10-aurora-1920x1080.png"
-            [steamos]="shadowos-10-aurora-1920x1080.png"
-            [amnesia]="shadowos-07-dark-wolf-1920x1080.png"
-            [qubes]="shadowos-02-milkyway-1920x1080.png"
         )
         WP_FILE="${MODE_WALLPAPER[$mode]:-}"
         WP_PATH="/usr/share/backgrounds/shadowos/${WP_FILE}"
@@ -109,7 +94,7 @@ apply_mode() {
     # Notify desktop
     if command -v notify-send >/dev/null 2>&1; then
         sudo -u "${SUDO_USER:-shadow}" \
-            DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "${SUDO_USER:-shadow}")/bus" \
+            DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "${SUDO_USER:-shadow}")/bus" \
             notify-send -i security-high "ShadowOS" "mode → $mode" 2>/dev/null || true
     fi
 
@@ -126,11 +111,7 @@ apply_mode() {
 }
 
 case "${1:-}" in
-    pentest|privacy|dev|ghost|normal|undercover|gaming|amnesia|qubes|steamos) apply_mode "$1" ;;
-    anon)
-        require_root "$@"
-        shadow-anonsurf start
-        ;;
+    normal|privacy|ghost) apply_mode "$1" ;;
     toggle-tor)
         require_root "$@"
         if systemctl is-active --quiet tor; then
@@ -142,25 +123,23 @@ case "${1:-}" in
         fi
         ;;
     picker)
-        choice=$(printf "normal\ndev\npentest\nprivacy\nghost\namnesia\nqubes\nsteamos\nundercover\ngaming" | wofi --dmenu --prompt="mode →")
+        choice=$(printf "normal\nprivacy\nghost" | wofi --dmenu --prompt="mode →")
         [[ -n "$choice" ]] && pkexec /usr/local/bin/shadow-mode "$choice"
         ;;
     status|"")
         cur=$(current)
         echo "current mode: $cur"
         echo
-        if nft list tables 2>/dev/null | grep -qE 'shadow|anonsurf|killswitch'; then
-            case "$cur" in
-                normal|dev|pentest|undercover)
-                    echo "warning: ghost/privacy firewall rules still active — run: sudo shadow-mode $cur"
-                    echo
-                    ;;
-            esac
+        if nft list tables 2>/dev/null | grep -qE 'shadow|killswitch'; then
+            if [[ "$cur" == "normal" ]]; then
+                echo "warning: privacy/ghost firewall rules still active — run: sudo shadow-mode normal"
+                echo
+            fi
         fi
         echo "tor:        $(systemctl is-active tor 2>/dev/null || echo inactive)"
         echo "dnscrypt:   $(systemctl is-active dnscrypt-proxy 2>/dev/null || echo inactive)"
         echo "firewall:   $(nft list tables 2>/dev/null | tr '\n' ' ' || echo unknown)"
-        echo "macchanger: $(cat /sys/class/net/*/address 2>/dev/null | head -3)"
+        echo "mac:        $(cat /sys/class/net/*/address 2>/dev/null | head -3)"
         ;;
     -h|--help|help) usage ;;
     *) usage; exit 1 ;;
