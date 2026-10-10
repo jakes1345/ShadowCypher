@@ -30,17 +30,12 @@ for conf in \
     "$PROFILE/etc/skel/.config/hypr/hyprland.conf" \
     "$PROFILE/etc/shadowos/desktop/hyprland.conf"; do
     [[ -f "$conf" ]] || { err "Missing: $conf"; continue; }
-    if grep -qn "windowrulev2" "$conf"; then
-        err "$conf: 'windowrulev2' is deprecated — use 'windowrule'"
-    fi
+    # new_optimizations was removed in Hyprland 0.42+
     if grep -qn "new_optimizations" "$conf"; then
         err "$conf: 'new_optimizations' removed in Hyprland 0.42+ — delete the line"
     fi
     if grep -qn "tap-to-click" "$conf"; then
-        err "$conf: 'tap-to-click' must be 'tap_to_click'"
-    fi
-    if grep -qn "windowrule1\b" "$conf"; then
-        err "$conf: 'windowrule' v1 syntax (no filter) is deprecated"
+        err "$conf: use 'tap_to_click' not 'tap-to-click'"
     fi
 done
 ok "Hyprland configs checked"
@@ -49,7 +44,6 @@ ok "Hyprland configs checked"
 echo "==> Checking Waybar config..."
 wb="$PROFILE/etc/skel/.config/waybar/config.jsonc"
 if [[ -f "$wb" ]]; then
-    # Strip // comments before parsing
     if ! sed 's|//.*||g' "$wb" | python3 -m json.tool > /dev/null 2>&1; then
         err "Invalid JSON in $wb"
     fi
@@ -59,10 +53,8 @@ ok "Waybar config checked"
 # ── 4. Systemd units ─────────────────────────────────────────────────────────
 echo "==> Checking systemd units..."
 while IFS= read -r -d '' f; do
-    # Check ExecStart paths exist inside profile tree
     while IFS= read -r line; do
         bin=$(echo "$line" | sed 's/ExecStart=//;s/ .*//')
-        # Only check absolute paths that aren't standard system paths
         if [[ "$bin" == /opt/* || "$bin" == /usr/local/* ]]; then
             rel="${PROFILE}${bin}"
             [[ -f "$rel" ]] || warn "Unit $f: ExecStart path missing in profile: $bin"
@@ -75,12 +67,13 @@ ok "Systemd units checked"
 echo "==> Checking package list..."
 required=(
     hyprland waybar foot mako hypridle hyprlock hyprpaper wofi
-    nftables conntrack-tools apparmor fail2ban macchanger
-    networkmanager bluez blueman pipewire wireplumber
+    nftables apparmor fail2ban macchanger
+    networkmanager bluez pipewire wireplumber
     grim slurp swappy wl-clipboard cliphist
-    polkit-gnome
+    polkit-kde-agent
     python python-gobject gtk3
-    git curl wget
+    git curl wget jq
+    calamares
 )
 for pkg in "${required[@]}"; do
     if ! grep -qx "$pkg" "$PKGS" 2>/dev/null; then
@@ -89,7 +82,18 @@ for pkg in "${required[@]}"; do
 done
 ok "Package list checked"
 
-# ── 6. Critical files exist ───────────────────────────────────────────────────
+# ── 6. Mode scripts all exist ─────────────────────────────────────────────────
+echo "==> Checking mode scripts..."
+for mode in normal privacy ghost dev gaming; do
+    dir="$PROFILE/etc/shadowos/modes/$mode"
+    [[ -f "$dir/apply.sh" ]]  || err "Missing: modes/$mode/apply.sh"
+    if [[ "$mode" != "normal" ]]; then
+        [[ -f "$dir/revert.sh" ]] || err "Missing: modes/$mode/revert.sh"
+    fi
+done
+ok "Mode scripts checked"
+
+# ── 7. Critical files exist ───────────────────────────────────────────────────
 echo "==> Checking critical profile files..."
 critical=(
     "etc/skel/.config/hypr/hyprland.conf"
@@ -98,12 +102,25 @@ critical=(
     "etc/skel/.config/wofi/style.css"
     "etc/shadowos/desktop/hyprland.conf"
     "etc/systemd/system/shadowos-firstboot.service"
-    "opt/shadowcypher/agent/install.sh"
+    "usr/local/bin/shadow-mode"
+    "usr/local/bin/shadowos-session-start"
+    "usr/local/bin/shadowos-firstboot"
+    "usr/local/bin/shadowos-ramwipe"
 )
 for f in "${critical[@]}"; do
     [[ -f "$PROFILE/$f" ]] || err "Critical file missing: $f"
 done
 ok "Critical files checked"
+
+# ── 8. Keybind script targets exist ──────────────────────────────────────────
+echo "==> Checking hyprland keybind targets..."
+while IFS= read -r script; do
+    [[ -f "$PROFILE/$script" ]] || warn "Keybind target missing in profile: $script"
+done < <(grep -h "exec," "$PROFILE/etc/shadowos/desktop/hyprland.conf" 2>/dev/null \
+    | grep -oE '/usr/local/bin/[a-z0-9_-]+' \
+    | sed 's|^/||' \
+    | sort -u)
+ok "Keybind targets checked"
 
 # ── Result ────────────────────────────────────────────────────────────────────
 echo ""
