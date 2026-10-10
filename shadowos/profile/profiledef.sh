@@ -53,11 +53,15 @@ file_permissions=(
   ["/usr/local/bin/guardian-logs"]="0:0:0755"
   ["/usr/local/bin/guardian-status"]="0:0:0755"
   ["/usr/local/bin/guardian-stop"]="0:0:0755"
-  # Modes — 3 only: normal, privacy, ghost
+  # Modes — normal, privacy, ghost, dev, gaming
   ["/etc/shadowos/modes/normal/apply.sh"]="0:0:0755"
   ["/etc/shadowos/modes/privacy/apply.sh"]="0:0:0755"
   ["/etc/shadowos/modes/privacy/revert.sh"]="0:0:0755"
   ["/etc/shadowos/modes/ghost/apply.sh"]="0:0:0755"
   ["/etc/shadowos/modes/ghost/revert.sh"]="0:0:0755"
+  ["/etc/shadowos/modes/dev/apply.sh"]="0:0:0755"
+  ["/etc/shadowos/modes/dev/revert.sh"]="0:0:0755"
+  ["/etc/shadowos/modes/gaming/apply.sh"]="0:0:0755"
+  ["/etc/shadowos/modes/gaming/revert.sh"]="0:0:0755"
   ["/etc/shadowos/modes/_network_open.sh"]="0:0:0755"
 )

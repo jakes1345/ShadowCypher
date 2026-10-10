@@ -20,6 +20,8 @@ ${BOLD}shadow-mode${RESET} — ShadowOS personality switcher
   ${GREEN}normal${RESET}      Default daily-driver
   ${GREEN}privacy${RESET}     Tor routing, MAC randomized, DNS encrypted, firejail wraps browsers
   ${GREEN}ghost${RESET}       Maximum lockdown: Tor only, every other app blocked, ephemeral
+  ${GREEN}dev${RESET}         Performance CPU, open dev ports, start container runtime
+  ${GREEN}gaming${RESET}      Performance CPU, gamemode service
   ${GREEN}toggle-tor${RESET}  Flip Tor system-wide regardless of current mode
   ${GREEN}picker${RESET}      Show wofi mode picker
   ${GREEN}status${RESET}      Show current mode + active rules
@@ -76,6 +78,8 @@ apply_mode() {
             [normal]="shadowos-01-centaurus-a-1920x1080.png"
             [privacy]="shadowos-09-seagull-1920x1080.png"
             [ghost]="shadowos-05-collision-1920x1080.png"
+            [dev]="shadowos-01-centaurus-a-1920x1080.png"
+            [gaming]="shadowos-01-centaurus-a-1920x1080.png"
         )
         WP_FILE="${MODE_WALLPAPER[$mode]:-}"
         WP_PATH="/usr/share/backgrounds/shadowos/${WP_FILE}"
@@ -111,7 +115,7 @@ apply_mode() {
 }
 
 case "${1:-}" in
-    normal|privacy|ghost) apply_mode "$1" ;;
+    normal|privacy|ghost|dev|gaming) apply_mode "$1" ;;
     toggle-tor)
         require_root "$@"
         if systemctl is-active --quiet tor; then
@@ -123,7 +127,7 @@ case "${1:-}" in
         fi
         ;;
     picker)
-        choice=$(printf "normal\nprivacy\nghost" | wofi --dmenu --prompt="mode →")
+        choice=$(printf "normal\nprivacy\nghost\ndev\ngaming" | wofi --dmenu --prompt="mode →")
         [[ -n "$choice" ]] && pkexec /usr/local/bin/shadow-mode "$choice"
         ;;
     status|"")

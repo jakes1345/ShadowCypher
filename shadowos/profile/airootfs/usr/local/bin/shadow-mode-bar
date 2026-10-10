@@ -15,6 +15,14 @@ case "$mode" in
         icon="󰄷"
         desc="Maximum lockdown · Tor only · ephemeral"
         ;;
+    dev)
+        icon="󰲋"
+        desc="Performance CPU · dev ports open · containers ready"
+        ;;
+    gaming)
+        icon="󰊗"
+        desc="Performance CPU · gamemode active"
+        ;;
     *)
         mode="normal"
         icon="󰍳"
