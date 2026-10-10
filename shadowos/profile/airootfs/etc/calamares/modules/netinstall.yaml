@@ -1,88 +1,27 @@
 # ShadowOS install profile picker.
-# Shown in the Calamares "netinstall" step so the user can add optional
-# packages during installation. The base OS (everything on the live ISO)
-# is already installed via unpackfs — these are additive extras only.
-#
-# All packages must exist in:
-#   Arch [core/extra/multilib] · BlackArch · Chaotic-AUR
+# Shown in the Calamares "netinstall" step — additive extras on top of the
+# base ISO. All packages must exist in Arch [core/extra/multilib] or Chaotic-AUR.
 
-- name: "Minimal extras"
-  description: "A few quality-of-life additions not on the minimal ISO path."
-  selected: false
-  packages: []
-
-- name: "Security pro"
-  description: "Full pentest arsenal if not already present — nmap, metasploit, wireshark, ffuf, nuclei, impacket, netexec, and more."
+- name: "Security tools"
+  description: "Curated security and privacy tools — nmap, wireshark, mitmproxy, radare2, and more."
   selected: true
   packages:
     - nmap
-    - rustscan
-    - masscan
-    - metasploit
-    - hydra
-    - hashcat
-    - aircrack-ng
     - wireshark-qt
-    - sqlmap
-    - ffuf
-    - subfinder
-    - nuclei
-    - feroxbuster
-    - impacket
-    - netexec
+    - masscan
     - mitmproxy
-    - bettercap
     - radare2
     - binwalk
-    - sleuthkit
     - yara
-    - john
-    - nikto
     - sslscan
-    - gobuster
-    - zaproxy
-    - seclists
-    - exploitdb
-    - dnsenum
-    - wfuzz
-    - whatweb
     - sshuttle
-    - httpx
-    - naabu
-    - amass
-    - keepassxc
-    - gnupg
-    - veracrypt
-    - tor
-    - torbrowser-launcher
-    - macchanger
     - proxychains-ng
-    - fail2ban
+    - torbrowser-launcher
     - distrobox
     - podman
 
-- name: "Gaming"
-  description: "Steam, Lutris, Heroic, MangoHUD, GameMode, Wine, Gamescope."
-  selected: false
-  packages:
-    - steam
-    - steam-devices
-    - lutris
-    - heroic-games-launcher-bin
-    - prismlauncher
-    - gamemode
-    - lib32-gamemode
-    - mangohud
-    - lib32-mangohud
-    - gamescope
-    - wine-staging
-    - winetricks
-    - vkd3d
-    - lib32-vkd3d
-    - goverlay
-
 - name: "Development"
-  description: "VSCode, Docker, Kubernetes, Rust, Go, Node, Python tooling."
+  description: "VSCode, Docker, Rust, Go, Node, Python tooling."
   selected: false
   packages:
     - code
@@ -93,8 +32,6 @@
     - buildah
     - kubectl
     - helm
-    - terraform
-    - ansible
     - rustup
     - go
     - nodejs

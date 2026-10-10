@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# shadow-term — launch the preferred terminal (ghostty → kitty → foot → alacritty).
+# Usage: shadow-term                      open a shell
+#        shadow-term [-e] cmd [args…]     run a command
+#        shadow-term --title T [-e] cmd   set the window title
+set -uo pipefail
+
+title=""
+if [[ "${1:-}" == "--title" ]]; then
+    title="${2:-}"; shift 2 || true
+fi
+[[ "${1:-}" == "-e" ]] && shift
+
+for term in ghostty kitty foot alacritty; do
+    command -v "$term" >/dev/null 2>&1 || continue
+    args=()
+    case "$term" in
+        ghostty)   [[ -n "$title" ]] && args+=("--title=$title"); (( $# )) && args+=(-e "$@") ;;
+        kitty)     [[ -n "$title" ]] && args+=(--title "$title"); (( $# )) && args+=("$@") ;;
+        foot)      [[ -n "$title" ]] && args+=(--title "$title"); (( $# )) && args+=("$@") ;;
+        alacritty) [[ -n "$title" ]] && args+=(--title "$title"); (( $# )) && args+=(-e "$@") ;;
+    esac
+    exec "$term" "${args[@]}"
+done
+
+notify-send -u critical "ShadowOS" "No terminal emulator installed (expected ghostty)" 2>/dev/null
+exit 1

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# shadow-power-menu — lock / suspend / reboot / shutdown picker (SUPER+Escape, Waybar power icon).
+set -uo pipefail
+
+choice=$(printf '%s\n' \
+    "󰌾  Lock" \
+    "󰤄  Suspend" \
+    "󰍃  Log out" \
+    "󰜉  Reboot" \
+    "󰐥  Shut down" \
+    | wofi --dmenu --prompt "power" --width 280 --height 260 --cache-file /dev/null)
+
+case "$choice" in
+    *Lock)       exec loginctl lock-session ;;
+    *Suspend)    exec systemctl suspend ;;
+    *"Log out")  exec hyprctl dispatch exit ;;
+    *Reboot)     exec systemctl reboot ;;
+    *"Shut down") exec systemctl poweroff ;;
+esac

@@ -1,19 +1,26 @@
 #!/usr/bin/env bash
-# Emit a compact mode pill for Waybar (text + CSS class).
-set -euo pipefail
+# shadow-mode-bar — emit the Waybar mode pill (JSON: text, class, tooltip).
+# State is written by shadow-mode to /var/lib/shadowos/current-mode.
+set -uo pipefail
 
-mode="$(cat /var/lib/shadowos/current-mode 2>/dev/null || echo normal)"
+STATE_FILE="/var/lib/shadowos/current-mode"
+mode="$({ tr -d '[:space:]' < "$STATE_FILE"; } 2>/dev/null)"
 
 case "$mode" in
-    normal)     icon="󰋜"; label="normal" ;;
-    dev)        icon="󰲋"; label="dev" ;;
-    pentest)    icon="󰞱"; label="pentest" ;;
-    privacy)    icon="󰖪"; label="privacy" ;;
-    ghost)      icon="󰻌"; label="ghost" ;;
-    undercover) icon="󰍲"; label="cover" ;;
-    gaming)     icon="󰊗"; label="gaming" ;;
-    *)          icon="󰒓"; label="$mode" ;;
+    privacy)
+        icon="󱇯"
+        desc="Tor routing · MAC randomized · encrypted DNS"
+        ;;
+    ghost)
+        icon="󰄷"
+        desc="Maximum lockdown · Tor only · ephemeral"
+        ;;
+    *)
+        mode="normal"
+        icon="󰍳"
+        desc="Daily driver · standard firewall"
+        ;;
 esac
 
-printf '{"text":"%s %s","class":"mode-%s","tooltip":"ShadowOS mode: %s\\nClick to switch (SUPER+M)"}\n' \
-    "$icon" "$label" "$mode" "$mode"
+printf '{"text":"%s %s","alt":"%s","class":"mode-%s","tooltip":"ShadowOS mode: %s\\n%s\\n\\nClick to switch  ·  SUPER+M"}\n' \
+    "$icon" "$mode" "$mode" "$mode" "$mode" "$desc"

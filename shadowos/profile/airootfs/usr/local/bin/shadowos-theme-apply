@@ -1,23 +1,39 @@
 #!/usr/bin/env bash
-# Apply desktop theme files for a ShadowOS personality mode.
-# Called from shadow-mode after switching; safe to run as the logged-in user.
-set -euo pipefail
+# shadowos-theme-apply — sync the desktop accent to the active ShadowOS mode.
+# Called by shadow-mode after a switch (as the logged-in user) and by
+# shadowos-session-start at login (with --no-reload, before Hyprland starts).
+#
+#   normal  → ShadowCypher teal (#00E0A4)
+#   privacy → amber            (#F4A261)
+#   ghost   → red              (#E63946)
+#
+# Waybar's mode pill is styled by CSS class (see waybar/style.css), so no
+# config swapping is needed — only the Hyprland border accent is written here.
+set -uo pipefail
 
 mode="${1:-normal}"
-cfg="${XDG_CONFIG_HOME:-$HOME/.config}/waybar"
-hypr="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+reload=1
+[[ "${2:-}" == "--no-reload" ]] && reload=0
 
-mkdir -p "$cfg" "$hypr"
+hypr="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+mkdir -p "$hypr"
 
 case "$mode" in
-    undercover)
-        cp -f /etc/skel/.config/waybar/config.undercover.jsonc "$cfg/config.jsonc"
-        cp -f /etc/skel/.config/waybar/style.undercover.css "$cfg/style.css"
-        ;;
-    *)
-        cp -f /etc/skel/.config/waybar/config.normal.jsonc "$cfg/config.jsonc"
-        cp -f /etc/skel/.config/waybar/style.normal.css "$cfg/style.css"
-        ;;
+    privacy) border="rgba(F4A261FF) rgba(E76F51FF) 45deg" ;;
+    ghost)   border="rgba(E63946FF) rgba(9D0208FF) 45deg" ;;
+    *)       mode="normal"; border="rgba(00E0A4FF) rgba(00B988FF) 45deg" ;;
 esac
 
-pkill -SIGUSR2 waybar 2>/dev/null || true
+cat > "$hypr/mode.conf" <<EOF
+# Written by shadowos-theme-apply when the ShadowOS mode changes — do not edit.
+# mode: $mode
+general {
+    col.active_border = $border
+}
+EOF
+
+if (( reload )); then
+    hyprctl reload >/dev/null 2>&1 || true
+    # Refresh the Waybar mode pill immediately (custom/mode uses signal 8)
+    pkill -RTMIN+8 waybar 2>/dev/null || true
+fi

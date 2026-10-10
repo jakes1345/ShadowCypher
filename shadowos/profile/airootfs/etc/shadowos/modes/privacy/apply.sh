@@ -87,9 +87,4 @@ fi
 systemctl start usbguard 2>/dev/null || true
 echo "  ✓ USBGuard active — new USB devices blocked"
 
-# Waybar: switch to privacy theme
-CONFIG_DIR="${HOME:-/root}/.config/waybar"
-[[ -f "$CONFIG_DIR/config.privacy.jsonc" ]] && cp "$CONFIG_DIR/config.privacy.jsonc" "$CONFIG_DIR/config.jsonc"
-pkill -SIGUSR2 waybar 2>/dev/null || true
-
 echo "  ✓ Privacy mode fully active"

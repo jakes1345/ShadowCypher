@@ -98,8 +98,8 @@ apply_mode() {
             notify-send -i security-high "ShadowOS" "mode → $mode" 2>/dev/null || true
     fi
 
-    # Refresh Waybar accent
-    pkill -SIGUSR2 waybar 2>/dev/null || true
+    # Refresh the Waybar mode pill (custom/mode listens on signal 8)
+    pkill -RTMIN+8 waybar 2>/dev/null || true
 
     # Switch AI model for this mode
     if [[ -f /etc/shadowcypher/ai.json ]] && command -v jq >/dev/null 2>&1; then

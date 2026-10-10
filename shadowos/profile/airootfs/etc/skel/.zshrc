@@ -1,90 +1,104 @@
-# ShadowOS default zsh config
-autoload -Uz compinit && compinit
-setopt autocd interactivecomments hist_ignore_dups share_history
+# ShadowOS — zsh config (fast, minimal). Personal additions: ~/.zshrc.local
+
+# === History ===
 HISTFILE=~/.zsh_history
-HISTSIZE=10000
-SAVEHIST=10000
+HISTSIZE=50000
+SAVEHIST=50000
+setopt share_history hist_ignore_all_dups hist_ignore_space hist_reduce_blanks extended_history
 
-# Aliases
-alias ls='eza --group-directories-first --icons'
-alias ll='eza -l --group-directories-first --icons --git'
-alias la='eza -la --group-directories-first --icons --git'
+# === Shell options ===
+setopt autocd interactive_comments no_beep
+bindkey -e
+
+# === Completion ===
+autoload -Uz compinit && compinit
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+# === Environment ===
+export EDITOR=nvim
+export VISUAL=nvim
+export PAGER=less
+export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+export MANROFFOPT="-c"
+export BAT_THEME="ansi"
+
+# === Aliases ===
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -l --icons --group-directories-first --git'
+alias la='eza -la --icons --group-directories-first --git'
+alias lt='eza --tree --level=2 --icons --group-directories-first'
 alias cat='bat --paging=never --style=plain'
-alias grep='rg'
-alias find='fd'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias v='nvim'
+alias rm='rm -I'
+alias diff='diff --color=auto'
+alias ip='ip -color=auto'
 
+# ShadowOS
 alias mode='shadow-mode'
 alias leak='shadow-leak-test'
 alias tor-status='systemctl status tor --no-pager'
+alias myip='curl -s https://api.ipify.org; echo'
+alias torip='torsocks curl -s https://api.ipify.org; echo'
+alias ff='fastfetch'
 
-# Welcome banner on first prompt of new terminals
-if [[ -z "$SHADOWOS_GREETED" && -t 1 ]]; then
-    export SHADOWOS_GREETED=1
-    fastfetch --config /etc/fastfetch/shadowos.jsonc 2>/dev/null || true
-fi
-
-# Starship prompt
-command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"
-alias watch='shadow-stream'
-
-# --- ShadowOS Tactical Aliases ---
-alias wipe='shadow-wipe'
-alias ports='rustscan -a'
-alias recon='subfinder -d $1 | httpx'
-alias lls='ls -lah --color=auto'
-alias search='grep -rnw . -e'
-alias myip='curl -s https://ifconfig.me && echo'
-
-# === Omarchy-inspired shell setup ===
-
-# zoxide — smart cd (learns most-visited dirs, replaces cd)
-command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)" && alias cd='z'
-
-# atuin — shell history with fuzzy search (replaces ctrl+r)
-command -v atuin >/dev/null 2>&1 && eval "$(atuin init zsh)"
-
-# yazi — shell wrapper: cd to last dir when exiting yazi
+# yazi: cd into the last directory on exit
 yy() {
-    local tmp
-    tmp="$(mktemp -t "yazi-cwd.XXXXX")"
+    local tmp cwd
+    tmp="$(mktemp -t yazi-cwd.XXXXXX)"
     yazi "$@" --cwd-file="$tmp"
-    if cwd="$(cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-        builtin cd -- "$cwd" || true
+    if cwd="$(<"$tmp")" && [[ -n "$cwd" && "$cwd" != "$PWD" ]]; then
+        builtin cd -- "$cwd"
     fi
     rm -f -- "$tmp"
 }
 
-# === Privacy / AnonSurf aliases (Parrot-inspired) ===
-alias anonsurf='sudo shadow-anonsurf'
-alias anon-start='sudo shadow-anonsurf start'
-alias anon-stop='sudo shadow-anonsurf stop'
-alias anon-check='shadow-anonsurf check'
-alias anon-status='shadow-anonsurf status'
-alias myip='torsocks curl -s https://api.ipify.org && echo'
-alias realip='curl -s https://api.ipify.org && echo'
+# === Tools ===
+# fzf: Ctrl-R history, Ctrl-T files, Alt-C cd
+if command -v fzf >/dev/null; then
+    export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border
+      --color=bg+:#161B22,fg+:#E6EDF3,hl:#00E0A4,hl+:#00E0A4,pointer:#00E0A4,prompt:#00E0A4,info:#8B949E,border:#30363D'
+    if fzf --zsh >/dev/null 2>&1; then
+        source <(fzf --zsh)
+    else
+        [[ -f /usr/share/fzf/key-bindings.zsh ]] && source /usr/share/fzf/key-bindings.zsh
+        [[ -f /usr/share/fzf/completion.zsh ]]   && source /usr/share/fzf/completion.zsh
+    fi
+fi
 
-# === Qubes VM aliases ===
-alias qube='sudo shadow-qube'
-alias qube-disp='sudo shadow-qube disposable'
-alias qube-list='shadow-qube list'
+# zoxide: cd learns frequent dirs (cd <partial>, cdi for interactive picker)
+command -v zoxide >/dev/null && eval "$(zoxide init zsh --cmd cd)"
 
-# === SteamOS / Gaming aliases ===
-alias game='shadow-gamescope'
-alias steam-bp='shadow-gamescope'
-
-# === Amnesia / Tails aliases ===
-alias amnesia='sudo /etc/shadowos/modes/amnesia/apply.sh'
-
-# Safer rm (move to trash instead of delete)
-alias rm='rm -I'
-
-# Modern tool replacements (omarchy-style)
-alias ps='procs'
-alias du='gdu'
-alias diff='diff --color=always'
-
-# Zsh plugins (installed as packages, must be sourced)
+# === Plugins ===
 [[ -f /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && \
     source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#484F58'
+
+# === Prompt ===
+command -v starship >/dev/null && eval "$(starship init zsh)"
+
+# === Greeting: one line, once per terminal window ===
+if [[ -o interactive && -z "$SHADOWOS_GREETED" && -z "$TMUX" ]]; then
+    export SHADOWOS_GREETED=1
+    () {
+        local m=normal c=$'\e[38;2;230;237;243m'
+        [[ -r /var/lib/shadowos/current-mode ]] && m="$(</var/lib/shadowos/current-mode)"
+        case "$m" in
+            privacy) c=$'\e[38;2;244;162;97m' ;;
+            ghost)   c=$'\e[38;2;230;57;70m' ;;
+        esac
+        print -P "%F{#00E0A4}%B ShadowOS%b%f  %F{#484F58}·%f  mode ${c}${m}"$'\e[0m'"  %F{#484F58}·  SUPER+M to switch · F1 for help%f"
+    }
+fi
+
+# Local overrides
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+
+# syntax-highlighting must be sourced last
 [[ -f /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
     source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh

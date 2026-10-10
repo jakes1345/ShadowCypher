@@ -62,6 +62,8 @@ polkit-kde-agent
 qt5-wayland
 waybar
 wofi
+ghostty
+foot
 hyprpaper
 hyprlock
 hypridle

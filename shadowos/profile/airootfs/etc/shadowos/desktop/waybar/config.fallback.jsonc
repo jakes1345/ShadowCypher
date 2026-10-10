@@ -27,7 +27,7 @@
     "format-ethernet": "  {ifname}",
     "format-disconnected": "  No network",
     "interval": 5,
-    "on-click": "foot -e nmtui"
+    "on-click": "shadow-term -e nmtui"
   },
 
   "pulseaudio": {

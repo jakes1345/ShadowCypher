@@ -1,11 +1,40 @@
+# ShadowOS notifications — ShadowCypher palette
 font=JetBrainsMono Nerd Font 11
-background-color=#0A0E13DD
-text-color=#E6EDF3
-border-color=#00E0A455
-border-size=1
-border-radius=10
-padding=14
-margin=10
-default-timeout=5000
+width=360
+height=160
 anchor=top-right
-max-icon-size=48
+outer-margin=10
+margin=8
+padding=14
+border-size=2
+border-radius=10
+icons=1
+max-icon-size=40
+max-visible=5
+layer=overlay
+sort=-time
+group-by=app-name
+default-timeout=5000
+ignore-timeout=0
+
+background-color=#0D1117F2
+text-color=#E6EDF3
+border-color=#00E0A4
+progress-color=over #00E0A433
+
+format=<b>%s</b>\n%b
+
+[urgency=low]
+border-color=#30363D
+text-color=#8B949E
+default-timeout=3000
+
+[urgency=critical]
+border-color=#E63946
+default-timeout=0
+
+[grouped]
+format=<b>%s</b> <span color="#8B949E">(%g)</span>\n%b
+
+[mode=do-not-disturb]
+invisible=1

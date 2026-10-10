@@ -15,7 +15,7 @@
   "packages": [
     "hyprland", "xdg-desktop-portal-hyprland", "qt6-wayland", "qt6-declarative",
     "qt6-5compat", "qt6-svg", "waybar", "wofi", "hyprpaper", "hyprlock", "hypridle",
-    "mako", "foot", "xterm", "thunar", "wl-clipboard", "cliphist", "polkit-gnome",
+    "mako", "ghostty", "wl-clipboard", "cliphist", "polkit-kde-agent", "grim", "slurp", "swappy",
     "sddm", "pipewire", "pipewire-pulse", "wireplumber", "ttf-jetbrains-mono-nerd",
     "papirus-icon-theme",
     "tor", "firejail", "apparmor", "nftables",

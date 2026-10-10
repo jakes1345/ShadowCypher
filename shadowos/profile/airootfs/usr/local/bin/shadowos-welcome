@@ -1,332 +1,74 @@
-#!/usr/bin/env python3
-"""
-ShadowOS Welcome — first-boot setup wizard.
-Runs once on first graphical login. Sets hostname, mode, API key.
-"""
-import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, GLib, Pango
-import os, subprocess, sys, socket, json, threading, datetime
-import urllib.request
+#!/usr/bin/env bash
+# shadowos-welcome — first-boot welcome. Runs once, stamps itself, never again.
+# Launched by shadowos-welcome.service / hyprland exec-once. Offline, no installs.
 
-STAMP = os.path.expanduser("~/.config/shadowos/welcome.stamp")
+STAMP="$HOME/.config/shadowos/welcome.stamp"
+[[ -f "$STAMP" ]] && exit 0
 
-CSS = b"""
-* { color: #f1f5f9; }
-window { background-color: #060a10; }
-.card {
-    background: linear-gradient(135deg, rgba(17,24,39,0.9), rgba(6,10,16,0.97));
-    border: 1px solid rgba(0,212,255,0.25);
-    border-radius: 16px;
-    padding: 28px 32px;
-}
-.page-title { font-size: 22px; font-weight: 900; color: #f1f5f9; }
-.section-lbl { font-size: 9px; font-weight: 800; letter-spacing: 2px; color: #475569; font-family: monospace; }
-.sub { font-size: 12px; color: #94a3b8; }
-.mode-btn { background: rgba(17,24,39,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px; color: #94a3b8; font-size: 12px; font-weight: 600; }
-.mode-btn:hover { border-color: rgba(0,212,255,0.5); color: #f1f5f9; }
-.mode-active { border-color: #00d4ff !important; color: #00d4ff !important; background: rgba(0,212,255,0.08) !important; }
-entry { background: rgba(17,24,39,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 9px 12px; color: #f1f5f9; font-family: monospace; font-size: 12px; }
-entry:focus { border-color: #00d4ff; }
-button.go { background: rgba(0,212,255,0.12); border: 1px solid #00d4ff; border-radius: 8px; padding: 10px 28px; color: #00d4ff; font-weight: 800; font-size: 13px; letter-spacing: 1px; }
-button.go:hover { background: rgba(0,212,255,0.22); }
-button.back { background: transparent; border: none; color: #475569; font-size: 12px; }
-button.back:hover { color: #94a3b8; }
-progressbar trough { background: rgba(255,255,255,0.05); border-radius: 3px; min-height: 3px; }
-progressbar progress { background: #00d4ff; border-radius: 3px; min-height: 3px; }
-"""
+# Not attached to a terminal (systemd/exec-once)? Re-launch inside one.
+if [[ ! -t 0 && -n "${WAYLAND_DISPLAY:-}" && -z "${SHADOWOS_WELCOME_TTY:-}" ]]; then
+    export SHADOWOS_WELCOME_TTY=1
+    command -v shadow-term >/dev/null && exec shadow-term --title "Welcome to ShadowOS" -e "$0"
+    for term in ghostty kitty foot alacritty; do
+        command -v "$term" >/dev/null && exec "$term" -e "$0"
+    done
+    exit 0
+fi
 
-MODES = [
-    ("normal",     "🌐", "Normal",      "Daily driver"),
-    ("dev",        "⚡", "Dev",         "Dev tools + containers"),
-    ("pentest",    "🎯", "Pentest",      "Recon tools active"),
-    ("privacy",    "🔒", "Privacy",      "Tor + encrypted DNS"),
-    ("ghost",      "👻", "Ghost",        "Maximum lockdown"),
-    ("undercover", "💼", "Undercover",   "Low-profile look"),
-]
+G='\033[38;2;0;224;164m'   # ShadowCypher teal
+W='\033[38;2;230;237;243m'
+S='\033[38;2;141;150;160m'
+D='\033[38;2;61;75;92m'
+B='\033[1m'; R='\033[0m'
 
+line() { printf "${D}%s${R}\n" "────────────────────────────────────────────────────────"; }
 
-class Welcome(Gtk.Window):
-    def __init__(self):
-        super().__init__(title="Welcome to ShadowOS")
-        self.set_default_size(620, 520)
-        self.set_position(Gtk.WindowPosition.CENTER)
-        self.set_resizable(False)
-        self.connect("delete-event", self._on_close)
-        self._mode = "normal"
+clear
+printf "\n${G}${B}"
+cat <<'EOF'
+   ███████ ██   ██  █████  ██████   ██████  ██     ██
+   ██      ██   ██ ██   ██ ██   ██ ██    ██ ██     ██
+   ███████ ███████ ███████ ██   ██ ██    ██ ██  █  ██
+        ██ ██   ██ ██   ██ ██   ██ ██    ██ ██ ███ ██
+   ███████ ██   ██ ██   ██ ██████   ██████   ███ ███
+EOF
+printf "${R}   ${S}ShadowCypher  ·  sovereign personal security${R}\n\n"
+line
+printf "\n${W}${B}Welcome.${R} ${S}ShadowOS has three modes. Pick one now, switch any time.${R}\n\n"
+printf "  ${G}${B}normal${R}    daily driver — full network, all apps, no restrictions\n"
+printf "  ${G}${B}privacy${R}   Tor routing, encrypted DNS, MAC randomized, sandboxed browsers\n"
+printf "  ${G}${B}ghost${R}     maximum lockdown — Tor only, everything else blocked, ephemeral\n\n"
+line
 
-        prov = Gtk.CssProvider()
-        prov.load_from_data(CSS)
-        Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+# ── pick a mode ──────────────────────────────────────────────────────────────
+mode=""
+if [[ -n "${WAYLAND_DISPLAY:-}" ]] && command -v wofi >/dev/null; then
+    mode=$(printf "normal\nprivacy\nghost" | wofi --dmenu --prompt="default mode →" 2>/dev/null)
+fi
+if [[ -z "$mode" ]]; then
+    printf "\n${W}Default mode${R} ${S}[normal/privacy/ghost]${R} ${G}▸${R} "
+    read -r mode
+fi
+mode="${mode,,}"
+case "$mode" in normal|privacy|ghost) ;; *) mode="normal" ;; esac
 
-        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        outer.set_margin_top(36); outer.set_margin_bottom(36)
-        outer.set_margin_start(52); outer.set_margin_end(52)
+printf "\n${G}▸${R} setting mode: ${B}$mode${R}\n"
+if ! shadow-mode "$mode"; then
+    printf "${S}  (could not apply now — run: sudo shadow-mode $mode)${R}\n"
+fi
 
-        self._bar = Gtk.ProgressBar()
-        self._bar.set_fraction(0.0)
-        outer.pack_start(self._bar, False, False, 0)
-        outer.pack_start(Gtk.Box(), False, False, 6)
+# ── keybinds ─────────────────────────────────────────────────────────────────
+printf "\n"; line
+printf "\n${W}${B}Three keys to know${R}\n\n"
+printf "  ${G}${B}SUPER + D${R}        app launcher\n"
+printf "  ${G}${B}SUPER + Return${R}   terminal\n"
+printf "  ${G}${B}SUPER + M${R}        mode picker  ${S}(or: shadow-mode <name>)${R}\n\n"
+printf "  ${S}Full tour any time:${R} ${G}SUPER + F1${R}  ${S}or${R}  ${G}shadowos-tour${R}\n\n"
+line
 
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        card.get_style_context().add_class("card")
+# ── stamp ────────────────────────────────────────────────────────────────────
+mkdir -p "$(dirname "$STAMP")"
+date -Is > "$STAMP"
 
-        self._stack = Gtk.Stack()
-        self._stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT)
-        self._stack.set_transition_duration(220)
-        self._stack.add_named(self._pg_welcome(), "welcome")
-        self._stack.add_named(self._pg_identity(), "identity")
-        self._stack.add_named(self._pg_mode(), "mode")
-        self._stack.add_named(self._pg_connect(), "connect")
-        self._stack.add_named(self._pg_done(), "done")
-        card.pack_start(self._stack, True, True, 0)
-        outer.pack_start(card, True, True, 0)
-        self.add(outer)
-
-    def _goto(self, page, frac):
-        self._stack.set_visible_child_name(page)
-        self._bar.set_fraction(frac)
-
-    # ── Page builders ──────────────────────────────────────────────────────
-
-    def _pg_welcome(self):
-        b = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        b.set_valign(Gtk.Align.CENTER)
-        logo = Gtk.Label(); logo.set_markup('<span font="52" color="#00d4ff">⬡</span>')
-        b.pack_start(logo, False, False, 0)
-        t = Gtk.Label(); t.set_markup('<span font_weight="black" font_size="xx-large" color="#00d4ff" letter_spacing="3000">SHADOWOS</span>')
-        b.pack_start(t, False, False, 0)
-        s = Gtk.Label(label="Sovereign Security Operating System"); s.get_style_context().add_class("sub")
-        b.pack_start(s, False, False, 0)
-        d = Gtk.Label(); d.set_markup('<span color="#475569" size="small">Privacy. Power. Precision. Let\'s get you set up.</span>')
-        b.pack_start(d, False, False, 8)
-        btn = Gtk.Button(label="Get Started  →"); btn.get_style_context().add_class("go"); btn.set_halign(Gtk.Align.CENTER)
-        btn.connect("clicked", lambda _: self._goto("identity", 0.25))
-        b.pack_start(btn, False, False, 12)
-        return b
-
-    def _pg_identity(self):
-        b = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        self._add_header(b, "IDENTITY", "Set Your Identity")
-        self._add_sub(b, "Hostname and operator handle appear in logs and the Sovereign network.")
-
-        self._add_lbl(b, "HOSTNAME", top=10)
-        self._hn = Gtk.Entry(); self._hn.set_placeholder_text("shadow-node-01"); self._hn.set_text(socket.gethostname())
-        b.pack_start(self._hn, False, False, 0)
-
-        self._add_lbl(b, "OPERATOR HANDLE", top=6)
-        self._handle = Gtk.Entry(); self._handle.set_placeholder_text("Your alias (used in logs and IRC)")
-        b.pack_start(self._handle, False, False, 0)
-
-        self._add_btns(b, back=None, nxt=("Continue  →", self._do_identity))
-        return b
-
-    def _pg_mode(self):
-        b = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        self._add_header(b, "PERSONALITY", "Choose Your Mode")
-        self._add_sub(b, "Switch anytime: shadow-mode <name>")
-
-        self._mode_btns = {}
-        grid = Gtk.Grid(); grid.set_column_spacing(8); grid.set_row_spacing(8); grid.set_margin_top(6)
-        for i, (mid, icon, name, desc) in enumerate(MODES):
-            btn = Gtk.Button(); btn.get_style_context().add_class("mode-btn")
-            inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            inner.pack_start(Gtk.Label(label=f"{icon}  {name}"), False, False, 0)
-            dl = Gtk.Label(label=desc); dl.get_style_context().add_class("sub")
-            inner.pack_start(dl, False, False, 0)
-            btn.add(inner); btn.connect("clicked", self._on_mode, mid)
-            self._mode_btns[mid] = btn
-            grid.attach(btn, i % 2, i // 2, 1, 1)
-        b.pack_start(grid, False, False, 0)
-        self._on_mode(None, "normal")
-        self._add_btns(b, back=("← Back", lambda _: self._goto("identity", 0.25)), nxt=("Continue  →", self._do_mode))
-        return b
-
-    def _pg_connect(self):
-        b = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        self._add_header(b, "CLOUD SYNC (OPTIONAL)", "Connect to ShadowCypher")
-        self._add_sub(b, "Link this machine as a Guardian node. Skip to stay fully offline.")
-
-        self._add_lbl(b, "API KEY", top=10)
-        self._api = Gtk.Entry(); self._api.set_placeholder_text("sc_live_xxxxxxxxxxxx")
-        self._api.set_visibility(False); self._api.set_input_purpose(Gtk.InputPurpose.PASSWORD)
-        b.pack_start(self._api, False, False, 0)
-
-        self._cs = Gtk.Label(label=""); self._cs.set_halign(Gtk.Align.START)
-        b.pack_start(self._cs, False, False, 0)
-
-        n = Gtk.Label(); n.set_markup('<span color="#475569" size="small">Get your key at shadowcypher.site/dashboard\nStored in /etc/shadowcypher/config.json — never leaves this machine.</span>')
-        n.set_halign(Gtk.Align.START); n.set_line_wrap(True); b.pack_start(n, False, False, 0)
-
-        row = Gtk.Box(spacing=8); row.set_margin_top(14)
-        back = Gtk.Button(label="← Back"); back.get_style_context().add_class("back")
-        back.connect("clicked", lambda _: self._goto("mode", 0.5)); row.pack_start(back, False, False, 0)
-        skip = Gtk.Button(label="Skip"); skip.get_style_context().add_class("back")
-        skip.connect("clicked", lambda _: self._finish()); row.pack_start(skip, False, False, 0)
-        nxt = Gtk.Button(label="Connect & Finish  →"); nxt.get_style_context().add_class("go")
-        nxt.connect("clicked", self._do_connect); row.pack_end(nxt, False, False, 0)
-        b.pack_end(row, False, False, 0)
-        return b
-
-    def _pg_done(self):
-        b = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        b.set_valign(Gtk.Align.CENTER)
-        chk = Gtk.Label(); chk.set_markup('<span font="48" color="#00d4ff">✓</span>')
-        b.pack_start(chk, False, False, 0)
-        t = Gtk.Label(); t.set_markup('<span font_weight="bold" font_size="x-large" color="#f1f5f9">You\'re ready.</span>')
-        b.pack_start(t, False, False, 0)
-        self._done_msg = Gtk.Label(); self._done_msg.set_markup('<span color="#94a3b8">ShadowOS is configured. Welcome, Operator.</span>')
-        self._done_msg.set_justify(Gtk.Justification.CENTER); b.pack_start(self._done_msg, False, False, 0)
-        tips = Gtk.Label(); tips.set_markup(
-            '<span color="#475569" size="small">'
-            '<b>shadow-mode</b> — switch personality\n'
-            '<b>shadowcypher</b> — launch the security platform\n'
-            '<b>shadowcypher.site</b> — manage your account</span>'
-        ); tips.set_justify(Gtk.Justification.CENTER); b.pack_start(tips, False, False, 8)
-        row = Gtk.Box(spacing=12); row.set_halign(Gtk.Align.CENTER)
-        tour_btn = Gtk.Button(label="Take the OS tour  ▶")
-        tour_btn.get_style_context().add_class("go")
-        tour_btn.connect("clicked", lambda _: (
-            subprocess.Popen(["/usr/local/bin/shadowos-tour"], start_new_session=True),
-            Gtk.main_quit()
-        ))
-        row.pack_start(tour_btn, False, False, 0)
-        btn = Gtk.Button(label="Skip — launch desktop"); btn.get_style_context().add_class("back"); btn.set_halign(Gtk.Align.CENTER)
-        btn.connect("clicked", lambda _: Gtk.main_quit())
-        row.pack_start(btn, False, False, 0)
-        b.pack_start(row, False, False, 12)
-        return b
-
-    # ── Helpers ───────────────────────────────────────────────────────────
-
-    def _add_header(self, b, section, title):
-        sl = Gtk.Label(label=section); sl.get_style_context().add_class("section-lbl"); sl.set_halign(Gtk.Align.START)
-        b.pack_start(sl, False, False, 0)
-        tl = Gtk.Label(); tl.set_markup(f'<span font_weight="bold" font_size="x-large" color="#f1f5f9">{title}</span>')
-        tl.set_halign(Gtk.Align.START); b.pack_start(tl, False, False, 0)
-
-    def _add_sub(self, b, text):
-        l = Gtk.Label(label=text); l.get_style_context().add_class("sub"); l.set_halign(Gtk.Align.START); l.set_line_wrap(True)
-        b.pack_start(l, False, False, 0)
-
-    def _add_lbl(self, b, text, top=0):
-        l = Gtk.Label(label=text); l.get_style_context().add_class("section-lbl"); l.set_halign(Gtk.Align.START)
-        l.set_margin_top(top); b.pack_start(l, False, False, 0)
-
-    def _add_btns(self, b, back, nxt):
-        row = Gtk.Box(spacing=8); row.set_margin_top(14)
-        if back:
-            bb = Gtk.Button(label=back[0]); bb.get_style_context().add_class("back"); bb.connect("clicked", back[1])
-            row.pack_start(bb, False, False, 0)
-        if nxt:
-            nb = Gtk.Button(label=nxt[0]); nb.get_style_context().add_class("go"); nb.connect("clicked", nxt[1])
-            row.pack_end(nb, False, False, 0)
-        b.pack_end(row, False, False, 0)
-
-    def _on_mode(self, _btn, mid):
-        self._mode = mid
-        for k, b in self._mode_btns.items():
-            ctx = b.get_style_context()
-            ctx.add_class("mode-active") if k == mid else ctx.remove_class("mode-active")
-
-    # ── Actions ───────────────────────────────────────────────────────────
-
-    def _do_identity(self, _):
-        hn = self._hn.get_text().strip()
-        handle = self._handle.get_text().strip()
-        if hn:
-            try: subprocess.run(["sudo", "hostnamectl", "set-hostname", hn], check=True, capture_output=True)
-            except Exception: pass
-        if handle:
-            self._save_cfg({"identity": {"handle": handle}})
-        self._goto("mode", 0.5)
-
-    def _do_mode(self, _):
-        try: subprocess.run(["sudo", "shadow-mode", self._mode], check=True, capture_output=True)
-        except Exception: pass
-        self._goto("connect", 0.75)
-
-    def _do_connect(self, _):
-        key = self._api.get_text().strip()
-        if not key:
-            self._cs.set_markup('<span color="#f87171">Enter a key or click Skip.</span>'); return
-        self._cs.set_markup('<span color="#94a3b8">Verifying...</span>')
-        def _check():
-            try:
-                req = urllib.request.Request("https://api.shadowcypher.site/v1/me",
-                    headers={"Authorization": f"Bearer {key}", "User-Agent": "ShadowOS/1.0"})
-                with urllib.request.urlopen(req, timeout=8) as r:
-                    data = json.loads(r.read())
-                GLib.idle_add(self._on_connected, key, data)
-            except Exception as e:
-                GLib.idle_add(self._cs.set_markup, f'<span color="#f87171">Error: {e}</span>')
-        threading.Thread(target=_check, daemon=True).start()
-
-    def _on_connected(self, key, data):
-        email = data.get("email", "unknown")
-        self._cs.set_markup(f'<span color="#00d4ff">✓ Connected as {email}</span>')
-        self._save_cfg({"api_key": key, "api_url": "https://api.shadowcypher.site"})
-        self._write_agent_cfg(key)
-        GLib.timeout_add(1000, lambda: self._finish() or False)
-
-    def _write_agent_cfg(self, key: str):
-        """Write ~/.shadowcypher/config.json for the platform agent (runs as shadow user)."""
-        agent_cfg_dir = "/home/shadow/.shadowcypher"
-        agent_cfg_path = f"{agent_cfg_dir}/config.json"
-        try:
-            os.makedirs(agent_cfg_dir, exist_ok=True)
-            cfg = {
-                "api_base": "https://api.shadowcypher.site",
-                "api_key": key,
-                "scan_interval_sec": 600,
-                "heartbeat_interval_sec": 60,
-            }
-            with open(agent_cfg_path, "w") as f:
-                json.dump(cfg, f, indent=2)
-            os.chmod(agent_cfg_path, 0o600)
-            subprocess.run(["chown", "-R", "shadow:shadow", agent_cfg_dir],
-                           capture_output=True)
-        except Exception:
-            pass
-
-    def _on_close(self, *_):
-        self._write_stamp()
-        Gtk.main_quit()
-
-    def _write_stamp(self):
-        try:
-            os.makedirs(os.path.dirname(STAMP), exist_ok=True)
-            with open(STAMP, "w") as f: f.write(datetime.datetime.now().isoformat())
-        except Exception: pass
-
-    def _finish(self):
-        self._goto("done", 1.0)
-        self._write_stamp()
-
-    def _save_cfg(self, updates):
-        os.makedirs("/etc/shadowcypher", exist_ok=True)
-        path = "/etc/shadowcypher/config.json"
-        cfg = {}
-        try:
-            with open(path) as f: cfg = json.load(f)
-        except Exception: pass
-        def _deep(d, u):
-            for k, v in u.items():
-                if isinstance(v, dict): _deep(d.setdefault(k, {}), v)
-                else: d[k] = v
-        _deep(cfg, updates)
-        try:
-            with open(path, "w") as f: json.dump(cfg, f, indent=2)
-            os.chmod(path, 0o600)
-        except Exception: pass
-
-
-def main():
-    if os.path.exists(STAMP):
-        sys.exit(0)
-    win = Welcome()
-    win.show_all()
-    Gtk.main()
-
-if __name__ == "__main__":
-    main()
+printf "\n${S}Done. Press Enter to close.${R} "
+read -r _

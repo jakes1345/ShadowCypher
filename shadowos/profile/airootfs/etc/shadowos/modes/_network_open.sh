@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Restore normal outbound networking after ghost/privacy lockdown modes.
-# Sourced by normal/dev/pentest/undercover apply.sh — do not execute directly.
+# Sourced by normal/apply.sh — do not execute directly.
 
 shadowos_network_open() {
     systemctl stop tor 2>/dev/null || true

@@ -25,12 +25,12 @@ pick=$(printf '%s\n' \
 [[ -n "$pick" ]] || exit 0
 
 run_term() {
-    foot --title "$1" -e bash -lc "$2; echo; read -n1 -rp 'Press any key…'"
+    shadow-term --title "$1" -e bash -lc "$2; echo; read -n1 -rp 'Press any key…'"
 }
 
 case "$pick" in
     "Wi-Fi & connections")
-        exec foot -e nmtui
+        exec shadow-term -e nmtui
         ;;
     "Bluetooth")
         if command -v blueman-manager >/dev/null; then
