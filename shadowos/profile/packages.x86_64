@@ -16,7 +16,6 @@ efibootmgr
 syslinux
 edk2-shell
 plymouth
-grub-efi-x86_64-signed
 sbctl
 efivar
 mokutil

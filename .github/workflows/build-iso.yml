@@ -55,7 +55,7 @@ jobs:
               pacman-key --populate archlinux
 
               # Refresh DB and install build deps
-              pacman -Sy --noconfirm --needed archiso git rsync grub
+              pacman -Sy --noconfirm --needed archiso git rsync grub cmake make gcc pkgconf openssl qt6-base qt6-websockets
 
               # Run the ShadowOS build script
               cd /build/shadowos
