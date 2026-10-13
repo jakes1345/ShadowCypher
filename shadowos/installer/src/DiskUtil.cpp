@@ -1,6 +1,7 @@
 #include "DiskUtil.h"
 #include <QProcess>
 #include <QStringList>
+#include <QRegularExpression>
 
 QVector<DiskInfo> DiskUtil::listDisks() {
     QVector<DiskInfo> result;
