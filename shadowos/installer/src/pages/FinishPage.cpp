@@ -4,6 +4,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QProcess>
+#include <QApplication>
 
 FinishPage::FinishPage(bool success, QWidget* parent)
     : QWidget(parent)

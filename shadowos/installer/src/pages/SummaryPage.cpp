@@ -55,7 +55,7 @@ SummaryPage::SummaryPage(InstallState* state, QWidget* parent)
     cl->setContentsMargins(0, 4, 0, 4);
     cl->setSpacing(0);
 
-    auto* addSep = [&]() {
+    auto addSep = [&]() {
         auto* sep = new QFrame;
         sep->setFrameShape(QFrame::HLine);
         sep->setStyleSheet(QString("border: none; border-top: 1px solid %1;").arg(Theme::BORDER_DIM));
