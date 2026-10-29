@@ -5,43 +5,66 @@ on:
     - cron: '0 12 * * *'  # Daily at noon UTC
   workflow_dispatch:
 
+concurrency:
+  group: download-stats
+  cancel-in-progress: false
+
 jobs:
   stats:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # commit docs/DOWNLOAD_STATS.md back to main
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Generate statistics report
+      # Real download counts come from the GitHub Releases API (asset download_count).
+      - name: Fetch release download counts
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python3 shadowos/stats_server.py > /tmp/stats.json
-          cat /tmp/stats.json
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            | jq -s 'add // [] | map(select(.draft | not))' > /tmp/releases.json
+          jq -r '"\(length) published releases, \(map(.assets[].download_count) | add // 0) total downloads"' /tmp/releases.json
 
-      - name: Update README with stats
+      - name: Write docs/DOWNLOAD_STATS.md
         run: |
-          python3 << 'EOF'
-          import json
-          with open('/tmp/stats.json') as f:
-              stats = json.load(f)
-
-          # Update docs/DOWNLOAD_STATS.md with current stats
-          with open('docs/DOWNLOAD_STATS.md', 'w') as f:
-              f.write(f"# Download Statistics\n\n")
-              f.write(f"**Total Downloads:** {stats['summary']['total']}\n")
-              f.write(f"**Last Updated:** {stats['summary']['updated']}\n\n")
-              f.write(f"## By Version\n\n")
-              for v, count in stats['by_version'].items():
-                  f.write(f"- {v}: {count}\n")
-          EOF
+          mkdir -p docs
+          jq -r --arg updated "$(date -u '+%Y-%m-%d %H:%M UTC')" '
+            def total: map(.assets[].download_count) | add // 0;
+            "# Download Statistics",
+            "",
+            "**Total downloads:** \(total) across \(length) releases",
+            "**Last updated:** \($updated)",
+            "",
+            "Counts are GitHub release asset downloads, refreshed daily by the Update Download Statistics workflow.",
+            "",
+            "## By release",
+            "",
+            "| Release | Published | Downloads |",
+            "| --- | --- | ---: |",
+            (sort_by(.published_at // "") | reverse | .[]
+              | "| \(.tag_name)\(if .prerelease then " (pre-release)" else "" end) | \((.published_at // "")[0:10]) | \([.assets[].download_count] | add // 0) |"),
+            "",
+            "## By asset",
+            "",
+            "| Release | Asset | Downloads |",
+            "| --- | --- | ---: |",
+            (sort_by(.published_at // "") | reverse | .[] | .tag_name as $tag
+              | .assets | sort_by(-.download_count) | .[]
+              | "| \($tag) | \(.name) | \(.download_count) |")
+          ' /tmp/releases.json > docs/DOWNLOAD_STATS.md
+          cat docs/DOWNLOAD_STATS.md
 
       - name: Commit statistics
         run: |
           git config user.name "ShadowOS Bot"
           git config user.email "bot@shadowcypher.site"
           git add docs/DOWNLOAD_STATS.md
-          git commit -m "chore: update download statistics" || true
-          git push || true
+          # Skip the commit when only the timestamp moved, so main doesn't get a no-op commit every day.
+          if git diff --cached --quiet -I '^\*\*Last updated:\*\*'; then
+            echo "Download counts unchanged; nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore: update download statistics"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
