@@ -48,7 +48,6 @@ import time
 from typing import Any, Callable, Dict, List, Optional
 
 from shadowcypher.compiler.lexer import ShadowLexer, Token
-from shadowcypher.core.bus import bus
 from shadowcypher.core.logger import logger
 
 

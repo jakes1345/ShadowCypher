@@ -8,11 +8,9 @@ Implements complete Checksec binary hardening analysis (Canary, NX, PIE, RELRO, 
 from __future__ import annotations
 
 import dataclasses
-import os
 import struct
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
-
+from typing import Any, Dict, List, Optional, Set
 
 # ── ELF Constants ────────────────────────────────────────────────────────────
 

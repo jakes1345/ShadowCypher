@@ -13,13 +13,11 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
-import math
-import os
 import re
 import sqlite3
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional
 
 
 @dataclasses.dataclass
@@ -108,10 +106,10 @@ class AdvancedContextVault:
         """Hierarchically chunk decompiled C code by function boundaries."""
         chunks: List[SemanticChunk] = []
         lines = raw_c.splitlines()
-        
+
         # Regex to detect function headers e.g. "int main(", "void fcn.00003c10("
         func_regex = re.compile(r"^(?:[\w\*]+\s+)+([a-zA-Z_][\w\.\:]*)\s*\([^)]*\)\s*\{?", re.M)
-        
+
         current_func_label = "header"
         current_lines: List[str] = []
         start_line = 1
@@ -278,7 +276,7 @@ class AdvancedContextVault:
 
         selected = []
         accumulated_tokens = 0
-        for score, chk in scored_chunks:
+        for _score, chk in scored_chunks:
             tokens = chk["tokens"]
             if accumulated_tokens + tokens <= max_token_budget:
                 selected.append(chk)

@@ -18,12 +18,12 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from shadowcypher.audit.ifix_guard import AuditRecord, IFixPolicyAuditor
+from shadowcypher.context_vault.engine import AdvancedContextVault, SlicedContext
 from shadowcypher.sre.elf_parser import ELFParser
 from shadowcypher.sre.vulnerability_scanner import BinaryVulnerabilityScanner
-from shadowcypher.audit.ifix_guard import IFixPolicyAuditor, AuditRecord
-from shadowcypher.context_vault.engine import AdvancedContextVault, SlicedContext
 
 logger = logging.getLogger("PentAGI-StateMachine")
 
@@ -174,7 +174,7 @@ class AutonomousPentAGISystem:
             # Phase 5: Context-Mode Sandboxing & Slicing
             # ─────────────────────────────────────────────────────────────
             self._transition(telemetry, MissionState.CONTEXT_SANDBOXING, "Sandboxing artifacts into CAS database")
-            
+
             # Format comprehensive raw mission report
             full_report_text = json.dumps({
                 "mission_id": mission_id,

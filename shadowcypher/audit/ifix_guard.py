@@ -9,15 +9,12 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import ipaddress
-import json
-import os
 import re
 import shlex
 import sqlite3
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
 
 # Offline MITRE ATT&CK Mapping
 MITRE_TACTICS_MAP = {
@@ -116,7 +113,7 @@ class IFixPolicyAuditor:
         # 1. Shell AST Tokenizer & Injection Checks
         if raw_cmd:
             try:
-                tokens = shlex.split(raw_cmd)
+                shlex.split(raw_cmd)
             except ValueError as e:
                 verdict = "DENIED"
                 risk_level = "HIGH"

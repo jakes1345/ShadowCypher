@@ -25,7 +25,6 @@ import shutil
 import socket
 import sqlite3
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -38,12 +37,11 @@ except Exception:
     logger = logging.getLogger("UnifiedAgent")
 
 # Deep Engineering Subsystems
+from shadowcypher.audit.ifix_guard import IFixPolicyAuditor
+from shadowcypher.context_vault.engine import AdvancedContextVault
+from shadowcypher.orchestrator.pentagi_state_machine import AutonomousPentAGISystem, MissionTelemetry
 from shadowcypher.sre.elf_parser import ELFParser
 from shadowcypher.sre.vulnerability_scanner import BinaryVulnerabilityScanner
-from shadowcypher.audit.ifix_guard import IFixPolicyAuditor, AuditRecord
-from shadowcypher.context_vault.engine import AdvancedContextVault, SlicedContext
-from shadowcypher.orchestrator.pentagi_state_machine import AutonomousPentAGISystem, MissionState, MissionTelemetry
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Linux Drive Storage & Filesystem Verifier
@@ -155,20 +153,20 @@ class ContextModeVault:
         content_hash = hashlib.sha256(content_bytes).hexdigest()
         storage_id = f"ctx_{int(time.time())}_{content_hash[:8]}"
 
-        lines = [l.strip() for l in raw_output.splitlines() if l.strip()]
+        lines = [line.strip() for line in raw_output.splitlines() if line.strip()]
         total_lines = len(lines)
 
         priority_keywords = [
             "vulnerability", "cve", "critical", "high", "exploit", "password",
             "overflow", "leak", "warning", "error", "entry point", "function"
         ]
-        priority_lines = [l for l in lines if any(k in l.lower() for k in priority_keywords)]
+        priority_lines = [line for line in lines if any(k in line.lower() for k in priority_keywords)]
 
         selected_lines = priority_lines[:max_lines] if priority_lines else lines[:max_lines]
         summary_text = (
             f"[CONTEXT-SANDBOX ARTIFACT: {storage_id}]\n"
             f"Tool: {tool_name} | Total Lines: {total_lines} | Raw Size: {raw_size}B\n"
-            f"Extracted Highlights:\n" + ("\n".join(f"  • {l}" for l in selected_lines))
+            f"Extracted Highlights:\n" + ("\n".join(f"  • {line}" for line in selected_lines))
         )
 
         with sqlite3.connect(self.db_path) as conn:
@@ -343,15 +341,13 @@ class BinaryReverseEngineer:
         except Exception:
             pass
 
-        # 3. Disassembly text sample via objdump
-        disasm_sample = []
+        # 3. Disassembly text sample via objdump (builds internal state; result not returned)
         try:
             dump_proc = subprocess.run(
                 ["objdump", "-d", "-M", "intel", "--no-show-raw-insn", str(binary_path)],
                 capture_output=True, text=True, timeout=8
             )
-            disasm_lines = [l for l in dump_proc.stdout.splitlines() if l.strip() and not l.startswith("Disassembly")]
-            disasm_sample = disasm_lines[:30]
+            _ = [line for line in dump_proc.stdout.splitlines() if line.strip() and not line.startswith("Disassembly")]
         except Exception:
             pass
 
@@ -438,10 +434,10 @@ class GhidraHeadlessDecompilerBridge:
                 ["r2", "-q", "-c", "aaa; afl", str(binary_path)],
                 capture_output=True, text=True, timeout=15
             )
-            func_lines = [l for l in f_proc.stdout.splitlines() if l.strip()]
+            func_lines = [line for line in f_proc.stdout.splitlines() if line.strip()]
             candidates = []
-            for l in func_lines:
-                parts = l.split()
+            for line in func_lines:
+                parts = line.split()
                 if len(parts) >= 4:
                     name = parts[3]
                     addr = parts[0]
@@ -586,12 +582,12 @@ class UnifiedCyberAgent:
 
         self.voice.speak(f"Decompiling binary target {p.name}")
         decomp_result = self.decompiler.decompile_binary(p, max_functions=max_functions)
-        
+
         # Sandbox the entire decompiled C source into Advanced Context Vault
         c_code = decomp_result.get("c_pseudocode", "")
         art_id = self.advanced_vault.store_and_sandbox(f"decompile_{p.name}", f"C Decompilation for {p.name}", c_code)
         sliced = self.advanced_vault.slice_context_window(art_id, max_token_budget=600)
-        
+
         self.voice.speak(f"Decompilation complete for {p.name}. Saved to context vault.")
         return {
             "binary": str(p),
@@ -985,14 +981,14 @@ def main():
         print(f"\n[+] Unified Agent Initialized on Linux Drive: {agent.drive_info.resolved_mount}")
         print(f"    Filesystem: {agent.drive_info.fs_type} | Capacity: {agent.drive_info.total_gb} GB ({agent.drive_info.free_gb} GB free)")
         print(f"    Vault DB: {agent.vault.db_path}\n")
-        
+
         # Test binary analysis against system binaries on host drive
         print("[*] Running SRE analysis on local drive binaries (/bin/ls, /bin/bash)...")
         report["binary_sre"] = agent.audit_drive_binaries("/bin", max_binaries=2)
 
         print("[*] Testing headless decompilation on /bin/id...")
         report["decompilation"] = agent.decompile_binary_target("/bin/id", max_functions=2)
-        
+
         print("[*] Running audited recon against localhost...")
         report["reconnaissance"] = agent.execute_network_recon("127.0.0.1")
 
@@ -1011,8 +1007,8 @@ def main():
             print(f"    Functions:    {dec.get('functions_decompiled')} (Lines: {dec.get('lines_decompiled')})")
             print(f"    Vault ID:     {dec.get('vault_id')} (Token Saving: {dec.get('token_savings')})")
             print("    --- C Pseudocode Sample ---")
-            for l in dec.get("c_pseudocode_preview", "").splitlines()[:20]:
-                print(f"    {l}")
+            for line in dec.get("c_pseudocode_preview", "").splitlines()[:20]:
+                print(f"    {line}")
         if "binary_sre" in report:
             print(f"\nBinaries Audited: {len(report['binary_sre'])}")
             for b in report["binary_sre"]:
