@@ -95,12 +95,15 @@ if [[ -d "$QT_APP_SRC/src" ]]; then
     cmake -S "$QT_APP_SRC" -B "$QT_APP_BUILD" \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/usr \
+      -DBUILD_TESTING=OFF \
       -Wno-dev -DCMAKE_VERBOSE_MAKEFILE=OFF 2>&1 | tail -5
 
     make -C "$QT_APP_BUILD" -j"$(nproc)" 2>&1 | tail -10
 
     if [[ -f "$QT_APP_BUILD/shadowcypher" ]]; then
       cp -f "$QT_APP_BUILD/shadowcypher" "$QT_APP_DEST/shadowcypher-qt"
+      cp -f "$QT_APP_BUILD/core/shadowcypher-runtime" "$QT_APP_DEST/shadowcypher-runtime"
+      chmod +x "$QT_APP_DEST/shadowcypher-runtime"
       chmod +x "$QT_APP_DEST/shadowcypher-qt"
       strip --strip-unneeded "$QT_APP_DEST/shadowcypher-qt" 2>/dev/null || true
       echo "   Desktop app staged → $QT_APP_DEST/shadowcypher-qt ($(du -sh "$QT_APP_DEST/shadowcypher-qt" | cut -f1))"

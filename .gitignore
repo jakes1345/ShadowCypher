@@ -126,6 +126,14 @@ dashboard*.png
 # Compiled arsenal binaries (commit source only)
 shadowcypher/arsenal/primitives/slowloris/slowloris
 
+# ShadowOS build output (ISOs can be multi-GB; out is a symlink to external drive)
+shadowos/out
+shadowos/out/
+*.iso
+
+# Ghidra / decompiler scripts dumped into the tree
+shadowcypher/ai/scripts/*.java
+
 # Rust build output
 **/target/
 Cargo.lock
