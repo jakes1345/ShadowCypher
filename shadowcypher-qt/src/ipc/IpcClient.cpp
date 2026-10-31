@@ -8,11 +8,16 @@
 #  include <QTcpSocket>
 static constexpr quint16 IPC_TCP_PORT = 54321;
 #else
-// Must match the path chosen in Daemon.cpp (uses QStandardPaths::RuntimeLocation)
+#  include <sys/socket.h>
+#  include <unistd.h>
+// Must exactly mirror the logic in Daemon.cpp so both sides resolve the same path.
+// Never falls back to /tmp — an attacker can pre-create a world-writable socket there.
 static QString unixSocketPath() {
     const QString rt = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    // Daemon uses the same formula; keep in sync.
     return rt.isEmpty()
-        ? QStringLiteral("/tmp/shadowcypher-daemon.sock")  // fallback (pre-XDG)
+        ? QStringLiteral("/run/user/") + QString::number(static_cast<quint32>(::getuid()))
+              + QStringLiteral("/shadowcypher-daemon.sock")
         : rt + QStringLiteral("/shadowcypher-daemon.sock");
 }
 #endif
@@ -75,7 +80,22 @@ int IpcClient::call(const QString& method, const QJsonObject& params) {
 void IpcClient::onConnected() {
     m_buffer.clear();
 
-#ifdef Q_OS_WIN
+#ifndef Q_OS_WIN
+    // Before sending anything, verify the daemon process is owned by this user.
+    // Prevents connecting to a spoofed socket left in the path by another user.
+    auto* sock = qobject_cast<QLocalSocket*>(m_device);
+    if (sock) {
+        struct ucred cred{};
+        socklen_t credLen = sizeof(cred);
+        const int fd = static_cast<int>(sock->socketDescriptor());
+        if (fd < 0 || ::getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &cred, &credLen) != 0
+                   || cred.uid != ::getuid()) {
+            qWarning("[IpcClient] Daemon peer UID mismatch — disconnecting");
+            sock->disconnectFromServer();
+            return;  // onDisconnected() will schedule a reconnect
+        }
+    }
+#else
     // Authenticate: read the per-session token written by the daemon at startup
     const QString tokenPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
                               + QStringLiteral("/daemon.token");
