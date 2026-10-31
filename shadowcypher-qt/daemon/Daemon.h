@@ -6,6 +6,7 @@
 #include <QMutex>
 #include <QElapsedTimer>
 #include <atomic>
+#include <optional>
 
 #ifdef Q_OS_WIN
 #  include <QTcpServer>
@@ -87,7 +88,13 @@ private:
     QJsonObject nvdSearch(const QString& query, int days = 0);
     QJsonArray  parseCveResponse(const QJsonObject& nvdResp);
 
-    Server*            m_server;
+    Server*             m_server;
+#ifndef Q_OS_WIN
+    QString             m_ipcSocket;  // resolved at construction to $XDG_RUNTIME_DIR/...
+#else
+    QByteArray          m_token;      // random per-session secret; client must send on connect
+    QSet<QIODevice*>    m_authed;     // sockets that have passed token auth
+#endif
     shadow::NativeTools m_tools;
     QElapsedTimer      m_uptime;
     QString            m_stateDir;

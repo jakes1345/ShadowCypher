@@ -3,8 +3,10 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QFileDevice>
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSet>
 #include <QSettings>
@@ -14,11 +16,21 @@
 #include <QtConcurrent/QtConcurrent>
 #include <QTimer>
 
-#ifdef Q_OS_WIN
-static constexpr quint16 IPC_PORT = 54321;
+#ifndef Q_OS_WIN
+#  include <sys/socket.h>
+#  include <unistd.h>
+static constexpr quint16 IPC_PORT = 0;  // unused on Unix
 #else
-static const QString IPC_SOCKET = QStringLiteral("/tmp/shadowcypher-daemon.sock");
+static constexpr quint16 IPC_PORT = 54321;
 #endif
+
+// Reject HTTP-shaped connections that cannot be valid JSON-RPC
+static bool looksLikeHttp(const QByteArray& firstBytes) {
+    return firstBytes.startsWith("GET ")  || firstBytes.startsWith("POST ")
+        || firstBytes.startsWith("HEAD ") || firstBytes.startsWith("PUT ")
+        || firstBytes.startsWith("DELE")  || firstBytes.startsWith("PATC")
+        || firstBytes.startsWith("OPTI");
+}
 
 // ── Construction ──────────────────────────────────────────────────────────────
 
@@ -46,10 +58,42 @@ Daemon::Daemon(QObject* parent) : QObject(parent) {
     m_uptime.start();
 
 #ifdef Q_OS_WIN
+    // Generate a random 32-byte hex token for this session.
+    // Stored in a user-only file so the GUI can read it; anyone else connecting
+    // without the token is rejected.
+    QByteArray raw(32, Qt::Uninitialized);
+    QRandomGenerator::securelySeeded().fillRange(
+        reinterpret_cast<quint32*>(raw.data()),
+        static_cast<qsizetype>(raw.size() / sizeof(quint32)));
+    m_token = raw.toHex();
+
+    const QString tokenDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    QDir().mkpath(tokenDir);
+    const QString tokenPath = tokenDir + QStringLiteral("/daemon.token");
+    QFile tf(tokenPath);
+    if (tf.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        tf.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        tf.write(m_token);
+        tf.close();
+    } else {
+        qCritical("[daemon] Cannot write token file: %s", qPrintable(tf.errorString()));
+    }
+
     m_server = new QTcpServer(this);
 #else
+    // Use the per-user runtime directory (chmod 0700 by the OS) so no other
+    // user on the machine can even see the socket path.
+    const QString runtimeDir =
+        QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    m_ipcSocket = runtimeDir.isEmpty()
+        ? QStringLiteral("/run/user/") + QString::number(static_cast<quint32>(::getuid()))
+              + QStringLiteral("/shadowcypher-daemon.sock")
+        : runtimeDir + QStringLiteral("/shadowcypher-daemon.sock");
+
     m_server = new QLocalServer(this);
-    QLocalServer::removeServer(IPC_SOCKET);
+    // Restrict socket file permissions to the owner only
+    m_server->setSocketOptions(QLocalServer::UserAccessOption);
+    QLocalServer::removeServer(m_ipcSocket);
 #endif
 
     connect(m_server, &Server::newConnection, this, &Daemon::onNewConnection);
@@ -59,7 +103,7 @@ bool Daemon::start() {
 #ifdef Q_OS_WIN
     if (!m_server->listen(QHostAddress::LocalHost, IPC_PORT)) {
 #else
-    if (!m_server->listen(IPC_SOCKET)) {
+    if (!m_server->listen(m_ipcSocket)) {
 #endif
         qCritical("[daemon] Cannot listen: %s", qPrintable(m_server->errorString()));
         return false;
@@ -68,7 +112,7 @@ bool Daemon::start() {
 #ifdef Q_OS_WIN
           qPrintable(QString("TCP 127.0.0.1:%1").arg(IPC_PORT))
 #else
-          qPrintable(IPC_SOCKET)
+          qPrintable(m_ipcSocket)
 #endif
     );
 
@@ -81,14 +125,29 @@ bool Daemon::start() {
 
 void Daemon::onNewConnection() {
     while (m_server->hasPendingConnections()) {
-#ifdef Q_OS_WIN
         auto* sock = m_server->nextPendingConnection();
-#else
-        auto* sock = m_server->nextPendingConnection();
+
+#ifndef Q_OS_WIN
+        // Verify that the connecting process is owned by the same UID as the daemon.
+        // This is immune to TOCTOU and works even if the socket were somehow world-accessible.
+        struct ucred cred{};
+        socklen_t credLen = sizeof(cred);
+        const int fd = static_cast<int>(
+            qobject_cast<QLocalSocket*>(sock)->socketDescriptor());
+        if (fd < 0 || ::getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &cred, &credLen) != 0
+                   || cred.uid != ::getuid()) {
+            qWarning("[daemon] Rejected connection from uid=%u (expected %u)",
+                     static_cast<unsigned>(fd >= 0 ? cred.uid : 0u),
+                     static_cast<unsigned>(::getuid()));
+            sock->close();
+            sock->deleteLater();
+            continue;
+        }
 #endif
-        connect(sock, &QIODevice::readyRead,    this, &Daemon::onReadyRead);
-        connect(sock, &Socket::disconnected,    this, &Daemon::onDisconnected);
-        connect(sock, &Socket::disconnected,    sock, &QObject::deleteLater);
+
+        connect(sock, &QIODevice::readyRead, this, &Daemon::onReadyRead);
+        connect(sock, &Socket::disconnected, this, &Daemon::onDisconnected);
+        connect(sock, &Socket::disconnected, sock, &QObject::deleteLater);
     }
 }
 
@@ -96,9 +155,16 @@ void Daemon::onReadyRead() {
     auto* sock = qobject_cast<QIODevice*>(sender());
     if (!sock) return;
 
-    // Buffer per-socket — store in dynamic property
+    // Buffer per-socket — stored in a dynamic property
     QByteArray buf = sock->property("_buf").toByteArray();
     buf += sock->readAll();
+
+    // Immediately kill connections that look like HTTP (SSRF / cross-protocol attack)
+    if (looksLikeHttp(buf)) {
+        qWarning("[daemon] Rejected HTTP-shaped connection");
+        sock->close();
+        return;
+    }
 
     while (true) {
         const int nl = buf.indexOf('\n');
@@ -112,6 +178,30 @@ void Daemon::onReadyRead() {
         const QJsonValue  id  = req.value(QStringLiteral("id"));
         const QString method  = req.value(QStringLiteral("method")).toString();
         const QJsonObject params = req.value(QStringLiteral("params")).toObject();
+
+#ifdef Q_OS_WIN
+        // Windows: require a one-time token auth before any other method.
+        // The GUI reads the token from the daemon.token file written at startup.
+        if (!m_authed.contains(sock)) {
+            if (method == QStringLiteral("auth")) {
+                const QByteArray provided = params.value(QStringLiteral("token"))
+                                                  .toString().toUtf8();
+                if (!provided.isEmpty() && provided == m_token) {
+                    m_authed.insert(sock);
+                    QJsonObject ok;
+                    ok[QStringLiteral("ok")] = true;
+                    respond(sock, id, ok);
+                } else {
+                    respondError(sock, id, QStringLiteral("Unauthorized"), -32000);
+                    sock->close();
+                }
+            } else {
+                respondError(sock, id, QStringLiteral("Unauthorized — send auth first"), -32000);
+                sock->close();
+            }
+            continue;
+        }
+#endif
 
         try {
             const QJsonValue result = dispatch(method, params);
@@ -127,7 +217,10 @@ void Daemon::onReadyRead() {
 }
 
 void Daemon::onDisconnected() {
-    // Sockets are set to deleteLater on disconnect — nothing to do here.
+#ifdef Q_OS_WIN
+    auto* sock = qobject_cast<QIODevice*>(sender());
+    if (sock) m_authed.remove(sock);
+#endif
 }
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────

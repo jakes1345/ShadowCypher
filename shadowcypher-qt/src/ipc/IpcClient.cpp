@@ -1,12 +1,20 @@
 #include "IpcClient.h"
-#include <QTimer>
+#include <QFile>
 #include <QJsonArray>
+#include <QStandardPaths>
+#include <QTimer>
 
 #ifdef Q_OS_WIN
 #  include <QTcpSocket>
 static constexpr quint16 IPC_TCP_PORT = 54321;
 #else
-static const QString UNIX_SOCKET_PATH = "/tmp/shadowcypher-daemon.sock";
+// Must match the path chosen in Daemon.cpp (uses QStandardPaths::RuntimeLocation)
+static QString unixSocketPath() {
+    const QString rt = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    return rt.isEmpty()
+        ? QStringLiteral("/tmp/shadowcypher-daemon.sock")  // fallback (pre-XDG)
+        : rt + QStringLiteral("/shadowcypher-daemon.sock");
+}
 #endif
 
 IpcClient::IpcClient(QObject* parent) : QObject(parent) {
@@ -39,7 +47,7 @@ void IpcClient::connectToDaemon() {
 #else
     auto* sock = qobject_cast<QLocalSocket*>(m_device);
     if (sock->state() == QLocalSocket::ConnectedState) return;
-    sock->connectToServer(UNIX_SOCKET_PATH);
+    sock->connectToServer(unixSocketPath());
 #endif
 }
 
@@ -66,6 +74,28 @@ int IpcClient::call(const QString& method, const QJsonObject& params) {
 
 void IpcClient::onConnected() {
     m_buffer.clear();
+
+#ifdef Q_OS_WIN
+    // Authenticate: read the per-session token written by the daemon at startup
+    const QString tokenPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
+                              + QStringLiteral("/daemon.token");
+    QFile tf(tokenPath);
+    if (tf.open(QIODevice::ReadOnly)) {
+        const QByteArray token = tf.readAll().trimmed();
+        tf.close();
+        QJsonObject authMsg{
+            {QStringLiteral("jsonrpc"), QStringLiteral("2.0")},
+            {QStringLiteral("method"),  QStringLiteral("auth")},
+            {QStringLiteral("params"),  QJsonObject{{QStringLiteral("token"),
+                                                     QString::fromUtf8(token)}}},
+            {QStringLiteral("id"), 0}
+        };
+        m_device->write(QJsonDocument(authMsg).toJson(QJsonDocument::Compact) + '\n');
+    } else {
+        qWarning("[IpcClient] Cannot read daemon token — Windows auth will fail");
+    }
+#endif
+
     emit connected();
 }
 
