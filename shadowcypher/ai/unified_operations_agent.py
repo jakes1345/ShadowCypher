@@ -555,7 +555,7 @@ class UnifiedCyberAgent:
 
     def __init__(self, drive_path: str = "/tmp/shadow_drive"):
         self.drive_info = LinuxDriveEngine.inspect_drive(drive_path)
-        logger.info(f"Target Linux Drive initialized: {self.drive_info.resolved_mount} ({self.drive_info.fs_type}, {self.drive_info.free_gb}GB free)")
+        logger.info("UnifiedCyberAgent", f"Target Linux Drive initialized: {self.drive_info.resolved_mount} ({self.drive_info.fs_type}, {self.drive_info.free_gb}GB free)")
 
         # Create vault dir on drive or fallback
         vault_dir = Path(self.drive_info.target_path) / ".shadow_context_vault"
@@ -720,7 +720,7 @@ class UnifiedCyberAgent:
             target_path.mkdir(parents=True, exist_ok=True)
 
         self.voice.speak(f"Daemon watching Linux drive directory {target_path.name}")
-        logger.info(f"[WATCHER-DAEMON] Monitoring: {target_path} (polling every {poll_interval}s)")
+        logger.info("WatcherDaemon", f"[WATCHER-DAEMON] Monitoring: {target_path} (polling every {poll_interval}s)")
 
         seen_files: Dict[str, float] = {}
         for p in target_path.glob("**/*"):
