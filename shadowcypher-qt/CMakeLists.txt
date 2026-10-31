@@ -11,6 +11,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Concurrent WebSockets)
 find_package(OpenSSL REQUIRED)
 include(CTest)
 add_subdirectory(core)
+add_subdirectory(daemon)
 
 qt_add_executable(shadowcypher
     src/main.cpp
