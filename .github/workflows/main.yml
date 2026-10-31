@@ -7,6 +7,22 @@ on:
     branches: [ main, master ]
 
 jobs:
+  native-runtime:
+    name: Qt6/C++ desktop and runtime
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Qt6 build dependencies
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y cmake ninja-build qt6-base-dev qt6-websockets-dev libssl-dev
+    - name: Build desktop and native runtime
+      run: |
+        cmake -S shadowcypher-qt -B "$RUNNER_TEMP/shadowcypher-native" -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
+        cmake --build "$RUNNER_TEMP/shadowcypher-native" --parallel 2
+    - name: Test native runtime
+      run: ctest --test-dir "$RUNNER_TEMP/shadowcypher-native" --output-on-failure
+
   quality-assurance:
     name: Quality Assurance
     runs-on: ubuntu-latest

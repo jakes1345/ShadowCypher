@@ -1,12 +1,25 @@
 #include "IpcClient.h"
-#include <QTimer>
+#include <QFile>
 #include <QJsonArray>
+#include <QStandardPaths>
+#include <QTimer>
 
 #ifdef Q_OS_WIN
 #  include <QTcpSocket>
 static constexpr quint16 IPC_TCP_PORT = 54321;
 #else
-static const QString UNIX_SOCKET_PATH = "/tmp/shadowcypher-daemon.sock";
+#  include <sys/socket.h>
+#  include <unistd.h>
+// Must exactly mirror the logic in Daemon.cpp so both sides resolve the same path.
+// Never falls back to /tmp — an attacker can pre-create a world-writable socket there.
+static QString unixSocketPath() {
+    const QString rt = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    // Daemon uses the same formula; keep in sync.
+    return rt.isEmpty()
+        ? QStringLiteral("/run/user/") + QString::number(static_cast<quint32>(::getuid()))
+              + QStringLiteral("/shadowcypher-daemon.sock")
+        : rt + QStringLiteral("/shadowcypher-daemon.sock");
+}
 #endif
 
 IpcClient::IpcClient(QObject* parent) : QObject(parent) {
@@ -39,7 +52,7 @@ void IpcClient::connectToDaemon() {
 #else
     auto* sock = qobject_cast<QLocalSocket*>(m_device);
     if (sock->state() == QLocalSocket::ConnectedState) return;
-    sock->connectToServer(UNIX_SOCKET_PATH);
+    sock->connectToServer(unixSocketPath());
 #endif
 }
 
@@ -66,6 +79,43 @@ int IpcClient::call(const QString& method, const QJsonObject& params) {
 
 void IpcClient::onConnected() {
     m_buffer.clear();
+
+#ifndef Q_OS_WIN
+    // Before sending anything, verify the daemon process is owned by this user.
+    // Prevents connecting to a spoofed socket left in the path by another user.
+    auto* sock = qobject_cast<QLocalSocket*>(m_device);
+    if (sock) {
+        struct ucred cred{};
+        socklen_t credLen = sizeof(cred);
+        const int fd = static_cast<int>(sock->socketDescriptor());
+        if (fd < 0 || ::getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &cred, &credLen) != 0
+                   || cred.uid != ::getuid()) {
+            qWarning("[IpcClient] Daemon peer UID mismatch — disconnecting");
+            sock->disconnectFromServer();
+            return;  // onDisconnected() will schedule a reconnect
+        }
+    }
+#else
+    // Authenticate: read the per-session token written by the daemon at startup
+    const QString tokenPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
+                              + QStringLiteral("/daemon.token");
+    QFile tf(tokenPath);
+    if (tf.open(QIODevice::ReadOnly)) {
+        const QByteArray token = tf.readAll().trimmed();
+        tf.close();
+        QJsonObject authMsg{
+            {QStringLiteral("jsonrpc"), QStringLiteral("2.0")},
+            {QStringLiteral("method"),  QStringLiteral("auth")},
+            {QStringLiteral("params"),  QJsonObject{{QStringLiteral("token"),
+                                                     QString::fromUtf8(token)}}},
+            {QStringLiteral("id"), 0}
+        };
+        m_device->write(QJsonDocument(authMsg).toJson(QJsonDocument::Compact) + '\n');
+    } else {
+        qWarning("[IpcClient] Cannot read daemon token — Windows auth will fail");
+    }
+#endif
+
     emit connected();
 }
 

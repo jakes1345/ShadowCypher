@@ -27,6 +27,10 @@ import subprocess
 import sys
 import time
 
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 # MCP protocol constants
 JSONRPC_VERSION = "2.0"
 MCP_PROTOCOL_VERSION = "2024-11-05"
@@ -340,6 +344,14 @@ TOOLS = {
         "handler": lambda params: tool_traffic_analyze()
     },
 }
+
+# Register Unified Cyber-Operations & SRE tools (Ghidra, Context Vault, iFixAi Safety, Drive SRE)
+try:
+    from shadowcypher.ai.unified_operations_agent import get_unified_mcp_tools
+    TOOLS.update(get_unified_mcp_tools())
+except Exception as _unified_err:
+    sys.stderr.write(f"Warning: Failed to load unified agent tools: {_unified_err}\n")
+
 
 def handle_request(request):
     method = request.get("method", "")

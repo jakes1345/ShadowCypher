@@ -9,11 +9,15 @@
 #include <QJsonObject>
 #include <QStandardPaths>
 #include <QCoreApplication>
+#include <QFileInfo>
+#include "../api/ApiClient.h"
 
 QString ShadowScriptPage::missionDir() {
     // Check common locations
     for (const QString& d : {
             QString("/opt/shadowcypher/shadowscript/missions"),
+            QString("/usr/share/shadowcypher/missions"),
+            QDir::currentPath() + "/shadowscript/missions",
             QDir::homePath() + "/.local/share/shadowcypher/missions",
             QString(QCoreApplication::applicationDirPath()) + "/../shadowscript/missions",
         }) {
@@ -22,15 +26,21 @@ QString ShadowScriptPage::missionDir() {
     return {};
 }
 
-ShadowScriptPage::ShadowScriptPage(IpcClient* ipc, QWidget* parent)
-    : QWidget(parent), m_ipc(ipc)
+ShadowScriptPage::ShadowScriptPage(QWidget* parent)
+    : QWidget(parent), m_runner(new shadow::MissionRunner(this))
 {
     buildUi();
     scanLocalMissions();
-    if (m_ipc) {
-        connect(m_ipc, &IpcClient::resultReady, this, &ShadowScriptPage::onIpcResult);
-        connect(m_ipc, &IpcClient::connected, this, &ShadowScriptPage::loadMissions);
-    }
+    m_currentMission = "Untitled";
+    m_sourceDirectory = missionDir().isEmpty() ? QDir::currentPath() : missionDir();
+    connect(m_runner, &shadow::MissionRunner::output, this, [this](const QString& text) { m_output->log(text, "INFO"); });
+    connect(m_runner, &shadow::MissionRunner::finished, this, [this](bool success, const QString& message) {
+        setRunningState(false);
+        m_output->log(message, success ? "SUCCESS" : "ERROR");
+    });
+    connect(m_editor, &QPlainTextEdit::textChanged, this, [this] {
+        m_runBtn->setEnabled(!m_running && !m_editor->toPlainText().trimmed().isEmpty());
+    });
 }
 
 void ShadowScriptPage::buildUi() {
@@ -158,11 +168,6 @@ void ShadowScriptPage::scanLocalMissions() {
     m_output->log(QString("Found %1 mission(s) in %2").arg(m_missionList->count()).arg(dir), "SYSTEM");
 }
 
-void ShadowScriptPage::loadMissions() {
-    if (m_ipc && m_ipc->isConnected())
-        m_ipc->call("list_missions");
-}
-
 void ShadowScriptPage::onMissionSelected(QListWidgetItem* item) {
     QString path = item->data(Qt::UserRole).toString();
     if (path.isEmpty()) return;
@@ -173,35 +178,31 @@ void ShadowScriptPage::onMissionSelected(QListWidgetItem* item) {
         f.close();
     }
     m_currentMission = item->text().trimmed();
+    m_sourceDirectory = QFileInfo(path).absolutePath();
     m_runBtn->setEnabled(!m_running);
     m_output->log("Loaded: " + m_currentMission, "INFO");
 }
 
 void ShadowScriptPage::runMission() {
     if (m_running || m_currentMission.isEmpty()) return;
-    if (!m_ipc || !m_ipc->isConnected()) {
-        m_output->log("Daemon not connected — cannot run mission", "WARNING");
-        return;
-    }
     setRunningState(true);
     m_output->log("▶ Running: " + m_currentMission, "SYSTEM");
-    m_runReqId = m_ipc->call("run_mission", {
-        {"name", m_currentMission},
-        {"source", m_editor->toPlainText()}
-    });
+    if (!m_runner->start(m_editor->toPlainText(), m_sourceDirectory, ApiClient::configIniPath()))
+        setRunningState(false);
 }
 
 void ShadowScriptPage::stopMission() {
     if (!m_running) return;
-    if (m_ipc && m_ipc->isConnected())
-        m_stopReqId = m_ipc->call("stop_mission", {{"name", m_currentMission}});
-    setRunningState(false);
-    m_output->log("■ Mission stopped: " + m_currentMission, "WARNING");
+    m_runner->stop();
+    m_stopBtn->setEnabled(false);
+    m_output->log("Stopping mission: " + m_currentMission, "WARNING");
 }
 
 void ShadowScriptPage::setRunningState(bool running) {
     m_running = running;
-    m_runBtn->setEnabled(!running && !m_currentMission.isEmpty());
+    m_runBtn->setEnabled(!running && !m_editor->toPlainText().trimmed().isEmpty());
+    m_missionList->setEnabled(!running);
+    m_editor->setReadOnly(running);
     m_stopBtn->setEnabled(running);
     m_statusLabel->setText(running ? "● RUNNING" : "IDLE");
     m_statusLabel->setStyleSheet(running
@@ -209,14 +210,3 @@ void ShadowScriptPage::setRunningState(bool running) {
         : "color: #334155; font-family: 'JetBrains Mono'; font-size: 10px; letter-spacing: 2px;");
 }
 
-void ShadowScriptPage::onIpcResult(int id, QJsonObject result) {
-    if (id == m_runReqId) {
-        QString line = result.value("output").toString();
-        QString level = result.value("level").toString("INFO");
-        if (!line.isEmpty()) m_output->log(line, level);
-        if (result.value("complete").toBool()) {
-            setRunningState(false);
-            m_output->log("Mission complete: " + m_currentMission, "SUCCESS");
-        }
-    }
-}

@@ -83,6 +83,7 @@ import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLooku
 import { getOtaManifest, updateOtaManifest } from "./ota";
 import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, openDm, listDms, createRoom, deleteRoom, updateRoom } from "./chat";
 import { listFiles, uploadFile, downloadFile, deleteFile } from "./files";
+import { getInbox, getMailCount, getMail, markRead, deleteMail, sendOutbound, replyMail, storeInboundMail } from "./mail";
 export { ChatRoom } from "./chat_do";
 import { dbSelect } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
@@ -698,6 +699,10 @@ export default {
         // Admin (shadow@shadowcypher.site only — checked inside each handler)
         "GET /v1/admin/overview":             adminOverview,
         "GET /v1/admin/users":                adminUsers,
+        // Shadow Mail
+        "GET /v1/mail/inbox":                 getInbox,
+        "GET /v1/mail/count":                 getMailCount,
+        "POST /v1/mail/send":                 sendOutbound,
       };
       const routeKey = `${req.method} ${path}`;
       const handler = authedRoutes[routeKey];
@@ -716,6 +721,11 @@ export default {
       // File storage
       const fileGet    = req.method === "GET"    && /^\/v1\/files\/.+/.test(path);
       const fileDelete = req.method === "DELETE" && /^\/v1\/files\/.+/.test(path);
+      // Mail (parameterized — /v1/mail/:id, /v1/mail/:id/reply, /v1/mail/:id/read)
+      const mailGet    = req.method === "GET"    && /^\/v1\/mail\/[^/]+$/.test(path);
+      const mailDel    = req.method === "DELETE" && /^\/v1\/mail\/[^/]+$/.test(path);
+      const mailRead   = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/read$/.test(path);
+      const mailReply  = req.method === "POST"   && /^\/v1\/mail\/[^/]+\/reply$/.test(path);
       // Chat room management (parameterized)
       const chatRoomDelete = req.method === "DELETE" && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
       const chatRoomPatch  = req.method === "PATCH"  && /^\/v1\/chat\/rooms\/[^/]+$/.test(path);
@@ -723,7 +733,7 @@ export default {
       const deviceDetail_ = req.method === "GET"   && /^\/v1\/devices\/[0-9a-f-]{36}$/.test(path);
       const devicePatch   = req.method === "PATCH"  && /^\/v1\/devices\/[0-9a-f-]{36}$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || fileGet || fileDelete || chatRoomDelete || chatRoomPatch || deviceDetail_ || devicePatch;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || fileGet || fileDelete || chatRoomDelete || chatRoomPatch || deviceDetail_ || devicePatch || mailGet || mailDel || mailRead || mailReply;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -769,6 +779,12 @@ export default {
           if (chatRoomDelete) return deleteRoom(req, env, authedUser, cors, roomName);
           if (chatRoomPatch)  return updateRoom(req, env, authedUser, cors, roomName);
         }
+        // Mail — message id is the segment after /v1/mail/
+        const mailId = path.split("/")[3];
+        if (mailGet)   return getMail(req, env, authedUser, cors, mailId);
+        if (mailDel)   return deleteMail(req, env, authedUser, cors, mailId);
+        if (mailRead)  return markRead(req, env, authedUser, cors, mailId);
+        if (mailReply) return replyMail(req, env, authedUser, cors, mailId);
         // File storage — key is everything after /v1/files/
         const fileKey = path.slice("/v1/files/".length);
         if (fileGet)    return downloadFile(req, env, { id: user.id, email: user.email }, cors, fileKey);
@@ -833,6 +849,11 @@ export default {
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(runCveMatchingCron(env));
+  },
+
+  async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
+    const rawBody = await new Response(message.raw).text();
+    ctx.waitUntil(storeInboundMail(env, message, rawBody));
   },
 
 };

@@ -9,6 +9,9 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Concurrent WebSockets)
 find_package(OpenSSL REQUIRED)
+include(CTest)
+add_subdirectory(core)
+add_subdirectory(daemon)
 
 qt_add_executable(shadowcypher
     src/main.cpp
@@ -57,8 +60,6 @@ qt_add_executable(shadowcypher
     src/pages/ThreatPage.h
     src/pages/VulnPage.cpp
     src/pages/VulnPage.h
-    src/pages/SmartContractPage.cpp
-    src/pages/SmartContractPage.h
 )
 
 target_link_libraries(shadowcypher PRIVATE
@@ -68,7 +69,9 @@ target_link_libraries(shadowcypher PRIVATE
     Qt6::Concurrent
     Qt6::WebSockets
     OpenSSL::Crypto
+    shadow_runtime
 )
+add_dependencies(shadowcypher shadowcypher-daemon)
 
 if(NOT MSVC)
     target_compile_options(shadowcypher PRIVATE -Wall -Wextra -O2)
@@ -77,6 +80,8 @@ else()
 endif()
 
 install(TARGETS shadowcypher DESTINATION bin)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../shadowscript/missions"
+    DESTINATION share/shadowcypher)
 install(FILES assets/shadowcypher.desktop DESTINATION share/applications)
 install(FILES assets/icon-256.png
     DESTINATION share/icons/hicolor/256x256/apps
