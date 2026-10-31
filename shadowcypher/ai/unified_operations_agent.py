@@ -469,7 +469,7 @@ class GhidraHeadlessDecompilerBridge:
                 "lines_count": len(full_c.splitlines())
             }
         except Exception as e:
-            return {"engine": "Native SRE", "error": str(e), "c_pseudocode": f"// Decompilation failed: {e}"}
+            return {"engine": "Native SRE", "error": str(e), "c_pseudocode": f"// Decompilation failed: {e}", "functions_decompiled": 0, "binary": str(binary_path)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -524,7 +524,7 @@ class LocalLinuxVoiceInterface:
 
     @staticmethod
     def speak(text: str) -> None:
-        logger.info(f"[TACTICAL VOICE] {text}")
+        logger.info("TacticalVoice", f"[TACTICAL VOICE] {text}")
         speech_cmd = None
         for binary, args in [
             ("spd-say", ["spd-say", "-r", "10", text]),
@@ -740,11 +740,11 @@ class UnifiedCyberAgent:
                         seen_files[path_str] = mtime
                         if self.sre.is_elf_binary(p):
                             self.voice.speak(f"New binary detected: {p.name}. Decompiling.")
-                            logger.info(f"[WATCHER-DAEMON] New ELF binary detected: {p}. Running automatic SRE...")
+                            logger.info("WatcherDaemon", f"[WATCHER-DAEMON] New ELF binary detected: {p}. Running automatic SRE...")
                             decomp = self.decompile_binary_target(path_str, max_functions=3)
-                            logger.info(f"[WATCHER-DAEMON] Decompiled {p.name} -> Vault ID: {decomp.get('vault_id')}")
+                            logger.info("WatcherDaemon", f"[WATCHER-DAEMON] Decompiled {p.name} -> Vault ID: {decomp.get('vault_id')}")
         except KeyboardInterrupt:
-            logger.info("[WATCHER-DAEMON] Watch loop stopped by operator.")
+            logger.info("WatcherDaemon", "[WATCHER-DAEMON] Watch loop stopped by operator.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -1,0 +1,12 @@
+[Unit]
+Description=ShadowOS Live Login Fix
+After=local-fs.target
+ConditionPathExists=!/var/lib/shadowos/live-login-fix.stamp
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/shadowos-live-login-fix.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

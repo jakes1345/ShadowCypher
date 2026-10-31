@@ -821,7 +821,7 @@ class TestShadowOSHyprland:
         assert "monitor" in self.conf
 
     def test_terminal_bound(self):
-        assert "foot" in self.conf or "kitty" in self.conf or "alacritty" in self.conf
+        assert "foot" in self.conf or "kitty" in self.conf or "alacritty" in self.conf or "shadow-term" in self.conf
 
     def test_launcher_bound(self):
         assert "wofi" in self.conf or "rofi" in self.conf
