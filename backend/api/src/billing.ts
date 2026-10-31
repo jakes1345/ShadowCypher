@@ -19,6 +19,7 @@
 import type { Env } from "./index";
 import { dbSelect, dbUpdate, dbUpsert } from "./supabase";
 import { applyReferralReward } from "./referrals";
+import { fulfillShopSession, isShopSession } from "./shop";
 
 interface AuthedUser {
   id: string;
@@ -33,7 +34,7 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
 
 // ─── Stripe REST helper (no SDK — keeps Worker bundle small) ────────────────
 
-async function stripeForm(
+export async function stripeForm(
   env: Env,
   path: string,
   body: Record<string, string>
@@ -193,6 +194,21 @@ export async function handleWebhook(req: Request, env: Env, cors: HeadersInit): 
 
   const event = JSON.parse(payload) as { type: string; data: { object: Record<string, unknown> } };
   const obj = event.data.object;
+
+  // Merch orders (one-time payments) never touch subscription state.
+  if (
+    (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") &&
+    isShopSession(obj)
+  ) {
+    try {
+      await fulfillShopSession(env, obj);
+    } catch (err) {
+      console.error("[webhook] shop fulfilment failed", err instanceof Error ? err.message : err);
+      // 500 makes Stripe retry; fulfilment is idempotent per session.
+      return json({ error: "shop_fulfilment_failed" }, { status: 500 }, cors);
+    }
+    return json({ received: true }, {}, cors);
+  }
 
   try {
     switch (event.type) {

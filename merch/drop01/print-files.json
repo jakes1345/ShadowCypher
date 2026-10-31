@@ -1,0 +1,122 @@
+[
+  {
+    "file": "print/ghost-mode-tee_left-chest.png",
+    "source": "src/ghost-mode-tee_left-chest.svg",
+    "product": "ghost-mode-tee",
+    "placement": "front (left chest)",
+    "size_px": [
+      1050,
+      1050
+    ],
+    "size_in": "3.5 x 3.5",
+    "note": "Place on the wearer's left chest, about 3 in below the collar."
+  },
+  {
+    "file": "print/ghost-mode-tee_back.png",
+    "source": "src/ghost-mode-tee_back.svg",
+    "product": "ghost-mode-tee",
+    "placement": "back",
+    "size_px": [
+      3600,
+      4800
+    ],
+    "size_in": "12 x 16",
+    "note": ""
+  },
+  {
+    "file": "print/plaintext-tee_front.png",
+    "source": "src/plaintext-tee_front.svg",
+    "product": "plaintext-tee",
+    "placement": "front",
+    "size_px": [
+      3600,
+      4800
+    ],
+    "size_in": "12 x 16",
+    "note": "Ciphertext = AES-256-GCM(key=0x5c*32, nonce=0x0b*12, aad='sc-drop-01') of filler + 'say it in the dark.'."
+  },
+  {
+    "file": "print/dark-hoodie_chest.png",
+    "source": "src/dark-hoodie_chest.svg",
+    "product": "dark-hoodie",
+    "placement": "front (chest)",
+    "size_px": [
+      3000,
+      900
+    ],
+    "size_in": "10 x 3",
+    "note": "Centre on the chest, top edge about 3.5 in below the collar seam, above the pocket."
+  },
+  {
+    "file": "print/dark-hoodie_back.png",
+    "source": "src/dark-hoodie_back.svg",
+    "product": "dark-hoodie",
+    "placement": "back",
+    "size_px": [
+      3600,
+      4800
+    ],
+    "size_in": "12 x 16",
+    "note": ""
+  },
+  {
+    "file": "print/hood-dad-hat_embroidery-front.png",
+    "source": "src/hood-dad-hat_embroidery-front.svg",
+    "product": "hood-dad-hat",
+    "placement": "embroidery_front",
+    "size_px": [
+      1200,
+      525
+    ],
+    "size_in": "4 x 1.75",
+    "note": "Flat embroidery. Threads: 1832 Purple #6B5294, 1801 White #FFFFFF, 1695 Aqua/Teal #3399FF, 1800 Black #000000."
+  },
+  {
+    "file": "print/sticker_ghost-mode.png",
+    "source": "src/sticker_ghost-mode.svg",
+    "product": "sticker-ghost-mode",
+    "placement": "default",
+    "size_px": [
+      1200,
+      1200
+    ],
+    "size_in": "4 x 4",
+    "note": ""
+  },
+  {
+    "file": "print/sticker_encrypted-seal.png",
+    "source": "src/sticker_encrypted-seal.svg",
+    "product": "sticker-encrypted-seal",
+    "placement": "default",
+    "size_px": [
+      1200,
+      1200
+    ],
+    "size_in": "4 x 4",
+    "note": ""
+  },
+  {
+    "file": "print/sticker_terminal.png",
+    "source": "src/sticker_terminal.svg",
+    "product": "sticker-terminal",
+    "placement": "default",
+    "size_px": [
+      1200,
+      1200
+    ],
+    "size_in": "4 x 4",
+    "note": ""
+  },
+  {
+    "file": "print/mug_wrap.png",
+    "source": "src/mug_wrap.svg",
+    "product": "mug",
+    "placement": "default",
+    "size_px": [
+      2700,
+      1050
+    ],
+    "size_in": "9 x 3.5",
+    "note": ""
+  }
+]

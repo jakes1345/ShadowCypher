@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop — ShadowCypher</title>
+    <meta name="description" content="ShadowCypher Drop 01: tees, a hoodie, a hat, stickers and a mug. Printed on demand, shipped worldwide.">
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/png" href="/icon-192.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        :root { --cyan: #22e3ff; --line: #1c1f26; }
+        * { box-sizing: border-box; }
+        body { background: var(--bg-base); color: var(--text-primary); font-family: var(--font-main); margin: 0; }
+        a { color: inherit; }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+        header.top { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; border-bottom: 1px solid var(--line); }
+        .back { color: var(--accent-primary); font-family: var(--font-mono); font-size: .78rem; text-decoration: none; letter-spacing: 2px; }
+        .cart-btn { background: none; border: 1px solid var(--line); color: var(--text-primary); font-family: var(--font-mono); font-size: .8rem; letter-spacing: 1px; padding: 9px 14px; border-radius: 8px; cursor: pointer; }
+        .cart-btn:hover { border-color: var(--accent-primary); }
+        .cart-btn b { color: var(--cyan); }
+        .hero { padding: 64px 0 36px; }
+        .kicker { font-family: var(--font-mono); color: var(--cyan); font-size: .75rem; letter-spacing: 3px; text-transform: uppercase; }
+        .hero h1 { font-size: clamp(2.4rem, 6vw, 4.2rem); line-height: 1.02; margin: 14px 0 14px; font-weight: 900; letter-spacing: -.01em; }
+        .hero h1 span { color: var(--accent-primary); }
+        .hero p { color: var(--text-secondary); max-width: 620px; line-height: 1.6; margin: 0; }
+        .notice { margin: 0 0 28px; padding: 14px 18px; border: 1px solid var(--line); border-left: 3px solid var(--cyan); border-radius: 8px; background: var(--bg-surface); color: var(--text-secondary); font-size: .95rem; }
+        .notice.ok { border-left-color: var(--success); color: var(--text-primary); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; padding-bottom: 80px; }
+        .card { background: var(--bg-surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+        .card .img { aspect-ratio: 1; background: #0c0c0c; display: grid; place-items: center; overflow: hidden; }
+        .card .img img { width: 100%; height: 100%; object-fit: contain; }
+        .card .body { padding: 16px 16px 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+        .card h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+        .card .meta { color: var(--text-muted); font-family: var(--font-mono); font-size: .72rem; letter-spacing: 1px; text-transform: uppercase; }
+        .card .price { font-family: var(--font-mono); color: var(--cyan); font-size: .95rem; }
+        .row { display: flex; gap: 8px; align-items: center; margin-top: auto; }
+        select, .qty { background: var(--bg-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font-family: var(--font-mono); font-size: .82rem; }
+        select { flex: 1; min-width: 0; }
+        .qty { width: 62px; }
+        .add { background: var(--accent-primary); color: #fff; border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 700; cursor: pointer; font-family: var(--font-main); }
+        .add:hover { background: var(--accent-secondary); }
+        .add:disabled { opacity: .5; cursor: default; }
+        .thumbs { display: flex; gap: 6px; padding: 0 16px; }
+        .thumbs button { width: 46px; height: 46px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: #0c0c0c; cursor: pointer; overflow: hidden; }
+        .thumbs button.on { border-color: var(--accent-primary); }
+        .thumbs img { width: 100%; height: 100%; object-fit: contain; }
+        /* drawer */
+        .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: opacity .2s; }
+        .scrim.on { opacity: 1; pointer-events: auto; }
+        aside.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 100%); background: var(--bg-surface); border-left: 1px solid var(--line); transform: translateX(100%); transition: transform .25s; display: flex; flex-direction: column; z-index: 10; }
+        aside.drawer.on { transform: none; }
+        .drawer header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--line); }
+        .drawer h2 { margin: 0; font-size: 1.1rem; }
+        .x { background: none; border: 0; color: var(--text-secondary); font-size: 1.4rem; cursor: pointer; }
+        .lines { flex: 1; overflow: auto; padding: 8px 20px; }
+        .line { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+        .line img { width: 56px; height: 56px; object-fit: contain; background: #0c0c0c; border-radius: 6px; }
+        .line .n { font-size: .9rem; }
+        .line .s { color: var(--text-muted); font-family: var(--font-mono); font-size: .75rem; }
+        .line .ctl { display: flex; gap: 6px; align-items: center; font-family: var(--font-mono); font-size: .8rem; }
+        .line .ctl button { background: var(--bg-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; width: 26px; height: 26px; cursor: pointer; }
+        .sum { padding: 18px 20px 22px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+        .sum div { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: .85rem; color: var(--text-secondary); }
+        .sum div.t { color: var(--text-primary); font-size: 1rem; }
+        .checkout { margin-top: 6px; padding: 14px; font-size: 1rem; }
+        .empty { color: var(--text-muted); padding: 40px 0; text-align: center; }
+        .err { color: var(--critical); font-size: .85rem; min-height: 1.2em; }
+        footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--text-muted); font-size: .85rem; }
+        footer a { color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header class="top">
+        <a class="back" href="/">← SHADOWCYPHER</a>
+        <button class="cart-btn" id="cartBtn" type="button" hidden>CART <b id="cartCount">0</b></button>
+    </header>
+
+    <section class="hero">
+        <div class="kicker">Drop 01</div>
+        <h1>Say it in <span>the dark.</span></h1>
+        <p>Gear for people who'd rather not be read. Every piece is printed to order and shipped worldwide, so nothing sits in a warehouse and nothing gets wasted.</p>
+    </section>
+
+    <div id="notice" class="notice" hidden></div>
+    <div id="grid" class="grid" aria-live="polite"></div>
+</div>
+
+<footer>
+    <div class="wrap">
+        Payments by Stripe. We never see your card. Printing and shipping by Printful, who get only what they need to deliver your order.
+        Questions about an order: <a href="mailto:shop@shadowcypher.site">shop@shadowcypher.site</a>
+    </div>
+</footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Cart">
+    <header><h2>Your cart</h2><button class="x" id="closeCart" type="button" aria-label="Close">×</button></header>
+    <div class="lines" id="lines"></div>
+    <div class="sum">
+        <div><span>Subtotal</span><span id="subtotal">$0.00</span></div>
+        <div><span>Shipping</span><span id="shipNote">calculated at checkout</span></div>
+        <div class="err" id="err"></div>
+        <button class="add checkout" id="checkout" type="button">Checkout</button>
+    </div>
+</aside>
+
+<script>
+(() => {
+    const API = "https://api.shadowcypher.site";
+    const FREE_SHIP_CENTS = 7500;          // mirrors SHOP_FREE_SHIPPING_CENTS on the API
+    const CART_KEY = "sc-cart-v1";
+
+    // Shown while the store is closed: the real Drop 01 artwork.
+    const PREVIEW = [
+        { name: "Ghost Mode Tee", meta: "Bella+Canvas 3001 · black", price: "$34", imgs: ["ghost-mode-tee_back", "ghost-mode-tee_left-chest"] },
+        { name: "Plaintext Tee", meta: "Bella+Canvas 3001 · black", price: "$30", imgs: ["plaintext-tee_front"] },
+        { name: "Say It In The Dark Hoodie", meta: "Gildan 18500 · black", price: "$62", imgs: ["dark-hoodie_back", "dark-hoodie_chest"] },
+        { name: "Hood Dad Hat", meta: "Embroidered · black", price: "$30", imgs: ["hood-dad-hat_embroidery-front"] },
+        { name: "Ghost Mode Sticker", meta: "Kiss-cut vinyl · 4 in", price: "$5", imgs: ["sticker_ghost-mode"] },
+        { name: "Encrypted Seal Sticker", meta: "Kiss-cut vinyl · 4 in", price: "$5", imgs: ["sticker_encrypted-seal"] },
+        { name: "Terminal Sticker", meta: "Kiss-cut vinyl · 4 in", price: "$5", imgs: ["sticker_terminal"] },
+        { name: "while(awake) Mug", meta: "Black glossy · 11 oz", price: "$20", imgs: ["mug_wrap"] },
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const money = (c) => "$" + (c / 100).toFixed(2);
+    const el = (tag, attrs = {}, ...kids) => {
+        const n = document.createElement(tag);
+        for (const [k, v] of Object.entries(attrs)) {
+            if (k === "class") n.className = v;
+            else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+            else n.setAttribute(k, v);
+        }
+        for (const k of kids) n.append(k);
+        return n;
+    };
+
+    let cart = [];
+    try { cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]"); } catch { cart = []; }
+    const save = () => { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch {} };
+
+    function notice(text, ok) {
+        const n = $("notice");
+        n.textContent = text;
+        n.className = "notice" + (ok ? " ok" : "");
+        n.hidden = false;
+    }
+
+    function gallery(item) {
+        const main = el("img", { src: `/shop/drop01/${item.imgs[0]}.webp`, alt: item.name, loading: "lazy" });
+        const card = el("div", { class: "card" }, el("div", { class: "img" }, main));
+        if (item.imgs.length > 1) {
+            const t = el("div", { class: "thumbs" });
+            item.imgs.forEach((src, i) => {
+                const b = el("button", { type: "button", class: i ? "" : "on", "aria-label": "View" },
+                    el("img", { src: `/shop/drop01/${src}.webp`, alt: "" }));
+                b.addEventListener("click", () => {
+                    main.src = `/shop/drop01/${src}.webp`;
+                    t.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+                });
+                t.append(b);
+            });
+            card.append(t);
+        }
+        return card;
+    }
+
+    function renderClosed() {
+        notice("The store opens soon. Here's what's in the first drop.");
+        const grid = $("grid");
+        grid.replaceChildren();
+        for (const item of PREVIEW) {
+            const card = gallery(item);
+            card.append(el("div", { class: "body" },
+                el("h3", {}, item.name), el("div", { class: "meta" }, item.meta),
+                el("div", { class: "price" }, item.price)));
+            grid.append(card);
+        }
+    }
+
+    function renderOpen(products) {
+        const grid = $("grid");
+        grid.replaceChildren();
+        for (const p of products) {
+            const variants = p.variants.filter((v) => v.available);
+            if (!variants.length) continue;
+            const img = el("img", { src: variants[0].image || p.thumbnail || "", alt: p.name, loading: "lazy" });
+            const sel = el("select", { "aria-label": "Option" });
+            for (const v of variants) {
+                const label = [v.color, v.size].filter(Boolean).join(" · ") || "One size";
+                sel.append(el("option", { value: String(v.id) }, `${label} — ${money(v.price_cents)}`));
+            }
+            const qty = el("input", { class: "qty", type: "number", min: "1", max: "10", value: "1", "aria-label": "Quantity" });
+            const lo = Math.min(...variants.map((v) => v.price_cents));
+            const hi = Math.max(...variants.map((v) => v.price_cents));
+            const priceEl = el("div", { class: "price" }, lo === hi ? money(lo) : `${money(lo)} – ${money(hi)}`);
+            sel.addEventListener("change", () => {
+                const v = variants.find((x) => String(x.id) === sel.value);
+                if (v?.image) img.src = v.image;
+            });
+            const add = el("button", { class: "add", type: "button" }, "Add");
+            add.addEventListener("click", () => {
+                const v = variants.find((x) => String(x.id) === sel.value);
+                const q = Math.max(1, Math.min(10, parseInt(qty.value, 10) || 1));
+                const line = cart.find((l) => l.id === v.id);
+                if (line) line.qty = Math.min(10, line.qty + q);
+                else cart.push({ id: v.id, qty: q, name: p.name, opt: [v.color, v.size].filter(Boolean).join(" · "), price: v.price_cents, image: v.image || p.thumbnail || "" });
+                save(); drawCart(); openCart();
+            });
+            if (variants.length === 1) sel.hidden = true;
+            grid.append(el("div", { class: "card" },
+                el("div", { class: "img" }, img),
+                el("div", { class: "body" }, el("h3", {}, p.name), priceEl, el("div", { class: "row" }, sel, qty, add))));
+        }
+        $("cartBtn").hidden = false;
+    }
+
+    function drawCart() {
+        const lines = $("lines");
+        lines.replaceChildren();
+        let sub = 0, count = 0;
+        for (const l of cart) {
+            sub += l.price * l.qty; count += l.qty;
+            const minus = el("button", { type: "button", "aria-label": "Less" }, "−");
+            const plus = el("button", { type: "button", "aria-label": "More" }, "+");
+            minus.addEventListener("click", () => { l.qty -= 1; if (l.qty < 1) cart = cart.filter((x) => x !== l); save(); drawCart(); });
+            plus.addEventListener("click", () => { l.qty = Math.min(10, l.qty + 1); save(); drawCart(); });
+            lines.append(el("div", { class: "line" },
+                el("img", { src: l.image, alt: "" }),
+                el("div", {}, el("div", { class: "n" }, l.name), el("div", { class: "s" }, `${l.opt || "One size"} · ${money(l.price)}`)),
+                el("div", { class: "ctl" }, minus, String(l.qty), plus)));
+        }
+        if (!cart.length) lines.append(el("div", { class: "empty" }, "Nothing here yet."));
+        $("cartCount").textContent = String(count);
+        $("subtotal").textContent = money(sub);
+        $("shipNote").textContent = sub >= FREE_SHIP_CENTS ? "free" : `free over ${money(FREE_SHIP_CENTS)}`;
+        $("checkout").disabled = !cart.length;
+    }
+
+    const openCart = () => { $("drawer").classList.add("on"); $("scrim").classList.add("on"); };
+    const closeCart = () => { $("drawer").classList.remove("on"); $("scrim").classList.remove("on"); };
+    $("cartBtn").addEventListener("click", openCart);
+    $("closeCart").addEventListener("click", closeCart);
+    $("scrim").addEventListener("click", closeCart);
+
+    $("checkout").addEventListener("click", async () => {
+        const btn = $("checkout");
+        $("err").textContent = "";
+        btn.disabled = true; btn.textContent = "Opening secure checkout…";
+        try {
+            const r = await fetch(`${API}/v1/shop/checkout`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ items: cart.map((l) => ({ variant_id: l.id, quantity: l.qty })) }),
+            });
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok || !data.url) {
+                const why = { variant_unavailable: "Something in your cart just sold out. Remove it and try again.",
+                              rate_limited: "Too many tries. Wait a minute and try again.",
+                              shop_closed: "The store isn't open yet." }[data.error];
+                throw new Error(why || "Checkout couldn't start. Try again in a moment.");
+            }
+            window.location.href = data.url;
+        } catch (e) {
+            $("err").textContent = e.message;
+            btn.disabled = false; btn.textContent = "Checkout";
+        }
+    });
+
+    async function boot() {
+        const q = new URLSearchParams(location.search);
+        if (q.get("order") === "success") {
+            cart = []; save();
+            notice("Order placed. You'll get a receipt now and a tracking email when it ships.", true);
+        } else if (q.get("order") === "canceled") {
+            notice("Checkout canceled. Your cart is still here.");
+        }
+        drawCart();
+        try {
+            const r = await fetch(`${API}/v1/shop/products`);
+            const data = await r.json();
+            if (!r.ok || !data.open) return renderClosed();
+            // Drop cart lines that are no longer sold, refresh prices from the store.
+            const live = new Map();
+            data.products.forEach((p) => p.variants.forEach((v) => v.available && live.set(v.id, v)));
+            cart = cart.filter((l) => live.has(l.id)).map((l) => ({ ...l, price: live.get(l.id).price_cents }));
+            save(); drawCart();
+            if (q.get("order") !== "success") $("notice").hidden = true;
+            renderOpen(data.products);
+        } catch {
+            renderClosed();
+        }
+    }
+    boot();
+})();
+</script>
+</body>
+</html>

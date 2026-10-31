@@ -91,6 +91,7 @@ import { sendWelcomeEmail, sendKeyRotatedEmail, sendRecoveryKitEmail } from "./e
 import { adminOverview, adminUsers } from "./admin";
 import { getProfile, updateProfile } from "./profile";
 import { rateLimit } from "./ratelimit";
+import { getProducts as shopProducts, handleShopCheckout } from "./shop";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -138,6 +139,13 @@ export interface Env {
   SHADOW_FILES: R2Bucket;
   // KV rate-limit store (binding: SHADOW_RL)
   SHADOW_RL?: KVNamespace;
+  // Merch shop (shop.ts) — Printful print-on-demand
+  PRINTFUL_API_TOKEN?: string;
+  PRINTFUL_STORE_ID?: string;
+  SHOP_AUTO_CONFIRM?: string;
+  SHOP_SHIPPING_CENTS?: string;
+  SHOP_FREE_SHIPPING_CENTS?: string;
+  SHOP_SHIP_COUNTRIES?: string;
 }
 
 interface SupabaseUser {
@@ -423,6 +431,10 @@ export default {
                 "GET /v1/incidents?open=1",
                 "POST /v1/incidents/ack?incident_id=",
               ],
+              shop: [
+                "GET /v1/shop/products (public)",
+                "POST /v1/shop/checkout (public)",
+              ],
               billing: [
                 "POST /v1/billing/checkout",
                 "POST /v1/billing/portal",
@@ -523,6 +535,18 @@ export default {
         if (!(await rateLimit(env.SHADOW_RL, `poll:${ip}`, 30, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         return pollDeviceAuth(req, env, undefined, cors);
+      }
+
+      // Merch shop — public. Prices are always re-read server-side from Printful.
+      if (path === "/v1/shop/products" && req.method === "GET") {
+        if (!(await rateLimit(env.SHADOW_RL, `shop-list:${ip}`, 60, 60_000)))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        return shopProducts(req, env, cors);
+      }
+      if (path === "/v1/shop/checkout" && req.method === "POST") {
+        if (!(await rateLimit(env.SHADOW_RL, `shop-co:${ip}`, 10, 60_000)))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        return handleShopCheckout(req, env, cors);
       }
 
       // Public knowledge endpoints — no API key required
