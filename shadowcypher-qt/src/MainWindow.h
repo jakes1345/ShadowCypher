@@ -4,6 +4,7 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QLabel>
+#include <QProcess>
 #include "ipc/IpcClient.h"
 
 class MainWindow : public QMainWindow {
@@ -21,6 +22,7 @@ private:
     QStackedWidget* m_stack;
     QListWidget*   m_nav;
     QLabel*        m_connectionDot;
+    QProcess*      m_daemonProcess = nullptr;
 
     void buildSidebar(QWidget* parent);
     void buildPages();
@@ -42,5 +44,4 @@ private:
     static constexpr int PAGE_MAIL          = 12;
     static constexpr int PAGE_CVE_FEED      = 13;
     static constexpr int PAGE_SETTINGS      = 14;
-    static constexpr int PAGE_WEB3_AUDIT    = 15;
 };

@@ -60,8 +60,6 @@ qt_add_executable(shadowcypher
     src/pages/ThreatPage.h
     src/pages/VulnPage.cpp
     src/pages/VulnPage.h
-    src/pages/SmartContractPage.cpp
-    src/pages/SmartContractPage.h
 )
 
 target_link_libraries(shadowcypher PRIVATE
@@ -73,7 +71,7 @@ target_link_libraries(shadowcypher PRIVATE
     OpenSSL::Crypto
     shadow_runtime
 )
-add_dependencies(shadowcypher shadowcypher-runtime)
+add_dependencies(shadowcypher shadowcypher-daemon)
 
 if(NOT MSVC)
     target_compile_options(shadowcypher PRIVATE -Wall -Wextra -O2)

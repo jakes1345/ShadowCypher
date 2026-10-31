@@ -15,7 +15,8 @@
 #include "pages/NetworkPage.h"
 #include "pages/ThreatPage.h"
 #include "pages/VulnPage.h"
-#include "pages/SmartContractPage.h"
+#include <QCoreApplication>
+#include <QFile>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -119,7 +120,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         {"  SHADOW MAIL"},
         {"  CVE FEED"},
         {"  SETTINGS"},
-        {"  WEB3 AUDIT"},
     };
     for (const auto& item : navItems)
         m_nav->addItem(item.label);
@@ -154,7 +154,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     m_stack->addWidget(new MailPage(m_ipc, this));            // 12
     m_stack->addWidget(new CveFeedPage(m_ipc, this));         // 13
     m_stack->addWidget(new SettingsPage(this));               // 14
-    m_stack->addWidget(new SmartContractPage(this));          // 15
 
     rootLayout->addWidget(m_stack);
 
@@ -165,7 +164,16 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     );
     statusBar()->showMessage("SHADOWCYPHER TACTICAL OS  |  Qt6 Native  |  Daemon: disconnected");
 
-    // Start IPC
+    // Auto-launch daemon before connecting IPC
+    {
+        QString daemonPath = QCoreApplication::applicationDirPath()
+                             + QStringLiteral("/shadowcypher-daemon");
+        if (!QFile::exists(daemonPath))
+            daemonPath = QStringLiteral("shadowcypher-daemon");
+        m_daemonProcess = new QProcess(this);
+        m_daemonProcess->setProgram(daemonPath);
+        m_daemonProcess->start();
+    }
     m_ipc->connectToDaemon();
 }
 
