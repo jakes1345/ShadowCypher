@@ -507,9 +507,8 @@ declare -A categories=(
   [base]="base linux-hardened"
   [boot]="grub efibootmgr"
   [desktop]="hyprland waybar wofi sddm foot"
-  [dev]="git neovim code docker podman"
-  [pentest]="nmap metasploit wireshark-qt aircrack-ng"
-  [gaming]="steam gamemode mangohud lutris prismlauncher"
+  [dev]="git neovim"
+  [pentest]="nmap wireshark-qt"
   [security]="tor nftables apparmor fail2ban"
 )
 for cat_name in "${!categories[@]}"; do

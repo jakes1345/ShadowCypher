@@ -144,6 +144,9 @@ class TestGhidraHeadlessDecompilerBridge:
     """Test native Linux SRE / Ghidra C pseudocode decompilation."""
 
     def test_decompile_binary_id(self):
+        import shutil
+        if shutil.which("r2") is None:
+            pytest.skip("radare2 not installed")
         bridge = GhidraHeadlessDecompilerBridge()
         decomp = bridge.decompile_binary(Path("/bin/id"), max_functions=2)
         assert "c_pseudocode" in decomp

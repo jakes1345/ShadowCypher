@@ -831,7 +831,9 @@ class TestShadowScript:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # UI: all 35 pages import and have correct class (parametrized)
+# NOTE: Python UI replaced by Qt6/C++ desktop app — skip until ui/ is rebuilt.
 # ─────────────────────────────────────────────────────────────────────────────
+@pytest.mark.skip(reason="Python UI superseded by Qt6/C++ desktop app")
 class TestUIPageImports:
     PAGE_MAP = {
         "Central Command HUD": ("dashboard", "DashboardPage"),
@@ -879,7 +881,9 @@ class TestUIPageImports:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # UI INTEGRITY: verify stale ui_integrity.py references are documented
+# NOTE: Python UI replaced by Qt6/C++ desktop app — skip until ui/ is rebuilt.
 # ─────────────────────────────────────────────────────────────────────────────
+@pytest.mark.skip(reason="Python UI superseded by Qt6/C++ desktop app")
 class TestUIIntegrityScript:
     def test_ghost_correct_class_is_shadow_nodes_page(self):
         from shadowcypher.ui import ghost_page

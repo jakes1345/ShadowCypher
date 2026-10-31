@@ -47,6 +47,8 @@ pass
 keepassxc
 veracrypt
 usbguard
+cpupower
+cups
 bubblewrap
 nmap
 wireshark-qt

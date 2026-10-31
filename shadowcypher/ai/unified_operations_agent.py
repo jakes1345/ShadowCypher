@@ -469,7 +469,7 @@ class GhidraHeadlessDecompilerBridge:
                 "lines_count": len(full_c.splitlines())
             }
         except Exception as e:
-            return {"engine": "Native SRE", "error": str(e), "c_pseudocode": f"// Decompilation failed: {e}"}
+            return {"engine": "Native SRE", "error": str(e), "c_pseudocode": f"// Decompilation failed: {e}", "functions_decompiled": 0, "binary": str(binary_path)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -524,7 +524,7 @@ class LocalLinuxVoiceInterface:
 
     @staticmethod
     def speak(text: str) -> None:
-        logger.info(f"[TACTICAL VOICE] {text}")
+        logger.info("TacticalVoice", f"[TACTICAL VOICE] {text}")
         speech_cmd = None
         for binary, args in [
             ("spd-say", ["spd-say", "-r", "10", text]),
@@ -555,7 +555,7 @@ class UnifiedCyberAgent:
 
     def __init__(self, drive_path: str = "/tmp/shadow_drive"):
         self.drive_info = LinuxDriveEngine.inspect_drive(drive_path)
-        logger.info(f"Target Linux Drive initialized: {self.drive_info.resolved_mount} ({self.drive_info.fs_type}, {self.drive_info.free_gb}GB free)")
+        logger.info("UnifiedCyberAgent", f"Target Linux Drive initialized: {self.drive_info.resolved_mount} ({self.drive_info.fs_type}, {self.drive_info.free_gb}GB free)")
 
         # Create vault dir on drive or fallback
         vault_dir = Path(self.drive_info.target_path) / ".shadow_context_vault"
@@ -720,7 +720,7 @@ class UnifiedCyberAgent:
             target_path.mkdir(parents=True, exist_ok=True)
 
         self.voice.speak(f"Daemon watching Linux drive directory {target_path.name}")
-        logger.info(f"[WATCHER-DAEMON] Monitoring: {target_path} (polling every {poll_interval}s)")
+        logger.info("WatcherDaemon", f"[WATCHER-DAEMON] Monitoring: {target_path} (polling every {poll_interval}s)")
 
         seen_files: Dict[str, float] = {}
         for p in target_path.glob("**/*"):
@@ -740,11 +740,11 @@ class UnifiedCyberAgent:
                         seen_files[path_str] = mtime
                         if self.sre.is_elf_binary(p):
                             self.voice.speak(f"New binary detected: {p.name}. Decompiling.")
-                            logger.info(f"[WATCHER-DAEMON] New ELF binary detected: {p}. Running automatic SRE...")
+                            logger.info("WatcherDaemon", f"[WATCHER-DAEMON] New ELF binary detected: {p}. Running automatic SRE...")
                             decomp = self.decompile_binary_target(path_str, max_functions=3)
-                            logger.info(f"[WATCHER-DAEMON] Decompiled {p.name} -> Vault ID: {decomp.get('vault_id')}")
+                            logger.info("WatcherDaemon", f"[WATCHER-DAEMON] Decompiled {p.name} -> Vault ID: {decomp.get('vault_id')}")
         except KeyboardInterrupt:
-            logger.info("[WATCHER-DAEMON] Watch loop stopped by operator.")
+            logger.info("WatcherDaemon", "[WATCHER-DAEMON] Watch loop stopped by operator.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
