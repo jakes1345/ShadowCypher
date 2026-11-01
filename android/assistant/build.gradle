@@ -60,4 +60,7 @@ dependencies {
 
     // ONNX Runtime — wake word inference
     implementation "com.microsoft.onnxruntime:onnxruntime-android:1.19.2"
+
+    // HTTP client for LLMClient (Guardian API / Ollama)
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
 }
