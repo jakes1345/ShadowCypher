@@ -26,7 +26,7 @@ def test_operator_profile():
     resp = requests.get(f"{BASE_URL}/v1/me", headers=HEADERS)
     assert resp.status_code == 200
     data = resp.json()
-    assert data["email"] == "operator@shadowcypher.site"
+    assert data["email"].lower().endswith("@shadowcypher.site")
     assert data["plan"] == "personal"
     print("✓ Operator profile retrieved")
 

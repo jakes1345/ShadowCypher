@@ -3,6 +3,7 @@ import threading
 import time
 import requests
 import pytest
+from unittest.mock import patch
 
 
 def _start_guardian_server():
@@ -13,19 +14,24 @@ def _start_guardian_server():
 
 @pytest.fixture(scope="session", autouse=True)
 def guardian_api_server():
-    """Start the Guardian API server once per test session."""
-    thread = threading.Thread(target=_start_guardian_server, daemon=True)
-    thread.start()
+    """Start the Guardian API server once per test session.
 
-    # Wait up to 10 seconds for the server to become ready
-    for _ in range(50):
-        try:
-            resp = requests.get("http://localhost:9999/health", timeout=0.5)
-            if resp.status_code == 200:
-                break
-        except Exception:
-            pass
-        time.sleep(0.2)
+    Patches _get_or_create_api_token to return "operator" so tests always
+    use the well-known token regardless of the user's local config handle.
+    """
+    with patch("shadowcypher.api.local_api._get_or_create_api_token", return_value="operator"):
+        thread = threading.Thread(target=_start_guardian_server, daemon=True)
+        thread.start()
 
-    yield
-    # Server thread is a daemon and will stop when the process exits
+        # Wait up to 10 seconds for the server to become ready
+        for _ in range(50):
+            try:
+                resp = requests.get("http://localhost:9999/health", timeout=0.5)
+                if resp.status_code == 200:
+                    break
+            except Exception:
+                pass
+            time.sleep(0.2)
+
+        yield
+        # Server thread is a daemon and will stop when the process exits
