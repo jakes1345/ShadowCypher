@@ -177,7 +177,6 @@ class ADPivot(BaseModule):
         Find accounts with 'Do not require Kerberos pre-auth' (UF_DONT_REQUIRE_PREAUTH).
         AS-REP roasting candidates.
         """
-        UF_DONT_REQUIRE_PREAUTH = 0x400000
         results = self._search(
             search_filter="(&(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=4194304))",
             attributes=["sAMAccountName", "userAccountControl", "displayName"],

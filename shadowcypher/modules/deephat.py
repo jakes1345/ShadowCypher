@@ -130,7 +130,9 @@ class DeepHat(BaseModule):
         Uses the Psbdmp.ws public API (no auth required).
         """
         try:
-            import urllib.request, json
+            import json
+            import urllib.parse
+            import urllib.request
             url = f"https://psbdmp.ws/api/search/{urllib.parse.quote(keyword)}"
             req = urllib.request.Request(url, headers={"User-Agent": "ShadowCypher/3.0"})
             with urllib.request.urlopen(req, timeout=10) as resp:
@@ -152,7 +154,9 @@ class DeepHat(BaseModule):
         Check if an email appears in known breach databases via HIBP API (v3).
         Requires HIBP API key for full results; returns public breach names otherwise.
         """
-        import urllib.request, json, urllib.parse
+        import json
+        import urllib.parse
+        import urllib.request
         email_encoded = urllib.parse.quote(email)
         url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{email_encoded}"
         headers = {
@@ -181,9 +185,10 @@ class DeepHat(BaseModule):
 
     def _tor_request(self, url: str, timeout: int = 30) -> Any:
         """Make an HTTP request through the Tor SOCKS5 proxy."""
-        import socks
-        import urllib.request
         import json
+        import urllib.request
+
+        import socks
 
         orig_socket = socket.socket
         try:
@@ -206,7 +211,6 @@ class DeepHat(BaseModule):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-import urllib.parse  # noqa: E402 (needed in search_paste_sites above)
 
 
 def _onion_RE_matches(url: str) -> bool:
