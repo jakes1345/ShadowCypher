@@ -523,8 +523,11 @@ class TestVulnScanner:
         assert hasattr(vs, "audit_target")
 
     def test_nuclei_scan_raises_without_ai_engine(self, vs):
-        # register_tool fallback raises ImportError when ai_engine is not installed
+        # Only testable when ai_engine is NOT installed; skip otherwise
+        import importlib
         import pytest
+        if importlib.util.find_spec("ai_engine") is not None:
+            pytest.skip("ai_engine is installed; fallback ImportError path not reachable")
         with pytest.raises(ImportError, match="ai_engine"):
             vs.nuclei_scan("http://127.0.0.1", on_output=lambda l: None)
 
