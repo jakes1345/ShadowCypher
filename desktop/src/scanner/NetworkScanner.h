@@ -57,6 +57,10 @@ private:
     QTimer        m_timer;
     QThread       m_thread;
     QList<Device> m_devices;
-    QList<Device> m_baseline;   // confirmed good IP→MAC mappings; never auto-updated
+    // m_baseline: user-confirmed IP→MAC mappings. Only updated via confirmDevice().
+    QList<Device> m_baseline;
+    // m_pending: first-seen but not yet confirmed. MAC changes here still fire
+    // arpSpoofDetected. Promoted to m_baseline via confirmDevice().
+    QList<Device> m_pending;
     bool          m_running = false;
 };

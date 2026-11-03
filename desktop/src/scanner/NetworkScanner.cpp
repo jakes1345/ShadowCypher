@@ -40,22 +40,35 @@ void NetworkScanner::scanNow()
     QList<Device> found = parseArpTable();
 
     for (auto& d : found) {
+        // 1. Check confirmed baseline first.
         auto base = std::find_if(m_baseline.begin(), m_baseline.end(),
             [&](const Device& k) { return k.ip == d.ip; });
-
-        if (base == m_baseline.end()) {
-            // Trust-on-first-use: add to baseline immediately so that a future
-            // MAC change for this IP triggers arpSpoofDetected rather than being
-            // silently treated as another "new" device.
-            d.isNew = true;
-            m_baseline.append(d);
-            emit newDeviceFound(d.ip, d.mac);
-        } else if (base->mac != d.mac) {
-            // Flag as suspect and keep flagging until confirmDevice() is called.
-            // Never update baseline automatically.
-            d.isSuspect = true;
-            emit arpSpoofDetected(d.ip, base->mac, d.mac);
+        if (base != m_baseline.end()) {
+            if (base->mac != d.mac) {
+                d.isSuspect = true;
+                emit arpSpoofDetected(d.ip, base->mac, d.mac);
+            }
+            continue;
         }
+
+        // 2. Check pending (first-seen but not yet confirmed) list.
+        auto pend = std::find_if(m_pending.begin(), m_pending.end(),
+            [&](const Device& k) { return k.ip == d.ip; });
+        if (pend != m_pending.end()) {
+            // Still unconfirmed — detect MAC changes against the first-seen MAC.
+            if (pend->mac != d.mac) {
+                d.isSuspect = true;
+                emit arpSpoofDetected(d.ip, pend->mac, d.mac);
+            }
+            // isNew stays false on repeat scans of a pending device.
+            continue;
+        }
+
+        // 3. Genuinely new IP — add to pending, NOT to baseline.
+        //    The user must call confirmDevice(ip) to promote it to baseline.
+        d.isNew = true;
+        m_pending.append(d);
+        emit newDeviceFound(d.ip, d.mac);
     }
 
     m_devices = found;
@@ -105,11 +118,15 @@ QList<Device> NetworkScanner::parseArpTable()
 
 void NetworkScanner::confirmDevice(const QString& ip)
 {
-    // Find the device in the last scan and update the baseline to its current MAC.
+    // Find the device in the last scan result.
     auto cur = std::find_if(m_devices.begin(), m_devices.end(),
         [&](const Device& d) { return d.ip == ip; });
     if (cur == m_devices.end()) return;
 
+    // Remove from pending (if present).
+    m_pending.removeIf([&](const Device& d) { return d.ip == ip; });
+
+    // Add/update in confirmed baseline with the current (user-approved) MAC.
     auto base = std::find_if(m_baseline.begin(), m_baseline.end(),
         [&](const Device& d) { return d.ip == ip; });
     if (base != m_baseline.end())
@@ -117,8 +134,8 @@ void NetworkScanner::confirmDevice(const QString& ip)
     else
         m_baseline.append(*cur);
 
-    // Clear the suspect flag in the live device list
     cur->isSuspect = false;
+    cur->isNew     = false;
     emit devicesChanged();
 }
 
