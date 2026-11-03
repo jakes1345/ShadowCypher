@@ -37,20 +37,29 @@ void NetworkScanner::onTimer() { scanNow(); }
 
 void NetworkScanner::scanNow()
 {
-    // Run in Qt concurrent to avoid blocking UI
     QList<Device> found = parseArpTable();
+
     for (auto& d : found) {
-        auto it = std::find_if(m_knownDevices.begin(), m_knownDevices.end(),
+        // Check against confirmed baseline (never auto-updated after first scan).
+        auto base = std::find_if(m_baseline.begin(), m_baseline.end(),
             [&](const Device& k) { return k.ip == d.ip; });
-        if (it == m_knownDevices.end()) {
+
+        if (base == m_baseline.end()) {
             d.isNew = true;
             emit newDeviceFound(d.ip, d.mac);
-        } else if (it->mac != d.mac) {
+        } else if (base->mac != d.mac) {
+            // Keep flagging as suspect until the user explicitly confirms the new MAC.
+            // Do NOT update baseline here — that would silently clear the alert.
             d.isSuspect = true;
-            emit arpSpoofDetected(d.ip, it->mac, d.mac);
+            emit arpSpoofDetected(d.ip, base->mac, d.mac);
         }
     }
-    m_knownDevices = found;
+
+    // Baseline is only populated on the very first scan.
+    // Subsequent scans never silently update it; use confirmDevice() for that.
+    if (m_baseline.isEmpty())
+        m_baseline = found;
+
     m_devices = found;
     emit devicesChanged();
     emit scanComplete(found.size());
@@ -94,6 +103,25 @@ QList<Device> NetworkScanner::parseArpTable()
 #endif
 
     return devices;
+}
+
+void NetworkScanner::confirmDevice(const QString& ip)
+{
+    // Find the device in the last scan and update the baseline to its current MAC.
+    auto cur = std::find_if(m_devices.begin(), m_devices.end(),
+        [&](const Device& d) { return d.ip == ip; });
+    if (cur == m_devices.end()) return;
+
+    auto base = std::find_if(m_baseline.begin(), m_baseline.end(),
+        [&](const Device& d) { return d.ip == ip; });
+    if (base != m_baseline.end())
+        base->mac = cur->mac;
+    else
+        m_baseline.append(*cur);
+
+    // Clear the suspect flag in the live device list
+    cur->isSuspect = false;
+    emit devicesChanged();
 }
 
 int NetworkScanner::newCount() const

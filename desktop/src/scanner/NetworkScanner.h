@@ -36,6 +36,8 @@ public slots:
     void start();
     void stop();
     Q_INVOKABLE void scanNow();
+    // Confirm that a device's current MAC is legitimate, updating the baseline.
+    Q_INVOKABLE void confirmDevice(const QString& ip);
 
 signals:
     void runningChanged();
@@ -55,6 +57,6 @@ private:
     QTimer        m_timer;
     QThread       m_thread;
     QList<Device> m_devices;
-    QList<Device> m_knownDevices;
+    QList<Device> m_baseline;   // confirmed good IP→MAC mappings; never auto-updated
     bool          m_running = false;
 };
