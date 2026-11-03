@@ -28,6 +28,7 @@ signals:
 
 private:
     void setStatus(const QString& s) { m_status = s; emit statusChanged(); }
+    void rollback();
 
     bool       m_active     = false;
     QString    m_status     = "off";

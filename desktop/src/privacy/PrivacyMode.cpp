@@ -1,55 +1,100 @@
 #include "PrivacyMode.h"
 #include <QProcess>
 
-PrivacyMode::PrivacyMode(QObject* parent) : QObject(parent) {}
-
-// Helper: run a shell command, return true only if it exited normally with code 0.
-static bool runShell(const QString& cmd, int timeoutMs = 15000)
+// Run a single iptables/ip6tables/systemctl command as an argument list (no shell injection).
+// Returns true only if the process exits normally with code 0.
+static bool run(const QString& prog, const QStringList& args, int timeoutMs = 8000)
 {
     QProcess p;
-    p.start("bash", {"-c", cmd});
+    p.start(prog, args);
     const bool finished = p.waitForFinished(timeoutMs);
     return finished
         && p.exitStatus() == QProcess::NormalExit
         && p.exitCode() == 0;
 }
 
+// Check whether a rule reference exists without changing anything.
+static bool ruleExists(const QString& table, const QStringList& ruleArgs)
+{
+    // iptables -t <table> -C <ruleArgs> exits 0 if rule exists, 1 if not.
+    QStringList args = {"-t", table, "-C"};
+    args << ruleArgs;
+    return run("iptables", args);
+}
+static bool rule6Exists(const QString& table, const QStringList& ruleArgs)
+{
+    QStringList args = {"-t", table, "-C"};
+    args << ruleArgs;
+    return run("ip6tables", args);
+}
+
+PrivacyMode::PrivacyMode(QObject* parent) : QObject(parent) {}
+
 void PrivacyMode::engage()
 {
 #ifdef SC_LINUX
     setStatus("engaging");
 
-    // Save existing iptables rules so we can restore them on disengage.
-    QProcess save;
-    save.start("bash", {"-c", "iptables-save; ip6tables-save"});
-    save.waitForFinished(5000);
-    m_savedRules = save.readAllStandardOutput();
+    // Save existing rules for clean restore on disengage.
+    {
+        QProcess save;
+        save.start("bash", {"-c", "iptables-save && ip6tables-save"});
+        if (save.waitForFinished(5000) && save.exitStatus() == QProcess::NormalExit)
+            m_savedRules = save.readAllStandardOutput();
+    }
 
-    // Use a dedicated chain (SHADOW_KS) instead of flushing global OUTPUT.
-    const QString setup =
-        // IPv4 kill-switch
-        "iptables -N SHADOW_KS 2>/dev/null; "
-        "iptables -F SHADOW_KS; "
-        "iptables -A SHADOW_KS -m owner --uid-owner debian-tor -j ACCEPT; "
-        "iptables -A SHADOW_KS -o lo -j ACCEPT; "
-        "iptables -A SHADOW_KS -j DROP; "
-        "iptables -C OUTPUT -j SHADOW_KS 2>/dev/null || iptables -I OUTPUT 1 -j SHADOW_KS; "
-        // IPv6 kill-switch (prevent IPv6 leaks)
-        "ip6tables -N SHADOW_KS6 2>/dev/null; "
-        "ip6tables -F SHADOW_KS6; "
-        "ip6tables -A SHADOW_KS6 -o lo -j ACCEPT; "
-        "ip6tables -A SHADOW_KS6 -j DROP; "
-        "ip6tables -C OUTPUT -j SHADOW_KS6 2>/dev/null || ip6tables -I OUTPUT 1 -j SHADOW_KS6; "
-        // Start Tor
-        "systemctl start tor";
+    // ── IPv4 kill-switch ──────────────────────────────────────────────────
+    // Create chain (tolerate "already exists"); fail on anything else.
+    run("iptables", {"-N", "SHADOW_KS"}); // tolerated if chain exists
+    if (!run("iptables", {"-F", "SHADOW_KS"})
+     || !run("iptables", {"-A", "SHADOW_KS", "-m", "owner", "--uid-owner", "debian-tor", "-j", "ACCEPT"})
+     || !run("iptables", {"-A", "SHADOW_KS", "-o", "lo", "-j", "ACCEPT"})
+     || !run("iptables", {"-A", "SHADOW_KS", "-j", "DROP"})) {
+        rollback();
+        setStatus("error: failed to build IPv4 kill-switch chain");
+        emit activeChanged();
+        return;
+    }
+    // Insert into OUTPUT only if not already there.
+    if (!ruleExists("filter", {"OUTPUT", "-j", "SHADOW_KS"}))
+        if (!run("iptables", {"-I", "OUTPUT", "1", "-j", "SHADOW_KS"})) {
+            rollback();
+            setStatus("error: failed to insert IPv4 OUTPUT rule");
+            emit activeChanged();
+            return;
+        }
 
-    const bool ok = runShell(setup);
-    if (!ok) {
-        // Roll back on partial failure
-        runShell("iptables -D OUTPUT -j SHADOW_KS 2>/dev/null; iptables -F SHADOW_KS; iptables -X SHADOW_KS 2>/dev/null; "
-                 "ip6tables -D OUTPUT -j SHADOW_KS6 2>/dev/null; ip6tables -F SHADOW_KS6; ip6tables -X SHADOW_KS6 2>/dev/null", 8000);
-        m_active = false;
-        setStatus("error: failed to apply kill-switch");
+    // ── IPv6 kill-switch ──────────────────────────────────────────────────
+    run("ip6tables", {"-N", "SHADOW_KS6"});
+    if (!run("ip6tables", {"-F", "SHADOW_KS6"})
+     || !run("ip6tables", {"-A", "SHADOW_KS6", "-o", "lo", "-j", "ACCEPT"})
+     || !run("ip6tables", {"-A", "SHADOW_KS6", "-j", "DROP"})) {
+        rollback();
+        setStatus("error: failed to build IPv6 kill-switch chain");
+        emit activeChanged();
+        return;
+    }
+    if (!rule6Exists("filter", {"OUTPUT", "-j", "SHADOW_KS6"}))
+        if (!run("ip6tables", {"-I", "OUTPUT", "1", "-j", "SHADOW_KS6"})) {
+            rollback();
+            setStatus("error: failed to insert IPv6 OUTPUT rule");
+            emit activeChanged();
+            return;
+        }
+
+    // ── Start Tor ─────────────────────────────────────────────────────────
+    if (!run("systemctl", {"start", "tor"}, 20000)) {
+        rollback();
+        setStatus("error: Tor failed to start");
+        emit activeChanged();
+        return;
+    }
+
+    // ── Confirm rules are actually in place before claiming active ────────
+    if (!ruleExists("filter", {"OUTPUT", "-j", "SHADOW_KS"})
+     || !rule6Exists("filter", {"OUTPUT", "-j", "SHADOW_KS6"})) {
+        rollback();
+        setStatus("error: kill-switch rules not confirmed after setup");
         emit activeChanged();
         return;
     }
@@ -59,8 +104,6 @@ void PrivacyMode::engage()
     emit activeChanged();
 
 #elif defined(SC_WINDOWS)
-    // Windows: full iptables kill-switch is not available.
-    // Report as unsupported rather than falsely claiming protection.
     setStatus("unsupported: Windows kill-switch not implemented");
     m_active = false;
     emit activeChanged();
@@ -70,21 +113,30 @@ void PrivacyMode::engage()
 void PrivacyMode::disengage()
 {
 #ifdef SC_LINUX
-    // Remove only our dedicated chain, don't flush the user's other rules.
-    runShell("iptables -D OUTPUT -j SHADOW_KS 2>/dev/null; "
-             "iptables -F SHADOW_KS; iptables -X SHADOW_KS 2>/dev/null; "
-             "ip6tables -D OUTPUT -j SHADOW_KS6 2>/dev/null; "
-             "ip6tables -F SHADOW_KS6; ip6tables -X SHADOW_KS6 2>/dev/null; "
-             "systemctl stop tor", 10000);
-    m_savedRules.clear();
+    rollback();
 #endif
     m_active = false;
     setStatus("off");
     emit activeChanged();
 }
 
+void PrivacyMode::rollback()
+{
+#ifdef SC_LINUX
+    run("iptables",  {"-D", "OUTPUT", "-j", "SHADOW_KS"});
+    run("iptables",  {"-F", "SHADOW_KS"});
+    run("iptables",  {"-X", "SHADOW_KS"});
+    run("ip6tables", {"-D", "OUTPUT", "-j", "SHADOW_KS6"});
+    run("ip6tables", {"-F", "SHADOW_KS6"});
+    run("ip6tables", {"-X", "SHADOW_KS6"});
+    run("systemctl", {"stop", "tor"}, 10000);
+    m_savedRules.clear();
+#endif
+}
+
 void PrivacyMode::verify()
 {
+    // Check whether the SOCKS proxy reaches the Tor network.
     QProcess p;
 #ifdef SC_LINUX
     p.start("bash", {"-c",
@@ -99,8 +151,25 @@ void PrivacyMode::verify()
         emit verifyResult(false, "curl timed out or crashed.");
         return;
     }
-    const QString out = p.readAllStandardOutput();
-    const bool ok = out.contains("\"IsTor\":true");
-    emit verifyResult(ok, ok ? "Tor confirmed — all traffic is routed through Tor."
-                             : "Not routing through Tor — check that Tor is running.");
+    const QString out   = p.readAllStandardOutput();
+    const bool torOk    = out.contains("\"IsTor\":true");
+
+    if (!torOk) {
+        emit verifyResult(false, "SOCKS proxy is NOT routing through Tor.");
+        return;
+    }
+
+#ifdef SC_LINUX
+    // Only claim full traffic protection when the kill-switch rules are confirmed present.
+    const bool ksOk = m_active
+        && ruleExists("filter", {"OUTPUT", "-j", "SHADOW_KS"})
+        && rule6Exists("filter", {"OUTPUT", "-j", "SHADOW_KS6"});
+
+    if (ksOk)
+        emit verifyResult(true,  "Full protection confirmed: SOCKS proxy routes through Tor and IPv4/IPv6 kill-switch is in place.");
+    else
+        emit verifyResult(false, "SOCKS proxy via Tor confirmed — but kill-switch is NOT active. Traffic outside the proxy may not be protected.");
+#else
+    emit verifyResult(true, "SOCKS proxy via Tor confirmed. Note: no system-wide kill-switch on this platform.");
+#endif
 }

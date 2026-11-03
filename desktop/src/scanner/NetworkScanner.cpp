@@ -40,25 +40,23 @@ void NetworkScanner::scanNow()
     QList<Device> found = parseArpTable();
 
     for (auto& d : found) {
-        // Check against confirmed baseline (never auto-updated after first scan).
         auto base = std::find_if(m_baseline.begin(), m_baseline.end(),
             [&](const Device& k) { return k.ip == d.ip; });
 
         if (base == m_baseline.end()) {
+            // Trust-on-first-use: add to baseline immediately so that a future
+            // MAC change for this IP triggers arpSpoofDetected rather than being
+            // silently treated as another "new" device.
             d.isNew = true;
+            m_baseline.append(d);
             emit newDeviceFound(d.ip, d.mac);
         } else if (base->mac != d.mac) {
-            // Keep flagging as suspect until the user explicitly confirms the new MAC.
-            // Do NOT update baseline here — that would silently clear the alert.
+            // Flag as suspect and keep flagging until confirmDevice() is called.
+            // Never update baseline automatically.
             d.isSuspect = true;
             emit arpSpoofDetected(d.ip, base->mac, d.mac);
         }
     }
-
-    // Baseline is only populated on the very first scan.
-    // Subsequent scans never silently update it; use confirmDevice() for that.
-    if (m_baseline.isEmpty())
-        m_baseline = found;
 
     m_devices = found;
     emit devicesChanged();
