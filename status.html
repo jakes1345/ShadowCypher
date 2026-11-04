@@ -67,7 +67,7 @@
         }
         async function refresh() {
             const results = await Promise.all([
-                checkOne('api', 'https://shadowcypher-api.shadowcypher.workers.dev/v1/health', 'api'),
+                checkOne('api', 'https://api.shadowcypher.site/v1/health', 'api'),
                 checkOne('site', '/manifest.json', 'site'),
                 checkOne('supabase', 'https://umruqwvyipylfslwwozj.supabase.co/auth/v1/health', 'supabase'),
                 checkOne('stripe', 'https://api.stripe.com/healthcheck', 'stripe'),
