@@ -80,7 +80,8 @@ Rectangle {
                         Button {
                             Layout.preferredWidth: 140
                             height: 40
-                            text: privacy.active ? "Disengage" : "Engage"
+                            text: privacy.busy ? "Working…" : privacy.active ? "Disengage" : "Engage"
+                            enabled: !privacy.busy
                             onClicked: privacy.active ? privacy.disengage() : privacy.engage()
                             background: Rectangle {
                                 color: privacy.active
@@ -100,7 +101,7 @@ Rectangle {
                             Layout.preferredWidth: 140
                             height: 36
                             text: "Verify Tor"
-                            enabled: privacy.active
+                            enabled: privacy.active && !privacy.busy
                             onClicked: privacy.verify()
                             background: Rectangle {
                                 color: "transparent"

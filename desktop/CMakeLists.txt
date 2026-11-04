@@ -72,6 +72,28 @@ if(WIN32)
     set_target_properties(shadowcypher PROPERTIES WIN32_EXECUTABLE TRUE)
 elseif(UNIX)
     target_compile_definitions(shadowcypher PRIVATE SC_LINUX)
+
+    # Root helper for privacy mode, run through pkexec. Kept free of Qt so the
+    # code that runs privileged stays small.
+    add_executable(shadowcypher-privacy-helper src/privacy/helper/main.cpp)
+    target_compile_options(shadowcypher-privacy-helper PRIVATE -Wall -Wextra)
+    # Runs as root: no $ORIGIN-relative library search path.
+    set_target_properties(shadowcypher-privacy-helper PROPERTIES INSTALL_RPATH "")
+
+    set(SC_PRIVACY_HELPER_PATH
+        "${CMAKE_INSTALL_FULL_LIBEXECDIR}/shadowcypher/shadowcypher-privacy-helper")
+    target_compile_definitions(shadowcypher PRIVATE
+        SC_PRIVACY_HELPER="${SC_PRIVACY_HELPER_PATH}")
+
+    # polkit only reads actions from /usr/share, whatever the install prefix.
+    set(POLKIT_ACTIONS_DIR "/usr/share/polkit-1/actions" CACHE PATH "polkit actions directory")
+    configure_file(packaging/linux/site.shadowcypher.privacy.policy.in
+                   ${CMAKE_CURRENT_BINARY_DIR}/site.shadowcypher.privacy.policy @ONLY)
+
+    install(TARGETS shadowcypher-privacy-helper
+        RUNTIME DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}/shadowcypher)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/site.shadowcypher.privacy.policy
+        DESTINATION ${POLKIT_ACTIONS_DIR})
 endif()
 
 # App metadata

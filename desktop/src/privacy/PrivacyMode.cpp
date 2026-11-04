@@ -1,188 +1,138 @@
 #include "PrivacyMode.h"
+#include <QFile>
+#include <QFileInfo>
 #include <QProcess>
 #ifdef SC_LINUX
-#include <pwd.h>
 #include <unistd.h>
-
-// Debian/Ubuntu run Tor as "debian-tor"; Arch (ShadowOS) and Fedora use "tor".
-static QString torUser()
-{
-    for (const char* name : {"debian-tor", "tor", "_tor"})
-        if (getpwnam(name)) return QString::fromLatin1(name);
-    return {};
-}
 #endif
 
-// Run a single iptables/ip6tables/systemctl command as an argument list (no shell injection).
-// Returns true only if the process exits normally with code 0.
-static bool run(const QString& prog, const QStringList& args, int timeoutMs = 8000)
-{
-    QProcess p;
-    p.start(prog, args);
-    const bool finished = p.waitForFinished(timeoutMs);
-    return finished
-        && p.exitStatus() == QProcess::NormalExit
-        && p.exitCode() == 0;
-}
+#ifndef SC_PRIVACY_HELPER
+#define SC_PRIVACY_HELPER ""
+#endif
 
-// Check whether a rule reference exists without changing anything.
-static bool ruleExists(const QString& table, const QStringList& ruleArgs)
-{
-    // iptables -t <table> -C <ruleArgs> exits 0 if rule exists, 1 if not.
-    QStringList args = {"-t", table, "-C"};
-    args << ruleArgs;
-    return run("iptables", args);
-}
-static bool rule6Exists(const QString& table, const QStringList& ruleArgs)
-{
-    QStringList args = {"-t", table, "-C"};
-    args << ruleArgs;
-    return run("ip6tables", args);
-}
+// Written by the helper only once the kill-switch rules are confirmed in place.
+static const char* kMarker = "/run/shadowcypher/privacy-active";
 
-PrivacyMode::PrivacyMode(QObject* parent) : QObject(parent) {}
+PrivacyMode::PrivacyMode(QObject* parent) : QObject(parent)
+{
+#ifdef SC_LINUX
+    // The kill-switch outlives the app; pick up one left on by a previous session.
+    if (QFile::exists(kMarker)) {
+        m_active = true;
+        m_status = "active";
+    }
+#endif
+}
 
 void PrivacyMode::engage()
 {
 #ifdef SC_LINUX
-    // Bail out before touching anything: as a normal user every iptables call
-    // fails and the rollback's systemctl call raises a polkit prompt.
-    if (geteuid() != 0) {
-        setStatus("error: requires root (run ShadowCypher with sudo for now)");
-        emit activeChanged();
-        return;
-    }
-    const QString tor = torUser();
-    if (tor.isEmpty()) {
-        setStatus("error: Tor is not installed (no tor system user found)");
-        emit activeChanged();
-        return;
-    }
-
-    setStatus("engaging");
-
-    // ── IPv4 kill-switch ──────────────────────────────────────────────────
-    // Create chain (tolerate "already exists"); fail on anything else.
-    run("iptables", {"-N", "SHADOW_KS"}); // tolerated if chain exists
-    if (!run("iptables", {"-F", "SHADOW_KS"})
-     || !run("iptables", {"-A", "SHADOW_KS", "-m", "owner", "--uid-owner", tor, "-j", "ACCEPT"})
-     || !run("iptables", {"-A", "SHADOW_KS", "-o", "lo", "-j", "ACCEPT"})
-     || !run("iptables", {"-A", "SHADOW_KS", "-j", "DROP"})) {
-        rollback();
-        setStatus("error: failed to build IPv4 kill-switch chain");
-        emit activeChanged();
-        return;
-    }
-    // Insert into OUTPUT only if not already there.
-    if (!ruleExists("filter", {"OUTPUT", "-j", "SHADOW_KS"}))
-        if (!run("iptables", {"-I", "OUTPUT", "1", "-j", "SHADOW_KS"})) {
-            rollback();
-            setStatus("error: failed to insert IPv4 OUTPUT rule");
-            emit activeChanged();
-            return;
-        }
-
-    // ── IPv6 kill-switch ──────────────────────────────────────────────────
-    run("ip6tables", {"-N", "SHADOW_KS6"});
-    if (!run("ip6tables", {"-F", "SHADOW_KS6"})
-     || !run("ip6tables", {"-A", "SHADOW_KS6", "-o", "lo", "-j", "ACCEPT"})
-     || !run("ip6tables", {"-A", "SHADOW_KS6", "-j", "DROP"})) {
-        rollback();
-        setStatus("error: failed to build IPv6 kill-switch chain");
-        emit activeChanged();
-        return;
-    }
-    if (!rule6Exists("filter", {"OUTPUT", "-j", "SHADOW_KS6"}))
-        if (!run("ip6tables", {"-I", "OUTPUT", "1", "-j", "SHADOW_KS6"})) {
-            rollback();
-            setStatus("error: failed to insert IPv6 OUTPUT rule");
-            emit activeChanged();
-            return;
-        }
-
-    // ── Start Tor ─────────────────────────────────────────────────────────
-    if (!run("systemctl", {"start", "tor"}, 20000)) {
-        rollback();
-        setStatus("error: Tor failed to start");
-        emit activeChanged();
-        return;
-    }
-
-    // ── Confirm rules are actually in place before claiming active ────────
-    if (!ruleExists("filter", {"OUTPUT", "-j", "SHADOW_KS"})
-     || !rule6Exists("filter", {"OUTPUT", "-j", "SHADOW_KS6"})) {
-        rollback();
-        setStatus("error: kill-switch rules not confirmed after setup");
-        emit activeChanged();
-        return;
-    }
-
-    m_active = true;
-    setStatus("active");
-    emit activeChanged();
-
-#elif defined(SC_WINDOWS)
+    runHelper("engage");
+#else
     setStatus("unsupported: Windows kill-switch not implemented");
-    m_active = false;
-    emit activeChanged();
 #endif
 }
 
 void PrivacyMode::disengage()
 {
 #ifdef SC_LINUX
-    rollback();
+    runHelper("disengage");
 #endif
-    m_active = false;
-    setStatus("off");
-    emit activeChanged();
 }
 
-void PrivacyMode::rollback()
+void PrivacyMode::runHelper(const QString& verb)
 {
 #ifdef SC_LINUX
-    run("iptables",  {"-D", "OUTPUT", "-j", "SHADOW_KS"});
-    run("iptables",  {"-F", "SHADOW_KS"});
-    run("iptables",  {"-X", "SHADOW_KS"});
-    run("ip6tables", {"-D", "OUTPUT", "-j", "SHADOW_KS6"});
-    run("ip6tables", {"-F", "SHADOW_KS6"});
-    run("ip6tables", {"-X", "SHADOW_KS6"});
-    run("systemctl", {"stop", "tor"}, 10000);
+    if (m_busy) return;
+    const QString helper = QStringLiteral(SC_PRIVACY_HELPER);
+    if (helper.isEmpty() || !QFileInfo(helper).isExecutable()) {
+        setStatus("error: privacy helper not installed (sudo cmake --install build)");
+        return;
+    }
+
+    auto* proc = new QProcess(this);
+    // Already root (e.g. launched with sudo): no need to go through polkit.
+    if (geteuid() == 0)
+        proc->start(helper, {verb});
+    else
+        proc->start("pkexec", {helper, verb});
+
+    setBusy(true);
+    setStatus(verb == "engage" ? "engaging" : "disengaging");
+
+    connect(proc, &QProcess::finished, this, [this, proc, verb](int code, QProcess::ExitStatus st) {
+        proc->deleteLater();
+        setBusy(false);
+        const QString out = QString::fromUtf8(proc->readAllStandardOutput()).trimmed();
+        onHelperFinished(verb, st == QProcess::NormalExit ? code : -1, out);
+    });
+    connect(proc, &QProcess::errorOccurred, this, [this, proc](QProcess::ProcessError err) {
+        if (err != QProcess::FailedToStart) return;
+        proc->deleteLater();
+        setBusy(false);
+        setStatus("error: pkexec is not available");
+    });
+#else
+    Q_UNUSED(verb)
 #endif
+}
+
+void PrivacyMode::onHelperFinished(const QString& verb, int code, const QString& output)
+{
+    // pkexec: 126 = authentication dialog dismissed, 127 = not authorized.
+    if (code == 126 || code == 127) {
+        setStatus(code == 126 ? "cancelled: authentication dismissed" : "error: not authorized");
+        setActive(QFile::exists(kMarker));
+        return;
+    }
+
+    const QString lastLine = output.section('\n', -1);
+    if (code == 0) {
+        setActive(verb == "engage");
+        setStatus(verb == "engage" ? "active" : "off");
+        return;
+    }
+
+    // The helper rolls back on failure, so trust the marker for the real state.
+    setActive(QFile::exists(kMarker));
+    setStatus(lastLine.startsWith("error:") ? lastLine
+                                            : QString("error: helper exited with code %1").arg(code));
 }
 
 void PrivacyMode::verify()
 {
-    // Check whether the SOCKS proxy reaches the Tor network.
+    if (m_busy) return;
     // --socks5-hostname makes Tor resolve DNS; plain --socks5 resolves locally,
     // which the kill-switch blocks (and would leak the lookup anyway).
-    QProcess p;
-    p.start("curl", {"--socks5-hostname", "127.0.0.1:9050", "--max-time", "10", "-s",
-                     "https://check.torproject.org/api/ip"});
-    const bool finished = p.waitForFinished(15000);
-    if (!finished || p.exitStatus() != QProcess::NormalExit) {
-        emit verifyResult(false, "curl timed out or crashed.");
-        return;
-    }
-    const QString out   = p.readAllStandardOutput();
-    const bool torOk    = out.contains("\"IsTor\":true");
-
-    if (!torOk) {
-        emit verifyResult(false, "SOCKS proxy is NOT routing through Tor.");
-        return;
-    }
-
+    auto* proc = new QProcess(this);
+    setBusy(true);
+    connect(proc, &QProcess::finished, this, [this, proc](int, QProcess::ExitStatus st) {
+        proc->deleteLater();
+        setBusy(false);
+        if (st != QProcess::NormalExit) {
+            emit verifyResult(false, "curl crashed.");
+            return;
+        }
+        const bool torOk = proc->readAllStandardOutput().contains("\"IsTor\":true");
+        if (!torOk) {
+            emit verifyResult(false, "SOCKS proxy is NOT routing through Tor.");
+            return;
+        }
 #ifdef SC_LINUX
-    // Only claim full traffic protection when the kill-switch rules are confirmed present.
-    const bool ksOk = m_active
-        && ruleExists("filter", {"OUTPUT", "-j", "SHADOW_KS"})
-        && rule6Exists("filter", {"OUTPUT", "-j", "SHADOW_KS6"});
-
-    if (ksOk)
-        emit verifyResult(true,  "Full protection confirmed: SOCKS proxy routes through Tor and IPv4/IPv6 kill-switch is in place.");
-    else
-        emit verifyResult(false, "SOCKS proxy via Tor confirmed — but kill-switch is NOT active. Traffic outside the proxy may not be protected.");
+        if (m_active && QFile::exists(kMarker))
+            emit verifyResult(true,  "Full protection confirmed: SOCKS proxy routes through Tor and IPv4/IPv6 kill-switch is in place.");
+        else
+            emit verifyResult(false, "SOCKS proxy via Tor confirmed — but kill-switch is NOT active. Traffic outside the proxy may not be protected.");
 #else
-    emit verifyResult(true, "SOCKS proxy via Tor confirmed. Note: no system-wide kill-switch on this platform.");
+        emit verifyResult(true, "SOCKS proxy via Tor confirmed. Note: no system-wide kill-switch on this platform.");
 #endif
+    });
+    connect(proc, &QProcess::errorOccurred, this, [this, proc](QProcess::ProcessError err) {
+        if (err != QProcess::FailedToStart) return;
+        proc->deleteLater();
+        setBusy(false);
+        emit verifyResult(false, "curl is not installed.");
+    });
+    proc->start("curl", {"--socks5-hostname", "127.0.0.1:9050", "--max-time", "10", "-s",
+                         "https://check.torproject.org/api/ip"});
 }
