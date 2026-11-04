@@ -157,6 +157,12 @@ export async function saveMyIdentity(req: Request, env: Env, user: AuthedUser, c
   const handle = user.handle?.toLowerCase();
   if (!handle || !HANDLE_RE.test(handle)) return json({ error: "account_has_no_handle" }, { status: 400 }, cors);
 
+  // Every write needs a recent sign-in. A "locked private key" can be forged from
+  // the public key alone (the fingerprint covers only the public half), so an API
+  // key by itself could otherwise overwrite both locked copies and brick the key.
+  const denied = await requireSession(req, env, user, true, cors);
+  if (denied) return denied;
+
   const raw = await req.text();
   if (raw.length > 2 * MAX_PRIVATE + MAX_PUBLIC + 1024) return json({ error: "payload_too_large" }, { status: 413 }, cors);
   let body: Record<string, unknown>;
@@ -171,13 +177,6 @@ export async function saveMyIdentity(req: Request, env: Env, user: AuthedUser, c
     limit: 1,
   }))[0];
   const now = new Date().toISOString();
-
-  // Re-locking the same key needs its private half, which an API key alone can't supply.
-  // Installing a different key does not, so it needs a fresh sign-in.
-  if (!existing || existing.fingerprint !== checked.fingerprint) {
-    const denied = await requireSession(req, env, user, true, cors);
-    if (denied) return denied;
-  }
 
   if (!existing) {
     await dbInsert(env, "user_keys", {

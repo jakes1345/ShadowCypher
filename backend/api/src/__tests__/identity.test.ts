@@ -139,28 +139,28 @@ describe("POST /v1/identity/me", () => {
       type: "ecc", userIDs: [{ email: "alice@shadowcypher.site" }], format: "object",
     });
     const bundle = { public_key: privateKey.toPublic().armor(), encrypted_private_key: privateKey.armor() };
-    expect(await read(await saveMyIdentity(post(bundle), env, alice, cors)))
+    expect(await read(await saveMyIdentity(post(bundle, fresh()), env, alice, cors)))
       .toEqual({ status: 400, body: { error: "private_key_not_encrypted" } });
     expect(db.inserted).toHaveLength(0);
   });
 
   it("refuses a key issued for another handle", async () => {
-    expect((await read(await saveMyIdentity(post(bobKeys), env, alice, cors))).body.error).toBe("user_id_mismatch");
+    expect((await read(await saveMyIdentity(post(bobKeys, fresh()), env, alice, cors))).body.error).toBe("user_id_mismatch");
   });
 
   it("refuses private and public halves from different keys", async () => {
     const mixed = { ...aliceKeys, encrypted_private_key: otherKeys.encrypted_private_key };
-    expect((await read(await saveMyIdentity(post(mixed), env, alice, cors))).body.error).toBe("fingerprint_mismatch");
+    expect((await read(await saveMyIdentity(post(mixed, fresh()), env, alice, cors))).body.error).toBe("fingerprint_mismatch");
   });
 
   it("refuses a private key uploaded as the public key", async () => {
     const swapped = { ...aliceKeys, public_key: aliceKeys.encrypted_private_key };
-    expect((await read(await saveMyIdentity(post(swapped), env, alice, cors))).body.error).toBe("public_key_is_private");
+    expect((await read(await saveMyIdentity(post(swapped, fresh()), env, alice, cors))).body.error).toBe("public_key_is_private");
   });
 
   it("re-locks the same key in place (password change)", async () => {
     db.rows.push({ user_id: "u-alice", handle: "alice", fingerprint: aliceKeys.fingerprint });
-    const { status, body } = await read(await saveMyIdentity(post(aliceKeys), env, alice, cors));
+    const { status, body } = await read(await saveMyIdentity(post(aliceKeys, fresh()), env, alice, cors));
     expect(status).toBe(200);
     expect(body.created).toBe(false);
     expect(db.updated[0]).toHaveProperty("encrypted_private_key", aliceKeys.encrypted_private_key);
@@ -224,7 +224,10 @@ describe("an API key alone is not enough", () => {
     expect(db.updated).toHaveLength(0);
   });
 
-  it("still lets the same key be re-locked, which needs the private key anyway", async () => {
-    expect((await saveMyIdentity(post(aliceKeys), env, alice, cors)).status).toBe(200);
+  it("won't re-lock the same key without a recent sign-in either", async () => {
+    // A locked copy can be forged from the public key alone, so this path is gated too.
+    expect((await read(await saveMyIdentity(post(aliceKeys), env, alice, cors))).body.error).toBe("session_required");
+    expect((await read(await saveMyIdentity(post(aliceKeys, stale()), env, alice, cors))).body.error).toBe("reauth_required");
+    expect(db.updated).toHaveLength(0);
   });
 });
