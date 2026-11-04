@@ -1,5 +1,6 @@
 #include "MailPage.h"
 #include "../theme.h"
+#include "../api/ApiClient.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -7,9 +8,9 @@
 #include <QFrame>
 #include <QListWidgetItem>
 #include <QJsonDocument>
-#include <QNetworkRequest>
-#include <QSettings>
+#include <QDateTime>
 #include <QUrl>
+#include <QTextDocumentFragment>
 #include <QTimer>
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
@@ -77,19 +78,12 @@ static QString fieldStyle()
 
 // ── Constructor ───────────────────────────────────────────────────────────────
 
-MailPage::MailPage(IpcClient* ipc, QWidget* parent)
+// Mail lives on the API (Shadow Mail), not in the local daemon, so every call
+// goes through ApiClient with the signed-in account's key.
+MailPage::MailPage(QWidget* parent)
     : QWidget(parent)
-    , m_ipc(ipc)
-    , m_nam(new QNetworkAccessManager(this))
 {
     buildUi();
-
-    connect(m_nam, &QNetworkAccessManager::finished, this, &MailPage::onNetworkReply);
-
-    if (m_ipc) {
-        connect(m_ipc, &IpcClient::resultReady, this, &MailPage::onIpcResult);
-        connect(m_ipc, &IpcClient::connected,   this, &MailPage::refresh);
-    }
 
     m_timer = new QTimer(this);
     m_timer->setInterval(60'000);
@@ -376,7 +370,7 @@ QWidget* MailPage::createMessageWidget(const QJsonObject& msg)
     const QString from    = msg.value("from").toString();
     const QString subject = msg.value("subject").toString();
     const QString preview = msg.value("preview").toString();
-    const QString date    = msg.value("date").toString();
+    const QString date    = msg.value("short_date").toString(msg.value("date").toString());
 
     auto* container = new QWidget;
     container->setAttribute(Qt::WA_TranslucentBackground);
@@ -486,7 +480,22 @@ void MailPage::loadMessages(const QJsonArray& messages)
     }
 
     for (const QJsonValue& val : messages) {
-        const QJsonObject msg = val.toObject();
+        const QJsonObject row = val.toObject();
+        const QDateTime when = QDateTime::fromString(row.value("received_at").toString(), Qt::ISODate);
+        QJsonObject msg{
+            {"id",      row.value("id")},
+            {"from",    row.value("from_addr")},
+            {"to",      row.value("to_addr")},
+            {"subject", row.value("subject").toString().isEmpty()
+                            ? QStringLiteral("(no subject)") : row.value("subject").toString()},
+            {"date",    when.isValid() ? when.toLocalTime().toString("MMM d, hh:mm") : QString()},
+            // The list column is narrow: time for today's mail, otherwise just the day.
+            {"short_date", !when.isValid() ? QString()
+                           : when.toLocalTime().date() == QDate::currentDate()
+                               ? when.toLocalTime().toString("hh:mm")
+                               : when.toLocalTime().toString("MMM d")},
+            {"read",    row.value("is_read").toBool(true)},
+        };
 
         auto* item = new QListWidgetItem(m_msgList);
         item->setData(Qt::UserRole, QVariant::fromValue(msg));
@@ -503,13 +512,18 @@ void MailPage::loadMessages(const QJsonArray& messages)
 
 void MailPage::refresh()
 {
+    auto* api = ApiClient::instance();
+    if (!api || !api->isAuthenticated()) return;
     m_syncLabel->show();
-
-    if (m_ipc && m_ipc->isConnected()) {
-        m_inboxReqId = m_ipc->call("mail_inbox");
-    } else {
-        fetchInboxHttp();
-    }
+    api->get("/v1/mail/inbox?limit=50", this, [this](bool ok, QJsonDocument doc, int status) {
+        m_syncLabel->hide();
+        if (!ok) {
+            m_bodyView->setHtml(QString("<div style='padding:24px;color:#f43f5e;font-family:\"JetBrains Mono\";"
+                                        "font-size:11px;'>Couldn't load mail (HTTP %1).</div>").arg(status));
+            return;
+        }
+        loadMessages(doc.object().value("messages").toArray());
+    });
 }
 
 void MailPage::onMessageClicked(QListWidgetItem* item)
@@ -517,12 +531,32 @@ void MailPage::onMessageClicked(QListWidgetItem* item)
     if (!item) return;
 
     const QJsonObject msg = item->data(Qt::UserRole).value<QJsonObject>();
-    if (msg.isEmpty()) return;
+    const QString id = msg.value("id").toString();
+    if (id.isEmpty()) return;
 
+    auto* api = ApiClient::instance();
+    if (!api) return;
+    m_openId = id;
+    showMessage(msg, QStringLiteral("Loading…"));
+    // Opening a message also marks it read on the server.
+    api->get("/v1/mail/" + QUrl::toPercentEncoding(id), this,
+             [this, msg, id](bool ok, QJsonDocument doc, int status) {
+        if (id != m_openId) return;   // the user opened another message meanwhile
+        if (!ok) { showMessage(msg, QString("Couldn't load this message (HTTP %1).").arg(status)); return; }
+        const QJsonObject full = doc.object();
+        QString text = full.value("body_text").toString();
+        if (text.isEmpty() && !full.value("body_html").toString().isEmpty())
+            text = QTextDocumentFragment::fromHtml(full.value("body_html").toString()).toPlainText();
+        showMessage(msg, text.isEmpty() ? QStringLiteral("(empty message)") : text);
+    });
+}
+
+void MailPage::showMessage(const QJsonObject& msg, const QString& body)
+{
     const QString from    = msg.value("from").toString().toHtmlEscaped();
     const QString date    = msg.value("date").toString().toHtmlEscaped();
     const QString subject = msg.value("subject").toString().toHtmlEscaped();
-    const QString body    = msg.value("body").toString()
+    const QString bodyHtml = body
                                .toHtmlEscaped()
                                .replace(QChar('\n'), QLatin1String("<br>"));
 
@@ -554,7 +588,7 @@ void MailPage::onMessageClicked(QListWidgetItem* item)
 
     // Body
     html += "<div style='color:#cbd5e1;font-size:13px;line-height:1.75;"
-            "font-family:Inter,Outfit,sans-serif;'>" + body + "</div>";
+            "font-family:Inter,Outfit,sans-serif;'>" + bodyHtml + "</div>";
 
     html += "</div>";
 
@@ -591,142 +625,33 @@ void MailPage::sendMail()
     setComposeEnabled(false);
     showSendStatus("SENDING…", true);  // accent-colored while in-flight
 
-    if (m_ipc && m_ipc->isConnected()) {
-        QJsonObject params;
-        params["to"]      = to;
-        params["subject"] = subject;
-        params["body"]    = body;
-        m_sendReqId = m_ipc->call("mail_send", params);
-    } else {
-        sendMailHttp(to, subject, body);
-    }
+    auto* api = ApiClient::instance();
+    if (!api) { finishSend(false, "Not signed in"); return; }
+    api->post("/v1/mail/send", QJsonObject{{"to", to}, {"subject", subject}, {"text", body}}, this,
+              [this](bool ok, QJsonDocument doc, int status) {
+        const QString err = doc.object().value("error").toString();
+        finishSend(ok, err.isEmpty() ? QString("HTTP %1").arg(status) : err);
+    });
 }
 
-void MailPage::onIpcResult(int id, QJsonObject result)
+void MailPage::finishSend(bool ok, const QString& error)
 {
-    if (id == m_inboxReqId) {
-        m_inboxReqId = -1;
-        m_syncLabel->hide();
-        loadMessages(result.value("messages").toArray());
-        return;
-    }
-
-    if (id == m_sendReqId) {
-        m_sendReqId = -1;
-        m_sending   = false;
-        setComposeEnabled(true);
-
-        const bool ok = result.value("ok").toBool(true);
-        if (ok) {
-            showSendStatus("✓ MESSAGE SENT", true);
-            m_toField->clear();
-            m_subjectField->clear();
-            m_bodyField->clear();
-            // Auto-hide compose after brief delay
-            QTimer::singleShot(1200, this, [this]() {
-                m_composePanel->hide();
-                m_composeBtn->setText("✉ COMPOSE");
-                m_sendStatusLabel->hide();
-            });
-            refresh();
-        } else {
-            const QString err = result.value("error").toString("Send failed");
-            showSendStatus("ERROR: " + err, false);
-        }
-    }
-}
-
-void MailPage::onNetworkReply(QNetworkReply* reply)
-{
-    reply->deleteLater();
-
-    const QString op = reply->property("op").toString();
-
-    if (reply->error() != QNetworkReply::NoError) {
-        m_syncLabel->hide();
-        if (op == "send") {
-            m_sending = false;
-            setComposeEnabled(true);
-            showSendStatus("ERROR: " + reply->errorString(), false);
-        }
-        return;
-    }
-
-    const QByteArray   data = reply->readAll();
-    const QJsonDocument doc  = QJsonDocument::fromJson(data);
-    if (!doc.isObject()) {
-        m_syncLabel->hide();
-        return;
-    }
-    const QJsonObject obj = doc.object();
-
-    if (op == "inbox") {
-        m_syncLabel->hide();
-        loadMessages(obj.value("messages").toArray());
-    } else if (op == "send") {
-        m_sending = false;
-        setComposeEnabled(true);
-
-        const bool ok = obj.value("ok").toBool(false);
-        if (ok) {
-            showSendStatus("✓ MESSAGE SENT", true);
-            m_toField->clear();
-            m_subjectField->clear();
-            m_bodyField->clear();
-            QTimer::singleShot(1200, this, [this]() {
-                m_composePanel->hide();
-                m_composeBtn->setText("✉ COMPOSE");
-                m_sendStatusLabel->hide();
-            });
-            refresh();
-        } else {
-            const QString err = obj.value("error").toString("Send failed");
-            showSendStatus("ERROR: " + err, false);
-        }
-    }
-}
-
-// ── HTTP helpers ──────────────────────────────────────────────────────────────
-
-void MailPage::fetchInboxHttp()
-{
-    QNetworkRequest req(QUrl(apiBaseUrl() + "/v1/mail/inbox"));
-    req.setRawHeader("Authorization", ("Bearer " + apiKey()).toUtf8());
-    req.setAttribute(QNetworkRequest::CacheLoadControlAttribute,
-                     QNetworkRequest::AlwaysNetwork);
-
-    QNetworkReply* reply = m_nam->get(req);
-    reply->setProperty("op", QStringLiteral("inbox"));
-}
-
-void MailPage::sendMailHttp(const QString& to, const QString& subject, const QString& body)
-{
-    QNetworkRequest req(QUrl(apiBaseUrl() + "/v1/mail/send"));
-    req.setRawHeader("Authorization", ("Bearer " + apiKey()).toUtf8());
-    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-    QJsonObject payload;
-    payload["to"]      = to;
-    payload["subject"] = subject;
-    payload["body"]    = body;
-
-    QNetworkReply* reply = m_nam->post(req, QJsonDocument(payload).toJson(QJsonDocument::Compact));
-    reply->setProperty("op", QStringLiteral("send"));
+    m_sending = false;
+    setComposeEnabled(true);
+    if (!ok) { showSendStatus("ERROR: " + error, false); return; }
+    showSendStatus("✓ MESSAGE SENT", true);
+    m_toField->clear();
+    m_subjectField->clear();
+    m_bodyField->clear();
+    QTimer::singleShot(1200, this, [this]() {
+        m_composePanel->hide();
+        m_composeBtn->setText("✉ COMPOSE");
+        m_sendStatusLabel->hide();
+    });
+    refresh();
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
-
-QString MailPage::apiKey() const
-{
-    QSettings settings;
-    return settings.value("api/key").toString();
-}
-
-QString MailPage::apiBaseUrl() const
-{
-    QSettings settings;
-    return settings.value("api/base_url", "https://api.shadowcypher.site").toString();
-}
 
 void MailPage::setComposeEnabled(bool on)
 {
