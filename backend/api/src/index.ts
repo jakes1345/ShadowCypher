@@ -83,6 +83,7 @@ import { getWeather, getCurrency, getCve, getIpReputation, checkBreach, dnsLooku
 import { getOtaManifest, updateOtaManifest } from "./ota";
 import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, openDm, listDms, createRoom, deleteRoom, updateRoom } from "./chat";
 import { listFiles, uploadFile, downloadFile, deleteFile } from "./files";
+import { listEvents, createEvent, updateEvent, deleteEvent } from "./calendar";
 import { getInbox, getMailCount, getMail, markRead, deleteMail, sendOutbound, replyMail, storeInboundMail } from "./mail";
 export { ChatRoom } from "./chat_do";
 import { dbSelect, findAuthUserByEmail } from "./supabase";
@@ -700,6 +701,9 @@ export default {
         // File storage
         "GET /v1/files":                      listFiles,
         "POST /v1/files/upload":              uploadFile,
+        // Calendar
+        "GET /v1/calendar/events":            listEvents,
+        "POST /v1/calendar/events":           createEvent,
         // Profile
         "PATCH /v1/me/profile":               updateProfile,
         // Admin (shadow@shadowcypher.site only — checked inside each handler)
@@ -730,6 +734,9 @@ export default {
       // File storage
       const fileGet    = req.method === "GET"    && /^\/v1\/files\/.+/.test(path);
       const fileDelete = req.method === "DELETE" && /^\/v1\/files\/.+/.test(path);
+      // Calendar events (parameterized)
+      const calEventPatch = req.method === "PATCH"  && /^\/v1\/calendar\/events\/[0-9a-f-]{36}$/.test(path);
+      const calEventDel   = req.method === "DELETE" && /^\/v1\/calendar\/events\/[0-9a-f-]{36}$/.test(path);
       // Mail (parameterized — /v1/mail/:id, /v1/mail/:id/reply, /v1/mail/:id/read)
       const mailGet    = req.method === "GET"    && /^\/v1\/mail\/[^/]+$/.test(path);
       const mailDel    = req.method === "DELETE" && /^\/v1\/mail\/[^/]+$/.test(path);
@@ -742,7 +749,7 @@ export default {
       const deviceDetail_ = req.method === "GET"   && /^\/v1\/devices\/[0-9a-f-]{36}$/.test(path);
       const devicePatch   = req.method === "PATCH"  && /^\/v1\/devices\/[0-9a-f-]{36}$/.test(path);
 
-      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || fileGet || fileDelete || chatRoomDelete || chatRoomPatch || deviceDetail_ || devicePatch || mailGet || mailDel || mailRead || mailReply;
+      const isParamRoute = handler || agentMissionCreate || agentMissionPending || missionResult || missionGet || missionList || fileGet || fileDelete || chatRoomDelete || chatRoomPatch || deviceDetail_ || devicePatch || mailGet || mailDel || mailRead || mailReply || calEventPatch || calEventDel;
       if (isParamRoute) {
         const key = extractKey(req);
         if (!key) return json({ error: "missing_or_invalid_key" }, { status: 401 }, cors);
@@ -790,6 +797,9 @@ export default {
           if (chatRoomDelete) return deleteRoom(req, env, authedUser, cors, roomName);
           if (chatRoomPatch)  return updateRoom(req, env, authedUser, cors, roomName);
         }
+        // Calendar — event id is the last path segment
+        if (calEventPatch) return updateEvent(req, env, authedUser, cors, parts[4]);
+        if (calEventDel)   return deleteEvent(req, env, authedUser, cors, parts[4]);
         // Mail — message id is the segment after /v1/mail/
         const mailId = path.split("/")[3];
         if (mailGet)   return getMail(req, env, authedUser, cors, mailId);

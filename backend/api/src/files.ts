@@ -3,7 +3,7 @@
  *
  * Routes (all authenticated):
  *   POST   /v1/files/upload   — multipart or raw body upload (max 10 MB)
- *   GET    /v1/files/:key     — stream file from R2 (any authed user)
+ *   GET    /v1/files/:key     — stream file from R2 (owner only; key prefix = user_id/)
  *   DELETE /v1/files/:key     — delete (owner only; key prefix = user_id/)
  */
 
@@ -118,11 +118,14 @@ export async function uploadFile(
 export async function downloadFile(
   _req: Request,
   env: Env,
-  _user: { id: string; email: string },
+  user: { id: string; email: string },
   cors: HeadersInit,
   key: string
 ): Promise<Response> {
   if (!env.SHADOW_FILES) return json({ error: "storage_not_configured" }, { status: 503 }, cors);
+
+  if (!key.startsWith(`${user.id}/`) || key.includes(".."))
+    return json({ error: "forbidden" }, { status: 403 }, cors);
 
   const obj = await env.SHADOW_FILES.get(key);
   if (!obj) return json({ error: "not_found" }, { status: 404 }, cors);
