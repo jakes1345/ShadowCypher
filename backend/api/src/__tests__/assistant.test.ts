@@ -141,3 +141,10 @@ describe("providerError", () => {
     expect(providerError("socket hang up").status).toBe(502);
   });
 });
+
+describe("providerError with cut-off JSON", () => {
+  it("still extracts Anthropic's message", () => {
+    const r = providerError('anthropic_400:{"type":"error","error":{"type":"invalid_request_error","message":"This API key is not scoped to a workspace."},"request_id":"req_01');
+    expect(r.body.reason).toBe("Anthropic rejected the request: This API key is not scoped to a workspace.");
+  });
+});
