@@ -196,6 +196,12 @@ export async function getUsage(req: Request, env: Env, user: AuthedUser, cors: H
   const plan = getEffectivePlan(profile);
   const { count } = await rolloverIfNeeded(env, profile);
   const cap = QUOTA_BY_PLAN[plan] ?? 0;
+  let byokWorkspaceSet = false;
+  if (profile.ai_byok_key_encrypted && env.BYOK_ENCRYPTION_SECRET) {
+    try {
+      byokWorkspaceSet = !!unpackByok(await decrypt(env.BYOK_ENCRYPTION_SECRET, profile.ai_byok_key_encrypted)).workspaceId;
+    } catch { /* undecryptable: report false */ }
+  }
   return json({
     plan,
     provider: profile.ai_provider,
@@ -205,12 +211,76 @@ export async function getUsage(req: Request, env: Env, user: AuthedUser, cors: H
     period_start: profile.ai_query_period_start,
     byok_configured: !!profile.ai_byok_key_encrypted,
     byok_last4: profile.ai_byok_key_last4,
+    byok_workspace_set: byokWorkspaceSet,
     ollama_url: profile.ai_ollama_url,
   }, {}, cors);
 }
 
+// ─── BYOK workspace ID ──────────────────────────────────────────────────────
+// Org-level Anthropic keys must send `anthropic-workspace-id`. The workspace ID is
+// stored inside the encrypted BYOK blob as JSON {k, w}; older blobs are the bare key.
+
+export interface ByokSecret { key: string; workspaceId?: string }
+
+export function isWorkspaceId(s: unknown): s is string {
+  return typeof s === "string" && /^wrkspc_[A-Za-z0-9]{8,64}$/.test(s);
+}
+
+export function packByok(secret: ByokSecret): string {
+  return secret.workspaceId ? JSON.stringify({ k: secret.key, w: secret.workspaceId }) : secret.key;
+}
+
+export function unpackByok(plain: string): ByokSecret {
+  if (plain.startsWith("{")) {
+    try {
+      const o = JSON.parse(plain) as { k?: string; w?: string };
+      if (o.k) return { key: o.k, workspaceId: isWorkspaceId(o.w) ? o.w : undefined };
+    } catch { /* fall through */ }
+  }
+  return { key: plain };
+}
+
+/**
+ * Turns a provider failure ("anthropic_400:{json}" / "ollama_404:text") into a
+ * response the apps can show. Provider 4xx means the user's key or setup is wrong,
+ * so it is a 400 with a readable reason rather than a 502.
+ */
+export function providerError(message: string): { status: number; body: Record<string, string> } {
+  const m = /^(anthropic|ollama)_(\d{3}):([\s\S]*)$/.exec(message);
+  if (!m) return { status: 502, body: { error: "ai_error", message } };
+  const [, provider, code, rest] = m;
+  const status = Number(code);
+  let detail = rest.trim();
+  try {
+    const parsed = JSON.parse(rest) as { error?: { message?: string } };
+    if (parsed.error?.message) detail = parsed.error.message;
+  } catch { /* not JSON */ }
+  const name = provider === "anthropic" ? "Anthropic" : "Ollama";
+  const reason = `${name} rejected the request: ${detail.slice(0, 300)}`;
+  if (status === 429) return { status: 429, body: { error: "provider_rate_limited", reason } };
+  if (status >= 400 && status < 500) return { status: 400, body: { error: "provider_rejected", reason } };
+  return { status: 502, body: { error: "ai_error", reason, message } };
+}
+
 export async function setByok(req: Request, env: Env, user: AuthedUser, cors: HeadersInit): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as { api_key?: string | null; clear?: boolean };
+  const body = (await req.json().catch(() => ({}))) as { api_key?: string | null; workspace_id?: string | null; clear?: boolean };
+  if (body.workspace_id !== undefined && body.workspace_id !== null && body.workspace_id !== "" && !isWorkspaceId(body.workspace_id)) {
+    return json({ error: "invalid_workspace_id", reason: "Workspace IDs look like wrkspc_… (Anthropic Console → Workspaces)." }, { status: 400 }, cors);
+  }
+  const workspaceId = isWorkspaceId(body.workspace_id) ? body.workspace_id : undefined;
+
+  // Workspace ID only: keep the saved key, set or clear its workspace
+  if (body.api_key === undefined && body.workspace_id !== undefined && !body.clear) {
+    if (!env.BYOK_ENCRYPTION_SECRET) return json({ error: "byok_not_supported_on_this_deployment" }, { status: 503 }, cors);
+    const profile = await getProfile(env, user.id);
+    if (!profile?.ai_byok_key_encrypted) return json({ error: "no_byok_key", reason: "Save an Anthropic API key first." }, { status: 400 }, cors);
+    const current = unpackByok(await decrypt(env.BYOK_ENCRYPTION_SECRET, profile.ai_byok_key_encrypted));
+    await dbUpdate(env, "profiles", { user_id: `eq.${user.id}` }, {
+      ai_byok_key_encrypted: await encrypt(env.BYOK_ENCRYPTION_SECRET, packByok({ key: current.key, workspaceId })),
+    });
+    return json({ saved: true, workspace_set: !!workspaceId }, {}, cors);
+  }
+
   if (body.clear || body.api_key === null || body.api_key === "") {
     await dbUpdate(env, "profiles", { user_id: `eq.${user.id}` }, {
       ai_provider: "platform",
@@ -225,14 +295,14 @@ export async function setByok(req: Request, env: Env, user: AuthedUser, cors: He
   if (!env.BYOK_ENCRYPTION_SECRET) {
     return json({ error: "byok_not_supported_on_this_deployment" }, { status: 503 }, cors);
   }
-  const encrypted = await encrypt(env.BYOK_ENCRYPTION_SECRET, body.api_key);
+  const encrypted = await encrypt(env.BYOK_ENCRYPTION_SECRET, packByok({ key: body.api_key, workspaceId }));
   const last4 = body.api_key.slice(-4);
   await dbUpdate(env, "profiles", { user_id: `eq.${user.id}` }, {
     ai_provider: "byok",
     ai_byok_key_encrypted: encrypted,
     ai_byok_key_last4: last4,
   });
-  return json({ saved: true, last4 }, {}, cors);
+  return json({ saved: true, last4, workspace_set: !!workspaceId }, {}, cors);
 }
 
 export async function setOllama(req: Request, env: Env, user: AuthedUser, cors: HeadersInit): Promise<Response> {
@@ -362,13 +432,13 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
       if (!env.BYOK_ENCRYPTION_SECRET) {
         return json({ error: "byok_decryption_unavailable" }, { status: 503 }, cors);
       }
-      const userKey = await decrypt(env.BYOK_ENCRYPTION_SECRET, profile.ai_byok_key_encrypted);
+      const byok = unpackByok(await decrypt(env.BYOK_ENCRYPTION_SECRET, profile.ai_byok_key_encrypted));
       if (mode === "general") {
         let cited: WebResult[];
-        ({ answer, modelLabel, sources: cited } = await queryAnthropicGeneral(userKey, generalModel, messages, effectiveSystemPrompt, generalOpts));
+        ({ answer, modelLabel, sources: cited } = await queryAnthropicGeneral(byok.key, generalModel, messages, effectiveSystemPrompt, { ...generalOpts, workspaceId: byok.workspaceId }));
         sources = cited;
       } else {
-        ({ answer, modelLabel } = await queryAnthropic(userKey, env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001", messages, effectiveSystemPrompt));
+        ({ answer, modelLabel } = await queryAnthropic(byok.key, env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001", messages, effectiveSystemPrompt, byok.workspaceId));
       }
     } else if (mode === "general") {
       // Platform key, general mode: costs 2 quota units (bigger model plus web tools)
@@ -406,7 +476,8 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
     }, {}, cors);
   } catch (e) {
     console.error("[assistant] failed", e);
-    return json({ error: "ai_error", message: e instanceof Error ? e.message : "unknown" }, { status: 502 }, cors);
+    const pe = providerError(e instanceof Error ? e.message : "unknown");
+    return json(pe.body, { status: pe.status }, cors);
   }
 }
 
@@ -415,10 +486,11 @@ async function queryAnthropic(
   model: string,
   messages: HistoryMessage[],
   systemPrompt: string,
+  workspaceId?: string,
 ): Promise<{ answer: string; modelLabel: string }> {
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    headers: anthropicHeaders(apiKey, workspaceId),
     body: JSON.stringify({
       model,
       max_tokens: 600,
@@ -512,7 +584,7 @@ async function queryAnthropicGeneral(
   model: string,
   messages: HistoryMessage[],
   systemPrompt: string,
-  opts: { voice: boolean; web: boolean },
+  opts: { voice: boolean; web: boolean; workspaceId?: string },
 ): Promise<{ answer: string; modelLabel: string; sources: WebResult[] }> {
   const convo: Array<{ role: string; content: unknown }> = [...messages];
   const tools = opts.web
@@ -525,12 +597,7 @@ async function queryAnthropicGeneral(
   for (let attempt = 0; attempt < 3; attempt++) {
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "server-side-fallback-2026-07-01",
-        "content-type": "application/json",
-      },
+      headers: { ...anthropicHeaders(apiKey, opts.workspaceId), "anthropic-beta": "server-side-fallback-2026-07-01" },
       body: JSON.stringify({
         model,
         max_tokens: 16000,
@@ -584,4 +651,11 @@ export function extractSources(blocks: AnthropicBlock[]): WebResult[] {
     }
   }
   return out;
+}
+
+/** Request headers for Anthropic; org-level keys also need the workspace. */
+export function anthropicHeaders(apiKey: string, workspaceId?: string): Record<string, string> {
+  const h: Record<string, string> = { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" };
+  if (workspaceId) h["anthropic-workspace-id"] = workspaceId;
+  return h;
 }

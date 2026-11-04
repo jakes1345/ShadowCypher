@@ -103,3 +103,41 @@ describe("Claude general-mode response parsing", () => {
     expect(extractSources([{ type: "web_search_tool_result", content: { error_code: "max_uses_exceeded" } }])).toEqual([]);
   });
 });
+
+import { isWorkspaceId, packByok, unpackByok, providerError, anthropicHeaders } from "../assistant";
+
+describe("BYOK workspace ID", () => {
+  it("validates workspace IDs", () => {
+    expect(isWorkspaceId("wrkspc_01AbCdEfGhIjKl")).toBe(true);
+    expect(isWorkspaceId("wrkspc_")).toBe(false);
+    expect(isWorkspaceId("sk-ant-abc")).toBe(false);
+    expect(isWorkspaceId(undefined)).toBe(false);
+  });
+
+  it("round-trips key and workspace, and reads old bare-key blobs", () => {
+    const packed = packByok({ key: "sk-ant-xyz", workspaceId: "wrkspc_01AbCdEfGhIjKl" });
+    expect(unpackByok(packed)).toEqual({ key: "sk-ant-xyz", workspaceId: "wrkspc_01AbCdEfGhIjKl" });
+    expect(packByok({ key: "sk-ant-xyz" })).toBe("sk-ant-xyz");
+    expect(unpackByok("sk-ant-legacy")).toEqual({ key: "sk-ant-legacy" });
+  });
+
+  it("only sends the workspace header when set", () => {
+    expect(anthropicHeaders("k")["anthropic-workspace-id"]).toBeUndefined();
+    expect(anthropicHeaders("k", "wrkspc_01AbCdEfGhIjKl")["anthropic-workspace-id"]).toBe("wrkspc_01AbCdEfGhIjKl");
+  });
+});
+
+describe("providerError", () => {
+  it("turns an Anthropic 400 into a readable 400", () => {
+    const r = providerError('anthropic_400:{"type":"error","error":{"type":"invalid_request_error","message":"This API key is not scoped to a workspace"}}');
+    expect(r.status).toBe(400);
+    expect(r.body.error).toBe("provider_rejected");
+    expect(r.body.reason).toBe("Anthropic rejected the request: This API key is not scoped to a workspace");
+  });
+  it("keeps rate limits as 429 and server errors as 502", () => {
+    expect(providerError("anthropic_429:{}").status).toBe(429);
+    expect(providerError("anthropic_529:overloaded").status).toBe(502);
+    expect(providerError("ollama_404:model not found").body.reason).toBe("Ollama rejected the request: model not found");
+    expect(providerError("socket hang up").status).toBe(502);
+  });
+});
