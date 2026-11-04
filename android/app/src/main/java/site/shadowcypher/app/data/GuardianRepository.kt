@@ -9,7 +9,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 private const val BASE_URL_REMOTE = "https://api.shadowcypher.site"
-private const val BASE_URL_LOCAL = "http://10.0.2.2:9999"  // Android emulator: 10.0.2.2 maps to host localhost
 const val PREFS_NAME = "shadow_prefs"
 const val PREF_API_KEY = "sc_api_key"
 const val PREF_BASE_URL = "sc_base_url"
@@ -34,7 +33,7 @@ class GuardianRepository(private val context: Context) {
         _cachedApi = null
     }
 
-    fun getBaseUrl(): String = prefs.getString(PREF_BASE_URL, BASE_URL_LOCAL) ?: BASE_URL_LOCAL
+    fun getBaseUrl(): String = prefs.getString(PREF_BASE_URL, null)?.takeIf { it.isNotBlank() } ?: BASE_URL_REMOTE
 
     fun setBaseUrl(url: String) {
         prefs.edit().putString(PREF_BASE_URL, url).apply()
@@ -92,9 +91,31 @@ class GuardianRepository(private val context: Context) {
 
     suspend fun fetchSummary(): Result<GuardianSummary> = runCatching { buildApi(requireKey()).getSummary() }
 
-    suspend fun triggerScan(): Result<ScanResponse> = runCatching { buildApi(requireKey()).triggerScan() }
+    suspend fun fetchIncidents(): Result<List<Incident>> = runCatching { buildApi(requireKey()).getIncidents().incidents }
 
-    suspend fun fetchIncidents(): Result<List<Incident>> = runCatching { buildApi(requireKey()).getIncidents() }
+    private val deviceAuthApi: DeviceAuthApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(getBaseUrl())
+            .client(OkHttpClient.Builder().build())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(DeviceAuthApi::class.java)
+    }
+
+    suspend fun startDeviceAuth(): Result<DeviceAuthStart> = runCatching {
+        deviceAuthApi.start(DeviceAuthStartRequest("Guardian (Android)"))
+    }
+
+    /** Returns the poll status; "authorized" responses carry api_key. 403/410 bodies carry denied/expired. */
+    suspend fun pollDeviceAuth(deviceCode: String): Result<DeviceAuthPoll> = runCatching {
+        val resp = deviceAuthApi.poll(DeviceAuthPollRequest(deviceCode))
+        resp.body() ?: when (resp.code()) {
+            403 -> DeviceAuthPoll("denied", null, null, null)
+            410 -> DeviceAuthPoll("expired", null, null, null)
+            404 -> DeviceAuthPoll("expired", null, null, "invalid_code")
+            else -> throw IllegalStateException("Sign-in check failed (HTTP ${resp.code()})")
+        }
+    }
 
     suspend fun fetchAgents(): Result<List<Agent>> = runCatching { buildApi(requireKey()).getAgents().agents }
 
@@ -107,7 +128,8 @@ class GuardianRepository(private val context: Context) {
     }
 
     suspend fun acknowledgeIncident(id: String): Result<Unit> = runCatching {
-        buildApi(requireKey()).acknowledgeIncident(id)
+        val resp = buildApi(requireKey()).acknowledgeIncident(id)
+        if (!resp.isSuccessful) throw IllegalStateException("HTTP ${resp.code()}")
         Unit
     }
 

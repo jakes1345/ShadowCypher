@@ -40,8 +40,11 @@ data class Incident(
     @SerializedName("acknowledged") val resolved: Boolean
 )
 
+// The API returns {id, cve_id, fired_at}; the other fields stay null until it sends them.
 data class CveAlert(
     val cve_id: String,
+    val id: String? = null,
+    val fired_at: String? = null,
     val severity: String?,
     val description: String?,
     val affected_device: String?
@@ -55,7 +58,6 @@ data class GuardianSummary(
     val last_scan_at: String?
 )
 
-data class ScanResponse(val success: Boolean?, val message: String?)
 
 data class Mission(
     val id: String,
@@ -75,3 +77,17 @@ data class MissionListResponse(val missions: List<Mission>)
 data class AiChatMessage(val role: String, val content: String)
 data class AiQueryRequest(val question: String, val tier: String = "fast", val history: List<AiChatMessage> = emptyList())
 data class AiQueryResponse(val answer: String?, val model: String?, val provider: String?, val error: String?)
+
+data class IncidentsResponse(val incidents: List<Incident>)
+
+data class DeviceAuthStartRequest(val client_label: String)
+data class DeviceAuthStart(
+    val device_code: String,
+    val user_code: String,
+    val verification_uri: String,
+    val verification_uri_complete: String?,
+    val expires_in: Int,
+    val interval: Int
+)
+data class DeviceAuthPollRequest(val device_code: String)
+data class DeviceAuthPoll(val status: String?, val api_key: String?, val email: String?, val error: String?)

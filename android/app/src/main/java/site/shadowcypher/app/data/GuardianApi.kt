@@ -15,14 +15,11 @@ interface GuardianApi {
     @GET("/v1/guardian/summary")
     suspend fun getSummary(): GuardianSummary
 
-    @POST("/v1/scans")
-    suspend fun triggerScan(@Body body: Map<String, String> = emptyMap()): ScanResponse
-
     @GET("/v1/incidents")
-    suspend fun getIncidents(): List<Incident>
+    suspend fun getIncidents(): IncidentsResponse
 
-    @POST("/v1/incidents/{id}/acknowledge")
-    suspend fun acknowledgeIncident(@Path("id") id: String): Response<Unit>
+    @POST("/v1/incidents/ack")
+    suspend fun acknowledgeIncident(@Query("incident_id") id: String): Response<Unit>
 
     @GET("/v1/agents")
     suspend fun getAgents(): AgentsResponse
@@ -41,4 +38,14 @@ interface GuardianApi {
 
     @POST("/v1/assistant/query")
     suspend fun queryAssistant(@Body body: AiQueryRequest): AiQueryResponse
+}
+
+/** Sign-in through the browser. These routes take no API key. */
+interface DeviceAuthApi {
+
+    @POST("/v1/auth/device")
+    suspend fun start(@Body body: DeviceAuthStartRequest): DeviceAuthStart
+
+    @POST("/v1/auth/device/poll")
+    suspend fun poll(@Body body: DeviceAuthPollRequest): Response<DeviceAuthPoll>
 }

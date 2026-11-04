@@ -34,9 +34,6 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _scanTriggered = MutableStateFlow(false)
-    val scanTriggered: StateFlow<Boolean> = _scanTriggered.asStateFlow()
-
     private val _agents = MutableStateFlow<List<Agent>>(emptyList())
     val agents: StateFlow<List<Agent>> = _agents.asStateFlow()
 
@@ -101,19 +98,6 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun triggerScan() {
-        viewModelScope.launch {
-            _error.value = null
-            val result = repo.triggerScan()
-            result.onSuccess { _scanTriggered.value = true }
-            result.onFailure { _error.value = "Scan failed: ${it.message}" }
-        }
-    }
-
-    fun acknowledgeScanTriggered() {
-        _scanTriggered.value = false
-    }
-
     fun acknowledgeIncident(incidentId: String) {
         viewModelScope.launch {
             repo.acknowledgeIncident(incidentId)
@@ -127,6 +111,61 @@ class GuardianViewModel(application: Application) : AndroidViewModel(application
                 }
                 .onFailure { _error.value = "Acknowledge failed: ${it.message}" }
         }
+    }
+
+    // ── Browser sign-in (device flow) ───────────────────────────────────────
+
+    sealed class BrowserSignIn {
+        object Idle : BrowserSignIn()
+        object Starting : BrowserSignIn()
+        data class Waiting(val userCode: String, val url: String) : BrowserSignIn()
+        data class Failed(val message: String) : BrowserSignIn()
+    }
+
+    private val _browserSignIn = MutableStateFlow<BrowserSignIn>(BrowserSignIn.Idle)
+    val browserSignIn: StateFlow<BrowserSignIn> = _browserSignIn.asStateFlow()
+    private var signInJob: Job? = null
+
+    /** Starts the device flow; [openUrl] is called once with the approval page. */
+    fun startBrowserSignIn(openUrl: (String) -> Unit) {
+        signInJob?.cancel()
+        signInJob = viewModelScope.launch {
+            _browserSignIn.value = BrowserSignIn.Starting
+            val start = repo.startDeviceAuth().getOrElse {
+                _browserSignIn.value = BrowserSignIn.Failed("Couldn't reach ShadowCypher: ${it.message}")
+                return@launch
+            }
+            val url = start.verification_uri_complete ?: start.verification_uri
+            _browserSignIn.value = BrowserSignIn.Waiting(start.user_code, url)
+            openUrl(url)
+
+            val deadline = System.currentTimeMillis() + start.expires_in * 1000L
+            val interval = start.interval.coerceAtLeast(2) * 1000L
+            while (System.currentTimeMillis() < deadline) {
+                delay(interval)
+                val poll = repo.pollDeviceAuth(start.device_code).getOrNull() ?: continue
+                when (poll.status) {
+                    "authorized" -> {
+                        val key = poll.api_key
+                        if (key.isNullOrBlank()) {
+                            _browserSignIn.value = BrowserSignIn.Failed("Sign-in approved, but no API key came back.")
+                        } else {
+                            setApiKey(key)
+                            _browserSignIn.value = BrowserSignIn.Idle
+                        }
+                        return@launch
+                    }
+                    "denied" -> { _browserSignIn.value = BrowserSignIn.Failed("Sign-in was denied."); return@launch }
+                    "expired", "consumed" -> break
+                }
+            }
+            _browserSignIn.value = BrowserSignIn.Failed("The sign-in code expired. Try again.")
+        }
+    }
+
+    fun cancelBrowserSignIn() {
+        signInJob?.cancel()
+        _browserSignIn.value = BrowserSignIn.Idle
     }
 
     fun setApiKey(key: String) {
