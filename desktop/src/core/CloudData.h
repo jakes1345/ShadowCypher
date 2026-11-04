@@ -18,7 +18,8 @@ class CloudData : public QObject
     Q_PROPERTY(bool       incidentsLoaded READ incidentsLoaded NOTIFY incidentsChanged)
     Q_PROPERTY(QJsonArray threats   READ threats   NOTIFY threatsChanged)
     Q_PROPERTY(bool       threatsLoaded READ threatsLoaded NOTIFY threatsChanged)
-    Q_PROPERTY(QString    error     READ error     NOTIFY errorChanged)
+    Q_PROPERTY(QString    incidentsError READ incidentsError NOTIFY errorChanged)
+    Q_PROPERTY(QString    threatsError   READ threatsError   NOTIFY errorChanged)
     Q_PROPERTY(QString    syncStatus READ syncStatus NOTIFY syncStatusChanged)
 
 public:
@@ -30,7 +31,8 @@ public:
     bool       incidentsLoaded() const { return m_incidentsLoaded; }
     QJsonArray threats()   const { return m_threats; }
     bool       threatsLoaded() const { return m_threatsLoaded; }
-    QString    error()     const { return m_error; }
+    QString    incidentsError() const { return m_incidentsError; }
+    QString    threatsError()   const { return m_threatsError; }
     QString    syncStatus() const { return m_syncStatus; }
 
     void setActive(bool active);
@@ -47,7 +49,8 @@ signals:
     void syncStatusChanged();
 
 private:
-    void setError(const QString& e) { if (e == m_error) return; m_error = e; emit errorChanged(); }
+    void setIncidentsError(const QString& e) { if (e == m_incidentsError) return; m_incidentsError = e; emit errorChanged(); }
+    void setThreatsError(const QString& e)   { if (e == m_threatsError) return; m_threatsError = e; emit errorChanged(); }
     void setSyncStatus(const QString& s) { m_syncStatus = s; emit syncStatusChanged(); }
     void uploadScan();
 
@@ -61,6 +64,7 @@ private:
     bool            m_threatsLoaded = false;
     QJsonArray      m_incidents;
     QJsonArray      m_threats;
-    QString         m_error;
+    QString         m_incidentsError;
+    QString         m_threatsError;
     QString         m_syncStatus;
 };

@@ -75,12 +75,12 @@ Rectangle {
                         spacing: 10
                         Text { text: "OPEN INCIDENTS"; color: root.textSec; font.pixelSize: 11; font.family: root.monoFont; font.letterSpacing: 2 }
                         Text {
-                            visible: !cloud.active || cloud.error.length > 0 || (cloud.incidentsLoaded && cloud.openCount === 0) || !cloud.incidentsLoaded
+                            visible: !cloud.active || cloud.incidentsError.length > 0 || (cloud.incidentsLoaded && cloud.openCount === 0) || !cloud.incidentsLoaded
                             text: !cloud.active ? "Sign in online to see incidents from your ShadowCypher account."
-                                : cloud.error.length > 0 ? cloud.error
+                                : cloud.incidentsError.length > 0 ? cloud.incidentsError
                                 : !cloud.incidentsLoaded ? "Loading…"
                                 : "No open incidents."
-                            color: cloud.error.length > 0 && cloud.active ? root.red : root.textSec
+                            color: cloud.incidentsError.length > 0 && cloud.active ? root.red : root.textSec
                             font.pixelSize: 12; wrapMode: Text.Wrap; Layout.fillWidth: true
                         }
                         Repeater {
@@ -129,7 +129,7 @@ Rectangle {
                         Text {
                             visible: !cloud.active || !cloud.threatsLoaded || cloud.threats.length === 0
                             text: !cloud.active ? "Sign in online to see the threat feed."
-                                : !cloud.threatsLoaded ? (cloud.error.length > 0 ? "Threat feed unavailable." : "Loading…")
+                                : !cloud.threatsLoaded ? (cloud.threatsError.length > 0 ? cloud.threatsError : "Loading…")
                                 : "No new CVEs."
                             color: root.textSec; font.pixelSize: 12; wrapMode: Text.Wrap; Layout.fillWidth: true
                         }

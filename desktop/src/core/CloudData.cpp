@@ -23,7 +23,7 @@ CloudData::CloudData(ApiClient* api, Config* config, NetworkScanner* scanner, QO
         if (!m_active || !openOnly) return;
         m_incidents = items;
         m_incidentsLoaded = true;
-        setError({});
+        setIncidentsError({});
         emit incidentsChanged();
     });
 
@@ -41,6 +41,7 @@ CloudData::CloudData(ApiClient* api, Config* config, NetworkScanner* scanner, QO
         if (!m_active) return;
         m_threats = cves;
         m_threatsLoaded = true;
+        setThreatsError({});
         emit threatsChanged();
     });
 
@@ -56,8 +57,10 @@ CloudData::CloudData(ApiClient* api, Config* config, NetworkScanner* scanner, QO
         if (!m_active) return;
         if (path.startsWith("/v1/scans"))
             setSyncStatus("Sync failed: " + msg);
-        else if (path.startsWith("/v1/incidents") || path.startsWith("/v1/threats"))
-            setError("Couldn't load from ShadowCypher cloud (" + msg + ")");
+        else if (path.startsWith("/v1/incidents"))
+            setIncidentsError("Couldn't load incidents (" + msg + ")");
+        else if (path.startsWith("/v1/threats"))
+            setThreatsError("Threat feed unavailable (" + msg + ")");
     });
 
     connect(m_scanner, &NetworkScanner::scanComplete, this, [this]() {
@@ -79,7 +82,8 @@ void CloudData::setActive(bool active)
         m_incidents = {};
         m_threats = {};
         m_incidentsLoaded = m_threatsLoaded = false;
-        m_error.clear();
+        m_incidentsError.clear();
+        m_threatsError.clear();
         m_syncStatus.clear();
         emit incidentsChanged();
         emit threatsChanged();
