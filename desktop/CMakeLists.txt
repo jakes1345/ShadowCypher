@@ -21,6 +21,7 @@ set(SOURCES
     src/App.cpp
     src/core/Config.cpp
     src/core/ApiClient.cpp
+    src/core/CloudData.cpp
     src/scanner/NetworkScanner.cpp
     src/scanner/ArpMonitor.cpp
     src/ai/OllamaClient.cpp
@@ -31,6 +32,7 @@ set(HEADERS
     src/App.h
     src/core/Config.h
     src/core/ApiClient.h
+    src/core/CloudData.h
     src/scanner/NetworkScanner.h
     src/scanner/ArpMonitor.h
     src/ai/OllamaClient.h

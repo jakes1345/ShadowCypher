@@ -7,7 +7,11 @@ Rectangle {
     property string sub:   ""
     property color  accent: root.accent
 
-    height: 100
+    // Sized for layouts: equal share of a row by default, fixed height.
+    implicitHeight: 100
+    implicitWidth: 160
+    Layout.fillWidth: true
+    Layout.preferredWidth: 1
     color: root.bgPanel
     radius: 8
     border.color: root.border

@@ -65,8 +65,72 @@ Window {
 
                     Text { text: "Sign In"; color: root.textPri; font.pixelSize: 18; font.weight: Font.SemiBold }
 
+                    // ── Browser (device-code) sign-in ──────────────────────────
+                    Button {
+                        Layout.fillWidth: true; height: 44
+                        visible: !app.deviceAuthActive
+                        text: "Sign in with browser"
+                        enabled: !app.authBusy
+                        onClicked: { loginError.text = ""; app.startDeviceLogin(loginBaseInput.text) }
+                        background: Rectangle { color: root.accent; radius: 8; opacity: parent.enabled ? 1 : 0.6 }
+                        contentItem: Text { text: parent.text; color: "#fff"; font.pixelSize: 14; font.weight: Font.Medium; horizontalAlignment: Text.AlignHCenter }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        visible: app.deviceAuthActive
+                        implicitHeight: deviceCol.implicitHeight + 36
+                        color: root.bgPanel; radius: 8; border.color: root.border
+                        ColumnLayout {
+                            id: deviceCol
+                            anchors { fill: parent; margins: 18 }
+                            spacing: 10
+                            Text {
+                                text: app.deviceUserCode ? "Enter this code on the ShadowCypher sign-in page:" : "Requesting a sign-in code…"
+                                color: root.textSec; font.pixelSize: 12; wrapMode: Text.Wrap; Layout.fillWidth: true
+                            }
+                            Text {
+                                visible: app.deviceUserCode.length > 0
+                                Layout.alignment: Qt.AlignHCenter
+                                text: app.deviceUserCode
+                                color: root.textPri; font.pixelSize: 28; font.family: root.monoFont; font.letterSpacing: 4
+                            }
+                            Button {
+                                visible: app.deviceUserCode.length > 0
+                                Layout.fillWidth: true; height: 40
+                                text: "Open sign-in page"
+                                onClicked: app.openDeviceVerifyPage()
+                                background: Rectangle { color: root.accent; radius: 8 }
+                                contentItem: Text { text: parent.text; color: "#fff"; font.pixelSize: 13; horizontalAlignment: Text.AlignHCenter }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text {
+                                    visible: app.deviceUserCode.length > 0
+                                    text: "Waiting for approval…"; color: root.textSec; font.pixelSize: 12
+                                    Layout.fillWidth: true
+                                }
+                                Item { Layout.fillWidth: true; visible: app.deviceUserCode.length === 0 }
+                                Text {
+                                    text: "Cancel"; color: root.accent; font.pixelSize: 12
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: app.cancelDeviceLogin() }
+                                }
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        visible: !app.deviceAuthActive
+                        spacing: 10
+                        Rectangle { Layout.fillWidth: true; height: 1; color: root.border }
+                        Text { text: "or paste an API key"; color: root.textSec; font.pixelSize: 11 }
+                        Rectangle { Layout.fillWidth: true; height: 1; color: root.border }
+                    }
+
                     ColumnLayout {
                         spacing: 8
+                        visible: !app.deviceAuthActive
                         Text { text: "API KEY"; color: root.textSec; font.pixelSize: 10; font.family: root.monoFont; font.letterSpacing: 2 }
                         Rectangle {
                             Layout.fillWidth: true; height: 44; radius: 8
@@ -87,6 +151,7 @@ Window {
 
                     ColumnLayout {
                         spacing: 8
+                        visible: !app.deviceAuthActive
                         Text { text: "API SERVER"; color: root.textSec; font.pixelSize: 10; font.family: root.monoFont; font.letterSpacing: 2 }
                         Rectangle {
                             Layout.fillWidth: true; height: 44; radius: 8
@@ -116,11 +181,12 @@ Window {
 
                     Button {
                         Layout.fillWidth: true; height: 44
-                        text: app.authBusy ? "Checking…" : "Sign In"
+                        visible: !app.deviceAuthActive
+                        text: app.authBusy ? "Checking…" : "Sign in with key"
                         enabled: !app.authBusy
                         onClicked: doLogin()
-                        background: Rectangle { color: root.accent; radius: 8; opacity: parent.enabled ? 1 : 0.6 }
-                        contentItem: Text { text: parent.text; color: "#fff"; font.pixelSize: 14; font.weight: Font.Medium; horizontalAlignment: Text.AlignHCenter }
+                        background: Rectangle { color: "transparent"; border.color: root.accent; radius: 8; opacity: parent.enabled ? 1 : 0.6 }
+                        contentItem: Text { text: parent.text; color: root.accent; font.pixelSize: 14; font.weight: Font.Medium; horizontalAlignment: Text.AlignHCenter }
                     }
 
                     Text {

@@ -59,6 +59,7 @@ void NetworkScanner::scanNow()
     if (m_scanning) return;
     m_scanning = true;
     emit scanningChanged();
+    m_scanClock.start();
 
     probeLocalSubnets();
     QTimer::singleShot(kArpSettleMs, this, &NetworkScanner::collectResults);
@@ -150,6 +151,7 @@ void NetworkScanner::collectResults()
     }
 
     m_devices = found;
+    m_lastDurationMs = m_scanClock.elapsed();
     m_scanning = false;
     emit scanningChanged();
     emit devicesChanged();

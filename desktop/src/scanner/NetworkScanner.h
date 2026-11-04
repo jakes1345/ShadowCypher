@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QHash>
 #include <QUdpSocket>
+#include <QElapsedTimer>
 
 struct Device {
     QString ip;
@@ -37,6 +38,7 @@ public:
     QJsonArray devicesJson() const;
 
     void setIntervalSeconds(int seconds);
+    qint64 lastScanDurationMs() const { return m_lastDurationMs; }
 
 public slots:
     void start();
@@ -73,6 +75,8 @@ private:
     QList<Device> m_pending;
     QHash<QString, QString> m_hostnames;   // ip → reverse-DNS name ("" = no PTR record)
     QString       m_baselinePath;
+    QElapsedTimer m_scanClock;
+    qint64        m_lastDurationMs = 0;
     bool          m_running  = false;
     bool          m_scanning = false;
 };

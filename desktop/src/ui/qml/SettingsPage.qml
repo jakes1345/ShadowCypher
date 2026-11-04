@@ -104,6 +104,25 @@ Rectangle {
                             Text { text: "Minimum 30 seconds · Default 600 (10 min)"; color: root.textSec; font.pixelSize: 12 }
                         }
                     }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 16
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            Text { text: "Sync scans to my ShadowCypher account"; color: root.textPri; font.pixelSize: 13 }
+                            Text {
+                                text: "Uploads each scan's device list (MAC, IP, hostname) so new devices raise incidents in your account. Off by default; nothing leaves this machine unless you turn it on."
+                                color: root.textSec; font.pixelSize: 11; wrapMode: Text.Wrap; Layout.fillWidth: true
+                            }
+                        }
+                        Switch {
+                            id: syncSwitch
+                            checked: config.syncScans
+                            onToggled: config.syncScans = checked
+                        }
+                    }
                 }
             }
 

@@ -29,10 +29,15 @@ Rectangle {
                 columnSpacing: 16
                 rowSpacing: 16
 
-                StatTile { Layout.fillWidth: true; label: "DEVICES"; value: scanner.devices.length.toString(); sub: "on LAN" }
-                StatTile { Layout.fillWidth: true; label: "INCIDENTS"; value: "0"; sub: "last 24h"; accent: root.amber }
-                StatTile { Layout.fillWidth: true; label: "AI"; value: ai.available ? "Online" : "Offline"; sub: ai.model; accent: ai.available ? root.green : root.textSec }
-                StatTile { Layout.fillWidth: true; label: "PRIVACY"; value: privacy.active ? "On" : "Off"; sub: privacy.status; accent: privacy.active ? root.green : root.textSec }
+                StatTile { label: "DEVICES"; value: scanner.devices.length.toString(); sub: "on LAN" }
+                StatTile {
+                    label: "INCIDENTS"
+                    value: !cloud.active ? "—" : cloud.incidentsLoaded ? cloud.openCount.toString() : "…"
+                    sub: cloud.active ? "open" : "sign in online"
+                    accent: cloud.active && cloud.openCount > 0 ? root.amber : root.textSec
+                }
+                StatTile { label: "AI"; value: ai.available ? "Online" : "Offline"; sub: ai.model; accent: ai.available ? root.green : root.textSec }
+                StatTile { label: "PRIVACY"; value: privacy.active ? "On" : "Off"; sub: privacy.status; accent: privacy.active ? root.green : root.textSec }
             }
 
             // Scan button row
@@ -47,6 +52,117 @@ Rectangle {
                     padding: 0; leftPadding: 20; rightPadding: 20; height: 36
                 }
                 Text { text: scanner.running ? "Monitoring active" : "Manual scan"; color: root.textSec; font.pixelSize: 12 }
+                Text {
+                    visible: cloud.syncStatus.length > 0
+                    text: "·  " + cloud.syncStatus; color: root.textSec; font.pixelSize: 12
+                }
+            }
+
+            // Cloud cards: open incidents + CVE feed
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 16
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    Layout.alignment: Qt.AlignTop
+                    Layout.preferredHeight: incCol.implicitHeight + 36
+                    color: root.bgSurface; radius: 8; border.color: root.border
+                    ColumnLayout {
+                        id: incCol
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 18 }
+                        spacing: 10
+                        Text { text: "OPEN INCIDENTS"; color: root.textSec; font.pixelSize: 11; font.family: root.monoFont; font.letterSpacing: 2 }
+                        Text {
+                            visible: !cloud.active || cloud.error.length > 0 || (cloud.incidentsLoaded && cloud.openCount === 0) || !cloud.incidentsLoaded
+                            text: !cloud.active ? "Sign in online to see incidents from your ShadowCypher account."
+                                : cloud.error.length > 0 ? cloud.error
+                                : !cloud.incidentsLoaded ? "Loading…"
+                                : "No open incidents."
+                            color: cloud.error.length > 0 && cloud.active ? root.red : root.textSec
+                            font.pixelSize: 12; wrapMode: Text.Wrap; Layout.fillWidth: true
+                        }
+                        Repeater {
+                            model: cloud.active ? cloud.incidents.slice(0, 5) : []
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 10
+                                Rectangle {
+                                    width: 8; height: 8; radius: 4
+                                    color: modelData.severity === "critical" || modelData.severity === "high" ? root.red
+                                         : modelData.severity === "warning" || modelData.severity === "medium" ? root.amber
+                                         : root.textSec
+                                }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+                                    Text { text: modelData.title || "Incident"; color: root.textPri; font.pixelSize: 13; elide: Text.ElideRight; Layout.fillWidth: true }
+                                    Text {
+                                        text: (modelData.category || "") + (modelData.created_at ? "  ·  " + Qt.formatDateTime(new Date(modelData.created_at), "MMM d, hh:mm") : "")
+                                        color: root.textSec; font.pixelSize: 11; font.family: root.monoFont
+                                    }
+                                }
+                                Button {
+                                    text: "Ack"
+                                    onClicked: cloud.acknowledge(modelData.id)
+                                    background: Rectangle { color: "transparent"; border.color: root.border; radius: 4 }
+                                    contentItem: Text { text: parent.text; color: root.textSec; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    padding: 0; leftPadding: 12; rightPadding: 12; implicitHeight: 26
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    Layout.alignment: Qt.AlignTop
+                    Layout.preferredHeight: threatCol.implicitHeight + 36
+                    color: root.bgSurface; radius: 8; border.color: root.border
+                    ColumnLayout {
+                        id: threatCol
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 18 }
+                        spacing: 10
+                        Text { text: "NEW CVEs · LAST 7 DAYS"; color: root.textSec; font.pixelSize: 11; font.family: root.monoFont; font.letterSpacing: 2 }
+                        Text {
+                            visible: !cloud.active || !cloud.threatsLoaded || cloud.threats.length === 0
+                            text: !cloud.active ? "Sign in online to see the threat feed."
+                                : !cloud.threatsLoaded ? (cloud.error.length > 0 ? "Threat feed unavailable." : "Loading…")
+                                : "No new CVEs."
+                            color: root.textSec; font.pixelSize: 12; wrapMode: Text.Wrap; Layout.fillWidth: true
+                        }
+                        Repeater {
+                            model: cloud.active ? cloud.threats.slice(0, 6) : []
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 10
+                                Text {
+                                    text: modelData.id
+                                    color: root.accent; font.pixelSize: 12; font.family: root.monoFont
+                                    Layout.preferredWidth: 150
+                                    MouseArea {
+                                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                        // URL comes from the API; only open NVD pages.
+                                        onClicked: if ((modelData.url || "").startsWith("https://nvd.nist.gov/")) Qt.openUrlExternally(modelData.url)
+                                    }
+                                }
+                                Text {
+                                    text: (modelData.severity || "N/A") + (modelData.cvss !== undefined && modelData.cvss !== null ? "  " + Number(modelData.cvss).toFixed(1) : "")
+                                    color: modelData.severity === "CRITICAL" || modelData.severity === "HIGH" ? root.red
+                                         : modelData.severity === "MEDIUM" ? root.amber : root.textSec
+                                    font.pixelSize: 11; font.family: root.monoFont
+                                    Layout.fillWidth: true
+                                }
+                                Text {
+                                    text: modelData.published ? Qt.formatDate(new Date(modelData.published), "MMM d") : ""
+                                    color: root.textSec; font.pixelSize: 11; font.family: root.monoFont
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // Device list

@@ -9,6 +9,8 @@ class Config : public QObject
     Q_PROPERTY(QString apiKey       READ apiKey       WRITE setApiKey       NOTIFY changed)
     Q_PROPERTY(QString apiBase      READ apiBase      WRITE setApiBase      NOTIFY changed)
     Q_PROPERTY(int     scanInterval READ scanInterval WRITE setScanInterval NOTIFY changed)
+    // Off by default: uploading sends LAN device MACs/IPs/hostnames to the user's account.
+    Q_PROPERTY(bool    syncScans    READ syncScans    WRITE setSyncScans    NOTIFY changed)
 
 public:
     explicit Config(QObject* parent = nullptr);
@@ -16,10 +18,12 @@ public:
     QString apiKey()      const;
     QString apiBase()     const;
     int     scanInterval() const;
+    bool    syncScans()    const { return m_syncScans; }
 
     void setApiKey(const QString&);
     void setApiBase(const QString&);
     void setScanInterval(int seconds);
+    void setSyncScans(bool on);
 
     Q_INVOKABLE void save();
     Q_INVOKABLE void reload();
@@ -35,6 +39,7 @@ private:
     QString     m_apiKey;
     QString     m_apiBase   = "https://api.shadowcypher.site";
     int         m_scanInterval = 600;
+    bool        m_syncScans    = false;
 
     void load();
 };

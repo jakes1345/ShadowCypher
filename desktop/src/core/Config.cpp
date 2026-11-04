@@ -25,6 +25,7 @@ void Config::load()
     m_apiKey       = m_raw["api_key"].toString();
     m_apiBase      = m_raw["api_base"].toString("https://api.shadowcypher.site");
     m_scanInterval = m_raw["scan_interval_sec"].toInt(600);
+    m_syncScans    = m_raw["sync_scans"].toBool(false);
 }
 
 void Config::save()
@@ -32,6 +33,7 @@ void Config::save()
     m_raw["api_key"]           = m_apiKey;
     m_raw["api_base"]          = m_apiBase;
     m_raw["scan_interval_sec"] = m_scanInterval;
+    m_raw["sync_scans"]        = m_syncScans;
     QFile f(m_path);
     if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         f.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
@@ -55,3 +57,4 @@ void Config::setApiBase(const QString& v)
     save();
 }
 void Config::setScanInterval(int v)          { m_scanInterval = qMax(30, v); save(); }
+void Config::setSyncScans(bool on)           { m_syncScans = on; save(); }

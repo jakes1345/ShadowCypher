@@ -7,6 +7,7 @@
 #include "App.h"
 #include "core/Config.h"
 #include "core/ApiClient.h"
+#include "core/CloudData.h"
 #include "scanner/NetworkScanner.h"
 #include "ai/OllamaClient.h"
 #include "privacy/PrivacyMode.h"
@@ -32,10 +33,16 @@ int main(int argc, char *argv[])
     // App controller — bridges C++ to QML
     App controller(&config, &apiClient, &scanner, &ai, &privacy);
 
+    CloudData cloud(&apiClient, &config, &scanner);
+    QObject::connect(&controller, &App::authChanged, &cloud, [&]() {
+        cloud.setActive(controller.authenticated() && !controller.offline());
+    });
+
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("app", &controller);
     engine.rootContext()->setContextProperty("config", &config);
     engine.rootContext()->setContextProperty("apiClient", &apiClient);
+    engine.rootContext()->setContextProperty("cloud", &cloud);
     engine.rootContext()->setContextProperty("scanner", &scanner);
     engine.rootContext()->setContextProperty("ai", &ai);
     engine.rootContext()->setContextProperty("privacy", &privacy);
