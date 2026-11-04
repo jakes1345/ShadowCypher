@@ -119,6 +119,7 @@ export interface Env {
   // AI assistant (P4C)
   ANTHROPIC_API_KEY: string;
   ANTHROPIC_MODEL: string;
+  ANTHROPIC_GENERAL_MODEL?: string;   // general-mode Shadow AI model (default claude-opus-5-5)
   // BYOK encryption (P4F)
   BYOK_ENCRYPTION_SECRET: string;
   // Agent auto-update

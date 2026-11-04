@@ -702,10 +702,7 @@ const ShadowAssistant = (() => {
       const response = await route(text);
       if (response) {
         document.getElementById('sa-response').textContent = response;
-        setState('speaking');
-        if (plugin) await plugin.speak({ text: response, rate: 1.05 });
-        setState('idle');
-        setTimeout(() => _animatedDismiss(), 3000);
+        setState('idle');  // typed: shown, not spoken; overlay stays open to read
       }
     } catch (_) {
       document.getElementById('sa-response').textContent = 'Command failed.';
@@ -890,7 +887,7 @@ const ShadowAssistant = (() => {
     window.ShadowHome?.setState('thinking');
 
     try {
-      const response = await route(transcript);
+      const response = await route(transcript, { voice: true });
       if (response) {
         const respEl = document.getElementById('sa-response');
         if (respEl) respEl.textContent = response;
@@ -1037,11 +1034,53 @@ const ShadowAssistant = (() => {
     return best.chunk;
   }
 
+  // ── Shadow AI (ShadowCypher API, general mode) ───────────────────────────
+  // Returns { answer } on success, { error } when the API refused (plan, quota,
+  // provider not set up), or null when the API couldn't be reached.
+
+  const _history = [];
+
+  function _hostOf(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch (_) { return ''; }
+  }
+
+  async function askShadow(text, voice) {
+    if (!apiKey) return { error: 'Sign in first: open Shadow AI settings and tap "Sign in with browser".' };
+    let resp;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 90000);
+      resp = await fetch(`${API_BASE}/v1/assistant/query`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: text.slice(0, 4000), mode: 'general', voice: !!voice, history: _history.slice(-8) }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+    } catch (_) {
+      return null;
+    }
+    let data = {};
+    try { data = await resp.json(); } catch (_) {}
+    if (!resp.ok) {
+      if (resp.status >= 500 && data.error !== 'platform_ai_not_configured') return null;
+      if (data.error === 'quota_exceeded') return { error: 'Monthly Shadow AI quota used up. Add your own Anthropic key or Ollama server on shadowcypher.site → Account.' };
+      return { error: data.reason || data.hint || data.error || `Shadow AI error ${resp.status}` };
+    }
+    const answer = (data.answer || '').trim();
+    if (!answer) return null;
+    _history.push({ role: 'user', content: text.slice(0, 2000) }, { role: 'assistant', content: answer.slice(0, 2000) });
+    while (_history.length > 8) _history.shift();
+    const hosts = [...new Set((data.sources || []).map(s => _hostOf(s.url)).filter(Boolean))].slice(0, 3);
+    if (!voice && hosts.length) return { answer: `${answer}\n\nSources: ${hosts.join(', ')}` };
+    return { answer };
+  }
+
   // ── Router ────────────────────────────────────────────────────────────────
   // Layer 1: OS intents (call/text/alarm/timer/open/maps)
   // Layer 2: Classifier → Guardian/security commands
-  // Layer 3: KB search (local knowledge base)
-  // Fallback: "didn't understand" — no cloud AI
+  // Layer 3: Shadow AI (general mode, web-grounded)
+  // Offline fallback: local KB, instant answers, Wikipedia, web search
 
   // ── Web knowledge (no LLM) ────────────────────────────────────────────────
 
@@ -1099,7 +1138,7 @@ const ShadowAssistant = (() => {
   ];
   let _fallbackIdx = 0;
 
-  async function route(userText) {
+  async function route(userText, opts = {}) {
     // Layer 1: OS intents (call, text, alarm, timer, open app, maps)
     const sys = trySystemIntent(userText);
     if (sys && plugin) {
@@ -1113,7 +1152,7 @@ const ShadowAssistant = (() => {
     let classifierIntent = null;
     if (typeof ShadowClassifier !== 'undefined' && ShadowClassifier.isReady()) {
       const result = ShadowClassifier.classify(userText);
-      if (result.intent && result.intent !== 'unknown' && result.confidence >= 0.45) {
+      if (result.intent && result.intent !== 'unknown' && result.confidence >= (apiKey ? 0.7 : 0.45)) {
         classifierIntent = result.intent;
       }
     } else {
@@ -1126,7 +1165,12 @@ const ShadowAssistant = (() => {
       if (resp !== null) return resp;
     }
 
-    // Layer 3: Local KB search
+    // Layer 3: Shadow AI. Falls through to the offline layers only when the API is unreachable.
+    const ai = await askShadow(userText, !!opts.voice);
+    if (ai && ai.answer) return ai.answer;
+    if (ai && ai.error) return ai.error;
+
+    // Offline: local KB search
     await loadKB();
     const chunk = kbSearch(userText);
     if (chunk) {
