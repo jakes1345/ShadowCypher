@@ -138,7 +138,25 @@ class GuardianRepository(private val context: Context) {
     }
 
     suspend fun queryAssistant(question: String, history: List<AiChatMessage>): Result<AiQueryResponse> = runCatching {
-        buildApi(requireKey()).queryAssistant(AiQueryRequest(question = question, history = history.takeLast(8)))
+        try {
+            buildApi(requireKey()).queryAssistant(AiQueryRequest(question = question, history = history.takeLast(8)))
+        } catch (e: retrofit2.HttpException) {
+            throw IllegalStateException(apiErrorMessage(e))
+        }
+    }
+
+    /** Turns an API error body ({error, reason, hint}) into a readable message. */
+    private fun apiErrorMessage(e: retrofit2.HttpException): String {
+        val body = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null }
+        val json = try { body?.let { org.json.JSONObject(it) } } catch (_: Exception) { null }
+        val reason = json?.optString("reason")?.takeIf { it.isNotBlank() }
+        val hint = json?.optString("hint")?.takeIf { it.isNotBlank() }
+        return when {
+            reason != null -> reason
+            json?.optString("error") == "quota_exceeded" -> "Monthly AI quota used up." + (hint?.let { " $it" } ?: "")
+            json?.optString("error")?.isNotBlank() == true -> "${json.optString("error")} (HTTP ${e.code()})"
+            else -> "HTTP ${e.code()}"
+        }
     }
 
     companion object {
