@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -86,9 +87,55 @@ fun SettingsScreen(viewModel: GuardianViewModel) {
             Spacer(Modifier.height(12.dp))
         }
 
+        // Browser sign-in (device flow)
+        if (currentKey.isBlank()) {
+            val signIn by viewModel.browserSignIn.collectAsState()
+            val context = LocalContext.current
+            SectionCard {
+                SectionCardLabel("SIGN IN")
+                Spacer(Modifier.height(12.dp))
+                when (val s = signIn) {
+                    is GuardianViewModel.BrowserSignIn.Waiting -> {
+                        Text("Approve this device in your browser. Check that the code matches:",
+                            color = ColorTextSecondary, fontSize = 13.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text(s.userCode, color = ColorTextPrimary, fontSize = 28.sp,
+                            fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { openInBrowser(context, s.url) }, shape = RoundedCornerShape(8.dp)) {
+                                Text("Open browser again")
+                            }
+                            TextButton(onClick = { viewModel.cancelBrowserSignIn() }) { Text("Cancel") }
+                        }
+                    }
+                    else -> {
+                        Text("Sign in with your ShadowCypher account in the browser. Your password never goes through this app.",
+                            color = ColorTextSecondary, fontSize = 13.sp)
+                        if (s is GuardianViewModel.BrowserSignIn.Failed) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(s.message, color = ColorCritical, fontSize = 13.sp)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Button(
+                            onClick = { viewModel.startBrowserSignIn { url -> openInBrowser(context, url) } },
+                            enabled = s !is GuardianViewModel.BrowserSignIn.Starting,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = ColorAccentPurple),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(if (s is GuardianViewModel.BrowserSignIn.Starting) "Starting..." else "Sign in with browser",
+                                fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+
         // API Key section
         SectionCard {
-            SectionCardLabel("API KEY")
+            SectionCardLabel(if (currentKey.isBlank()) "OR PASTE AN API KEY" else "API KEY")
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = draftKey,
@@ -276,5 +323,16 @@ private fun CodeBlock(code: String) {
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace
         )
+    }
+}
+
+private fun openInBrowser(context: android.content.Context, url: String) {
+    try {
+        context.startActivity(
+            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    } catch (_: android.content.ActivityNotFoundException) {
+        // No browser installed; the code and URL stay on screen.
     }
 }

@@ -37,13 +37,6 @@ fun DashboardScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val apiKey by viewModel.apiKey.collectAsState()
-    val scanTriggered by viewModel.scanTriggered.collectAsState()
-
-    LaunchedEffect(scanTriggered) {
-        if (scanTriggered) {
-            viewModel.acknowledgeScanTriggered()
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -179,15 +172,15 @@ fun DashboardScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // Trigger scan button
+        // Agents upload a network scan on every check-in; the phone just pulls the latest.
         Button(
-            onClick = { viewModel.triggerScan() },
+            onClick = { viewModel.refresh() },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = ColorAccentPurple),
             shape = RoundedCornerShape(8.dp)
         ) {
             Text(
-                text = if (isLoading) "SCANNING..." else "TRIGGER SCAN",
+                text = if (isLoading) "REFRESHING..." else "REFRESH",
                 fontFamily = FontFamily.Monospace,
                 letterSpacing = 1.sp,
                 fontWeight = FontWeight.Bold
@@ -237,7 +230,7 @@ private fun SetupCard(onNavigateToSettings: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "API KEY REQUIRED",
+                text = "SIGN IN REQUIRED",
                 color = ColorAccentPurple,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
@@ -253,7 +246,7 @@ private fun SetupCard(onNavigateToSettings: () -> Unit) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Enter your API key in Settings to start monitoring your network.",
+                text = "Sign in from Settings to start monitoring your network.",
                 color = ColorTextSecondary,
                 fontSize = 13.sp
             )
