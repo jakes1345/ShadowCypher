@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QPointer>
 #include <QSslConfiguration>
+#include <QUrl>
 
 ApiClient* ApiClient::s_instance = nullptr;
 ApiClient* ApiClient::instance() { return s_instance; }
@@ -18,6 +19,15 @@ ApiClient::ApiClient(QObject* parent) : QObject(parent) {
     m_nam = new QNetworkAccessManager(this);
     QSettings s(configIniPath(), QSettings::IniFormat);
     m_apiKey = s.value("api_key").toString();
+
+    // A self-hosted server may be set in config.ini. The key is sent to it, so only
+    // HTTPS is accepted, except plain HTTP to this machine for local development.
+    m_apiBase = DEFAULT_API_BASE;
+    const QUrl custom(s.value("api_base").toString().trimmed());
+    const bool local = custom.host() == "127.0.0.1" || custom.host() == "localhost";
+    if (custom.isValid() && !custom.host().isEmpty()
+        && (custom.scheme() == "https" || (custom.scheme() == "http" && local)))
+        m_apiBase = custom.toString(QUrl::StripTrailingSlash);
 }
 
 void ApiClient::setApiKey(const QString& key) {
@@ -28,7 +38,7 @@ void ApiClient::setApiKey(const QString& key) {
 }
 
 QNetworkRequest ApiClient::makeRequest(const QString& path) const {
-    QUrl url(QString(API_BASE) + path);
+    QUrl url(m_apiBase + path);
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     if (!m_apiKey.isEmpty())
@@ -100,20 +110,27 @@ void ApiClient::del(const QString& path, QObject* ctx, ApiCallback cb) {
     dispatchReply(reply, ctx, std::move(cb));
 }
 
-void ApiClient::login(const QString& handle, const QString& password,
-                      QObject* ctx,
-                      std::function<void(bool ok, QString errorMsg)> cb) {
-    QJsonObject body{{"handle", handle}, {"password", password}};
-    post("/v1/auth/login", body, ctx,
-         [this, cb = std::move(cb)](bool ok, QJsonDocument doc, int /*status*/) {
-        if (ok) {
-            QString key = doc.object().value("api_key").toString();
-            if (key.isEmpty()) { cb(false, "No API key in response"); return; }
-            setApiKey(key);
-            cb(true, {});
-        } else {
-            QString msg = doc.object().value("error").toString("Login failed");
-            cb(false, msg);
-        }
+void ApiClient::verifyKey(const QString& key, QObject* ctx,
+                          std::function<void(bool ok, int status, QString handle)> cb) {
+    QNetworkRequest req = makeRequest("/v1/me");
+    req.setRawHeader("Authorization", ("Bearer " + key).toUtf8());
+    dispatchReply(m_nam->get(req), ctx, [cb = std::move(cb)](bool ok, QJsonDocument doc, int status) {
+        cb(ok, status, doc.object().value("handle").toString());
     });
+}
+
+void ApiClient::startDeviceAuth(const QString& clientLabel, QObject* ctx, ApiCallback cb) {
+    QNetworkRequest req = makeRequest("/v1/auth/device");
+    req.setRawHeader("Authorization", QByteArray());   // no key yet, and don't leak an old one
+    dispatchReply(m_nam->post(req, QJsonDocument(QJsonObject{{"client_label", clientLabel}})
+                                       .toJson(QJsonDocument::Compact)),
+                  ctx, std::move(cb));
+}
+
+void ApiClient::pollDeviceAuth(const QString& deviceCode, QObject* ctx, ApiCallback cb) {
+    QNetworkRequest req = makeRequest("/v1/auth/device/poll");
+    req.setRawHeader("Authorization", QByteArray());
+    dispatchReply(m_nam->post(req, QJsonDocument(QJsonObject{{"device_code", deviceCode}})
+                                       .toJson(QJsonDocument::Compact)),
+                  ctx, std::move(cb));
 }

@@ -30,10 +30,18 @@ public:
     void upload(const QString& path, const QByteArray& data, const QString& fileName,
                 const QString& mime, QObject* ctx, ApiCallback cb);
 
-    // Login: posts /v1/auth/login, stores key on success
-    void login(const QString& handle, const QString& password,
-               QObject* ctx,
-               std::function<void(bool ok, QString errorMsg)> cb);
+    // Calls GET /v1/me with `key` (not the stored one). ok=true means the key is valid.
+    // status 0 means the server couldn't be reached.
+    void verifyKey(const QString& key, QObject* ctx,
+                   std::function<void(bool ok, int status, QString handle)> cb);
+
+    // Browser sign-in (device authorization):
+    //   startDeviceAuth → user approves at verification_uri → pollDeviceAuth until "authorized".
+    void startDeviceAuth(const QString& clientLabel, QObject* ctx, ApiCallback cb);
+    void pollDeviceAuth(const QString& deviceCode, QObject* ctx, ApiCallback cb);
+
+    // API server, from `api_base` in config.ini (for self-hosting); defaults to production.
+    QString apiBase() const { return m_apiBase; }
 
     static QString configIniPath();
     static ApiClient* instance();
@@ -43,8 +51,9 @@ private:
     static ApiClient* s_instance;
     QNetworkAccessManager* m_nam;
     QString m_apiKey;
+    QString m_apiBase;
 
-    static constexpr auto API_BASE = "https://api.shadowcypher.site";
+    static constexpr auto DEFAULT_API_BASE = "https://api.shadowcypher.site";
 
     QNetworkRequest makeRequest(const QString& path) const;
     void dispatchReply(QNetworkReply* reply, QObject* ctx, ApiCallback cb);

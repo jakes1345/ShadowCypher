@@ -155,7 +155,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     m_stack->addWidget(new ShadowScriptPage(this));           // 9
     m_stack->addWidget(new ChatPage(m_ipc, this));            // 10
     m_stack->addWidget(new GhostPage(m_ipc, this));           // 11
-    m_stack->addWidget(new MailPage(m_ipc, this));            // 12
+    m_stack->addWidget(new MailPage(this));            // 12
     m_stack->addWidget(new DrivePage(this));                  // 13
     m_stack->addWidget(new CalendarPage(this));               // 14
     m_stack->addWidget(new CveFeedPage(m_ipc, this));         // 15
