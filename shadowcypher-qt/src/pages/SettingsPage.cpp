@@ -6,6 +6,8 @@
 #include <QSettings>
 #include <QDir>
 #include <QTimer>
+#include <QRegularExpression>
+#include "../api/ApiClient.h"
 
 // Config file path: ~/.config/shadowcypher/config.ini
 static QString configPath() {
@@ -255,7 +257,7 @@ void SettingsPage::buildUi() {
         auto* heading = new QLabel;
         heading->setText(
             "<span style='font-weight:800;color:#94a3b8;font-size:11px;"
-            "letter-spacing:2px;'>NOTIFICATION PREFERENCES</span>"
+            "letter-spacing:2px;'>PREFERENCES</span>"
         );
         heading->setTextFormat(Qt::RichText);
         cardLay->addWidget(heading);
@@ -267,6 +269,17 @@ void SettingsPage::buildUi() {
         m_soundAlertChk = new QCheckBox("Sound alerts for critical incidents");
         m_soundAlertChk->setStyleSheet(checkStyle());
         cardLay->addWidget(m_soundAlertChk);
+
+        // Off by default: ShadowCypher sends no telemetry unless asked to.
+        m_syncScansChk = new QCheckBox("Sync network scans to my ShadowCypher account");
+        m_syncScansChk->setStyleSheet(checkStyle());
+        cardLay->addWidget(m_syncScansChk);
+        auto* syncHint = new QLabel(
+            "Uploads each device list (IP, MAC, hostname) so the web dashboard can track "
+            "devices and raise new-device alerts. Nothing is uploaded while this is off.");
+        syncHint->setWordWrap(true);
+        syncHint->setStyleSheet("color: #64748b; font-size: 11px; border: none; background: transparent;");
+        cardLay->addWidget(syncHint);
 
         auto* btnRow = new QHBoxLayout;
         auto* saveBtn = new QPushButton("SAVE PREFERENCES");
@@ -301,13 +314,27 @@ void SettingsPage::loadSettings() {
     );
     m_desktopNotifChk->setChecked(cfg.value("notifications/desktop", true).toBool());
     m_soundAlertChk->setChecked(cfg.value("notifications/sound", false).toBool());
+    m_syncScansChk->setChecked(cfg.value("sync/scans", false).toBool());
 }
 
 void SettingsPage::saveApiKey() {
-    QSettings cfg(configPath(), QSettings::IniFormat);
-    cfg.setValue("auth/api_key", m_apiKeyEdit->text().trimmed());
-    cfg.sync();
-    showSavedFeedback(m_apiSavedLbl);
+    // Same rule as sign-in: a key is checked with the server before it's saved.
+    const QString key = m_apiKeyEdit->text().trimmed();
+    auto* api = ApiClient::instance();
+    auto fail = [this](const QString& msg) {
+        m_apiSavedLbl->setText(msg);
+        m_apiSavedLbl->setStyleSheet("color: #f43f5e; font-family: 'JetBrains Mono'; font-size: 11px;");
+        m_apiSavedLbl->setVisible(true);
+    };
+    static const QRegularExpression keyRe("^sc_live_[a-f0-9]{48}$");
+    if (!api || !keyRe.match(key).hasMatch()) { fail("Not a valid API key"); return; }
+    api->verifyKey(key, this, [this, api, key, fail](bool ok, int status, QString) {
+        if (!ok) { fail(status == 0 ? "Can't reach the server" : "Key rejected by the server"); return; }
+        api->setApiKey(key);
+        m_apiSavedLbl->setText("Saved");
+        m_apiSavedLbl->setStyleSheet("color: #00ff9d; font-family: 'JetBrains Mono'; font-size: 11px;");
+        showSavedFeedback(m_apiSavedLbl);
+    });
 }
 
 void SettingsPage::toggleApiKeyVisibility(bool checked) {
@@ -328,6 +355,7 @@ void SettingsPage::saveNotifications() {
     QSettings cfg(configPath(), QSettings::IniFormat);
     cfg.setValue("notifications/desktop", m_desktopNotifChk->isChecked());
     cfg.setValue("notifications/sound",   m_soundAlertChk->isChecked());
+    cfg.setValue("sync/scans",            m_syncScansChk->isChecked());
     cfg.sync();
     showSavedFeedback(m_notifSavedLbl);
 }

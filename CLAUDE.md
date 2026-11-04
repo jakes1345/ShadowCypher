@@ -21,7 +21,7 @@ Sovereign personal security platform: network monitoring, CVE threat feed, encry
 
 - **The desktop app is Qt6 C++, in `shadowcypher-qt/` only.** New desktop features go there.
 - **No Python and no GTK.** Don't add Python or GTK code, dependencies, CI jobs or packages. The project moved off Python + GTK3.
-- Leftovers from before the switch are being removed: `desktop/` (a second Qt/QML app), `native/` (an old GTK app), `shadowcypher/`, `tests/`, `agent/`, `shadowscript/` Python code, root Python files, and the Python app bundled into the ShadowOS ISO. Don't build on them or fix them. If a change needs one of them, port the piece into `shadowcypher-qt/` instead.
+- Leftovers from before the switch are being removed: `native/` (an old GTK app), `shadowcypher/`, `tests/`, `agent/`, `shadowscript/` Python code, root Python files, and the Python app bundled into the ShadowOS ISO. Don't build on them or fix them. If a change needs one of them, port the piece into `shadowcypher-qt/` instead.
 
 ## Key directories
 
@@ -30,6 +30,7 @@ shadowcypher-qt/
   src/                  # Qt Widgets UI: MainWindow, pages/, api/ApiClient, ipc/IpcClient
   daemon/               # C++ background daemon (scans, incidents, CVE feed, ghost mode, AI)
   core/                 # shared runtime, with tests in core/tests
+  privacy-helper/       # root helper for Ghost mode's kill-switch, run through pkexec
 www/index.html          # entire web frontend (auth, chat, mail, dashboard, drive)
 www/js/identity.js      # client-side key derivation and OpenPGP identity keys
 backend/api/src/

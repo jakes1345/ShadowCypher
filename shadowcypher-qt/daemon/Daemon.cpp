@@ -794,12 +794,9 @@ QJsonValue Daemon::handleGhostStatus() {
         torActive = (r.out.trimmed() == QByteArray("active"));
     }
 
-    // Kill-switch: look for DROP rule in OUTPUT chain
-    {
-        const shadow::ProcessResult r = shadow::runProcess(
-            QStringLiteral("iptables"), {QStringLiteral("-L"), QStringLiteral("OUTPUT"), QStringLiteral("-n")}, {}, 5000);
-        killSwitch = QString::fromUtf8(r.out).contains(QStringLiteral("DROP"));
-    }
+    // Kill-switch: the privacy helper writes this marker only while its SHADOW_KS
+    // chains are confirmed in place (listing iptables would need root).
+    killSwitch = QFile::exists(QStringLiteral("/run/shadowcypher/privacy-active"));
 
     // MAC address of primary interface
     {
@@ -831,83 +828,19 @@ QJsonValue Daemon::handleGhostStatus() {
     return obj;
 }
 
+// Ghost mode is switched by the desktop app through shadowcypher-privacy-helper
+// (pkexec, administrator approval). The daemon runs unprivileged and must not
+// touch the firewall: the old version ran iptables directly, which failed without
+// root and, when it did run, flushed the user's whole OUTPUT chain.
 QJsonValue Daemon::handleGhostEnable() {
-#ifndef Q_OS_WIN
-    QStringList errors;
-    auto run = [&](const QString& prog, const QStringList& args) {
-        const shadow::ProcessResult r = shadow::runProcess(prog, args, {}, 15000);
-        if (r.exitCode != 0)
-            errors.append(prog + QStringLiteral(": ") + QString::fromUtf8(r.err).trimmed());
-    };
-
-    // 1. Start Tor
-    run(QStringLiteral("systemctl"), {QStringLiteral("start"), QStringLiteral("tor")});
-    QThread::sleep(2);
-
-    // 2. Kill-switch: block all non-Tor outbound traffic
-    run(QStringLiteral("iptables"), {QStringLiteral("-I"), QStringLiteral("OUTPUT"), QStringLiteral("1"),
-        QStringLiteral("-m"), QStringLiteral("owner"), QStringLiteral("--uid-owner"),
-        QStringLiteral("debian-tor"), QStringLiteral("-j"), QStringLiteral("ACCEPT")});
-    run(QStringLiteral("iptables"), {QStringLiteral("-A"), QStringLiteral("OUTPUT"),
-        QStringLiteral("-d"), QStringLiteral("127.0.0.0/8"), QStringLiteral("-j"), QStringLiteral("ACCEPT")});
-    run(QStringLiteral("iptables"), {QStringLiteral("-A"), QStringLiteral("OUTPUT"),
-        QStringLiteral("-j"), QStringLiteral("DROP")});
-
-    // 3. Lock DNS to Tor's resolver
-    // (Best-effort — requires write permission to /etc/resolv.conf)
-    QFile resolv(QStringLiteral("/etc/resolv.conf"));
-    if (resolv.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        resolv.write("nameserver 127.0.0.1\n");
-        resolv.close();
-    }
-
-    QJsonObject obj;
-    obj[QStringLiteral("ok")]   = errors.isEmpty();
-    if (!errors.isEmpty())
-        obj[QStringLiteral("error")] = errors.join(QStringLiteral("; "));
-    return obj;
-#else
     QJsonObject obj;
     obj[QStringLiteral("ok")]    = false;
-    obj[QStringLiteral("error")] = QStringLiteral("Ghost mode not supported on Windows");
+    obj[QStringLiteral("error")] = QStringLiteral("Ghost mode is switched from the ShadowCypher app (needs administrator approval)");
     return obj;
-#endif
 }
 
 QJsonValue Daemon::handleGhostDisable() {
-#ifndef Q_OS_WIN
-    QStringList errors;
-    auto run = [&](const QString& prog, const QStringList& args) {
-        const shadow::ProcessResult r = shadow::runProcess(prog, args, {}, 15000);
-        if (r.exitCode != 0)
-            errors.append(prog + QStringLiteral(": ") + QString::fromUtf8(r.err).trimmed());
-    };
-
-    // 1. Flush OUTPUT chain kill-switch rules
-    run(QStringLiteral("iptables"), {QStringLiteral("-F"), QStringLiteral("OUTPUT")});
-
-    // 2. Stop Tor
-    run(QStringLiteral("systemctl"), {QStringLiteral("stop"), QStringLiteral("tor")});
-
-    // 3. Restore DNS (try resolvectl, then dhclient, then fallback)
-    {
-        const shadow::ProcessResult r = shadow::runProcess(
-            QStringLiteral("resolvectl"), {QStringLiteral("revert")}, {}, 5000);
-        if (r.exitCode != 0)
-            shadow::runProcess(QStringLiteral("dhclient"), {QStringLiteral("-1")}, {}, 10000);
-    }
-
-    QJsonObject obj;
-    obj[QStringLiteral("ok")]   = errors.isEmpty();
-    if (!errors.isEmpty())
-        obj[QStringLiteral("error")] = errors.join(QStringLiteral("; "));
-    return obj;
-#else
-    QJsonObject obj;
-    obj[QStringLiteral("ok")]    = false;
-    obj[QStringLiteral("error")] = QStringLiteral("Ghost mode not supported on Windows");
-    return obj;
-#endif
+    return handleGhostEnable();
 }
 
 // ── State persistence ─────────────────────────────────────────────────────────

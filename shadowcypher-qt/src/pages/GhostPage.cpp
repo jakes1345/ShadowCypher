@@ -99,9 +99,20 @@ QPushButton:hover {
 // ──────────────────────────────────────────────────────────────────────────────
 
 GhostPage::GhostPage(IpcClient* ipc, QWidget* parent)
-    : QWidget(parent), m_ipc(ipc)
+    : QWidget(parent), m_ipc(ipc), m_privacy(new PrivacyHelper(this))
 {
     buildUi();
+
+    // The kill-switch is changed by the root helper (after an administrator
+    // prompt), never by the daemon, so this works with or without the daemon.
+    connect(m_privacy, &PrivacyHelper::finished, this,
+            [this](bool ok, bool active, const QString& message) {
+        m_waiting = false;
+        m_ghostActive = active;
+        m_terminal->log(message, ok ? (active ? "SUCCESS" : "WARNING") : "ERROR");
+        updateToggleButton();
+        QTimer::singleShot(800, this, &GhostPage::refresh);
+    });
 
     m_timer = new QTimer(this);
     m_timer->setInterval(POLL_INTERVAL_MS);
@@ -343,28 +354,13 @@ void GhostPage::toggleGhostMode()
         m_toggleBtn->setStyleSheet(WAITING_STYLE);
         m_toggleBtn->setEnabled(false);
         m_terminal->log("Disabling Ghost Mode…", "WARNING");
-
-        if (m_ipc && m_ipc->isConnected()) {
-            m_enableReqId = m_ipc->call("ghost_mode_disable");
-        } else {
-            // No IPC — nothing we can reliably do without a daemon
-            m_terminal->log("IPC daemon not connected — cannot disable Ghost Mode remotely", "ERROR");
-            m_waiting = false;
-            updateToggleButton();
-        }
+        m_privacy->disengage();
     } else {
         m_toggleBtn->setText("ENGAGING…");
         m_toggleBtn->setStyleSheet(WAITING_STYLE);
         m_toggleBtn->setEnabled(false);
-        m_terminal->log("Enabling Ghost Mode…", "INFO");
-
-        if (m_ipc && m_ipc->isConnected()) {
-            m_enableReqId = m_ipc->call("ghost_mode_enable");
-        } else {
-            m_terminal->log("IPC daemon not connected — cannot enable Ghost Mode remotely", "ERROR");
-            m_waiting = false;
-            updateToggleButton();
-        }
+        m_terminal->log("Enabling Ghost Mode (administrator approval needed)…", "INFO");
+        m_privacy->engage();
     }
 }
 
@@ -377,10 +373,11 @@ void GhostPage::onIpcResult(int id, QJsonObject result)
     if (id == m_statusReqId) {
         // ghost_mode_status → { tor, kill_switch, mac, dns_locked, active }
         bool tor      = result.value("tor").toBool(false);
-        bool ks       = result.value("kill_switch").toBool(false);
+        // Listing iptables needs root, so the helper's marker is the real kill-switch state.
+        bool ks       = PrivacyHelper::killSwitchActive();
         QString mac   = result.value("mac").toString("—");
         bool dnsLock  = result.value("dns_locked").toBool(false);
-        bool active   = result.value("active").toBool(false);
+        bool active   = tor && ks;
         applyStatus(tor, ks, mac, dnsLock, active);
         m_terminal->log(
             QString("[IPC] status — tor:%1  ks:%2  dns:%3  active:%4")
@@ -391,24 +388,6 @@ void GhostPage::onIpcResult(int id, QJsonObject result)
             active ? "SUCCESS" : "INFO"
         );
 
-    } else if (id == m_enableReqId) {
-        bool ok = result.value("ok").toBool(false);
-        m_waiting = false;
-
-        if (ok) {
-            m_ghostActive = !m_ghostActive;     // flip after confirmed
-            m_terminal->log(
-                m_ghostActive ? "Ghost Mode ACTIVATED" : "Ghost Mode DEACTIVATED",
-                m_ghostActive ? "SUCCESS" : "WARNING"
-            );
-        } else {
-            QString err = result.value("error").toString("Unknown error");
-            m_terminal->log("Ghost Mode toggle failed: " + err, "ERROR");
-        }
-
-        updateToggleButton();
-        // Re-probe status so cards reflect actual system state
-        QTimer::singleShot(800, this, &GhostPage::refresh);
     }
 }
 
@@ -497,14 +476,12 @@ void GhostPage::checkViaProcess()
             this, &GhostPage::onTorCheckFinished);
     m_torProc->start("systemctl", {"is-active", "tor"});
 
-    // ── 2. Kill-switch: check for DROP rule in iptables OUTPUT chain ──
-    // We run: iptables -L OUTPUT -n --line-numbers  (no sudo for list in some distros)
-    // If that fails, we check for ip6tables similarly.
+    // ── 2. Kill-switch: the privacy helper's marker (listing iptables needs root) ──
     m_ksProc = new QProcess(this);
     connect(m_ksProc,
             QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, &GhostPage::onKillSwitchCheckFinished);
-    m_ksProc->start("sh", {"-c", "iptables -L OUTPUT -n 2>/dev/null | grep -i drop"});
+    m_ksProc->start("sh", {"-c", "test -e /run/shadowcypher/privacy-active && echo armed"});
 
     // ── 3. MAC address: ip link show — grab default-route interface ──
     m_macProc = new QProcess(this);
@@ -560,7 +537,7 @@ void GhostPage::onKillSwitchCheckFinished(int exitCode, QProcess::ExitStatus)
     if (!m_ksProc) return;
 
     QString out = m_ksProc->readAllStandardOutput().trimmed();
-    // If grep found DROP rules the kill-switch is armed (grep exits 0 on match)
+    // The marker exists only while the helper's kill-switch chains are in place
     bool armed = (exitCode == 0) && !out.isEmpty();
 
     m_ksDot->setText(dotHtml(armed ? Theme::SUCCESS : Theme::WARNING));
@@ -575,6 +552,11 @@ void GhostPage::onKillSwitchCheckFinished(int exitCode, QProcess::ExitStatus)
         QString("Kill-switch: %1").arg(armed ? "ARMED" : "DISARMED"),
         armed ? "SUCCESS" : "WARNING"
     );
+    // Without the daemon this is the only status source, so keep the button in step.
+    if (!m_waiting) {
+        m_ghostActive = armed;
+        updateToggleButton();
+    }
 
     m_ksProc->deleteLater();
     m_ksProc = nullptr;
