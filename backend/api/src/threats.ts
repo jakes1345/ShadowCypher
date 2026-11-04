@@ -114,6 +114,11 @@ function daysAgoIso(days: number): string {
   return d.toISOString().replace(/\.\d{3}Z$/, ".000Z");
 }
 
+// NVD rejects pubStartDate without pubEndDate (404), so ranges always carry both.
+function nowIso(): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, ".000Z");
+}
+
 export async function getThreats(
   _req: Request,
   _env: Env,
@@ -130,6 +135,7 @@ export async function getThreats(
   try {
     const params: Record<string, string> = {
       pubStartDate: daysAgoIso(days),
+      pubEndDate: nowIso(),
       resultsPerPage: String(limit),
       startIndex: String((page - 1) * limit),
     };
@@ -191,7 +197,7 @@ export async function getThreatStats(
 }
 
 async function fetchCount(severity: string): Promise<number> {
-  const url = `${NVD_BASE}?pubStartDate=${daysAgoIso(7)}&cvssV3Severity=${severity}&resultsPerPage=1`;
+  const url = `${NVD_BASE}?pubStartDate=${daysAgoIso(7)}&pubEndDate=${nowIso()}&cvssV3Severity=${severity}&resultsPerPage=1`;
   const resp = await fetch(url, {
     headers: { "User-Agent": "ShadowCypher/1.0 (contact: hello@shadowcypher.site)" },
     cf: { cacheTtl: 3600, cacheEverything: true } as RequestInitCfProperties,

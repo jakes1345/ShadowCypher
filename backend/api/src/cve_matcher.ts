@@ -76,13 +76,15 @@ function twoHoursAgoIso(): string {
 
 async function fetchRecentCves(env: Env): Promise<NvdCve[]> {
   const pubStartDate = twoHoursAgoIso();
+  // NVD returns 404 for pubStartDate without pubEndDate.
+  const pubEndDate = new Date().toISOString().replace(/\.\d{3}Z$/, ".000Z");
   // NVD cvssV3Severity is exact-match — "HIGH" does NOT include "CRITICAL".
   // Fetch both severities and merge deduplicated results.
   const severities = ["CRITICAL", "HIGH"] as const;
   const allCves = new Map<string, NvdCve>();
 
   await Promise.all(severities.map(async (severity) => {
-    const qs = new URLSearchParams({ pubStartDate, cvssV3Severity: severity }).toString();
+    const qs = new URLSearchParams({ pubStartDate, pubEndDate, cvssV3Severity: severity }).toString();
     const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?${qs}`;
 
     let resp: Response;
