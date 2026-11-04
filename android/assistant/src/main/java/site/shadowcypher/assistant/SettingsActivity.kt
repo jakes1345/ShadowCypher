@@ -16,12 +16,14 @@ import java.net.URL
 class SettingsActivity : AppCompatActivity() {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private lateinit var assistStatus: TextView
 
     companion object {
         private const val PREFS = "shadow_prefs"
         private const val KEY_API = "sc_api_key"
         private const val KEY_WAKE = "wake_word_enabled"
         private const val API_BASE = "https://api.shadowcypher.site"
+        private const val CONNECTED_TEXT = "Connected. Long-press Home or the power button, or say 'Hey Shadow'."
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,9 +71,9 @@ class SettingsActivity : AppCompatActivity() {
         }
         val statusDesc = TextView(this).apply {
             text = if (storedKey.isNotEmpty())
-                "Guardian network connected. Say 'Hey Shadow' or long-press Home."
+                CONNECTED_TEXT
             else
-                "Enter your ShadowCypher API key below to connect to your Guardian network."
+                "Sign in below to connect Shadow to your ShadowCypher account."
             textSize = 13f
             setTextColor(0xFF94A3B8.toInt())
             setPadding(0, 8, 0, 0)
@@ -80,7 +82,7 @@ class SettingsActivity : AppCompatActivity() {
         statusCard.addView(statusDesc)
 
         // API Key section
-        val keyLabel = sectionLabel("API KEY")
+        val keyLabel = sectionLabel("OR PASTE AN API KEY")
         val keyInput = EditText(this).apply {
             hint = "sc_live_..."
             setText(storedKey)
@@ -105,6 +107,48 @@ class SettingsActivity : AppCompatActivity() {
             text = "Get your key at shadowcypher.site → Account → API Key"
         }
 
+        // Browser sign-in (device flow)
+        val signInLabel = sectionLabel("SIGN IN")
+        val signInBtn = primaryButton("Sign in with browser")
+        val signInStatus = TextView(this).apply {
+            textSize = 13f
+            setTextColor(0xFF94A3B8.toInt())
+            setPadding(4, 8, 0, 0)
+            text = "Approve this phone on shadowcypher.site. Your password never goes through this app."
+        }
+        signInBtn.setOnClickListener {
+            signInBtn.isEnabled = false
+            signInStatus.setTextColor(0xFF94A3B8.toInt())
+            signInStatus.text = "Starting…"
+            scope.launch {
+                val result = browserSignIn(signInStatus)
+                signInBtn.isEnabled = true
+                if (result != null) {
+                    prefs.edit().putString(KEY_API, result.first).apply()
+                    keyInput.setText(result.first)
+                    signInStatus.text = "✓ Signed in as ${result.second}"
+                    signInStatus.setTextColor(0xFF22C55E.toInt())
+                    statusTitle.text = "● CONNECTED"
+                    statusTitle.setTextColor(0xFF22C55E.toInt())
+                    statusDesc.text = CONNECTED_TEXT
+                }
+            }
+        }
+
+        // AI provider: Community accounts need their own Anthropic key or Ollama server
+        val aiLabel = sectionLabel("AI MODEL")
+        val aiDesc = TextView(this).apply {
+            text = "On the Community plan, Shadow answers with your own Anthropic API key or your own Ollama server. Set one on shadowcypher.site → Account → Shadow AI."
+            textSize = 13f
+            setTextColor(0xFF94A3B8.toInt())
+            setPadding(4, 0, 0, 12)
+        }
+        val aiBtn = ghostButton("Open AI settings on shadowcypher.site")
+        aiBtn.setOnClickListener {
+            try { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://shadowcypher.site/?nav=account"))) }
+            catch (_: Exception) {}
+        }
+
         val saveBtn = primaryButton("Save & Connect")
         saveBtn.setOnClickListener {
             val key = keyInput.text.toString().trim()
@@ -126,7 +170,7 @@ class SettingsActivity : AppCompatActivity() {
                     keyStatus.setTextColor(0xFF22C55E.toInt())
                     statusTitle.text = "● CONNECTED"
                     statusTitle.setTextColor(0xFF22C55E.toInt())
-                    statusDesc.text = "Guardian network connected. Say 'Hey Shadow' or long-press Home."
+                    statusDesc.text = CONNECTED_TEXT
                 } else {
                     keyStatus.text = "Key invalid or API unreachable"
                     keyStatus.setTextColor(0xFFEF4444.toInt())
@@ -161,7 +205,11 @@ class SettingsActivity : AppCompatActivity() {
 
         // Set as default assist
         val assistLabel = sectionLabel("DEFAULT ASSISTANT")
-        val assistBtn = ghostButton("Set as Default Assist App")
+        assistStatus = TextView(this).apply {
+            textSize = 13f
+            setPadding(4, 0, 0, 12)
+        }
+        val assistBtn = ghostButton("Choose digital assistant app")
         assistBtn.setOnClickListener {
             try { startActivity(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)) }
             catch (e: Exception) { startActivity(Intent(Settings.ACTION_SETTINGS)) }
@@ -175,12 +223,15 @@ class SettingsActivity : AppCompatActivity() {
             })
         }
 
-        listOf(header, sub, statusCard, keyLabel, keyInput, keyStatus,
-            sectionSpacer(), saveBtn, sectionSpacer(),
+        listOf(header, sub, statusCard,
+            assistLabel, assistStatus, assistBtn, sectionSpacer(),
+            signInLabel, signInBtn, signInStatus, sectionSpacer(),
+            keyLabel, keyInput, keyStatus, sectionSpacer(), saveBtn, sectionSpacer(),
+            aiLabel, aiDesc, aiBtn, sectionSpacer(),
             wakeLabel, wakeRow, sectionSpacer(),
-            assistLabel, assistBtn, sectionSpacer(),
             launchBtn
         ).forEach { layout.addView(it) }
+        updateAssistStatus()
 
         scroll.addView(layout)
         return scroll
@@ -264,6 +315,77 @@ class SettingsActivity : AppCompatActivity() {
             JSONObject(body).optString("email", null)
         } catch (e: Exception) { null }
     }
+
+    override fun onResume() {
+        super.onResume()
+        if (::assistStatus.isInitialized) updateAssistStatus()
+    }
+
+    /** Shows whether Shadow currently holds the digital assistant role. */
+    private fun updateAssistStatus() {
+        val held = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            val rm = getSystemService(android.app.role.RoleManager::class.java)
+            rm?.isRoleHeld(android.app.role.RoleManager.ROLE_ASSISTANT) == true
+        } else {
+            Settings.Secure.getString(contentResolver, "assistant")?.startsWith(packageName) == true
+        }
+        assistStatus.text = if (held) "✓ Shadow is your digital assistant. Long-press Home or the power button to talk."
+            else "Shadow isn't your digital assistant yet. Tap below, choose 'Digital assistant app', then pick Shadow."
+        assistStatus.setTextColor(if (held) 0xFF22C55E.toInt() else 0xFFF59E0B.toInt())
+    }
+
+    /**
+     * Device-flow sign-in, same as the desktop app: get a code, open the approval
+     * page, poll until approved. Returns (apiKey, email) or null.
+     */
+    private suspend fun browserSignIn(status: TextView): Pair<String, String>? {
+        val start = withContext(Dispatchers.IO) {
+            postJson("/v1/auth/device", JSONObject().put("client_label", "Shadow AI (Android)"))
+        }
+        if (start == null || start.second != 200) {
+            status.text = "Couldn't reach ShadowCypher. Check your connection and try again."
+            status.setTextColor(0xFFEF4444.toInt())
+            return null
+        }
+        val s = start.first
+        val code = s.optString("user_code")
+        val url = s.optString("verification_uri_complete").ifBlank { s.optString("verification_uri") }
+        status.text = "Approve this phone in your browser. Code: $code"
+        try { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) } catch (_: Exception) {}
+        val deadline = System.currentTimeMillis() + s.optInt("expires_in", 600) * 1000L
+        val interval = s.optInt("interval", 5).coerceAtLeast(2) * 1000L
+        while (System.currentTimeMillis() < deadline) {
+            delay(interval)
+            val poll = withContext(Dispatchers.IO) {
+                postJson("/v1/auth/device/poll", JSONObject().put("device_code", s.optString("device_code")))
+            } ?: continue
+            when (poll.first.optString("status")) {
+                "authorized" -> {
+                    val key = poll.first.optString("api_key")
+                    if (key.isNotBlank()) return key to poll.first.optString("email", "your account")
+                }
+                "denied" -> { status.text = "Sign-in was denied."; status.setTextColor(0xFFEF4444.toInt()); return null }
+                "expired", "consumed" -> break
+            }
+        }
+        status.text = "The sign-in code expired. Try again."
+        status.setTextColor(0xFFEF4444.toInt())
+        return null
+    }
+
+    /** POST JSON; returns (body, status) or null on network failure. Error bodies are read too. */
+    private fun postJson(path: String, body: JSONObject): Pair<JSONObject, Int>? = try {
+        val conn = URL("$API_BASE$path").openConnection() as HttpURLConnection
+        conn.requestMethod = "POST"
+        conn.doOutput = true
+        conn.connectTimeout = 10000
+        conn.readTimeout = 10000
+        conn.setRequestProperty("Content-Type", "application/json")
+        conn.outputStream.use { it.write(body.toString().toByteArray()) }
+        val code = conn.responseCode
+        val text = (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader()?.readText() ?: "{}"
+        (try { JSONObject(text) } catch (_: Exception) { JSONObject() }) to code
+    } catch (_: Exception) { null }
 
     override fun onDestroy() {
         scope.cancel()

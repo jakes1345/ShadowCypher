@@ -20,7 +20,6 @@ import androidx.annotation.Keep
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -35,8 +34,6 @@ class AssistantActivity : AppCompatActivity() {
     private var wasAssistLaunch = false
     private val voskSTT by lazy { VoskSTT(this) }
     private var voskReady = false
-    private var llmClient: LLMClient? = null
-    private var isProcessing = false
 
     companion object {
         private const val MIC_REQ = 1001
@@ -75,7 +72,6 @@ class AssistantActivity : AppCompatActivity() {
 
         initTTS()
         initSTT()
-        initLLM()
         voskSTT.loadModel(
             onReady = {
                 voskReady = true
@@ -404,7 +400,6 @@ class AssistantActivity : AppCompatActivity() {
                             onPartial = { t -> fireEvent("partialResult", mapOf("transcript" to t)) },
                             onResult  = { t ->
                                 fireEvent("speechResult", mapOf("transcript" to t))
-                                processSpeechThroughLLM(t)
                             },
                         )
                     } else {
@@ -418,7 +413,6 @@ class AssistantActivity : AppCompatActivity() {
                 override fun onResults(b: Bundle?) {
                     val t = b?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: return
                     fireEvent("speechResult", mapOf("transcript" to t))
-                    processSpeechThroughLLM(t)
                 }
                 override fun onEvent(type: Int, params: Bundle?) {}
             })
@@ -426,39 +420,6 @@ class AssistantActivity : AppCompatActivity() {
     }
 
     // ── TTS setup ────────────────────────────────────────────────────────────
-
-    private fun initLLM() {
-        val apiKey = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_API, "") ?: ""
-        if (apiKey.isNotBlank()) {
-            llmClient = LLMClient(apiKey)
-            Log.i(TAG, "LLMClient initialized")
-        }
-    }
-
-    private fun processSpeechThroughLLM(transcript: String) {
-        if (isProcessing || llmClient == null) return
-        isProcessing = true
-
-        lifecycleScope.launch {
-            try {
-                val result = llmClient!!.query(transcript)
-                result.onSuccess { response ->
-                    Log.i(TAG, "LLM response: $response")
-                    runOnUiThread {
-                        tts?.speak(response, TextToSpeech.QUEUE_FLUSH, null, "llm_${System.currentTimeMillis()}")
-                    }
-                }.onFailure { e ->
-                    Log.e(TAG, "LLM query failed", e)
-                    val fallback = "I couldn't process that request. Please try again."
-                    runOnUiThread {
-                        tts?.speak(fallback, TextToSpeech.QUEUE_FLUSH, null, "err_${System.currentTimeMillis()}")
-                    }
-                }
-            } finally {
-                isProcessing = false
-            }
-        }
-    }
 
     private fun initTTS() {
         tts = TextToSpeech(this) { status ->

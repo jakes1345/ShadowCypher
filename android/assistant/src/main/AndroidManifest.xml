@@ -42,6 +42,38 @@
 
         </activity>
 
+        <!-- Digital assistant role: Settings → Default apps → Digital assistant app -->
+        <service
+            android:name=".ShadowVoiceInteractionService"
+            android:label="Shadow"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true">
+            <meta-data
+                android:name="android.voice_interaction"
+                android:resource="@xml/voice_interaction_service" />
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".ShadowVoiceSessionService"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true" />
+
+        <service
+            android:name=".ShadowRecognitionService"
+            android:label="Shadow"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.speech.RecognitionService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.speech"
+                android:resource="@xml/recognition_service" />
+        </service>
+
         <!-- Wake word foreground service -->
         <service
             android:name=".WakeWordService"

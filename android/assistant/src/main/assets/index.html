@@ -676,16 +676,17 @@ window.ShadowHome = (() => {
     processInput(text);
   }
 
-  async function processInput(text) {
+  async function processInput(text, fromVoice = false) {
     addMessage('user', text);
     setState('thinking');
     document.getElementById('sh-partial').textContent = '';
 
     try {
       // Delegate to assistant.js router
-      const response = await window._shadowRoute(text);
+      const response = await window._shadowRoute(text, { voice: fromVoice });
       if (response) {
         addMessage('shadow', response);
+        if (!fromVoice) { setState('idle'); return; }  // typed questions are read, not spoken
         setState('speaking');
         try {
           await window.Capacitor?.Plugins?.ShadowAssistant?.speak({ text: response, rate: 1.05 });
@@ -703,7 +704,7 @@ window.ShadowHome = (() => {
   function onSpeechResult(transcript) {
     if (!transcript) { setState('idle'); return; }
     document.getElementById('sh-partial').textContent = '';
-    processInput(transcript);
+    processInput(transcript, true);
   }
 
   function onPartialResult(transcript) {
