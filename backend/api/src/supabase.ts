@@ -39,6 +39,35 @@ function authHeaders(env: Env, prefer?: string): HeadersInit {
   return h;
 }
 
+export interface AuthUser {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+}
+
+const USER_PAGE = 50;
+const USER_MAX_PAGES = 20;
+
+/**
+ * Finds the auth user with exactly this email, or null.
+ * GoTrue's list endpoint has no `email` parameter (it is silently ignored and
+ * returns every user); `filter` is a substring match, so the result is
+ * re-checked for an exact match rather than trusting the first row.
+ */
+export async function findAuthUserByEmail(env: Env, email: string): Promise<AuthUser | null> {
+  const want = email.trim().toLowerCase();
+  for (let page = 1; page <= USER_MAX_PAGES; page++) {
+    const url = `${env.SUPABASE_URL}/auth/v1/admin/users?filter=${encodeURIComponent(want)}&per_page=${USER_PAGE}&page=${page}`;
+    const resp = await fetch(url, { headers: authHeaders(env) });
+    if (!resp.ok) return null;
+    const users = ((await resp.json()) as { users?: AuthUser[] }).users ?? [];
+    const match = users.find((u) => u.email?.toLowerCase() === want);
+    if (match) return match;
+    if (users.length < USER_PAGE) return null;
+  }
+  return null;
+}
+
 export async function dbSelect<T = unknown>(env: Env, table: string, opts: QueryOptions = {}): Promise<T[]> {
   const url = buildUrl(env, table, opts);
   const headers = authHeaders(env, opts.single ? "return=representation" : undefined);

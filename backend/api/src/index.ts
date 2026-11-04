@@ -85,7 +85,7 @@ import { listRooms, getMessages, sendMessage, updatePresence, getOnlineUsers, op
 import { listFiles, uploadFile, downloadFile, deleteFile } from "./files";
 import { getInbox, getMailCount, getMail, markRead, deleteMail, sendOutbound, replyMail, storeInboundMail } from "./mail";
 export { ChatRoom } from "./chat_do";
-import { dbSelect } from "./supabase";
+import { dbSelect, findAuthUserByEmail } from "./supabase";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 import { sendWelcomeEmail, sendKeyRotatedEmail, sendRecoveryKitEmail } from "./emails";
@@ -582,13 +582,7 @@ export default {
         if (!body?.handle || !body.code) return json({ error: "handle_and_code_required" }, { status: 400 }, cors);
 
         const userEmail = `${body.handle.toLowerCase().replace(/^@/, "")}@shadowcypher.site`;
-        // Look up the user by their handle-derived email
-        const usersResp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(userEmail)}`, {
-          headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
-        });
-        if (!usersResp.ok) return json({ error: "user_not_found" }, { status: 404 }, cors);
-        const usersBody = (await usersResp.json()) as { users?: SupabaseUser[] };
-        const user = usersBody.users?.[0];
+        const user = (await findAuthUserByEmail(env, userEmail)) as SupabaseUser | null;
         if (!user) return json({ error: "user_not_found" }, { status: 404 }, cors);
 
         const storedHashes: string[] = (user.user_metadata as { recovery_codes?: string[] })?.recovery_codes ?? [];

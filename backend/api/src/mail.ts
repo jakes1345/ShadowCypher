@@ -14,7 +14,7 @@
  */
 
 import type { Env } from "./index";
-import { dbSelect, dbInsert, dbUpdate, dbCount } from "./supabase";
+import { dbSelect, dbInsert, dbUpdate, dbCount, findAuthUserByEmail } from "./supabase";
 import { dispatchMailWebhook } from "./webhooks";
 import { dispatchMailPushNotification } from "./notifications";
 import { decodeMimeWords, decodeQuotedPrintable, decodeBase64Body, parseHeaders, parseMimeParts, escapeRegex, extractBodies } from "./mime";
@@ -55,19 +55,7 @@ export async function storeInboundMail(
   const handle = handleMatch[1];
   const userEmail = `${handle}@shadowcypher.site`;
 
-  // Resolve user_id from email
-  const usersResp = await fetch(
-    `${env.SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(userEmail)}`,
-    {
-      headers: {
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-    }
-  );
-  if (!usersResp.ok) return;
-  const usersBody = (await usersResp.json()) as { users?: { id: string }[] };
-  const user = usersBody.users?.[0];
+  const user = await findAuthUserByEmail(env, userEmail);
   if (!user) return;
 
   const subject = decodeMimeWords(message.headers.get("subject") ?? "(no subject)");

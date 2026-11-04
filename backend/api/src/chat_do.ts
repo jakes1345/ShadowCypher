@@ -19,7 +19,7 @@
  */
 
 import type { Env } from "./index";
-import { dbInsert, dbSelect, dbUpsert } from "./supabase";
+import { dbInsert, dbSelect, dbUpsert, findAuthUserByEmail } from "./supabase";
 import { dispatchMentionPushNotification } from "./notifications";
 
 interface SessionMeta {
@@ -230,18 +230,7 @@ export class ChatRoom implements DurableObject {
     roomName: string
   ): Promise<void> {
     const targetEmail = `${mentionedNick}@shadowcypher.site`;
-    const resp = await fetch(
-      `${this.env.SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(targetEmail)}`,
-      {
-        headers: {
-          apikey: this.env.SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${this.env.SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-      }
-    );
-    if (!resp.ok) return;
-    const body = (await resp.json()) as { users?: { id: string }[] };
-    const userId = body.users?.[0]?.id;
+    const userId = (await findAuthUserByEmail(this.env, targetEmail))?.id;
     if (!userId) return;
     await dispatchMentionPushNotification(this.env, userId, {
       senderNick,

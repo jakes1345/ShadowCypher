@@ -12,7 +12,7 @@
  */
 
 import type { Env } from "./index";
-import { dbSelect, dbInsert, dbUpsert, dbUpdate } from "./supabase";
+import { dbSelect, dbInsert, dbUpsert, dbUpdate, findAuthUserByEmail } from "./supabase";
 
 interface AuthedUser { id: string; email: string; handle?: string }
 
@@ -235,13 +235,7 @@ export async function openDm(
 
   // Verify target user exists
   const targetEmail = `${handle}@shadowcypher.site`;
-  const usersResp = await fetch(
-    `${env.SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(targetEmail)}`,
-    { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }
-  );
-  if (!usersResp.ok) return json({ error: "user_lookup_failed" }, { status: 500 }, cors);
-  const usersBody = (await usersResp.json()) as { users?: { id: string }[] };
-  const targetUser = usersBody.users?.[0];
+  const targetUser = await findAuthUserByEmail(env, targetEmail);
   if (!targetUser) return json({ error: "user_not_found" }, { status: 404 }, cors);
 
   // Sort by user ID for a consistent room identity regardless of who initiates

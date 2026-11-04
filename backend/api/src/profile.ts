@@ -21,7 +21,7 @@
  */
 
 import type { Env } from "./index";
-import { dbSelect, dbUpsert } from "./supabase";
+import { dbSelect, dbUpsert, findAuthUserByEmail } from "./supabase";
 
 interface SupabaseAuthUser {
   id: string;
@@ -52,18 +52,7 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
 
 async function lookupUserByHandle(env: Env, handle: string): Promise<SupabaseAuthUser | null> {
   const email = `${handle.toLowerCase().replace(/[^a-z0-9_-]/g, "")}@shadowcypher.site`;
-  const resp = await fetch(
-    `${env.SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(email)}`,
-    {
-      headers: {
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-    }
-  );
-  if (!resp.ok) return null;
-  const body = (await resp.json()) as { users?: SupabaseAuthUser[] };
-  return body.users?.[0] ?? null;
+  return (await findAuthUserByEmail(env, email)) as SupabaseAuthUser | null;
 }
 
 /** GET /v1/profile/:handle — no auth required */
