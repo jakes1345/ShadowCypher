@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 
 Rectangle {
@@ -28,10 +29,10 @@ Rectangle {
                 columnSpacing: 16
                 rowSpacing: 16
 
-                StatTile { label: "DEVICES"; value: scanner.devices.length.toString(); sub: "on LAN" }
-                StatTile { label: "INCIDENTS"; value: "0"; sub: "last 24h"; accent: root.amber }
-                StatTile { label: "AI"; value: ai.available ? "Online" : "Offline"; sub: ai.model; accent: ai.available ? root.green : root.textSec }
-                StatTile { label: "PRIVACY"; value: privacy.active ? "On" : "Off"; sub: privacy.status; accent: privacy.active ? root.green : root.textSec }
+                StatTile { Layout.fillWidth: true; label: "DEVICES"; value: scanner.devices.length.toString(); sub: "on LAN" }
+                StatTile { Layout.fillWidth: true; label: "INCIDENTS"; value: "0"; sub: "last 24h"; accent: root.amber }
+                StatTile { Layout.fillWidth: true; label: "AI"; value: ai.available ? "Online" : "Offline"; sub: ai.model; accent: ai.available ? root.green : root.textSec }
+                StatTile { Layout.fillWidth: true; label: "PRIVACY"; value: privacy.active ? "On" : "Off"; sub: privacy.status; accent: privacy.active ? root.green : root.textSec }
             }
 
             // Scan button row

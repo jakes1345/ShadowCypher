@@ -71,14 +71,16 @@ Window {
                         Rectangle {
                             Layout.fillWidth: true; height: 44; radius: 8
                             color: root.bgPanel; border.color: loginKeyInput.activeFocus ? root.accent : root.border
-                            TextInput {
+                            TextField {
                                 id: loginKeyInput
-                                anchors { fill: parent; leftMargin: 16; rightMargin: 16; topMargin: 12; bottomMargin: 12 }
+                                anchors.fill: parent
+                                leftPadding: 16; rightPadding: 16
                                 color: root.textPri; font.pixelSize: 13; font.family: root.monoFont
-                                echoMode: TextInput.Password
+                                echoMode: TextField.Password
                                 passwordCharacter: "•"
                                 placeholderText: "sc_live_…"
                                 Keys.onReturnPressed: doLogin()
+                                background: Item {}
                             }
                         }
                     }

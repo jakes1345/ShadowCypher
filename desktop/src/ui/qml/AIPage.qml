@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 
 Rectangle {
@@ -165,15 +166,17 @@ Rectangle {
                     color: root.bgPanel
                     border.color: inputField.activeFocus ? root.accent : root.border
 
-                    TextInput {
+                    TextField {
                         id: inputField
-                        anchors { fill: parent; leftMargin: 16; rightMargin: 16; topMargin: 12; bottomMargin: 12 }
+                        anchors.fill: parent
+                        leftPadding: 16; rightPadding: 16
                         color: root.textPri
                         font.pixelSize: 13
                         clip: true
                         placeholderText: ai.available ? "Ask anything about your network…" : "Ollama offline"
                         enabled: ai.available && !ai.busy
                         Keys.onReturnPressed: sendMsg()
+                        background: Item {}
                     }
                 }
 
