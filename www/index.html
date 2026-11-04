@@ -2294,10 +2294,18 @@
             return data;
         }
 
+        // The API key alone can't read the locked key or install a new one; the
+        // signed-in session has to come along.
         async function identityApi(apiKey, method, body) {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) throw new Error('sign in again to use your encryption key');
             const resp = await fetch(`${API_BASE}/v1/identity/me`, {
                 method,
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                    'X-Session-Token': session.access_token,
+                },
                 body: body ? JSON.stringify(body) : undefined,
             });
             const data = await resp.json().catch(() => ({}));

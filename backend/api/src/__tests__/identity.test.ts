@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterEach } from "vitest";
 import * as openpgp from "openpgp";
 import type { Env } from "../index";
 
@@ -50,10 +50,26 @@ async function makeBundle(handle: string): Promise<Bundle> {
   };
 }
 
-function post(body: unknown): Request {
-  return new Request("https://api.shadowcypher.site/v1/identity/me", { method: "POST", body: JSON.stringify(body) });
+// Session tokens the stand-in auth server accepts: token -> user id.
+const sessions: Record<string, string> = {};
+function sessionToken(userId: string, signedInSecondsAgo: number): string {
+  const claims = { amr: [{ method: "password", timestamp: Math.floor(Date.now() / 1000) - signedInSecondsAgo }] };
+  const token = `h.${btoa(JSON.stringify(claims)).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_")}.sig-${Object.keys(sessions).length}`;
+  sessions[token] = userId;
+  return token;
 }
-const get = (path: string) => new Request(`https://api.shadowcypher.site${path}`);
+const fresh = () => sessionToken("u-alice", 30);
+const stale = () => sessionToken("u-alice", 3600);
+
+function post(body: unknown, token?: string): Request {
+  return new Request("https://api.shadowcypher.site/v1/identity/me", {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: token ? { "X-Session-Token": token } : {},
+  });
+}
+const get = (path: string, token?: string) =>
+  new Request(`https://api.shadowcypher.site${path}`, { headers: token ? { "X-Session-Token": token } : {} });
 const read = async (r: Response) => ({ status: r.status, body: (await r.json()) as Record<string, unknown> });
 
 let aliceKeys: Bundle;
@@ -69,7 +85,15 @@ beforeEach(() => {
   db.inserted.length = 0;
   db.updated.length = 0;
   db.lookup.mockReset();
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    if (!String(url).endsWith("/auth/v1/user")) return new Response("unexpected", { status: 500 });
+    const token = String(new Headers(init?.headers).get("Authorization")).replace("Bearer ", "");
+    const id = sessions[token];
+    return id ? new Response(JSON.stringify({ id })) : new Response("{}", { status: 401 });
+  }));
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("GET /v1/auth/kdf", () => {
   const kdf = { v: 1, alg: "argon2id", m: 65536, t: 3, p: 1, salt: "AAAAAAAAAAAAAAAAAAAAAA==" };
@@ -104,7 +128,7 @@ describe("GET /v1/auth/kdf", () => {
 
 describe("POST /v1/identity/me", () => {
   it("stores a new, locked bundle", async () => {
-    const { status, body } = await read(await saveMyIdentity(post(aliceKeys), env, alice, cors));
+    const { status, body } = await read(await saveMyIdentity(post(aliceKeys, fresh()), env, alice, cors));
     expect(status).toBe(200);
     expect(body).toMatchObject({ fingerprint: aliceKeys.fingerprint, created: true });
     expect(db.inserted[0]).toMatchObject({ user_id: "u-alice", handle: "alice", fingerprint: aliceKeys.fingerprint });
@@ -145,11 +169,11 @@ describe("POST /v1/identity/me", () => {
 
   it("will not swap in a different key without replace:true", async () => {
     db.rows.push({ user_id: "u-alice", handle: "alice", fingerprint: aliceKeys.fingerprint });
-    expect(await read(await saveMyIdentity(post(otherKeys), env, alice, cors)))
+    expect(await read(await saveMyIdentity(post(otherKeys, fresh()), env, alice, cors)))
       .toEqual({ status: 409, body: { error: "identity_exists", fingerprint: aliceKeys.fingerprint } });
     expect(db.updated).toHaveLength(0);
 
-    const replaced = await read(await saveMyIdentity(post({ ...otherKeys, replace: true }), env, alice, cors));
+    const replaced = await read(await saveMyIdentity(post({ ...otherKeys, replace: true }, fresh()), env, alice, cors));
     expect(replaced.body).toMatchObject({ replaced: true, fingerprint: otherKeys.fingerprint });
     expect(db.updated[0]).toHaveProperty("public_key", otherKeys.public_key);
   });
@@ -167,8 +191,40 @@ describe("reading keys", () => {
   });
 
   it("returns the owner's locked bundle, or 404", async () => {
-    expect((await getMyIdentity(get("/v1/identity/me"), env, alice, cors)).status).toBe(404);
+    // Any valid session will do for reading; it needn't be a fresh sign-in.
+    expect((await getMyIdentity(get("/v1/identity/me", stale()), env, alice, cors)).status).toBe(404);
     db.rows.push({ user_id: "u-alice", handle: "alice", ...aliceKeys });
-    expect((await getMyIdentity(get("/v1/identity/me"), env, alice, cors)).status).toBe(200);
+    expect((await getMyIdentity(get("/v1/identity/me", stale()), env, alice, cors)).status).toBe(200);
+  });
+});
+
+describe("an API key alone is not enough", () => {
+  beforeEach(() => { db.rows.push({ user_id: "u-alice", handle: "alice", ...aliceKeys }); });
+
+  it("won't hand out the locked private key without a session", async () => {
+    expect(await read(await getMyIdentity(get("/v1/identity/me"), env, alice, cors)))
+      .toEqual({ status: 401, body: { error: "session_required" } });
+    expect((await read(await getMyIdentity(get("/v1/identity/me", "forged"), env, alice, cors))).body.error)
+      .toBe("session_invalid");
+    const bobsSession = sessionToken("u-bob", 10);
+    expect(await read(await getMyIdentity(get("/v1/identity/me", bobsSession), env, alice, cors)))
+      .toEqual({ status: 403, body: { error: "session_mismatch" } });
+  });
+
+  it("won't install a key without a recent sign-in", async () => {
+    db.rows.length = 0;
+    expect((await read(await saveMyIdentity(post(aliceKeys), env, alice, cors))).body.error).toBe("session_required");
+    expect((await read(await saveMyIdentity(post(aliceKeys, stale()), env, alice, cors))).body.error).toBe("reauth_required");
+    expect(db.inserted).toHaveLength(0);
+  });
+
+  it("won't replace a key without a recent sign-in", async () => {
+    const res = await read(await saveMyIdentity(post({ ...otherKeys, replace: true }, stale()), env, alice, cors));
+    expect(res).toEqual({ status: 401, body: { error: "reauth_required" } });
+    expect(db.updated).toHaveLength(0);
+  });
+
+  it("still lets the same key be re-locked, which needs the private key anyway", async () => {
+    expect((await saveMyIdentity(post(aliceKeys), env, alice, cors)).status).toBe(200);
   });
 });

@@ -38,6 +38,36 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...cors, ...(init.headers || {}) },
   });
 
+// API keys live on devices and agents, so on their own they must not hand out the
+// locked private key (offline guessing) or install a new key (redirecting mail).
+// Those calls also need the user's Supabase session; installing a key needs a
+// sign-in from the last few minutes.
+const FRESH_SIGN_IN_SECONDS = 15 * 60;
+
+async function requireSession(req: Request, env: Env, user: AuthedUser, fresh: boolean, cors: HeadersInit): Promise<Response | null> {
+  const token = req.headers.get("X-Session-Token");
+  if (!token) return json({ error: "session_required" }, { status: 401 }, cors);
+  const resp = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) return json({ error: "session_invalid" }, { status: 401 }, cors);
+  const sessionUser = (await resp.json()) as { id?: string };
+  if (sessionUser.id !== user.id) return json({ error: "session_mismatch" }, { status: 403 }, cors);
+  if (fresh) {
+    // The auth server has just validated this token, so its claims can be read as-is.
+    // amr records when the user actually authenticated; iat moves on every refresh.
+    let signedInAt = 0;
+    try {
+      const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      const claims = JSON.parse(atob(b64)) as { amr?: { timestamp?: number }[] };
+      signedInAt = Math.max(0, ...(claims.amr ?? []).map((a) => a.timestamp ?? 0));
+    } catch { /* treated as stale */ }
+    if (Date.now() / 1000 - signedInAt > FRESH_SIGN_IN_SECONDS)
+      return json({ error: "reauth_required" }, { status: 401 }, cors);
+  }
+  return null;
+}
+
 function handleParam(req: Request): string | null {
   const h = new URL(req.url).searchParams.get("handle")?.trim().toLowerCase().replace(/^@/, "") ?? "";
   return HANDLE_RE.test(h) ? h : null;
@@ -80,7 +110,9 @@ export async function lookupIdentity(req: Request, env: Env, cors: HeadersInit):
   return json({ handle, fingerprint, public_key }, {}, cors);
 }
 
-export async function getMyIdentity(_req: Request, env: Env, user: AuthedUser, cors: HeadersInit): Promise<Response> {
+export async function getMyIdentity(req: Request, env: Env, user: AuthedUser, cors: HeadersInit): Promise<Response> {
+  const denied = await requireSession(req, env, user, false, cors);
+  if (denied) return denied;
   const rows = await dbSelect<KeyRow>(env, "user_keys", {
     select: "fingerprint,public_key,encrypted_private_key,recovery_private_key,updated_at",
     filters: { user_id: `eq.${user.id}` },
@@ -139,6 +171,13 @@ export async function saveMyIdentity(req: Request, env: Env, user: AuthedUser, c
     limit: 1,
   }))[0];
   const now = new Date().toISOString();
+
+  // Re-locking the same key needs its private half, which an API key alone can't supply.
+  // Installing a different key does not, so it needs a fresh sign-in.
+  if (!existing || existing.fingerprint !== checked.fingerprint) {
+    const denied = await requireSession(req, env, user, true, cors);
+    if (denied) return denied;
+  }
 
   if (!existing) {
     await dbInsert(env, "user_keys", {

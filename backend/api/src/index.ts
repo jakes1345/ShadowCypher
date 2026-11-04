@@ -162,7 +162,7 @@ function corsHeaders(origin: string | null, allowed: string): HeadersInit {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization,Content-Type",
+    "Access-Control-Allow-Headers": "Authorization,Content-Type,X-Session-Token",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
