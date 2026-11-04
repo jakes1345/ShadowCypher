@@ -1,4 +1,6 @@
 #include "GuardianPage.h"
+#include "../api/ApiClient.h"
+#include <QSettings>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QSplitter>
@@ -148,6 +150,7 @@ void GuardianPage::onIpcResult(int id, QJsonObject result) {
     if (id == m_devicesReqId) {
         QJsonArray devices = result.value("devices").toArray();
         populateDevices(devices);
+        syncScan(devices);
         int total  = devices.size();
         int trusted = 0;
         for (const auto& d : devices)
@@ -160,6 +163,44 @@ void GuardianPage::onIpcResult(int id, QJsonObject result) {
     } else if (id == m_incidentsReqId) {
         populateIncidents(result.value("incidents").toArray());
     }
+}
+
+// Opt-in (Settings → "Sync network scans"): upload the device list so the web
+// dashboard can track devices. Only when signed in, and only when the set changed.
+void GuardianPage::syncScan(const QJsonArray& devices) {
+    auto* api = ApiClient::instance();
+    QSettings cfg(ApiClient::configIniPath(), QSettings::IniFormat);
+    if (!api || !api->isAuthenticated() || !cfg.value("sync/scans", false).toBool()) return;
+
+    QJsonArray out;
+    QStringList sig;
+    for (const auto& v : devices) {
+        const QJsonObject d = v.toObject();
+        const QString mac = d.value("mac").toString();
+        if (mac.isEmpty()) continue;
+        QJsonObject row{{"mac", mac}, {"ip", d.value("ip").toString()}};
+        if (!d.value("hostname").toString().isEmpty()) row["hostname"] = d.value("hostname");
+        out.append(row);
+        sig << mac + "|" + d.value("ip").toString();
+    }
+    if (out.isEmpty()) return;
+    sig.sort();
+    const QString signature = sig.join(',');
+    if (signature == m_lastSyncedSignature) return;
+    m_lastSyncedSignature = signature;
+
+    api->post("/v1/scans", QJsonObject{{"scan_type", "arp"}, {"devices", out}}, this,
+              [this, n = out.size()](bool ok, QJsonDocument doc, int status) {
+        if (!ok) {
+            m_lastSyncedSignature.clear();   // try again on the next refresh
+            m_feed->log(QString("Scan sync failed (HTTP %1)").arg(status), "WARNING");
+            return;
+        }
+        const int fresh = doc.object().value("new_device_incidents").toInt();
+        m_feed->log(fresh > 0 ? QString("Synced %1 devices · %2 new on your account").arg(n).arg(fresh)
+                              : QString("Synced %1 devices to your account").arg(n),
+                    fresh > 0 ? "WARNING" : "SUCCESS");
+    });
 }
 
 void GuardianPage::populateDevices(const QJsonArray& devices) {

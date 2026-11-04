@@ -27,6 +27,9 @@ private:
 
     int m_devicesReqId   = -1;
     int m_incidentsReqId = -1;
+    QString m_lastSyncedSignature;   // device set last uploaded, to skip unchanged lists
+
+    void syncScan(const QJsonArray& devices);
 
     void buildUi();
     void populateDevices(const QJsonArray& devices);

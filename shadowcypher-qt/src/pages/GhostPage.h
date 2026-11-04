@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include "../ipc/IpcClient.h"
 #include "../widgets/TacticalTerminal.h"
+#include "../privacy/PrivacyHelper.h"
 
 class GhostPage : public QWidget {
     Q_OBJECT
@@ -26,6 +27,7 @@ private slots:
 
 private:
     IpcClient*        m_ipc;
+    PrivacyHelper*    m_privacy;
     QPushButton*      m_toggleBtn;
     QPushButton*      m_refreshBtn;
 
@@ -45,7 +47,6 @@ private:
     bool m_waiting     = false;
 
     int m_statusReqId = -1;
-    int m_enableReqId = -1;
 
     // Running QProcess instances
     QProcess* m_torProc  = nullptr;

@@ -31,6 +31,7 @@ private:
     // Section 3 — Notifications
     QCheckBox*   m_desktopNotifChk = nullptr;
     QCheckBox*   m_soundAlertChk   = nullptr;
+    QCheckBox*   m_syncScansChk    = nullptr;
     QLabel*      m_notifSavedLbl   = nullptr;
 
     void buildUi();

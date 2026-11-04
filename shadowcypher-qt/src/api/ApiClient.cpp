@@ -18,7 +18,14 @@ QString ApiClient::configIniPath() {
 ApiClient::ApiClient(QObject* parent) : QObject(parent) {
     m_nam = new QNetworkAccessManager(this);
     QSettings s(configIniPath(), QSettings::IniFormat);
-    m_apiKey = s.value("api_key").toString();
+    // auth/api_key is the one key name; Settings and the daemon read it too.
+    // Older builds saved it as a top-level api_key, so carry that over once.
+    m_apiKey = s.value("auth/api_key").toString();
+    if (m_apiKey.isEmpty() && s.contains("api_key")) {
+        m_apiKey = s.value("api_key").toString();
+        s.setValue("auth/api_key", m_apiKey);
+        s.remove("api_key");
+    }
 
     // A self-hosted server may be set in config.ini. The key is sent to it, so only
     // HTTPS is accepted, except plain HTTP to this machine for local development.
@@ -33,7 +40,8 @@ ApiClient::ApiClient(QObject* parent) : QObject(parent) {
 void ApiClient::setApiKey(const QString& key) {
     m_apiKey = key;
     QSettings s(configIniPath(), QSettings::IniFormat);
-    s.setValue("api_key", key);
+    s.setValue("auth/api_key", key);
+    s.remove("api_key");
     s.sync();
 }
 
