@@ -56,20 +56,20 @@ void ApiClient::verifyKey(const QString& key)
     req.setTransferTimeout(15000);
 
     QNetworkReply* reply = m_nam.get(req);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, key]() {
         reply->deleteLater();
         const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         const QJsonObject body = QJsonDocument::fromJson(reply->readAll()).object();
 
         if (status == 200) {
-            emit keyVerified(body);
+            emit keyVerified(key, body);
         } else if (status == 401 || status == 403) {
-            emit keyRejected(body["error"].toString("unauthorized"));
+            emit keyRejected(key, body["error"].toString("unauthorized"));
         } else if (status != 0) {
-            emit keyCheckFailed(QString("API at %1 answered HTTP %2").arg(m_config->apiBase()).arg(status),
+            emit keyCheckFailed(key, QString("API at %1 answered HTTP %2").arg(m_config->apiBase()).arg(status),
                                 status >= 500);
         } else {
-            emit keyCheckFailed(reply->errorString(), true);
+            emit keyCheckFailed(key, reply->errorString(), true);
         }
     });
 }

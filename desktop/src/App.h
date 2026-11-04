@@ -34,6 +34,7 @@ signals:
     void notification(const QString& title, const QString& message, const QString& level);
 
 private:
+    bool isPending(const QString& key) const { return m_authBusy && !key.isEmpty() && key == m_candidateKey; }
     void setAuthBusy(bool b) { if (b == m_authBusy) return; m_authBusy = b; emit authBusyChanged(); }
     void setAuthenticated(bool authed, bool offline);
 

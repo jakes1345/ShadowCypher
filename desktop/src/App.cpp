@@ -27,7 +27,8 @@ App::App(Config* config, ApiClient* api, NetworkScanner* scanner,
             QString("%1 changed from %2 to %3").arg(ip, knownMac, currentMac), "error");
     });
 
-    connect(m_api, &ApiClient::keyVerified, this, [this](const QJsonObject&) {
+    connect(m_api, &ApiClient::keyVerified, this, [this](const QString& key, const QJsonObject&) {
+        if (!isPending(key)) return;
         if (m_candidateKey != m_config->apiKey())
             m_config->setApiKey(m_candidateKey);
         m_api->setApiKey(m_candidateKey);
@@ -37,7 +38,8 @@ App::App(Config* config, ApiClient* api, NetworkScanner* scanner,
         setAuthenticated(true, false);
     });
 
-    connect(m_api, &ApiClient::keyRejected, this, [this](const QString&) {
+    connect(m_api, &ApiClient::keyRejected, this, [this](const QString& key, const QString&) {
+        if (!isPending(key)) return;
         const bool stored = m_checkingStoredKey;
         m_checkingStoredKey = false;
         m_candidateKey.clear();
@@ -49,7 +51,8 @@ App::App(Config* config, ApiClient* api, NetworkScanner* scanner,
             "error");
     });
 
-    connect(m_api, &ApiClient::keyCheckFailed, this, [this](const QString& msg, bool transient) {
+    connect(m_api, &ApiClient::keyCheckFailed, this, [this](const QString& key, const QString& msg, bool transient) {
+        if (!isPending(key)) return;
         const bool stored = m_checkingStoredKey;
         m_checkingStoredKey = false;
         m_candidateKey.clear();
@@ -106,6 +109,10 @@ void App::login(const QString& apiKey, const QString& apiBase)
 
 void App::logout()
 {
+    // Drop any in-flight check so a late reply can't sign the user back in.
+    m_candidateKey.clear();
+    m_checkingStoredKey = false;
+    setAuthBusy(false);
     m_config->setApiKey({});
     m_api->setApiKey({});
     setAuthenticated(false, false);

@@ -40,10 +40,11 @@ signals:
     void authError();
     void networkError(const QString& message);
 
-    void keyVerified(const QJsonObject& user);
-    void keyRejected(const QString& reason);
+    // Each carries the key that was checked, so callers can drop stale replies.
+    void keyVerified(const QString& key, const QJsonObject& user);
+    void keyRejected(const QString& key, const QString& reason);
     // transient: unreachable or 5xx (worth retrying later), as opposed to a wrong URL.
-    void keyCheckFailed(const QString& message, bool transient);
+    void keyCheckFailed(const QString& key, const QString& message, bool transient);
 
 private:
     void request(const QString& method, const QString& path,
