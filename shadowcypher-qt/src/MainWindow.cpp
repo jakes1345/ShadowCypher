@@ -9,6 +9,8 @@
 #include "pages/ChatPage.h"
 #include "pages/GhostPage.h"
 #include "pages/MailPage.h"
+#include "pages/DrivePage.h"
+#include "pages/CalendarPage.h"
 #include "pages/CveFeedPage.h"
 #include "pages/OsintPage.h"
 #include "pages/SettingsPage.h"
@@ -118,6 +120,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         {"  CHAT"},
         {"  GHOST MODE"},
         {"  SHADOW MAIL"},
+        {"  SHADOW DRIVE"},
+        {"  CALENDAR"},
         {"  CVE FEED"},
         {"  SETTINGS"},
     };
@@ -152,8 +156,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     m_stack->addWidget(new ChatPage(m_ipc, this));            // 10
     m_stack->addWidget(new GhostPage(m_ipc, this));           // 11
     m_stack->addWidget(new MailPage(m_ipc, this));            // 12
-    m_stack->addWidget(new CveFeedPage(m_ipc, this));         // 13
-    m_stack->addWidget(new SettingsPage(this));               // 14
+    m_stack->addWidget(new DrivePage(this));                  // 13
+    m_stack->addWidget(new CalendarPage(this));               // 14
+    m_stack->addWidget(new CveFeedPage(m_ipc, this));         // 15
+    m_stack->addWidget(new SettingsPage(this));               // 16
 
     rootLayout->addWidget(m_stack);
 

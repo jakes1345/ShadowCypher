@@ -21,7 +21,14 @@ public:
     // ctx: if non-null and destroyed before reply, callback is skipped
     void get(const QString& path, QObject* ctx, ApiCallback cb);
     void post(const QString& path, const QJsonObject& body, QObject* ctx, ApiCallback cb);
+    void patch(const QString& path, const QJsonObject& body, QObject* ctx, ApiCallback cb);
     void del(const QString& path, QObject* ctx, ApiCallback cb);
+
+    using BytesCallback = std::function<void(bool ok, QByteArray data, int status)>;
+    void getBytes(const QString& path, QObject* ctx, BytesCallback cb);
+    // Raw-body upload; the server reads the name from Content-Disposition.
+    void upload(const QString& path, const QByteArray& data, const QString& fileName,
+                const QString& mime, QObject* ctx, ApiCallback cb);
 
     // Login: posts /v1/auth/login, stores key on success
     void login(const QString& handle, const QString& password,

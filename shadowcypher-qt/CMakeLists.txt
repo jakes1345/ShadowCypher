@@ -46,6 +46,10 @@ qt_add_executable(shadowcypher
     src/pages/ChatPage.h
     src/pages/MailPage.cpp
     src/pages/MailPage.h
+    src/pages/DrivePage.cpp
+    src/pages/DrivePage.h
+    src/pages/CalendarPage.cpp
+    src/pages/CalendarPage.h
     src/pages/GhostPage.cpp
     src/pages/GhostPage.h
     src/pages/CveFeedPage.cpp

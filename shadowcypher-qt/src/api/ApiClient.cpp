@@ -64,6 +64,37 @@ void ApiClient::post(const QString& path, const QJsonObject& body,
     dispatchReply(reply, ctx, std::move(cb));
 }
 
+void ApiClient::getBytes(const QString& path, QObject* ctx, BytesCallback cb) {
+    auto* reply = m_nam->get(makeRequest(path));
+    QPointer<QObject> guard(ctx);
+    connect(reply, &QNetworkReply::finished, reply,
+            [reply, guard, ctx, cb = std::move(cb)]() {
+        int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        QByteArray data = reply->readAll();
+        bool ok = reply->error() == QNetworkReply::NoError && status >= 200 && status < 300;
+        reply->deleteLater();
+        if (ctx != nullptr && guard.isNull()) return;
+        cb(ok, data, status);
+    });
+}
+
+void ApiClient::upload(const QString& path, const QByteArray& data, const QString& fileName,
+                       const QString& mime, QObject* ctx, ApiCallback cb) {
+    QNetworkRequest req = makeRequest(path);
+    req.setHeader(QNetworkRequest::ContentTypeHeader, mime);
+    QString safe = fileName;
+    safe.replace('"', '_');
+    req.setRawHeader("Content-Disposition", ("attachment; filename=\"" + safe + "\"").toUtf8());
+    dispatchReply(m_nam->post(req, data), ctx, std::move(cb));
+}
+
+void ApiClient::patch(const QString& path, const QJsonObject& body,
+                      QObject* ctx, ApiCallback cb) {
+    auto* reply = m_nam->sendCustomRequest(makeRequest(path), "PATCH",
+                                           QJsonDocument(body).toJson(QJsonDocument::Compact));
+    dispatchReply(reply, ctx, std::move(cb));
+}
+
 void ApiClient::del(const QString& path, QObject* ctx, ApiCallback cb) {
     auto* reply = m_nam->deleteResource(makeRequest(path));
     dispatchReply(reply, ctx, std::move(cb));
