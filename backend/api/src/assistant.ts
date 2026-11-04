@@ -254,7 +254,11 @@ export function providerError(message: string): { status: number; body: Record<s
   try {
     const parsed = JSON.parse(rest) as { error?: { message?: string } };
     if (parsed.error?.message) detail = parsed.error.message;
-  } catch { /* not JSON */ }
+  } catch {
+    // Cut-off JSON: pull the message field out directly
+    const mm = /"message"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(rest);
+    if (mm) detail = mm[1].replace(/\\"/g, '"');
+  }
   const name = provider === "anthropic" ? "Anthropic" : "Ollama";
   const reason = `${name} rejected the request: ${detail.slice(0, 300)}`;
   if (status === 429) return { status: 429, body: { error: "provider_rate_limited", reason } };
@@ -608,7 +612,7 @@ async function queryAnthropicGeneral(
         ...(tools ? { tools } : {}),
       }),
     });
-    if (!resp.ok) throw new Error(`anthropic_${resp.status}:${(await resp.text()).slice(0, 300)}`);
+    if (!resp.ok) throw new Error(`anthropic_${resp.status}:${(await resp.text()).slice(0, 4000)}`);
     data = await resp.json();
     if (data.stop_reason !== "pause_turn") break;
     convo.push({ role: "assistant", content: data.content });
