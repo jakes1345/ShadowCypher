@@ -55,11 +55,16 @@ const USER_MAX_PAGES = 20;
  * re-checked for an exact match rather than trusting the first row.
  */
 export async function findAuthUserByEmail(env: Env, email: string): Promise<AuthUser | null> {
+  return lookupAuthUserByEmail(env, email).catch(() => null);
+}
+
+/** Like findAuthUserByEmail, but throws when the auth API fails instead of reporting "not found". */
+export async function lookupAuthUserByEmail(env: Env, email: string): Promise<AuthUser | null> {
   const want = email.trim().toLowerCase();
   for (let page = 1; page <= USER_MAX_PAGES; page++) {
     const url = `${env.SUPABASE_URL}/auth/v1/admin/users?filter=${encodeURIComponent(want)}&per_page=${USER_PAGE}&page=${page}`;
     const resp = await fetch(url, { headers: authHeaders(env) });
-    if (!resp.ok) return null;
+    if (!resp.ok) throw new Error(`auth_lookup_failed:${resp.status}`);
     const users = ((await resp.json()) as { users?: AuthUser[] }).users ?? [];
     const match = users.find((u) => u.email?.toLowerCase() === want);
     if (match) return match;

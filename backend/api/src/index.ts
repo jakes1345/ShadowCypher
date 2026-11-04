@@ -86,6 +86,7 @@ import { listFiles, uploadFile, downloadFile, deleteFile } from "./files";
 import { getInbox, getMailCount, getMail, markRead, deleteMail, sendOutbound, replyMail, storeInboundMail } from "./mail";
 export { ChatRoom } from "./chat_do";
 import { dbSelect, findAuthUserByEmail } from "./supabase";
+import { getKdfParams, lookupIdentity, getMyIdentity, saveMyIdentity } from "./identity";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 import { sendWelcomeEmail, sendKeyRotatedEmail, sendRecoveryKitEmail } from "./emails";
@@ -525,6 +526,17 @@ export default {
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         return pollDeviceAuth(req, env, undefined, cors);
       }
+      // Identity keys — login params and public keys are needed before/without a session
+      if (path === "/v1/auth/kdf" && req.method === "GET") {
+        if (!(await rateLimit(env.SHADOW_RL, `kdf:${ip}`, 30, 60_000)))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        return getKdfParams(req, env, cors);
+      }
+      if (path === "/v1/identity/lookup" && req.method === "GET") {
+        if (!(await rateLimit(env.SHADOW_RL, `idlookup:${ip}`, 60, 60_000)))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        return lookupIdentity(req, env, cors);
+      }
 
       // Public knowledge endpoints — no API key required
       if (path === "/v1/shadow/wiki" && req.method === "GET") return wikiSummary(req, env, cors);
@@ -694,6 +706,9 @@ export default {
         "GET /v1/admin/overview":             adminOverview,
         "GET /v1/admin/users":                adminUsers,
         // Shadow Mail
+        // Identity keys
+        "GET /v1/identity/me":                getMyIdentity,
+        "POST /v1/identity/me":               saveMyIdentity,
         "GET /v1/mail/inbox":                 getInbox,
         "GET /v1/mail/count":                 getMailCount,
         "POST /v1/mail/send":                 sendOutbound,
@@ -749,6 +764,8 @@ export default {
         if (routeKey === "POST /v1/files/upload" && !(await rateLimit(env.SHADOW_RL, `upload:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         if (routeKey === "POST /v1/chat/dm/open" && !(await rateLimit(env.SHADOW_RL, `dm-open:${user.id}`, 20, 60_000)))
+          return json({ error: "rate_limited" }, { status: 429 }, cors);
+        if (routeKey === "POST /v1/identity/me" && !(await rateLimit(env.SHADOW_RL, `identity:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         if (routeKey === "POST /v1/mail/send" && !(await rateLimit(env.SHADOW_RL, `mail-send:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);

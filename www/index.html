@@ -31,6 +31,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script defer src="vendor/openpgp-6.3.2.min.js" integrity="sha384-Q6tBjZrAPJTIxj5F9KxCni/T9dTGDsXfi4U7aBZOl+3zPHpzU6gKcyKzAhs8Xeoa"></script>
+    <script defer src="vendor/hash-wasm-argon2-4.12.0.umd.min.js" integrity="sha384-tP0Wy54CKmng7i9EoTlPySD0hBx6Octj0VS6MfwlnUu111MPa+JLm0CCbep6XJ1W"></script>
+    <script defer src="js/identity.js"></script>
 </head>
 <body>
     <canvas id="bg-canvas"></canvas>
@@ -1536,6 +1539,11 @@
                         <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 10px;">Confirm</label>
                         <input type="password" id="reset-password-confirm" class="cli-input" placeholder="••••••••" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;">
                     </div>
+                    <div style="margin-bottom: 30px;">
+                        <label class="mono" style="font-size: 0.7rem; color: var(--accent-primary); display: block; margin-bottom: 6px;">Encryption recovery phrase</label>
+                        <p style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 8px;">Restores the key that protects your encrypted data. Without it, you'll get a new key and anything encrypted to the old one can't be opened.</p>
+                        <input type="text" id="reset-recovery-phrase" class="cli-input mono" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" style="width: 100%; padding: 15px; border: 1px solid #333; background: #000;" autocomplete="off" spellcheck="false">
+                    </div>
                     <button type="submit" class="btn-primary" style="width: 100%;">Update password</button>
                     </form>
                 </div>
@@ -1569,16 +1577,23 @@
                 <div id="recovery-kit-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
                     <div style="background:#0a0a14; border:1px solid var(--accent-primary); padding:40px; max-width:520px; width:90%; position:relative;">
                         <div class="mono" style="font-size:0.65rem; letter-spacing:3px; color:var(--accent-primary); margin-bottom:16px;">RECOVERY KIT</div>
-                        <h3 style="font-size:1.3rem; color:#fff; margin-bottom:12px;">Save these codes. We won't show them again.</h3>
-                        <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:24px;">If you lose your password, any one of these codes recovers your account. Each code works once.</p>
-                        <div id="recovery-codes-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:24px; font-family:var(--font-mono); font-size:0.85rem;"></div>
+                        <h3 style="font-size:1.3rem; color:#fff; margin-bottom:12px;">Save this now. We won't show it again.</h3>
+                        <div id="recovery-codes-block">
+                            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:16px;">If you lose your password, any one of these codes recovers your account. Each code works once.</p>
+                            <div id="recovery-codes-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:24px; font-family:var(--font-mono); font-size:0.85rem;"></div>
+                        </div>
+                        <div id="recovery-phrase-block" style="display:none; margin-bottom:24px;">
+                            <div class="mono" style="font-size:0.65rem; letter-spacing:2px; color:var(--accent-primary); margin-bottom:8px;">ENCRYPTION RECOVERY PHRASE</div>
+                            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:12px;">This unlocks your encryption key if you forget your password. It never leaves this device. We can't see it, and we can't reset it for you.</p>
+                            <div id="recovery-phrase-value" style="background:#0e0e1e; border:1px solid #222; padding:12px 14px; letter-spacing:2px; color:#fff; font-family:var(--font-mono); font-size:0.85rem; word-break:break-all;"></div>
+                        </div>
                         <div style="display:flex; gap:12px; margin-bottom:24px;">
                             <button onclick="copyRecoveryCodes()" style="flex:1; padding:10px; background:transparent; border:1px solid var(--accent-primary); color:var(--accent-primary); font-family:var(--font-mono); font-size:0.7rem; cursor:pointer; letter-spacing:1px;">COPY ALL</button>
                             <button onclick="downloadRecoveryCodes()" style="flex:1; padding:10px; background:transparent; border:1px solid #444; color:#999; font-family:var(--font-mono); font-size:0.7rem; cursor:pointer; letter-spacing:1px;">DOWNLOAD</button>
                         </div>
                         <label style="display:flex; align-items:center; gap:10px; font-size:0.8rem; color:var(--text-secondary); cursor:pointer; margin-bottom:20px;">
                             <input type="checkbox" id="recovery-confirm-check" style="accent-color:var(--accent-primary);">
-                            I've saved these codes somewhere safe
+                            I've saved this somewhere safe
                         </label>
                         <button onclick="closeRecoveryKit()" id="recovery-done-btn" class="btn-primary" style="width:100%; opacity:0.4; cursor:not-allowed;" disabled>Done — take me to my account</button>
                     </div>
@@ -1951,7 +1966,9 @@
             shutter.classList.remove('active');
         }
 
-        // THREE.JS Background
+        // THREE.JS Background — decorative only; without WebGL (or if the CDN
+        // script is blocked) the rest of this script must still run.
+        try {
         const scene = new THREE.Scene(), camera = new THREE.Camera();
         const renderer = new THREE.WebGLRenderer({canvas:document.getElementById('void-canvas'),alpha:true});
         const geo = new THREE.PlaneGeometry(2,2);
@@ -2029,6 +2046,7 @@
         animate(0);
         window.addEventListener('resize',()=>{mat.uniforms.resolution.value.set(window.innerWidth,window.innerHeight);renderer.setSize(window.innerWidth,window.innerHeight);});
         renderer.setSize(window.innerWidth,window.innerHeight);
+        } catch (e) { console.warn('Background animation disabled:', e.message); }
 
         // ─── Native app mode (Capacitor) ──────────────────────────────────────
         // When running as an installed app, skip the marketing homepage and go
@@ -2184,6 +2202,7 @@
         // ── Recovery codes ───────────────────────────────────────────────────────
 
         let _plainRecoveryCodes = [];
+        let _plainRecoveryPhrase = '';
 
         function generateRecoveryCodes() {
             const codes = [];
@@ -2199,12 +2218,16 @@
             return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        function showRecoveryKit(codes) {
+        function showRecoveryKit(codes, phrase = '') {
             _plainRecoveryCodes = codes;
+            _plainRecoveryPhrase = phrase;
             const grid = document.getElementById('recovery-codes-grid');
             grid.innerHTML = codes.map(c =>
                 `<div style="background:#0e0e1e; border:1px solid #222; padding:10px 14px; letter-spacing:2px; color:#fff;">${c}</div>`
             ).join('');
+            document.getElementById('recovery-codes-block').style.display = codes.length ? 'block' : 'none';
+            document.getElementById('recovery-phrase-block').style.display = phrase ? 'block' : 'none';
+            document.getElementById('recovery-phrase-value').textContent = phrase;
             const modal = document.getElementById('recovery-kit-modal');
             modal.style.display = 'flex';
             const check = document.getElementById('recovery-confirm-check');
@@ -2220,12 +2243,21 @@
 
         function closeRecoveryKit() {
             document.getElementById('recovery-kit-modal').style.display = 'none';
+            document.getElementById('recovery-phrase-value').textContent = '';
             _plainRecoveryCodes = [];
+            _plainRecoveryPhrase = '';
+        }
+
+        function recoveryKitText() {
+            const parts = [];
+            if (_plainRecoveryCodes.length) parts.push('Account recovery codes (each works once):\n' + _plainRecoveryCodes.join('\n'));
+            if (_plainRecoveryPhrase) parts.push('Encryption recovery phrase (unlocks your encryption key; we cannot reset it):\n' + _plainRecoveryPhrase);
+            return parts.join('\n\n');
         }
 
         function copyRecoveryCodes() {
-            navigator.clipboard.writeText(_plainRecoveryCodes.join('\n')).then(() =>
-                cliPrint('Recovery codes copied.', 'var(--success)')
+            navigator.clipboard.writeText(recoveryKitText()).then(() =>
+                cliPrint('Recovery kit copied.', 'var(--success)')
             );
         }
 
@@ -2233,11 +2265,79 @@
             const blob = new Blob([
                 'ShadowCypher Recovery Kit\n' +
                 'Generated: ' + new Date().toISOString() + '\n\n' +
-                'Keep these codes secret. Each works once.\n\n' +
-                _plainRecoveryCodes.join('\n')
+                'Keep this secret.\n\n' +
+                recoveryKitText() + '\n'
             ], { type: 'text/plain' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
             a.download = 'shadowcypher-recovery-kit.txt'; a.click();
+        }
+
+        // ── Identity keys (zero-access encryption) ──────────────────────────────
+        // See js/identity.js. The unlocked private key lives in memory only.
+
+        let _identityKey = null;
+
+        // Login parameters for a handle: {v:0} = plain password, {v:1,...} = split.
+        // null = this API doesn't support identity keys yet, so keep the old flow.
+        async function fetchKdf(handle) {
+            let resp;
+            try {
+                resp = await fetch(`${API_BASE}/v1/auth/kdf?handle=${encodeURIComponent(handle)}`);
+            } catch {
+                throw new Error("Can't reach ShadowCypher right now. Try again in a moment.");
+            }
+            if (resp.status === 404) return null;
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(resp.status === 503
+                ? 'Sign-in is temporarily unavailable. Try again in a moment.'
+                : (data.error || `HTTP ${resp.status}`));
+            return data;
+        }
+
+        async function identityApi(apiKey, method, body) {
+            const resp = await fetch(`${API_BASE}/v1/identity/me`, {
+                method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                body: body ? JSON.stringify(body) : undefined,
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (method === 'GET' && resp.status === 404 && data.error === 'no_identity') return null;
+            if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+            return data;
+        }
+
+        // Creates and uploads a new key; returns the recovery phrase to show the user.
+        async function createAndStoreIdentity(apiKey, handle, kek, replace = false) {
+            const { privateKey } = await ScIdentity.createIdentity(handle);
+            const phrase = ScIdentity.newRecoveryPhrase();
+            const bundle = await ScIdentity.buildBundle(privateKey, kek, phrase);
+            await identityApi(apiKey, 'POST', replace ? { ...bundle, replace: true } : bundle);
+            _identityKey = privateKey;
+            return phrase;
+        }
+
+        // After a successful sign-in: move legacy accounts to the split password,
+        // then unlock the identity key or create one. Returns a new recovery phrase, if any.
+        async function setUpIdentityAfterSignIn(handle, password, kdf, secrets, user) {
+            if (kdf.v !== 1) {
+                const newKdf = ScIdentity.newKdfParams();
+                secrets = await ScIdentity.deriveSecrets(password, newKdf);
+                const { error } = await supabaseClient.auth.updateUser({
+                    password: secrets.loginSecret,
+                    data: { ...(user.user_metadata || {}), kdf: newKdf },
+                });
+                if (error) throw new Error(`couldn't upgrade sign-in (${error.message})`);
+            }
+            const apiKey = await ensureApiKey(user);
+            if (!apiKey) throw new Error('no API key on this account');
+            const mine = await identityApi(apiKey, 'GET');
+            if (!mine) return createAndStoreIdentity(apiKey, handle, secrets.kek);
+            try {
+                _identityKey = await ScIdentity.unlockPrivateKey(mine.encrypted_private_key, secrets.kek);
+            } catch {
+                throw new Error('your encryption key could not be unlocked with this password');
+            }
+            return '';
         }
 
         // ── Auth ─────────────────────────────────────────────────────────────────
@@ -2249,14 +2349,28 @@
                 const rawHandle = document.getElementById('login-handle').value.trim().replace(/^@/, '');
                 const password = document.getElementById('login-password').value;
                 if (!rawHandle || !password) { showAuthBanner('Handle and password required.', 'error'); return; }
-                const email = `${rawHandle}@shadowcypher.site`;
+                const handle = rawHandle.toLowerCase();
+                const email = `${handle}@shadowcypher.site`;
                 try {
-                    const result = await supabaseClient.auth.signInWithPassword({ email, password });
+                    const kdf = await fetchKdf(handle);
+                    let secrets = null;
+                    if (kdf?.v === 1) {
+                        showAuthBanner('Unlocking…', 'info');
+                        secrets = await ScIdentity.deriveSecrets(password, kdf);
+                    }
+                    const result = await supabaseClient.auth.signInWithPassword({
+                        email, password: secrets ? secrets.loginSecret : password,
+                    });
                     if (result.error) throw result.error;
                     await vaultStore(password, result.data.session.access_token);
                     chatDeriveVaultKey(password).catch(() => null);
-                    cliPrint(`Signed in as @${rawHandle}`, 'var(--success)');
+                    cliPrint(`Signed in as @${handle}`, 'var(--success)');
                     // onAuthStateChange picks up SIGNED_IN
+                    if (kdf) {
+                        setUpIdentityAfterSignIn(handle, password, kdf, secrets, result.data.user)
+                            .then(phrase => { if (phrase) showRecoveryKit([], phrase); })
+                            .catch(err => cliPrint(`Encryption key: ${err.message}`, 'var(--warning)'));
+                    }
                 } catch (err) {
                     cliPrint(`Sign in failed: ${err.message}`, 'var(--critical)');
                     showAuthBanner(err.message || 'Sign in failed.', 'error');
@@ -2280,23 +2394,36 @@
             const codeHashes = await Promise.all(codes.map(hashRecoveryCode));
 
             try {
+                // Only split the password if this API can hand the parameters back at login.
+                const supportsIdentity = (await fetchKdf(rawHandle)) !== null;
+                const kdf = supportsIdentity ? ScIdentity.newKdfParams() : null;
+                const secrets = kdf ? await ScIdentity.deriveSecrets(password, kdf) : null;
+                const apiKey = generateApiKey();
+
                 const result = await supabaseClient.auth.signUp({
                     email,
-                    password,
+                    password: secrets ? secrets.loginSecret : password,
                     options: {
                         data: {
                             handle: rawHandle,
                             recovery_codes: codeHashes,
-                            api_key: generateApiKey(),
+                            api_key: apiKey,
                             api_key_created_at: new Date().toISOString(),
+                            ...(kdf ? { kdf } : {}),
                         }
                     }
                 });
                 if (result.error) throw result.error;
 
+                let phrase = '';
                 if (result.data.session) {
                     await vaultStore(password, result.data.session.access_token);
                     chatDeriveVaultKey(password).catch(() => null);
+                    // Without a session (email confirmation on), the key is created at first sign-in.
+                    if (secrets) {
+                        phrase = await createAndStoreIdentity(apiKey, rawHandle, secrets.kek)
+                            .catch(err => { cliPrint(`Encryption key: ${err.message}`, 'var(--warning)'); return ''; });
+                    }
                 }
 
                 // Send recovery kit to disposal email if provided — backend discards the address after sending
@@ -2308,7 +2435,7 @@
                 }
 
                 cliPrint(`Account created: @${rawHandle}`, 'var(--success)');
-                showRecoveryKit(codes);
+                showRecoveryKit(codes, phrase);
 
             } catch (err) {
                 let msg = err.message || 'Signup failed.';
@@ -2355,6 +2482,7 @@
 
         async function signOut() {
             _sessionApiKey = null;
+            _identityKey = null;
             if (supabaseClient) await supabaseClient.auth.signOut();
             // onAuthStateChange will fire SIGNED_OUT and clean up the UI
             cliPrint('Signed out.', 'var(--warning)');
@@ -3668,8 +3796,53 @@
             if (!pw || pw.length < 6) { cliPrint('Password must be at least 6 chars.', 'var(--warning)'); return; }
             if (pw !== pw2) { cliPrint('Passwords do not match.', 'var(--critical)'); return; }
             try {
-                const { error } = await supabaseClient.auth.updateUser({ password: pw });
-                if (error) throw error;
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                const handle = user?.user_metadata?.handle;
+                const supportsIdentity = handle ? (await fetchKdf(handle)) !== null : false;
+
+                if (!supportsIdentity) {
+                    const { error } = await supabaseClient.auth.updateUser({ password: pw });
+                    if (error) throw error;
+                } else {
+                    const apiKey = await ensureApiKey(user);
+                    const mine = apiKey ? await identityApi(apiKey, 'GET') : null;
+                    const phraseInput = document.getElementById('reset-recovery-phrase').value.trim();
+
+                    // Unlock with the phrase before changing anything, so a typo can't cost the key.
+                    let recovered = null;
+                    if (mine && phraseInput) {
+                        try {
+                            recovered = await ScIdentity.unlockPrivateKey(
+                                mine.recovery_private_key || '', ScIdentity.normalizePhrase(phraseInput));
+                        } catch {
+                            throw new Error('That recovery phrase does not unlock your encryption key.');
+                        }
+                    }
+                    if (mine && !recovered && !confirm(
+                        'Continue without your recovery phrase?\n\nYou will get a new encryption key. ' +
+                        'Anything encrypted to your old key will be permanently unreadable.')) {
+                        return;
+                    }
+
+                    const kdf = ScIdentity.newKdfParams();
+                    const secrets = await ScIdentity.deriveSecrets(pw, kdf);
+                    const { error } = await supabaseClient.auth.updateUser({
+                        password: secrets.loginSecret,
+                        data: { ...(user.user_metadata || {}), kdf },
+                    });
+                    if (error) throw error;
+                    chatDeriveVaultKey(pw).catch(() => null);
+
+                    if (recovered) {
+                        // Same key, re-locked under the new password; the recovery copy stays as is.
+                        await identityApi(apiKey, 'POST', await ScIdentity.buildBundle(recovered, secrets.kek));
+                        _identityKey = recovered;
+                    } else if (apiKey) {
+                        const phrase = await createAndStoreIdentity(apiKey, handle, secrets.kek, Boolean(mine));
+                        showRecoveryKit([], phrase);
+                    }
+                    document.getElementById('reset-recovery-phrase').value = '';
+                }
                 cliPrint('Password updated. You are signed in.', 'var(--success)');
                 showAuthBanner('Password updated. Redirecting…', 'info');
                 history.replaceState(null, '', window.location.pathname);

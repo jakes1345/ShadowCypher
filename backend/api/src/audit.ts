@@ -31,7 +31,9 @@ export type AuditEvent =
   | "totp_disabled"
   | "export_downloaded"
   | "byok_set"
-  | "byok_cleared";
+  | "byok_cleared"
+  | "identity_created"
+  | "identity_replaced";
 
 /** Best-effort log entry. Never throws — silently swallows DB errors. */
 export function audit(
