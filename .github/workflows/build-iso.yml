@@ -1,11 +1,15 @@
 name: ShadowOS ISO Build
 
+# A full ISO build takes 60-90 minutes, so it runs for releases, for pull
+# requests that touch ShadowOS, and on demand, not on every push to main.
 on:
   push:
-    branches: [main]
     tags: ['v*']
   pull_request:
     branches: [main]
+    paths:
+      - 'shadowos/**'
+      - '.github/workflows/build-iso.yml'
   workflow_dispatch:
 
 permissions:
