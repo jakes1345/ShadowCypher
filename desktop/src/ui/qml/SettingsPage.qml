@@ -40,7 +40,7 @@ Rectangle {
                                 anchors { fill: parent; leftMargin: 14; rightMargin: 14; topMargin: 10; bottomMargin: 10 }
                                 text: config.apiBase
                                 color: root.textPri; font.pixelSize: 13; font.family: root.monoFont
-                                onEditingFinished: { config.apiBase = text; config.save() }
+                                onEditingFinished: if (text !== config.apiBase) config.apiBase = text
                             }
                         }
                     }
@@ -58,7 +58,7 @@ Rectangle {
                                 color: root.textPri; font.pixelSize: 13; font.family: root.monoFont
                                 echoMode: TextInput.Password
                                 passwordCharacter: "•"
-                                onEditingFinished: { config.apiKey = text; config.save() }
+                                onEditingFinished: if (text !== config.apiKey) app.login(text)
                             }
                         }
                         Text { text: "Pattern: sc_live_ + 48 hex characters"; color: root.textSec; font.pixelSize: 11 }
@@ -94,7 +94,7 @@ Rectangle {
                                     color: root.textPri; font.pixelSize: 13; font.family: root.monoFont
                                     inputMethodHints: Qt.ImhDigitsOnly
                                     validator: IntValidator { bottom: 30; top: 86400 }
-                                    onEditingFinished: { config.scanInterval = parseInt(text); config.save() }
+                                    onEditingFinished: config.scanInterval = parseInt(text)
                                 }
                             }
                         }

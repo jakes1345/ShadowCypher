@@ -2,9 +2,10 @@
 #include <QObject>
 #include <QString>
 #include <QNetworkAccessManager>
+#include <QJsonArray>
+#include <QTimer>
 
 // Talks to a local Ollama instance (http://localhost:11434) for on-device AI.
-// Falls back to the ShadowCypher API Guardian endpoint if Ollama is unavailable.
 class OllamaClient : public QObject
 {
     Q_OBJECT
@@ -22,6 +23,7 @@ public:
 
     Q_INVOKABLE void checkAvailability();
     Q_INVOKABLE void query(const QString& prompt, const QString& requestId = {});
+    Q_INVOKABLE void clearHistory() { m_history = {}; }
     Q_INVOKABLE void listModels();
 
 signals:
@@ -36,6 +38,8 @@ private:
     void setBusy(bool b) { if (b == m_busy) return; m_busy = b; emit busyChanged(); }
 
     QNetworkAccessManager m_nam;
+    QTimer                m_recheck;
+    QJsonArray            m_history;   // prior user/assistant turns, sent with each query
     QString               m_model     = "mistral:latest";
     QString               m_baseUrl   = "http://localhost:11434";
     bool                  m_available = false;

@@ -21,22 +21,21 @@ void Config::load()
 {
     QFile f(m_path);
     if (!f.open(QIODevice::ReadOnly)) return;
-    const QJsonObject obj = QJsonDocument::fromJson(f.readAll()).object();
-    m_apiKey       = obj["api_key"].toString();
-    m_apiBase      = obj["api_base"].toString("https://api.shadowcypher.site");
-    m_scanInterval = obj["scan_interval_sec"].toInt(600);
+    m_raw          = QJsonDocument::fromJson(f.readAll()).object();
+    m_apiKey       = m_raw["api_key"].toString();
+    m_apiBase      = m_raw["api_base"].toString("https://api.shadowcypher.site");
+    m_scanInterval = m_raw["scan_interval_sec"].toInt(600);
 }
 
 void Config::save()
 {
-    QJsonObject obj;
-    obj["api_key"]          = m_apiKey;
-    obj["api_base"]         = m_apiBase;
-    obj["scan_interval_sec"] = m_scanInterval;
+    m_raw["api_key"]           = m_apiKey;
+    m_raw["api_base"]          = m_apiBase;
+    m_raw["scan_interval_sec"] = m_scanInterval;
     QFile f(m_path);
     if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         f.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
-        f.write(QJsonDocument(obj).toJson());
+        f.write(QJsonDocument(m_raw).toJson());
     }
     emit changed();
 }
@@ -48,5 +47,11 @@ QString Config::apiBase()      const { return m_apiBase; }
 int     Config::scanInterval() const { return m_scanInterval; }
 
 void Config::setApiKey(const QString& v)     { m_apiKey = v;       save(); }
-void Config::setApiBase(const QString& v)    { m_apiBase = v;      save(); }
-void Config::setScanInterval(int v)          { m_scanInterval = v; save(); }
+void Config::setApiBase(const QString& v)
+{
+    QString base = v.trimmed();
+    while (base.endsWith('/')) base.chop(1);
+    m_apiBase = base;
+    save();
+}
+void Config::setScanInterval(int v)          { m_scanInterval = qMax(30, v); save(); }

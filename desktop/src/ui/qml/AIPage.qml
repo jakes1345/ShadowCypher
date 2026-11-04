@@ -96,9 +96,11 @@ Rectangle {
                     }
                 }
 
+                TextMetrics { id: metrics; text: content; font: bubble.font }
+
                 Rectangle {
-                    Layout.maximumWidth: msgList.width * 0.72
-                    height: bubble.implicitHeight + 20
+                    Layout.preferredWidth: Math.min(metrics.advanceWidth + 30, msgList.width * 0.72)
+                    Layout.preferredHeight: bubble.implicitHeight + 20
                     radius: 8
                     color: role === "user"
                            ? Qt.rgba(180/255,74/255,255/255,0.12)
@@ -213,6 +215,9 @@ Rectangle {
         target: ai
         function onQueryResult(requestId, response) {
             chatModel.append({ role: "assistant", content: response })
+        }
+        function onError(message) {
+            chatModel.append({ role: "assistant", content: "Error from Ollama: " + message })
         }
         function onAvailableChanged() {
             if (ai.available && chatModel.count === 0) {

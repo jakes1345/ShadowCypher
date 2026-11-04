@@ -1,5 +1,17 @@
 #include "PrivacyMode.h"
 #include <QProcess>
+#ifdef SC_LINUX
+#include <pwd.h>
+#include <unistd.h>
+
+// Debian/Ubuntu run Tor as "debian-tor"; Arch (ShadowOS) and Fedora use "tor".
+static QString torUser()
+{
+    for (const char* name : {"debian-tor", "tor", "_tor"})
+        if (getpwnam(name)) return QString::fromLatin1(name);
+    return {};
+}
+#endif
 
 // Run a single iptables/ip6tables/systemctl command as an argument list (no shell injection).
 // Returns true only if the process exits normally with code 0.
@@ -33,21 +45,27 @@ PrivacyMode::PrivacyMode(QObject* parent) : QObject(parent) {}
 void PrivacyMode::engage()
 {
 #ifdef SC_LINUX
-    setStatus("engaging");
-
-    // Save existing rules for clean restore on disengage.
-    {
-        QProcess save;
-        save.start("bash", {"-c", "iptables-save && ip6tables-save"});
-        if (save.waitForFinished(5000) && save.exitStatus() == QProcess::NormalExit)
-            m_savedRules = save.readAllStandardOutput();
+    // Bail out before touching anything: as a normal user every iptables call
+    // fails and the rollback's systemctl call raises a polkit prompt.
+    if (geteuid() != 0) {
+        setStatus("error: requires root (run ShadowCypher with sudo for now)");
+        emit activeChanged();
+        return;
     }
+    const QString tor = torUser();
+    if (tor.isEmpty()) {
+        setStatus("error: Tor is not installed (no tor system user found)");
+        emit activeChanged();
+        return;
+    }
+
+    setStatus("engaging");
 
     // ── IPv4 kill-switch ──────────────────────────────────────────────────
     // Create chain (tolerate "already exists"); fail on anything else.
     run("iptables", {"-N", "SHADOW_KS"}); // tolerated if chain exists
     if (!run("iptables", {"-F", "SHADOW_KS"})
-     || !run("iptables", {"-A", "SHADOW_KS", "-m", "owner", "--uid-owner", "debian-tor", "-j", "ACCEPT"})
+     || !run("iptables", {"-A", "SHADOW_KS", "-m", "owner", "--uid-owner", tor, "-j", "ACCEPT"})
      || !run("iptables", {"-A", "SHADOW_KS", "-o", "lo", "-j", "ACCEPT"})
      || !run("iptables", {"-A", "SHADOW_KS", "-j", "DROP"})) {
         rollback();
@@ -130,22 +148,17 @@ void PrivacyMode::rollback()
     run("ip6tables", {"-F", "SHADOW_KS6"});
     run("ip6tables", {"-X", "SHADOW_KS6"});
     run("systemctl", {"stop", "tor"}, 10000);
-    m_savedRules.clear();
 #endif
 }
 
 void PrivacyMode::verify()
 {
     // Check whether the SOCKS proxy reaches the Tor network.
+    // --socks5-hostname makes Tor resolve DNS; plain --socks5 resolves locally,
+    // which the kill-switch blocks (and would leak the lookup anyway).
     QProcess p;
-#ifdef SC_LINUX
-    p.start("bash", {"-c",
-        "curl --socks5 127.0.0.1:9050 --max-time 10 -s https://check.torproject.org/api/ip"
-    });
-#elif defined(SC_WINDOWS)
-    p.start("curl", {"--socks5", "127.0.0.1:9050", "--max-time", "10", "-s",
+    p.start("curl", {"--socks5-hostname", "127.0.0.1:9050", "--max-time", "10", "-s",
                      "https://check.torproject.org/api/ip"});
-#endif
     const bool finished = p.waitForFinished(15000);
     if (!finished || p.exitStatus() != QProcess::NormalExit) {
         emit verifyResult(false, "curl timed out or crashed.");

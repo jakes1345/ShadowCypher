@@ -84,7 +84,7 @@ Rectangle {
                     }
                 }
                 Text {
-                    text: scanner.running ? "Monitoring" : "Idle"
+                    text: (scanner.running ? "Monitoring" : "Idle") + (app.offline ? " · offline" : "")
                     color: scanner.running ? root.green : root.textSec
                     font.pixelSize: 11
                     font.family: root.monoFont

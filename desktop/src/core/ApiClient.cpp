@@ -49,9 +49,36 @@ void ApiClient::request(const QString& method, const QString& path, const QJsonO
     });
 }
 
+void ApiClient::verifyKey(const QString& key)
+{
+    QNetworkRequest req(QUrl(m_config->apiBase() + "/v1/me"));
+    req.setRawHeader("Authorization", ("Bearer " + key).toUtf8());
+    req.setTransferTimeout(15000);
+
+    QNetworkReply* reply = m_nam.get(req);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QJsonObject body = QJsonDocument::fromJson(reply->readAll()).object();
+
+        if (status == 200) {
+            emit keyVerified(body);
+        } else if (status == 401 || status == 403) {
+            emit keyRejected(body["error"].toString("unauthorized"));
+        } else if (status != 0) {
+            emit keyCheckFailed(QString("API at %1 answered HTTP %2").arg(m_config->apiBase()).arg(status),
+                                status >= 500);
+        } else {
+            emit keyCheckFailed(reply->errorString(), true);
+        }
+    });
+}
+
+static QString enc(const QString& s) { return QString::fromUtf8(QUrl::toPercentEncoding(s)); }
+
 void ApiClient::getMe()                               { request("GET",  "/v1/me"); }
 void ApiClient::getIncidents(int limit)               { request("GET",  QString("/v1/incidents?limit=%1").arg(limit)); }
-void ApiClient::lookupCve(const QString& id)          { request("GET",  "/v1/cve/" + id); }
-void ApiClient::checkBreach(const QString& email)     { request("GET",  "/v1/breach?email=" + email); }
-void ApiClient::checkIpReputation(const QString& ip)  { request("GET",  "/v1/ip-rep?ip=" + ip); }
+void ApiClient::lookupCve(const QString& id)          { request("GET",  "/v1/cve/" + enc(id)); }
+void ApiClient::checkBreach(const QString& email)     { request("GET",  "/v1/breach?email=" + enc(email)); }
+void ApiClient::checkIpReputation(const QString& ip)  { request("GET",  "/v1/ip-rep?ip=" + enc(ip)); }
 void ApiClient::postScanResult(const QJsonObject& scan) { request("POST", "/v1/scan", scan); }

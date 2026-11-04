@@ -85,6 +85,25 @@ Window {
                         }
                     }
 
+                    ColumnLayout {
+                        spacing: 8
+                        Text { text: "API SERVER"; color: root.textSec; font.pixelSize: 10; font.family: root.monoFont; font.letterSpacing: 2 }
+                        Rectangle {
+                            Layout.fillWidth: true; height: 44; radius: 8
+                            color: root.bgPanel; border.color: loginBaseInput.activeFocus ? root.accent : root.border
+                            TextField {
+                                id: loginBaseInput
+                                anchors.fill: parent
+                                leftPadding: 16; rightPadding: 16
+                                color: root.textPri; font.pixelSize: 13; font.family: root.monoFont
+                                text: config.apiBase
+                                placeholderText: "https://api.shadowcypher.site"
+                                Keys.onReturnPressed: doLogin()
+                                background: Item {}
+                            }
+                        }
+                    }
+
                     Text {
                         id: loginError
                         text: ""
@@ -97,9 +116,10 @@ Window {
 
                     Button {
                         Layout.fillWidth: true; height: 44
-                        text: "Sign In"
+                        text: app.authBusy ? "Checking…" : "Sign In"
+                        enabled: !app.authBusy
                         onClicked: doLogin()
-                        background: Rectangle { color: root.accent; radius: 8 }
+                        background: Rectangle { color: root.accent; radius: 8; opacity: parent.enabled ? 1 : 0.6 }
                         contentItem: Text { text: parent.text; color: "#fff"; font.pixelSize: 14; font.weight: Font.Medium; horizontalAlignment: Text.AlignHCenter }
                     }
 
@@ -113,13 +133,8 @@ Window {
         }
 
         function doLogin() {
-            const key = loginKeyInput.text.trim()
-            if (!key.match(/^sc_live_[a-f0-9]{48}$/)) {
-                loginError.text = "Invalid key format. Expected sc_live_ + 48 hex chars."
-                return
-            }
             loginError.text = ""
-            app.login(key)
+            app.login(loginKeyInput.text, loginBaseInput.text)
         }
 
         Connections {

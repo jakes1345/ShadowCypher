@@ -132,7 +132,7 @@ Rectangle {
                     Repeater {
                         model: [
                             { step: "1", title: "Starts Tor service", desc: "systemctl start tor — Tor runs as a SOCKS5 proxy on 127.0.0.1:9050" },
-                            { step: "2", title: "Applies iptables kill-switch", desc: "OUTPUT chain DROPs all traffic except debian-tor uid and loopback — no leaks even if Tor crashes" },
+                            { step: "2", title: "Applies iptables kill-switch", desc: "OUTPUT chain DROPs all traffic except Tor's own system user and loopback — no leaks even if Tor crashes" },
                             { step: "3", title: "Verify button", desc: "Curl through SOCKS5 to check.torproject.org/api/ip and confirm IsTor:true" }
                         ]
                         RowLayout {

@@ -17,6 +17,8 @@ public:
 
     // Auth
     Q_INVOKABLE void getMe();
+    // Checks a candidate key against /v1/me without adopting it.
+    void verifyKey(const QString& key);
 
     // Incidents
     Q_INVOKABLE void postScanResult(const QJsonObject& scan);
@@ -37,6 +39,11 @@ signals:
     void ipReputationResult(const QJsonObject& result);
     void authError();
     void networkError(const QString& message);
+
+    void keyVerified(const QJsonObject& user);
+    void keyRejected(const QString& reason);
+    // transient: unreachable or 5xx (worth retrying later), as opposed to a wrong URL.
+    void keyCheckFailed(const QString& message, bool transient);
 
 private:
     void request(const QString& method, const QString& path,

@@ -46,20 +46,21 @@ Rectangle {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 12
+                // Static model: values bind per-tile so scans don't rebuild the delegates.
                 Repeater {
-                    model: [
-                        { label: "TOTAL DEVICES", value: scanner.devices.length.toString(), accent: root.accent },
-                        { label: "NEW THIS SESSION", value: scanner.newCount !== undefined ? scanner.newCount.toString() : "0", accent: root.amber },
-                        { label: "ALERTS", value: scanner.alertCount !== undefined ? scanner.alertCount.toString() : "0", accent: root.red }
-                    ]
+                    model: ["TOTAL DEVICES", "NEW THIS SESSION", "ALERTS"]
                     Rectangle {
-                        Layout.fillWidth: true; height: 80
+                        Layout.fillWidth: true; Layout.preferredHeight: 80
                         color: root.bgPanel; radius: 8; border.color: root.border
                         ColumnLayout {
                             anchors { fill: parent; margins: 16 }
                             spacing: 4
-                            Text { text: modelData.label; color: root.textSec; font.pixelSize: 10; font.family: root.monoFont; font.letterSpacing: 2 }
-                            Text { text: modelData.value; color: modelData.accent; font.pixelSize: 26; font.weight: Font.Bold }
+                            Text { text: modelData; color: root.textSec; font.pixelSize: 10; font.family: root.monoFont; font.letterSpacing: 2 }
+                            Text {
+                                text: index === 0 ? scanner.devices.length : index === 1 ? scanner.newCount : scanner.alertCount
+                                color: index === 0 ? root.accent : index === 1 ? root.amber : root.red
+                                font.pixelSize: 26; font.weight: Font.Bold
+                            }
                         }
                     }
                 }
@@ -84,7 +85,7 @@ Rectangle {
             // Device table
             Rectangle {
                 Layout.fillWidth: true
-                height: Math.max(300, deviceView.contentHeight + 52)
+                Layout.preferredHeight: Math.max(300, deviceView.contentHeight + 52)
                 color: root.bgSurface; radius: 8; border.color: root.border
 
                 ColumnLayout {
@@ -149,15 +150,29 @@ Rectangle {
                                 Text { text: modelData.vendor || "—";   color: root.textSec; font.pixelSize: 11; Layout.preferredWidth: 160; elide: Text.ElideRight }
                                 Text { text: modelData.lastSeen || "—"; color: root.textSec; font.pixelSize: 11; font.family: root.monoFont; Layout.preferredWidth: 120 }
                                 Rectangle {
-                                    width: 72; height: 22; radius: 4
+                                    id: badge
+                                    width: 80; height: 22; radius: 4
+                                    readonly property bool canTrust: !modelData.trusted
                                     color: modelData.suspect ? Qt.rgba(239/255,68/255,68/255,0.12)
-                                         : modelData.isNew   ? Qt.rgba(245/255,158/255,11/255,0.1)
-                                                             : Qt.rgba(34/255,197/255,94/255,0.08)
+                                         : modelData.trusted ? Qt.rgba(34/255,197/255,94/255,0.08)
+                                                             : Qt.rgba(245/255,158/255,11/255,0.1)
+                                    border.color: badgeMouse.containsMouse && canTrust ? root.green : "transparent"
                                     Text {
                                         anchors.centerIn: parent
-                                        text:  modelData.suspect ? "SUSPECT" : modelData.isNew ? "NEW" : "KNOWN"
-                                        color: modelData.suspect ? root.red : modelData.isNew ? root.amber : root.green
+                                        text: badgeMouse.containsMouse && badge.canTrust ? "TRUST"
+                                            : modelData.suspect ? "SUSPECT" : modelData.trusted ? "TRUSTED"
+                                            : modelData.isNew   ? "NEW"     : "UNTRUSTED"
+                                        color: badgeMouse.containsMouse && badge.canTrust ? root.green
+                                             : modelData.suspect ? root.red : modelData.trusted ? root.green : root.amber
                                         font.pixelSize: 9; font.family: root.monoFont; font.letterSpacing: 1
+                                    }
+                                    MouseArea {
+                                        id: badgeMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        enabled: badge.canTrust
+                                        cursorShape: badge.canTrust ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                        onClicked: scanner.confirmDevice(modelData.ip)
                                     }
                                 }
                             }

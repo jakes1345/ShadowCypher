@@ -1,7 +1,6 @@
 #pragma once
 #include <QObject>
 #include <QString>
-#include <QByteArray>
 
 // Privacy mode: routes all traffic through Tor with an iptables kill-switch.
 // Linux: uses systemd + iptables. Windows: stub (routes via SOCKS proxy).
@@ -32,5 +31,4 @@ private:
 
     bool       m_active     = false;
     QString    m_status     = "off";
-    QByteArray m_savedRules;   // iptables-save output, restored on disengage
 };
