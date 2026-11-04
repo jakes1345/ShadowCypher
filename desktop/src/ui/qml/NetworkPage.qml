@@ -95,7 +95,10 @@ Rectangle {
                         Layout.fillWidth: true; height: 44
                         color: root.bgPanel
                         radius: 8
-                        Rectangle { anchors { left: parent.left; right: parent.right; bottom: parent.bottom }; height: 1; color: root.border }
+                        Rectangle {
+                            anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
+                            height: 1; color: root.border
+                        }
                         RowLayout {
                             anchors { fill: parent; leftMargin: 16; rightMargin: 16 }
                             spacing: 0
@@ -132,7 +135,10 @@ Rectangle {
                             color: modelData.suspect
                                    ? Qt.rgba(239/255,68/255,68/255,0.05)
                                    : index % 2 === 0 ? "transparent" : Qt.rgba(1,1,1,0.015)
-                            Rectangle { anchors { left: parent.left; right: parent.right; bottom: parent.bottom }; height: 1; color: root.border; opacity: 0.5 }
+                            Rectangle {
+                                anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
+                                height: 1; color: root.border; opacity: 0.5
+                            }
                             RowLayout {
                                 anchors { fill: parent; leftMargin: 16; rightMargin: 16 }
                                 spacing: 0

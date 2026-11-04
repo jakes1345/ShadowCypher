@@ -12,8 +12,6 @@ find_package(Qt6 REQUIRED COMPONENTS
     Quick
     QuickControls2
     Network
-    Concurrent
-    WebSockets
 )
 
 qt_standard_project_setup()
@@ -47,12 +45,14 @@ qt_add_qml_module(shadowcypher
     QML_FILES
         src/ui/qml/Main.qml
         src/ui/qml/Sidebar.qml
+        src/ui/qml/NavItem.qml
+        src/ui/qml/StatTile.qml
+        src/ui/qml/Toast.qml
         src/ui/qml/DashboardPage.qml
         src/ui/qml/NetworkPage.qml
         src/ui/qml/AIPage.qml
         src/ui/qml/PrivacyPage.qml
         src/ui/qml/SettingsPage.qml
-        src/ui/qml/Components.qml
 )
 
 target_include_directories(shadowcypher PRIVATE src)
@@ -63,8 +63,6 @@ target_link_libraries(shadowcypher PRIVATE
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::Network
-    Qt6::Concurrent
-    Qt6::WebSockets
 )
 
 # Platform-specific
