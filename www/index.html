@@ -2324,18 +2324,12 @@
             return phrase;
         }
 
-        // After a successful sign-in: move legacy accounts to the split password,
-        // then unlock the identity key or create one. Returns a new recovery phrase, if any.
-        async function setUpIdentityAfterSignIn(handle, password, kdf, secrets, user) {
-            if (kdf.v !== 1) {
-                const newKdf = ScIdentity.newKdfParams();
-                secrets = await ScIdentity.deriveSecrets(password, newKdf);
-                const { error } = await supabaseClient.auth.updateUser({
-                    password: secrets.loginSecret,
-                    data: { ...(user.user_metadata || {}), kdf: newKdf },
-                });
-                if (error) throw new Error(`couldn't upgrade sign-in (${error.message})`);
-            }
+        // After a successful sign-in to a split-password account: unlock the identity
+        // key or create one. Returns a new recovery phrase, if any.
+        // Legacy accounts are not moved to the split password here: the Android app
+        // still sends the plain password and would be locked out afterwards.
+        async function setUpIdentityAfterSignIn(handle, kdf, secrets, user) {
+            if (kdf.v !== 1 || !secrets) return '';
             const apiKey = await ensureApiKey(user);
             if (!apiKey) throw new Error('no API key on this account');
             const mine = await identityApi(apiKey, 'GET');
@@ -2374,8 +2368,8 @@
                     chatDeriveVaultKey(password).catch(() => null);
                     cliPrint(`Signed in as @${handle}`, 'var(--success)');
                     // onAuthStateChange picks up SIGNED_IN
-                    if (kdf) {
-                        setUpIdentityAfterSignIn(handle, password, kdf, secrets, result.data.user)
+                    if (kdf?.v === 1) {
+                        setUpIdentityAfterSignIn(handle, kdf, secrets, result.data.user)
                             .then(phrase => { if (phrase) showRecoveryKit([], phrase); })
                             .catch(err => cliPrint(`Encryption key: ${err.message}`, 'var(--warning)'));
                     }
