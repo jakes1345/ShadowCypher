@@ -14,7 +14,7 @@ routes = [{ pattern = "api.shadowcypher.site", custom_domain = true }]
 #   wrangler secret put SUPABASE_WEBHOOK_SECRET # any random string; set same in Supabase webhook header
 [vars]
 ENVIRONMENT = "production"
-ALLOWED_ORIGINS = "https://shadowcypher.site,https://www.shadowcypher.site,https://dev.shadowcypher.site,http://localhost:8081"
+ALLOWED_ORIGINS = "https://shadowcypher.site,https://www.shadowcypher.site,https://dev.shadowcypher.site,http://localhost:8081,https://appassets.androidplatform.net"
 SITE_URL = "https://shadowcypher.site"
 RESEND_FROM_EMAIL = "ShadowCypher <noreply@shadowcypher.site>"
 AGENT_VERSION = "0.3.0"

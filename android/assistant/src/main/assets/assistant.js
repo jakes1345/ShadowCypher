@@ -76,6 +76,9 @@ const ShadowAssistant = (() => {
   // ── Bootstrap ──────────────────────────────────────────────────────────────
 
   async function init() {
+    // The app injects the native bridge after the page has loaded, so wait for
+    // it before deciding this is a plain browser preview.
+    for (let i = 0; i < 50 && !window.Capacitor; i++) await sleep(100);
     if (!window.Capacitor || !window.Capacitor.isNativePlatform()) {
       // Non-native preview mode: just show home screen
       window.ShadowBoot?.ready();
@@ -1034,6 +1037,22 @@ const ShadowAssistant = (() => {
     return best.chunk;
   }
 
+  // Re-read the saved key (sign-in may have happened in Settings after this page loaded)
+  async function refreshKey() {
+    if (!plugin) return;
+    try {
+      const result = await plugin.getApiKey();
+      const key = result?.key || null;
+      if (key && key !== apiKey) {
+        apiKey = key;
+        loadGuardianContext().then(() => window.ShadowHome?.updateGuardianStats(guardianCtx)).catch(() => {});
+      } else if (!key) {
+        apiKey = null;
+      }
+    } catch (_) {}
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshKey(); });
+
   // ── Shadow AI (ShadowCypher API, general mode) ───────────────────────────
   // Returns { answer } on success, { error } when the API refused (plan, quota,
   // provider not set up), or null when the API couldn't be reached.
@@ -1045,6 +1064,7 @@ const ShadowAssistant = (() => {
   }
 
   async function askShadow(text, voice) {
+    if (!apiKey) await refreshKey();
     if (!apiKey) return { error: 'Sign in first: open Shadow AI settings and tap "Sign in with browser".' };
     let resp;
     try {
@@ -1252,7 +1272,7 @@ const ShadowAssistant = (() => {
 
   return { init, show, dismiss, startListening, openSettings,
            _saveApiKey, _clearApiKey, _closeSettings, _toggleKeyVisibility,
-           _runChip, _submitText, _toggleWakeWord, route };
+           _runChip, _submitText, _toggleWakeWord, route, refreshKey };
 })();
 
 if (document.readyState === 'loading') {

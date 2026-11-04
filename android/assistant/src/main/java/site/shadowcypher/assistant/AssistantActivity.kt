@@ -49,6 +49,12 @@ class AssistantActivity : AppCompatActivity() {
 
         window.setBackgroundDrawable(ColorDrawable(0xFF06060F.toInt()))
 
+        // Serve the bundled page from a real https origin (not file://, whose origin is
+        // "null") so the ShadowCypher API can allow it through CORS.
+        val assetLoader = androidx.webkit.WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", androidx.webkit.WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
+
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
@@ -64,6 +70,8 @@ class AssistantActivity : AppCompatActivity() {
             }
             addJavascriptInterface(ShadowBridge(), "ShadowBridge")
             webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest): android.webkit.WebResourceResponse? =
+                    assetLoader.shouldInterceptRequest(request.url)
                 override fun onPageFinished(view: WebView?, url: String?) = injectShim()
             }
             setBackgroundColor(0xFF06060F.toInt())
@@ -90,7 +98,7 @@ class AssistantActivity : AppCompatActivity() {
             },
         )
 
-        webView.loadUrl("file:///android_asset/index.html")
+        webView.loadUrl("https://appassets.androidplatform.net/assets/index.html")
     }
 
     // ── Capacitor shim injected after page load ───────────────────────────────
@@ -475,6 +483,12 @@ class AssistantActivity : AppCompatActivity() {
             webView.evaluateJavascript("if(window.ShadowAssistant)ShadowAssistant.show()", null)
             webView.evaluateJavascript("setTimeout(()=>ShadowAssistant.startListening(),400)", null)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Pick up a sign-in done in Settings while this screen was in the background
+        if (::webView.isInitialized) webView.evaluateJavascript("window.ShadowAssistant && ShadowAssistant.refreshKey && ShadowAssistant.refreshKey()", null)
     }
 
     override fun onDestroy() {
