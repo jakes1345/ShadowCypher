@@ -775,7 +775,7 @@ export default {
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         if (routeKey === "POST /v1/identity/me" && !(await rateLimit(env.SHADOW_RL, `identity:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
-        if (routeKey === "POST /v1/mail/send" && !(await rateLimit(env.SHADOW_RL, `mail-send:${user.id}`, 10, 60_000)))
+        if ((routeKey === "POST /v1/mail/send" || mailReply) && !(await rateLimit(env.SHADOW_RL, `mail-send:${user.id}`, 10, 60_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
         if (routeKey === "POST /v1/chat/rooms" && !(await rateLimit(env.SHADOW_RL, `room-create:${user.id}`, 5, 3_600_000)))
           return json({ error: "rate_limited" }, { status: 429 }, cors);
