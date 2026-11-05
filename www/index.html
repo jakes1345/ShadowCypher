@@ -4796,11 +4796,14 @@
             const btn = document.querySelector('#mail-compose-modal .btn-primary');
             btn.disabled = true; btn.textContent = 'SENDING…';
             try {
-                await mailCallApi('POST', '/v1/mail/send', { to, subject, text });
+                const res = await mailCallApi('POST', '/v1/mail/send', { to, subject, text });
+                if (!res) return;
                 mailHideCompose();
-                showToast('Email sent.', 'success');
+                showToast(res.internal ? 'Delivered to their ShadowCypher inbox.' : 'Email sent.', 'success');
                 if (_mailFolder === 'sent') mailLoadList();
-            } catch (e) { showToast(`Send failed: ${e.message}`, 'error'); }
+            } catch (e) {
+                showToast(e.message === 'recipient_not_found' ? `No ShadowCypher user at ${to}.` : `Send failed: ${e.message}`, 'error');
+            }
             finally { btn.disabled = false; btn.textContent = 'SEND'; }
         }
 

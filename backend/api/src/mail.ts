@@ -3,6 +3,8 @@
  *
  * Inbound flow:  Cloudflare Email Worker → storeInboundMail() → mail_messages table
  * Outbound flow: POST /v1/mail/send → Resend → stored as direction='outbound'
+ * Internal flow: mail to another handle@shadowcypher.site skips Resend and is
+ *                written straight into the recipient's inbox
  *
  * Routes (all authenticated):
  *   GET    /v1/mail/inbox          — paginated inbox (newest first)
@@ -95,6 +97,78 @@ export async function storeInboundMail(
     from: message.from,
     subject,
     preview,
+  }).catch(() => null);
+}
+
+// ── Internal delivery (user → user on shadowcypher.site, never leaves the platform) ──
+
+const INTERNAL_ADDR = /^[a-z0-9_]{2,32}@shadowcypher\.site$/;
+
+export function bareAddress(addr: string): string {
+  const m = addr.match(/<([^>]+)>/);
+  return (m ? m[1] : addr).trim().toLowerCase();
+}
+
+export function isInternalAddress(addr: string): boolean {
+  return INTERNAL_ADDR.test(bareAddress(addr));
+}
+
+type InternalResult = { ok: true; messageId: string } | { ok: false };
+
+async function deliverInternal(
+  env: Env,
+  fromAddr: string,
+  toAddr: string,
+  subject: string,
+  text: string | null,
+  html: string | null
+): Promise<InternalResult> {
+  const recipient = await findAuthUserByEmail(env, toAddr);
+  if (!recipient) return { ok: false };
+
+  const messageId = `<${crypto.randomUUID()}@shadowcypher.site>`;
+  const receivedAt = new Date().toISOString();
+  await dbInsert(env, "mail_messages", {
+    user_id: recipient.id,
+    message_id: messageId,
+    from_addr: fromAddr,
+    to_addr: toAddr,
+    subject,
+    body_text: text,
+    body_html: html,
+    direction: "inbound",
+    is_read: false,
+    received_at: receivedAt,
+  });
+
+  const preview = (text ?? "").trim().slice(0, 280).replace(/\s+/g, " ");
+  dispatchMailWebhook(env, { from: fromAddr, to: toAddr, subject, preview, received_at: receivedAt, user_id: recipient.id }).catch(() => null);
+  dispatchMailPushNotification(env, recipient.id, { from: fromAddr, subject, preview }).catch(() => null);
+
+  return { ok: true, messageId };
+}
+
+async function storeSentCopy(
+  env: Env,
+  userId: string,
+  messageId: string | null,
+  fromAddr: string,
+  toAddr: string,
+  subject: string,
+  text: string | null,
+  html: string | null
+): Promise<void> {
+  await dbInsert(env, "mail_messages", {
+    user_id: userId,
+    message_id: messageId,
+    from_addr: fromAddr,
+    to_addr: toAddr,
+    subject,
+    body_text: text,
+    body_html: html,
+    direction: "outbound",
+    is_read: true,
+    received_at: new Date().toISOString(),
   }).catch(() => null);
 }
 
@@ -204,8 +278,6 @@ export async function sendOutbound(
   user: { id: string; email: string },
   cors: HeadersInit
 ): Promise<Response> {
-  if (!env.RESEND_API_KEY) return json({ error: "mail_not_configured" }, { status: 503 }, cors);
-
   const body = (await req.json().catch(() => null)) as {
     to?: string;
     subject?: string;
@@ -216,6 +288,20 @@ export async function sendOutbound(
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!body?.to || !emailRegex.test(body.to) || !body.subject?.trim())
     return json({ error: "to_and_subject_required" }, { status: 400 }, cors);
+
+  const subject = body.subject.trim();
+  const text = body.text ?? null;
+  const html = body.html ?? null;
+
+  if (isInternalAddress(body.to)) {
+    const to = bareAddress(body.to);
+    const sent = await deliverInternal(env, user.email, to, subject, text, html);
+    if (!sent.ok) return json({ error: "recipient_not_found" }, { status: 404 }, cors);
+    await storeSentCopy(env, user.id, sent.messageId, user.email, to, subject, text, html);
+    return json({ ok: true, id: sent.messageId, internal: true }, {}, cors);
+  }
+
+  if (!env.RESEND_API_KEY) return json({ error: "mail_not_configured" }, { status: 503 }, cors);
 
   const handle = user.email.split("@")[0];
   const from = user.email.endsWith("@shadowcypher.site")
@@ -230,28 +316,15 @@ export async function sendOutbound(
     body: JSON.stringify({
       from,
       to: body.to,
-      subject: body.subject.trim(),
-      ...(body.html ? { html: body.html } : { text: body.text ?? "" }),
+      subject,
+      ...(html ? { html } : { text: text ?? "" }),
     }),
   });
 
   if (!sendResp.ok) return json({ error: "send_failed" }, { status: 502 }, cors);
   const sendData = (await sendResp.json()) as { id?: string };
 
-  // Store a copy in outbox
-  await dbInsert(env, "mail_messages", {
-    user_id: user.id,
-    message_id: sendData.id ?? null,
-    from_addr: user.email,
-    to_addr: body.to,
-    subject: body.subject.trim(),
-    body_text: body.text ?? null,
-    body_html: body.html ?? null,
-    direction: "outbound",
-    is_read: true,
-    received_at: new Date().toISOString(),
-  }).catch(() => null);
-
+  await storeSentCopy(env, user.id, sendData.id ?? null, user.email, body.to, subject, text, html);
   return json({ ok: true, id: sendData.id }, {}, cors);
 }
 
@@ -262,8 +335,6 @@ export async function replyMail(
   cors: HeadersInit,
   messageId: string
 ): Promise<Response> {
-  if (!env.RESEND_API_KEY) return json({ error: "mail_not_configured" }, { status: 503 }, cors);
-
   const orig = await dbSelect<MailRow>(env, "mail_messages", {
     select: "id,user_id,message_id,from_addr,subject",
     filters: { id: `eq.${messageId}`, user_id: `eq.${user.id}` },
@@ -277,6 +348,17 @@ export async function replyMail(
 
   const replyTo = orig.from_addr;
   const replySubject = /^re:/i.test(orig.subject) ? orig.subject : `Re: ${orig.subject}`;
+
+  if (isInternalAddress(replyTo)) {
+    const to = bareAddress(replyTo);
+    const sent = await deliverInternal(env, user.email, to, replySubject, replyText, null);
+    if (!sent.ok) return json({ error: "recipient_not_found" }, { status: 404 }, cors);
+    await storeSentCopy(env, user.id, sent.messageId, user.email, to, replySubject, replyText, null);
+    return json({ ok: true, id: sent.messageId, internal: true }, {}, cors);
+  }
+
+  if (!env.RESEND_API_KEY) return json({ error: "mail_not_configured" }, { status: 503 }, cors);
+
   const handle = user.email.split("@")[0];
   const fromAddr = user.email.endsWith("@shadowcypher.site")
     ? `${handle} <${user.email}>`
