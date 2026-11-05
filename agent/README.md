@@ -45,7 +45,7 @@ The API also creates a "new device" incident on its own when a scan contains a M
 
 ### Remote missions
 
-In `run` mode the agent also polls `GET /v1/agents/<id>/missions/pending` on every heartbeat and runs whatever missions are queued for it. This agent no longer ships with a ShadowScript interpreter, so it runs each mission's script with the shell (`subprocess.run(..., shell=True)`) as the user the agent runs as, and posts the output back. Anyone who can queue a mission on your account, which means anyone holding your API key, can run commands on this machine. `once` doesn't poll missions.
+In `run` mode the agent also polls `GET /v1/agents/<id>/missions/pending` on every heartbeat. Missions are ShadowScript, and the agent runs them only through the ShadowScript interpreter. It never hands a mission to the shell. This agent doesn't ship the interpreter, so it rejects each mission and reports `MISSION_REJECTED` with exit code 126, which clears it from the queue. Versions before 0.3.1 fell back to running the script as a shell command, so update if you're on an older one. `once` doesn't poll missions.
 
 ### Updates
 
