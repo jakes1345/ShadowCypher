@@ -9,4 +9,4 @@
 # The marketing homepage has no inline scripts. Browsers enforce both policies,
 # so this one only needs to narrow script-src.
 /
-  Content-Security-Policy: script-src 'self' https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; object-src 'none'; base-uri 'self'
+  Content-Security-Policy: script-src 'self' https://static.cloudflareinsights.com; object-src 'none'; base-uri 'self'

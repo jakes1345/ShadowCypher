@@ -3,975 +3,279 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShadowCypher — Privacy & Security Platform | VPN Alternative</title>
-    <meta name="description" content="ShadowCypher routes all your traffic through Tor, randomizes your MAC address, and locks down DNS — no VPN company, no logs, no subscription. Free and open source. One command to go dark.">
+    <title>ShadowCypher — open-source network security, mail, chat and files</title>
+    <meta name="description" content="ShadowCypher watches your network, checks it against known CVEs and gives you mail, chat and file storage under one account. Open source, self-hostable, no telemetry.">
     <link rel="icon" type="image/png" href="/icon-192.png">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#b44aff">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ShadowCypher">
-    <!-- Open Graph / Social preview -->
-    <meta property="og:type"        content="website">
-    <meta property="og:url"         content="https://shadowcypher.site/">
-    <meta property="og:title"       content="ShadowCypher — Private internet without a VPN subscription">
-    <meta property="og:description" content="Route all traffic through Tor, randomize your MAC, block DNS leaks — no VPN company in the middle. Free, open source, one command.">
-    <meta property="og:image"       content="https://shadowcypher.site/dashboard.png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta name="twitter:card"        content="summary_large_image">
-    <meta name="twitter:title"       content="ShadowCypher — Private internet without a VPN subscription">
-    <meta name="twitter:description" content="Route all traffic through Tor, randomize your MAC, block DNS leaks — no VPN company in the middle. Free, open source, one command.">
-    <meta name="keywords" content="vpn alternative, tor vpn, open source vpn, self-hosted vpn, privacy tool, anonymous browsing, tor proxy, ghost mode, mac randomization, dns leak prevention, free vpn alternative, linux privacy">
-    <meta name="twitter:image"       content="https://shadowcypher.site/dashboard.png">
-    <!-- Canonical -->
+    <meta name="theme-color" content="#8b5cf6">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://shadowcypher.site/">
+    <meta property="og:title" content="ShadowCypher — open-source network security, mail, chat and files">
+    <meta property="og:description" content="A Linux desktop app that watches your network, plus mail, chat, files and an AI assistant under one account. Open source, self-hostable, no telemetry.">
+    <meta property="og:image" content="https://shadowcypher.site/icon-512.png">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="ShadowCypher — open-source network security, mail, chat and files">
+    <meta name="twitter:description" content="A Linux desktop app that watches your network, plus mail, chat, files and an AI assistant under one account. Open source, self-hostable, no telemetry.">
     <link rel="canonical" href="https://shadowcypher.site/">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <canvas id="bg-canvas"></canvas>
-    <canvas id="void-canvas" style="position:fixed;inset:0;z-index:-1;"></canvas>
+    <div style="position:fixed;inset:0;z-index:-2;background:radial-gradient(ellipse at 20% 10%,rgba(139,92,246,0.14),transparent 55%),radial-gradient(ellipse at 85% 70%,rgba(59,130,246,0.07),transparent 50%);"></div>
     <div id="hex-dump" style="position:fixed;inset:0;z-index:-1;opacity:0.04;font-family:var(--font-main);font-size:10px;color:var(--accent-primary);pointer-events:none;overflow:hidden;line-height:1.2;padding:20px;"></div>
 
-    <!-- Page Shutter -->
-    <div class="page-shutter" id="pageShutter">
-        <div class="shutter-logo">ShadowCypher</div>
-    </div>
-
-
     <nav class="premium-nav">
-        <a href="/" class="logo-container" style="display:flex;align-items:center;cursor:pointer;gap:10px;text-decoration:none;">
+        <a href="/" class="logo-container" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
             <div style="width:28px;height:28px;background:var(--accent-primary);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;color:#fff;flex-shrink:0;">SC</div>
             <div class="logo-text" style="font-family:var(--font-heading);font-size:1.1rem;font-weight:700;letter-spacing:0.02em;color:var(--text-primary);">ShadowCypher</div>
         </a>
-        <div class="nav-tabs" id="navTabs">
-            <div class="nav-indicator" id="navIndicator"></div>
-            <a data-nav="home" id="nav-home" class="nav-tab active">Overview</a>
-            <a data-nav="arsenal" id="nav-arsenal" class="nav-tab">Arsenal</a>
-            <a data-nav="ghost" id="nav-ghost" class="nav-tab">Privacy</a>
-            <a data-nav="download" id="nav-download" class="nav-tab">Download</a>
-            <a data-nav="shadowos" id="nav-shadowos" class="nav-tab">ShadowOS</a>
-            <a href="/shadow.html" class="nav-tab" style="color:#b44aff;">Shadow</a>
-            <a data-nav="pricing" id="nav-pricing" class="nav-tab">Pro</a>
+        <div class="nav-tabs">
+            <a href="#platform" class="nav-tab">Platform</a>
+            <a href="#privacy" class="nav-tab">Privacy</a>
+            <a href="#shadowos" class="nav-tab">ShadowOS</a>
+            <a href="#download" class="nav-tab">Download</a>
+            <a href="#pricing" class="nav-tab">Pricing</a>
+            <a href="/docs.html" class="nav-tab">Docs</a>
             <a href="/app/" class="nav-tab" style="color:var(--accent-primary);font-weight:700;">Open app →</a>
         </div>
     </nav>
 
-    <!-- HOME -->
-    <div id="page-home" class="page active">
+    <main style="padding-top:64px;position:relative;z-index:1;">
 
         <!-- Hero -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;min-height:calc(100vh - 200px);align-items:center;padding-bottom:60px;">
-            <div class="hero-container" style="text-align:left;">
-                <div class="status-badge"><div class="status-dot"></div>v3.0.0 · Build verified</div>
-                <h1 class="hero-title">Privacy without<br><span style="color:var(--accent-primary);">trusting anyone.</span></h1>
-                <p class="hero-subtitle">Most VPNs just move the trust problem — now you're trusting a company instead of your ISP. ShadowCypher routes everything through Tor so there's no company to trust at all. No logs because there's nothing to log. No subscription. Runs entirely on your machine.</p>
-                <div style="display:flex;gap:20px;flex-wrap:wrap;">
-                    <a data-nav="ghost" class="btn-primary">See how it works</a>
-                    <a data-nav="download" class="btn-primary" style="background:transparent;border:1px solid var(--accent-primary);color:var(--accent-primary);">Download</a>
-                </div>
-                <div class="swarm-feed" style="margin-top:40px;width:100%;">
-                    <div class="mono" style="font-size:0.7rem;color:var(--accent-primary);margin-bottom:10px;opacity:0.6;">// DEMO: install the agent to see your real network events here</div>
-                    <div id="swarm-log" style="height:100px;overflow:hidden;border-left:2px solid var(--accent-primary);padding-left:20px;font-family:var(--font-main);font-size:0.8rem;line-height:2;"></div>
-                </div>
-            </div>
-            <!-- Hero dashboard mockup -->
-            <div style="padding:0 0 0 20px;">
-                <div style="background:#0a0a0c;border:1px solid rgba(180,74,255,0.25);border-radius:10px;overflow:hidden;box-shadow:0 0 60px rgba(180,74,255,0.08);">
-                    <!-- Terminal titlebar -->
-                    <div style="background:#111;border-bottom:1px solid rgba(180,74,255,0.15);padding:10px 16px;display:flex;align-items:center;gap:8px;">
-                        <div style="width:10px;height:10px;border-radius:50%;background:#ef4444;opacity:0.8;"></div>
-                        <div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;opacity:0.8;"></div>
-                        <div style="width:10px;height:10px;border-radius:50%;background:#22c55e;opacity:0.8;"></div>
-                        <div style="flex:1;text-align:center;font-family:var(--font-mono);font-size:0.6rem;color:#444;letter-spacing:2px;">GUARDIAN // NETWORK MONITOR</div>
-                        <div style="display:flex;align-items:center;gap:6px;">
-                            <div style="width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;"></div>
-                            <span style="font-family:var(--font-mono);font-size:0.55rem;color:#22c55e;">LIVE</span>
-                        </div>
-                    </div>
-                    <!-- Scan header -->
-                    <div style="padding:12px 16px 6px;display:flex;justify-content:space-between;align-items:center;">
-                        <span style="font-family:var(--font-mono);font-size:0.6rem;color:#555;letter-spacing:2px;">// NETWORK SCAN · 192.168.1.0/24</span>
-                        <span style="font-family:var(--font-mono);font-size:0.55rem;color:#333;">last scan: 2m ago</span>
-                    </div>
-                    <!-- Device table -->
-                    <div style="padding:0 16px 12px;font-family:var(--font-mono);font-size:0.65rem;line-height:2.2;">
-                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;color:#333;font-size:0.55rem;letter-spacing:1px;border-bottom:1px solid #1a1a1a;padding-bottom:4px;margin-bottom:4px;">
-                            <span>IP</span><span>DEVICE</span><span>OS</span><span>STATUS</span>
-                        </div>
-                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;color:#cbd5e1;">
-                            <span style="color:#666;">192.168.1.1</span><span>ASUS RT-AX88U <span style="color:#555;font-size:0.6rem;">[Router]</span></span><span style="color:#555;">Linux</span><span style="color:#22c55e;">OK</span>
-                        </div>
-                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;color:#cbd5e1;">
-                            <span style="color:#666;">192.168.1.4</span><span>DESKTOP-SC01 <span style="color:#b44aff;font-size:0.6rem;">[This machine]</span></span><span style="color:#555;">Linux</span><span style="color:#22c55e;">OK</span>
-                        </div>
-                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;color:#cbd5e1;">
-                            <span style="color:#666;">192.168.1.9</span><span>Galaxy S24 Ultra</span><span style="color:#555;">Android</span><span style="color:#22c55e;">OK</span>
-                        </div>
-                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;color:#cbd5e1;">
-                            <span style="color:#666;">192.168.1.17</span><span>MacBook Pro M3</span><span style="color:#555;">macOS</span><span style="color:#22c55e;">OK</span>
-                        </div>
-                        <div style="display:grid;grid-template-columns:110px 1fr 80px 70px;gap:4px;">
-                            <span style="color:#666;">192.168.1.23</span><span style="color:#f97316;">UNKNOWN DEVICE <span style="color:#ef4444;font-size:0.6rem;">[ARP ANOMALY]</span></span><span style="color:#555;">—</span><span style="color:#ef4444;">⚠ ALERT</span>
-                        </div>
-                    </div>
-                    <!-- Incident strip -->
-                    <div style="background:rgba(239,68,68,0.06);border-top:1px solid rgba(239,68,68,0.15);padding:10px 16px;display:flex;align-items:center;gap:10px;">
-                        <div style="width:6px;height:6px;border-radius:50%;background:#ef4444;animation:pulse 1s infinite;flex-shrink:0;"></div>
-                        <span style="font-family:var(--font-mono);font-size:0.6rem;color:#ef4444;">INCIDENT: ARP spoof detected — 192.168.1.23 claiming gateway MAC</span>
-                    </div>
-                    <!-- Ghost status + stats row -->
-                    <div style="background:#0d0d0f;border-top:1px solid #1a1a1a;padding:10px 16px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;">
-                        <div style="text-align:center;border-right:1px solid #1a1a1a;padding:4px 0;">
-                            <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent-primary);">29</div>
-                            <div style="font-family:var(--font-mono);font-size:0.5rem;color:#555;letter-spacing:1px;margin-top:1px;">MODULES</div>
-                        </div>
-                        <div style="text-align:center;border-right:1px solid #1a1a1a;padding:4px 0;">
-                            <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent-primary);">8</div>
-                            <div style="font-family:var(--font-mono);font-size:0.5rem;color:#555;letter-spacing:1px;margin-top:1px;">GHOST LAYERS</div>
-                        </div>
-                        <div style="text-align:center;border-right:1px solid #1a1a1a;padding:4px 0;">
-                            <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent-primary);">5</div>
-                            <div style="font-family:var(--font-mono);font-size:0.5rem;color:#555;letter-spacing:1px;margin-top:1px;">PLATFORMS</div>
-                        </div>
-                        <div style="text-align:center;padding:4px 0;">
-                            <div style="font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--accent-primary);">9</div>
-                            <div style="font-family:var(--font-mono);font-size:0.5rem;color:#555;letter-spacing:1px;margin-top:1px;">MCP TOOLS</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Platform Ecosystem -->
-        <div style="padding:80px 0 60px;border-top:1px solid var(--glass-border);">
-            <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// THE PLATFORM</div>
-            <h2 style="font-size:2rem;font-weight:700;margin-bottom:16px;">Five tools. One sovereign stack.</h2>
-            <p style="color:var(--text-secondary);max-width:680px;margin-bottom:56px;line-height:1.8;">ShadowCypher isn't a single app. It's a multi-platform security environment where every component talks to every other. Run an engagement on desktop, monitor your LAN from your phone, get alerted when something moves.</p>
-
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">
-
-                <!-- ShadowOS -->
-                <div style="background:rgba(180,74,255,0.03);border:1px solid rgba(180,74,255,0.35);border-radius:8px;padding:28px;position:relative;overflow:hidden;">
-                    <div style="position:absolute;top:0;right:0;background:rgba(180,74,255,0.15);font-family:var(--font-mono);font-size:0.5rem;color:var(--accent-primary);letter-spacing:2px;padding:4px 10px;border-radius:0 8px 0 6px;">v0.1.0</div>
-                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
-                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">ARCH LINUX · HYPRLAND · LIVE ISO</div>
-                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">ShadowOS</h3>
-                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">An Arch-based live/installable ISO. Pentest tools, dev environment, and gaming — all in one hardened OS. Hyprland compositor, custom Plymouth boot, 6 hot-swap security modes. ShadowCypher pre-installed.</p>
-                    <div class="mono" style="font-size:0.7rem;line-height:2;">
-                        <div style="color:var(--text-secondary);">→ 250+ packages (blackarch + AUR)</div>
-                        <div style="color:var(--text-secondary);">→ 6 modes: normal/dev/privacy/ghost/audit/undercover</div>
-                        <div style="color:var(--text-secondary);">→ Nmap, AbuseIPDB, CVE lookup, DNS audit...</div>
-                        <div style="color:var(--text-secondary);">→ Steam, Lutris, MangoHUD, GameMode</div>
-                        <div style="color:var(--text-secondary);">→ Ollama + ShadowCypher pre-loaded</div>
-                    </div>
-                    <div style="margin-top:16px;">
-                        <a data-nav="shadowos" style="font-family:var(--font-mono);font-size:0.7rem;color:var(--accent-primary);cursor:pointer;text-decoration:none;">Try it yourself →</a>
-                    </div>
-                </div>
-
-                <!-- Desktop App -->
-                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:28px;position:relative;overflow:hidden;">
-                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
-                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">LINUX · C++ · Qt6</div>
-                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">Desktop Command Center</h3>
-                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">Network monitoring, CVE threat feed, local AI via Ollama, and privacy controls. Runs on any Linux machine.</p>
-                    <div class="mono" style="font-size:0.7rem;color:#555;line-height:2;">
-                    </div>
-                </div>
-
-                <!-- Android Guardian -->
-                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:28px;position:relative;overflow:hidden;">
-                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
-                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">ANDROID · CAPACITOR</div>
-                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">ShadowCypher Guardian</h3>
-                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">The full web dashboard wrapped in a native Android app. Device inventory, CVE matches against your gear, real-time incident alerts, and Guardian agent management — from your pocket.</p>
-                    <div class="mono" style="font-size:0.7rem;line-height:2;">
-                        <div style="color:var(--text-secondary);">→ Network device inventory</div>
-                        <div style="color:var(--text-secondary);">→ CVE matching by device</div>
-                        <div style="color:var(--text-secondary);">→ ARP spoof / rogue AP alerts</div>
-                        <div style="color:var(--text-secondary);">→ Live threat feed</div>
-                        <div style="color:var(--text-secondary);">→ Push notifications</div>
-                    </div>
-                </div>
-
-                <!-- Shadow AI -->
-                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:28px;position:relative;overflow:hidden;">
-                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
-                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">ANDROID · ASSIST OVERLAY</div>
-                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">Shadow Assistant</h3>
-                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">Replaces Bixby, Siri, and Google Assistant. Set as your default Assist app — long-press Home to invoke the translucent overlay. STT → AI → TTS. Your phone, your AI.</p>
-                    <div class="mono" style="font-size:0.7rem;line-height:2;">
-                        <div style="color:var(--text-secondary);">→ Transparent overlay (no UI chrome)</div>
-                        <div style="color:var(--text-secondary);">→ On-device STT + cloud AI</div>
-                        <div style="color:var(--text-secondary);">→ Works on lock screen</div>
-                        <div style="color:var(--text-secondary);">→ Replaces default assistant</div>
-                        <div style="color:var(--text-secondary);">→ 769KB — no bloat</div>
-                    </div>
-                </div>
-
-                <!-- Guardian Agent -->
-                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:28px;position:relative;overflow:hidden;">
-                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
-                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">DAEMON · LINUX / MACOS / WIN</div>
-                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">Guardian Agent</h3>
-                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">A lightweight Python daemon that runs on any machine on your LAN. Scans your network every 10 minutes, fingerprints devices, detects threats, and reports to your dashboard and phone.</p>
-                    <div style="background:#000;border:1px solid #222;border-radius:4px;padding:10px 14px;font-family:var(--font-mono);font-size:0.72rem;color:#0f0;line-height:1.9;">
-                        <div>curl -sSL https://shadowcypher.site/agent/install.sh | bash</div>
-                        <div style="color:#555;">shadow-agent init &amp;&amp; shadow-agent run</div>
-                    </div>
-                </div>
-
-                <!-- Web Dashboard -->
-                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:28px;position:relative;overflow:hidden;grid-column:span 1;">
-                    <div style="position:absolute;top:0;right:0;width:60px;height:60px;background:linear-gradient(135deg,var(--accent-primary),transparent);opacity:0.08;border-radius:0 8px 0 60px;"></div>
-                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:14px;">PWA · CLOUDFLARE · SUPABASE</div>
-                    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">Web Dashboard</h3>
-                    <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">This site. A zero-dependency PWA — no framework, no React, no bundle step. Sign in from any browser, see your network state, manage your account, receive alerts. Installable on desktop or mobile.</p>
-                    <div class="mono" style="font-size:0.7rem;line-height:2;">
-                        <div style="color:var(--text-secondary);">→ Supabase auth + real-time</div>
-                        <div style="color:var(--text-secondary);">→ Cloudflare Worker API</div>
-                        <div style="color:var(--text-secondary);">→ PWA installable</div>
-                        <div style="color:var(--text-secondary);">→ 0 npm dependencies</div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- How it connects -->
-        <div style="padding:60px 0;border-top:1px solid var(--glass-border);">
-            <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// DATA FLOW</div>
-            <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:12px;">How everything connects.</h2>
-            <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:48px;max-width:560px;line-height:1.8;">Every component talks to every other. Run a mission on desktop, agent scans your LAN, events hit the API, and your phone lights up — all in real time.</p>
-            <div style="display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:center;row-gap:16px;">
-
-                <!-- Desktop -->
-                <div style="flex:1;min-width:150px;max-width:220px;background:rgba(180,74,255,0.06);border:1px solid rgba(180,74,255,0.25);border-radius:10px;padding:28px 20px 24px;text-align:center;position:relative;">
-                    <div style="width:52px;height:52px;margin:0 auto 16px;background:rgba(180,74,255,0.12);border:1px solid rgba(180,74,255,0.3);border-radius:12px;display:flex;align-items:center;justify-content:center;">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgb(180,74,255)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                    </div>
-                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:8px;">DESKTOP APP</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">Run missions,<br>Ghost mode,<br>AI terminal</div>
-                    <div style="position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:2px;height:8px;background:rgba(180,74,255,0.3);display:none;"></div>
-                </div>
-
-                <!-- Arrow 1 -->
-                <div style="display:flex;align-items:center;padding:0 6px;color:rgba(180,74,255,0.4);">
-                    <svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M0 8 L28 8 M22 2 L28 8 L22 14" stroke="rgba(180,74,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0,100" to="100,0" dur="2s" repeatCount="indefinite"/></path></svg>
-                </div>
-
-                <!-- Agent Daemon -->
-                <div style="flex:1;min-width:150px;max-width:220px;background:rgba(34,197,94,0.05);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:28px 20px 24px;text-align:center;">
-                    <div style="width:52px;height:52px;margin:0 auto 16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-                    </div>
-                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:rgb(34,197,94);letter-spacing:3px;margin-bottom:8px;">AGENT DAEMON</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">Scans LAN<br>every 10 min,<br>any platform</div>
-                </div>
-
-                <!-- Arrow 2 -->
-                <div style="display:flex;align-items:center;padding:0 6px;">
-                    <svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M0 8 L28 8 M22 2 L28 8 L22 14" stroke="rgba(34,197,94,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0,100" to="100,0" dur="2s" begin="0.4s" repeatCount="indefinite"/></path></svg>
-                </div>
-
-                <!-- API / Supabase -->
-                <div style="flex:1;min-width:150px;max-width:220px;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:28px 20px 24px;text-align:center;">
-                    <div style="width:52px;height:52px;margin:0 auto 16px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgb(59,130,246)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-                    </div>
-                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:rgb(59,130,246);letter-spacing:3px;margin-bottom:8px;">API / SUPABASE</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">Store events,<br>match CVEs,<br>edge delivery</div>
-                </div>
-
-                <!-- Arrow 3 -->
-                <div style="display:flex;align-items:center;padding:0 6px;">
-                    <svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M0 8 L28 8 M22 2 L28 8 L22 14" stroke="rgba(59,130,246,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0,100" to="100,0" dur="2s" begin="0.8s" repeatCount="indefinite"/></path></svg>
-                </div>
-
-                <!-- Dashboard -->
-                <div style="flex:1;min-width:150px;max-width:220px;background:rgba(249,115,22,0.05);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:28px 20px 24px;text-align:center;">
-                    <div style="width:52px;height:52px;margin:0 auto 16px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgb(249,115,22)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/></svg>
-                    </div>
-                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:rgb(249,115,22);letter-spacing:3px;margin-bottom:8px;">DASHBOARD</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">Web + Android<br>visibility,<br>real-time</div>
-                </div>
-
-                <!-- Arrow 4 -->
-                <div style="display:flex;align-items:center;padding:0 6px;">
-                    <svg width="36" height="16" viewBox="0 0 36 16" fill="none"><path d="M0 8 L28 8 M22 2 L28 8 L22 14" stroke="rgba(239,68,68,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-dasharray" from="0,100" to="100,0" dur="2s" begin="1.2s" repeatCount="indefinite"/></path></svg>
-                </div>
-
-                <!-- Push Alert -->
-                <div style="flex:1;min-width:150px;max-width:220px;background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:28px 20px 24px;text-align:center;">
-                    <div style="width:52px;height:52px;margin:0 auto 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:12px;display:flex;align-items:center;justify-content:center;">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgb(239,68,68)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                    </div>
-                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:rgb(239,68,68);letter-spacing:3px;margin-bottom:8px;">PUSH ALERT</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">Notified<br>instantly on<br>any device</div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- Quick navigation to all pages -->
-        <div style="padding:60px 0;border-top:1px solid var(--glass-border);">
-            <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// EXPLORE</div>
-            <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:40px;">Everything available to you.</h2>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
-
-                <div data-nav="arsenal" class="hover-lift explore-card" style="--hover-border:var(--accent-primary);--hover-bg:rgba(180,74,255,0.04);padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;">
-                    <div style="width:40px;height:40px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.25);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(180,74,255)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    </div>
-                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">01 // ARSENAL</div>
-                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Tactical Modules</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">Network security tools: OSINT, CVE scanner, DNS audit, AbuseIPDB, breach check.</div>
-                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(180,74,255,0.5);">Explore →</div>
-                </div>
-
-                <div data-nav="ghost" class="hover-lift explore-card" style="--hover-border:rgba(148,163,184,0.4);--hover-bg:rgba(148,163,184,0.03);padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;">
-                    <div style="width:40px;height:40px;background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(148,163,184)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                    </div>
-                    <div class="mono" style="font-size:0.55rem;color:#94a3b8;letter-spacing:2px;margin-bottom:8px;">02 // GHOST</div>
-                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Ghost Protocol</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">Privacy mode: routes traffic through Tor with kill-switch and MAC randomization.</div>
-                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(148,163,184,0.5);">Explore →</div>
-                </div>
-
-                <div data-href="/app/?nav=guardian" class="hover-lift explore-card" style="--hover-border:rgba(34,197,94,0.4);--hover-bg:rgba(34,197,94,0.03);padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;">
-                    <div style="width:40px;height:40px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    </div>
-                    <div class="mono" style="font-size:0.55rem;color:rgb(34,197,94);letter-spacing:2px;margin-bottom:8px;">03 // GUARDIAN</div>
-                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Network Monitor</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">Live LAN scanner. Device inventory, CVE matching, ARP spoof detection, threat feed.</div>
-                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(34,197,94,0.5);">Explore →</div>
-                </div>
-
-                <div data-nav="download" class="hover-lift explore-card" style="--hover-border:rgba(59,130,246,0.4);--hover-bg:rgba(59,130,246,0.03);padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;">
-                    <div style="width:40px;height:40px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(59,130,246)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18" stroke-width="2"/></svg>
-                    </div>
-                    <div class="mono" style="font-size:0.55rem;color:rgb(59,130,246);letter-spacing:2px;margin-bottom:8px;">04 // DOWNLOAD</div>
-                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Android Apps</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">Guardian APK + Shadow APK. Sideload-ready, direct from GitHub Releases.</div>
-                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(59,130,246,0.5);">Download →</div>
-                </div>
-
-                <div data-nav="pricing" class="hover-lift explore-card" style="--hover-border:rgba(249,115,22,0.4);--hover-bg:rgba(249,115,22,0.03);padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;">
-                    <div style="width:40px;height:40px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(249,115,22)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    </div>
-                    <div class="mono" style="font-size:0.55rem;color:rgb(249,115,22);letter-spacing:2px;margin-bottom:8px;">05 // PRO</div>
-                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Pricing</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">Community free forever. Guardian Pro $9.99/mo. Operator $49/mo. 14-day trial.</div>
-                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(249,115,22,0.5);">View plans →</div>
-                </div>
-
-                <div data-href="/app/?nav=account" class="hover-lift explore-card" style="--hover-border:rgba(180,74,255,0.4);--hover-bg:rgba(180,74,255,0.03);padding:28px 24px 24px;border:1px solid var(--glass-border);border-radius:10px;cursor:pointer;transition:border-color 0.2s,background 0.2s,transform 0.15s;">
-                    <div style="width:40px;height:40px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(180,74,255)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    </div>
-                    <div class="mono" style="font-size:0.55rem;color:var(--accent-primary);letter-spacing:2px;margin-bottom:8px;">06 // ACCOUNT</div>
-                    <div style="font-weight:600;margin-bottom:8px;font-size:0.95rem;">Sign In</div>
-                    <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">Create an account or sign in to access your Guardian dashboard and agent data.</div>
-                    <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.6rem;color:rgba(180,74,255,0.5);">Sign in →</div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- Built for operators -->
-        <div style="padding:60px 0 80px;border-top:1px solid var(--glass-border);">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;">
+        <section class="site-section" style="padding-top:24px;">
+            <div class="hero-split">
                 <div>
-                    <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// DESIGN PRINCIPLES</div>
-                    <h2 style="font-size:1.8rem;font-weight:700;margin-bottom:20px;">Not built for the cloud.<br>Built for the operator.</h2>
-                    <p style="color:var(--text-secondary);line-height:1.8;margin-bottom:20px;">Most security tools phone home. ShadowCypher doesn't. The desktop app runs entirely offline — Ollama for AI inference, local SQLite for state. The agent daemon runs on your hardware. You own your data.</p>
-                    <p style="color:var(--text-secondary);line-height:1.8;">When you do use the cloud (dashboard, push alerts), it's Cloudflare Workers at the edge — your data never touches a central server.</p>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:16px;">
-                    <div style="display:flex;gap:16px;align-items:flex-start;">
-                        <div style="width:32px;height:32px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;font-family:var(--font-mono);color:var(--accent-primary);">01</div>
-                        <div><div style="font-weight:600;margin-bottom:4px;">Zero telemetry</div><div style="font-size:0.82rem;color:var(--text-secondary);">No analytics, no crash reporting, no usage data. The code is open source — verify it yourself.</div></div>
-                    </div>
-                    <div style="display:flex;gap:16px;align-items:flex-start;">
-                        <div style="width:32px;height:32px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;font-family:var(--font-mono);color:var(--accent-primary);">02</div>
-                        <div><div style="font-weight:600;margin-bottom:4px;">Cryptographic identity</div><div style="font-size:0.82rem;color:var(--text-secondary);">RSA-4096 key pairs. AES-256-GCM chat. X25519 forward secrecy. Every sensitive surface is encrypted.</div></div>
-                    </div>
-                    <div style="display:flex;gap:16px;align-items:flex-start;">
-                        <div style="width:32px;height:32px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;font-family:var(--font-mono);color:var(--accent-primary);">03</div>
-                        <div><div style="font-weight:600;margin-bottom:4px;">Local-first AI</div><div style="font-size:0.82rem;color:var(--text-secondary);">AI inference via Ollama runs on your machine. No API keys, no OpenAI, no data leaves your box.</div></div>
-                    </div>
-                    <div style="display:flex;gap:16px;align-items:flex-start;">
-                        <div style="width:32px;height:32px;background:rgba(180,74,255,0.1);border:1px solid rgba(180,74,255,0.3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;font-family:var(--font-mono);color:var(--accent-primary);">04</div>
-                        <div><div style="font-weight:600;margin-bottom:4px;">Open source</div><div style="font-size:0.82rem;color:var(--text-secondary);">Full source on <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);">GitHub</a>. Clone, audit, fork. Community edition is free forever.</div></div>
+                    <div class="status-badge"><div class="status-dot"></div>Open source · MIT · self-hostable</div>
+                    <h1 class="hero-title">Know what's on your network.<br><span style="color:var(--accent-primary);">Keep your stuff on yours.</span></h1>
+                    <p class="hero-subtitle">ShadowCypher is a Linux desktop app that watches your network, flags new and suspicious devices and checks what you run against known CVEs. The same account gives you mail at <span class="mono" style="color:var(--text-primary);">you@shadowcypher.site</span>, chat, file storage and an AI assistant. Run it on our servers or your own. No telemetry.</p>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                        <a href="/app/" class="btn-primary">Open the web app</a>
+                        <a href="#download" class="btn-primary btn-outline">Get the desktop app</a>
                     </div>
                 </div>
-            </div>
-        </div>
-
-    </div>
-
-
-    <!-- ARSENAL -->
-    <div id="page-arsenal" class="page">
-        <div class="content-section">
-            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Tactical Arsenal</h2>
-            <p style="color:var(--text-secondary);margin-bottom:16px;max-width:700px;">29 purpose-built offensive and defensive modules across six mission areas. Every tool was built because it was needed in the field — no fluff, no overlap.</p>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:48px;">
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">RECON</span>
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">EXPLOIT</span>
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">GHOST</span>
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">C2</span>
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">COMMS</span>
-                <span style="font-family:var(--font-mono);font-size:0.65rem;padding:4px 12px;border:1px solid rgba(180,74,255,0.3);color:var(--accent-primary);">DSL</span>
-            </div>
-
-            <!-- Category: Command & Control -->
-            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
-                <div style="width:3px;height:36px;background:linear-gradient(180deg,var(--accent-primary),transparent);border-radius:2px;flex-shrink:0;"></div>
-                <div>
-                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 01</div>
-                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Command &amp; Control</div>
-                </div>
-                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(180,74,255,0.15),transparent);"></div>
-            </div>
-
-            <!-- Module 1: NEXUS-COMMAND -->
-            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
-                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
-                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
-                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 01</div>
-                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">NEXUS-COMMAND</h3>
-                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">The main desktop HUD. Real-time Cairo gauges for CPU, RAM, network I/O. AI inference via local Ollama. Network topology war-map with live host discovery.</p>
-                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">PYTHON · GTK3 · CAIRO · OLLAMA</div>
-                    </div>
-                    <div style="padding:32px;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Capabilities</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ Live system telemetry dashboard</li>
-                                    <li>→ Quantum-Core AI deep analysis</li>
-                                    <li>→ Network war-map (Nmap + Cairo)</li>
-                                    <li>→ Admin god panel (encrypted)</li>
-                                    <li>→ Lazy-loaded page architecture</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">AI Integration</div>
-                                <div style="background:#000;border:1px solid #222;border-radius:4px;padding:12px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;line-height:2;">
-                                    <div style="color:#555;"># Natural language security ops</div>
-                                    <div>shadow &gt; scan my network</div>
-                                    <div>shadow &gt; am I anonymous?</div>
-                                    <div>shadow &gt; engage ghost mode</div>
-                                </div>
-                            </div>
+                <div class="hero-mock">
+                    <div style="background:#0a0a0c;border:1px solid rgba(139,92,246,0.25);border-radius:10px;overflow:hidden;box-shadow:0 0 60px rgba(139,92,246,0.08);">
+                        <div style="background:#111;border-bottom:1px solid rgba(139,92,246,0.15);padding:10px 16px;display:flex;align-items:center;gap:8px;">
+                            <div style="width:10px;height:10px;border-radius:50%;background:#ef4444;opacity:0.8;"></div>
+                            <div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;opacity:0.8;"></div>
+                            <div style="width:10px;height:10px;border-radius:50%;background:#22c55e;opacity:0.8;"></div>
+                            <div style="flex:1;text-align:center;font-family:var(--font-mono);font-size:0.6rem;color:#555;letter-spacing:2px;">GUARDIAN · EXAMPLE</div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Category: Intelligence -->
-            <div style="display:flex;align-items:center;gap:16px;margin-top:40px;margin-bottom:20px;">
-                <div style="width:3px;height:36px;background:linear-gradient(180deg,rgb(34,197,94),transparent);border-radius:2px;flex-shrink:0;"></div>
-                <div>
-                    <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;">CATEGORY 02</div>
-                    <div style="font-size:1rem;font-weight:700;color:#fff;letter-spacing:1px;">Reconnaissance &amp; Intelligence</div>
-                </div>
-                <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(34,197,94,0.15),transparent);"></div>
-            </div>
-
-            <!-- Module 2: COVERT-INTEL -->
-            <div style="border:1px solid var(--glass-border);border-radius:8px;margin-bottom:24px;overflow:hidden;">
-                <div style="display:grid;grid-template-columns:280px 1fr;gap:0;">
-                    <div style="padding:32px;background:rgba(180,74,255,0.04);border-right:1px solid var(--glass-border);">
-                        <div class="mono" style="font-size:0.55rem;color:#555;letter-spacing:3px;margin-bottom:8px;">MODULE 02</div>
-                        <h3 class="mono" style="color:var(--accent-primary);font-size:1.1rem;margin-bottom:12px;">COVERT-INTEL</h3>
-                        <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">Reconnaissance and OSINT. Fingerprint targets, discover infrastructure, sweep for vulnerabilities, and correlate findings with ExploitDB.</p>
-                        <div style="margin-top:16px;font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:1px;">NMAP · SHERLOCK · NUCLEI · EXPLOITDB</div>
-                    </div>
-                    <div style="padding:32px;">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Tools</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ Nmap service + OS fingerprinting</li>
-                                    <li>→ Sherlock — 300+ platform OSINT</li>
-                                    <li>→ Nuclei vulnerability sweep</li>
-                                    <li>→ Infrastructure recon (DNS, SSL)</li>
-                                    <li>→ ExploitDB CVE correlation</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);margin-bottom:10px;">Output</div>
-                                <ul style="list-style:none;font-size:0.8rem;color:var(--text-secondary);line-height:2.2;">
-                                    <li>→ JSON + Markdown reports</li>
-                                    <li>→ Severity-ranked findings</li>
-                                    <li>→ CVE IDs with CVSS scores</li>
-                                    <li>→ Exportable to ShadowScript</li>
-                                </ul>
-                            </div>
+                        <div style="padding:12px 16px;font-family:var(--font-mono);font-size:0.66rem;line-height:2.2;">
+                            <div style="display:grid;grid-template-columns:105px 1fr 70px;gap:4px;color:#444;font-size:0.56rem;letter-spacing:1px;border-bottom:1px solid #1a1a1a;padding-bottom:4px;margin-bottom:4px;"><span>IP</span><span>DEVICE</span><span>STATUS</span></div>
+                            <div style="display:grid;grid-template-columns:105px 1fr 70px;gap:4px;color:#cbd5e1;"><span style="color:#666;">192.168.1.1</span><span>Router</span><span style="color:#22c55e;">known</span></div>
+                            <div style="display:grid;grid-template-columns:105px 1fr 70px;gap:4px;color:#cbd5e1;"><span style="color:#666;">192.168.1.4</span><span>This machine</span><span style="color:#22c55e;">known</span></div>
+                            <div style="display:grid;grid-template-columns:105px 1fr 70px;gap:4px;color:#cbd5e1;"><span style="color:#666;">192.168.1.9</span><span>Phone</span><span style="color:#22c55e;">known</span></div>
+                            <div style="display:grid;grid-template-columns:105px 1fr 70px;gap:4px;"><span style="color:#666;">192.168.1.23</span><span style="color:#f97316;">Unknown device</span><span style="color:#ef4444;">new</span></div>
                         </div>
+                        <div style="background:rgba(239,68,68,0.06);border-top:1px solid rgba(239,68,68,0.15);padding:10px 16px;font-family:var(--font-mono);font-size:0.62rem;color:#ef4444;">Incident: new device 192.168.1.23 joined the network</div>
+                        <div style="background:rgba(245,158,11,0.05);border-top:1px solid rgba(245,158,11,0.15);padding:10px 16px;font-family:var(--font-mono);font-size:0.62rem;color:#f59e0b;">CVE match: OpenSSH 8.9 on 192.168.1.4 — check for updates</div>
                     </div>
                 </div>
             </div>
+        </section>
 
-
-            <!-- Source note -->
-            <div style="padding:24px;border:1px dashed rgba(180,74,255,0.2);border-radius:6px;text-align:center;">
-                <span style="font-size:0.82rem;color:var(--text-secondary);">All modules are open source. </span>
-                <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);font-size:0.82rem;">View full source on GitHub →</a>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- GHOST PROTOCOL -->
-    <div id="page-ghost" class="page">
-        <div class="content-section">
-            <h2 style="font-size:2.5rem;margin-bottom:10px;">Ghost Mode</h2>
-            <p style="color:var(--text-secondary);margin-bottom:16px;max-width:700px;line-height:1.8;">If you came here looking for a VPN alternative — this is what you want. Ghost Mode routes <strong style="color:#fff;">all</strong> your traffic through Tor, not just your browser. Your MAC address gets randomized. DNS is locked so nothing leaks outside Tor. If the connection drops, iptables kills it — no accidental cleartext. One command on, one command off, one command to verify it's working.</p>
-            <p style="color:var(--text-secondary);margin-bottom:16px;max-width:700px;line-height:1.8;">The fundamental difference from a VPN: there's no company in the middle. With a VPN, you're just moving your trust from your ISP to the VPN provider — and hoping they mean it when they say "no logs." With Tor, the architecture itself makes logging your traffic impossible for any single party. No promises required.</p>
-            <p style="color:var(--text-secondary);margin-bottom:40px;max-width:700px;line-height:1.8;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:14px 18px;"><strong style="color:#f59e0b;">Honest tradeoff:</strong> Tor is slower than a VPN. If you're streaming or gaming, that'll be noticeable. Ghost Mode is built for privacy when you actually need it — research, sensitive browsing, anything where you'd rather be slow and invisible than fast and trackable.</p>
-
-            <!-- VPN vs Ghost comparison -->
-            <div style="margin-bottom:40px;border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;">
-                <div style="background:rgba(180,74,255,0.06);padding:14px 20px;border-bottom:1px solid var(--glass-border);">
-                    <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--accent-primary);letter-spacing:3px;">VPN vs GHOST MODE</span>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;font-family:var(--font-mono);font-size:0.72rem;">
-                    <div style="padding:12px 20px;border-bottom:1px solid #111;color:#555;font-size:0.62rem;letter-spacing:2px;border-right:1px solid #1a1a1a;">FEATURE</div>
-                    <div style="padding:12px 20px;border-bottom:1px solid #111;color:#555;font-size:0.62rem;letter-spacing:2px;border-right:1px solid #1a1a1a;">NORDVPN / PROTONVPN</div>
-                    <div style="padding:12px 20px;border-bottom:1px solid #111;color:var(--accent-primary);font-size:0.62rem;letter-spacing:2px;">SHADOWCYPHER GHOST</div>
-
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">Hides your IP</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;border-right:1px solid #1a1a1a;">✓ (VPN server sees it)</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">✓ (Tor exit node, not you)</div>
-
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">No logs</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#f59e0b;border-right:1px solid #1a1a1a;">They promise. Trust them?</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">Runs locally. Nothing to log.</div>
-
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">MAC randomization</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#ef4444;border-right:1px solid #1a1a1a;">✗ Not included</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">✓ Layer 3</div>
-
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">DNS leak prevention</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#f59e0b;border-right:1px solid #1a1a1a;">Varies by client</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">✓ Locked by iptables</div>
-
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">Kill-switch</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#f59e0b;border-right:1px solid #1a1a1a;">App-level (bypassable)</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">✓ Kernel-level iptables</div>
-
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">Cost</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#f59e0b;border-right:1px solid #1a1a1a;">$4–$12/month</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;">Free. Always.</div>
-
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:var(--text-secondary);border-right:1px solid #1a1a1a;">Speed</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#22c55e;border-right:1px solid #1a1a1a;">Fast (single hop)</div>
-                    <div style="padding:11px 20px;border-bottom:1px solid #111;color:#f59e0b;">Slower (3 Tor hops) — tradeoff for real anonymity</div>
-
-                    <div style="padding:11px 20px;color:var(--text-secondary);border-right:1px solid #1a1a1a;">Open source</div>
-                    <div style="padding:11px 20px;color:#ef4444;border-right:1px solid #1a1a1a;">Partially / closed</div>
-                    <div style="padding:11px 20px;color:#22c55e;">✓ Fully. Read every line.</div>
-                </div>
-            </div>
-
-            <!-- How to use it (for normal humans) -->
-            <div style="margin-bottom:40px;">
-                <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:20px;">Get private in 60 seconds</h3>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">
-                    <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.2);border-radius:8px;padding:24px;">
-                        <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:var(--accent-primary);margin-bottom:12px;">01</div>
-                        <div style="font-weight:600;margin-bottom:8px;">Install ShadowCypher</div>
-                        <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;">Clone the repo and run the installer. Takes about 2 minutes on any Linux machine. Tor is set up automatically.</div>
-                        <div style="margin-top:14px;background:#000;border-radius:4px;padding:10px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;">git clone github.com/jakes1345/ShadowCypher</div>
-                    </div>
-                    <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.2);border-radius:8px;padding:24px;">
-                        <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:var(--accent-primary);margin-bottom:12px;">02</div>
-                        <div style="font-weight:600;margin-bottom:8px;">Run one command</div>
-                        <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;">Ghost Mode engages 8 layers at once — Tor routing, kill-switch, MAC change, DNS lockdown. Everything.</div>
-                        <div style="margin-top:14px;background:#000;border-radius:4px;padding:10px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;">sudo python3 ghost_mode.py engage</div>
-                    </div>
-                    <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.2);border-radius:8px;padding:24px;">
-                        <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:var(--accent-primary);margin-bottom:12px;">03</div>
-                        <div style="font-weight:600;margin-bottom:8px;">Verify it's working</div>
-                        <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;">Shadow Audit checks every layer — IP, DNS, MAC, hostname, firewall. It tells you exactly what's exposed and fixes it.</div>
-                        <div style="margin-top:14px;background:#000;border-radius:4px;padding:10px 14px;font-family:var(--font-mono);font-size:0.7rem;color:#0f0;">python3 shadow_audit.py</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- The 8 layers + sub-tools -->
-            <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:20px;">What's running under the hood</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;">
-                <div class="module-card" style="clip-path:none;border-left:3px solid var(--accent-primary);">
-                    <h3 class="mono" style="margin-bottom:20px;font-size:0.8rem;">8 LAYERS, ALL AT ONCE</h3>
-                    <ul class="mono" style="font-size:0.75rem;color:var(--accent-primary);list-style:none;line-height:2.5;">
-                        <li>01 // Tor transparent redirect — all traffic, not just browser</li>
-                        <li>02 // iptables kill-switch — connection dies if Tor drops</li>
-                        <li>03 // MAC randomization — new hardware identity</li>
-                        <li>04 // Hostname neutralization — nothing to fingerprint</li>
-                        <li>05 // Timezone → UTC — no timezone leaks</li>
-                        <li>06 // DNS leak prevention — no queries leaving Tor</li>
-                        <li>07 // RAM-only workspace — nothing written to disk</li>
-                        <li>08 // Log suppression — system logs paused</li>
+        <!-- Platform -->
+        <section id="platform" class="site-section">
+            <div class="section-label">// The platform</div>
+            <h2 class="section-title">One account, four ways in.</h2>
+            <p class="section-lead">The desktop app does the work that has to happen on your machine. The web app holds your account services. Both talk to the same API, which you can run yourself.</p>
+            <div class="site-grid">
+                <div class="site-card">
+                    <div class="card-tag">Linux · Qt6 · C++</div>
+                    <h3>Desktop app</h3>
+                    <p>A native app with a background daemon. Everything that touches your network runs locally.</p>
+                    <ul>
+                        <li>Guardian: devices on your LAN and new-device incidents</li>
+                        <li>Network scans with nmap, arp-scan and tcpdump</li>
+                        <li>Threat intel: recent CVEs from NVD and a package audit</li>
+                        <li>Counter-intel: ARP spoofing, DNS leaks, rogue DHCP, TLS interception</li>
+                        <li>OSINT and vulnerability tools for targets you're authorized to test</li>
+                        <li>AI assistant on a local Ollama model</li>
+                        <li>Ghost mode: Tor with a kill-switch</li>
                     </ul>
                 </div>
-                <div style="display:grid;gap:16px;">
-                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;font-size:0.8rem;">TRAFFIC MIRAGE</h3><p style="font-size:0.8rem;color:var(--text-secondary);">Makes Tor traffic look like normal HTTPS using obfs4 bridges — useful in countries or networks that block Tor. Adds cover traffic and timing noise to defeat correlation attacks.</p></div>
-                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;font-size:0.8rem;">EMERGENCY WIPE</h3><p style="font-size:0.8rem;color:var(--text-secondary);">One command destroys all keys, session data, logs, and configs. 7-pass file shredding. If you need to disappear fast, this is the button.</p></div>
-                    <div class="module-card" style="clip-path:none;"><h3 class="mono" style="color:var(--accent-primary);margin-bottom:10px;font-size:0.8rem;">SHADOW AUDIT</h3><p style="font-size:0.8rem;color:var(--text-secondary);">Runs after Ghost Mode to verify every layer actually worked. Checks real DNS resolution, confirms your IP is a Tor exit node, validates firewall rules. Gives you a score and fixes what's broken.</p></div>
+                <div class="site-card">
+                    <div class="card-tag">Any browser</div>
+                    <h3>Web app</h3>
+                    <p>Your account services, at <a href="/app/" class="text-link">shadowcypher.site/app</a>.</p>
+                    <ul>
+                        <li>Mail at your own handle@shadowcypher.site address</li>
+                        <li>Mail between ShadowCypher users never leaves the platform</li>
+                        <li>Chat rooms and direct messages</li>
+                        <li>Drive for your files</li>
+                        <li>Office: documents, spreadsheets and slides</li>
+                        <li>Guardian dashboard and push alerts</li>
+                        <li>Shadow AI assistant</li>
+                    </ul>
+                </div>
+                <div class="site-card">
+                    <div class="card-tag">Android · v1.1</div>
+                    <h3>Android apps</h3>
+                    <p>Two apps, installed from the APKs on GitHub.</p>
+                    <ul>
+                        <li>ShadowCypher Guardian: the web dashboard as an Android app, with push alerts</li>
+                        <li>Shadow AI: a voice assistant you can set as your phone's default</li>
+                    </ul>
+                </div>
+                <div class="site-card">
+                    <div class="card-tag dev">Arch Linux · in development</div>
+                    <h3>ShadowOS</h3>
+                    <p>A hardened Arch-based live ISO with the desktop app built in. <a href="#shadowos" class="text-link">More below.</a></p>
                 </div>
             </div>
+        </section>
 
-            <!-- Restore -->
-            <div style="margin-top:32px;padding:24px 30px;background:var(--bg-surface);border:1px solid var(--glass-border);border-radius:6px;">
-                <div style="font-family:var(--font-mono);font-size:0.65rem;color:#555;letter-spacing:2px;margin-bottom:14px;">FULL COMMAND REFERENCE</div>
-                <code class="mono" style="font-size:0.85rem;color:var(--accent-primary);line-height:2.2;display:block;">
-                    sudo python3 ghost_mode.py engage &nbsp;&nbsp;&nbsp;&nbsp;# Go dark — all 8 layers<br>
-                    sudo python3 ghost_mode.py disengage &nbsp;# Back to normal<br>
-                    python3 shadow_audit.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Verify every layer<br>
-                    python3 dead_drop.py panic &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Emergency wipe
-                </code>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- ── Download page ─────────────────────────────────────────────────── -->
-    <div id="page-download" class="page">
-        <div class="content-section">
-            <h2 class="mono" style="font-size:1.8rem;letter-spacing:4px;margin-bottom:8px;">// DOWNLOADS</h2>
-            <p style="color:var(--text-secondary);margin-bottom:48px;max-width:600px;">Two Android apps. One monitors your network from the shadows. The other replaces your assistant.</p>
-
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:60px;">
-
-                <!-- ShadowCypher Guardian -->
-                <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.25);border-radius:10px;padding:32px;position:relative;overflow:hidden;">
-                    <div style="position:absolute;top:0;right:0;background:rgba(34,197,94,0.15);font-family:var(--font-mono);font-size:0.5rem;color:rgb(34,197,94);letter-spacing:2px;padding:4px 10px;border-radius:0 10px 0 6px;">SECURITY v1.1</div>
-                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:16px;">ANDROID · NATIVE COMPOSE</div>
-                    <h3 style="font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:8px;">ShadowCypher Guardian</h3>
-                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;margin-bottom:16px;">Native Jetpack Compose UI. Network scanner, device inventory, CVE matching, incident alerts, background sync, remote ShadowScript mission execution. v1.1 — device detail modal, CVE alerts panel, scan history timeline, incident detail modal, PagerDuty + OpsGenie webhook support.</p>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
-                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:rgb(34,197,94);border-radius:3px;">Native Compose</span>
-                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.2);color:var(--accent-primary);border-radius:3px;">Remote missions</span>
-                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);color:rgb(59,130,246);border-radius:3px;">Hardened</span>
-                    </div>
-                    <div style="font-size:0.75rem;color:#555;font-family:var(--font-mono);margin-bottom:20px;">v1.1 · 4.4MB · Android 7.0+</div>
-                    <div style="display:flex;flex-direction:column;gap:10px;">
-                        <a href="https://github.com/jakes1345/ShadowCypher/releases/latest/download/shadowcypher-v1.1.apk"
-                           download
-                           style="display:block;padding:14px 20px;background:var(--accent-primary);color:#000;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;letter-spacing:2px;text-decoration:none;border-radius:6px;text-align:center;">
-                            ↓ DOWNLOAD APK
-                        </a>
-                        <a href="https://github.com/jakes1345/ShadowCypher/releases/latest"
-                           target="_blank" rel="noopener"
-                           style="display:block;padding:10px 20px;background:transparent;border:1px solid #333;color:#888;font-family:var(--font-mono);font-size:0.7rem;text-decoration:none;border-radius:6px;text-align:center;">
-                            View on GitHub →
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Shadow AI -->
-                <div style="background:rgba(180,74,255,0.04);border:1px solid rgba(180,74,255,0.25);border-radius:10px;padding:32px;position:relative;overflow:hidden;">
-                    <div style="position:absolute;top:0;right:0;background:rgba(34,197,94,0.15);font-family:var(--font-mono);font-size:0.5rem;color:rgb(34,197,94);letter-spacing:2px;padding:4px 10px;border-radius:0 10px 0 6px;">SECURITY v1.1</div>
-                    <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:16px;">ANDROID · VOICE ASSISTANT</div>
-                    <h3 style="font-size:1.4rem;font-weight:700;color:#fff;margin-bottom:8px;">Shadow</h3>
-                    <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;margin-bottom:16px;">Replaces Bixby, Google Assistant, and Siri. Auth'd with your API key, pulls live Guardian context before every response. v1.1 — standalone APK (no Guardian dependency), Capacitor push notification wiring, improved STT accuracy.</p>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">
-                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:rgb(239,68,68);border-radius:3px;">Guardian-aware</span>
-                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.2);color:var(--accent-primary);border-radius:3px;">Offline STT</span>
-                        <span style="font-family:var(--font-mono);font-size:0.55rem;padding:3px 8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:rgb(34,197,94);border-radius:3px;">Hardened</span>
-                    </div>
-                    <div style="font-size:0.75rem;color:#555;font-family:var(--font-mono);margin-bottom:20px;">v1.1 · 769KB · Android 7.0+</div>
-                    <div style="display:flex;flex-direction:column;gap:10px;">
-                        <a href="https://github.com/jakes1345/ShadowCypher/releases/latest/download/shadow-ai-v1.1.apk"
-                           download
-                           style="display:block;padding:14px 20px;background:var(--accent-primary);color:#000;font-family:var(--font-mono);font-size:0.75rem;font-weight:700;letter-spacing:2px;text-decoration:none;border-radius:6px;text-align:center;">
-                            ↓ DOWNLOAD APK
-                        </a>
-                        <a href="https://github.com/jakes1345/ShadowCypher/releases/latest"
-                           target="_blank" rel="noopener"
-                           style="display:block;padding:10px 20px;background:transparent;border:1px solid #333;color:#888;font-family:var(--font-mono);font-size:0.7rem;text-decoration:none;border-radius:6px;text-align:center;">
-                            View on GitHub →
-                        </a>
-                    </div>
-                </div>
+        <!-- Privacy -->
+        <section id="privacy" class="site-section">
+            <div class="section-label">// Privacy</div>
+            <h2 class="section-title">What we protect, and what we don't yet.</h2>
+            <p class="section-lead">Security tools shouldn't oversell. Here is exactly where your data goes and what is encrypted today.</p>
+            <div style="overflow-x:auto;margin-bottom:40px;">
+                <table class="info-table">
+                    <tr><th>Area</th><th>Status</th><th>Details</th></tr>
+                    <tr><td>Telemetry</td><td class="yes">None</td><td>The apps send no usage data. Syncing scan results to your account is off until you turn it on.</td></tr>
+                    <tr><td>Chat</td><td class="yes">End-to-end</td><td>Messages are encrypted in your browser with AES-GCM while your chat vault is unlocked. The key stays in memory and never reaches the server.</td></tr>
+                    <tr><td>Password</td><td class="yes">Split</td><td>New web accounts stretch the password with Argon2id on your device. The server gets a derived login secret; the other half unlocks your OpenPGP key, which only unlocks on your device.</td></tr>
+                    <tr><td>Mail</td><td class="not-yet">Not end-to-end yet</td><td>Stored on the server as received. Mail between ShadowCypher users stays on the platform and never goes through an outside mail provider.</td></tr>
+                    <tr><td>Drive</td><td class="not-yet">Not end-to-end yet</td><td>Files are stored on the server as uploaded.</td></tr>
+                    <tr><td>Self-hosting</td><td class="yes">Supported</td><td>Run the API, database and storage yourself. <a href="/self-host.html" class="text-link">Self-hosting guide</a></td></tr>
+                </table>
             </div>
 
-            <!-- Install instructions -->
-            <div style="background:rgba(255,255,255,0.02);border:1px solid #222;border-radius:8px;padding:28px;max-width:640px;">
-                <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-secondary);letter-spacing:2px;margin-bottom:16px;">// SIDELOAD INSTRUCTIONS</div>
-                <div style="font-size:0.82rem;color:var(--text-secondary);line-height:2;">
-                    <div>1. Enable <strong style="color:#fff;">Install unknown apps</strong> in Android Settings → Apps → Special app access</div>
-                    <div>2. Open the downloaded <code style="color:var(--accent-primary);">.apk</code> file and tap Install</div>
-                    <div>3. For Shadow: Settings → Default Apps → Assist app → select <strong style="color:#fff;">Shadow</strong></div>
-                    <div>4. For Guardian monitoring: install the <a data-href="/app/?nav=guardian" style="color:var(--accent-primary);cursor:pointer;">Guardian agent</a> on a machine on your LAN</div>
+            <div class="site-grid">
+                <div class="site-card">
+                    <div class="card-tag">Desktop app</div>
+                    <h3>Ghost mode</h3>
+                    <p>Routes your traffic through Tor and adds an iptables kill-switch, so nothing goes out in the clear if Tor drops. It's the only part of the app that needs root, and it asks through your system's normal password prompt.</p>
+                    <p class="fine-print">Tor is slower than a normal connection. It's built for anonymity, not streaming or gaming.</p>
+                </div>
+                <div class="site-card">
+                    <div class="card-tag">Desktop app</div>
+                    <h3>Counter-intel checks</h3>
+                    <p>Looks for the signs of someone interfering with your network: ARP spoofing, interfaces in promiscuous mode, DNS leaks, rogue DHCP servers, TLS interception and unusual traffic.</p>
                 </div>
             </div>
+        </section>
 
-            <!-- Agent CLI -->
-            <div style="margin-top:40px;max-width:640px;">
-                <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-secondary);letter-spacing:2px;margin-bottom:16px;">// GUARDIAN AGENT (Linux / macOS / Windows)</div>
-                <div style="background:#000;border:1px solid #222;border-radius:6px;padding:20px;font-family:var(--font-mono);font-size:0.8rem;color:#94a3b8;line-height:2.2;">
-                    <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">pip install requests</span></div>
-                    <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">python3 shadowcypher_agent.py init</span> &nbsp;<span style="color:#555;"># paste your API key</span></div>
-                    <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">python3 shadowcypher_agent.py run</span> &nbsp;&nbsp;<span style="color:#555;"># runs in foreground</span></div>
+        <!-- ShadowOS -->
+        <section id="shadowos" class="site-section">
+            <div class="section-label">// ShadowOS · in development</div>
+            <h2 class="section-title">A hardened Linux with ShadowCypher built in.</h2>
+            <p class="section-lead">An Arch-based live ISO with Hyprland, the hardened kernel, nftables, AppArmor, Tor and dnscrypt-proxy. One command switches the firewall, Tor routing and services between modes. There's no download yet: you build the ISO yourself.</p>
+            <div class="site-grid">
+                <div class="site-card">
+                    <h3>Modes</h3>
+                    <code class="code-block">shadow-mode normal
+shadow-mode privacy
+shadow-mode ghost
+shadow-mode dev
+shadow-mode gaming</code>
                 </div>
-                <p style="font-size:0.75rem;color:#555;margin-top:10px;">Get your API key from <a data-href="/app/?nav=account" style="color:var(--accent-primary);cursor:pointer;">Account → API Key</a>. The agent auto-updates and ships data every 10 minutes.</p>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- SHADOWOS -->
-    <div id="page-shadowos" class="page">
-        <div class="content-section">
-            <div class="mono" style="font-size:0.65rem;color:var(--accent-primary);letter-spacing:4px;margin-bottom:12px;opacity:0.7;">// SOVEREIGN OPERATING SYSTEM</div>
-            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">ShadowOS</h2>
-            <p style="color:var(--text-secondary);margin-bottom:10px;max-width:720px;line-height:1.8;">An Arch Linux-based live/installable ISO. Security monitoring workstation, developer environment, and daily driver — all in one hardened OS with a custom Hyprland compositor, branded boot sequence, and ShadowCypher pre-installed at <code style="color:var(--accent-primary);">/opt/shadowcypher</code>.</p>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:48px;">
-                <span style="font-family:var(--font-mono);font-size:0.6rem;padding:4px 10px;background:rgba(180,74,255,0.08);border:1px solid rgba(180,74,255,0.25);color:var(--accent-primary);border-radius:3px;">v0.1.0</span>
-                <span style="font-family:var(--font-mono);font-size:0.6rem;padding:4px 10px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#22c55e;border-radius:3px;">ISO VERIFIED · ~7.4 GB</span>
-                <span style="font-family:var(--font-mono);font-size:0.6rem;padding:4px 10px;background:rgba(255,255,255,0.04);border:1px solid #333;color:#888;border-radius:3px;">x86_64 · UEFI + BIOS</span>
-                <span style="font-family:var(--font-mono);font-size:0.6rem;padding:4px 10px;background:rgba(255,255,255,0.04);border:1px solid #333;color:#888;border-radius:3px;">BUILD YOUR OWN</span>
-            </div>
-
-            <!-- Feature grid -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:48px;">
-                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:24px;">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:12px;">SECURITY TOOLS</div>
-                    <div class="mono" style="font-size:0.72rem;color:var(--text-secondary);line-height:2.2;">
-                        <div>nmap · sqlmap · hydra · metasploit</div>
-                        <div>aircrack-ng · bettercap · john · hashcat</div>
-                        <div>rustscan · ffuf · feroxbuster · subfinder</div>
-                        <div>impacket · netexec · mitmproxy · nuclei</div>
-                        <div>wireshark · sshuttle · httpx · naabu</div>
-                    </div>
-                </div>
-                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:24px;">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:12px;">DEVELOPMENT</div>
-                    <div class="mono" style="font-size:0.72rem;color:var(--text-secondary);line-height:2.2;">
-                        <div>VSCode · neovim · helix · lazygit · gh</div>
-                        <div>docker · podman · kubectl · terraform</div>
-                        <div>rustup · go · nodejs · python</div>
-                        <div>Distrobox (Kali / Ubuntu / Debian containers)</div>
-                        <div>Flatpak · Flathub</div>
-                    </div>
-                </div>
-                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:24px;">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:12px;">DESKTOP + GAMING</div>
-                    <div class="mono" style="font-size:0.72rem;color:var(--text-secondary);line-height:2.2;">
-                        <div>Hyprland · Waybar · Wofi · Hyprlock</div>
-                        <div>SDDM custom theme · Plymouth boot splash</div>
-                        <div>Steam · Heroic · Lutris · PrismLauncher</div>
-                        <div>MangoHUD · GameScope · wine-staging</div>
-                        <div>LibreWolf · Mullvad Browser · Tor Browser</div>
-                    </div>
-                </div>
-                <div style="background:rgba(180,74,255,0.03);border:1px solid var(--glass-border);border-radius:8px;padding:24px;">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);letter-spacing:3px;margin-bottom:12px;">PRIVACY + HARDENING</div>
-                    <div class="mono" style="font-size:0.72rem;color:var(--text-secondary);line-height:2.2;">
-                        <div>linux-hardened kernel + sysctl hardening</div>
-                        <div>AppArmor · ufw · dnscrypt-proxy</div>
-                        <div>Tor · MAC randomization per-mode</div>
-                        <div>ShadowCypher GTK app pre-installed</div>
-                        <div>Ollama for local AI inference</div>
-                    </div>
+                <div class="site-card">
+                    <h3>Build it</h3>
+                    <code class="code-block">cd shadowos
+sudo bash build.sh     # Arch host
+bash build-docker.sh   # any host with Docker
+bash qemu-test.sh      # boot it in QEMU</code>
+                    <a href="https://github.com/jakes1345/ShadowCypher/tree/main/shadowos" class="text-link">ShadowOS on GitHub →</a>
                 </div>
             </div>
+        </section>
 
-            <!-- Modes table -->
-            <div style="margin-bottom:48px;">
-                <div class="mono" style="font-size:0.65rem;color:var(--text-secondary);letter-spacing:2px;margin-bottom:16px;">// 6 HOT-SWAP SECURITY MODES — switch with <code style="color:var(--accent-primary);">shadow-mode &lt;name&gt;</code> or SUPER+M</div>
-                <div style="border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;">
-                    <table style="width:100%;border-collapse:collapse;font-size:0.8rem;font-family:var(--font-mono);">
-                        <thead>
-                            <tr style="background:rgba(180,74,255,0.06);border-bottom:1px solid var(--glass-border);">
-                                <th style="padding:12px 16px;text-align:left;color:var(--text-secondary);font-weight:500;font-size:0.65rem;letter-spacing:2px;">MODE</th>
-                                <th style="padding:12px 16px;text-align:left;color:var(--text-secondary);font-weight:500;font-size:0.65rem;letter-spacing:2px;">TOR</th>
-                                <th style="padding:12px 16px;text-align:left;color:var(--text-secondary);font-weight:500;font-size:0.65rem;letter-spacing:2px;">DNS</th>
-                                <th style="padding:12px 16px;text-align:left;color:var(--text-secondary);font-weight:500;font-size:0.65rem;letter-spacing:2px;">FIREWALL</th>
-                                <th style="padding:12px 16px;text-align:left;color:var(--text-secondary);font-weight:500;font-size:0.65rem;letter-spacing:2px;">USE CASE</th>
-                            </tr>
-                        </thead>
-                        <tbody style="color:#ddd;">
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:12px 16px;color:#22c55e;">normal</td><td style="padding:12px 16px;color:#555;">off</td><td style="padding:12px 16px;">dnscrypt</td><td style="padding:12px 16px;">deny in</td><td style="padding:12px 16px;color:var(--text-secondary);">Daily driver</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:12px 16px;color:var(--accent-primary);">dev</td><td style="padding:12px 16px;color:#555;">off</td><td style="padding:12px 16px;">dnscrypt</td><td style="padding:12px 16px;">docker open</td><td style="padding:12px 16px;color:var(--text-secondary);">Development</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:12px 16px;color:#ef4444;">audit</td><td style="padding:12px 16px;color:#555;">off</td><td style="padding:12px 16px;">dnscrypt</td><td style="padding:12px 16px;">scan open</td><td style="padding:12px 16px;color:var(--text-secondary);">Active audit</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:12px 16px;color:#f59e0b;">privacy</td><td style="padding:12px 16px;color:#22c55e;">on</td><td style="padding:12px 16px;">dnscrypt+Tor</td><td style="padding:12px 16px;">Tor-only</td><td style="padding:12px 16px;color:var(--text-secondary);">Travel / hostile networks</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:12px 16px;color:#94a3b8;">ghost</td><td style="padding:12px 16px;color:#22c55e;">on</td><td style="padding:12px 16px;">Tor-only</td><td style="padding:12px 16px;">drop all</td><td style="padding:12px 16px;color:var(--text-secondary);">Maximum lockdown</td></tr>
-                            <tr><td style="padding:12px 16px;color:#888;">undercover</td><td style="padding:12px 16px;color:#555;">off</td><td style="padding:12px 16px;">dnscrypt</td><td style="padding:12px 16px;">neutral</td><td style="padding:12px 16px;color:var(--text-secondary);">Low-profile / looks like a normal desktop</td></tr>
-                        </tbody>
-                    </table>
+        <!-- Download -->
+        <section id="download" class="site-section">
+            <div class="section-label">// Download</div>
+            <h2 class="section-title">Get ShadowCypher.</h2>
+            <p class="section-lead">The web app needs nothing installed. The desktop app is built from source; there's no packaged release yet.</p>
+            <div class="site-grid">
+                <div class="site-card">
+                    <div class="card-tag">Linux desktop · v1.0</div>
+                    <h3>Desktop app</h3>
+                    <p>Needs CMake, Ninja, a C++17 compiler, OpenSSL and Qt 6.4 or newer.</p>
+                    <code class="code-block">git clone https://github.com/jakes1345/ShadowCypher
+cd ShadowCypher
+cmake -S shadowcypher-qt -B build -G Ninja
+cmake --build build</code>
+                    <p class="fine-print">Sign in from the app: it opens your browser to approve the device.</p>
                 </div>
-            </div>
-
-            <!-- Build + Test yourself -->
-            <div style="margin-bottom:40px;">
-                <div class="mono" style="font-size:0.65rem;color:var(--text-secondary);letter-spacing:2px;margin-bottom:20px;">// BUILD IT YOURSELF</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
-                    <div>
-                        <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);margin-bottom:10px;letter-spacing:2px;">NATIVE (Arch host)</div>
-                        <div style="background:#000;border:1px solid #222;border-radius:6px;padding:16px;font-family:var(--font-mono);font-size:0.75rem;color:#94a3b8;line-height:2;">
-                            <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">sudo pacman -S archiso</span></div>
-                            <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">git clone https://github.com/jakes1345/ShadowCypher</span></div>
-                            <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">cd ShadowCypher/shadowos</span></div>
-                            <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">sudo ./build.sh</span></div>
-                            <div style="color:#555;"># out/shadowos-&lt;date&gt;-x86_64.iso (~7.4 GB)</div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);margin-bottom:10px;letter-spacing:2px;">DOCKER (any host)</div>
-                        <div style="background:#000;border:1px solid #222;border-radius:6px;padding:16px;font-family:var(--font-mono);font-size:0.75rem;color:#94a3b8;line-height:2;">
-                            <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">git clone https://github.com/jakes1345/ShadowCypher</span></div>
-                            <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">cd ShadowCypher/shadowos</span></div>
-                            <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">./build-docker.sh</span></div>
-                            <div style="color:#555;"># builds in Arch-in-Docker, outputs ISO</div>
-                            <div style="color:#555;"># ~20-45 min depending on your hardware</div>
-                        </div>
+                <div class="site-card">
+                    <div class="card-tag">Android · v1.1</div>
+                    <h3>Android apps</h3>
+                    <p>Install the APK directly. You may need to allow installs from your browser.</p>
+                    <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+                        <a href="https://github.com/jakes1345/ShadowCypher/releases/latest/download/shadowcypher-v1.1.apk" class="btn-primary" style="text-align:center;">ShadowCypher Guardian (.apk)</a>
+                        <a href="https://github.com/jakes1345/ShadowCypher/releases/latest/download/shadow-ai-v1.1.apk" class="btn-primary btn-outline" style="text-align:center;">Shadow AI (.apk)</a>
                     </div>
                 </div>
-
-                <div style="margin-bottom:20px;">
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);margin-bottom:10px;letter-spacing:2px;">TEST IN QEMU (no USB needed)</div>
-                    <div style="background:#000;border:1px solid #222;border-radius:6px;padding:16px;font-family:var(--font-mono);font-size:0.75rem;color:#94a3b8;line-height:2;">
-                        <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">qemu-system-x86_64 -enable-kvm -m 4G -cdrom out/shadowos-*.iso -vga virtio</span></div>
-                    </div>
-                </div>
-
-                <div>
-                    <div class="mono" style="font-size:0.6rem;color:var(--accent-primary);margin-bottom:10px;letter-spacing:2px;">FLASH TO USB</div>
-                    <div style="background:#000;border:1px solid #222;border-radius:6px;padding:16px;font-family:var(--font-mono);font-size:0.75rem;color:#94a3b8;line-height:2;">
-                        <div><span style="color:#555;">$</span> <span style="color:var(--accent-primary);">sudo ./shadowos/flash-usb.sh out/shadowos-*.iso /dev/sdX</span> &nbsp;<span style="color:#555;"># replace sdX with your USB device</span></div>
-                    </div>
+                <div class="site-card">
+                    <div class="card-tag">Any browser</div>
+                    <h3>Web app</h3>
+                    <p>Create an account with a handle and you get your mail address, chat, drive and dashboard right away.</p>
+                    <a href="/app/" class="btn-primary" style="display:block;text-align:center;">Open the web app</a>
                 </div>
             </div>
+        </section>
 
-            <!-- Credentials notice -->
-            <div style="padding:20px 24px;background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.2);border-radius:6px;max-width:640px;">
-                <div class="mono" style="font-size:0.6rem;color:#f59e0b;letter-spacing:2px;margin-bottom:8px;">// DEFAULT LIVE ISO CREDENTIALS</div>
-                <div class="mono" style="font-size:0.8rem;color:var(--text-secondary);line-height:2;">
-                    <div>User: <span style="color:#fff;">shadow</span> &nbsp;/&nbsp; Password: <span style="color:#fff;">shadow</span></div>
-                    <div>Root: <span style="color:#fff;">shadow</span></div>
-                </div>
-                <p style="font-size:0.75rem;color:#555;margin-top:10px;margin-bottom:0;">These are reset by the installer. Do not leave them on installed systems.</p>
-            </div>
-
-            <!-- GitHub link -->
-            <div style="margin-top:40px;padding:24px;border:1px dashed rgba(180,74,255,0.2);border-radius:6px;text-align:center;">
-                <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Full source, build scripts, branding renderer, and profile config are all open source.</p>
-                <a href="https://github.com/jakes1345/ShadowCypher/tree/main/shadowos" target="_blank" rel="noopener" style="color:var(--accent-primary);font-size:0.82rem;text-decoration:none;">View shadowos/ on GitHub →</a>
-            </div>
-        </div>
-    </div>
-
-
-    <div id="page-pricing" class="page">
-        <div class="content-section" style="text-align:center;">
-            <h2 style="font-size:2.5rem;margin-bottom:10px;letter-spacing:5px;">Go Pro</h2>
-            <p style="color:#bbb;margin-bottom:60px;max-width:600px;margin-left:auto;margin-right:auto;">Community edition is free forever. Pro unlocks the tools that make ShadowCypher a sovereign operating environment.</p>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:30px;max-width:1000px;margin:0 auto;">
+        <!-- Pricing -->
+        <section id="pricing" class="site-section">
+            <div class="section-label">// Pricing</div>
+            <h2 class="section-title">Free to use. Pay for more monitoring.</h2>
+            <p class="section-lead">The desktop app and self-hosting are free. Paid plans on the hosted service raise the Guardian limits and add alerts. New accounts get 14 days of Guardian Pro.</p>
+            <div class="site-grid" style="align-items:stretch;">
                 <div class="price-card">
                     <div class="price-tier">COMMUNITY</div>
                     <div class="price-amount">$0</div>
                     <div class="price-period">forever</div>
                     <ul class="price-features">
-                        <li>Full CLI toolkit</li>
-                        <li>29 tactical scripts</li>
-                        <li>One-time network scan</li>
-                        <li>Basic router audit</li>
-                        <li>Local AI inference</li>
-                        <li>ShadowScript DSL</li>
+                        <li>Desktop app, all local features</li>
+                        <li>Mail, chat, drive and office</li>
+                        <li>1 Guardian agent</li>
+                        <li>7 days of scan history</li>
+                        <li>Shadow AI with your own Anthropic key</li>
                     </ul>
-                    <a href="https://github.com/jakes1345/ShadowCypher" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;">CLONE REPO</a>
+                    <a href="/app/" class="btn-primary btn-outline" style="display:block;text-align:center;">Create an account</a>
                 </div>
                 <div class="price-card featured">
                     <div class="price-badge">MOST POPULAR</div>
                     <div class="price-tier">GUARDIAN PRO</div>
-                    <div class="price-amount">$9<span style="font-size:1rem;">.99</span></div>
-                    <div class="price-period">/month</div>
+                    <div class="price-amount">$9.99</div>
+                    <div class="price-period">per month</div>
                     <ul class="price-features">
                         <li>Everything in Community</li>
-                        <li>24/7 network monitoring</li>
-                        <li>ARP spoof alerts</li>
-                        <li>Auto-hardening</li>
-                        <li>Ghost Mode</li>
-                        <li>AI security assistant</li>
-                        <li>Mobile companion</li>
-                        <li>Family dashboard</li>
+                        <li>10 Guardian agents</li>
+                        <li>90 days of scan history</li>
+                        <li>Email and push alerts</li>
+                        <li>Hosted Shadow AI</li>
+                        <li>Webhooks to Slack, Discord and Teams</li>
                     </ul>
-                    <a data-href="/app/?nav=pricing" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;cursor:pointer;">SUBSCRIBE — $9.99/mo</a>
+                    <a href="/app/?nav=pricing" class="btn-primary" style="display:block;text-align:center;">Start with Pro</a>
                 </div>
                 <div class="price-card">
                     <div class="price-tier">OPERATOR</div>
                     <div class="price-amount">$49</div>
-                    <div class="price-period">/month</div>
+                    <div class="price-period">per month</div>
                     <ul class="price-features">
-                        <li>Everything in Guardian</li>
-                        <li>AI Autopilot missions</li>
-                        <li>Swarm telemetry cloud</li>
-                        <li>Team collaboration</li>
-                        <li>Report generation</li>
-                        <li>Priority support</li>
-                        <li>Threat intel feed</li>
+                        <li>Everything in Guardian Pro</li>
+                        <li>Unlimited agents and history</li>
+                        <li>Teams</li>
+                        <li>Remote missions on your agents</li>
                     </ul>
-                    <a data-href="/app/?nav=pricing" class="btn-primary" style="width:100%;text-align:center;font-size:0.7rem;padding:15px 20px;cursor:pointer;">SUBSCRIBE — $49/mo</a>
+                    <a href="/app/?nav=pricing" class="btn-primary btn-outline" style="display:block;text-align:center;">Choose Operator</a>
                 </div>
             </div>
+        </section>
 
-            <!-- Feature comparison table -->
-            <div style="max-width:1000px;margin:80px auto 0;text-align:left;">
-                <h3 style="font-size:1.2rem;letter-spacing:3px;color:var(--accent-primary);margin-bottom:30px;text-transform:uppercase;font-family:var(--font-mono);">// What you get on each plan</h3>
-                <div style="border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;background:rgba(180,74,255,0.02);">
-                    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-                        <thead>
-                            <tr style="background:rgba(180,74,255,0.08);border-bottom:1px solid var(--glass-border);">
-                                <th style="padding:18px 20px;text-align:left;color:var(--text-secondary);font-weight:500;letter-spacing:2px;font-size:0.7rem;text-transform:uppercase;">Feature</th>
-                                <th style="padding:18px 20px;text-align:center;color:#fff;font-weight:700;letter-spacing:1px;">Community</th>
-                                <th style="padding:18px 20px;text-align:center;color:var(--accent-primary);font-weight:700;letter-spacing:1px;">Guardian Pro</th>
-                                <th style="padding:18px 20px;text-align:center;color:var(--accent-primary);font-weight:700;letter-spacing:1px;">Operator</th>
-                            </tr>
-                        </thead>
-                        <tbody style="color:#ddd;">
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">CLI toolkit + 29 tactical scripts</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">On-demand network scan</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">24/7 continuous monitoring</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Real-time threat alerts (ARP spoof, new device)</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Devices monitored simultaneously</td><td style="text-align:center;">1</td><td style="text-align:center;">10</td><td style="text-align:center;">Unlimited</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Scan history retention</td><td style="text-align:center;">7 days</td><td style="text-align:center;">90 days</td><td style="text-align:center;">Unlimited</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Auto-hardening (firewall, SSH, services)</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Privacy Mode (Tor + kill-switch)</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">AI security assistant</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Team accounts + shared dashboards</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">AI Autopilot missions</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td></tr>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:14px 20px;">Threat intel feed</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;color:#666;">—</td><td style="text-align:center;">✅</td></tr>
-                            <tr><td style="padding:14px 20px;">Priority support</td><td style="text-align:center;color:#666;">community</td><td style="text-align:center;">email</td><td style="text-align:center;">email + chat</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <p style="color:var(--text-secondary);font-size:0.75rem;margin-top:20px;text-align:center;">
-                    All paid plans start with a <strong style="color:var(--accent-primary);">14-day free trial</strong>. Cancel any time, no questions.
-                </p>
-            </div>
-        </div>
-    </div>
+        <section class="site-section" style="padding-bottom:40px;">
+            <p class="fine-print" style="max-width:760px;">ShadowCypher includes offensive security tools. Use them only on systems you own or have written permission to test; anything else is illegal. Released under the MIT License.</p>
+        </section>
+    </main>
 
-
-
-    <footer style="text-align:center;padding:60px 20px;border-top:1px solid var(--glass-border);margin-top:60px;">
+    <footer style="text-align:center;padding:60px 20px;border-top:1px solid var(--glass-border);margin-top:40px;position:relative;z-index:1;">
         <p style="font-family:var(--font-heading);font-size:1rem;font-weight:700;letter-spacing:0.05em;margin-bottom:8px;">ShadowCypher</p>
-        <p style="color:var(--text-muted);font-size:0.78rem;">Qt6 · C++ · Arch Linux</p>
+        <p style="color:var(--text-muted);font-size:0.78rem;">Qt6 · C++ · Cloudflare Workers · Arch Linux</p>
         <div style="margin-top:20px;display:flex;gap:30px;justify-content:center;flex-wrap:wrap;">
             <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">GitHub</a>
             <a href="/blog/" style="color:var(--accent-primary);text-decoration:none;font-size:0.8rem;">Blog</a>
@@ -985,7 +289,6 @@
         </div>
     </footer>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="/js/site.js"></script>
 </body>
 </html>
