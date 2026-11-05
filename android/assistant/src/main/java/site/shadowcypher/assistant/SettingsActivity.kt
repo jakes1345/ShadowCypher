@@ -22,6 +22,10 @@ class SettingsActivity : AppCompatActivity() {
         private const val PREFS = "shadow_prefs"
         private const val KEY_API = "sc_api_key"
         private const val KEY_WAKE = "wake_word_enabled"
+        private const val KEY_PENDING_DEVICE = "signin_pending_device_code"
+        private const val KEY_PENDING_CODE = "signin_pending_user_code"
+        private const val KEY_PENDING_UNTIL = "signin_pending_until"
+        private const val KEY_PENDING_INTERVAL = "signin_pending_interval"
         private const val API_BASE = "https://api.shadowcypher.site"
         private const val CONNECTED_TEXT = "Connected. Long-press Home or the power button, or say 'Hey Shadow'."
     }
@@ -116,22 +120,23 @@ class SettingsActivity : AppCompatActivity() {
             setPadding(4, 8, 0, 0)
             text = "Approve this phone on shadowcypher.site. Your password never goes through this app."
         }
+        signInStatusView = signInStatus
+        onSignedIn = { key, email ->
+            prefs.edit().putString(KEY_API, key).apply()
+            keyInput.setText(key)
+            signInStatus.text = "✓ Signed in as $email"
+            signInStatus.setTextColor(0xFF22C55E.toInt())
+            statusTitle.text = "● CONNECTED"
+            statusTitle.setTextColor(0xFF22C55E.toInt())
+            statusDesc.text = CONNECTED_TEXT
+        }
         signInBtn.setOnClickListener {
             signInBtn.isEnabled = false
             signInStatus.setTextColor(0xFF94A3B8.toInt())
             signInStatus.text = "Starting…"
             scope.launch {
-                val result = browserSignIn(signInStatus)
+                if (startBrowserSignIn(signInStatus)) resumePendingSignIn()
                 signInBtn.isEnabled = true
-                if (result != null) {
-                    prefs.edit().putString(KEY_API, result.first).apply()
-                    keyInput.setText(result.first)
-                    signInStatus.text = "✓ Signed in as ${result.second}"
-                    signInStatus.setTextColor(0xFF22C55E.toInt())
-                    statusTitle.text = "● CONNECTED"
-                    statusTitle.setTextColor(0xFF22C55E.toInt())
-                    statusDesc.text = CONNECTED_TEXT
-                }
             }
         }
 
@@ -319,6 +324,9 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (::assistStatus.isInitialized) updateAssistStatus()
+        // Coming back from the browser (or after Android recreated this screen):
+        // pick up a sign-in that's still waiting for approval.
+        resumePendingSignIn()
     }
 
     /** Shows whether Shadow currently holds the digital assistant role. */
@@ -334,43 +342,80 @@ class SettingsActivity : AppCompatActivity() {
         assistStatus.setTextColor(if (held) 0xFF22C55E.toInt() else 0xFFF59E0B.toInt())
     }
 
-    /**
-     * Device-flow sign-in, same as the desktop app: get a code, open the approval
-     * page, poll until approved. Returns (apiKey, email) or null.
-     */
-    private suspend fun browserSignIn(status: TextView): Pair<String, String>? {
+    // ── Browser sign-in (device flow, same as the desktop app) ──────────────
+    // The pending code is saved, so approval still lands if Android closes this
+    // screen while the user is in the browser.
+
+    private var signInStatusView: TextView? = null
+    private var onSignedIn: ((String, String) -> Unit)? = null
+    private var pollJob: Job? = null
+
+    /** Gets a code, saves it as pending and opens the approval page. */
+    private suspend fun startBrowserSignIn(status: TextView): Boolean {
         val start = withContext(Dispatchers.IO) {
             postJson("/v1/auth/device", JSONObject().put("client_label", "Shadow AI (Android)"))
         }
         if (start == null || start.second != 200) {
             status.text = "Couldn't reach ShadowCypher. Check your connection and try again."
             status.setTextColor(0xFFEF4444.toInt())
-            return null
+            return false
         }
         val s = start.first
-        val code = s.optString("user_code")
+        pollJob?.cancel()
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_PENDING_DEVICE, s.optString("device_code"))
+            .putString(KEY_PENDING_CODE, s.optString("user_code"))
+            .putLong(KEY_PENDING_UNTIL, System.currentTimeMillis() + s.optInt("expires_in", 600) * 1000L)
+            .putInt(KEY_PENDING_INTERVAL, s.optInt("interval", 5).coerceAtLeast(2))
+            .apply()
+        status.text = "Approve this phone in your browser. Code: ${s.optString("user_code")}"
         val url = s.optString("verification_uri_complete").ifBlank { s.optString("verification_uri") }
-        status.text = "Approve this phone in your browser. Code: $code"
         try { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) } catch (_: Exception) {}
-        val deadline = System.currentTimeMillis() + s.optInt("expires_in", 600) * 1000L
-        val interval = s.optInt("interval", 5).coerceAtLeast(2) * 1000L
-        while (System.currentTimeMillis() < deadline) {
-            delay(interval)
-            val poll = withContext(Dispatchers.IO) {
-                postJson("/v1/auth/device/poll", JSONObject().put("device_code", s.optString("device_code")))
-            } ?: continue
-            when (poll.first.optString("status")) {
-                "authorized" -> {
+        return true
+    }
+
+    /** Polls the saved pending code until approved, denied or expired. Safe to call repeatedly. */
+    private fun resumePendingSignIn() {
+        if (pollJob?.isActive == true) return
+        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val deviceCode = prefs.getString(KEY_PENDING_DEVICE, null) ?: return
+        val until = prefs.getLong(KEY_PENDING_UNTIL, 0L)
+        val interval = prefs.getInt(KEY_PENDING_INTERVAL, 5) * 1000L
+        val status = signInStatusView
+        status?.setTextColor(0xFF94A3B8.toInt())
+        status?.text = "Approve this phone in your browser. Code: ${prefs.getString(KEY_PENDING_CODE, "")}"
+        pollJob = scope.launch {
+            var outcome = "expired"
+            var first = true
+            while (System.currentTimeMillis() < until) {
+                if (!first) delay(interval)
+                first = false
+                val poll = withContext(Dispatchers.IO) {
+                    postJson("/v1/auth/device/poll", JSONObject().put("device_code", deviceCode))
+                } ?: continue
+                val st = poll.first.optString("status")
+                if (st == "authorized") {
                     val key = poll.first.optString("api_key")
-                    if (key.isNotBlank()) return key to poll.first.optString("email", "your account")
+                    if (key.isNotBlank()) {
+                        clearPendingSignIn()
+                        onSignedIn?.invoke(key, poll.first.optString("email", "your account"))
+                        return@launch
+                    }
                 }
-                "denied" -> { status.text = "Sign-in was denied."; status.setTextColor(0xFFEF4444.toInt()); return null }
-                "expired", "consumed" -> break
+                if (st == "denied") { outcome = "denied"; break }
+                if (st == "expired" || st == "consumed") break
             }
+            clearPendingSignIn()
+            status?.text = if (outcome == "denied") "Sign-in was denied." else "The sign-in code expired. Try again."
+            status?.setTextColor(0xFFEF4444.toInt())
         }
-        status.text = "The sign-in code expired. Try again."
-        status.setTextColor(0xFFEF4444.toInt())
-        return null
+    }
+
+    private fun clearPendingSignIn() {
+        getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .remove(KEY_PENDING_DEVICE).remove(KEY_PENDING_CODE)
+            .remove(KEY_PENDING_UNTIL).remove(KEY_PENDING_INTERVAL)
+            .apply()
     }
 
     /** POST JSON; returns (body, status) or null on network failure. Error bodies are read too. */

@@ -12,6 +12,7 @@
         <activity
             android:name=".SettingsActivity"
             android:label="Shadow AI"
+            android:launchMode="singleTask"
             android:theme="@style/AssistantTheme"
             android:exported="true">
             <intent-filter>
