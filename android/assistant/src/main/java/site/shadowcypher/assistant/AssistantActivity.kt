@@ -76,7 +76,22 @@ class AssistantActivity : AppCompatActivity() {
             }
             setBackgroundColor(0xFF06060F.toInt())
         }
-        setContentView(webView)
+        // Edge-to-edge (Android 15+): adjustResize is ignored, so pad the page by the
+        // status bar on top and by the keyboard or navigation bar at the bottom.
+        val container = android.widget.FrameLayout(this).apply {
+            setBackgroundColor(0xFF06060F.toInt())
+            addView(webView, android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
+        }
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(container) { v, insets ->
+            val t = androidx.core.view.WindowInsetsCompat.Type.systemBars() or androidx.core.view.WindowInsetsCompat.Type.displayCutout()
+            val bars = insets.getInsets(t)
+            val ime = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
+            v.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
+            androidx.core.view.WindowInsetsCompat.CONSUMED
+        }
+        setContentView(container)
 
         initTTS()
         initSTT()
