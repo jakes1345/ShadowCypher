@@ -1,138 +1,31 @@
-# ShadowOS Driver Package Management
+# Drivers
 
-Centralized driver management for ShadowOS, supporting NVIDIA, AMD, Intel, wireless, and storage controllers.
+This folder is empty apart from this README. Driver installation is done by `../install-drivers.sh`, which installs packages with `pacman` rather than from files here. The ISO build doesn't run it; it's meant for an installed system.
 
-## Directory Structure
+## Usage
 
-```
-drivers/
-├── nvidia/          NVIDIA GPU drivers (proprietary, open-source fallback)
-├── amd/             AMD GPU drivers (AMDGPU stack)
-├── intel/           Intel GPU drivers (iGPU, Arc)
-├── wireless/        Wireless firmware (Intel, Realtek, Qualcomm, Broadcom)
-└── storage/         NVMe, SATA, RAID controller firmware
-```
+Run it as root from the `shadowos` folder, with one category:
 
-## Quick Start
-
-Install all drivers:
 ```bash
-sudo /home/jack/ShadowCypher/shadowos/install-drivers.sh all
+sudo ./install-drivers.sh nvidia      # or amd, intel, wireless, storage, all
 ```
 
-Install specific driver category:
-```bash
-sudo /home/jack/ShadowCypher/shadowos/install-drivers.sh nvidia
-sudo /home/jack/ShadowCypher/shadowos/install-drivers.sh amd
-sudo /home/jack/ShadowCypher/shadowos/install-drivers.sh intel
-sudo /home/jack/ShadowCypher/shadowos/install-drivers.sh wireless
-sudo /home/jack/ShadowCypher/shadowos/install-drivers.sh storage
-```
+Each category checks for matching hardware with `lspci` (except `wireless` and `storage`, which always run), syncs the package database and installs:
 
-## Supported Hardware
+| Category | Packages |
+|---|---|
+| `nvidia` | `nvidia`, `nvidia-utils`, `lib32-nvidia-utils`, then `linux-headers`. Falls back to `xf86-video-nouveau` if that install fails |
+| `amd` | `xf86-video-amdgpu`, `mesa`, `lib32-mesa`, `vulkan-radeon`, `lib32-vulkan-radeon`. Falls back to `xf86-video-ati` |
+| `intel` | `xf86-video-intel`, `mesa`, `lib32-mesa`, `vulkan-intel`, `lib32-vulkan-intel`, `intel-ucode` |
+| `wireless` | `wireless_tools`, `wpa_supplicant`, `dialog`, Intel and Atheros firmware, `rtl88xxau-airmon-git`, `broadcom-wl` |
+| `storage` | `nvme-cli`, `hdparm`, `sdparm`, `mdadm`, `linux-firmware` |
 
-### NVIDIA
-- GeForce GTX 900 series and newer (RTX 40/50 series supported)
-- Quadro / RTX workstation GPUs
-- Fallback: `xf86-video-nouveau` (open-source)
+Output and errors go to `/var/log/shadowos-drivers.log`.
 
-### AMD
-- Radeon RX 6000, 7000 series
-- RDNA, RDNA 2, RDNA 3 architectures
-- Legacy: Polaris, Vega fallback
+## Known issues
 
-### Intel
-- Integrated UHD Graphics (Gen 8+)
-- Arc A770, A750 discrete GPUs
-- Data Center GPU Flex
-
-### Wireless
-- Intel AX200/AX201 (Wi-Fi 6)
-- Realtek RTL8169/RTL8111 (Ethernet)
-- Qualcomm Atheros AR9xxx, QCA9xxx
-- Broadcom BCM94352
-
-### Storage
-- NVMe: Samsung, Micron, WD, SK Hynix
-- SATA: AHCI controllers
-- RAID: MD software RAID, hardware controller firmware
-
-## Driver Installation Details
-
-Each driver category installs:
-1. **Package dependencies** — Core libraries and tools
-2. **Firmware** — Microcode and device firmware
-3. **Configuration** — Modprobe rules, xorg.conf snippets (if needed)
-4. **Verification** — Automatic device detection and status logging
-
-### Installation Log
-All installations are logged to `/var/log/shadowos-drivers.log`
-
-## Troubleshooting
-
-### NVIDIA
-If proprietary driver fails to load:
-1. Check BIOS: disable Secure Boot if driver is unsigned
-2. Check kernel: `dmesg | grep nvidia` for module load errors
-3. Fallback: installer auto-switches to `xf86-video-nouveau` if needed
-4. Verify: `nvidia-smi` should show GPU info
-
-### AMD
-If AMDGPU doesn't detect GPU:
-1. Verify: `lspci | grep -i amd`
-2. Check BIOS: enable "PCIe Gen" (not limited to Gen 2)
-3. Module check: `lsmod | grep amdgpu`
-4. Fallback: `xf86-video-ati` (legacy driver)
-
-### Intel
-If iGPU is not detected:
-1. Verify BIOS: enable iGPU (sometimes labeled "Integrated Graphics")
-2. Check kernel: `dmesg | grep -i intel` for initialization
-3. Verify: `lspci | grep Intel | grep VGA`
-4. Wayland hint: Intel GPU works best with Wayland (Hyprland)
-
-### Wireless
-If network device not detected:
-1. Verify: `ip link show` or `iwconfig`
-2. Check firmware: `dmesg | grep -i firmware`
-3. Module load: `modprobe -v <module-name>`
-4. Restart networking: `sudo systemctl restart NetworkManager`
-
-### Storage
-If NVMe drive not detected:
-1. Verify: `lsblk` or `nvme list`
-2. Check BIOS: enable NVMe support (usually default)
-3. Module: Ensure `nvme` module is loaded
-4. Firmware: Some drives benefit from vendor firmware updates
-
-## Adding Custom Drivers
-
-To add a custom driver:
-1. Create a subdirectory under `drivers/`
-2. Place driver package or build script in the subdirectory
-3. Update `install-drivers.sh` with a new case statement
-4. Document in this README
-
-Example structure:
-```
-drivers/custom/
-├── README.md              Driver-specific docs
-├── build.sh               Optional: build from source
-└── firmware/              Firmware blobs (if any)
-```
-
-## License & Attribution
-
-ShadowOS drivers include:
-- **NVIDIA**: Proprietary (EULA) + Nouveau (MIT)
-- **AMD**: Open-source AMDGPU (MIT/Apache)
-- **Intel**: Open-source i915 (MIT)
-- **Wireless**: Mixed (GPL-2, BSD, proprietary firmware blobs)
-- **Storage**: Open-source kernel modules + vendor firmware (typically proprietary)
-
-See individual driver subdirectories for license details.
-
-## Related Documentation
-
-- [DRIVER_MANAGEMENT.md](../docs/DRIVER_MANAGEMENT.md) — Full management guide
-- [ShadowOS README](../README.md) — System overview
+- The Intel check never matches (`lspci | grep -q Intel | grep -q VGA` gives the second `grep` no input), so `intel` always skips.
+- The `nvidia` package only ships modules for the stock `linux` kernel, and the script installs `linux-headers`. When booted into `linux-hardened` you need the DKMS variant of the driver and `linux-hardened-headers`.
+- `xf86-video-*` packages are X11 drivers. Hyprland runs on Wayland and only needs Mesa or the NVIDIA driver.
+- Some packages, such as `rtl88xxau-airmon-git`, may only be available from AUR or the extra repos ShadowOS enables. Failures are logged as warnings and the script carries on.
+- Nothing is written to modprobe or Xorg config.

@@ -1,18 +1,16 @@
-# Vendor-Specific Firmware
+# Vendor firmware
 
-Firmware packages and update instructions for certified hardware vendors.
+This folder is empty apart from this README. No firmware files are stored in the repo.
 
-## Directories
-
-- **bios/** - System firmware (BIOS/UEFI)
-- **wifi/** - WiFi adapter firmware
-- **storage/** - NVMe/SATA controller firmware
-- **graphics/** - GPU firmware
-
-## Updating Firmware
+Firmware updates go through fwupd, using `../firmware-manager.sh`:
 
 ```bash
-sudo shadowos-firmware-manager install
+sudo ./firmware-manager.sh check     # refresh metadata and list available updates
+sudo ./firmware-manager.sh install   # apply them (runs fwupdmgr update --allow-older)
+./firmware-manager.sh list           # devices fwupd knows about
+./firmware-manager.sh history        # past updates
 ```
 
-Firmware is automatically detected and installed.
+Run it from the `shadowos` folder. It isn't installed into the ISO, and `fwupd` isn't in the ISO's package list, so install that first (`pacman -S fwupd`). What can be updated depends on the vendor publishing firmware to LVFS.
+
+`install` passes `--allow-older`, so it will also accept a downgrade if one is offered.

@@ -1,19 +1,12 @@
 # Native runtime
 
-`shadowcypher-runtime` is the Qt6/C++ execution backend. It builds and runs without
-Python. The desktop ShadowScript page uses this executable directly; it does not
-need the Python IPC daemon to execute missions.
+`shadowcypher-runtime` is the Qt6/C++ execution backend for ShadowScript, plus a native Guardian agent and a small MCP server. It builds and runs without Python. The desktop ShadowScript page starts this executable to run missions.
 
-This is an incremental migration. Other desktop pages still use the Python daemon,
-and the native agent and MCP server do not yet replace every feature of their
-Python counterparts. Keep existing installations until the required features are
-available here. No Python fallback is performed by this runtime.
+It doesn't yet do everything the old Python app did. The gaps are listed in each section below, and anything not ported fails with an explicit error rather than falling back to something else.
 
 ## Build and test
 
-Requires C++17, CMake, and Qt 6.4 or newer (Core and Network; Qt Test for tests).
-Building the full desktop additionally requires Widgets, Concurrent, WebSockets,
-and OpenSSL. Build artifacts can stay outside the checkout:
+Requires C++17, CMake, and Qt 6.4 or newer (Core and Network; Qt Test for tests). Building the full desktop app also needs Widgets, Concurrent, WebSockets and OpenSSL. Build output can stay outside the checkout:
 
 ```sh
 cmake -S shadowcypher-qt/core -B /tmp/shadowcypher-runtime -DCMAKE_BUILD_TYPE=Release
@@ -21,9 +14,7 @@ cmake --build /tmp/shadowcypher-runtime
 ctest --test-dir /tmp/shadowcypher-runtime --output-on-failure
 ```
 
-The full desktop CMake build also builds the runtime. `cmake --install` installs
-both executables; ShadowOS stages them together. To run from a build directory,
-keep the runtime in its `core/` subdirectory next to the desktop executable.
+The full desktop CMake build also builds the runtime. `cmake --install` installs both executables, and the ShadowOS build stages them together. The desktop app looks for the runtime next to its own executable, then in a `core/` subdirectory, then on `PATH`, so running from a build directory works as is.
 
 ## ShadowScript
 
@@ -34,20 +25,12 @@ shadowcypher-runtime script mission.shadow --config-ini ~/.config/shadowcypher/c
 ```
 
 `check` validates syntax only. It does not check external tools or run a mission.
-Supported language constructs include variables, target selection, conditionals,
-FOR/WHILE, BREAK/RETURN, MAP/FILTER/YIELD, relative LOAD, output, sleep, and UNSAFE
-blocks. C++, Go, and Rust blocks execute in separate processes; they require their
-respective compilers. Rust blocks retain the `serde_json` Cargo dependency.
 
-`!sys` and `!pipe` require UNSAFE and split arguments without shell interpretation.
-Pipelines, redirection, and shell expansion are not implicit. Native function calls
-also require UNSAFE. Compilation occurs in a private temporary directory, removed
-when the call finishes. Process timeouts, cancellation, output limits, loop limits,
-and LOAD nesting limits apply. These controls are not an operating-system sandbox.
+The language supports variables, target selection, conditionals, FOR/WHILE, BREAK/RETURN, MAP/FILTER/YIELD, relative LOAD, output, sleep and UNSAFE blocks. C++, Go and Rust blocks are compiled and run as separate processes, so they need `c++`, `go` or `cargo` installed. Rust blocks keep the `serde_json` Cargo dependency.
 
-SCAN supports up to 4096 TCP ports per call. AI uses the configured Ollama service;
-it does not include the Python engine's cloud fallback, RAG, team prompts, or
-ShadowGuard implementation. Its analysis is limited to explicitly supplied text.
+`!sys` and `!pipe` need UNSAFE and split their arguments without a shell. Pipelines, redirection and shell expansion don't happen implicitly. Native function calls also need UNSAFE. Compilation happens in a private temporary directory that is removed when the call finishes. Process timeouts, cancellation, output limits, loop limits and LOAD nesting limits apply. These controls are not an operating-system sandbox.
+
+SCAN accepts up to 4096 TCP ports per call. AI calls go to the configured Ollama service and only analyse the text you pass in. There is no cloud fallback, RAG, team prompts or ShadowGuard here; those were part of the removed Python engine.
 
 Implemented module calls:
 
@@ -59,9 +42,7 @@ Implemented module calls:
 - `forensics`: `generate_hashes`, `hash_file`, `extract_metadata`, `extract_strings`, `binwalk_scan`
 - `vuln` and `web`: `nuclei_scan`
 
-External tools must be installed separately. Some third-party tools may themselves
-use Python. Unported module calls and directives, including SWARM, fail explicitly.
-Bundled missions that use those operations are not yet fully runnable here.
+External tools (nmap, subfinder, amass, lynis, exiftool and so on) must be installed separately, and some of them use Python themselves. Other module calls and directives, including SWARM, fail with an error. Some missions in `shadowscript/missions/` use those, so not all of them run yet.
 
 ## Guardian agent preview
 
@@ -70,34 +51,18 @@ shadowcypher-runtime agent-once --config ~/.shadowcypher/config.json
 shadowcypher-runtime agent-run --config ~/.shadowcypher/config.json --interval 600
 ```
 
-Configuration accepts `api_base`, `api_key`, `ollama_url`, and `ollama_model`.
-Protect the configuration with owner-only permissions. Desktop INI configuration
-uses `api_key`, `ollama/endpoint`, and optional `ollama/model` instead.
+The JSON config accepts `api_base`, `api_key`, `ollama_url` and `ollama_model`. Keep it readable by your user only. The desktop INI config uses `api_key`, `ollama/endpoint` and an optional `ollama/model` instead. `--interval` takes 10 to 86400 seconds.
 
-The native agent registers the host, sends heartbeats, and uploads the current
-neighbor table. Linux uses `ip -j neigh`; other platforms use `arp -a`. This does
-not discover hosts absent from the neighbor table or fingerprint their services.
-Router/DNS/firewall/hardening audits, incident detection, automatic updates, device
-login, and service installation remain in the Python agent.
+The native agent registers the host, sends heartbeats and uploads the current neighbour table. On Linux it reads `ip -j neigh`; elsewhere it parses `arp -a`. It won't find hosts that aren't already in the neighbour table, and it doesn't fingerprint services. The router, DNS, firewall and hardening audits, incident detection, automatic updates, device login and service installation are still only in the Python agent (`agent/`).
 
-The default state file is `~/.shadowcypher/native-agent-state.json`, separate from
-the Python agent. Override it with `--state`. Only one native agent may use a state
-file at a time. Completed remote mission results are saved before submission and
-retried after a transmission failure. An interruption during mission execution
-still requires checking the server-side mission state.
+The default state file is `~/.shadowcypher/native-agent-state.json`, separate from the Python agent's. Override it with `--state`. Only one native agent can use a state file at a time. Finished remote mission results are saved before they're sent and retried if sending fails. If the agent is interrupted while a mission is running, check the mission's state on the server.
 
-Add `--missions` to allow the agent to claim remote work and execute it with the
-native ShadowScript engine. This does not fall back to executing scripts as shell
-commands. Do not enable it for queues containing unported module calls.
+Add `--missions` to let the agent claim remote missions and run them with the native ShadowScript engine. It never falls back to running a script as shell commands. Don't enable it for a queue that contains unported module calls.
 
 ## MCP preview
 
-Configure an MCP client to run `shadowcypher-runtime mcp` over standard input/output.
-Use `--config` or `--config-ini` to select Ollama settings. Standard output contains
-JSON-RPC messages only; diagnostics go to standard error.
+Point an MCP client at `shadowcypher-runtime mcp` over stdin/stdout. Use `--config` or `--config-ini` to pick the Ollama settings. Stdout carries JSON-RPC messages only; diagnostics go to stderr. Requests over 1 MiB are rejected.
 
-The current tool set is `shadowcypher_network_scan` (neighbor-table discovery),
-`shadowcypher_port_scan`, and `shadowcypher_ai_query`. The intelligence, offensive,
-and unified binary-analysis MCP tool sets remain in Python.
+There are three tools: `shadowcypher_network_scan` (reads the neighbour table), `shadowcypher_port_scan` and `shadowcypher_ai_query`. The intelligence, offensive and binary-analysis tool sets from the old Python MCP server haven't been ported.
 
-`shadowcypher-runtime capabilities` reports the available modes and MCP tools.
+`shadowcypher-runtime capabilities` prints the available modes and MCP tools as JSON.

@@ -1,54 +1,81 @@
-# ShadowCypher Guardian Agent
+# ShadowCypher Guardian agent
 
-Tiny Python daemon that scans your local network, fingerprints devices, detects ARP anomalies, and ships everything to your ShadowCypher dashboard at https://shadowcypher.site.
+A small Python daemon that scans your local network, checks a few things about the machine it runs on, and sends the results to your ShadowCypher dashboard at https://shadowcypher.site.
+
+This is the last piece of Python in the project. It's still what the site installs, but new work goes into the native runtime (`shadowcypher-runtime agent-run`, see [`shadowcypher-qt/core/README.md`](../shadowcypher-qt/core/README.md)).
 
 ## Install
 
+On Linux or macOS, `install.sh` does everything below for you. It downloads the agent into `~/.local/share/shadowcypher-agent`, creates a virtualenv with `requests`, links a `shadow-agent` wrapper into `~/.local/bin`, runs `init`, and installs the service if systemd user sessions work. Windows has `install.ps1`.
+
+To set it up by hand you need Python 3.9 or newer and `requests`:
+
 ```bash
-# Requires Python 3.10+
 pip install requests
-
-# Get your API key from https://shadowcypher.site → Account → COPY
-python3 shadowcypher_agent.py init   # paste key when prompted
+python3 shadowcypher_agent.py init    # paste the API key from your account page
+# or
+python3 shadowcypher_agent.py login   # approve this machine in the browser instead
 ```
 
-## Run
+`setup.sh` in this folder creates a local `.venv` and the `shadow-agent` wrapper if you'd rather not install `requests` globally.
 
-```bash
-# Foreground
-python3 shadowcypher_agent.py run
+## Commands
 
-# One-shot (cron / systemd one-shot timer)
-python3 shadowcypher_agent.py once
-```
+| Command | What it does |
+|---|---|
+| `init` | Writes `~/.shadowcypher/config.json` with the API key you paste |
+| `login` | Same, but gets the key through the browser device flow |
+| `run` | Runs in the foreground until stopped |
+| `once` | Runs one scan cycle and exits |
+| `update` | Checks GitHub releases for a newer agent |
+| `install-service` | Installs and starts a service (systemd user unit, launchd or a Windows scheduled task) |
+| `uninstall-service` | Removes it |
+| `status` | Shows the service status |
 
 ## What it sends
 
-| Endpoint | Frequency | Purpose |
+| Endpoint | When | Contents |
 |---|---|---|
-| `POST /v1/agents/register` | Once per install | Identifies this machine to your account |
-| `POST /v1/agents/heartbeat` | Every 60s | "still alive" ping |
-| `POST /v1/scans` | Every 10 min | Full network scan (ARP + reverse DNS + light port probe) |
-| `POST /v1/incidents` | On anomaly | ARP spoof, duplicate IP/MAC detection |
+| `POST /v1/agents/register` | First run | Hostname, OS and agent version |
+| `POST /v1/agents/heartbeat` | Every 60 s | Liveness ping |
+| `POST /v1/scans` | Every 10 min | Network scan (ARP cache, reverse DNS, a probe of 11 common ports, a guess at device type), plus DNS and firewall checks, router findings, and a hardening report every sixth cycle |
+| `POST /v1/incidents` | When something is found | ARP anomalies, exposed router services, DNS leaks, no active firewall, hardening issues |
 
-The Worker auto-creates "new device" incidents server-side when an unknown MAC appears in your scan. You see them on the dashboard incident feed.
+The API also creates a "new device" incident on its own when a scan contains a MAC address it hasn't seen before.
 
-## Config (`~/.shadowcypher/config.json`)
+### Remote missions
+
+In `run` mode the agent also polls `GET /v1/agents/<id>/missions/pending` on every heartbeat and runs whatever missions are queued for it. This agent no longer ships with a ShadowScript interpreter, so it runs each mission's script with the shell (`subprocess.run(..., shell=True)`) as the user the agent runs as, and posts the output back. Anyone who can queue a mission on your account, which means anyone holding your API key, can run commands on this machine. `once` doesn't poll missions.
+
+### Updates
+
+`run` checks GitHub releases tagged `agent-v*` at start-up and once a day. It replaces itself only if the release has both `shadowcypher_agent.py` and a matching `shadowcypher_agent.py.sha256`.
+
+## Config
+
+`~/.shadowcypher/config.json`:
 
 ```json
 {
-  "api_base": "https://shadowcypher-api.shadowcypher.workers.dev",
+  "api_base": "https://api.shadowcypher.site",
   "api_key": "sc_live_…",
   "scan_interval_sec": 600,
   "heartbeat_interval_sec": 60
 }
 ```
 
-`mode 0600`. Never commit. The state file (`~/.shadowcypher/state.json`) caches `agent_id` so re-registers are idempotent.
+The scan interval can't go below 60 seconds and the heartbeat can't go below 30. Keep the file at mode `0600` and never commit it. The state file, `~/.shadowcypher/state.json`, caches the `agent_id` so restarting doesn't register the machine again.
 
-## systemd unit (optional)
+## Running as a service
 
-Save as `/etc/systemd/system/shadowcypher-agent.service`:
+`install-service` writes a systemd user unit called `shadowcypher-guardian`, enables it and turns on lingering so it keeps running after you log out:
+
+```bash
+shadow-agent install-service
+journalctl --user -u shadowcypher-guardian -f
+```
+
+If you'd rather manage a system-wide unit yourself, something like this works:
 
 ```ini
 [Unit]
@@ -65,5 +92,3 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 ```
-
-Then: `sudo systemctl enable --now shadowcypher-agent`.
