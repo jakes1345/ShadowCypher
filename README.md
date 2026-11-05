@@ -112,7 +112,7 @@ See the guide at [shadowcypher.site/self-host](https://shadowcypher.site/self-ho
 
 ## Status of the Python code
 
-ShadowCypher moved from Python and GTK to Qt6 C++. Some Python from the earlier versions (`shadowcypher/`, `agent/`, `shadowscript/`, `tests/`) is still in the tree while the remaining pieces are ported to the Qt app and removed. New desktop work goes in `shadowcypher-qt/`.
+ShadowCypher moved from Python and GTK to Qt6 C++, and the old Python app has been removed. The one piece left is the Guardian agent (`agent/`), which the site still installs with `agent/install.sh` until the C++ daemon ships as a download. New desktop work goes in `shadowcypher-qt/`.
 
 ## Contributing and security
 
