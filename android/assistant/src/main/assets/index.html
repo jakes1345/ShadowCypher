@@ -256,6 +256,11 @@ html, body {
 .sh-msg.user { align-self: flex-end; align-items: flex-end; }
 .sh-msg.shadow { align-self: flex-start; align-items: flex-start; }
 
+.sh-bubble p { margin: 0 0 8px; }
+.sh-bubble p:last-child { margin-bottom: 0; }
+.sh-bubble ul, .sh-bubble ol { margin: 0 0 8px; padding-left: 20px; }
+.sh-bubble li { margin: 2px 0; }
+.sh-bubble code { font-family: monospace; background: rgba(255,255,255,0.08); padding: 0 4px; border-radius: 4px; }
 .sh-bubble {
   padding: 10px 14px; border-radius: 16px;
   font-size: 0.9rem; line-height: 1.5;
@@ -570,7 +575,7 @@ window.ShadowHome = (() => {
     hint.style.display = 'none';
     hist.innerHTML = _messages.map(m => `
       <div class="sh-msg ${m.role}">
-        <div class="sh-bubble">${escHtml(m.text)}</div>
+        <div class="sh-bubble">${m.role === 'shadow' ? mdToHtml(m.text) : escHtml(m.text)}</div>
         <div class="sh-msg-time">${m.time}</div>
       </div>
     `).join('');
@@ -579,6 +584,42 @@ window.ShadowHome = (() => {
 
   function escHtml(t) {
     return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  }
+
+  // Minimal Markdown for Shadow's answers. Escapes HTML first; links become plain
+  // text so tapping them can't navigate the app page away.
+  function mdInline(s) {
+    return s
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>')
+      .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '$1');
+  }
+
+  function mdToHtml(text) {
+    const esc = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const out = [];
+    let list = null;
+    const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
+    for (const raw of esc.split(/\n/)) {
+      const line = raw.trimEnd();
+      let m;
+      if ((m = /^\s*[-*•]\s+(.*)/u.exec(line))) {
+        if (list !== 'ul') { close(); out.push('<ul>'); list = 'ul'; }
+        out.push(`<li>${mdInline(m[1])}</li>`);
+      } else if ((m = /^\s*\d+[.)]\s+(.*)/.exec(line))) {
+        if (list !== 'ol') { close(); out.push('<ol>'); list = 'ol'; }
+        out.push(`<li>${mdInline(m[1])}</li>`);
+      } else if ((m = /^#{1,6}\s+(.*)/.exec(line))) {
+        close(); out.push(`<p><strong>${mdInline(m[1])}</strong></p>`);
+      } else if (line.trim() === '') {
+        close();
+      } else {
+        close(); out.push(`<p>${mdInline(line)}</p>`);
+      }
+    }
+    close();
+    return out.join('');
   }
 
   function setState(s) {
@@ -689,7 +730,7 @@ window.ShadowHome = (() => {
         if (!fromVoice) { setState('idle'); return; }  // typed questions are read, not spoken
         setState('speaking');
         try {
-          await window.Capacitor?.Plugins?.ShadowAssistant?.speak({ text: response, rate: 1.05 });
+          await window.Capacitor?.Plugins?.ShadowAssistant?.speak({ text: (window.ShadowAssistant?.plainText || String)(response), rate: 1.05 });
         } catch (_) {}
         setState('idle');
       } else {

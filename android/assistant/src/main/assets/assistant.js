@@ -704,7 +704,7 @@ const ShadowAssistant = (() => {
     try {
       const response = await route(text);
       if (response) {
-        document.getElementById('sa-response').textContent = response;
+        document.getElementById('sa-response').textContent = plainText(response);
         setState('idle');  // typed: shown, not spoken; overlay stays open to read
       }
     } catch (_) {
@@ -893,13 +893,13 @@ const ShadowAssistant = (() => {
       const response = await route(transcript, { voice: true });
       if (response) {
         const respEl = document.getElementById('sa-response');
-        if (respEl) respEl.textContent = response;
+        if (respEl) respEl.textContent = plainText(response);
         setState('speaking');
         window.ShadowHome?.setState('speaking');
         // Add to chat history
         window.ShadowHome?.addMessage('user', transcript);
         window.ShadowHome?.addMessage('shadow', response);
-        if (plugin) await plugin.speak({ text: response, rate: 1.05 });
+        if (plugin) await plugin.speak({ text: plainText(response), rate: 1.05 });
         setState('idle');
         window.ShadowHome?.setState('idle');
         // Dismiss the overlay if it's open — home screen has the result
@@ -1256,9 +1256,9 @@ const ShadowAssistant = (() => {
     try {
       const response = await route(text);
       if (response) {
-        document.getElementById('sa-response').textContent = response;
+        document.getElementById('sa-response').textContent = plainText(response);
         setState('speaking');
-        if (plugin) await plugin.speak({ text: response, rate: 1.05 });
+        if (plugin) await plugin.speak({ text: plainText(response), rate: 1.05 });
         setState('idle');
         setTimeout(() => _animatedDismiss(), 2500);
       }
@@ -1270,9 +1270,20 @@ const ShadowAssistant = (() => {
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+  // Markdown marks removed, for the plain-text overlay and for text-to-speech
+  function plainText(s) {
+    return String(s || '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1$2')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/^\s*[-*]\s+/gm, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  }
+
   return { init, show, dismiss, startListening, openSettings,
            _saveApiKey, _clearApiKey, _closeSettings, _toggleKeyVisibility,
-           _runChip, _submitText, _toggleWakeWord, route, refreshKey };
+           _runChip, _submitText, _toggleWakeWord, route, refreshKey, plainText };
 })();
 
 if (document.readyState === 'loading') {

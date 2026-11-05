@@ -40,7 +40,7 @@ const QUOTA_BY_PLAN: Record<string, number> = {
 
 const SYSTEM_PROMPT = `You are Shadow, the ShadowCypher voice assistant — a calm, precise security advisor. Reply in 1-3 sentences optimized for speech. No markdown, no bullet points, no headers. If the user's network data is provided, reference it directly. Never invent device names, IPs, or incidents. If a question is outside your data, say so plainly and suggest one next step.`;
 
-const GENERAL_PROMPT = `You are Shadow, a private personal assistant from ShadowCypher. Answer any question the user asks: facts, how-to, writing, maths, planning, advice. Be direct and accurate. If you are not sure, say so instead of guessing. When web results are provided, prefer them for anything recent and mention the source site by name. The user's network data is only provided for security questions; never invent device names, IPs or incidents.`;
+const GENERAL_PROMPT = `You are Shadow, a private personal assistant from ShadowCypher. Answer any question the user asks: facts, how-to, writing, maths, planning, advice. Be direct and accurate. If you are not sure, say so instead of guessing. When web results are provided, prefer them for anything recent and mention the source site by name. For news or anything about today, search with specific, dated terms (for example "technology news" plus today's date) or fetch a news front page such as techmeme.com or apnews.com, then summarise the actual stories with their dates; don't answer with a list of sites to check. The user's network data is only provided for security questions; never invent device names, IPs or incidents.`;
 
 const VOICE_STYLE = ` Your reply will be read aloud: answer in 1-4 short sentences of plain speech, with no markdown, lists, headers, URLs or emoji.`;
 
@@ -427,6 +427,7 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
   // Dispatch to chosen provider
   try {
     let answer: string;
+    let toolErrors: string[] = [];
     let modelLabel: string;
 
     if (usesOllama) {
@@ -439,7 +440,7 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
       const byok = unpackByok(await decrypt(env.BYOK_ENCRYPTION_SECRET, profile.ai_byok_key_encrypted));
       if (mode === "general") {
         let cited: WebResult[];
-        ({ answer, modelLabel, sources: cited } = await queryAnthropicGeneral(byok.key, generalModel, messages, effectiveSystemPrompt, { ...generalOpts, workspaceId: byok.workspaceId }));
+        ({ answer, modelLabel, sources: cited, toolErrors } = await queryAnthropicGeneral(byok.key, generalModel, messages, effectiveSystemPrompt, { ...generalOpts, workspaceId: byok.workspaceId }));
         sources = cited;
       } else {
         ({ answer, modelLabel } = await queryAnthropic(byok.key, env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001", messages, effectiveSystemPrompt, byok.workspaceId));
@@ -450,7 +451,7 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
         return json({ error: "platform_ai_not_configured", hint: "Configure your own Anthropic key (BYOK) or Ollama URL in the dashboard." }, { status: 503 }, cors);
       }
       let cited: WebResult[];
-      ({ answer, modelLabel, sources: cited } = await queryAnthropicGeneral(env.ANTHROPIC_API_KEY, generalModel, messages, effectiveSystemPrompt, generalOpts));
+      ({ answer, modelLabel, sources: cited, toolErrors } = await queryAnthropicGeneral(env.ANTHROPIC_API_KEY, generalModel, messages, effectiveSystemPrompt, generalOpts));
       sources = cited;
       await incrementUsage(env, user.id, 2);
     } else {
@@ -476,6 +477,7 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
       provider: profile.ai_provider,
       mode,
       sources: sources.map((s) => ({ title: s.title, url: s.url })),
+      ...(toolErrors.length ? { tool_errors: toolErrors } : {}),
       data_summary: { devices: devices.length, incidents: incidents.length, scans: scans.length },
     }, {}, cors);
   } catch (e) {
@@ -589,12 +591,12 @@ async function queryAnthropicGeneral(
   messages: HistoryMessage[],
   systemPrompt: string,
   opts: { voice: boolean; web: boolean; workspaceId?: string },
-): Promise<{ answer: string; modelLabel: string; sources: WebResult[] }> {
+): Promise<{ answer: string; modelLabel: string; sources: WebResult[]; toolErrors: string[] }> {
   const convo: Array<{ role: string; content: unknown }> = [...messages];
   const tools = opts.web
     ? [
-        { type: "web_search_20260209", name: "web_search", max_uses: 5 },
-        { type: "web_fetch_20260209", name: "web_fetch", max_uses: 3 },
+        { type: "web_search_20260209", name: "web_search", max_uses: 8 },
+        { type: "web_fetch_20260209", name: "web_fetch", max_uses: 4 },
       ]
     : undefined;
   let data: { content?: AnthropicBlock[]; model?: string; stop_reason?: string } = {};
@@ -618,13 +620,14 @@ async function queryAnthropicGeneral(
     convo.push({ role: "assistant", content: data.content });
   }
   if (data.stop_reason === "refusal") {
-    return { answer: "I can't help with that one.", modelLabel: data.model || model, sources: [] };
+    return { answer: "I can't help with that one.", modelLabel: data.model || model, sources: [], toolErrors: [] };
   }
   const blocks = data.content || [];
   return {
     answer: extractAnswer(blocks) || "(no answer)",
     modelLabel: data.model || model,
     sources: extractSources(blocks),
+    toolErrors: extractToolErrors(blocks),
   };
 }
 
@@ -662,4 +665,21 @@ export function anthropicHeaders(apiKey: string, workspaceId?: string): Record<s
   const h: Record<string, string> = { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" };
   if (workspaceId) h["anthropic-workspace-id"] = workspaceId;
   return h;
+}
+
+/**
+ * Error codes from the web search / web fetch tools (they come back as HTTP 200
+ * with an error object instead of results), e.g. "web_search: max_uses_exceeded".
+ */
+export function extractToolErrors(blocks: AnthropicBlock[]): string[] {
+  const out: string[] = [];
+  for (const b of blocks) {
+    if (b.type !== "web_search_tool_result" && b.type !== "web_fetch_tool_result") continue;
+    const c = b.content as { error_code?: string; type?: string } | unknown[] | undefined;
+    if (c && !Array.isArray(c) && typeof c === "object" && (c as { error_code?: string }).error_code) {
+      out.push(`${b.type === "web_search_tool_result" ? "web_search" : "web_fetch"}: ${(c as { error_code: string }).error_code}`);
+    }
+  }
+  if (out.length) console.warn("[assistant] web tool errors", out.join(", "));
+  return out;
 }
