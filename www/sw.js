@@ -3,8 +3,8 @@
 // - Handles web-push events (delivers Guardian incident notifications)
 // - Click-through navigates the user to the relevant dashboard page
 
-const CACHE = "shadowcypher-v4";
-const SHELL = ["/", "/index.html", "/styles.css", "/manifest.json"];
+const CACHE = "shadowcypher-v5";
+const SHELL = ["/", "/app/", "/styles.css", "/js/site.js", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -29,7 +29,7 @@ self.addEventListener("fetch", (e) => {
 
   if (e.request.mode === "navigate") {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match("/index.html"))
+      fetch(e.request).catch(() => caches.match(url.pathname.startsWith("/app") ? "/app/" : "/"))
     );
     return;
   }
@@ -40,14 +40,14 @@ self.addEventListener("fetch", (e) => {
 
 // ─── Web Push ───────────────────────────────────────────────────────────────
 self.addEventListener("push", (event) => {
-  let data = { title: "ShadowCypher", body: "New event", url: "/?nav=account" };
+  let data = { title: "ShadowCypher", body: "New event", url: "/app/?nav=account" };
   try { if (event.data) data = { ...data, ...event.data.json() }; } catch (e) {}
   const options = {
     body: data.body,
     icon: "/icon-192.png",
     badge: "/icon-192.png",
     tag: data.tag || "shadowcypher-event",
-    data: { url: data.url || "/?nav=account" },
+    data: { url: data.url || "/app/?nav=account" },
     requireInteraction: data.severity === "critical",
   };
   event.waitUntil(self.registration.showNotification(data.title, options));
@@ -55,12 +55,14 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const rawUrl = event.notification.data?.url || "/?nav=account";
+  const rawUrl = event.notification.data?.url || "/app/?nav=account";
   const safeUrl = (() => {
     try {
       const parsed = new URL(rawUrl, self.location.origin);
-      return parsed.origin === self.location.origin ? parsed.href : "/?nav=account";
-    } catch { return "/?nav=account"; }
+      if (parsed.origin !== self.location.origin) return "/app/?nav=account";
+      if (parsed.pathname === "/" && parsed.search) parsed.pathname = "/app/";
+      return parsed.href;
+    } catch { return "/app/?nav=account"; }
   })();
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {

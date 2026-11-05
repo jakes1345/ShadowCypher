@@ -31,7 +31,7 @@
         </div>
 
         <p style="margin-top:30px; padding-top:20px; border-top:1px solid var(--glass-border); color:var(--text-secondary); font-size:0.7rem; line-height:1.7;">
-            Once authorized, the device will receive your current API key. You can revoke it any time from <a href="/?nav=account" style="color:var(--accent-primary);">your account</a>.
+            Once authorized, the device will receive your current API key. You can revoke it any time from <a href="/app/?nav=account" style="color:var(--accent-primary);">your account</a>.
         </p>
     </div>
 
@@ -73,7 +73,7 @@
 
             const apiKey = await getApiKey();
             if (!apiKey) {
-                status.innerHTML = '<a href="/?nav=account" style="color:var(--accent-primary);">Sign in first</a> to authorize.';
+                status.innerHTML = '<a href="/app/?nav=account" style="color:var(--accent-primary);">Sign in first</a> to authorize.';
                 return;
             }
 

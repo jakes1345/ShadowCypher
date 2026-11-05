@@ -5,3 +5,8 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.shadowcypher.site wss://api.shadowcypher.site https://*.supabase.co wss://*.supabase.co https://cloudflareinsights.com; frame-ancestors 'none';
+
+# The marketing homepage has no inline scripts. Browsers enforce both policies,
+# so this one only needs to narrow script-src.
+/
+  Content-Security-Policy: script-src 'self' https://cdnjs.cloudflare.com https://static.cloudflareinsights.com; object-src 'none'; base-uri 'self'

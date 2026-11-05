@@ -383,3 +383,10 @@ footer a:hover { text-decoration: underline; }
 #sheet-grid td:hover { background: rgba(180,74,255,0.05) !important; }
 
 .slide-thumb-active { border-color: var(--accent-primary) !important; }
+
+.hover-lift { transition: border-color 0.2s, background 0.2s, transform 0.2s; }
+.hover-lift:hover {
+    border-color: var(--hover-border) !important;
+    background: var(--hover-bg) !important;
+    transform: translateY(-2px);
+}
