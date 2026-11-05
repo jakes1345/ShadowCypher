@@ -106,7 +106,7 @@ noto-fonts
 noto-fonts-emoji
 ttf-jetbrains-mono-nerd
 
-# Qt6 (ShadowCypher desktop app)
+# Qt6 (ShadowCypher desktop app and the installer)
 qt6-base
 qt6-wayland
 qt6-declarative
@@ -118,23 +118,8 @@ qt6-charts
 qt6-multimedia
 qt6-multimedia-ffmpeg
 
-# GTK / theming
-gtk3
-gtk4
+# Theming
 papirus-icon-theme
-
-# Python (Guardian agent + ShadowCypher app)
-python
-python-pip
-python-requests
-python-websockets
-python-cryptography
-python-gobject
-python-cairo
-python-pydantic
-python-pydantic-settings
-python-rich
-python-psutil
 
 # Dev tools
 git

@@ -71,7 +71,7 @@ required=(
     networkmanager bluez pipewire wireplumber
     grim slurp swappy wl-clipboard cliphist
     polkit-kde-agent
-    python python-gobject gtk3
+    qt6-base qt6-wayland qt6-websockets tor iptables polkit
     git curl wget jq
     calamares
 )

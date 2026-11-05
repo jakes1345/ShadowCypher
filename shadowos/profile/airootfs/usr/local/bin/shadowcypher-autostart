@@ -16,28 +16,18 @@ if [[ "${SHADOWCYPHER_MANUAL:-0}" != "1" && "${1:-}" != "--manual" ]]; then
     exit 0
 fi
 
-# Qt6 binary (built from shadowcypher-qt/ and staged into the ISO by build.sh)
-QT_BIN=/opt/shadowcypher/shadowcypher-qt/shadowcypher-qt
+# Qt6 app, installed into the image by shadowos/build.sh (cmake --install).
+QT_BIN=/usr/bin/shadowcypher
 
-# Fallback: system-installed binary
-if [[ ! -x "$QT_BIN" ]]; then
-    QT_BIN=$(command -v shadowcypher-qt 2>/dev/null || true)
-fi
-
-if pgrep -f "shadowcypher-qt" >/dev/null 2>&1; then
-    log "ShadowCypher already running — skip"
+if pgrep -x shadowcypher >/dev/null 2>&1; then
+    log "ShadowCypher already running - skip"
     exit 0
 fi
 
-if [[ -z "$QT_BIN" || ! -x "$QT_BIN" ]]; then
-    log "shadowcypher-qt binary not found — falling back to python engine"
-    # Python backend engine (no UI) as last resort
-    if python3 -c "import shadowcypher" 2>/dev/null; then
-        export PYTHONPATH=/opt/shadowcypher
-        exec python3 -m shadowcypher.engine >>"$LOG_FILE" 2>&1
-    fi
+if [[ ! -x "$QT_BIN" ]]; then
+    log "$QT_BIN not found"
     notify-send -i dialog-error "ShadowCypher" \
-        "ShadowCypher binary not found. Re-install from: https://shadowcypher.site" \
+        "ShadowCypher isn't installed on this system. Get it from https://shadowcypher.site" \
         2>/dev/null || true
     exit 1
 fi

@@ -50,10 +50,7 @@ file_permissions=(
   ["/usr/local/bin/shadowcypher-autostart"]="0:0:0755"
   ["/usr/local/bin/shadowos-ramwipe"]="0:0:0755"
   # Guardian daemon
-  ["/usr/local/bin/guardian-launch"]="0:0:0755"
-  ["/usr/local/bin/guardian-logs"]="0:0:0755"
-  ["/usr/local/bin/guardian-status"]="0:0:0755"
-  ["/usr/local/bin/guardian-stop"]="0:0:0755"
+  ["/usr/libexec/shadowcypher/shadowcypher-privacy-helper"]="0:0:0755"
   # Modes — normal, privacy, ghost, dev, gaming
   ["/etc/shadowos/modes/normal/apply.sh"]="0:0:0755"
   ["/etc/shadowos/modes/privacy/apply.sh"]="0:0:0755"

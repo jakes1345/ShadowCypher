@@ -21,7 +21,7 @@ if ! command -v mkarchiso >/dev/null 2>&1; then
   exit 1
 fi
 
-mkdir -p "$WORK" "$OUT" "$ISO_OPT"
+mkdir -p "$WORK" "$OUT"
 
 # Copy releng base if profile is incomplete (first run helper)
 if [[ ! -f "$PROFILE/pacman.conf" ]]; then
@@ -29,38 +29,10 @@ if [[ ! -f "$PROFILE/pacman.conf" ]]; then
   cp -rn /usr/share/archiso/configs/releng/. "$PROFILE/"
 fi
 
-RSYNC_EXCLUDES=(
-  --exclude=__pycache__ --exclude='*.pyc' --exclude='*.pyo'
-  --exclude=meta-venv --exclude=venv --exclude=.venv
-  --exclude=logs --exclude=outputs --exclude=findings --exclude=reports
-  --exclude='*.log' --exclude=.ruff_cache --exclude=test_venv
-  --exclude='node_modules' --exclude=build --exclude=dist --exclude='*.egg-info'
-)
-
-echo ">> Snapshotting ShadowCypher sources → ISO airootfs/opt/shadowcypher"
-for src in shadowcypher ai_engine shadowai shadow_skills shadowscript agent; do
-  if [[ -d "$REPO_ROOT/$src" ]]; then
-    echo "   rsync $src"
-    rsync -a --delete "${RSYNC_EXCLUDES[@]}" "$REPO_ROOT/$src/" "$ISO_OPT/$src/"
-  fi
-done
-
-# Assets (war map, icons) — live at /opt/shadowcypher/assets on the image
-if [[ -d "$REPO_ROOT/assets" ]]; then
-  echo "   rsync assets → opt/shadowcypher/assets"
-  rsync -a "$REPO_ROOT/assets/" "$ISO_OPT/assets/"
-fi
-
-# Native icons + launch entrypoint
-if [[ -d "$REPO_ROOT/native/icons" ]]; then
-  mkdir -p "$ISO_OPT/native/icons"
-  rsync -a "$REPO_ROOT/native/icons/" "$ISO_OPT/native/icons/"
-fi
-[[ -f "$REPO_ROOT/native/launch.sh" ]] && cp -f "$REPO_ROOT/native/launch.sh" "$ISO_OPT/launch.sh"
-[[ -f "$ISO_OPT/launch.sh" ]] || cp -f "$PROFILE/airootfs/opt/shadowcypher/launch.sh" "$ISO_OPT/launch.sh" 2>/dev/null || true
-[[ -f "$REPO_ROOT/config.example.json" ]] && cp -f "$REPO_ROOT/config.example.json" "$ISO_OPT/config.example.json"
-
-chmod +x "$ISO_OPT/launch.sh" 2>/dev/null || true
+# The ISO used to carry a snapshot of the old Python/GTK app in
+# /opt/shadowcypher. The desktop app is now Qt6 C++ (shadowcypher-qt), built
+# and installed into the image below; make sure no stale copy is left behind.
+rm -rf "$ISO_OPT"
 
 # Stamp build metadata into os-release (visible in neofetch / welcome)
 OSR="$PROFILE/airootfs/etc/os-release"
@@ -78,42 +50,32 @@ if [[ -d "$GRUB_THEME_SRC" ]]; then
   echo ">> GRUB theme staged → profile/grub/themes/shadowos/"
 fi
 
-# ── Build Qt6 desktop app and stage it into airootfs ──────────────────────
+# ── Build the Qt6 desktop app and install it into airootfs ───────────────
+# Installs /usr/bin/shadowcypher (+ shadowcypher-daemon, shadowcypher-runtime),
+# the Ghost mode root helper in /usr/libexec/shadowcypher, its polkit policy,
+# the menu entry and icon. The ISO is pointless without it, so a failed build
+# stops here instead of producing an image with no app.
 QT_APP_SRC="$REPO_ROOT/shadowcypher-qt"
-QT_APP_DEST="$PROFILE/airootfs/opt/shadowcypher/shadowcypher-qt"
+QT_APP_BUILD="$QT_APP_SRC/_build"
+AIROOTFS="$PROFILE/airootfs"
 
-if [[ -d "$QT_APP_SRC/src" ]]; then
-  echo ">> Compiling Qt6 desktop app (shadowcypher-qt)..."
-  QT_APP_BUILD="$QT_APP_SRC/_build"
-  mkdir -p "$QT_APP_BUILD" "$QT_APP_DEST"
-
-  if ! command -v cmake >/dev/null 2>&1; then
-    echo "   cmake not found — skipping shadowcypher-qt build" >&2
-  elif ! pkg-config --exists Qt6Widgets 2>/dev/null; then
-    echo "   Qt6 not found — skipping shadowcypher-qt build (install qt6-base qt6-websockets)" >&2
-  else
-    cmake -S "$QT_APP_SRC" -B "$QT_APP_BUILD" \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_INSTALL_PREFIX=/usr \
-      -DBUILD_TESTING=OFF \
-      -Wno-dev -DCMAKE_VERBOSE_MAKEFILE=OFF 2>&1 | tail -5
-
-    make -C "$QT_APP_BUILD" -j"$(nproc)" 2>&1 | tail -10
-
-    if [[ -f "$QT_APP_BUILD/shadowcypher" ]]; then
-      cp -f "$QT_APP_BUILD/shadowcypher" "$QT_APP_DEST/shadowcypher-qt"
-      cp -f "$QT_APP_BUILD/core/shadowcypher-runtime" "$QT_APP_DEST/shadowcypher-runtime"
-      chmod +x "$QT_APP_DEST/shadowcypher-runtime"
-      chmod +x "$QT_APP_DEST/shadowcypher-qt"
-      strip --strip-unneeded "$QT_APP_DEST/shadowcypher-qt" 2>/dev/null || true
-      echo "   Desktop app staged → $QT_APP_DEST/shadowcypher-qt ($(du -sh "$QT_APP_DEST/shadowcypher-qt" | cut -f1))"
-    else
-      echo "   WARNING: shadowcypher-qt binary not produced — check cmake output" >&2
-    fi
-  fi
-else
-  echo "   shadowcypher-qt source not found — skipping" >&2
+if ! command -v cmake >/dev/null 2>&1 || ! pkg-config --exists Qt6Widgets 2>/dev/null; then
+  echo "cmake and Qt6 are required: pacman -S cmake make gcc pkgconf qt6-base qt6-websockets" >&2
+  exit 1
 fi
+echo ">> Building ShadowCypher desktop app (shadowcypher-qt)"
+cmake -S "$QT_APP_SRC" -B "$QT_APP_BUILD" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DBUILD_TESTING=OFF \
+  -Wno-dev
+cmake --build "$QT_APP_BUILD" --parallel "$(nproc)"
+DESTDIR="$AIROOTFS" cmake --install "$QT_APP_BUILD" --strip
+for f in /usr/bin/shadowcypher /usr/bin/shadowcypher-daemon \
+         /usr/libexec/shadowcypher/shadowcypher-privacy-helper; do
+  [[ -x "$AIROOTFS$f" ]] || { echo "   missing after install: $f" >&2; exit 1; }
+done
+echo "   Installed into airootfs: shadowcypher, shadowcypher-daemon, privacy helper"
 
 # ── Build Qt6 installer binary and stage it into airootfs ──────────────────
 INSTALLER_SRC="$REPO_ROOT/shadowos/installer"
