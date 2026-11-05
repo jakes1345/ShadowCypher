@@ -48,7 +48,7 @@ CONFIG_DIR = Path.home() / ".shadowcypher"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 STATE_PATH = CONFIG_DIR / "state.json"
 DEFAULT_API = "https://api.shadowcypher.site"
-AGENT_VERSION = "0.3.0"
+AGENT_VERSION = "0.3.1"
 UPDATE_CHECK_INTERVAL = 86400  # 24 hours
 
 
@@ -520,11 +520,12 @@ def poll_missions(api: "ApiClient", agent_id: str) -> None:
                 finally:
                     _sys.stdout = old_stdout
             except ImportError:
-                # ShadowCypher not installed locally — run script as shell commands (basic fallback)
-                import subprocess
-                result = subprocess.run(script, shell=True, capture_output=True, text=True, timeout=120)
-                output_lines = result.stdout.splitlines() + result.stderr.splitlines()
-                exit_code = result.returncode
+                # Missions are ShadowScript, run only by its interpreter. Never fall
+                # back to the shell: that would let anyone who can queue a mission on
+                # the account (anyone holding its API key) run commands on this machine.
+                output_lines = ["MISSION_REJECTED: No ShadowScript interpreter on this machine, so this mission was not run. The agent never runs mission scripts as shell commands."]
+                exit_code = 126
+                print(f"[!] mission {mission_id} rejected: no ShadowScript interpreter", file=sys.stderr)
 
         except Exception as e:
             output_lines = [f"MISSION_ERROR: {e}"]

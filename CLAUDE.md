@@ -97,9 +97,9 @@ Required secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_WEBHOOK
 - Planning docs (`PHASE_*.md`, `*_IMPLEMENTATION.md`), which belong in notes, not the repo
 - IDE and tool configs (`.aider*`, `.cursor/`, `.crush/`)
 
-**Product directories on `main`:** `shadowcypher-qt/`, `www/`, `backend/`, `shadowos/`, `android/`, `blog/`. Anything else needs a reason.
+**Product directories on `main`:** `shadowcypher-qt/`, `www/`, `backend/`, `shadowos/`, `android/`, `blog/`. Supporting directories, each with a reason: `agent/` (Guardian agent, still offered), `arch/` (the published ShadowOS package repo), `assets/` and `packaging/` (used by the desktop and ShadowOS builds), `shadowscript/` (missions bundled with the desktop app). Anything else needs a reason.
 
-**Root-level files allowed:** LICENSE, README.md, CLAUDE.md, CNAME, .gitignore, manifest.json, sitemap.xml, sw.js, icons, privacy.html, terms.html, self-host.html, docs.html, roadmap.html, shadow.html, status.html, styles.css, device.html.
+**Root-level files allowed:** LICENSE, README.md, CLAUDE.md, CONTRIBUTING.md, SECURITY.md, .gitignore. The website lives in `www/` only; don't put HTML, CSS, icons or other site files at the repo root.
 
 **Don't create documentation that isn't user-facing.**
 

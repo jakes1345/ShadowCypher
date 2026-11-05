@@ -1,30 +1,29 @@
 # ShadowOS pacman repository
 
-Signed Arch Linux package repository for ShadowOS.
+A signed pacman repository for installing ShadowOS packages on an existing Arch system. The packages are built from the PKGBUILDs in [`packaging/arch/`](../packaging/arch/) by the `publish-arch.yml` workflow, which commits the results to `x86_64/` here.
 
-## Quick install (existing Arch)
+## Current state
+
+Only three packages are published at the moment: `shadowos-keyring`, `shadowos-mirrorlist` and `shadowos-meta`, all version 1.0-1. `shadowos-meta` depends on the other packages listed below, which aren't in the repo yet, so `pacman -S shadowos-meta` fails until they are. The published `shadowos-meta` also still depends on `shadowcypher-agent`, which has no PKGBUILD.
+
+## Setup
+
+`install.sh` does the setup in one go. Read it first, then:
 
 ```bash
 curl -fsSL https://shadowcypher.site/arch/install.sh | sudo bash
 ```
 
-Then:
-```bash
-sudo pacman -S shadowos-meta     # full ShadowOS experience
-# or pick individual packages:
-sudo pacman -S shadowcypher      # just the security GTK app
-sudo pacman -S shadowos-tools    # just the shadow-* CLI suite
-sudo pacman -S shadowos-branding # wallpapers + Plymouth + GRUB + SDDM themes
-```
+It imports the signing key, writes `/etc/pacman.d/shadowos-mirrorlist`, adds a `[shadowos]` section to `/etc/pacman.conf` and runs `pacman -Sy`. Pass `--meta` (`sudo bash -s -- --meta`) to install `shadowos-meta` as well.
 
-## Manual setup
+By hand:
 
 ```bash
-# 1. Import key
+# 1. Import and locally sign the key
 curl -fsSL https://shadowcypher.site/arch/shadowos.gpg | sudo pacman-key --add -
 sudo pacman-key --lsign-key 3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083
 
-# 2. Add to /etc/pacman.conf
+# 2. Add the repo to /etc/pacman.conf
 sudo tee -a /etc/pacman.conf <<'EOF'
 
 [shadowos]
@@ -38,28 +37,24 @@ sudo pacman -Sy
 
 ## Packages
 
-| Package | Purpose |
-|---------|---------|
-| `shadowos-keyring` | Distributes the repo signing key |
-| `shadowos-mirrorlist` | Server URL(s) for the repo |
-| `shadowos-base` | sysctl hardening, faillock, polkit rules, mode scripts |
-| `shadowos-branding` | 20 wallpapers + Plymouth + GRUB + SDDM themes |
-| `shadowos-tools` | shadow-mode, shadow-update, shadow-help-me, leak-test, diag |
-| `shadowos-hyprland-config` | Default Hyprland + Waybar + Mako + Foot + Wofi + zsh dotfiles |
-| `shadowos-firefox-config` | Privacy-hardened user.js (arkenfox-derived) |
-| `shadowos-fastfetch` | Terminal banner with ShadowOS ASCII logo |
-| `shadowos-meta` | Pulls all of the above + curated upstream defaults |
-| `shadowcypher` | The GTK security suite app |
-| `shadowcypher-agent` | Guardian endpoint agent |
+| Package | Contents | Published |
+|---|---|---|
+| `shadowos-keyring` | The repo signing key | yes |
+| `shadowos-mirrorlist` | Server list for the repo | yes |
+| `shadowos-meta` | Depends on all of the below plus upstream defaults | yes |
+| `shadowos-base` | sysctl hardening, faillock, polkit rules, mode scripts, os-release | no |
+| `shadowos-branding` | Wallpapers and the Plymouth, GRUB and SDDM themes | no |
+| `shadowos-tools` | `shadow-mode`, `shadow-update`, `shadow-help-me`, `shadow-leak-test`, `shadowos-diag` and other scripts, plus the Calamares branding | no |
+| `shadowos-hyprland-config` | Default Hyprland, Waybar, Mako, Foot, Wofi and Zsh config | no |
+| `shadowos-firefox-config` | Hardened Firefox `user.js`, derived from arkenfox | no |
+| `shadowos-fastfetch` | Fastfetch banner with the ShadowOS logo | no |
+| `shadowcypher` | The Qt6 desktop app, its daemon and runtime | no |
+
+`packaging/arch/` also has PKGBUILDs for `shadowbrowser` and `shadowos-shell`, which the workflow doesn't build.
 
 ## Signing key
 
 - Fingerprint: `3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083`
 - UID: `ShadowCypher Packages <admin@shadowcypher.site>`
-- Same OpenPGP key that signs the `apt` repo.
 
-## Trust
-
-Packages are signed at build time by GitHub Actions using a key stored
-in the `APT_SIGNING_KEY` GitHub Secret. The build pipeline lives at
-`.github/workflows/publish-arch.yml` in the source repo.
+Packages and the repo database are signed in GitHub Actions with a key stored in the `APT_SIGNING_KEY` repository secret. The workflow is `.github/workflows/publish-arch.yml`.

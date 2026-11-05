@@ -17,8 +17,8 @@ ENVIRONMENT = "production"
 ALLOWED_ORIGINS = "https://shadowcypher.site,https://www.shadowcypher.site,https://dev.shadowcypher.site,http://localhost:8081,https://appassets.androidplatform.net"
 SITE_URL = "https://shadowcypher.site"
 RESEND_FROM_EMAIL = "ShadowCypher <noreply@shadowcypher.site>"
-AGENT_VERSION = "0.3.0"
-AGENT_SHA256 = "6590fee3f95e24a9a14a968feb598327eeb2daece83654fffe5e7cf974e13d4f"
+AGENT_VERSION = "0.3.1"
+AGENT_SHA256 = "74b2de08a3c60022afc707fb8742681f0726697d466c73f73fc034be5e83e4b9"
 ANTHROPIC_MODEL = "claude-sonnet-4-6"
 
 [[kv_namespaces]]
