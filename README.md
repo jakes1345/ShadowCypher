@@ -82,7 +82,7 @@ The web app and the desktop app use the same API, a Cloudflare Worker backed by:
 
 ## ShadowOS
 
-An Arch-based live ISO with Hyprland, `linux-hardened`, nftables, AppArmor, Tor and dnscrypt-proxy, with the ShadowCypher desktop app built in. `shadow-mode <normal|privacy|ghost|dev|gaming>` switches the firewall, Tor routing and a few services in one command.
+Still in development. An Arch-based live ISO with Hyprland, `linux-hardened`, nftables, AppArmor, Tor and dnscrypt-proxy, with the ShadowCypher desktop app built in. `shadow-mode <normal|privacy|ghost|dev|gaming>` switches the firewall, Tor routing and a few services in one command.
 
 ```bash
 cd shadowos

@@ -2,6 +2,8 @@
 
 An Arch-based live ISO built with archiso. It boots into Hyprland with the ShadowCypher desktop app installed, and it can be installed to disk with Calamares. The goal is a small, privacy-focused daily driver with a curated set of network-monitoring and hardening tools. Anything else can be installed from the repos it has enabled, which include BlackArch and Chaotic-AUR.
 
+**Status: in development.** ShadowOS isn't ready for daily use yet. Expect things here to change as it comes together.
+
 ## What's in the image
 
 The full list is in `profile/packages.x86_64` (about 160 packages).
@@ -111,7 +113,3 @@ The live user is `shadow`. Its password is generated randomly when the image is 
 ## Themes and wallpapers
 
 The wallpapers and the Plymouth, GRUB and SDDM themes are committed as images under `branding/` and `profile/airootfs/usr/share/`. The scripts that used to generate them were removed with the rest of the project's Python, so edit the images directly.
-
-## Other folders
-
-`boot-configs/`, `drivers/`, `vendor-firmware/` and `vendor-support/` hold reference notes and helper scripts for installed systems. The ISO build doesn't use any of them; see the README in each.
