@@ -18,7 +18,6 @@ depends=(
     'shadowos-firefox-config'
     'shadowos-fastfetch'
     'shadowcypher'
-    'shadowcypher-agent'
 
     # Core upstream (Arch core/extra/multilib/blackarch)
     # — see shadowos/profile/packages.x86_64 for the full list; this meta

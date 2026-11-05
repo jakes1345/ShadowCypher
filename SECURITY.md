@@ -28,17 +28,9 @@ ShadowCypher is a multi-layer platform:
 | Layer | Technology |
 |-------|-----------|
 | Desktop UI | Qt6 C++ (`shadowcypher-qt/`) — dark JetBrains Mono theme, QProcess tool invocation |
-| Python backend | `shadowcypher/` — 50+ offensive/defensive modules, local daemon |
+| Desktop daemon | `shadowcypher-qt/daemon/` — C++ background service (scans, incidents, CVE feed); Ghost mode changes the firewall only through a `pkexec` helper |
 | Cloud API | Cloudflare Worker (`backend/api/`) — TypeScript, Supabase auth, KV/R2 storage |
 | OS integration | ShadowOS Arch Linux ISO (`shadowos/`) — Ollama, hardened kernel |
-
-## Admin Node Concept
-
-ShadowCypher uses an asymmetric cryptographic identity system:
-
-- The repository contains `admin_public.pem`.
-- The maintainer holds `admin_private.pem` (never committed).
-- A machine is only recognized as the "Admin Node" if it can prove possession of the private key matching the shipped public key.
 
 ## Reporting a Vulnerability
 

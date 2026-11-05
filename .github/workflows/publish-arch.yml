@@ -5,10 +5,9 @@ on:
     branches: [main]
     paths:
       - 'packaging/arch/**'
-      - 'shadowcypher/**'
+      - 'shadowcypher-qt/**'
       - 'shadowos/profile/airootfs/**'
       - 'shadowos/branding/**'
-      - 'pyproject.toml'
       - '.github/workflows/publish-arch.yml'
   workflow_dispatch:
 
@@ -76,24 +75,11 @@ jobs:
               "$GITHUB_WORKSPACE/packaging/arch/$pkg/files/"
           done
 
-          # shadowcypher package: ship the actual application
+          # shadowcypher package: the Qt6 desktop app, built by its PKGBUILD.
+          # shadowscript/ comes along for the mission scripts it installs.
           mkdir -p "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files"
-          rsync -a --exclude='__pycache__' --exclude='*.pyc' \
-            --exclude='venv' --exclude='.venv' \
-            "$GITHUB_WORKSPACE/shadowcypher/" \
-            "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/shadowcypher/"
-          [ -d "$GITHUB_WORKSPACE/native" ] && \
-            cp -a "$GITHUB_WORKSPACE/native" "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/native"
-          [ -d "$GITHUB_WORKSPACE/shadowscript" ] && \
-            cp -a "$GITHUB_WORKSPACE/shadowscript" "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/shadowscript"
-          [ -f "$GITHUB_WORKSPACE/config.example.json" ] && \
-            cp "$GITHUB_WORKSPACE/config.example.json" "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/"
-
-          # shadowcypher-agent: just the agent dir
-          mkdir -p "$GITHUB_WORKSPACE/packaging/arch/shadowcypher-agent/files"
-          rsync -a --exclude='.venv' --exclude='__pycache__' \
-            "$AIR/opt/shadowcypher/agent" \
-            "$GITHUB_WORKSPACE/packaging/arch/shadowcypher-agent/files/shadowos/profile/airootfs/opt/shadowcypher/" 2>/dev/null || true
+          cp -a "$GITHUB_WORKSPACE/shadowcypher-qt" "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/shadowcypher-qt"
+          cp -a "$GITHUB_WORKSPACE/shadowscript" "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/shadowscript"
 
           chown -R builder:builder $GITHUB_WORKSPACE
 
@@ -106,7 +92,7 @@ jobs:
           cd $GITHUB_WORKSPACE/packaging/arch
           for d in shadowos-keyring shadowos-mirrorlist shadowos-base shadowos-branding \
                    shadowos-tools shadowos-hyprland-config shadowos-firefox-config \
-                   shadowos-fastfetch shadowos-meta shadowcypher shadowcypher-agent; do
+                   shadowos-fastfetch shadowos-meta shadowcypher; do
             echo "════════════════════════════════════════"
             echo "  Building $d"
             echo "════════════════════════════════════════"

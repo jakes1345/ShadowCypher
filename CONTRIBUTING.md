@@ -43,9 +43,9 @@ Title: [Bug] Brief description (e.g., "[Bug] AutoScan crashes on invalid CIDR in
 
 ## Environment
 - **OS:** (Linux distro, macOS version, Windows WSL version)
-- **Python:** (3.12.x, 3.13.x, etc.)
+- **Qt version:** (from `qmake6 --version` or your package manager)
 - **GPU:** (NVIDIA, AMD, CPU, none)
-- **Installation:** (pip, apt, Flatpak, manual)
+- **Installation:** (built from source, ShadowOS, Android app)
 - **ShadowCypher Version:** (main branch or specific commit hash)
 
 ## Steps to Reproduce
@@ -118,47 +118,28 @@ What else did you try? Why isn't it sufficient?
 
 ### Prerequisites
 
-- **Python 3.12+**
-- **Go 1.24+** (for native relay component)
-- **Git**
-- **Virtual environment tool** (venv, Poetry, or similar)
+- **Desktop app:** CMake 3.16+, a C++17 compiler, Qt 6 (`qt6-base`, `qt6-websockets`; `qt6-wayland` on Wayland), OpenSSL, Ninja or make
+- **API:** Node.js 20+ and npm
+- **ShadowOS:** an Arch host with `archiso`, or Docker
+- **Android:** Android Studio or the Android SDK with JDK 17
 
-### Clone & Install
-
-```bash
-# Clone repository
-git clone https://github.com/shadowcypher/shadowcypher.git
-cd shadowcypher
-
-# Create virtual environment
-python3.12 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -e ".[dev]"
-
-# Build native components
-cd native && go build -o shadowcypher-relay ./cmd/relay && cd ..
-
-# Verify installation
-python -m shadowcypher --version
-```
-
-### Running in Development
+### Build & Test
 
 ```bash
-# Run with debug logging
-PYTHONUNBUFFERED=1 DEBUG=1 python -m shadowcypher
+git clone https://github.com/jakes1345/ShadowCypher.git
+cd ShadowCypher
 
-# Run tests
-pytest tests/ -v --cov=shadowcypher
+# Desktop app (Qt6 C++)
+cmake -S shadowcypher-qt -B build -G Ninja -DBUILD_TESTING=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+./build/shadowcypher
 
-# Run linting
-black shadowcypher/ tests/
-isort shadowcypher/ tests/
-flake8 shadowcypher/ tests/
-mypy shadowcypher/
+# API (Cloudflare Worker)
+cd backend/api && npm ci && npm run typecheck && npm test
 ```
+
+CI runs the desktop build and tests and the API typecheck and tests on every pull request. Both must pass before a PR can merge.
 
 ### Project Structure
 
@@ -210,9 +191,9 @@ Briefly describe what this PR does. What problem does it solve?
 - Change 3
 
 ## Testing
-- [ ] Unit tests pass: `pytest tests/ -v`
+- [ ] Tests pass: `ctest --test-dir build` and/or `npm test` in `backend/api`
 - [ ] Manual testing: (describe what you tested and on what OS)
-- [ ] No new warnings from linting/type checking
+- [ ] No new compiler warnings, and `npm run typecheck` is clean
 
 ## Checklist
 - [ ] Code follows style guide (see Coding Standards)
@@ -244,226 +225,53 @@ Closes #123
 
 ## Coding Standards
 
-### Python
+### C++ (desktop app)
 
-**Style Guide:** PEP 8 with Black formatter
+- C++17 and Qt 6. Keep the UI in `shadowcypher-qt/src/`, the background work in `daemon/`, and shared code in `core/`.
+- Network calls go through `ApiClient`; never build request URLs or auth headers by hand.
+- Anything that needs root goes through the privacy helper and `pkexec`. The app and the daemon run unprivileged.
+- Fix new compiler warnings in code you touch.
 
-```bash
-# Format code
-black shadowcypher/ tests/
+### TypeScript (API)
 
-# Sort imports
-isort shadowcypher/ tests/
+- Keep `npm run typecheck` clean, and add a Vitest test next to the code you change.
+- Look up auth users with `findAuthUserByEmail`; the auth API ignores an `email` filter.
+- Secrets come from `wrangler secret put`, never from the repo.
 
-# Check for issues
-flake8 shadowcypher/ tests/
-mypy shadowcypher/ --strict
-```
+### Web app
 
-**Key Conventions:**
-- 4-space indentation
-- Max line length: 100 characters
-- Use type hints for all function signatures
-- Use descriptive variable names (avoid single-letter vars except in loops)
-- Use docstrings for classes and functions (Google style)
-- Prefer list/dict comprehensions for clarity
+- `www/index.html` ships as-is, with no build step. `callApi()` returns parsed JSON, not a `Response`.
 
-**Example:**
+### No Python, no GTK
 
-```python
-from typing import Optional, List
-from shadowcypher.core.models import Threat
-
-def analyze_threat(
-    threat: Threat,
-    confidence_threshold: float = 0.75,
-) -> Optional[dict]:
-    """
-    Analyze a threat against known patterns.
-    
-    Args:
-        threat: Threat object to analyze
-        confidence_threshold: Minimum confidence score (0.0-1.0)
-    
-    Returns:
-        Analysis results dict or None if confidence is too low
-    
-    Raises:
-        ValueError: If confidence_threshold is not in range [0.0, 1.0]
-    """
-    if not 0.0 <= confidence_threshold <= 1.0:
-        raise ValueError("confidence_threshold must be in range [0.0, 1.0]")
-    
-    results = [
-        pattern.match(threat) 
-        for pattern in known_patterns 
-        if pattern.confidence >= confidence_threshold
-    ]
-    
-    return {"matches": results} if results else None
-```
-
-### Go
-
-**Style Guide:** Go conventions (gofmt, golint)
-
-```bash
-# Format code
-go fmt ./...
-
-# Lint
-golangci-lint run ./...
-
-# Test
-go test ./... -v -cover
-```
-
-**Key Conventions:**
-- Use interfaces for extensibility
-- Error handling: explicit `if err != nil` checks
-- Concurrency-safe with channels and sync primitives
-- Document exported functions
-
-### Configuration Files
-
-- **YAML:** 2-space indentation, no tabs
-- **JSON:** 2-space indentation, no trailing commas
-- **Markdown:** Max line length 100, consistent heading levels
+The project moved from Python + GTK to Qt6 C++. Don't add Python or GTK code, dependencies or CI jobs.
 
 ---
 
 ## Testing Requirements
 
-### Unit Tests
-
-All new functionality must have unit tests. Aim for 80%+ code coverage.
-
-```bash
-# Run tests with coverage
-pytest tests/ -v --cov=shadowcypher --cov-report=html
-
-# Test a specific module
-pytest tests/test_identity.py -v
-
-# Run with markers
-pytest tests/ -v -m "not slow"
-```
-
-**Test Organization:**
-- Mirror source structure: `shadowcypher/core/foo.py` → `tests/core/test_foo.py`
-- Use descriptive test names: `test_autoscan_rejects_invalid_cidr_formats`
-- Use fixtures for setup/teardown (see `tests/conftest.py`)
-
-**Example Test:**
-
-```python
-import pytest
-from shadowcypher.arsenal.autoscan import AutoScan
-
-@pytest.fixture
-def autoscan():
-    """Provide an AutoScan instance for testing."""
-    return AutoScan()
-
-def test_autoscan_accepts_valid_cidr(autoscan):
-    """AutoScan should accept valid CIDR notation."""
-    result = autoscan.validate_target("192.168.1.0/24")
-    assert result.is_valid is True
-
-def test_autoscan_rejects_invalid_cidr(autoscan):
-    """AutoScan should reject invalid CIDR notation."""
-    result = autoscan.validate_target("999.999.999.999/32")
-    assert result.is_valid is False
-```
-
-### Integration Tests
-
-If your change affects module orchestration, threat feed integration, or the event bus, add integration tests in `tests/integration/`.
+- **Desktop:** add or extend tests in `shadowcypher-qt/core/tests/` for runtime logic, and run `ctest`. For UI changes, run the app and attach screenshots to the PR.
+- **API:** `npm test` (Vitest) in `backend/api/`. Cover new routes, including error and auth-failure cases.
+- **ShadowOS:** run `bash shadowos/validate.sh`. For changes to the image, build the ISO and boot it with `bash shadowos/qemu-test.sh`.
 
 ### Manual Testing Checklist
 
 For UI changes:
-- [ ] Test on target OS (Linux/macOS/WSL)
-- [ ] Test with different themes (light/dark)
-- [ ] Test accessibility (keyboard navigation, screen readers)
+- [ ] Test on Linux (X11 and Wayland if you can)
 - [ ] Test with different window sizes
 - [ ] Screenshot for PR if UI changes are significant
 
-For modules/tools:
-- [ ] Test with realistic targets (with permission)
-- [ ] Test with edge cases (empty results, network timeout, malformed input)
-- [ ] Verify output accuracy against expected behavior
-- [ ] Check error handling and user feedback
+For network features:
+- [ ] Test edge cases: empty results, network timeouts, malformed input
+- [ ] Check error handling and what the user sees
 
 ---
 
 ## Documentation Expectations
 
-### Code Documentation
-
-Every public class, function, and module should have docstrings:
-
-```python
-def orchestrate_scan(
-    target: str,
-    modules: List[str],
-    timeout_seconds: int = 300,
-) -> ScanResult:
-    """
-    Orchestrate a security scan against a target using specified modules.
-    
-    This function coordinates parallel execution of multiple modules, 
-    aggregates results, and deduplicates findings.
-    
-    Args:
-        target: Target hostname, IP, or CIDR range
-        modules: List of module names to run (e.g., ["nmap", "nikto"])
-        timeout_seconds: Maximum time allowed for the entire scan (default: 300)
-    
-    Returns:
-        ScanResult object with aggregated findings, timing info, and metadata
-    
-    Raises:
-        ValueError: If target is invalid or modules list is empty
-        TimeoutError: If scan exceeds timeout_seconds
-        ModuleNotFoundError: If a module in the list is not available
-    
-    Example:
-        >>> result = orchestrate_scan("192.168.1.1", ["nmap", "nikto"])
-        >>> print(f"Found {len(result.findings)} issues")
-    """
-```
-
-### Feature Documentation
-
-For new features, update:
-
-1. **README.md** — add to feature list if it's user-facing
-2. **Module Library** — if it's a new module, add to `docs/modules/`
-3. **User Guide** — workflow documentation in `docs/guides/`
-4. **API Docs** — if it's a new API endpoint or orchestration function
-5. **Threat Model** — if it introduces new attack surface or mitigations
-
-### Blog Posts
-
-Share knowledge with the community:
-- Security findings or threat intelligence → `docs/blog/threats/`
-- Tool tutorials and how-tos → `docs/blog/tutorials/`
-- Architecture decisions → `docs/blog/engineering/`
-
-**Format:**
-```markdown
----
-title: "How to Set Up Offline YARA Rules"
-author: Your Name
-date: 2026-07-05
-tags: ["yara", "offline", "detection"]
----
-
-# How to Set Up Offline YARA Rules
-
-[Content...]
-```
+- Document public classes and functions with a short comment on what they do and why.
+- Update `README.md` for user-facing changes, and `CLAUDE.md` for new conventions or commands.
+- Don't add internal planning docs to the repo.
 
 ---
 

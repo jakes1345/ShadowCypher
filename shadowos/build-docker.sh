@@ -109,9 +109,6 @@ docker run --rm --privileged --network=host \
     echo ">> ShadowCypher desktop app installed into the image."
     set +e
 
-    # Patch mkarchiso to pass --noconfirm to pacstrap
-    python3 /build/patch-mkarchiso.py
-
     # mkarchiso — must succeed or we have nothing
     set -e
     echo ">> Building ISO with mkarchiso..."

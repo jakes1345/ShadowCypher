@@ -13,15 +13,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
 
       - name: Generate changelog
         run: |
           VERSION=${GITHUB_REF#refs/tags/shadowos-v}
-          python3 shadowos/changelog.py "$VERSION" > /tmp/changelog_entry.md
+          bash shadowos/changelog.sh "$VERSION" > /tmp/changelog_entry.md
 
       - name: Update CHANGELOG.md
         run: |
