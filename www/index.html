@@ -2829,7 +2829,7 @@
             const first = d.first_seen_at ? new Date(d.first_seen_at).toLocaleString() : '—';
             const ports = (d.open_ports || []);
             const portsHtml = ports.length
-                ? ports.map(p => `<span style="font-family:var(--font-mono);font-size:0.75rem;padding:2px 8px;background:rgba(99,179,237,0.08);border:1px solid rgba(99,179,237,0.2);border-radius:3px;color:var(--accent-primary);">${p}</span>`).join('')
+                ? ports.map(p => `<span style="font-family:var(--font-mono);font-size:0.75rem;padding:2px 8px;background:rgba(99,179,237,0.08);border:1px solid rgba(99,179,237,0.2);border-radius:3px;color:var(--accent-primary);">${escapeHtml(String(p))}</span>`).join('')
                 : '<span style="color:#555;font-size:0.75rem;">No open ports detected</span>';
 
             // CVE alerts for this device
@@ -4760,13 +4760,12 @@
                 const bodyEl = document.getElementById('mail-reader-body');
                 if (msg.body_html) {
                     const iframe = document.createElement('iframe');
-                    iframe.sandbox = 'allow-same-origin';
+                    iframe.sandbox = '';
                     iframe.style.cssText = 'width:100%;flex:1;border:none;background:#fff;';
                     bodyEl.innerHTML = '';
                     bodyEl.style.padding = '0';
                     bodyEl.appendChild(iframe);
-                    iframe.onload = () => { iframe.contentDocument.open(); iframe.contentDocument.write(msg.body_html); iframe.contentDocument.close(); };
-                    iframe.src = 'about:blank';
+                    iframe.srcdoc = msg.body_html;
                 } else {
                     bodyEl.style.padding = '24px';
                     bodyEl.textContent = msg.body_text || '(no body)';

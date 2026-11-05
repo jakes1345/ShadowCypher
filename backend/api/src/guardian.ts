@@ -196,7 +196,7 @@ export async function uploadScan(req: Request, env: Env, user: AuthedUser, cors:
           hostname: d.hostname ?? null,
           vendor: d.vendor ?? null,
           device_type: d.device_type ?? null,
-          open_ports: d.open_ports ?? [],
+          open_ports: (d.open_ports ?? []).filter((p): p is number => Number.isInteger(p) && p > 0 && p < 65536),
           os_fingerprint: d.os_fingerprint ?? null,
           last_seen_at: new Date().toISOString(),
         },
