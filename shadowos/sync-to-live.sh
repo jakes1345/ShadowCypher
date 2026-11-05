@@ -47,21 +47,6 @@ sshpass -p "$PASS" ssh "${SSH_OPTS[@]}" -p "$PORT" "$SSH_HOST" "echo '$PASS' | s
 sshpass -p "$PASS" rsync -az --delete \
     -e "ssh ${SSH_OPTS[*]} -p $PORT" \
     "$PATCH_ROOT/" "$SSH_HOST:/tmp/shadowos-patch/"
-RSYNC_EX=(--exclude='meta-venv' --exclude='**/meta-venv/**' --exclude='.git' --exclude='__pycache__' --exclude='.venv' --exclude='venv')
-sshpass -p "$PASS" ssh "${SSH_OPTS[@]}" -p "$PORT" "$SSH_HOST" 'mkdir -p /tmp/shadowos-sc-src'
-for src in shadowcypher ai_engine shadowai shadow_skills shadowscript agent; do
-    [[ -d "$REPO/$src" ]] || continue
-    echo ">>   rsync $src"
-    sshpass -p "$PASS" rsync -az "${RSYNC_EX[@]}" \
-        -e "ssh ${SSH_OPTS[*]} -p $PORT" \
-        "$REPO/$src/" "$SSH_HOST:/tmp/shadowos-sc-src/$src/"
-done
-[[ -d "$REPO/assets" ]] && \
-    sshpass -p "$PASS" rsync -az \
-        -e "ssh ${SSH_OPTS[*]} -p $PORT" \
-        "$REPO/assets/" "$SSH_HOST:/tmp/shadowos-sc-src/assets/"
-[[ -f "$REPO/config.example.json" ]] && \
-    sshpass -p "$PASS" scp "${SSH_OPTS[@]}" -P "$PORT" "$REPO/config.example.json" "$SSH_HOST:/tmp/shadowos-sc-src/"
 [[ -f "$APPLY" ]] && \
     sshpass -p "$PASS" scp "${SSH_OPTS[@]}" -P "$PORT" "$APPLY" "$SSH_HOST:/tmp/shadowos-apply-fixes.sh"
 

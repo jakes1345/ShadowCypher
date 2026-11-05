@@ -45,10 +45,7 @@ shadowos/
 │   ├── grub/grub.cfg                     live GRUB config
 │   ├── grub/themes/shadowos/             live-boot theme assets
 │   └── syslinux/                         BIOS fallback boot
-├── branding/
-│   ├── render_all.py                     generates 20 desktop + 3 login wallpapers
-│   ├── render_plymouth.py                generates Plymouth theme assets
-│   └── render_grub.py                    generates GRUB theme assets
+├── branding/                            wallpapers, Plymouth and GRUB theme assets
 ├── build.sh                              wrapper around mkarchiso
 ├── build-docker.sh                       Arch-in-Docker build for non-Arch hosts
 ├── flash-usb.sh                          dd helper
@@ -103,13 +100,8 @@ Switch with `shadow-mode <name>` or `SUPER+M` for the wofi picker.
 - Root: `shadow`
 - These are reset by the installer; do not leave them on installed systems.
 
-## Regenerating themes / wallpapers
+## Themes and wallpapers
 
-```bash
-cd shadowos/branding
-python3 render_all.py        # 20 wallpapers + 3 login
-python3 render_plymouth.py   # Plymouth boot animation assets
-python3 render_grub.py       # GRUB theme background + select pixmaps
-```
-
-Requires Pillow; numpy makes it 10× faster.
+The wallpapers, Plymouth and GRUB theme assets are committed as images under
+`branding/` and `profile/airootfs/usr/share/`. The Python scripts that rendered
+them were removed with the rest of the project's Python; edit the images directly.
