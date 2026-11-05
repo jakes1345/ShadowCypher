@@ -21,7 +21,7 @@ Sovereign personal security platform: network monitoring, CVE threat feed, encry
 
 - **The desktop app is Qt6 C++, in `shadowcypher-qt/` only.** New desktop features go there.
 - **No Python and no GTK.** Don't add Python or GTK code, dependencies, CI jobs or packages. The project moved off Python + GTK3.
-- Leftovers from before the switch are being removed: `native/` (an old GTK app), `shadowcypher/`, `tests/`, `agent/`, `shadowscript/` Python code, root Python files, and the Python app bundled into the ShadowOS ISO. Don't build on them or fix them. If a change needs one of them, port the piece into `shadowcypher-qt/` instead.
+- Leftovers from before the switch are being removed: `shadowcypher/`, `tests/`, `agent/`, `shadowscript/` Python code, root Python files, and the Python app bundled into the ShadowOS ISO. Don't build on them or fix them. If a change needs one of them, port the piece into `shadowcypher-qt/` instead.
 
 ## Key directories
 
