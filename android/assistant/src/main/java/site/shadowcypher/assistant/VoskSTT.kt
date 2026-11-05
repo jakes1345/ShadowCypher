@@ -8,7 +8,6 @@ import android.util.Log
 import kotlinx.coroutines.*
 import org.vosk.Model
 import org.vosk.Recognizer
-import org.vosk.android.StorageService
 import java.io.File
 import java.io.IOException
 
@@ -78,45 +77,74 @@ class VoskSTT(private val context: Context) {
             return modelDir
         }
 
+        // 41 MB: only fetch on Wi-Fi or another unmetered network
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        if (cm.isActiveNetworkMetered) throw IOException("Offline speech model will download on Wi-Fi")
+
         cacheDir.mkdirs()
         Log.i(TAG, "Downloading Vosk model…")
         withContext(Dispatchers.Main) { onDownloadStart?.invoke() }
 
-        // Simulate progress ticks while StorageService downloads in background
-        val unpacked = kotlinx.coroutines.CompletableDeferred<String>()
-        var progressJob: kotlinx.coroutines.Job? = null
-
-        StorageService.unpack(
-            context, MODEL_URL, "vosk",
-            { model ->
-                Log.i(TAG, "Model loaded: $model")
-                progressJob?.cancel()
-                unpacked.complete(modelDir.absolutePath)
-            },
-            { error ->
-                Log.e(TAG, "Model download error: ${error.message}")
-                progressJob?.cancel()
-                unpacked.completeExceptionally(error)
-            }
-        )
-
-        // Tick fake progress (StorageService has no progress callback in v0.3.x)
-        progressJob = scope.launch {
-            var p = 0f
-            while (p < 0.95f && unpacked.isActive) {
-                delay(1500)
-                p = (p + 0.06f).coerceAtMost(0.95f)
-                withContext(Dispatchers.Main) { onProgress?.invoke(p) }
-            }
+        // Download the zip with real progress, then unpack it. (StorageService.unpack
+        // only unpacks a model bundled in the app's assets; it can't download.)
+        val zip = File(cacheDir, "$MODEL_DIR_NAME.zip.part")
+        val staging = File(cacheDir, "$MODEL_DIR_NAME.staging")
+        try {
+            download(MODEL_URL, zip) { p -> scope.launch(Dispatchers.Main) { onProgress?.invoke(p * 0.9f) } }
+            staging.deleteRecursively()
+            unzip(zip, staging)
+            val unpacked = File(staging, MODEL_DIR_NAME)
+            if (!File(unpacked, "am/final.mdl").exists()) throw IOException("Model archive is missing am/final.mdl")
+            modelDir.deleteRecursively()
+            if (!unpacked.renameTo(modelDir)) throw IOException("Couldn't move the model into place")
+            withContext(Dispatchers.Main) { onProgress?.invoke(1f) }
+        } finally {
+            zip.delete()
+            staging.deleteRecursively()
         }
-
-        // Wait up to 120s with proper coroutine suspension (not Thread.sleep)
-        withContext(Dispatchers.IO) {
-            kotlinx.coroutines.withTimeoutOrNull(120_000L) { unpacked.await() }
-        }
-
-        if (!modelDir.exists()) throw IOException("Model download timed out")
         return modelDir
+    }
+
+    private fun download(url: String, dest: File, onProgress: (Float) -> Unit) {
+        val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+        conn.connectTimeout = 15_000
+        conn.readTimeout = 30_000
+        try {
+            if (conn.responseCode != 200) throw IOException("Model download failed: HTTP ${conn.responseCode}")
+            val total = conn.contentLengthLong
+            var done = 0L
+            var lastTick = 0L
+            conn.inputStream.use { input ->
+                dest.outputStream().use { out ->
+                    val buf = ByteArray(64 * 1024)
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                        done += n
+                        if (total > 0 && done - lastTick > 512 * 1024) { lastTick = done; onProgress(done.toFloat() / total) }
+                    }
+                }
+            }
+            if (total > 0 && done != total) throw IOException("Model download incomplete ($done of $total bytes)")
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    /** Unzips [zip] into [dest], refusing entries that would land outside it. */
+    private fun unzip(zip: File, dest: File) {
+        val root = dest.canonicalFile
+        java.util.zip.ZipInputStream(zip.inputStream().buffered()).use { zin ->
+            while (true) {
+                val entry = zin.nextEntry ?: break
+                val out = File(root, entry.name).canonicalFile
+                if (!out.path.startsWith(root.path + File.separator)) throw IOException("Unsafe path in model archive: ${entry.name}")
+                if (entry.isDirectory) { out.mkdirs(); continue }
+                out.parentFile?.mkdirs()
+                out.outputStream().use { zin.copyTo(it) }
+            }
+        }
     }
 
     // ── Recording ─────────────────────────────────────────────────────────────
@@ -151,7 +179,9 @@ class VoskSTT(private val context: Context) {
         job = scope.launch {
             val buf = ShortArray(bufferSize / 2)
             var silenceFrames = 0
+            var reported = false
             val maxSilence = (SAMPLE_RATE * 1.5 / buf.size).toInt() // 1.5 s silence → finalize
+            val deadline = System.currentTimeMillis() + 15_000L                 // hard cap per listen
 
             while (isActive) {
                 val read = audioRecord?.read(buf, 0, buf.size) ?: -1
@@ -169,9 +199,11 @@ class VoskSTT(private val context: Context) {
                     silenceFrames = 0
                     val result = parseText(recognizer?.result ?: "")
                     if (result.isNotBlank()) {
+                        reported = true
                         withContext(Dispatchers.Main) { onResult(result) }
                         break
                     }
+                    if (System.currentTimeMillis() > deadline) break
                 } else {
                     val partial = parseText(recognizer?.partialResult ?: "")
                     if (partial.isNotBlank()) {
@@ -181,15 +213,17 @@ class VoskSTT(private val context: Context) {
                         silenceFrames++
                     }
 
-                    if (silenceFrames >= maxSilence) {
+                    if (silenceFrames >= maxSilence || System.currentTimeMillis() > deadline) {
+                        // Always report back, even when nothing was heard, so the UI
+                        // leaves the listening state (an empty transcript means idle).
                         val final = parseText(recognizer?.finalResult ?: "")
-                        if (final.isNotBlank()) {
-                            withContext(Dispatchers.Main) { onResult(final) }
-                        }
+                        reported = true
+                        withContext(Dispatchers.Main) { onResult(final) }
                         break
                     }
                 }
             }
+            if (!reported && isActive) withContext(Dispatchers.Main) { onResult("") }
             stopInternal()
         }
     }

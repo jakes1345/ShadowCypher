@@ -644,6 +644,8 @@ const ShadowAssistant = (() => {
       textInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); _submitText(); }
       });
+      textInput.addEventListener('focus', _armIdle);
+      textInput.addEventListener('input', _armIdle);
     }
 
     _syncSettingsView();
@@ -760,8 +762,19 @@ const ShadowAssistant = (() => {
       document.getElementById('sa-response').textContent = '';
     }
 
+    _armIdle();
+  }
+
+  // Close the overlay after a minute of inactivity, but never while the user is
+  // typing (field focused or not empty). Typing restarts the minute.
+  function _armIdle() {
     clearTimeout(_idleTimer);
-    _idleTimer = setTimeout(() => { if (state === 'idle') dismiss(); }, 60000);
+    _idleTimer = setTimeout(() => {
+      const input = document.getElementById('sa-text-input');
+      const typing = input && (document.activeElement === input || input.value.trim() !== '');
+      if (typing || state !== 'idle') { _armIdle(); return; }
+      dismiss();
+    }, 60000);
   }
 
   function _animatedDismiss() {
