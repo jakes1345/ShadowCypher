@@ -148,3 +148,16 @@ describe("providerError with cut-off JSON", () => {
     expect(r.body.reason).toBe("Anthropic rejected the request: This API key is not scoped to a workspace.");
   });
 });
+
+import { extractToolErrors } from "../assistant";
+
+describe("extractToolErrors", () => {
+  it("reports web tool error codes and ignores successful results", () => {
+    expect(extractToolErrors([
+      { type: "web_search_tool_result", content: [{ type: "web_search_result", url: "https://a", title: "A" }] },
+      { type: "web_search_tool_result", content: { type: "web_search_tool_result_error", error_code: "max_uses_exceeded" } },
+      { type: "web_fetch_tool_result", content: { type: "web_fetch_tool_error", error_code: "url_not_accessible" } },
+      { type: "text", text: "hi" },
+    ])).toEqual(["web_search: max_uses_exceeded", "web_fetch: url_not_accessible"]);
+  });
+});
