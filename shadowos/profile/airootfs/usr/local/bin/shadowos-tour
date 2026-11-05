@@ -85,17 +85,14 @@ printf "\n  ${S}Edit:${R} ~/.config/hypr/hyprland.conf\n"
 pause
 
 # ── 6. guardian ──────────────────────────────────────────────────────────────
-header "Guardian daemon"
-printf "  Guardian is the ShadowCypher agent. It watches this machine and, if you\n"
-printf "  link an account, reports to your dashboard. It is ${B}opt-in${R} — off until\n"
-printf "  you configure it. Without it, ShadowOS is fully offline-capable.\n\n"
-printf "  ${S}shadowcypher-agent.service${R}  $(svc shadowcypher-agent)\n"
-printf "  ${S}guardian-api.service${R}        $(svc guardian-api)\n\n"
-printf "  ${G}\$${R} guardian-status          ${S}detailed status${R}\n"
-printf "  ${G}\$${R} guardian-logs            ${S}follow logs${R}\n"
-printf "  ${G}\$${R} shadow-settings          ${S}link an account / re-run welcome${R}\n\n"
-if [[ ! -f /home/shadow/.shadowcypher/config.json ]]; then
-    printf "  ${A}not linked${R} ${S}— agent will not start until an API key is configured.${R}\n"
+header "Guardian"
+printf "  Guardian is part of the ShadowCypher app (SUPER+S). Its background daemon\n"
+printf "  watches this network locally. Uploading scans to your account is ${B}opt-in${R}\n"
+printf "  (Settings: Sync network scans). Without it, ShadowOS is fully offline-capable.\n\n"
+printf "  ${S}shadowcypher-daemon (user)${R}  $(systemctl --user is-active shadowcypher-daemon 2>/dev/null || echo inactive)\n\n"
+printf "  ${G}\$${R} journalctl --user -u shadowcypher-daemon -f   ${S}follow daemon logs${R}\n\n"
+if [[ ! -f "$HOME/.config/shadowcypher/config.ini" ]]; then
+    printf "  ${A}not signed in${R} ${S}- open ShadowCypher and choose Sign in with browser.${R}\n"
 fi
 printf "\n"; line
 printf "\n  ${G}${B}That's the tour.${R} ${S}Re-run any time with${R} SUPER+F1 ${S}or${R} shadowos-tour\n\n"

@@ -36,7 +36,6 @@ systemctl enable power-profiles-daemon.service 2>/dev/null || true
 systemctl enable auditd.service 2>/dev/null || true
 systemctl enable usbguard.service 2>/dev/null || true
 systemctl enable systemd-zram-setup@zram0.service 2>/dev/null || true
-systemctl enable shadowcypher-agent.service 2>/dev/null || true
 systemctl set-default graphical.target
 
 # ── SSH hardening ─────────────────────────────────────────────────────────────
@@ -127,13 +126,12 @@ for bin in \
     shadowos-ramwipe shadowos-session-start shadowos-theme-apply shadowos-tour \
     shadowos-update-gui shadowos-vpn-killswitch shadowos-welcome shadowos-ai-setup \
     shadow-power-menu shadow-term \
-    shadowcypher-autostart guardian-launch guardian-logs guardian-status guardian-stop
+    shadowcypher-autostart
 do
     chmod +x "/usr/local/bin/${bin}" 2>/dev/null || true
 done
 
 find /etc/shadowos/modes -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
-chmod +x /opt/shadowcypher/launch.sh 2>/dev/null || true
 
 # ── Plymouth in mkinitcpio ────────────────────────────────────────────────────
 if [ -f /etc/mkinitcpio.conf ] && ! grep -E '^HOOKS=.*plymouth' /etc/mkinitcpio.conf >/dev/null 2>&1; then

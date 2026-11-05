@@ -5,7 +5,7 @@ set -u
 
 LOG=/var/log/shadowos-ai-setup.log
 STAMP=/var/lib/shadowos/ai-setup.stamp
-MODELS_DIR=/opt/shadowcypher/shadowai/models
+MODELS_DIR=/usr/share/shadowcypher/models
 
 mkdir -p "$(dirname "$STAMP")"
 

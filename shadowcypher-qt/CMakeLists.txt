@@ -112,9 +112,12 @@ if(UNIX AND NOT APPLE)
 endif()
 
 install(TARGETS shadowcypher DESTINATION bin)
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../shadowscript/missions"
-    DESTINATION share/shadowcypher)
+# Optional mission scripts for the ShadowScript page (searched at runtime too).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../shadowscript/missions")
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../shadowscript/missions"
+        DESTINATION share/shadowcypher)
+endif()
 install(FILES assets/shadowcypher.desktop DESTINATION share/applications)
-install(FILES assets/icon-256.png
-    DESTINATION share/icons/hicolor/256x256/apps
+install(FILES assets/icon-512.png
+    DESTINATION share/icons/hicolor/512x512/apps
     RENAME shadowcypher.png)

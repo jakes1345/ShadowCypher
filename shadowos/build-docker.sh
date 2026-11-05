@@ -9,38 +9,11 @@ WORK="$HERE/work"
 
 mkdir -p "$OUT" "$WORK"
 
-# === Mirror parts of the ShadowCypher repo into the airootfs ===
-# So /opt/shadowcypher/ ships preinstalled inside the ISO.
-SC_SRC="$HERE/.."
-SC_DST="$HERE/profile/airootfs/opt/shadowcypher"
-echo ">> staging shadowcypher → /opt/shadowcypher"
-mkdir -p "$SC_DST"
-
-# Per-directory rsync — simpler and more predictable than complex filter rules
-RSYNC_EXCLUDES=(
-    --exclude='__pycache__' --exclude='*.pyc' --exclude='*.pyo'
-    --exclude='.venv' --exclude='venv' --exclude='meta-venv'
-    --exclude='node_modules' --exclude='.ruff_cache' --exclude='.git'
-    --exclude='logs' --exclude='outputs' --exclude='findings'
-    --exclude='reports' --exclude='*.log' --exclude='build' --exclude='dist'
-    --exclude='*.egg-info'
-    # Size reduction: skip heavy non-runtime assets from the ISO
-    --exclude='docs' --exclude='*.mp4' --exclude='*.mp3'
-    --exclude='*.pdf' --exclude='paper'
-    --exclude='autoagent-intro.svg' --exclude='autoagent-intro.png'
-)
-for src in shadowcypher ai_engine shadowai shadow_skills shadowscript agent; do
-    if [[ -d "$SC_SRC/$src" ]]; then
-        echo ">>   snapshotting $src ($(du -sh "$SC_SRC/$src" 2>/dev/null | cut -f1))"
-        rsync -a --delete "${RSYNC_EXCLUDES[@]}" "$SC_SRC/$src/" "$SC_DST/$src/"
-    fi
-done
-
-if [[ -d "$SC_SRC/assets" ]]; then
-    echo ">>   snapshotting assets"
-    rsync -a "$SC_SRC/assets/" "$SC_DST/assets/"
-fi
-[[ -f "$SC_SRC/config.example.json" ]] && cp -f "$SC_SRC/config.example.json" "$SC_DST/config.example.json"
+# The ShadowCypher desktop app (Qt6 C++, shadowcypher-qt/) is built and
+# installed into the image inside the container below. The image used to carry
+# a snapshot of the old Python app in /opt/shadowcypher; make sure none is left.
+REPO_ROOT="$(cd "$HERE/.." && pwd)"
+rm -rf "$HERE/profile/airootfs/opt/shadowcypher"
 
 BUILD_DATE="$(date +%Y.%m.%d)"
 OSR="$HERE/profile/airootfs/etc/os-release"
@@ -48,20 +21,6 @@ if [[ -f "$OSR" ]]; then
     sed -i "s/^PRETTY_NAME=.*/PRETTY_NAME=\"ShadowOS 0.3 (${BUILD_DATE})\"/" "$OSR"
     sed -i "s/^BUILD_ID=.*/BUILD_ID=${BUILD_DATE}/" "$OSR"
 fi
-
-# launch.sh entrypoint at /opt/shadowcypher/launch.sh
-if [[ -f "$SC_SRC/native/launch.sh" ]]; then
-    cp "$SC_SRC/native/launch.sh" "$SC_DST/launch.sh"
-else
-    # Minimal fallback so the Hyprland exec-once doesn't fail
-    cat > "$SC_DST/launch.sh" <<'LAUNCHER'
-#!/usr/bin/env bash
-# ShadowCypher launcher — runs the Python app from /opt/shadowcypher
-export PYTHONPATH=/opt/shadowcypher
-exec python3 -m shadowcypher.app "$@"
-LAUNCHER
-fi
-chmod +x "$SC_DST/launch.sh"
 
 # Copy GRUB theme into the ISO's grub directory so it loads during live boot.
 # (The airootfs copy lives at usr/share/grub/themes/shadowos/ for the installed
@@ -81,6 +40,7 @@ mkdir -p "$HERE/pkg-cache"
 echo ">> [2/3] Running mkarchiso inside container ..."
 docker run --rm --privileged --network=host \
   -v "$HERE":/build \
+  -v "$REPO_ROOT/shadowcypher-qt":/src/shadowcypher-qt:ro \
   -v "$HERE/pkg-cache":/var/cache/pacman/pkg \
   -w /build \
   "$IMAGE" -c '
@@ -134,6 +94,20 @@ docker run --rm --privileged --network=host \
 
     pacman --noconfirm -Sy 2>&1 | tail -3
     echo ">> Databases synced."
+
+    # Build the ShadowCypher desktop app and install it into the image
+    # (/usr/bin/shadowcypher, shadowcypher-daemon, the Ghost mode privacy helper
+    # and its polkit policy, menu entry and icon). No app means no ISO.
+    set -e
+    pacman --noconfirm -S --needed cmake make gcc pkgconf qt6-base qt6-websockets 2>&1 | tail -3
+    cmake -S /src/shadowcypher-qt -B /tmp/qt-build -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_TESTING=OFF -Wno-dev
+    cmake --build /tmp/qt-build --parallel "$(nproc)"
+    DESTDIR=/tmp/profile/airootfs cmake --install /tmp/qt-build --strip
+    test -x /tmp/profile/airootfs/usr/bin/shadowcypher
+    test -x /tmp/profile/airootfs/usr/libexec/shadowcypher/shadowcypher-privacy-helper
+    echo ">> ShadowCypher desktop app installed into the image."
+    set +e
 
     # Patch mkarchiso to pass --noconfirm to pacstrap
     python3 /build/patch-mkarchiso.py

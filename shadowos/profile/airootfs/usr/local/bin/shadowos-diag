@@ -20,7 +20,7 @@ hyprctl version  > "$WORK/hyprland/version.txt"  2>&1 || true
 
 # ShadowOS state
 cp -a /var/lib/shadowos/ "$WORK/shadowos/" 2>/dev/null || true
-ls -la /opt/shadowcypher/ > "$WORK/shadowos/opt-listing.txt" 2>&1 || true
+ls -la /usr/bin/shadowcypher* /usr/libexec/shadowcypher/ > "$WORK/shadowos/app-listing.txt" 2>&1 || true
 
 # System snapshot
 systemctl --failed > "$WORK/system/failed-units.txt" 2>&1 || true
