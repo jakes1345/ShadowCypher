@@ -163,18 +163,14 @@ mypy shadowcypher/
 ### Project Structure
 
 ```
-shadowcypher/
-├── shadowcypher/          # Main package
-│   ├── ui/               # GTK interface
-│   ├── ai_engine/        # Local LLM orchestration (Ollama)
-│   ├── arsenal/          # Tool wrappers & modules
-│   ├── core/             # Event bus, crypto, auth
-│   └── guardian/         # Guardian module system
-├── native/               # Go relay component
-├── tests/                # Unit & integration tests
-├── docs/                 # User & developer documentation
-├── .github/              # CI/CD workflows
-└── configs/              # Default configuration templates
+ShadowCypher/
+├── shadowcypher-qt/       # Desktop app (Qt6 C++): UI, background daemon, privacy helper
+├── www/                   # Web app (single-page HTML/JS)
+├── backend/api/           # API (Cloudflare Worker, TypeScript)
+├── android/               # Android apps: Guardian and Shadow AI
+├── shadowos/              # ShadowOS (Arch Linux ISO profile)
+├── blog/                  # Blog posts
+└── .github/               # CI/CD workflows
 ```
 
 ---
