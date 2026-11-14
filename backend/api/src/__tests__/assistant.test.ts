@@ -161,3 +161,19 @@ describe("extractToolErrors", () => {
     ])).toEqual(["web_search: max_uses_exceeded", "web_fetch: url_not_accessible"]);
   });
 });
+
+import { errorLabel } from "../assistant";
+
+describe("errorLabel", () => {
+  it("keeps the provider and status and drops the response text", () => {
+    const e = new Error('anthropic_400:{"error":{"message":"prompt quoted here: my router password is hunter2"}}');
+    expect(errorLabel(e)).toBe("anthropic_400");
+    expect(errorLabel(new Error("ollama_500:model crashed while answering <question text>"))).toBe("ollama_500");
+  });
+
+  it("never passes an unrecognised message through", () => {
+    expect(errorLabel(new Error("something with user text in it"))).toBe("error");
+    expect(errorLabel("a string")).toBe("error");
+    expect(errorLabel(undefined)).toBe("error");
+  });
+});
