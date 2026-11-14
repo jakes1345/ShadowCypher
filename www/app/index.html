@@ -2411,7 +2411,12 @@
 
             try {
                 // Only split the password if this API can hand the parameters back at login.
-                const supportsIdentity = (await fetchKdf(rawHandle)) !== null;
+                const kdfInfo = await fetchKdf(rawHandle);
+                if (kdfInfo && kdfInfo.reserved) {
+                    showAuthBanner(`The handle @${rawHandle} is reserved. Choose a different one.`, 'error');
+                    return;
+                }
+                const supportsIdentity = kdfInfo !== null;
                 const kdf = supportsIdentity ? ScIdentity.newKdfParams() : null;
                 const secrets = kdf ? await ScIdentity.deriveSecrets(password, kdf) : null;
                 const apiKey = generateApiKey();
@@ -2456,6 +2461,8 @@
             } catch (err) {
                 let msg = err.message || 'Signup failed.';
                 if (msg.includes('already registered')) msg = `The handle @${rawHandle} is taken. Choose a different one.`;
+                // The database refuses reserved names; Supabase reports that as a generic save error.
+                if (msg.includes('Database error saving new user')) msg = `The handle @${rawHandle} isn't available. Choose a different one.`;
                 cliPrint(`Signup: ${msg}`, 'var(--critical)');
                 showAuthBanner(msg, 'error');
             }
@@ -2510,12 +2517,14 @@
         let _sessionApiKey = null;
 
         async function callApi(path, opts = {}) {
-            const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+            // timeoutMs is ours, not fetch's: most calls should fail fast, a few are slow by nature.
+            const { timeoutMs = 10000, ...fetchOpts } = opts;
+            const headers = { 'Content-Type': 'application/json', ...(fetchOpts.headers || {}) };
             if (_sessionApiKey) headers['Authorization'] = `Bearer ${_sessionApiKey}`;
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
             try {
-                const resp = await fetch(`${API_BASE}${path}`, { ...opts, headers, signal: controller.signal });
+                const resp = await fetch(`${API_BASE}${path}`, { ...fetchOpts, headers, signal: controller.signal });
                 clearTimeout(timeoutId);
                 const data = await resp.json().catch(() => ({}));
                 if (!resp.ok) throw new Error(data.error || data.message || `HTTP ${resp.status}`);
@@ -3723,12 +3732,21 @@
             const confirmEmail = prompt('Type your email to confirm deletion. This is permanent.');
             if (!confirmEmail) return;
             try {
-                await callApi('/v1/me/delete', { method: 'POST', body: JSON.stringify({ confirm_email: confirmEmail }) });
+                cliPrint('Deleting your account, files, mail and chat history, and cancelling any subscription…', 'var(--warning)');
+                // Deletion removes every stored file as well as the database rows, so give it time.
+                await callApi('/v1/me/delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ confirm_email: confirmEmail }),
+                    timeoutMs: 120000,
+                });
                 cliPrint('Account deleted. Goodbye.', 'var(--warning)');
                 if (supabaseClient) await supabaseClient.auth.signOut();
                 setTimeout(() => window.location.href = '/', 1200);
             } catch (err) {
-                cliPrint(`Delete failed: ${err.message}`, 'var(--critical)');
+                const msg = (err.message === 'delete_incomplete' || err.message === 'Request timed out')
+                    ? "Deletion stopped part-way. Your account still exists, so run it again to finish."
+                    : err.message;
+                cliPrint(`Delete failed: ${msg}`, 'var(--critical)');
             }
         }
 
