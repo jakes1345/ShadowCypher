@@ -139,3 +139,49 @@ export async function dbUpdate<T = unknown>(
   if (!resp.ok) throw new Error(`db_update_failed:${table}:${resp.status}:${await resp.text()}`);
   return (await resp.json()) as T[];
 }
+
+/**
+ * Deletes the rows matching `filters` and returns how many went.
+ * Refuses to run without a filter, so a caller can never empty a table by accident.
+ * A table that does not exist counts as nothing to delete: self-hosted
+ * databases may not have every optional table.
+ */
+export async function dbDelete(env: Env, table: string, filters: Record<string, string>): Promise<number> {
+  if (Object.keys(filters).length === 0) throw new Error(`db_delete_unfiltered:${table}`);
+  const resp = await fetch(buildUrl(env, table, { filters }), {
+    method: "DELETE",
+    headers: authHeaders(env, "count=exact,return=minimal"),
+  });
+  if (resp.status === 404) return 0;
+  if (!resp.ok) throw new Error(`db_delete_failed:${table}:${resp.status}:${await resp.text()}`);
+  const total = resp.headers.get("Content-Range")?.split("/")[1]; // "*/12"
+  return total && total !== "*" ? parseInt(total, 10) : 0;
+}
+
+const SELECT_PAGE = 1000; // PostgREST's default row cap per request
+
+/**
+ * Reads every row matching the query, one page at a time.
+ * `order` must name a unique column so pages neither overlap nor skip rows.
+ * Stops at `maxRows` and reports `truncated` instead of returning a silent partial set.
+ */
+export async function dbSelectAll<T = unknown>(
+  env: Env,
+  table: string,
+  opts: { select?: string; filters?: Record<string, string>; order: string; maxRows?: number },
+): Promise<{ rows: T[]; truncated: boolean }> {
+  const maxRows = opts.maxRows ?? 100_000;
+  const rows: T[] = [];
+  for (let offset = 0; offset < maxRows; offset += SELECT_PAGE) {
+    const page = await dbSelect<T>(env, table, {
+      select: opts.select,
+      filters: opts.filters,
+      order: opts.order,
+      limit: Math.min(SELECT_PAGE, maxRows - offset),
+      offset,
+    });
+    rows.push(...page);
+    if (page.length < SELECT_PAGE) return { rows, truncated: false };
+  }
+  return { rows, truncated: true };
+}

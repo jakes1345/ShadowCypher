@@ -87,3 +87,38 @@ export async function neonRevokeKey(env: Env, userId: string, key: string): Prom
     console.error("[neon] revokeKey failed:", e);
   }
 }
+
+/** Postgres "undefined_table": the mirror was created from an older schema. */
+function isMissingTable(e: unknown): boolean {
+  return (e as { code?: string } | null)?.code === "42P01";
+}
+
+/**
+ * Remove a user from the Neon mirror.
+ *
+ * Most mirrored tables go with the user through ON DELETE CASCADE. The ones
+ * cleared first here either have no foreign key to users or would block the
+ * delete (team invitations the user sent) or outlive it (audit rows).
+ *
+ * Unlike the other helpers here, this one throws. Key lookups try Neon first,
+ * so a row left behind would keep a deleted account's API key working.
+ */
+export async function neonDeleteUser(env: Env, userId: string): Promise<void> {
+  if (!env.NEON_DATABASE_URL) return;
+  const db = sql(env);
+  const optional = [
+    () => db`UPDATE public.team_members SET invited_by = NULL WHERE invited_by = ${userId}`,
+    () => db`DELETE FROM public.team_invites WHERE invited_by = ${userId}`,
+    () => db`DELETE FROM public.audit_log WHERE user_id = ${userId}`,
+    () => db`DELETE FROM public.chat_messages WHERE user_id = ${userId}`,
+    () => db`DELETE FROM public.chat_presence WHERE user_id = ${userId}`,
+  ];
+  for (const run of optional) {
+    try {
+      await run();
+    } catch (e) {
+      if (!isMissingTable(e)) throw e;
+    }
+  }
+  await db`DELETE FROM public.users WHERE id = ${userId}`;
+}
