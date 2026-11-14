@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy — ShadowCypher</title>
-    <meta name="description" content="ShadowCypher privacy policy: what we collect, what we don't, how we store it.">
+    <meta name="description" content="ShadowCypher privacy policy: what is stored, where, for how long, and who else handles it.">
     <link rel="icon" type="image/png" href="/icon-192.png">
     <link href="/vendor/fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
@@ -12,74 +12,150 @@
 <body style="background:var(--bg-base);color:#ddd;font-family:var(--font-main);max-width:800px;margin:0 auto;padding:60px 24px;line-height:1.7;">
     <a href="/" style="color:var(--accent-primary);font-family:var(--font-mono);font-size:0.8rem;text-decoration:none;letter-spacing:2px;">← SHADOWCYPHER</a>
     <h1 style="font-size:2.5rem;margin:30px 0 10px;color:#fff;">Privacy Policy</h1>
-    <p style="color:var(--text-secondary);font-family:var(--font-mono);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">Last updated: June 1, 2026</p>
+    <p style="color:var(--text-secondary);font-family:var(--font-mono);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;">Last updated: November 14, 2026</p>
 
     <h2 style="color:var(--accent-primary);margin-top:50px;font-size:1.4rem;">Summary</h2>
-    <p>ShadowCypher is a security platform you use to monitor <em>your own</em> networks and devices. We treat your data the same way we'd want our data treated: collect only what's necessary, store it as little as we can, never sell it, never share it with third parties for marketing, and let you delete it whenever you want.</p>
+    <p>ShadowCypher is run by one independent developer, not a company. "We" on this page means that person.</p>
+    <p>We store what the service needs in order to work and nothing else. We don't sell it, we don't share it for advertising, and there are no analytics or trackers anywhere in the product. You can export or delete everything yourself, at any time, without asking us.</p>
+    <p>This page lists what is stored, where it is stored, how long it is kept, and which outside companies handle it. Every statement here describes what the code does. The code is open at <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);">github.com/jakes1345/ShadowCypher</a>, so you can check.</p>
 
-    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Mobile apps (Guardian &amp; Shadow AI)</h2>
-    <p>This section applies specifically to the <strong>Guardian</strong> and <strong>Shadow AI</strong> Android apps.</p>
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">What we store</h2>
+
+    <h3 style="color:#fff;margin-top:26px;font-size:1.05rem;">Your account</h3>
     <ul>
-        <li><strong>API key:</strong> stored locally on your device only (Android SharedPreferences, encrypted). Never transmitted to us except as a bearer token to authenticate API requests you initiate.</li>
-        <li><strong>Voice / microphone:</strong> Shadow AI processes voice entirely on-device using an offline speech model (Vosk). No audio is ever recorded, transmitted, or stored — not by us, not by any third party. The microphone is only active when you are actively speaking to the assistant.</li>
-        <li><strong>Network data:</strong> Guardian displays your scan results from the Guardian agent. That data flows through the ShadowCypher API (Cloudflare Workers → your account) with the same protections described below.</li>
-        <li><strong>No advertising ID, no device fingerprint, no crash reporting SDK.</strong> Neither app includes any third-party analytics, attribution, or advertising library.</li>
-        <li><strong>Permissions used:</strong>
-            <ul>
-                <li><em>Guardian:</em> INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED, VIBRATE</li>
-                <li><em>Shadow AI:</em> INTERNET, RECORD_AUDIO (offline, on-device only), POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED</li>
-            </ul>
-        </li>
+        <li><strong>Handle.</strong> You sign up with a handle, and your address becomes <em>handle</em>@shadowcypher.site. We never ask for your name or another email address.</li>
+        <li><strong>Password.</strong> Sign-in is handled by Supabase Auth. For new accounts made in the web app, your device stretches the password with Argon2id and sends only a login secret derived from it, so the password itself never leaves your device. Older accounts, and the Android app, send the password to Supabase, which stores a hash of it and not the password.</li>
+        <li><strong>Recovery codes.</strong> We store hashes of your recovery codes, not the codes.</li>
+        <li><strong>A throwaway address, if you give one.</strong> At sign-up you can enter an email address to have your recovery codes sent to. We use it once to send that message and do not store it. Resend, which delivers the message, sees it.</li>
+        <li><strong>API key.</strong> The key that signs your devices and apps in to the API.</li>
+        <li><strong>Security log.</strong> A record of each time your API key is rotated or revoked and each time your identity keys are created or replaced, with the IP address and browser the request came from, so you can see what happened on your account.</li>
+        <li><strong>Public profile, if you fill it in.</strong> A bio, picture, links and location. Anything you add is visible to others unless you set the profile to private.</li>
     </ul>
 
-    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">What we collect</h2>
+    <h3 style="color:#fff;margin-top:26px;font-size:1.05rem;">Guardian (network monitoring)</h3>
     <ul>
-        <li><strong>Account info:</strong> email address and (optional) display name when you sign up. Stored in our auth provider (Supabase).</li>
-        <li><strong>Scan data:</strong> when you run the Guardian agent, it sends us details about devices on your local network — MAC addresses, IP addresses, hostnames, open ports, vendor identifiers. This is the data the platform analyzes to keep you secure.</li>
-        <li><strong>Incidents:</strong> security events flagged by the agent (new devices, ARP anomalies, etc.) — these stay in your account so you can review them.</li>
-        <li><strong>Billing data:</strong> if you subscribe, Stripe handles payment information directly. We never see your card. We only store your Stripe customer ID and current plan.</li>
-        <li><strong>Server logs:</strong> Cloudflare records request logs (IP address, user agent, timestamp) for abuse prevention. These are retained for 30 days.</li>
+        <li><strong>Agents.</strong> The name, operating system and agent version of each machine you run the agent on.</li>
+        <li><strong>Devices on your network.</strong> MAC address, IP address, hostname, vendor, device type, open ports, operating system guess, and any notes you add.</li>
+        <li><strong>Scans and incidents.</strong> The results of each scan, including router, DNS and firewall checks, and the security events raised from them.</li>
+        <li><strong>Missions.</strong> Scripts you send to your own agents, and the output they return.</li>
+    </ul>
+    <p>The agent reports facts about devices. It does not capture or upload the contents of your network traffic.</p>
+
+    <h3 style="color:#fff;margin-top:26px;font-size:1.05rem;">Mail, chat, files and calendar</h3>
+    <ul>
+        <li><strong>Mail.</strong> The messages you send and receive: addresses, subject and body. Mail is stored as received. It is not end-to-end encrypted, so it is readable on the server.</li>
+        <li><strong>Chat.</strong> Messages, reactions and read markers. While your chat vault is unlocked, messages are encrypted in your browser before they are sent, and the server holds only the encrypted form. A message sent while the vault is locked is stored as plain text.</li>
+        <li><strong>Drive, Docs and Sheets.</strong> The files and documents you save. They are stored as uploaded and are not end-to-end encrypted.</li>
+        <li><strong>Calendar.</strong> The events you create.</li>
+        <li><strong>Identity keys.</strong> Your OpenPGP public key, and your private key in locked form only. It is unlocked on your device with your password or recovery phrase, which we never receive.</li>
     </ul>
 
-    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">What we don't collect</h2>
+    <h3 style="color:#fff;margin-top:26px;font-size:1.05rem;">Billing, teams and settings</h3>
     <ul>
-        <li>We don't track you across other sites. No third-party analytics, no ad pixels, no Google Analytics, no Meta Pixel.</li>
-        <li>We don't read or store the content of network traffic — only metadata about devices.</li>
-        <li>We don't sell your data. Ever. Full stop.</li>
-        <li>We don't share your data with advertisers, data brokers, or marketing partners.</li>
+        <li><strong>Billing.</strong> If you subscribe, Stripe takes the payment. We never see your card. We store your Stripe customer and subscription IDs, your plan, its status and when the current period ends.</li>
+        <li><strong>Teams.</strong> Team names, members and invitations.</li>
+        <li><strong>Notifications.</strong> Your alert preferences, your browser's push subscription if you turn push on, and any webhook addresses you add.</li>
+        <li><strong>Referrals.</strong> Your referral code and, if someone referred you, which account did.</li>
     </ul>
 
-    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Where data lives</h2>
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Shadow AI</h2>
+    <p><strong>We keep nothing of what you ask or what it answers.</strong> Our server passes your question to the model, returns the answer, and stores neither. The conversation lives in your browser or app while it is open and is gone when you close it. The only thing we record is how many questions you asked this month, to apply your plan's limit. Our error logs record which model service failed and with what status code, never the text.</p>
+    <p>Where your question is processed depends on how you set Shadow AI up:</p>
     <ul>
-        <li><strong>Database:</strong> Supabase (PostgreSQL), hosted in their US infrastructure.</li>
-        <li><strong>API:</strong> Cloudflare Workers, edge-distributed globally.</li>
-        <li><strong>Static site:</strong> GitHub Pages, served via Cloudflare.</li>
-        <li><strong>Email delivery:</strong> Resend (when notifications are enabled).</li>
-        <li><strong>Payments:</strong> Stripe.</li>
-    </ul>
-    <p>You can self-host the entire platform — the code is open source at <a href="https://github.com/jakes1345/ShadowCypher" style="color:var(--accent-primary);">github.com/jakes1345/ShadowCypher</a>. If self-hosting matters to you (it should for some use cases), that option is real.</p>
-
-    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Retention</h2>
-    <ul>
-        <li><strong>Free tier:</strong> scan history retained 7 days.</li>
-        <li><strong>Guardian Pro:</strong> 90 days.</li>
-        <li><strong>Operator:</strong> retained as long as your account is active.</li>
-        <li><strong>Account deletion:</strong> when you delete your account, all your data is purged within 7 days.</li>
+        <li><strong>The model we provide</strong> (Guardian Pro and Operator). The model is run by Anthropic. We send it your question and the last few turns of the conversation. When you ask about your own network, we add a summary of your devices, incidents and recent scans so it can answer. For general questions the model can search the web, and Anthropic runs those searches. Anthropic does not train its models on this, and deletes it from its systems within 30 days unless it is flagged for abuse review or a law requires it to be kept. Their terms are at <a href="https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data" style="color:var(--accent-primary);">privacy.claude.com</a>.</li>
+        <li><strong>Your own Anthropic key.</strong> The same path, under your own account with Anthropic. We store your key encrypted.</li>
+        <li><strong>Your own Ollama server.</strong> Your question goes to the address you give us and not to Anthropic. If answering needs a web search, our server sends the search to Brave or DuckDuckGo.</li>
+        <li><strong>The desktop app.</strong> Its AI Assistant talks to Ollama on your own machine. Nothing leaves it.</li>
     </ul>
 
-    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Your rights</h2>
-    <p>You can request access, export, correction, or deletion of your data at any time by emailing <strong>privacy@shadowcypher.site</strong> or by deleting your account directly from the dashboard. We'll respond within 30 days. If you're in the EU, UK, or California, you have additional rights under GDPR / UK GDPR / CCPA — same email address, same response window.</p>
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Lookup tools</h2>
+    <p>Some tools look things up on outside services: CVE details (NVD), IP reputation (AbuseIPDB), breach checks (Have I Been Pwned), DNS (Cloudflare), web search (Brave or DuckDuckGo), Wikipedia, weather (Open-Meteo) and currency rates (Frankfurter). The request is made by our server, so the service sees the value you looked up and our server's address. It does not see your IP address or who you are.</p>
 
-    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Cookies</h2>
-    <p>We use a small number of strictly necessary cookies for authentication (Supabase session) and Cloudflare bot mitigation. We don't use tracking cookies. There's no consent banner because there's nothing requiring consent.</p>
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">What we don't do</h2>
+    <ul>
+        <li><strong>No analytics, ads or trackers.</strong> No Google Analytics, no pixels, no fingerprinting, no advertising ID, no crash-reporting SDK, in the site or in any app.</li>
+        <li><strong>No third-party scripts or fonts.</strong> Every page loads its code and fonts from this site. The site's security policy tells your browser to refuse anything else, so this is enforced and not just promised.</li>
+        <li><strong>No cookies.</strong> See "Cookies and browser storage" below.</li>
+        <li><strong>No selling or sharing.</strong> We don't sell your data, and we don't give it to advertisers, data brokers or marketing partners.</li>
+    </ul>
+
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Who else handles your data</h2>
+    <p>We run on other companies' infrastructure. Each one sees only what its job needs.</p>
+    <ul>
+        <li><strong>Supabase</strong> (United States). Sign-in and the main database.</li>
+        <li><strong>Neon.</strong> A second database holding a copy of your account ID, address, handle, plan and API key, used to recognise your key quickly.</li>
+        <li><strong>Cloudflare.</strong> Serves this site, runs the API, stores Drive files, Docs and Sheets, carries chat connections and receives inbound mail.</li>
+        <li><strong>Resend.</strong> Delivers mail you send to addresses outside ShadowCypher, and email alerts.</li>
+        <li><strong>Stripe.</strong> Payments.</li>
+        <li><strong>Anthropic.</strong> Shadow AI, as described above.</li>
+        <li><strong>Your browser's push service</strong> (Google, Mozilla or Apple). Delivers push notifications if you turn them on. The content is encrypted so the push service cannot read it.</li>
+    </ul>
+    <p>Cloudflare and Supabase keep their own operational logs of the requests they carry, including IP addresses, under their own policies. We have not switched on any request logging of our own. The only log we keep is the security log described above. To slow down abuse, the API keeps short-lived counters by IP address that expire within minutes.</p>
+    <p>These are United States companies, so data held with them can be reached by United States legal process. If that matters for what you do, you can run the whole platform yourself. The guide is at <a href="/self-host" style="color:var(--accent-primary);">shadowcypher.site/self-host</a>.</p>
+
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">How long we keep it</h2>
+    <ul>
+        <li><strong>Scan history.</strong> 7 days on the free plan, 90 days on Guardian Pro and during the trial, and for as long as your account exists on Operator. A job runs every hour and deletes scans older than your plan allows. When a trial or subscription ends, the free limit applies from then on. While a failed payment is still being retried, your paid limit is kept.</li>
+        <li><strong>Shadow AI questions and answers.</strong> Not kept at all.</li>
+        <li><strong>Everything else.</strong> Until you delete it, or delete your account.</li>
+    </ul>
+
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Deleting your account</h2>
+    <p>You can delete your account from the Account page. Deletion is immediate and removes:</p>
+    <ul>
+        <li>your sign-in, profile, keys, settings and security log;</li>
+        <li>your agents, devices, scans, incidents and missions;</li>
+        <li>your mailbox, your calendar, and every chat message and reaction you wrote;</li>
+        <li>every file, doc and sheet you stored;</li>
+        <li>the copy of your account in the second database, which also stops your API key working;</li>
+        <li>your Stripe customer record, which cancels any subscription at once.</li>
+    </ul>
+    <p>Some things are outside what deletion can reach. Mail and chat messages that other people received from you stay with them. Chat rooms you created stay for the people in them, without your account attached. Stripe keeps its own payment records as the law requires. Our providers may hold short-lived recovery copies on their side, which expire on their schedule.</p>
+
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Your rights and controls</h2>
+    <ul>
+        <li><strong>Export.</strong> The Account page gives you a file with every record we hold about you, and a list of your files, docs and sheets with a link to download each one.</li>
+        <li><strong>Delete.</strong> Delete individual items where they live, or the whole account as described above.</li>
+        <li><strong>Correct.</strong> Edit your profile, devices and settings directly.</li>
+        <li><strong>Ask.</strong> Write to <strong>privacy@shadowcypher.site</strong> for anything else. We answer within 30 days.</li>
+    </ul>
+    <p>If you are in the EU, the UK or California, you have rights under GDPR, UK GDPR or the CCPA. Use the same address.</p>
+
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">The apps</h2>
+
+    <h3 style="color:#fff;margin-top:26px;font-size:1.05rem;">Desktop app</h3>
+    <p>The desktop app and its background service run on your own machine, and what they find stays there. Scans are only uploaded to your account if you turn on sync in Settings, which is off by default. Chat, Mail, Drive and Calendar in the app use the same API as the web app. Two things go straight from your machine to an outside service: CVE lookups go to NVD, and the Counter-Intel check asks api.ipify.org for your public IP address.</p>
+
+    <h3 style="color:#fff;margin-top:26px;font-size:1.05rem;">Guardian agent</h3>
+    <p>The agent you install on a machine sends the device, scan and incident data listed under "Guardian" above, and fetches missions you have queued for it.</p>
+
+    <h3 style="color:#fff;margin-top:26px;font-size:1.05rem;">Android: ShadowCypher</h3>
+    <p>The ShadowCypher app is the web app packaged for Android, and this policy applies to it in the same way. Permissions: INTERNET, ACCESS_NETWORK_STATE, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED, VIBRATE.</p>
+
+    <h3 style="color:#fff;margin-top:26px;font-size:1.05rem;">Android: Shadow AI</h3>
+    <ul>
+        <li><strong>Voice.</strong> Speech is turned into text on your phone by an offline model (Vosk). Audio is never recorded, stored or sent anywhere. The text of your question is then sent like any typed question, as described under "Shadow AI".</li>
+        <li><strong>Microphone.</strong> The microphone is used only while you are talking to the assistant. If you turn on the "Hey Shadow" wake word, the app listens for those words on the phone, continuously, until you turn it off. That listening also happens on the device and sends nothing.</li>
+        <li><strong>API key.</strong> Kept in the app's private storage on your phone, which other apps cannot read. It is sent only to our API to sign you in.</li>
+        <li><strong>Speech model.</strong> The app downloads its speech model once from alphacephei.com, the makers of Vosk.</li>
+        <li><strong>Permissions.</strong> INTERNET, ACCESS_NETWORK_STATE, RECORD_AUDIO, FOREGROUND_SERVICE, FOREGROUND_SERVICE_MICROPHONE, WAKE_LOCK, RECEIVE_BOOT_COMPLETED, POST_NOTIFICATIONS, VIBRATE. The foreground service and wake lock exist for the wake word.</li>
+    </ul>
+
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Cookies and browser storage</h2>
+    <p>We set no cookies, so there is no cookie banner.</p>
+    <p>The web app keeps a few things in your browser's local storage so it can work: your sign-in session, an encrypted vault holding that session, a random ID used only to derive the vault's key, documents you save locally in the Office editor, and a referral code if you arrived through a referral link. None of it is used to track you, and clearing your browser's site data removes it.</p>
+
+    <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Children</h2>
+    <p>ShadowCypher is not meant for children under 13, and we don't knowingly hold accounts for them.</p>
 
     <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Changes to this policy</h2>
-    <p>If we make material changes, we'll email everyone with an active account at least 14 days before the change takes effect. Minor edits (typos, clarifications) happen without notice — the "Last updated" date at the top reflects the latest version.</p>
+    <p>If we make a material change, we'll send a message to your ShadowCypher inbox at least 14 days before it takes effect. Small edits, such as fixing a typo, happen without notice. The date at the top always shows the latest version.</p>
 
     <h2 style="color:var(--accent-primary);margin-top:40px;font-size:1.4rem;">Contact</h2>
     <p>Privacy questions: <strong>privacy@shadowcypher.site</strong><br>
+    Security reports: <strong>security@shadowcypher.site</strong><br>
     General contact: <strong>hello@shadowcypher.site</strong><br>
-    Code / issues: <a href="https://github.com/jakes1345/ShadowCypher/issues" style="color:var(--accent-primary);">github.com/jakes1345/ShadowCypher/issues</a></p>
+    Code and issues: <a href="https://github.com/jakes1345/ShadowCypher/issues" style="color:var(--accent-primary);">github.com/jakes1345/ShadowCypher/issues</a></p>
 
     <p style="margin-top:60px;color:var(--text-secondary);font-size:0.8rem;border-top:1px solid var(--glass-border);padding-top:20px;">
         <a href="/" style="color:var(--accent-primary);">Home</a> &nbsp;·&nbsp;
