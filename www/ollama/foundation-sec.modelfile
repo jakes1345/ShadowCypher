@@ -1,0 +1,27 @@
+# Cisco Foundation AI's Foundation-Sec-1.1-8B-Instruct, set up for Ollama.
+#
+#   ollama create foundation-sec -f foundation-sec.modelfile
+#
+# The published GGUF file has no chat template in it, so a plain `ollama pull` gives a
+# model that receives bare text and never sees the system prompt. The template below is
+# the model's own, from chat_template.jinja in
+# https://huggingface.co/fdtn-ai/Foundation-Sec-1.1-8B-Instruct
+#
+# Built with Llama. Llama 3.1 is licensed under the Llama 3.1 Community License,
+# Copyright (c) Meta Platforms, Inc. Cisco's changes are under the Apache 2.0 License.
+FROM hf.co/fdtn-ai/Foundation-Sec-1.1-8B-Instruct-Q4_K_M-GGUF
+
+TEMPLATE """{{- range .Messages }}
+{{- if eq .Role "system" }}<|system|>
+{{ .Content }}
+{{ else if eq .Role "user" }}<|user|>
+{{ .Content }}
+{{ else if eq .Role "assistant" }}<|assistant|>
+{{ .Content }}<|end_of_text|>
+{{ end }}
+{{- end }}<|assistant|>
+"""
+
+PARAMETER stop "<|end_of_text|>"
+PARAMETER stop "<|user|>"
+PARAMETER stop "<|system|>"
