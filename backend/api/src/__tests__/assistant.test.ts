@@ -161,3 +161,88 @@ describe("extractToolErrors", () => {
     ])).toEqual(["web_search: max_uses_exceeded", "web_fetch: url_not_accessible"]);
   });
 });
+
+import { afterEach, vi } from "vitest";
+import { chooseOllamaModel, listOllamaModels, resolveOllamaModel, OLLAMA_MODEL_PREFERENCE } from "../assistant";
+
+describe("choosing a model on a user's Ollama server", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** An Ollama server with these models installed; records the paths asked for. */
+  function ollamaWith(models: { name: string; family?: string }[], status = 200) {
+    const paths: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      paths.push(new URL(url).pathname);
+      return new Response(
+        JSON.stringify(status === 200 ? { models: models.map((m) => ({ name: m.name, details: { family: m.family ?? "llama" } })) } : { error: "nope" }),
+        { status },
+      );
+    });
+    return paths;
+  }
+
+  it("takes the first preferred model that is installed", () => {
+    const preferred = ["llama3.1:8b", "phi4-mini"];
+    expect(chooseOllamaModel(["mistral:7b", "phi4-mini:latest", "llama3.1:8b"], preferred)).toBe("llama3.1:8b");
+    expect(chooseOllamaModel(["mistral:7b", "phi4-mini:latest"], preferred)).toBe("phi4-mini:latest");
+  });
+
+  it("matches a bare name to the latest tag only, and ignores case", () => {
+    expect(chooseOllamaModel(["Phi4-Mini:latest"], ["phi4-mini"])).toBe("Phi4-Mini:latest");
+    // A differently tagged build is not the preferred model, so the first installed one is used.
+    expect(chooseOllamaModel(["gemma3:4b", "llama3.1:70b"], ["llama3.1:8b"])).toBe("gemma3:4b");
+    expect(chooseOllamaModel(["hf.co/org/model:latest"], ["hf.co/org/model"])).toBe("hf.co/org/model:latest");
+  });
+
+  it("falls back to whatever is installed, or nothing", () => {
+    expect(chooseOllamaModel(["qwen2.5:7b", "gemma3:4b"], ["llama3.1:8b"])).toBe("qwen2.5:7b");
+    expect(chooseOllamaModel([], ["llama3.1:8b"])).toBeUndefined();
+  });
+
+  it("lists chat models and leaves embedding models out", async () => {
+    const paths = ollamaWith([
+      { name: "nomic-embed-text:latest", family: "nomic-bert" },
+      { name: "all-minilm:latest", family: "bert" },
+      { name: "llama3.1:8b" },
+    ]);
+    expect(await listOllamaModels("https://ollama.example.com/")).toEqual(["llama3.1:8b"]);
+    expect(paths).toEqual(["/api/tags"]);
+  });
+
+  it("prefers the operator's model, then the best-scoring one, then what is there", async () => {
+    ollamaWith([{ name: "phi4-mini:latest" }, { name: "llama3.1:8b" }, { name: "gemma3:4b" }]);
+    expect(await resolveOllamaModel("https://o.example.com")).toBe("llama3.1:8b");
+    expect(await resolveOllamaModel("https://o.example.com", "gemma3:4b")).toBe("gemma3:4b");
+    expect(await resolveOllamaModel("https://o.example.com", "not-installed")).toBe("llama3.1:8b");
+
+    ollamaWith([{ name: "gemma3:4b" }, { name: "phi4-mini:latest" }]);
+    expect(await resolveOllamaModel("https://o.example.com")).toBe("phi4-mini:latest");
+
+    ollamaWith([{ name: "gemma3:4b" }]);
+    expect(await resolveOllamaModel("https://o.example.com")).toBe("gemma3:4b");
+  });
+
+  it("asks by name when the server will not list its models", async () => {
+    ollamaWith([], 404);
+    expect(await resolveOllamaModel("https://o.example.com")).toBe(OLLAMA_MODEL_PREFERENCE[0]);
+    expect(await resolveOllamaModel("https://o.example.com", "mistral:7b")).toBe("mistral:7b");
+  });
+
+  it("says so when the server has no chat model at all", async () => {
+    ollamaWith([{ name: "nomic-embed-text:latest", family: "nomic-bert" }]);
+    const err = await resolveOllamaModel("https://o.example.com").catch((e: Error) => e);
+    expect(err).toBeInstanceOf(Error);
+    const shown = providerError((err as Error).message);
+    expect(shown.status).toBe(400);
+    expect(shown.body.reason).toContain("no chat model is installed");
+    expect(shown.body.reason).toContain("ollama pull");
+  });
+});
+
+describe("providerError with Ollama's own error shape", () => {
+  it("shows the text Ollama sent, not raw JSON", () => {
+    const e = providerError(`ollama_404:{"error":"model 'llama3.1:8b' not found"}`);
+    expect(e.status).toBe(400);
+    expect(e.body.reason).toBe("Ollama rejected the request: model 'llama3.1:8b' not found");
+  });
+});
