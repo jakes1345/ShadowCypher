@@ -1,3 +1,4 @@
+#include "CveEnrichment.h"
 #include "NativeTools.h"
 #include "MissionRunner.h"
 #include "Process.h"
@@ -14,11 +15,46 @@
 #include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QUrlQuery>
 #include <QThread>
 #include <thread>
 #include <cstdio>
 
 using namespace shadow;
+
+struct EnrichFixture {
+    QList<QUrl> calls;
+    bool kevFails = false, epssFails = false;
+    qint64 now = 1'000'000'000'000LL;
+    CveEnricher make() {
+        return CveEnricher(
+            [this](const QUrl& url) -> QJsonObject {
+                calls.append(url);
+                if (url.host() == "www.cisa.gov") {
+                    if (kevFails) throw Error("kev down");
+                    return QJsonObject{{"vulnerabilities", QJsonArray{
+                        QJsonObject{{"cveID", "CVE-2021-44228"}, {"dueDate", "2021-12-24"}}}}};
+                }
+                if (epssFails) throw Error("epss down");
+                QJsonArray data;
+                for (const QString& id : QUrlQuery(url).queryItemValue("cve").split(','))
+                    data.append(QJsonObject{{"cve", id}, {"epss", "0.97500"}});
+                return QJsonObject{{"data", data}};
+            },
+            [this] { return now; });
+    }
+    int count(const char* host) const {
+        int n = 0;
+        for (const QUrl& u : calls) if (u.host() == host) ++n;
+        return n;
+    }
+};
+static QJsonArray cveRows(const QStringList& ids) {
+    QJsonArray rows;
+    for (const QString& id : ids)
+        rows.append(QJsonObject{{"cve_id", id}, {"epss_score", 0.0}, {"kev_exploited", false}});
+    return rows;
+}
 
 class RuntimeTests : public QObject {
     Q_OBJECT
@@ -179,6 +215,69 @@ private slots:
         status = 200; response = "not JSON";
         QVERIFY_EXCEPTION_THROWN(NativeTools::request(url), Error);
         QVERIFY_EXCEPTION_THROWN(NativeTools::request(QUrl("http://example.com"), {}, false, "secret"), Error);
+    }
+    // ── CVE enrichment (EPSS + CISA KEV) ────────────────────────────────────
+    void cveEnrichmentAppliesEpssAndKev() {
+        EnrichFixture f; auto e = f.make();
+        auto rows = cveRows({"CVE-2021-44228", "CVE-2020-0001"});
+        e.enrich(rows);
+        const auto kev = rows[0].toObject(), other = rows[1].toObject();
+        QVERIFY(kev["kev_exploited"].toBool());
+        QCOMPARE(kev["kev_due_date"].toString(), "2021-12-24");
+        QCOMPARE(kev["epss_score"].toDouble(), 0.975);
+        QVERIFY(!other["kev_exploited"].toBool());
+        QVERIFY(!other.contains("kev_due_date"));
+        QCOMPARE(other["epss_score"].toDouble(), 0.975);
+    }
+    void cveEnrichmentCachesWithinTtlAndRefetchesAfter() {
+        EnrichFixture f; auto e = f.make();
+        auto a = cveRows({"CVE-2021-44228"}); e.enrich(a);
+        auto b = cveRows({"CVE-2021-44228"}); e.enrich(b);
+        QCOMPARE(f.count("www.cisa.gov"), 1);
+        QCOMPARE(f.count("api.first.org"), 1);
+        QCOMPARE(b[0].toObject()["epss_score"].toDouble(), 0.975);
+        f.now += CveEnricher::kKevTtlMs + 1;
+        auto c = cveRows({"CVE-2021-44228"}); e.enrich(c);
+        QCOMPARE(f.count("www.cisa.gov"), 2);
+        QCOMPARE(f.count("api.first.org"), 2);
+    }
+    void cveEnrichmentBatchesEpssLookups() {
+        EnrichFixture f; auto e = f.make();
+        QStringList ids;
+        for (int i = 0; i < CveEnricher::kEpssBatch + 1; ++i) ids << QString("CVE-2024-%1").arg(1000 + i);
+        ids << ids.first();  // duplicate ids are looked up once
+        auto rows = cveRows(ids); e.enrich(rows);
+        QCOMPARE(f.count("api.first.org"), 2);
+        QCOMPARE(QUrlQuery(f.calls.last()).queryItemValue("cve"), QString("CVE-2024-%1").arg(1000 + CveEnricher::kEpssBatch));
+    }
+    void cveEnrichmentFailuresAreNonFatal() {
+        EnrichFixture f; f.kevFails = true; f.epssFails = true;
+        auto e = f.make();
+        auto rows = cveRows({"CVE-2021-44228"});
+        e.enrich(rows);  // must not throw
+        const auto row = rows[0].toObject();
+        QCOMPARE(row["epss_score"].toDouble(), 0.0);
+        QVERIFY(!row["kev_exploited"].toBool());
+    }
+    void cveEnrichmentBacksOffAfterFailedKevFetch() {
+        EnrichFixture f; f.kevFails = true;
+        auto e = f.make();
+        auto a = cveRows({"CVE-2021-44228"}); e.enrich(a);
+        f.now += CveEnricher::kRetryMs - 1000;  // inside the back-off window
+        auto b = cveRows({"CVE-2021-44228"}); e.enrich(b);
+        QCOMPARE(f.count("www.cisa.gov"), 1);
+        f.kevFails = false;
+        f.now += 2000;                           // past it
+        auto c = cveRows({"CVE-2021-44228"}); e.enrich(c);
+        QCOMPARE(f.count("www.cisa.gov"), 2);
+        QVERIFY(c[0].toObject()["kev_exploited"].toBool());
+    }
+    void cveEnrichmentIgnoresEpssFailureForCachedRows() {
+        EnrichFixture f; auto e = f.make();
+        auto a = cveRows({"CVE-2021-44228"}); e.enrich(a);
+        f.epssFails = true;
+        auto b = cveRows({"CVE-2021-44228"}); e.enrich(b);
+        QCOMPARE(b[0].toObject()["epss_score"].toDouble(), 0.975);
     }
     void mcpProtocol() {
         Protocol protocol{NativeTools{}};
