@@ -11,8 +11,8 @@ ShadowCypher is a security tool that integrates local AI with offensive security
 ### In-Scope Threats (We WILL fix these)
 
 1. **Local Command Injection:** If a user input field (e.g., a target IP) can be manipulated to execute arbitrary commands on the *host* machine running ShadowCypher.
-2. **AI Sandbox Escapes:** If the local AI agent can bypass the `_ALLOWED_COMMANDS` list in `orchestrator.py` or read files outside the designated safe paths.
-3. **Cryptographic Failures:** Weaknesses in the AES-256-GCM session encryption or the Admin Identity verification logic (`identity.py`).
+2. **ShadowScript Safety Bypasses:** If a mission can run `!sys`, `!pipe` or a native function outside an `UNSAFE { }` block, pass its arguments through a shell, or get past the runtime's timeout, output, loop and `LOAD` limits (`shadowcypher-qt/core/`).
+3. **Cryptographic Failures:** Weaknesses in the AES-256-GCM chat encryption, the split-password login, or the handling of OpenPGP identity keys (`www/js/identity.js`).
 4. **UI/IPC Injection:** Vulnerabilities that allow a remote target's response (e.g., a crafted banner) to crash the Qt6 desktop UI or inject commands through the local IPC socket.
 
 ### Out-of-Scope Threats (We will NOT fix these)
