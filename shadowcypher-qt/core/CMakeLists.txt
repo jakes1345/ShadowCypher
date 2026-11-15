@@ -6,6 +6,7 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Network)
 
 add_library(shadow_runtime STATIC
+    CveEnrichment.cpp CveEnrichment.h
     Process.cpp Process.h
     ShadowScript.cpp ShadowScript.h
     NativeTools.cpp NativeTools.h

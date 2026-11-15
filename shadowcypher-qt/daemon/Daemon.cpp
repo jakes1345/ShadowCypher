@@ -422,7 +422,8 @@ QJsonArray Daemon::parseCveResponse(const QJsonObject& nvdResp) {
 QJsonValue Daemon::handleCveFeedRecent(const QJsonObject& p) {
     const int days = p.value(QStringLiteral("days")).toInt(7);
     try {
-        const QJsonArray cves = parseCveResponse(nvdSearch(QString(), days));
+        QJsonArray cves = parseCveResponse(nvdSearch(QString(), days));
+        m_enricher.enrich(cves);
         QJsonObject obj;
         obj[QStringLiteral("cves")] = cves;
         return obj;
@@ -436,7 +437,8 @@ QJsonValue Daemon::handleCveFeedSearch(const QJsonObject& p) {
     if (keyword.isEmpty())
         throw shadow::Error(QStringLiteral("keyword is required"));
     try {
-        const QJsonArray cves = parseCveResponse(nvdSearch(keyword));
+        QJsonArray cves = parseCveResponse(nvdSearch(keyword));
+        m_enricher.enrich(cves);
         QJsonObject obj;
         obj[QStringLiteral("cves")] = cves;
         return obj;
@@ -488,6 +490,7 @@ QJsonValue Daemon::handleCveFeedScan(const QJsonObject& p) {
             } catch (...) {}
         }
 
+        m_enricher.enrich(allCves);
         QJsonObject obj;
         obj[QStringLiteral("cves")]    = allCves;
         obj[QStringLiteral("output")]  = QString::fromUtf8(res.out).left(4096);

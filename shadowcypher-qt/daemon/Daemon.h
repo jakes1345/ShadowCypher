@@ -1,8 +1,10 @@
 #pragma once
+#include "../core/CveEnrichment.h"
 #include "../core/NativeTools.h"
 #include <QObject>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QDateTime>
 #include <QMutex>
 #include <QElapsedTimer>
 #include <atomic>
@@ -102,6 +104,10 @@ private:
 
     // ── Shared state (protected by m_mutex) ──────────────────────────────────
     mutable QMutex m_mutex;
+
+    shadow::CveEnricher m_enricher{
+        [](const QUrl& u) { return shadow::NativeTools::request(u, {}, false, {}, {}, 30000); },
+        [] { return QDateTime::currentMSecsSinceEpoch(); }};
     QJsonArray     m_devices;
     QJsonArray     m_incidents;
 
