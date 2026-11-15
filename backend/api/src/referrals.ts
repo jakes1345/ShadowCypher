@@ -2,8 +2,8 @@
  * Phase 4L — referral program.
  *
  * Each user has a unique 8-character referral code. New signups attribute themselves
- * via /r/<code> (cookie set client-side, then claimed via POST /v1/referrals/claim
- * on first authenticated request).
+ * via /r/<code> (the code is kept in the browser's local storage, then claimed via
+ * POST /v1/referrals/claim on first authenticated request). No cookie is involved.
  *
  * Reward model (simplest possible v1): when a referee subscribes to a paid plan,
  * the referrer gets +30 days extension on their trial_ends_at. Tracked in

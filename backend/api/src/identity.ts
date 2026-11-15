@@ -13,6 +13,7 @@
 import * as openpgp from "openpgp";
 import type { Env } from "./index";
 import { dbInsert, dbSelect, dbUpdate, lookupAuthUserByEmail } from "./supabase";
+import { isReservedHandle } from "./reserved";
 import { audit, clientHints } from "./audit";
 
 interface AuthedUser { id: string; email: string; handle?: string }
@@ -94,7 +95,9 @@ export async function getKdfParams(req: Request, env: Env, cors: HeadersInit): P
     return json({ error: "lookup_unavailable" }, { status: 503 }, cors);
   }
   // Unknown and not-yet-upgraded accounts look the same: v0 means "send the password as-is".
-  return json(sanitizeKdf(user?.user_metadata?.kdf) ?? { v: 0 }, {}, cors);
+  const kdf = sanitizeKdf(user?.user_metadata?.kdf) ?? { v: 0 };
+  // The reserved list is public (it is in the repo), so saying so reveals nothing about who exists.
+  return json(isReservedHandle(handle) ? { ...kdf, reserved: true } : kdf, {}, cors);
 }
 
 export async function lookupIdentity(req: Request, env: Env, cors: HeadersInit): Promise<Response> {

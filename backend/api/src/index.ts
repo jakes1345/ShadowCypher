@@ -89,6 +89,8 @@ export { ChatRoom } from "./chat_do";
 import { dbSelect, findAuthUserByEmail } from "./supabase";
 import { getKdfParams, lookupIdentity, getMyIdentity, saveMyIdentity } from "./identity";
 import { neonFindUserByKey, neonRotateKey, neonRevokeKey, neonRegisterUser } from "./neon";
+import { eraseUser, ErasureError } from "./erasure";
+import { purgeExpiredScans } from "./retention";
 import { getEffectivePlan, trialDaysRemaining, type ProfileForPlan } from "./plans";
 import { sendWelcomeEmail, sendKeyRotatedEmail, sendRecoveryKitEmail } from "./emails";
 import { adminOverview, adminUsers } from "./admin";
@@ -261,9 +263,10 @@ function generateApiKey(): string {
 // ─── Handlers ───────────────────────────────────────────────────────────────
 
 /**
- * POST /v1/me/delete — hard delete the user's account and all data.
- * Requires the Bearer api_key (proves ownership). Cascade-deletes all child rows
- * via foreign-key constraints on the auth.users id.
+ * POST /v1/me/delete — delete the user's account and everything stored for it.
+ * Requires the Bearer api_key (proves ownership) and the account's address as
+ * confirmation. The work is in erasure.ts: billing, files, chat and mission
+ * rows, the Neon mirror, then the auth user and every table that cascades from it.
  */
 async function deleteAccount(req: Request, env: Env, user: { id: string; email: string }, cors: HeadersInit): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as { confirm_email?: string };
@@ -273,27 +276,20 @@ async function deleteAccount(req: Request, env: Env, user: { id: string; email: 
       { status: 400, headers: { "Content-Type": "application/json", ...cors } }
     );
   }
-  // Audit BEFORE we delete — once delete cascades, we can't add the entry
-  await audit(env, user.id, "account_deleted", clientHints(req));
-  // Delete via Supabase Admin API — cascades through profiles, agents, devices, scans, incidents, team_members, notification_prefs, audit_log
-  const resp = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
-    method: "DELETE",
-    headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-    },
-  });
-  if (!resp.ok) {
-    const txt = await resp.text();
-    console.error("[delete] failed", resp.status, txt);
+  try {
+    const removed = await eraseUser(env, user.id);
+    return new Response(JSON.stringify({ deleted: true, removed }), {
+      headers: { "Content-Type": "application/json", ...cors },
+    });
+  } catch (e) {
+    // Nothing after the failed step has run and the account still exists, so the user can retry.
+    const failedStep = e instanceof ErasureError ? e.step : "unknown";
+    console.error("[delete] failed", failedStep, e);
     return new Response(
-      JSON.stringify({ error: "delete_failed", detail: txt }),
+      JSON.stringify({ error: "delete_incomplete", step: failedStep, retry: true }),
       { status: 500, headers: { "Content-Type": "application/json", ...cors } }
     );
   }
-  return new Response(JSON.stringify({ deleted: true }), {
-    headers: { "Content-Type": "application/json", ...cors },
-  });
 }
 
 async function handleMe(req: Request, env: Env, cors: HeadersInit): Promise<Response> {
@@ -871,6 +867,11 @@ export default {
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(runCveMatchingCron(env));
+    ctx.waitUntil(
+      purgeExpiredScans(env)
+        .then((r) => { if (r.deleted) console.log("[retention] deleted expired scans", r.deleted); })
+        .catch((e) => console.error("[retention] purge failed", e))
+    );
   },
 
   async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
