@@ -3,7 +3,9 @@
 #include <QObject>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QHash>
 #include <QMutex>
+#include <QPair>
 #include <QElapsedTimer>
 #include <atomic>
 #include <optional>
@@ -87,6 +89,7 @@ private:
     void respondError(QIODevice* sock, const QJsonValue& id, const QString& msg, int code = -32601);
     QJsonObject nvdSearch(const QString& query, int days = 0);
     QJsonArray  parseCveResponse(const QJsonObject& nvdResp);
+    void        enrichCves(QJsonArray& cves);  // adds EPSS + CISA KEV, best effort
 
     Server*             m_server;
 #ifndef Q_OS_WIN
@@ -102,6 +105,12 @@ private:
 
     // ── Shared state (protected by m_mutex) ──────────────────────────────────
     mutable QMutex m_mutex;
+
+    // ── CVE enrichment caches (own mutex: held only for map access, never during I/O) ──
+    QMutex                       m_enrichMutex;
+    QHash<QString, QString>      m_kev;           // CVE id -> CISA due date
+    qint64                       m_kevFetchedMs = 0;
+    QHash<QString, QPair<double, qint64>> m_epss; // CVE id -> (score, fetched ms)
     QJsonArray     m_devices;
     QJsonArray     m_incidents;
 

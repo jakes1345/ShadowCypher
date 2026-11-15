@@ -56,7 +56,7 @@ Ghost mode is the only part that needs root. Turning it on or off runs `shadowcy
 | CVE Feed | NVD search, recent CVEs, and an `nmap -sV` scan of a target matched against NVD |
 | Settings | API key, Ollama endpoint, alerts and scan sync |
 
-The CVE Feed page has columns for EPSS scores and CISA KEV status, but the daemon doesn't fetch either yet, so they stay empty.
+The CVE Feed page shows EPSS scores (from the FIRST.org API) and CISA KEV status (from the CISA catalog). The daemon fetches both when you load the feed and caches them for 12 hours. If a fetch fails, those columns stay empty.
 
 ShadowScript missions run on `shadowcypher-runtime`, a native Qt/C++ executable with no Python dependency. Example missions and lessons are in [`shadowscript/`](shadowscript/). See [`shadowcypher-qt/core/README.md`](shadowcypher-qt/core/README.md) for the language and the module calls it supports.
 
