@@ -5,6 +5,9 @@
  * Outbound flow: POST /v1/mail/send → Resend → stored as direction='outbound'
  * Internal flow: mail to another handle@shadowcypher.site skips Resend and is
  *                written straight into the recipient's inbox
+ * Role addresses: mail for a reserved name (security@, privacy@, billing@ …)
+ *                goes to the operator's inbox, and no other account may send
+ *                as one. See reserved.ts.
  *
  * Routes (all authenticated):
  *   GET    /v1/mail/inbox          — paginated inbox (newest first)
@@ -21,6 +24,7 @@ import { dispatchMailWebhook } from "./webhooks";
 import { dispatchMailPushNotification } from "./notifications";
 import { decodeMimeWords, decodeQuotedPrintable, decodeBase64Body, parseHeaders, parseMimeParts, escapeRegex, extractBodies } from "./mime";
 import type { MimePart } from "./mime";
+import { inboxFor, isBlockedSender } from "./reserved";
 
 interface MailRow {
   id: string;
@@ -55,7 +59,8 @@ export async function storeInboundMail(
   if (!handleMatch) return; // not a valid handle address
 
   const handle = handleMatch[1];
-  const userEmail = `${handle}@shadowcypher.site`;
+  // Role addresses land in the operator's inbox; to_addr below keeps the address that was written to.
+  const userEmail = inboxFor(handle);
 
   const user = await findAuthUserByEmail(env, userEmail);
   if (!user) return;
@@ -123,7 +128,7 @@ async function deliverInternal(
   text: string | null,
   html: string | null
 ): Promise<InternalResult> {
-  const recipient = await findAuthUserByEmail(env, toAddr);
+  const recipient = await findAuthUserByEmail(env, inboxFor(toAddr.split("@")[0]));
   if (!recipient) return { ok: false };
 
   const messageId = `<${crypto.randomUUID()}@shadowcypher.site>`;
@@ -289,6 +294,8 @@ export async function sendOutbound(
   if (!body?.to || !emailRegex.test(body.to) || !body.subject?.trim())
     return json({ error: "to_and_subject_required" }, { status: 400 }, cors);
 
+  if (isBlockedSender(user.email)) return json({ error: "reserved_sender" }, { status: 403 }, cors);
+
   const subject = body.subject.trim();
   const text = body.text ?? null;
   const html = body.html ?? null;
@@ -345,6 +352,7 @@ export async function replyMail(
   const body = (await req.json().catch(() => null)) as { text?: string } | null;
   const replyText = body?.text?.trim() ?? "";
   if (!replyText) return json({ error: "text_required" }, { status: 400 }, cors);
+  if (isBlockedSender(user.email)) return json({ error: "reserved_sender" }, { status: 403 }, cors);
 
   const replyTo = orig.from_addr;
   const replySubject = /^re:/i.test(orig.subject) ? orig.subject : `Re: ${orig.subject}`;

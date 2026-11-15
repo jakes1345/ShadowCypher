@@ -245,6 +245,12 @@ export function unpackByok(plain: string): ByokSecret {
  * response the apps can show. Provider 4xx means the user's key or setup is wrong,
  * so it is a 400 with a readable reason rather than a 502.
  */
+/** The loggable part of a provider failure, e.g. "anthropic_429": provider and status only. */
+export function errorLabel(e: unknown): string {
+  const message = e instanceof Error ? e.message : "";
+  return /^[a-z]+_\d{3}/.exec(message)?.[0] ?? "error";
+}
+
 export function providerError(message: string): { status: number; body: Record<string, string> } {
   const m = /^(anthropic|ollama)_(\d{3}):([\s\S]*)$/.exec(message);
   if (!m) return { status: 502, body: { error: "ai_error", message } };
@@ -483,7 +489,9 @@ export async function handleQuery(req: Request, env: Env, user: AuthedUser, cors
       data_summary: { devices: devices.length, incidents: incidents.length, scans: scans.length },
     }, {}, cors);
   } catch (e) {
-    console.error("[assistant] failed", e);
+    // Log which provider failed and how, never its response text: an error
+    // body can quote the request, and questions are not ours to keep.
+    console.error("[assistant] failed", errorLabel(e));
     const pe = providerError(e instanceof Error ? e.message : "unknown");
     return json(pe.body, { status: pe.status }, cors);
   }

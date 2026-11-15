@@ -19,7 +19,6 @@
                     localStorage.setItem('sc_referral_code', code);
                     localStorage.setItem('sc_referral_seen_at', new Date().toISOString());
                 } catch (e) {}
-                document.cookie = 'sc_ref=' + code + '; path=/; max-age=2592000; samesite=lax';
                 window.location.replace('/?ref=' + encodeURIComponent(code));
                 return;
             }

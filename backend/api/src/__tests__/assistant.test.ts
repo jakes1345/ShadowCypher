@@ -246,3 +246,19 @@ describe("providerError with Ollama's own error shape", () => {
     expect(e.body.reason).toBe("Ollama rejected the request: model 'llama3.1:8b' not found");
   });
 });
+
+import { errorLabel } from "../assistant";
+
+describe("errorLabel", () => {
+  it("keeps the provider and status and drops the response text", () => {
+    const e = new Error('anthropic_400:{"error":{"message":"prompt quoted here: my router password is hunter2"}}');
+    expect(errorLabel(e)).toBe("anthropic_400");
+    expect(errorLabel(new Error("ollama_500:model crashed while answering <question text>"))).toBe("ollama_500");
+  });
+
+  it("never passes an unrecognised message through", () => {
+    expect(errorLabel(new Error("something with user text in it"))).toBe("error");
+    expect(errorLabel("a string")).toBe("error");
+    expect(errorLabel(undefined)).toBe("error");
+  });
+});

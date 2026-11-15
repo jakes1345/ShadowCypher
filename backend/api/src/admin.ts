@@ -8,6 +8,7 @@
 import type { Env } from "./index";
 import { dbSelect } from "./supabase";
 import { getEffectivePlan, type ProfileForPlan } from "./plans";
+import { ADMIN_EMAIL } from "./reserved";
 
 const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): Response =>
   new Response(JSON.stringify(body), {
@@ -15,7 +16,6 @@ const json = (body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): R
     headers: { "Content-Type": "application/json", ...cors, ...(init.headers ?? {}) },
   });
 
-const ADMIN_EMAIL = "shadow@shadowcypher.site";
 
 function requireAdmin(user: { id: string; email: string }, cors: HeadersInit): Response | null {
   if (user.email !== ADMIN_EMAIL) {
