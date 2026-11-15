@@ -10,7 +10,8 @@
     "secrets:set": "echo 'Run: wrangler secret put SUPABASE_URL && wrangler secret put SUPABASE_SERVICE_ROLE_KEY'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "eval": "vitest run --config vitest.eval.config.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260919.1",

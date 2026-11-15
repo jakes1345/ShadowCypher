@@ -40,7 +40,7 @@ A few routes are public: health and version checks, the device-login kickoff and
 
 Some routes are rate-limited per user through KV (assistant queries, scans, incidents, uploads, mail sends, room creation and others). The limits are in `src/index.ts`.
 
-The assistant answers with Anthropic's API by default (`ANTHROPIC_MODEL` in `wrangler.toml`). Users can switch to their own Anthropic key (stored encrypted) or their own Ollama endpoint.
+The assistant answers with Anthropic's API by default (`ANTHROPIC_MODEL` in `wrangler.toml`). Users can switch to their own Anthropic key (stored encrypted) or their own Ollama endpoint. On an Ollama endpoint the assistant asks which models are installed and uses `llama3.1:8b`, then `phi4-mini`, then whatever chat model is there; set `OLLAMA_DEFAULT_MODEL` to put another model first.
 
 ## Local dev
 
@@ -53,6 +53,14 @@ curl http://localhost:8787/v1/health
 ```
 
 `npm run typecheck` runs `tsc --noEmit`. `npm test` runs the Vitest suite in `src/__tests__/`.
+
+`npm run eval` scores local models on the assistant's question set (`src/evals/`). It needs a running Ollama server and takes minutes per model:
+
+```bash
+EVAL_MODELS=llama3.1:8b,phi4-mini npm run eval
+```
+
+Each question goes through the same prompt the assistant uses, and an answer passes only if it states the required facts, stays short, and names no device or address that is not in the data. The order the assistant prefers models in comes from these scores. The questions are a test set: do not train a model on them.
 
 ## Configuration
 

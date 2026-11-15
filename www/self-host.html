@@ -137,8 +137,28 @@ volumes:
   <pre><button class="copy-btn" onclick="copyPre(this)">copy</button><span class="comment"># Pull and start</span>
 docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
 
-<span class="comment"># Pull the default Shadow AI model (1.75 GB)</span>
-docker exec shadowcypher_ollama ollama pull hf.co/NousResearch/Hermes-3-Llama-3.2-3B-GGUF:Q4_K_M</pre>
+<span class="comment"># Pull the suggested assistant model (4.9 GB)</span>
+docker exec shadowcypher_ollama ollama pull llama3.1:8b
+
+<span class="comment"># Short on memory? This one is half the size and about twice as fast</span>
+docker exec shadowcypher_ollama ollama pull phi4-mini</pre>
+
+  <h3>Which model</h3>
+  <p>We score local models on 66 questions a ShadowCypher user would ask, sent through the assistant's own prompt. An answer counts only if it states the right facts, stays short, and names no device or address that is not in your data. Results from November 2026, on a 4-core CPU with no GPU:</p>
+  <table>
+    <tr><th>Model</th><th>Download</th><th>Fully correct</th><th>Typical answer</th></tr>
+    <tr><td><code>llama3.1:8b</code></td><td>4.9 GB</td><td>52 of 66</td><td>34 words, 10 seconds</td></tr>
+    <tr><td><code>phi4-mini</code></td><td>2.5 GB</td><td>46 of 66</td><td>28 words, 5 seconds</td></tr>
+    <tr><td>Foundation-Sec-1.1-8B, with the model file below</td><td>4.9 GB</td><td>32 of 66</td><td>82 words</td></tr>
+    <tr><td>Foundation-Sec-1.1-8B, plain <code>ollama pull</code></td><td>4.9 GB</td><td>24 of 66</td><td>91 words</td></tr>
+    <tr><td>Hermes-3-Llama-3.2-3B, which this page used to suggest</td><td>2.0 GB</td><td>22 of 66</td><td>59 words, 9 seconds</td></tr>
+  </table>
+  <p>When you point your shadowcypher.site account at your own Ollama server, the assistant uses <code>llama3.1:8b</code> if it is installed, then <code>phi4-mini</code>, then whatever chat model is there. The desktop app uses the model set as <code>ollama/model</code> in its config, or the first one installed. To score another model yourself, run <code>npm run eval</code> in <code>backend/api</code>.</p>
+  <p>Foundation-Sec is Cisco's security-tuned model. Its answers are mostly right but long, and the assistant is asked for one to three sentences, so it scores lower here. If you want it anyway, do not rely on a plain <code>ollama pull</code>: the published file carries no chat template, so the model never receives its instructions. Create it from our model file instead:</p>
+  <pre><button class="copy-btn" onclick="copyPre(this)">copy</button>curl -fsSLO https://shadowcypher.site/ollama/foundation-sec.modelfile
+docker cp foundation-sec.modelfile shadowcypher_ollama:/tmp/
+docker exec shadowcypher_ollama ollama create foundation-sec -f /tmp/foundation-sec.modelfile</pre>
+  <p>Llama 3.1 and Foundation-Sec are Built with Llama, under the Llama 3.1 Community License. Phi-4-mini is under the MIT licence.</p>
 
   <h2>// OPTION 2 — KUBERNETES <span class="tag med">ADVANCED</span></h2>
   <p>For running ShadowCypher across a cluster or on a homelab with k3s/k8s.</p>
