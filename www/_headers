@@ -10,3 +10,13 @@
 # so this one only needs to narrow script-src.
 /
   Content-Security-Policy: script-src 'self'; object-src 'none'; base-uri 'self'
+
+# On the live domain Cloudflare adds a bot-check script to every page, and that
+# script sets a cookie. The privacy policy says the site sets none. Browsers
+# enforce every policy they are sent, so this one names the only places a script
+# may load from on the live site, and the bot check is not among them.
+# /cdn-cgi/scripts/ stays: it holds Cloudflare's helper that shows the email
+# addresses it hides from scrapers. A page that loads a script from a new
+# folder must add the folder here (site_policy.test.ts fails until it does).
+https://shadowcypher.site/*
+  Content-Security-Policy: script-src 'unsafe-inline' 'wasm-unsafe-eval' https://shadowcypher.site/js/ https://shadowcypher.site/vendor/ https://shadowcypher.site/sw.js https://shadowcypher.site/cdn-cgi/scripts/
