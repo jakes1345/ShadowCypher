@@ -1,5 +1,6 @@
 #pragma once
 #include "../core/CveEnrichment.h"
+#include "../core/HardwareWatch.h"
 #include "../core/NativeTools.h"
 #include <QObject>
 #include <QJsonArray>
@@ -83,6 +84,7 @@ private:
     void addIncident(const QString& deviceIp, const QString& type,
                      const QString& description, const QString& severity);
     void reconcileDevices(const QJsonArray& fresh);
+    void pollHardware();
 
     // ── Util ─────────────────────────────────────────────────────────────────
     void respond(QIODevice* sock, const QJsonValue& id, const QJsonValue& result);
@@ -110,6 +112,11 @@ private:
         [] { return QDateTime::currentMSecsSinceEpoch(); }};
     QJsonArray     m_devices;
     QJsonArray     m_incidents;
+    shadow::HardwareWatch m_hardware;   // keyboards and adapters seen before
+
+    // ── Hardware watch (event-loop thread only) ──────────────────────────────
+    QByteArray     m_hardwareSeen;       // what the last look read
+    int            m_hardwareSettle = 0; // looks still owed after a change
 
     // ── Scan state ────────────────────────────────────────────────────────────
     std::atomic<bool>  m_scanRunning{false};

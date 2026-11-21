@@ -6,6 +6,7 @@
 #include <QFileDevice>
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QProcess>
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSet>
@@ -118,6 +119,15 @@ bool Daemon::start() {
 
     // Run first scan after 2s so the GUI sees data quickly on startup
     QTimer::singleShot(2000, this, &Daemon::handleTriggerScan);
+
+#ifdef Q_OS_LINUX
+    // Look at what is plugged in now, then keep looking. Reading it costs a
+    // few small files, and a device that types does so within seconds.
+    pollHardware();
+    auto* hardwareTimer = new QTimer(this);
+    connect(hardwareTimer, &QTimer::timeout, this, &Daemon::pollHardware);
+    hardwareTimer->start(2000);
+#endif
     return true;
 }
 
@@ -854,12 +864,19 @@ void Daemon::loadState() {
     const QJsonObject root = QJsonDocument::fromJson(f.readAll()).object();
     m_devices   = root.value(QStringLiteral("devices")).toArray();
     m_incidents = root.value(QStringLiteral("incidents")).toArray();
+    QStringList knownHardware;
+    for (const QJsonValue& v : root.value(QStringLiteral("hardware_known")).toArray())
+        knownHardware.append(v.toString());
+    m_hardware = shadow::HardwareWatch(
+        knownHardware, root.value(QStringLiteral("hardware_baselined")).toBool());
 }
 
 void Daemon::saveState() {
     QJsonObject root;
     root[QStringLiteral("devices")]   = m_devices;
     root[QStringLiteral("incidents")] = m_incidents;
+    root[QStringLiteral("hardware_known")]     = QJsonArray::fromStringList(m_hardware.known());
+    root[QStringLiteral("hardware_baselined")] = m_hardware.baselined();
     QFile f(m_statePath + QStringLiteral(".tmp"));
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) return;
     f.write(QJsonDocument(root).toJson());
@@ -911,6 +928,54 @@ void Daemon::reconcileDevices(const QJsonArray& fresh) {
                         QStringLiteral("high"));
         }
     }
+}
+
+// Raises an incident for hardware that can type by itself: a new keyboard, a
+// drive that is also a keyboard, a Flipper Zero. See core/HardwareWatch.h for
+// what it can and cannot tell.
+void Daemon::pollHardware() {
+    const QString usbDir = QStringLiteral("/sys/bus/usb/devices");
+    QByteArray inputs;
+    QFile inputFile(QStringLiteral("/proc/bus/input/devices"));
+    if (inputFile.open(QIODevice::ReadOnly)) inputs = inputFile.readAll();
+
+    // Most looks find nothing plugged in or removed, and stop here. After a
+    // change, look twice more: a network adapter gets its interface a moment
+    // after the device itself appears.
+    const QByteArray seen = QDir(usbDir).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)
+                                .join('\n').toUtf8() + '\n' + inputs;
+    if (seen != m_hardwareSeen) {
+        m_hardwareSeen = seen;
+        m_hardwareSettle = 3;
+    }
+    if (m_hardwareSettle == 0) return;
+    --m_hardwareSettle;
+
+    const QList<shadow::HardwareDevice> devices = shadow::readHardware(usbDir, inputs);
+    QMutexLocker lk(&m_mutex);
+    const bool wasBaselined = m_hardware.baselined();
+    const int  knownBefore  = m_hardware.known().size();
+    const QList<shadow::HardwareFinding> findings = m_hardware.observe(devices);
+    for (const shadow::HardwareFinding& f : findings) {
+        addIncident(f.device, f.type, f.description, f.severity);
+        qInfo("[daemon] hardware: %s", qPrintable(f.description));
+        // Say so now, wherever the window is: by the time someone opens the
+        // Guardian page the typing is long over. notify-send is part of
+        // libnotify; without it the incident is still recorded.
+        const QString notifier = QStandardPaths::findExecutable(QStringLiteral("notify-send"));
+        if (!notifier.isEmpty())
+            QProcess::startDetached(notifier, {
+                QStringLiteral("--app-name=ShadowCypher"),
+                f.severity == QStringLiteral("high") ? QStringLiteral("--urgency=critical")
+                                                     : QStringLiteral("--urgency=normal"),
+                QStringLiteral("--"),
+                f.type == QStringLiteral("attack_hardware") ? QStringLiteral("Attack hardware connected")
+                    : f.type == QStringLiteral("new_usb_network") ? QStringLiteral("New network adapter")
+                    : QStringLiteral("New keyboard"),
+                f.description});
+    }
+    if (!findings.isEmpty() || !wasBaselined || m_hardware.known().size() != knownBefore)
+        saveState();
 }
 
 // ── Util ──────────────────────────────────────────────────────────────────────
