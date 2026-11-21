@@ -264,7 +264,8 @@ void GuardianPage::populateIncidents(const QJsonArray& incidents) {
 
         m_feed->log(
             QString("[%1] %2 — %3").arg(sev.toUpper(), inc.value("device_ip").toString(), inc.value("description").toString()),
-            sev == "critical" ? "CRITICAL" : sev == "warning" ? "WARNING" : "INFO"
+            (sev == "critical" || sev == "high") ? "CRITICAL"
+                : (sev == "warning" || sev == "medium") ? "WARNING" : "INFO"
         );
     }
 }
@@ -281,7 +282,8 @@ QString GuardianPage::riskColor(int score) {
 }
 
 QString GuardianPage::severityColor(const QString& sev) {
-    if (sev == "critical") return "#f43f5e";
-    if (sev == "warning")  return "#ffb84d";
+    // The daemon's own incidents use low / medium / high
+    if (sev == "critical" || sev == "high")  return "#f43f5e";
+    if (sev == "warning"  || sev == "medium") return "#ffb84d";
     return "#38bdf8";
 }

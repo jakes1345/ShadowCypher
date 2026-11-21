@@ -35,14 +35,22 @@ It started as shell scripts I wrote to debug real network problems, because the 
 
 ## Desktop app
 
-The window talks to a C++ daemon over a local socket (`$XDG_RUNTIME_DIR/shadowcypher-daemon.sock`, owner-only). The daemon handles LAN discovery from the neighbour table, new-device incidents, NVD lookups, the Counter-Intel checks and chat with a local Ollama model. Pages that wrap command-line tools (Network, OSINT, Vuln, the Threat page's package audit) start those tools themselves.
+The window talks to a C++ daemon over a local socket (`$XDG_RUNTIME_DIR/shadowcypher-daemon.sock`, owner-only). The daemon handles LAN discovery from the neighbour table, new-device incidents, the hardware watch described below, NVD lookups, the Counter-Intel checks and chat with a local Ollama model. Pages that wrap command-line tools (Network, OSINT, Vuln, the Threat page's package audit) start those tools themselves.
+
+On Linux the daemon also watches what is plugged into the computer, because a "USB stick" or a charging cable can be a keyboard that types commands the moment it is connected. It raises an incident for:
+
+- a keyboard, USB or Bluetooth, that this computer has not used before, and with higher severity one that is also a storage drive or a network adapter;
+- a USB network adapter it has not used before, since traffic can be routed through one;
+- a Flipper Zero, by the names its firmware gives it, and a Digispark board set up as a keyboard.
+
+It reads what the kernel reports about each device (`/sys/bus/usb/devices`, `/proc/bus/input/devices`) and never reads keystrokes. It reports; it does not block, so the typing has already happened by the time the incident appears. A device that copies the IDs and names of a keyboard you already use is not noticed, and a Flipper Zero or other tool whose owner changed its defaults shows up only as a new keyboard. Whatever was plugged in the first time the daemon ran is taken as yours.
 
 Ghost mode is the only part that needs root. Turning it on or off runs `shadowcypher-privacy-helper` through `pkexec`, which starts Tor and sets up an iptables kill-switch. The daemon only reports its status.
 
 | Page | What it does |
 |---|---|
 | Dashboard | CPU, memory and network stats, plus a summary from the daemon |
-| Guardian | Devices and open incidents from the daemon. Can upload the device list to your account if you enable sync in Settings |
+| Guardian | Devices on the network and open incidents from the daemon, including the hardware watch's. Can upload the device list to your account if you enable sync in Settings |
 | Network Ops | Host discovery (`arp-scan`, or `nmap -sn`), `nmap -sV` service scans and `tcpdump` capture |
 | Threat Intel | Recent CVEs from NVD, and a local package audit with `arch-audit` (falls back to `pacman -Q`) |
 | OSINT | `whois`, `dig`, theHarvester, subfinder, amass and Shodan lookups on a domain or IP |
