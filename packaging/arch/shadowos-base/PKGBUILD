@@ -1,7 +1,7 @@
 # Maintainer: ShadowCypher <admin@shadowcypher.site>
 pkgname=shadowos-base
 pkgver=1.0
-pkgrel=1
+pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
 pkgdesc="ShadowOS core — sysctl hardening, polkit rules, mode scripts, os-release"
 arch=('any')
 url="https://shadowcypher.site"
@@ -12,7 +12,7 @@ backup=(
     'etc/os-release'
     'etc/hostname'
 )
-options=('!strip')
+options=('!strip' '!debug')
 
 # The files are the ISO's own, read straight from shadowos/profile/airootfs in
 # this checkout, so the package and the ISO cannot drift apart. A path that

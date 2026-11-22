@@ -8,9 +8,16 @@
 # as root). The checkout is only read; all build output goes to a scratch
 # directory and, once everything has passed, to <output-dir>.
 #
+#   PUBLISHED_URL=<url>      where the repository is published now. Each package
+#                            is compared with the published one: unchanged
+#                            contents keep the published file, changed contents
+#                            get the next release number (see "Versions" below).
+#                            Unset builds every package at the PKGBUILD's own
+#                            version, for a quick local test.
 #   SIGN_KEY=<fingerprint>   sign the packages and the database with this key.
 #                            Unset builds an unsigned repository, which is what
 #                            pull-request checks and local test builds want.
+#   SUMMARY=<file>           also write the version table there, as Markdown.
 #
 # One broken package does not stop the others, so a single run names every
 # package that fails. <output-dir> is only written when all packages built and
@@ -48,7 +55,8 @@ fi
 work="$(mktemp -d "${TMPDIR:-/tmp}/shadowos-repo.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 repo="$work/repo"
-mkdir -p "$work"/{build,pkgs,src,logs} "$repo"
+published="$work/published"
+mkdir -p "$work"/{build,pkgs,src,logs} "$repo" "$published"
 
 # GitHub Actions folds each step's log and shows failures as annotations;
 # anywhere else these print plain headings.
@@ -62,7 +70,8 @@ else
     fail()     { printf 'ERROR: %s: %s\n' "$1" "$2" >&2; }
 fi
 
-# Run one named check, folded in the log. A check that fails stops the script.
+# Run one named step, folded in the log. A step that fails stops the script.
+# The step runs in a subshell, so steps hand their results on in files.
 check() {
     local title=$1 problem=$2 fn=$3
     group "$title"
@@ -77,20 +86,21 @@ check() {
 }
 
 # ── Packages ─────────────────────────────────────────────────────────────────
-sign_args=(--nosign)
-[[ -z ${SIGN_KEY:-} ]] || sign_args=(--sign --key "$SIGN_KEY")
-
 # makepkg writes into the PKGBUILD's directory unless told otherwise.
 export BUILDDIR="$work/build" PKGDEST="$work/pkgs" SRCDEST="$work/src" \
        SRCPKGDEST="$work/src" LOGDEST="$work/logs"
 
-# The files makepkg will produce for a package, without the -debug split.
-package_files() {
-    (cd "$here/$1" && makepkg --packagelist) | grep -v -- '-debug-' || true
+# The file makepkg produces for a package (at release $2, if given), without
+# the -debug split.
+package_file() {
+    (
+        [[ -z ${2:-} ]] || export SHADOWOS_PKGREL=$2
+        cd "$here/$1" && makepkg --packagelist
+    ) | grep -v -- '-debug-' || true
 }
 
 build_package() {
-    local pkg=$1 args=(--force --clean --noconfirm "${sign_args[@]}") f
+    local pkg=$1 args=(--force --noconfirm --nosign) files
     # A package that compiles gets its dependencies installed by makepkg. The
     # others only copy files, and installing hyprland or linux-hardened to
     # package a config file would add gigabytes to every run, so their
@@ -102,10 +112,12 @@ build_package() {
     fi
     (cd "$here/$pkg" && makepkg "${args[@]}") || return 1
 
-    while read -r f; do
-        [[ -f $f ]] || { echo "makepkg succeeded but did not produce $f"; return 1; }
-        [[ -z ${SIGN_KEY:-} || -f $f.sig ]] || { echo "missing signature $f.sig"; return 1; }
-    done < <(package_files "$pkg")
+    mapfile -t files < <(package_file "$pkg")
+    if [[ ${#files[@]} -ne 1 ]]; then
+        echo "$pkg: expected one package from this PKGBUILD, makepkg lists ${#files[@]}"
+        return 1
+    fi
+    [[ -f ${files[0]} ]] || { echo "makepkg succeeded but did not produce ${files[0]}"; return 1; }
 }
 
 failed=()
@@ -126,18 +138,147 @@ if (( ${#failed[@]} )); then
     exit 1
 fi
 
+# ── Versions ─────────────────────────────────────────────────────────────────
+# pacman upgrades a package only when its version goes up, and it expects a
+# file it has already downloaded to still be the file the repository lists.
+# So against what is published at PUBLISHED_URL:
+#   - contents unchanged: the published file (and its signature) is kept, not
+#     the rebuild, which differs in timestamps only;
+#   - contents changed: the package is repackaged one release higher;
+#   - pkgver raised in the PKGBUILD: that version is used as it is.
+# The release number therefore lives in the published repository, not in git.
+
+# A digest of what a package installs and declares, leaving out everything
+# that only records when or where it was built.
+payload_digest() {
+    {
+        bsdtar -cf - --format=mtree --options='!all,type,uid,gid,mode,link,sha256' \
+            --exclude=.BUILDINFO --exclude=.MTREE --exclude=.PKGINFO "@$1" |
+            grep -v '^#' | LC_ALL=C sort
+        bsdtar -xOqf "$1" .PKGINFO | grep -Ev '^(#|pkgver = |builddate = |packager = |size = )'
+    } | sha256sum | cut -d' ' -f1
+}
+
+package_version() { bsdtar -xOqf "$1" .PKGINFO | sed -n 's/^pkgver = //p'; }
+
+# fetch <url> <file>: 0 = saved, 4 = the server says it is not there, 1 = failed.
+fetch() {
+    local code
+    code=$(curl -sSL --retry 3 --retry-delay 5 -o "$2" -w '%{http_code}' "$1") || { rm -f "$2"; return 1; }
+    case $code in
+        200) return 0 ;;
+        404) rm -f "$2"; return 4 ;;
+        *)   rm -f "$2"; echo "HTTP $code from $1"; return 1 ;;
+    esac
+}
+
+settle_versions() {
+    local index="$published/index.tsv" name cand cver pver pfile psum rel rc db
+    : > "$index"; : > "$work/final.list"; : > "$work/versions.tsv"
+
+    if [[ -n ${PUBLISHED_URL:-} ]]; then
+        # The files database carries the same package entries. Publishing
+        # replaces the two one after the other, so if a run died in between,
+        # one of them is still there to read.
+        rc=4
+        for db in "$REPO_NAME.db" "$REPO_NAME.files"; do
+            rc=0; fetch "$PUBLISHED_URL/$db" "$published/$db" || rc=$?
+            [[ $rc -eq 4 ]] || break
+            echo "$PUBLISHED_URL/$db is not there"
+        done
+        if [[ $rc -eq 4 ]]; then
+            # Without it nothing says which versions users already have, and
+            # starting again from the PKGBUILD versions would hand them
+            # packages older than the ones they installed.
+            echo "No database at $PUBLISHED_URL. To build a repository from nothing, run without PUBLISHED_URL."
+            return 1
+        elif [[ $rc -ne 0 ]]; then
+            echo "Could not read $PUBLISHED_URL/$db"
+            return 1
+        fi
+        # name, version, file name and checksum of every published package
+        bsdtar -xOf "$published/$db" --include='*/desc' | awk '
+            /^%FILENAME%$/  { getline file }
+            /^%NAME%$/      { getline name }
+            /^%VERSION%$/   { getline version }
+            /^%SHA256SUM%$/ { getline sum; print name "\t" version "\t" file "\t" sum }
+        ' > "$index" || return 1
+        [[ -s $index ]] || { echo "$PUBLISHED_URL/$db lists no packages"; return 1; }
+    else
+        echo "PUBLISHED_URL is not set: building every package at its PKGBUILD version."
+    fi
+
+    for name in "${PACKAGES[@]}"; do
+        cand=$(package_file "$name")
+        cver=$(package_version "$cand") || return 1
+        pver=""; pfile=""; psum=""
+        IFS=$'\t' read -r pver pfile psum < <(awk -F'\t' -v n="$name" '$1 == n {print $2 "\t" $3 "\t" $4}' "$index") || true
+
+        if [[ -z $pver ]]; then
+            printf '%s\t%s\t%s\t%s\n' "$name" "-" "$cver" "new package" >> "$work/versions.tsv"
+            echo "$cand" >> "$work/final.list"
+            continue
+        fi
+        if (( $(vercmp "$cver" "$pver") > 0 )); then
+            printf '%s\t%s\t%s\t%s\n' "$name" "$pver" "$cver" "new version" >> "$work/versions.tsv"
+            echo "$cand" >> "$work/final.list"
+            continue
+        fi
+        if [[ ${cver%-*} != "${pver%-*}" ]]; then
+            echo "$name: the PKGBUILD says ${cver%-*} but $pver is published. A version cannot go down; raise pkgver."
+            return 1
+        fi
+        if [[ ! ${pver##*-} =~ ^[0-9]+$ ]]; then
+            echo "$name: cannot count on from the published release in $pver"
+            return 1
+        fi
+
+        fetch "$PUBLISHED_URL/$pfile" "$published/$pfile" || { echo "Could not download the published $pfile"; return 1; }
+        echo "$psum  $published/$pfile" | sha256sum --check --quiet || {
+            echo "$pfile at $PUBLISHED_URL is not the file its database lists"; return 1; }
+
+        if [[ $(payload_digest "$cand") == "$(payload_digest "$published/$pfile")" ]]; then
+            rc=0; fetch "$PUBLISHED_URL/$pfile.sig" "$published/$pfile.sig" > /dev/null || rc=$?
+            [[ $rc -eq 0 || $rc -eq 4 ]] || { echo "Could not download the published $pfile.sig"; return 1; }
+            printf '%s\t%s\t%s\t%s\n' "$name" "$pver" "$pver" "unchanged" >> "$work/versions.tsv"
+            echo "$published/$pfile" >> "$work/final.list"
+        else
+            rel=$(( ${pver##*-} + 1 ))
+            echo "$name: contents differ from the published $pver, repackaging as ${pver%-*}-$rel"
+            (
+                export SHADOWOS_PKGREL=$rel
+                cd "$here/$name" && makepkg --repackage --force --noconfirm --nodeps --nosign
+            ) || return 1
+            cand=$(package_file "$name" "$rel")
+            [[ -f $cand ]] || { echo "makepkg did not produce $cand"; return 1; }
+            printf '%s\t%s\t%s\t%s\n' "$name" "$pver" "${pver%-*}-$rel" "changed" >> "$work/versions.tsv"
+            echo "$cand" >> "$work/final.list"
+        fi
+    done
+
+    printf '\n'
+    column -t -s $'\t' -N 'PACKAGE,PUBLISHED,THIS BUILD,CHANGE' "$work/versions.tsv"
+}
+check "Settle versions" "Could not settle the package versions" settle_versions
+
 # ── Repository database ──────────────────────────────────────────────────────
 build_database() {
-    cp "$work"/pkgs/*.pkg.tar.zst "$repo/" || return 1
-    if [[ -n ${SIGN_KEY:-} ]]; then
-        cp "$work"/pkgs/*.pkg.tar.zst.sig "$repo/" || return 1
-    fi
+    local f kind ext
+    while read -r f; do
+        cp "$f" "$repo/" || return 1
+        [[ -n ${SIGN_KEY:-} ]] || continue
+        # A kept package keeps the signature it was published with.
+        if [[ ! -f $f.sig ]]; then
+            gpg --batch --detach-sign --use-agent --local-user "$SIGN_KEY" --no-armor "$f" || return 1
+        fi
+        cp "$f.sig" "$repo/" || return 1
+    done < "$work/final.list"
+
     cd "$repo" || return 1
     repo-add ${SIGN_KEY:+--sign --key "$SIGN_KEY"} "$REPO_NAME.db.tar.gz" ./*.pkg.tar.zst || return 1
     # repo-add leaves shadowos.db and shadowos.files as symlinks to the
     # archives. Static hosts and release assets do not keep symlinks, and
     # pacman only ever asks for the short names, so publish those as files.
-    local kind ext
     for kind in db files; do
         for ext in "" .sig; do
             [[ -e $REPO_NAME.$kind.tar.gz$ext ]] || continue
@@ -248,5 +389,17 @@ fi
 # ── Output ───────────────────────────────────────────────────────────────────
 find "$out" -mindepth 1 -delete
 cp "$repo"/* "$out/"
+if [[ -n ${SUMMARY:-} ]]; then
+    {
+        printf '### [%s] repository\n\n' "$REPO_NAME"
+        if [[ -n ${PUBLISHED_URL:-} ]]; then
+            printf '| Package | Published | This build | |\n|---|---|---|---|\n'
+            awk -F'\t' '{ printf "| `%s` | %s | %s | %s |\n", $1, $2, ($4 == "unchanged" ? $3 : "**" $3 "**"), $4 }' "$work/versions.tsv"
+        else
+            printf '| Package | Version |\n|---|---|\n'
+            awk -F'\t' '{ printf "| `%s` | %s |\n", $1, $3 }' "$work/versions.tsv"
+        fi
+    } > "$SUMMARY"
+fi
 printf '\nRepository written to %s:\n' "$out"
 ls -l "$out"

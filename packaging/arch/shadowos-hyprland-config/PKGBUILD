@@ -1,7 +1,7 @@
 # Maintainer: ShadowCypher <admin@shadowcypher.site>
 pkgname=shadowos-hyprland-config
 pkgver=1.0
-pkgrel=1
+pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
 pkgdesc="ShadowOS Hyprland + Waybar + Mako + Foot + Wofi default configuration"
 arch=('any')
 url="https://shadowcypher.site"
@@ -24,7 +24,7 @@ backup=(
     'etc/skel/.config/mimeapps.list'
     'etc/skel/.zshrc'
 )
-options=('!strip')
+options=('!strip' '!debug')
 
 # Read straight from shadowos/profile/airootfs in this checkout; see
 # shadowos-base/PKGBUILD.

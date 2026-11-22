@@ -1,7 +1,7 @@
 # Maintainer: ShadowCypher <admin@shadowcypher.site>
 pkgname=shadowos-tools
 pkgver=1.0
-pkgrel=1
+pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
 pkgdesc="ShadowOS CLI suite — shadow-mode, shadow-update, shadow-help-me, leak test, diag, installer"
 arch=('any')
 url="https://shadowcypher.site"
@@ -11,7 +11,7 @@ optdepends=(
     'wofi: mode picker GUI'
     'mako: desktop notifications'
 )
-options=('!strip')
+options=('!strip' '!debug')
 
 # Read straight from shadowos/profile/airootfs in this checkout; see
 # shadowos-base/PKGBUILD.

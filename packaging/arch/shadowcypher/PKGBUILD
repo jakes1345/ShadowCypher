@@ -3,7 +3,7 @@
 # checkout. CMake also installs the missions from shadowscript/ next to it.
 pkgname=shadowcypher
 pkgver=1.0.0
-pkgrel=1
+pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
 pkgdesc="ShadowCypher — personal security platform: network guardian, CVE feed, encrypted mail, Ghost mode"
 arch=('x86_64')
 url="https://shadowcypher.site"
