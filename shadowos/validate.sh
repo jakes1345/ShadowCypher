@@ -15,7 +15,9 @@ ok()   { echo "  [OK]    $*"; }
 echo "==> Checking shell script syntax..."
 while IFS= read -r -d '' f; do
     head=$(head -1 "$f")
-    if [[ "$head" != *bash* && "$head" != *sh* ]]; then
+    # Files in /etc/profile.d are read by the login shell, never run, so they
+    # carry no shebang.
+    if [[ "$f" != */etc/profile.d/* && "$head" != *bash* && "$head" != *sh* ]]; then
         warn "No shebang: $f"
     fi
     if ! bash -n "$f" 2>/tmp/sh_err; then
@@ -63,6 +65,19 @@ while IFS= read -r -d '' f; do
     done < <(grep "^ExecStart=" "$f" 2>/dev/null || true)
 done < <(find "$PROFILE" -name "*.service" -print0)
 ok "Systemd units checked"
+
+# ── 4b. pacman hooks ─────────────────────────────────────────────────────────
+# pacman runs a hook's Exec after every transaction it matches. If the file is
+# not there, every one of those transactions ends with an error.
+echo "==> Checking pacman hooks..."
+while IFS= read -r -d '' f; do
+    while IFS= read -r bin; do
+        if [[ "$bin" == /opt/* || "$bin" == /usr/local/* ]]; then
+            [[ -f "${PROFILE}${bin}" ]] || err "Hook ${f#"$PROFILE"/}: Exec path missing in profile: $bin"
+        fi
+    done < <(sed -n 's/^Exec[[:space:]]*=[[:space:]]*\([^[:space:]]*\).*/\1/p' "$f")
+done < <(find "$PROFILE" -name "*.hook" -print0)
+ok "pacman hooks checked"
 
 # ── 5. Critical packages ──────────────────────────────────────────────────────
 echo "==> Checking package list..."
