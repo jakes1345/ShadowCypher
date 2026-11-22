@@ -7,6 +7,8 @@ arch=('any')
 url="https://shadowcypher.site"
 license=('MIT')
 depends=('hyprland' 'waybar' 'mako' 'foot' 'wofi' 'starship' 'zsh')
+# Both ship /etc/skel/.zshrc.
+conflicts=('grml-zsh-config')
 backup=(
     'etc/skel/.config/hypr/hyprland.conf'
     'etc/skel/.config/hypr/hyprlock.conf'
@@ -19,18 +21,25 @@ backup=(
     'etc/skel/.config/wofi/config'
     'etc/skel/.config/wofi/style.css'
     'etc/skel/.config/starship.toml'
-    'etc/skel/.config/MangoHud/MangoHud.conf'
     'etc/skel/.config/mimeapps.list'
     'etc/skel/.zshrc'
 )
 options=('!strip')
 
+# Read straight from shadowos/profile/airootfs in this checkout; see
+# shadowos-base/PKGBUILD.
 source=()
 sha256sums=()
 
 package() {
-    local SRC="$srcdir/files"
+    local SRC="$startdir/../../../shadowos/profile/airootfs"
+
+    # The desktop configuration and the shell profile. The rest of the ISO's
+    # /etc/skel stays out: the browser profile belongs to
+    # shadowos-firefox-config (two packages cannot own one file), and
+    # .ssh is the live user's.
     install -d "$pkgdir/etc/skel"
-    # Mirror the full skel tree, preserving symlinks/perms
-    cp -a "$SRC/etc/skel/." "$pkgdir/etc/skel/"
+    cp -r "$SRC/etc/skel/.config" "$pkgdir/etc/skel/.config"
+    install -m644 "$SRC/etc/skel/.zshrc" "$pkgdir/etc/skel/.zshrc"
+    chmod -R u=rwX,go=rX "$pkgdir/etc/skel"
 }

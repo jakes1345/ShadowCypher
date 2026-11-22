@@ -1,6 +1,6 @@
 # Maintainer: ShadowCypher <admin@shadowcypher.site>
-# The ShadowCypher desktop app (Qt6 C++). The publish-arch workflow stages
-# shadowcypher-qt/ into files/ before makepkg runs.
+# The ShadowCypher desktop app (Qt6 C++), built from shadowcypher-qt/ in this
+# checkout. CMake also installs the missions from shadowscript/ next to it.
 pkgname=shadowcypher
 pkgver=1.0.0
 pkgrel=1
@@ -15,21 +15,22 @@ depends=(
     'openssl'
     'polkit'
 )
-makedepends=('cmake' 'make' 'gcc' 'pkgconf')
+makedepends=('cmake' 'ninja')
 optdepends=(
     'tor: Ghost mode routes traffic through Tor'
     'iptables: Ghost mode kill-switch'
     'ollama: local AI assistant'
 )
+options=('!debug')
 source=()
 
 build() {
-    cmake -S "$srcdir/files/shadowcypher-qt" -B "$srcdir/build" \
+    cmake -S "$startdir/../../../shadowcypher-qt" -B "$srcdir/build" -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DBUILD_TESTING=OFF \
         -Wno-dev
-    cmake --build "$srcdir/build" --parallel "$(nproc)"
+    cmake --build "$srcdir/build"
 }
 
 package() {

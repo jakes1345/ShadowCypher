@@ -16,7 +16,7 @@ REPO_URL="https://shadowcypher.site/arch"
 KEY_FINGERPRINT="3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083"
 KEY_URL="${REPO_URL}/shadowos.gpg"
 
-CYAN='\033[1;36m'; GREEN='\033[1;32m'; RED='\033[1;31m'; NC='\033[0m'
+CYAN=$'\033[1;36m'; GREEN=$'\033[1;32m'; RED=$'\033[1;31m'; NC=$'\033[0m'
 ok()  { echo -e "${GREEN}[+]${NC} $1"; }
 log() { echo -e "${CYAN}[*]${NC} $1"; }
 err() { echo -e "${RED}[-]${NC} $1" >&2; exit 1; }

@@ -1,150 +1,217 @@
 name: Publish arch repository
 
+# Builds the ten [shadowos] packages with packaging/arch/build-repo.sh.
+#
+# On a pull request that is all it does: a change that breaks a package fails
+# the check before it reaches main. On main the packages and the database are
+# also signed, checked against the key shadowos-keyring ships, and published.
+# A package that fails to build, or a repository that fails a check, stops the
+# run before the publish job.
 on:
   push:
     branches: [main]
     paths:
       - 'packaging/arch/**'
       - 'shadowcypher-qt/**'
+      - 'shadowscript/missions/**'
       - 'shadowos/profile/airootfs/**'
-      - 'shadowos/branding/**'
+      - 'www/arch/**'
+      - '.github/workflows/publish-arch.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packaging/arch/**'
+      - 'shadowcypher-qt/**'
+      - 'shadowscript/missions/**'
+      - 'shadowos/profile/airootfs/**'
+      - 'www/arch/**'
       - '.github/workflows/publish-arch.yml'
   workflow_dispatch:
 
+# Publishing runs one at a time and is never cancelled halfway. Pull-request
+# builds only keep the newest run per branch.
 concurrency:
-  group: arch-repo
-  cancel-in-progress: false
+  group: arch-repo-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
-  contents: write
+  contents: read
+
+# bash with pipefail in both jobs. The container job would otherwise run its
+# steps with sh, where a failure on the left of a pipe goes unnoticed.
+defaults:
+  run:
+    shell: bash
+
+env:
+  KEY_ID: 3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083
+  # The release whose assets are the repository. www/_redirects names it too.
+  RELEASE_TAG: arch-repo
 
 jobs:
-  build-and-publish:
-    runs-on: ubuntu-22.04
+  build:
+    name: Build packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     container:
       image: archlinux:latest
-      options: --privileged
+    outputs:
+      publish: ${{ steps.mode.outputs.publish }}
 
     steps:
       - name: Install build tools
         run: |
-          # Refresh + install build deps
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm base-devel git rsync gnupg sudo
-
-          # makepkg refuses to run as root — create a build user
-          useradd -m -G wheel -s /bin/bash builder
-          echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers.d/builder
+          pacman -Syu --noconfirm --needed base-devel git
+          # makepkg refuses to run as root. It installs the build dependencies
+          # the PKGBUILDs ask for through sudo.
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
 
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+
+      # Only main is signed and published. Pull requests and manual runs on
+      # other branches build the same packages unsigned.
+      - name: Decide whether this run publishes
+        id: mode
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != pull_request ] && [ "$GITHUB_REF" = refs/heads/main ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # install.sh hands users www/arch/shadowos.gpg; the keyring package
+      # ships its own copy. They have to be the same key.
+      - name: Check the served key is the packaged key
+        run: cmp packaging/arch/shadowos-keyring/shadowos.gpg www/arch/shadowos.gpg
 
       - name: Import signing key
+        if: steps.mode.outputs.publish == 'true'
         env:
           APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
         run: |
           if [ -z "$APT_SIGNING_KEY" ]; then
-            echo "::error::APT_SIGNING_KEY not set; cannot sign packages"
+            echo "::error::APT_SIGNING_KEY is not set; cannot sign packages"
             exit 1
           fi
-          KEY_ID="3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083"
-
-          # Decode key to a builder-owned file
-          echo "$APT_SIGNING_KEY" | base64 -d > /tmp/key.gpg
-          chown builder:builder /tmp/key.gpg
-          chmod 600 /tmp/key.gpg
-
-          # All GPG ops as the builder user — one inline command, no heredoc
+          install -d -m 700 -o builder -g builder /home/builder/.gnupg
+          echo "$APT_SIGNING_KEY" | base64 -d |
+            sudo -u builder env GNUPGHOME=/home/builder/.gnupg gpg --batch --import
+          echo "${KEY_ID}:6:" |
+            sudo -u builder env GNUPGHOME=/home/builder/.gnupg gpg --batch --import-ownertrust
           sudo -u builder env GNUPGHOME=/home/builder/.gnupg \
-              bash -c "mkdir -p /home/builder/.gnupg && chmod 700 /home/builder/.gnupg && gpg --batch --import /tmp/key.gpg && echo '${KEY_ID}:6:' | gpg --batch --import-ownertrust && gpg --list-secret-keys --keyid-format=long | head -10"
+            gpg --list-secret-keys --keyid-format=long "$KEY_ID"
 
-          rm /tmp/key.gpg
-
-      - name: Stage package source trees
-        run: |
-          chown -R builder:builder $GITHUB_WORKSPACE
-          # Each PKGBUILD expects $srcdir/files to contain the relevant subset
-          # of repo content. We snapshot at build time.
-          AIR="$GITHUB_WORKSPACE/shadowos/profile/airootfs"
-
-          for pkg in shadowos-base shadowos-branding shadowos-tools \
-                     shadowos-hyprland-config shadowos-firefox-config shadowos-fastfetch; do
-            mkdir -p "$GITHUB_WORKSPACE/packaging/arch/$pkg/files"
-            rsync -a --exclude='__pycache__' "$AIR/" \
-              "$GITHUB_WORKSPACE/packaging/arch/$pkg/files/"
-          done
-
-          # shadowcypher package: the Qt6 desktop app, built by its PKGBUILD.
-          # shadowscript/ comes along for the mission scripts it installs.
-          mkdir -p "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files"
-          cp -a "$GITHUB_WORKSPACE/shadowcypher-qt" "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/shadowcypher-qt"
-          cp -a "$GITHUB_WORKSPACE/shadowscript" "$GITHUB_WORKSPACE/packaging/arch/shadowcypher/files/shadowscript"
-
-          chown -R builder:builder $GITHUB_WORKSPACE
-
-      - name: Build all packages
+      - name: Build packages and repository
         env:
           PACKAGER: "ShadowCypher <admin@shadowcypher.site>"
-          KEY_ID: "3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083"
+          SIGN_KEY: ${{ steps.mode.outputs.publish == 'true' && env.KEY_ID || '' }}
         run: |
-          mkdir -p /tmp/repo
-          cd $GITHUB_WORKSPACE/packaging/arch
-          for d in shadowos-keyring shadowos-mirrorlist shadowos-base shadowos-branding \
-                   shadowos-tools shadowos-hyprland-config shadowos-firefox-config \
-                   shadowos-fastfetch shadowos-meta shadowcypher; do
-            echo "════════════════════════════════════════"
-            echo "  Building $d"
-            echo "════════════════════════════════════════"
-            cd $GITHUB_WORKSPACE/packaging/arch/$d
-            sudo -u builder PACKAGER="$PACKAGER" GNUPGHOME=/home/builder/.gnupg \
-              makepkg --sign --key "$KEY_ID" --noconfirm --nodeps 2>&1 | tail -25 || true
-            cp -v *.pkg.tar.zst *.pkg.tar.zst.sig /tmp/repo/ 2>/dev/null || true
+          install -d -o builder -g builder "$RUNNER_TEMP/repo"
+          sudo -u builder env PACKAGER="$PACKAGER" SIGN_KEY="$SIGN_KEY" \
+            GITHUB_ACTIONS="$GITHUB_ACTIONS" GNUPGHOME=/home/builder/.gnupg \
+            packaging/arch/build-repo.sh "$RUNNER_TEMP/repo"
+
+      - name: Summarise
+        run: |
+          {
+            echo "### [shadowos] repository"
+            echo
+            echo "| File | Size |"
+            echo "|---|---:|"
+            cd "$RUNNER_TEMP/repo"
+            for f in *.pkg.tar.zst shadowos.db shadowos.files; do
+              echo "| \`$f\` | $(du -h "$f" | cut -f1) |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload repository
+        if: steps.mode.outputs.publish == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadowos-repo
+          path: ${{ runner.temp }}/repo/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  # The repository is the set of assets on one rolling GitHub release. It
+  # cannot live in git: main is protected, and shadowos-branding alone is over
+  # GitHub's 100 MB file limit. Users never see this address; pacman is pointed
+  # at https://shadowcypher.site/arch/shadowos/x86_64, which www/_redirects
+  # sends here.
+  publish:
+    name: Publish to the release
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write   # create the release and replace its assets
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: shadowos-repo
+          path: repo
+
+      - name: Publish
+        working-directory: repo
+        run: |
+          if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            # --latest=false: "latest" stays with the product releases.
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --latest=false \
+              --title "ShadowOS pacman repository" \
+              --notes "The signed \`[shadowos]\` pacman repository. The \`publish-arch\` workflow replaces these files on every build; the tag itself does not move. To use the repository, see [packaging/arch/README.md](https://github.com/$GITHUB_REPOSITORY/blob/main/packaging/arch/README.md)."
+          fi
+
+          # Packages first and the database last, so the database never lists
+          # a package that is not there yet.
+          gh release upload "$RELEASE_TAG" --clobber ./*.pkg.tar.zst ./*.pkg.tar.zst.sig
+          gh release upload "$RELEASE_TAG" --clobber \
+            shadowos.db shadowos.db.sig shadowos.files shadowos.files.sig
+
+          # Then drop whatever the new database no longer lists.
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' |
+            while read -r name; do
+              [ -e "$name" ] || gh release delete-asset "$RELEASE_TAG" "$name" --yes
+            done
+
+      - name: Check what users will download
+        working-directory: repo
+        run: |
+          # The release itself, then the address pacman is given.
+          for base in "https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG" \
+                      "https://shadowcypher.site/arch/shadowos/x86_64"; do
+            for f in shadowos.db shadowos.db.sig; do
+              if ! curl -fsSL --retry 6 --retry-delay 20 --retry-all-errors -o "$RUNNER_TEMP/$f" "$base/$f"; then
+                echo "::error title=Published repository is not reachable::could not download $base/$f (the release assets were uploaded; if this is the shadowcypher.site address, check the /arch/ rule in www/_redirects)"
+                exit 1
+              fi
+              if ! cmp -s "$f" "$RUNNER_TEMP/$f"; then
+                echo "::error title=Published repository is stale::$base/$f is not the file this run published"
+                exit 1
+              fi
+            done
           done
 
-      - name: Build pacman repo database
-        env:
-          KEY_ID: "3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083"
+      # The user's path, start to finish, on a stock Arch system: install.sh
+      # from the site, then pacman downloads every package through the
+      # redirect and verifies it against the key install.sh imported.
+      - name: Install from the published repository
         run: |
-          cd /tmp/repo
-          ls -la
-          chown -R builder:builder /tmp/repo
-          sudo -u builder GNUPGHOME=/home/builder/.gnupg \
-            repo-add --sign --key "$KEY_ID" --new --remove shadowos.db.tar.gz *.pkg.tar.zst
-          # Ensure pacman-expected symlinks exist (repo-add doesn't always
-          # create both shadowos.db and shadowos.files when running uncached)
-          ln -sfv shadowos.db.tar.gz shadowos.db
-          ln -sfv shadowos.files.tar.gz shadowos.files
-          ln -sfv shadowos.db.tar.gz.sig shadowos.db.sig
-          ln -sfv shadowos.files.tar.gz.sig shadowos.files.sig
-          ls -la
-
-      - name: Publish to arch/ in repo
-        run: |
-          OUT="$GITHUB_WORKSPACE/arch/x86_64"
-          mkdir -p "$OUT"
-          # Use rsync so symlinks become real files (GitHub Pages doesn't
-          # serve symlinks; pacman fetches shadowos.db as a URL so it has
-          # to be a real file)
-          rsync -avL --delete /tmp/repo/ "$OUT/"
-          # Also export the public key for the install one-liner
-          sudo -u builder gpg --armor --export "3ACC49288AC4F3BCBE1CDE98D9F1D18F1313F083" \
-            > "$GITHUB_WORKSPACE/arch/shadowos.gpg"
-
-      - name: Commit + push
-        run: |
-          # Restore root ownership so root can run git on the workspace
-          chown -R root:root "$GITHUB_WORKSPACE"
-          # And mark it safe — Arch's git is strict about cross-user repos
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          cd "$GITHUB_WORKSPACE"
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add arch/
-          if git diff --cached --quiet; then
-            echo "No changes to arch repo."
-          else
-            git commit -m "arch: rebuild packages ($(date -u +%Y-%m-%d))"
-            git pull --rebase origin main 2>/dev/null || true
-            git push
-          fi
+          expected=$(ls repo/*.pkg.tar.zst | wc -l)
+          docker run --rm -e EXPECTED="$expected" archlinux:latest bash -euo pipefail -c '
+            pacman-key --init
+            curl -fsSL https://shadowcypher.site/arch/install.sh | bash
+            mapfile -t pkgs < <(pacman -Slq shadowos)
+            if [ "${#pkgs[@]}" -ne "$EXPECTED" ]; then
+              echo "::error title=Published repository is incomplete::[shadowos] lists ${#pkgs[@]} packages, this run built $EXPECTED"
+              exit 1
+            fi
+            pacman -Sw --noconfirm --nodeps --nodeps "${pkgs[@]}"
+          '
+          echo "Published $expected packages to the $RELEASE_TAG release; a stock Arch container installed the repository from shadowcypher.site and verified all of them." >> "$GITHUB_STEP_SUMMARY"

@@ -10,40 +10,26 @@ depends=('plymouth' 'grub' 'sddm')
 install=shadowos-branding.install
 options=('!strip')
 
+# Read straight from shadowos/profile/airootfs in this checkout; see
+# shadowos-base/PKGBUILD.
 source=()
 sha256sums=()
 
 package() {
-    local SRC="$srcdir/files"
+    local SRC="$startdir/../../../shadowos/profile/airootfs"
+    local theme
 
-    # Wallpapers (20 desktop + 3 login + default symlinks)
-    install -d "$pkgdir/usr/share/backgrounds/shadowos/login"
-    cp -a "$SRC/usr/share/backgrounds/shadowos/"shadowos-*.png \
-        "$pkgdir/usr/share/backgrounds/shadowos/"
-    cp -a "$SRC/usr/share/backgrounds/shadowos/login/"shadowos-login-*.png \
-        "$pkgdir/usr/share/backgrounds/shadowos/login/"
-    # Re-create the symlinks
-    (cd "$pkgdir/usr/share/backgrounds/shadowos" && \
-        ln -sf shadowos-01-hex-teal-1920x1080.png wallpaper.png)
-    (cd "$pkgdir/usr/share/backgrounds/shadowos/login" && \
-        ln -sf shadowos-login-01-teal-1920x1080.png default.png)
+    # Wallpapers and login backgrounds. The whole directory, so the
+    # wallpaper.png and login/default.png symlinks that pick the defaults
+    # arrive together with the files they point at.
+    install -d "$pkgdir/usr/share/backgrounds"
+    cp -a "$SRC/usr/share/backgrounds/shadowos" "$pkgdir/usr/share/backgrounds/"
 
-    # Plymouth theme
-    install -d "$pkgdir/usr/share/plymouth/themes/shadowos"
-    cp -a "$SRC/usr/share/plymouth/themes/shadowos/." \
-        "$pkgdir/usr/share/plymouth/themes/shadowos/"
+    # Plymouth, GRUB and SDDM themes
+    for theme in plymouth grub sddm; do
+        install -d "$pkgdir/usr/share/$theme/themes"
+        cp -a "$SRC/usr/share/$theme/themes/shadowos" "$pkgdir/usr/share/$theme/themes/"
+    done
 
-    # GRUB theme
-    install -d "$pkgdir/usr/share/grub/themes/shadowos"
-    cp -a "$SRC/usr/share/grub/themes/shadowos/." \
-        "$pkgdir/usr/share/grub/themes/shadowos/"
-
-    # SDDM theme
-    install -d "$pkgdir/usr/share/sddm/themes/shadowos"
-    cp -a "$SRC/usr/share/sddm/themes/shadowos/." \
-        "$pkgdir/usr/share/sddm/themes/shadowos/"
-
-    # Wayland session entry
-    install -Dm644 "$SRC/usr/share/wayland-sessions/hyprland.desktop" \
-        "$pkgdir/usr/share/wayland-sessions/hyprland.desktop"
+    chmod -R u=rwX,go=rX "$pkgdir/usr"
 }
