@@ -191,4 +191,21 @@ jobs:
               fi
             done
           done
-          echo "Published $(ls ./*.pkg.tar.zst | wc -l) packages to $RELEASE_TAG." >> "$GITHUB_STEP_SUMMARY"
+
+      # The user's path, start to finish, on a stock Arch system: install.sh
+      # from the site, then pacman downloads every package through the
+      # redirect and verifies it against the key install.sh imported.
+      - name: Install from the published repository
+        run: |
+          expected=$(ls repo/*.pkg.tar.zst | wc -l)
+          docker run --rm -e EXPECTED="$expected" archlinux:latest bash -euo pipefail -c '
+            pacman-key --init
+            curl -fsSL https://shadowcypher.site/arch/install.sh | bash
+            mapfile -t pkgs < <(pacman -Slq shadowos)
+            if [ "${#pkgs[@]}" -ne "$EXPECTED" ]; then
+              echo "::error title=Published repository is incomplete::[shadowos] lists ${#pkgs[@]} packages, this run built $EXPECTED"
+              exit 1
+            fi
+            pacman -Sw --noconfirm --nodeps --nodeps "${pkgs[@]}"
+          '
+          echo "Published $expected packages to the $RELEASE_TAG release; a stock Arch container installed the repository from shadowcypher.site and verified all of them." >> "$GITHUB_STEP_SUMMARY"
