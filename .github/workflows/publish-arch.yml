@@ -7,6 +7,11 @@ name: Publish arch repository
 # also signed, checked against the key shadowos-keyring ships, and published.
 # A package that fails to build, or a repository that fails a check, stops the
 # run before the publish job.
+#
+# The build compares every package with the published one. Unchanged packages
+# keep their published file; changed ones get the next release number, which
+# is what makes pacman offer them as an upgrade. The run's summary lists which
+# is which, on pull requests too.
 on:
   push:
     branches: [main]
@@ -106,31 +111,25 @@ jobs:
         env:
           PACKAGER: "ShadowCypher <admin@shadowcypher.site>"
           SIGN_KEY: ${{ steps.mode.outputs.publish == 'true' && env.KEY_ID || '' }}
+          # The release itself, not the shadowcypher.site address that
+          # redirects to it: one thing fewer between the build and the truth.
+          PUBLISHED_URL: https://github.com/${{ github.repository }}/releases/download/${{ env.RELEASE_TAG }}
         run: |
-          install -d -o builder -g builder "$RUNNER_TEMP/repo"
+          install -d -o builder -g builder "$RUNNER_TEMP/build"
           sudo -u builder env PACKAGER="$PACKAGER" SIGN_KEY="$SIGN_KEY" \
+            PUBLISHED_URL="$PUBLISHED_URL" SUMMARY="$RUNNER_TEMP/build/versions.md" \
             GITHUB_ACTIONS="$GITHUB_ACTIONS" GNUPGHOME=/home/builder/.gnupg \
-            packaging/arch/build-repo.sh "$RUNNER_TEMP/repo"
+            packaging/arch/build-repo.sh "$RUNNER_TEMP/build/repo"
 
       - name: Summarise
-        run: |
-          {
-            echo "### [shadowos] repository"
-            echo
-            echo "| File | Size |"
-            echo "|---|---:|"
-            cd "$RUNNER_TEMP/repo"
-            for f in *.pkg.tar.zst shadowos.db shadowos.files; do
-              echo "| \`$f\` | $(du -h "$f" | cut -f1) |"
-            done
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: cat "$RUNNER_TEMP/build/versions.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload repository
         if: steps.mode.outputs.publish == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: shadowos-repo
-          path: ${{ runner.temp }}/repo/
+          path: ${{ runner.temp }}/build/repo/
           if-no-files-found: error
           retention-days: 7
           compression-level: 0
@@ -153,35 +152,22 @@ jobs:
       GH_REPO: ${{ github.repository }}
 
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: packaging/arch
+
       - uses: actions/download-artifact@v4
         with:
           name: shadowos-repo
-          path: repo
+          path: ${{ runner.temp }}/repo
 
+      # Uploads the new package versions, then the database, then removes the
+      # versions it replaced. Unchanged packages are left alone.
       - name: Publish
-        working-directory: repo
-        run: |
-          if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
-            # --latest=false: "latest" stays with the product releases.
-            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --latest=false \
-              --title "ShadowOS pacman repository" \
-              --notes "The signed \`[shadowos]\` pacman repository. The \`publish-arch\` workflow replaces these files on every build; the tag itself does not move. To use the repository, see [packaging/arch/README.md](https://github.com/$GITHUB_REPOSITORY/blob/main/packaging/arch/README.md)."
-          fi
-
-          # Packages first and the database last, so the database never lists
-          # a package that is not there yet.
-          gh release upload "$RELEASE_TAG" --clobber ./*.pkg.tar.zst ./*.pkg.tar.zst.sig
-          gh release upload "$RELEASE_TAG" --clobber \
-            shadowos.db shadowos.db.sig shadowos.files shadowos.files.sig
-
-          # Then drop whatever the new database no longer lists.
-          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' |
-            while read -r name; do
-              [ -e "$name" ] || gh release delete-asset "$RELEASE_TAG" "$name" --yes
-            done
+        run: packaging/arch/publish-release.sh "$RUNNER_TEMP/repo" "$RELEASE_TAG"
 
       - name: Check what users will download
-        working-directory: repo
+        working-directory: ${{ runner.temp }}/repo
         run: |
           # The release itself, then the address pacman is given.
           for base in "https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG" \
@@ -203,7 +189,7 @@ jobs:
       # redirect and verifies it against the key install.sh imported.
       - name: Install from the published repository
         run: |
-          expected=$(ls repo/*.pkg.tar.zst | wc -l)
+          expected=$(ls "$RUNNER_TEMP"/repo/*.pkg.tar.zst | wc -l)
           docker run --rm -e EXPECTED="$expected" archlinux:latest bash -euo pipefail -c '
             pacman-key --init
             curl -fsSL https://shadowcypher.site/arch/install.sh | bash
@@ -214,4 +200,4 @@ jobs:
             fi
             pacman -Sw --noconfirm --nodeps --nodeps "${pkgs[@]}"
           '
-          echo "Published $expected packages to the $RELEASE_TAG release; a stock Arch container installed the repository from shadowcypher.site and verified all of them." >> "$GITHUB_STEP_SUMMARY"
+          echo "The $RELEASE_TAG release holds $expected packages; a stock Arch container installed the repository from shadowcypher.site and verified all of them." >> "$GITHUB_STEP_SUMMARY"

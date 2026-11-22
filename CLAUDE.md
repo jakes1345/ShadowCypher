@@ -79,7 +79,7 @@ bash qemu-test.sh
 - **Deploys:**
   - Website: the Cloudflare Pages project `shadowcypher` deploys `www/` automatically from `main`. Don't deploy it by hand.
   - API: `cd backend/api && npm run deploy` ships whatever is in the working tree. Only run it from a clean checkout of `main`, after `npm run typecheck` and `npm test` pass.
-  - Arch repository: `publish-arch.yml` builds the packages in `packaging/arch/` and, on `main`, uploads them signed to the `arch-repo` GitHub release. `shadowcypher.site/arch/shadowos/x86_64/` redirects there (`www/_redirects`). Don't upload to that release by hand. See `packaging/arch/README.md`.
+  - Arch repository: `publish-arch.yml` builds the packages in `packaging/arch/` and, on `main`, uploads them signed to the `arch-repo` GitHub release. `shadowcypher.site/arch/shadowos/x86_64/` redirects there (`www/_redirects`). Don't upload to that release by hand, and don't edit `pkgrel` in the PKGBUILDs: the build raises a package's release whenever its contents change. See `packaging/arch/README.md`.
 - **Migrations:** apply a new file in `backend/api/migrations/` to Supabase before deploying code that needs it.
 - **Android:** `android/app/src/main/assets/public` is a frozen copy of the site. Login or protocol changes in `www/` don't reach the Android app until that copy is refreshed.
 

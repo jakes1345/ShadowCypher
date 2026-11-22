@@ -1,14 +1,14 @@
 # Maintainer: ShadowCypher <admin@shadowcypher.site>
 pkgname=shadowos-fastfetch
 pkgver=1.0
-pkgrel=1
+pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
 pkgdesc="ShadowOS fastfetch banner — ASCII logo + system snapshot at terminal login"
 arch=('any')
 url="https://shadowcypher.site"
 license=('MIT')
 depends=('fastfetch')
 backup=('etc/fastfetch/shadowos.jsonc')
-options=('!strip')
+options=('!strip' '!debug')
 
 # Read straight from shadowos/profile/airootfs in this checkout; see
 # shadowos-base/PKGBUILD.

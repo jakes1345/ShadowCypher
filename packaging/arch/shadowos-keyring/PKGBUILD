@@ -1,7 +1,7 @@
 # Maintainer: ShadowCypher <admin@shadowcypher.site>
 pkgname=shadowos-keyring
 pkgver=1.0
-pkgrel=1
+pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
 pkgdesc="ShadowOS PGP keyring — distributes the [shadowos] repo signing key"
 arch=('any')
 url="https://shadowcypher.site"

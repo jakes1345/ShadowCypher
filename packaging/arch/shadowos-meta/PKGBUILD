@@ -1,7 +1,7 @@
 # Maintainer: ShadowCypher <admin@shadowcypher.site>
 pkgname=shadowos-meta
 pkgver=1.0
-pkgrel=1
+pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
 pkgdesc="ShadowOS meta-package — installs the complete ShadowOS experience"
 arch=('any')
 url="https://shadowcypher.site"
