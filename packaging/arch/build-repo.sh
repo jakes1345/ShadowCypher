@@ -381,7 +381,11 @@ check_desktop_config() {
     # and shadowos-theme-apply can put beside it. --verify-config only parses,
     # so it needs no display.
     if ! command -v Hyprland > /dev/null; then
-        sudo pacman -S --needed --noconfirm hyprland || { echo "This check needs Hyprland (pacman -S hyprland)."; return 1; }
+        if ! sudo pacman -S --needed --noconfirm hyprland > "$work/logs/hyprland-install.log" 2>&1; then
+            tail -n 20 "$work/logs/hyprland-install.log"
+            echo "This check needs Hyprland, and installing it failed (pacman -S hyprland)."
+            return 1
+        fi
     fi
 
     local root="$work/desktop" config hypr modes profile mode output version
@@ -405,9 +409,9 @@ check_desktop_config() {
             output=$(XDG_CONFIG_HOME="$config" XDG_RUNTIME_DIR="$root/runtime" \
                 Hyprland --verify-config -c "$hypr/hyprland.lua" 2>&1) || true
             if [[ $(tail -n 1 <<< "$output") != "config ok" ]]; then
-                printf '%s rejects hyprland.lua with the %s hardware profile in %s mode:\n' \
-                    "$version" "$(basename "$profile" .lua)" "$mode"
-                sed -n '/Config parsing result/,$p' <<< "$output" | tail -n +2 | sed "s|$root||g"
+                printf '%s rejects hyprland.lua with hardware/%s as hardware-adjustments.lua, in %s mode:\n' \
+                    "$version" "${profile##*/}" "$mode"
+                sed -n '/Config parsing result/,$p' <<< "$output" | tail -n +2 | grep -v '^$' | sed "s|$root||g"
                 return 1
             fi
         done
