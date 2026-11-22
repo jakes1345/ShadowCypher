@@ -2,59 +2,55 @@
 pkgname=shadowos-base
 pkgver=1.0
 pkgrel=1
-pkgdesc="ShadowOS core — sysctl hardening, faillock, polkit rules, mode scripts, os-release"
+pkgdesc="ShadowOS core — sysctl hardening, polkit rules, mode scripts, os-release"
 arch=('any')
 url="https://shadowcypher.site"
 license=('MIT')
 depends=('bash' 'polkit' 'systemd')
 backup=(
     'etc/sysctl.d/99-shadowos.conf'
-    'etc/security/faillock.conf'
     'etc/os-release'
-    'etc/lsb-release'
     'etc/hostname'
 )
 options=('!strip')
 
-# Files are pulled from the repo at build time by ../../scripts/stage-pkg.sh
-# which copies the relevant subset of profile/airootfs into $srcdir.
+# The files are the ISO's own, read straight from shadowos/profile/airootfs in
+# this checkout, so the package and the ISO cannot drift apart. A path that
+# moves there fails this build instead of silently dropping out of the package.
 source=()
 sha256sums=()
 
 package() {
-    # Locations are mirrored from shadowos/profile/airootfs by stage-pkg.sh
-    local SRC="$srcdir/files"
+    local SRC="$startdir/../../../shadowos/profile/airootfs"
 
     # Sysctl hardening
     install -Dm644 "$SRC/etc/sysctl.d/99-shadowos.conf" \
         "$pkgdir/etc/sysctl.d/99-shadowos.conf"
-
-    # PAM faillock
-    install -Dm644 "$SRC/etc/security/faillock.conf" \
-        "$pkgdir/etc/security/faillock.conf"
 
     # Polkit rules
     install -Dm644 "$SRC/etc/polkit-1/rules.d/49-shadowos.rules" \
         "$pkgdir/etc/polkit-1/rules.d/49-shadowos.rules"
 
     # OS identity
-    install -Dm644 "$SRC/etc/os-release"  "$pkgdir/etc/os-release"
-    install -Dm644 "$SRC/etc/lsb-release" "$pkgdir/etc/lsb-release"
-    install -Dm644 "$SRC/etc/hostname"    "$pkgdir/etc/hostname"
+    install -Dm644 "$SRC/etc/os-release" "$pkgdir/etc/os-release"
+    install -Dm644 "$SRC/etc/hostname"   "$pkgdir/etc/hostname"
 
-    # SSH hardening overlay
-    install -Dm644 "$SRC/etc/ssh/sshd_config.d/shadowos.conf" \
-        "$pkgdir/etc/ssh/sshd_config.d/shadowos.conf"
+    # Two of the ISO's hardening files are deliberately not packaged:
+    #  - /etc/security/faillock.conf belongs to pam, and pacman refuses a
+    #    package that brings a file another package owns.
+    #  - /etc/ssh/sshd_config.d/*.conf are written for the live session
+    #    (password logins on, or logins limited to the "shadow" user). On an
+    #    existing system they would override the admin's own sshd_config.
 
-    # Mode scripts
-    install -d "$pkgdir/etc/shadowos/modes"
-    for mode in normal dev pentest privacy ghost; do
-        install -Dm755 "$SRC/etc/shadowos/modes/$mode/apply.sh" \
-            "$pkgdir/etc/shadowos/modes/$mode/apply.sh"
-    done
+    # Mode scripts. The whole tree: apply.sh sources ../_network_open.sh and
+    # shadow-mode runs the previous mode's revert.sh. Executable, as on the ISO.
+    install -d "$pkgdir/etc/shadowos"
+    cp -r "$SRC/etc/shadowos/modes" "$pkgdir/etc/shadowos/modes"
+    find "$pkgdir/etc/shadowos/modes" -type d -exec chmod 755 {} +
+    find "$pkgdir/etc/shadowos/modes" -type f -exec chmod 644 {} +
+    find "$pkgdir/etc/shadowos/modes" -name '*.sh' -exec chmod 755 {} +
 
     # Install config defaults
-    if [ -d "$SRC/etc/shadowos/install" ]; then
-        cp -r "$SRC/etc/shadowos/install" "$pkgdir/etc/shadowos/install"
-    fi
+    cp -r "$SRC/etc/shadowos/install" "$pkgdir/etc/shadowos/install"
+    chmod -R u=rwX,go=rX "$pkgdir/etc/shadowos/install"
 }

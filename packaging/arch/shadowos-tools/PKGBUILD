@@ -10,18 +10,19 @@ depends=('bash' 'pacman-contrib' 'nftables' 'ufw' 'tor' 'macchanger' 'systemd')
 optdepends=(
     'wofi: mode picker GUI'
     'mako: desktop notifications'
-    'pacman-contrib: checkupdates for shadow-update'
 )
 options=('!strip')
 
+# Read straight from shadowos/profile/airootfs in this checkout; see
+# shadowos-base/PKGBUILD.
 source=()
 sha256sums=()
 
 package() {
-    local SRC="$srcdir/files"
+    local SRC="$startdir/../../../shadowos/profile/airootfs"
+    local script
 
     # CLI scripts
-    install -d "$pkgdir/usr/local/bin"
     for script in shadow-mode shadow-update shadow-help-me shadow-help-me-stop \
                   shadow-leak-test shadow-ai-overlay shadowos-diag \
                   shadowos-firstboot shadowos-install shadowos-mac-randomize; do
@@ -35,13 +36,12 @@ package() {
     install -Dm644 "$SRC/etc/systemd/system/shadowos-firstboot.service" \
         "$pkgdir/usr/lib/systemd/system/shadowos-firstboot.service"
 
-    # Calamares branding (installer)
-    install -d "$pkgdir/etc/calamares/branding/shadowos"
-    cp -a "$SRC/etc/calamares/." "$pkgdir/etc/calamares/" 2>/dev/null || true
+    # Calamares branding and module config (installer)
+    install -d "$pkgdir/etc"
+    cp -r "$SRC/etc/calamares" "$pkgdir/etc/calamares"
+    chmod -R u=rwX,go=rX "$pkgdir/etc/calamares"
 
     # Desktop launcher for installer
-    if [ -f "$SRC/usr/share/applications/install-shadowos.desktop" ]; then
-        install -Dm644 "$SRC/usr/share/applications/install-shadowos.desktop" \
-            "$pkgdir/usr/share/applications/install-shadowos.desktop"
-    fi
+    install -Dm644 "$SRC/usr/share/applications/install-shadowos.desktop" \
+        "$pkgdir/usr/share/applications/install-shadowos.desktop"
 }

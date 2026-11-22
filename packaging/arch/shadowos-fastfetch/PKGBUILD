@@ -10,11 +10,13 @@ depends=('fastfetch')
 backup=('etc/fastfetch/shadowos.jsonc')
 options=('!strip')
 
+# Read straight from shadowos/profile/airootfs in this checkout; see
+# shadowos-base/PKGBUILD.
 source=()
 sha256sums=()
 
 package() {
-    local SRC="$srcdir/files"
+    local SRC="$startdir/../../../shadowos/profile/airootfs"
     install -Dm644 "$SRC/etc/fastfetch/shadowos.jsonc" \
         "$pkgdir/etc/fastfetch/shadowos.jsonc"
 }

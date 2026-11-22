@@ -9,11 +9,20 @@ license=('MIT')
 depends=('firefox')
 options=('!strip')
 
+# Read straight from shadowos/profile/airootfs in this checkout; see
+# shadowos-base/PKGBUILD.
 source=()
 sha256sums=()
 
 package() {
-    local SRC="$srcdir/files"
-    install -Dm644 "$SRC/etc/skel/.mozilla/firefox/shadow.default/user.js" \
-        "$pkgdir/etc/skel/.mozilla/firefox/shadow.default/user.js"
+    # The ISO ships LibreWolf, which is not in the official repositories, and
+    # keeps the hardened profile under .librewolf. The preferences are plain
+    # Firefox ones, so this package installs the same profile where Firefox
+    # looks for it. profiles.ini is what makes Firefox pick shadow.default
+    # instead of creating a profile of its own.
+    local SRC="$startdir/../../../shadowos/profile/airootfs/etc/skel/.librewolf"
+    local DST="$pkgdir/etc/skel/.mozilla/firefox"
+
+    install -Dm644 "$SRC/profiles.ini" "$DST/profiles.ini"
+    install -Dm644 "$SRC/shadow.default/user.js" "$DST/shadow.default/user.js"
 }
