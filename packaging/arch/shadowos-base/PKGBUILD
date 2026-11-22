@@ -2,13 +2,29 @@
 pkgname=shadowos-base
 pkgver=1.0
 pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
-pkgdesc="ShadowOS core — sysctl hardening, polkit rules, mode scripts, os-release"
+pkgdesc="ShadowOS core — sysctl hardening, module blacklist, polkit rules, mode scripts, os-release"
 arch=('any')
 url="https://shadowcypher.site"
 license=('MIT')
-depends=('bash' 'polkit' 'systemd')
+depends=(
+    'bash' 'polkit' 'systemd'
+    # What the mode scripts call without checking for it first.
+    'nftables' 'iproute2' 'tor' 'macchanger'
+    'firejail'      # privacy mode points the browser commands at it
+    'usbguard'      # ghost mode stops if it cannot start it
+)
+optdepends=(
+    'apparmor: ghost mode puts the loaded profiles in enforce mode'
+    'dnscrypt-proxy: encrypted DNS in privacy and ghost mode'
+    'conntrack-tools: normal mode clears tracked connections when it reopens the network'
+    'cpupower: dev and gaming mode set the performance governor'
+    'i2pd: privacy mode starts it if it is installed'
+    'gamemode: gaming mode'
+    'docker: dev mode'
+)
 backup=(
     'etc/sysctl.d/99-shadowos.conf'
+    'etc/modprobe.d/99-shadowos-blacklist.conf'
     'etc/os-release'
     'etc/hostname'
 )
@@ -27,6 +43,11 @@ package() {
     install -Dm644 "$SRC/etc/sysctl.d/99-shadowos.conf" \
         "$pkgdir/etc/sysctl.d/99-shadowos.conf"
 
+    # Kernel modules that are never loaded on demand: rarely used network
+    # protocols and filesystems.
+    install -Dm644 "$SRC/etc/modprobe.d/99-shadowos-blacklist.conf" \
+        "$pkgdir/etc/modprobe.d/99-shadowos-blacklist.conf"
+
     # Polkit rules. polkit owns the directory and keeps it at 750.
     install -dm750 "$pkgdir/etc/polkit-1/rules.d"
     install -m644 "$SRC/etc/polkit-1/rules.d/49-shadowos.rules" \
@@ -36,12 +57,17 @@ package() {
     install -Dm644 "$SRC/etc/os-release" "$pkgdir/etc/os-release"
     install -Dm644 "$SRC/etc/hostname"   "$pkgdir/etc/hostname"
 
-    # Two of the ISO's hardening files are deliberately not packaged:
+    # Some of the ISO's hardening is deliberately not packaged. It suits a
+    # machine installed from the ISO and would break one that was not:
     #  - /etc/security/faillock.conf belongs to pam, and pacman refuses a
     #    package that brings a file another package owns.
     #  - /etc/ssh/sshd_config.d/*.conf are written for the live session
     #    (password logins on, or logins limited to the "shadow" user). On an
     #    existing system they would override the admin's own sshd_config.
+    #  - /etc/security/limits.d/99-shadowos.conf caps every user at 1024
+    #    processes, which a browser and an IDE together can exceed.
+    #  - /etc/modprobe.d/99-shadowos-hardening.conf holds sysctl settings
+    #    written as module options, which modprobe does not apply.
 
     # Mode scripts. The whole tree: apply.sh sources ../_network_open.sh and
     # shadow-mode runs the previous mode's revert.sh. Executable, as on the ISO.

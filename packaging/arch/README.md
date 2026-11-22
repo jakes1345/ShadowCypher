@@ -38,21 +38,56 @@ sudo pacman -Sy
 | `shadowos-keyring` | The repo signing key |
 | `shadowos-mirrorlist` | Server list for the repo |
 | `shadowos-meta` | Depends on all of the below plus upstream defaults |
-| `shadowos-base` | sysctl hardening, polkit rules, the mode scripts, os-release |
+| `shadowos-base` | sysctl hardening, a kernel module blacklist, polkit rules, the mode scripts, os-release |
 | `shadowos-branding` | Wallpapers and the Plymouth, GRUB and SDDM themes |
-| `shadowos-tools` | `shadow-mode`, `shadow-update`, `shadow-help-me`, `shadow-leak-test`, `shadowos-diag` and other scripts, plus the Calamares branding |
-| `shadowos-hyprland-config` | Default Hyprland, Waybar, Mako, Foot, Wofi and Zsh config for new users (`/etc/skel`) |
+| `shadowos-tools` | The ISO's `/usr/local/bin`: `shadow-mode`, `shadow-update`, `shadow-settings`, `shadow-term`, `shadow-leak-test`, `shadow-score`, `shadowos-diag` and the rest, with their systemd units and polkit actions |
+| `shadowos-hyprland-config` | The desktop: the "Hyprland (ShadowOS)" login session and the Hyprland, Waybar, Mako, Wofi, terminal and Zsh configuration, with everything they start as dependencies |
 | `shadowos-firefox-config` | Hardened Firefox profile for new users, derived from arkenfox |
 | `shadowos-fastfetch` | Fastfetch banner with the ShadowOS logo |
 | `shadowcypher` | The Qt6 desktop app, its daemon and runtime |
 
-The packages take their files from `shadowos/profile/airootfs` and `shadowcypher-qt/`, so they carry what the ISO carries. Three things the ISO has are left out on purpose, because they would break an existing system:
+The packages take their files from `shadowos/profile/airootfs` and `shadowcypher-qt/`, so they carry what the ISO carries. `shadowos-tools` packages every script in the ISO's `/usr/local/bin`, so a script added there reaches installed systems without a packaging change.
 
-- `/etc/security/faillock.conf` belongs to `pam`, and pacman refuses a package that brings a file another package owns.
-- The ISO's `sshd_config.d` files are written for the live session. As drop-ins they would override the admin's own `sshd_config`.
-- `/etc/os-release` and `/etc/hostname` are installed as `.pacnew` files when the system already has its own.
+No package enables a service. The units are there to turn on:
 
-This directory also has PKGBUILDs for `shadowbrowser` and `shadowos-shell`, which are not built or published.
+- `shadowos-mac-randomize`: random MAC addresses at boot.
+- `shadowos-vpn-killswitch`: block everything outside a VPN tunnel.
+- `shadowos-firstboot`: adds the Chaotic-AUR repository, installs LibreWolf and Ghostty from it, refreshes the mirror list and downloads about 14 GB of AI models.
+- `shadowcypher-daemon` (a user unit): run the app's daemon from login. The app starts it by itself otherwise.
+
+## The desktop on an existing system
+
+Pick **Hyprland (ShadowOS)** on the login screen. The stock Hyprland session stays as it was.
+
+- At every login the session puts ShadowOS's `hyprland.lua` and Waybar files in `~/.config`, and writes `hardware-adjustments.lua` and `mode.lua` next to `hyprland.lua`. Personal changes go in `~/.config/hypr/user.lua`, which it never touches.
+- The first time, any of those files that already exists with other contents is kept next to it as `<file>.pre-shadowos`.
+- Config files the account does not have yet (wallpaper, lock screen, notifications, terminal, launcher) are copied from `/etc/skel`. Files that exist are left alone.
+- The shell setup is not applied to an existing account. To use it: `cp /etc/skel/.zshrc ~/` and `chsh -s /usr/bin/zsh`.
+
+Accounts created after the packages are installed get all of it from `/etc/skel`.
+
+## What is left out
+
+Some of what the ISO does would break a system that was not installed from it:
+
+- **The installer.** Calamares, its configuration and the "Install ShadowOS" menu entry belong to the live medium.
+- **`/etc/security/faillock.conf`** belongs to `pam`, and pacman refuses a package that brings a file another package owns.
+- **The SSH settings.** The ISO's `sshd_config.d` files are written for the live session: one allows password logins, the other lets only a user called `shadow` in. As drop-ins they would override the admin's own `sshd_config`.
+- **The process limit.** The ISO caps every user at 1024 processes, which a browser and an IDE together can exceed.
+- **`/etc/os-release` and `/etc/hostname`** are installed as `.pacnew` files when the system already has its own.
+
+To harden SSH by hand, first make sure key login works for your account. Then put these lines in `/etc/ssh/sshd_config.d/10-hardening.conf`:
+
+```
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+MaxAuthTries 3
+LoginGraceTime 30
+X11Forwarding no
+```
+
+Check the result with `sudo sshd -t`, reload with `sudo systemctl reload sshd`, and keep the session you are in open until a second login has worked.
 
 ## Building
 
@@ -62,7 +97,13 @@ On Arch, as a normal user who can `sudo pacman`:
 packaging/arch/build-repo.sh /tmp/shadowos-repo
 ```
 
-That builds all ten packages and the repository database, unsigned, into the directory you name. The script names every package that fails and writes nothing if one does. Before it writes the repository it has pacman resolve every package against `[shadowos]` plus the official repositories, and checks that no package ships a file another package owns. `SIGN_KEY=<fingerprint>` signs the result and has pacman verify it against the key in `shadowos-keyring/`.
+That builds all ten packages and the repository database, unsigned, into the directory you name. The script names every package that fails and writes nothing if one does. Before it writes the repository it:
+
+- has pacman resolve every package against `[shadowos]` plus the official repositories;
+- checks that no package ships a file another package owns;
+- has Hyprland check the packaged `hyprland.lua` (`Hyprland --verify-config`) with each hardware profile and each mode colour. It installs `hyprland` for this if it is missing.
+
+`SIGN_KEY=<fingerprint>` signs the result and has pacman verify it against the key in `shadowos-keyring/`.
 
 Run like that, every package comes out at release 1. To build what the workflow would publish, with the versions users would see, point the script at the published repository:
 
