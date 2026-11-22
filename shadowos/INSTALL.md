@@ -43,7 +43,7 @@ Open the dock → click the **Install ShadowOS** icon (or run `shadowos-install`
 
 | Profile | Installed size | What's included |
 |---------|---------------|-----------------|
-| **Minimal** | ~2 GB | Base + Hyprland + ShadowBrowser. Add anything else later via `pacman -S`. |
+| **Minimal** | ~2 GB | Base + Hyprland + LibreWolf. Add anything else later via `pacman -S`. |
 | **Security Pro** | ~5 GB | + nmap, metasploit, wireshark, rustscan, impacket, ffuf, the full pentest arsenal |
 | **Everything** | ~10 GB | + Steam, Lutris, Heroic, VSCode, Docker, GIMP, Blender, Krita, full dev/creator/gaming stack |
 
@@ -107,7 +107,7 @@ Or open the wofi picker: **Super + M**
 
 **No Wi-Fi after install:** run `nmtui` to connect. We ship `network-manager-applet` for tray-based connection management.
 
-**Hyprland is black after login:** older Intel GPUs need `WLR_RENDERER=pixman`. Add to `~/.config/hypr/hyprland.conf`.
+**Hyprland is black after login:** older Intel GPUs need `WLR_RENDERER=pixman`. Add `hl.env("WLR_RENDERER", "pixman")` to `~/.config/hypr/user.lua`.
 
 **Tor doesn't start in privacy mode:** run `sudo systemctl status tor` — usually a transient bridge issue. `shadow-mode normal && shadow-mode privacy` re-applies cleanly.
 

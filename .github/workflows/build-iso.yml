@@ -58,8 +58,11 @@ jobs:
               pacman-key --init
               pacman-key --populate archlinux
 
-              # Refresh DB and install build deps
-              pacman -Sy --noconfirm --needed archiso git rsync grub cmake make gcc pkgconf openssl qt6-base qt6-websockets
+              # Upgrade the image, then install the build dependencies. The
+              # image is older than the repositories, and installing new
+              # packages onto it without upgrading (pacman -Sy) fails as soon
+              # as one of them needs a newer library than the image has.
+              pacman -Syu --noconfirm --needed archiso git rsync grub cmake make gcc pkgconf openssl qt6-base qt6-websockets
 
               # Run the ShadowOS build script
               cd /build/shadowos

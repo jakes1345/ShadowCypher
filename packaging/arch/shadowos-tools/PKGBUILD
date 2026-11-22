@@ -2,14 +2,33 @@
 pkgname=shadowos-tools
 pkgver=1.0
 pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
-pkgdesc="ShadowOS CLI suite — shadow-mode, shadow-update, shadow-help-me, leak test, diag, installer"
+pkgdesc="ShadowOS scripts — shadow-mode, shadow-update, shadow-settings, shadow-term, leak test, diagnostics and the rest of the ISO's /usr/local/bin"
 arch=('any')
 url="https://shadowcypher.site"
 license=('MIT')
-depends=('bash' 'pacman-contrib' 'nftables' 'ufw' 'tor' 'macchanger' 'systemd')
+depends=(
+    'shadowos-base'     # shadow-mode runs the mode scripts in /etc/shadowos/modes
+    'bash' 'systemd' 'polkit' 'iproute2' 'curl'
+    'nftables' 'ufw' 'tor' 'macchanger'
+    'pacman-contrib'    # checkupdates: shadow-update, shadow-update-count
+    'jq'                # shadow-score, shadow-ai-overlay
+    'sudo'              # shadow-mode, shadow-update and others run their privileged steps through it
+)
 optdepends=(
-    'wofi: mode picker GUI'
-    'mako: desktop notifications'
+    'wofi: the pickers (shadow-mode picker, shadow-settings, shadow-power-menu, shadow-play, shadow-ai-overlay)'
+    'libnotify: desktop notifications'
+    'foot: a terminal for shadow-term (it tries ghostty, kitty, foot, alacritty)'
+    'ollama: shadow-ai-overlay and shadowos-ai-setup'
+    'openssh: shadow-help-me'
+    'torsocks: shadow-update --over-tor'
+    'flatpak: shadow-update and shadow-play'
+    'mpv: shadow-stream'
+    'yt-dlp: shadow-stream'
+    'networkmanager: Wi-Fi entry in shadow-settings'
+    'pavucontrol: audio entry in shadow-settings'
+    'power-profiles-daemon: power profile entry in shadow-settings'
+    'reflector: shadowos-firstboot refreshes the mirror list'
+    'git: shadowos-firstboot installs testssl.sh'
 )
 options=('!strip' '!debug')
 
@@ -18,30 +37,38 @@ options=('!strip' '!debug')
 source=()
 sha256sums=()
 
+# Scripts in the ISO's /usr/local/bin that only make sense on the live medium.
+# Everything else there is packaged, so a script added to the ISO reaches
+# installed systems without anyone remembering to list it here.
+_live_only=(
+    shadowos-install            # starts Calamares, which only the ISO has
+    shadowos-live-login-fix.sh  # autologin for the live user
+)
+
 package() {
     local SRC="$startdir/../../../shadowos/profile/airootfs"
-    local script
+    local script name unit
 
-    # CLI scripts
-    for script in shadow-mode shadow-update shadow-help-me shadow-help-me-stop \
-                  shadow-leak-test shadow-ai-overlay shadowos-diag \
-                  shadowos-firstboot shadowos-install shadowos-mac-randomize; do
-        install -Dm755 "$SRC/usr/local/bin/$script" \
-            "$pkgdir/usr/local/bin/$script"
+    for script in "$SRC"/usr/local/bin/*; do
+        name=${script##*/}
+        [[ " ${_live_only[*]} " == *" $name "* ]] && continue
+        install -Dm755 "$script" "$pkgdir/usr/local/bin/$name"
     done
 
-    # systemd units
-    install -Dm644 "$SRC/etc/systemd/system/shadowos-mac-randomize.service" \
-        "$pkgdir/usr/lib/systemd/system/shadowos-mac-randomize.service"
-    install -Dm644 "$SRC/etc/systemd/system/shadowos-firstboot.service" \
-        "$pkgdir/usr/lib/systemd/system/shadowos-firstboot.service"
+    # systemd units. None is enabled by installing the package.
+    for unit in shadowos-firstboot shadowos-mac-randomize shadowos-vpn-killswitch; do
+        install -Dm644 "$SRC/etc/systemd/system/$unit.service" \
+            "$pkgdir/usr/lib/systemd/system/$unit.service"
+    done
+    install -Dm644 "$SRC/etc/systemd/user/shadowos-welcome.service" \
+        "$pkgdir/usr/lib/systemd/user/shadowos-welcome.service"
 
-    # Calamares branding and module config (installer)
-    install -d "$pkgdir/etc"
-    cp -r "$SRC/etc/calamares" "$pkgdir/etc/calamares"
-    chmod -R u=rwX,go=rX "$pkgdir/etc/calamares"
+    # polkit actions for pkexec shadow-mode and shadow-bios. The rules in
+    # shadowos-base refer to them, and allow_gui is what lets the mode picker
+    # open from pkexec.
+    install -Dm644 "$SRC/usr/share/polkit-1/actions/org.shadowcypher.policy" \
+        "$pkgdir/usr/share/polkit-1/actions/org.shadowcypher.policy"
 
-    # Desktop launcher for installer
-    install -Dm644 "$SRC/usr/share/applications/install-shadowos.desktop" \
-        "$pkgdir/usr/share/applications/install-shadowos.desktop"
+    install -Dm644 "$SRC/usr/share/applications/shadowos-welcome.desktop" \
+        "$pkgdir/usr/share/applications/shadowos-welcome.desktop"
 }

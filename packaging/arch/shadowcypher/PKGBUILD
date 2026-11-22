@@ -35,4 +35,10 @@ build() {
 
 package() {
     DESTDIR="$pkgdir" cmake --install "$srcdir/build"
+
+    # The user unit the ISO runs the daemon with. Not enabled here: the app
+    # starts its own daemon, and whether one should run from login is the
+    # user's call (systemctl --user enable --now shadowcypher-daemon).
+    install -Dm644 "$startdir/../../../shadowos/profile/airootfs/etc/systemd/user/shadowcypher-daemon.service" \
+        "$pkgdir/usr/lib/systemd/user/shadowcypher-daemon.service"
 }

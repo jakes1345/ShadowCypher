@@ -372,6 +372,55 @@ check_file_conflicts() {
     printf '%d packaged files, none owned by another package without a declared conflict.\n' "${#paths[@]}"
 }
 
+check_desktop_config() {
+    # Hyprland reads its configuration at login. A file it rejects leaves the
+    # user with an error banner in place of the desktop, and a new Hyprland
+    # release can make a file that used to be fine into one of those. So ask
+    # Hyprland itself, about the files as packaged: hyprland.lua together with
+    # every hardware profile and every mode colour that shadowos-session-start
+    # and shadowos-theme-apply can put beside it. --verify-config only parses,
+    # so it needs no display.
+    if ! command -v Hyprland > /dev/null; then
+        if ! sudo pacman -S --needed --noconfirm hyprland > "$work/logs/hyprland-install.log" 2>&1; then
+            tail -n 20 "$work/logs/hyprland-install.log"
+            echo "This check needs Hyprland, and installing it failed (pacman -S hyprland)."
+            return 1
+        fi
+    fi
+
+    local root="$work/desktop" config hypr modes profile mode output version
+    version=$(Hyprland --version | sed -n '1s/ built from.*//p')
+    mkdir -p "$root/runtime" && chmod 700 "$root/runtime"
+    bsdtar -xf "$repo"/shadowos-hyprland-config-[0-9]*.pkg.tar.zst -C "$root" \
+        etc/skel/.config/hypr etc/shadowos/desktop || return 1
+    bsdtar -xf "$repo"/shadowos-tools-[0-9]*.pkg.tar.zst -C "$root" \
+        usr/local/bin/shadowos-theme-apply || return 1
+    mapfile -t modes < <(bsdtar -tf "$repo"/shadowos-base-[0-9]*.pkg.tar.zst |
+        sed -n 's|^etc/shadowos/modes/\([^/]*\)/$|\1|p')
+    (( ${#modes[@]} )) || { echo "shadowos-base ships no modes in /etc/shadowos/modes"; return 1; }
+    config="$root/etc/skel/.config"
+    hypr="$config/hypr"
+
+    for profile in "$root"/etc/shadowos/desktop/hardware/*.lua; do
+        for mode in "${modes[@]}"; do
+            # The two files a login writes next to hyprland.lua.
+            cp "$profile" "$hypr/hardware-adjustments.lua" || return 1
+            XDG_CONFIG_HOME="$config" bash "$root/usr/local/bin/shadowos-theme-apply" "$mode" --no-reload || return 1
+            output=$(XDG_CONFIG_HOME="$config" XDG_RUNTIME_DIR="$root/runtime" \
+                Hyprland --verify-config -c "$hypr/hyprland.lua" 2>&1) || true
+            if [[ $(tail -n 1 <<< "$output") != "config ok" ]]; then
+                printf '%s rejects hyprland.lua with hardware/%s as hardware-adjustments.lua, in %s mode:\n' \
+                    "$version" "${profile##*/}" "$mode"
+                sed -n '/Config parsing result/,$p' <<< "$output" | tail -n +2 | grep -v '^$' | sed "s|$root||g"
+                return 1
+            fi
+        done
+    done
+    printf '%s accepts hyprland.lua with each of %d hardware profiles in each of %d modes (%s).\n' \
+        "$version" "$(ls "$root"/etc/shadowos/desktop/hardware/*.lua | wc -l)" \
+        "${#modes[@]}" "${modes[*]}"
+}
+
 check_signatures() {
     # Have pacman fetch every package from the repository and verify it.
     pm -Sw --nodeps --nodeps "${PACKAGES[@]}" || return 1
@@ -382,6 +431,7 @@ check "Read the repository with pacman" \
     sync_repositories
 check "Resolve dependencies" "Dependencies do not resolve" check_dependencies
 check "Check for file conflicts" "A package ships a file another package owns" check_file_conflicts
+check "Check the desktop configuration with Hyprland" "Hyprland rejects the packaged desktop configuration" check_desktop_config
 if [[ -n ${SIGN_KEY:-} ]]; then
     check "Verify package signatures" "pacman rejected a package signature" check_signatures
 fi

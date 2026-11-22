@@ -25,19 +25,20 @@ done < <(find "$PROFILE" -name "*.sh" -print0)
 ok "Shell scripts checked"
 
 # ── 2. Hyprland config ────────────────────────────────────────────────────────
+# Hyprland's own check (Hyprland --verify-config) runs in the package build,
+# packaging/arch/build-repo.sh, which has Hyprland installed.
 echo "==> Checking Hyprland configs..."
-for conf in \
-    "$PROFILE/etc/skel/.config/hypr/hyprland.conf" \
-    "$PROFILE/etc/shadowos/desktop/hyprland.conf"; do
+skel_conf="$PROFILE/etc/skel/.config/hypr/hyprland.lua"
+canon_conf="$PROFILE/etc/shadowos/desktop/hyprland.lua"
+for conf in "$skel_conf" "$canon_conf"; do
     [[ -f "$conf" ]] || { err "Missing: $conf"; continue; }
-    # new_optimizations was removed in Hyprland 0.42+
-    if grep -qn "new_optimizations" "$conf"; then
-        err "$conf: 'new_optimizations' removed in Hyprland 0.42+ — delete the line"
-    fi
-    if grep -qn "tap-to-click" "$conf"; then
-        err "$conf: use 'tap_to_click' not 'tap-to-click'"
-    fi
+    # Hyprland reads hyprland.lua only. A hyprland.conf beside it is never read.
+    [[ -e "${conf%.lua}.conf" ]] && err "${conf%.lua}.conf: Hyprland no longer reads this format — move its settings to hyprland.lua"
 done
+# shadowos-session-start copies the canonical file over the user's at every login.
+if [[ -f "$skel_conf" && -f "$canon_conf" ]] && ! cmp -s "$skel_conf" "$canon_conf"; then
+    err "hyprland.lua differs between etc/skel/.config/hypr and etc/shadowos/desktop"
+fi
 ok "Hyprland configs checked"
 
 # ── 3. Waybar JSON ────────────────────────────────────────────────────────────
@@ -96,11 +97,11 @@ ok "Mode scripts checked"
 # ── 7. Critical files exist ───────────────────────────────────────────────────
 echo "==> Checking critical profile files..."
 critical=(
-    "etc/skel/.config/hypr/hyprland.conf"
+    "etc/skel/.config/hypr/hyprland.lua"
     "etc/skel/.config/waybar/config.jsonc"
     "etc/skel/.config/waybar/style.css"
     "etc/skel/.config/wofi/style.css"
-    "etc/shadowos/desktop/hyprland.conf"
+    "etc/shadowos/desktop/hyprland.lua"
     "etc/systemd/system/shadowos-firstboot.service"
     "usr/local/bin/shadow-mode"
     "usr/local/bin/shadowos-session-start"
@@ -116,10 +117,7 @@ ok "Critical files checked"
 echo "==> Checking hyprland keybind targets..."
 while IFS= read -r script; do
     [[ -f "$PROFILE/$script" ]] || warn "Keybind target missing in profile: $script"
-done < <(grep -h "exec," "$PROFILE/etc/shadowos/desktop/hyprland.conf" 2>/dev/null \
-    | grep -oE '/usr/local/bin/[a-z0-9_-]+' \
-    | sed 's|^/||' \
-    | sort -u)
+done < <(grep -ohE '/usr/local/bin/[a-z0-9_-]+' "$PROFILE/etc/shadowos/desktop/hyprland.lua" 2>/dev/null | sed 's|^/||' | sort -u)
 ok "Keybind targets checked"
 
 # ── Result ────────────────────────────────────────────────────────────────────

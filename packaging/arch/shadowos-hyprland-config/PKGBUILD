@@ -2,15 +2,42 @@
 pkgname=shadowos-hyprland-config
 pkgver=1.0
 pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
-pkgdesc="ShadowOS Hyprland + Waybar + Mako + Foot + Wofi default configuration"
+pkgdesc="The ShadowOS desktop: Hyprland session, Waybar, Mako, Wofi, terminal and shell configuration"
 arch=('any')
 url="https://shadowcypher.site"
 license=('MIT')
-depends=('hyprland' 'waybar' 'mako' 'foot' 'wofi' 'starship' 'zsh')
+# Everything the configuration starts or binds a key to.
+depends=(
+    'shadowos-tools'    # the shadow-* scripts behind the key bindings and the bar
+    'hyprland' 'hyprpaper' 'hypridle' 'hyprlock' 'polkit-kde-agent'
+    'waybar' 'mako' 'wofi' 'libnotify'
+    'foot' 'ghostty'
+    'wl-clipboard' 'cliphist' 'grim' 'slurp' 'swappy'
+    'brightnessctl' 'playerctl' 'wireplumber' 'pavucontrol' 'networkmanager'
+    'ttf-jetbrains-mono-nerd'
+    'yazi' 'neovim' 'btop'
+    # .zshrc aliases ls and cat to these, so a shell without them is broken.
+    'zsh' 'starship' 'eza' 'bat'
+)
+optdepends=(
+    'shadowos-branding: the wallpapers hyprpaper and hyprlock are pointed at'
+    'fzf: history and file search in zsh'
+    'fd: file listing for fzf'
+    'zoxide: smarter cd in zsh'
+    'zsh-autosuggestions: suggestions while typing'
+    'zsh-syntax-highlighting: command highlighting'
+    'torsocks: the torip alias'
+    'fastfetch: the ff alias'
+    'firefox: browser on SUPER+B when LibreWolf is not installed'
+    'mpv: default video and audio player'
+    'imv: default image viewer'
+    'thunar: default file manager for folders'
+)
 # Both ship /etc/skel/.zshrc.
 conflicts=('grml-zsh-config')
 backup=(
-    'etc/skel/.config/hypr/hyprland.conf'
+    'etc/skel/.config/hypr/hyprland.lua'
+    'etc/skel/.config/hypr/user.lua'
     'etc/skel/.config/hypr/hyprlock.conf'
     'etc/skel/.config/hypr/hypridle.conf'
     'etc/skel/.config/hypr/hyprpaper.conf'
@@ -33,13 +60,32 @@ sha256sums=()
 
 package() {
     local SRC="$startdir/../../../shadowos/profile/airootfs"
+    local f
 
-    # The desktop configuration and the shell profile. The rest of the ISO's
-    # /etc/skel stays out: the browser profile belongs to
-    # shadowos-firefox-config (two packages cannot own one file), and
-    # .ssh is the live user's.
+    # The desktop configuration and the shell profile, for accounts created
+    # from now on. The rest of the ISO's /etc/skel stays out: the browser
+    # profile belongs to shadowos-firefox-config (two packages cannot own one
+    # file), and .ssh is the live user's.
     install -d "$pkgdir/etc/skel"
     cp -r "$SRC/etc/skel/.config" "$pkgdir/etc/skel/.config"
     install -m644 "$SRC/etc/skel/.zshrc" "$pkgdir/etc/skel/.zshrc"
-    chmod -R u=rwX,go=rX "$pkgdir/etc/skel"
+
+    # The copies shadowos-session-start puts in place at every login. They
+    # must be the files /etc/skel hands to a new account; if the two have
+    # drifted apart in the ISO profile, stop here and say which.
+    for f in hypr/hyprland.lua waybar/config.jsonc waybar/style.css; do
+        if ! cmp -s "$SRC/etc/skel/.config/$f" "$SRC/etc/shadowos/desktop/${f#hypr/}"; then
+            error "etc/shadowos/desktop/${f#hypr/} and etc/skel/.config/$f differ in the ISO profile"
+            return 1
+        fi
+    done
+    install -d "$pkgdir/etc/shadowos"
+    cp -r "$SRC/etc/shadowos/desktop" "$pkgdir/etc/shadowos/desktop"
+
+    # The "Hyprland (ShadowOS)" entry on the login screen. Its Exec is
+    # shadowos-session-start, in shadowos-tools.
+    install -Dm644 "$SRC/usr/share/wayland-sessions/shadowos.desktop" \
+        "$pkgdir/usr/share/wayland-sessions/shadowos.desktop"
+
+    chmod -R u=rwX,go=rX "$pkgdir/etc" "$pkgdir/usr"
 }

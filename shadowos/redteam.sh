@@ -280,7 +280,7 @@ launcher=$(SR 'ls /opt/shadowcypher/launch.sh 2>&1')
 
 # ── 11. DESKTOP CONFIG (skel rolled to user) ──────────────────────────────
 section "11. DESKTOP CONFIG"
-for f in .config/hypr/hyprland.conf .config/hypr/hyprlock.conf \
+for f in .config/hypr/hyprland.lua .config/hypr/hyprlock.conf \
          .config/hypr/hyprpaper.conf .config/waybar/config.jsonc \
          .config/waybar/style.css .config/mako/config .zshrc \
          .config/foot/foot.ini .config/MangoHud/MangoHud.conf; do

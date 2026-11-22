@@ -18,20 +18,25 @@ reload=1
 hypr="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
 mkdir -p "$hypr"
 
+# The border is a gradient between two colours.
 case "$mode" in
-    privacy) border="rgba(F4A261FF) rgba(E76F51FF) 45deg" ;;
-    ghost)   border="rgba(E63946FF) rgba(9D0208FF) 45deg" ;;
-    dev)     border="rgba(58A6FFFF) rgba(1F6FEBFF) 45deg" ;;
-    gaming)  border="rgba(BC8CFFFF) rgba(7C3AEDFF) 45deg" ;;
-    *)       mode="normal"; border="rgba(00E0A4FF) rgba(00B988FF) 45deg" ;;
+    privacy) from=F4A261FF to=E76F51FF ;;
+    ghost)   from=E63946FF to=9D0208FF ;;
+    dev)     from=58A6FFFF to=1F6FEBFF ;;
+    gaming)  from=BC8CFFFF to=7C3AEDFF ;;
+    *)       mode="normal"; from=00E0A4FF to=00B988FF ;;
 esac
 
-cat > "$hypr/mode.conf" <<EOF
-# Written by shadowos-theme-apply when the ShadowOS mode changes — do not edit.
-# mode: $mode
-general {
-    col.active_border = $border
-}
+cat > "$hypr/mode.lua" <<EOF
+-- Written by shadowos-theme-apply when the ShadowOS mode changes — do not edit.
+-- mode: $mode
+hl.config({
+    general = {
+        col = {
+            active_border = { colors = { "rgba($from)", "rgba($to)" }, angle = 45 },
+        },
+    },
+})
 EOF
 
 if (( reload )); then

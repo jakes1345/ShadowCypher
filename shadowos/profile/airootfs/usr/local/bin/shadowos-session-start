@@ -43,77 +43,79 @@ if [[ "$IS_VM" -eq 1 ]]; then
 fi
 
 # Always deploy canonical desktop config (fixes old ISO autostart on every login).
-HYPR_DIR="${XDG_CONFIG_HOME:-${HOME:-/home/shadow}/.config}/hypr"
-WAYBAR_DIR="${XDG_CONFIG_HOME:-${HOME:-/home/shadow}/.config}/waybar"
+CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME:-/home/shadow}/.config}"
+HYPR_DIR="$CONFIG_DIR/hypr"
+WAYBAR_DIR="$CONFIG_DIR/waybar"
 CANON=/etc/shadowos/desktop
+# Written after the first deploy for this account.
+STAMP="$CONFIG_DIR/shadowos/desktop.stamp"
+
+# keep_once <file> <ours>: the first time this runs for an account, a <file>
+# that holds something other than <ours> is kept as <file>.pre-shadowos. On a
+# system that was not installed from the ISO, that is the user's own work.
+keep_once() {
+    local file="$1" ours="$2"
+    [[ ! -f "$STAMP" && -f "$file" ]] || return 0
+    # sha256sum, not cmp: coreutils is on every system, diffutils is not.
+    [[ "$(sha256sum < "$file")" == "$(sha256sum < "$ours" 2>/dev/null)" ]] ||
+        cp -p "$file" "$file.pre-shadowos" 2>/dev/null || true
+}
+
+# deploy <canonical file> <destination>: the destination becomes the canonical file.
+deploy() {
+    local src="$1" dst="$2"
+    [[ -f "$src" ]] || return 0
+    keep_once "$dst" "$src"
+    cp -f "$src" "$dst"
+}
+
 if [[ -d "$CANON" ]]; then
     mkdir -p "$HYPR_DIR" "$WAYBAR_DIR"
-    [[ -f "$CANON/hyprland.conf" ]] && cp -f "$CANON/hyprland.conf" "$HYPR_DIR/hyprland.conf"
-    if [[ -d "$CANON/waybar" ]]; then
-        cp -f "$CANON/waybar/"* "$WAYBAR_DIR/" 2>/dev/null || true
+    deploy "$CANON/hyprland.lua" "$HYPR_DIR/hyprland.lua"
+    for canon_file in "$CANON/waybar/"*; do
+        deploy "$canon_file" "$WAYBAR_DIR/${canon_file##*/}"
+    done
+    # These two are written further down, at every login.
+    for generated in hardware-adjustments.lua mode.lua; do
+        keep_once "$HYPR_DIR/$generated" "/etc/skel/.config/hypr/$generated"
+    done
+    # Hyprland stopped reading the .conf format, so overrides in an earlier
+    # user.conf no longer apply. Say so in the file that replaces it.
+    if [[ ! -f "$HYPR_DIR/user.lua" ]] && grep -qvE '^[[:space:]]*(#|$)' "$HYPR_DIR/user.conf" 2>/dev/null; then
+        cat > "$HYPR_DIR/user.lua" <<'EOF'
+-- Personal Hyprland overrides — ShadowOS never overwrites this file.
+-- Your earlier overrides are still in user.conf, in the format Hyprland no
+-- longer reads. Rewrite the ones you want to keep here, in Lua. Example:
+--   hl.monitor({ output = "DP-1", mode = "2560x1440@144", position = "0x0", scale = 1 })
+--   hl.bind("SUPER + G", hl.dsp.exec_cmd("gimp"))
+EOF
+    fi
+    # The rest of the desktop (wallpaper, lock screen, notifications, terminal,
+    # launcher) comes from /etc/skel, which only reaches accounts created after
+    # ShadowOS was installed. Give an older account the files it lacks. Nothing
+    # that already exists is touched.
+    for skel_dir in hypr waybar mako foot wofi ghostty yazi; do
+        [[ -d "/etc/skel/.config/$skel_dir" ]] || continue
+        mkdir -p "$CONFIG_DIR/$skel_dir"
+        cp -r --update=none "/etc/skel/.config/$skel_dir/." "$CONFIG_DIR/$skel_dir/" 2>/dev/null || true
+    done
+    if [[ ! -f "$STAMP" ]]; then
+        mkdir -p "${STAMP%/*}" && date -Is > "$STAMP"
     fi
 fi
-# Files sourced by hyprland.conf must exist or Hyprland shows a config error.
-[[ -f "$HYPR_DIR/user.conf" ]] || printf '# Personal Hyprland overrides — ShadowOS never overwrites this file.\n' > "$HYPR_DIR/user.conf"
+mkdir -p "$HYPR_DIR"
+# hyprland.lua runs user.lua when it is there; make sure there is one to find.
+[[ -f "$HYPR_DIR/user.lua" ]] || printf -- '-- Personal Hyprland overrides — ShadowOS never overwrites this file.\n' > "$HYPR_DIR/user.lua"
 # Re-apply the per-mode accent (border colour) for the persisted mode.
 MODE_STATE=/var/lib/shadowos/current-mode
 CURRENT_MODE=$({ tr -d '[:space:]' < "$MODE_STATE"; } 2>/dev/null)
 /usr/local/bin/shadowos-theme-apply "${CURRENT_MODE:-normal}" --no-reload 2>/dev/null || true
 
-# Strip legacy ISO autostart lines if an old overlay config survived.
-if [[ -f "$HYPR_DIR/hyprland.conf" ]]; then
-    sed -i \
-        -e '/^exec-once.*shadowcypher-autostart/d' \
-        -e '/^exec-once.*shadowcypher\.app/d' \
-        -e '/^exec-once.*\/opt\/shadowcypher\/launch\.sh/d' \
-        -e '/^exec-once.*shadowos-welcome.*--autostart/d' \
-        "$HYPR_DIR/hyprland.conf"
-fi
-
-# Generate dynamic performance tweaks for Hyprland
-mkdir -p "$HYPR_DIR"
-ADJUST_FILE="$HYPR_DIR/hardware-adjustments.conf"
-
-if [[ "$IS_VM" -eq 1 ]]; then
-    cat > "$ADJUST_FILE" <<'EOF'
-# Auto-generated VM performance profiles (reduces rendering lag)
-decoration {
-    rounding = 0
-    shadow {
-        enabled = false
-    }
-    blur {
-        enabled = false
-    }
-}
-animations {
-    enabled = false
-}
-EOF
-else
-    # Real hardware: re-enable premium effects (disabled in base config for VM safety)
-    cat > "$ADJUST_FILE" <<'EOF'
-# Auto-generated bare-metal profile — full effects enabled
-decoration {
-    rounding = 10
-    shadow {
-        enabled = true
-        range = 24
-        render_power = 3
-        color = rgba(00000099)
-    }
-    blur {
-        enabled = true
-        size = 8
-        passes = 3
-        ignore_opacity = true
-        vibrancy = 0
-    }
-}
-animations {
-    enabled = true
-}
-EOF
+# Effects to suit the machine: none in a VM, all of them on real hardware.
+HARDWARE=metal
+[[ "$IS_VM" -eq 1 ]] && HARDWARE=vm
+if [[ -f "$CANON/hardware/$HARDWARE.lua" ]]; then
+    cp -f "$CANON/hardware/$HARDWARE.lua" "$HYPR_DIR/hardware-adjustments.lua"
 fi
 
 # Arch ships start-hyprland; direct Hyprland triggers the yellow warning bar.

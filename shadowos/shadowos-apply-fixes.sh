@@ -101,7 +101,8 @@ fi
 if [[ -d "$PATCH_SRC/etc/shadowos/desktop" ]]; then
     log "Installing canonical desktop → /etc/shadowos/desktop"
     mkdir -p /etc/shadowos/desktop/waybar
-    cp -f "$PATCH_SRC/etc/shadowos/desktop/hyprland.conf" /etc/shadowos/desktop/hyprland.conf
+    cp -f "$PATCH_SRC/etc/shadowos/desktop/hyprland.lua" /etc/shadowos/desktop/hyprland.lua
+    cp -rf "$PATCH_SRC/etc/shadowos/desktop/hardware" /etc/shadowos/desktop/
     cp -f "$PATCH_SRC/etc/shadowos/desktop/waybar/"* /etc/shadowos/desktop/waybar/ 2>/dev/null || true
 fi
 
@@ -117,15 +118,6 @@ deploy_user_config() {
         mkdir -p "$home/.config/hypr" "$home/.config/waybar"
         cp -f "$PATCH_SRC/etc/skel/.config/hypr/"* "$home/.config/hypr/" 2>/dev/null || true
         cp -f "$PATCH_SRC/etc/skel/.config/waybar/"* "$home/.config/waybar/" 2>/dev/null || true
-        # Hyprland 0.55+ rejects idleinhibit (black screen after login)
-        if [[ -f "$home/.config/hypr/hyprland.conf" ]]; then
-            sed -i 's/idleinhibit/idle_inhibit/g' "$home/.config/hypr/hyprland.conf"
-            sed -i \
-                -e '/^exec-once.*shadowcypher-autostart/d' \
-                -e '/^exec-once.*shadowcypher\.app/d' \
-                -e '/^exec-once.*\/opt\/shadowcypher\/launch\.sh/d' \
-                "$home/.config/hypr/hyprland.conf"
-        fi
     fi
     chown -R "$user:$(id -gn "$user" 2>/dev/null || echo "$user")" "$home/.config" 2>/dev/null || true
 }
