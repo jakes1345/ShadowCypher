@@ -15,7 +15,9 @@ ok()   { echo "  [OK]    $*"; }
 echo "==> Checking shell script syntax..."
 while IFS= read -r -d '' f; do
     head=$(head -1 "$f")
-    if [[ "$head" != *bash* && "$head" != *sh* ]]; then
+    # Files in /etc/profile.d are read by the login shell, never run, so they
+    # carry no shebang.
+    if [[ "$f" != */etc/profile.d/* && "$head" != *bash* && "$head" != *sh* ]]; then
         warn "No shebang: $f"
     fi
     if ! bash -n "$f" 2>/tmp/sh_err; then

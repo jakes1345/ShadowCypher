@@ -1,7 +1,4 @@
-# ShadowOS Hardware Acceleration
+# ShadowOS session defaults
 QT_QPA_PLATFORM=wayland
-GBM_BACKEND=nvidia-drm
-__GLX_VENDOR_LIBRARY_NAME=nvidia
-LIBVA_DRIVER_NAME=nvidia
 MOZ_ENABLE_WAYLAND=1
 LIBVA_MESSAGING_LEVEL=1
