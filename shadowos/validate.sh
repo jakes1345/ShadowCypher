@@ -64,6 +64,19 @@ while IFS= read -r -d '' f; do
 done < <(find "$PROFILE" -name "*.service" -print0)
 ok "Systemd units checked"
 
+# ── 4b. pacman hooks ─────────────────────────────────────────────────────────
+# pacman runs a hook's Exec after every transaction it matches. If the file is
+# not there, every one of those transactions ends with an error.
+echo "==> Checking pacman hooks..."
+while IFS= read -r -d '' f; do
+    while IFS= read -r bin; do
+        if [[ "$bin" == /opt/* || "$bin" == /usr/local/* ]]; then
+            [[ -f "${PROFILE}${bin}" ]] || err "Hook ${f#"$PROFILE"/}: Exec path missing in profile: $bin"
+        fi
+    done < <(sed -n 's/^Exec[[:space:]]*=[[:space:]]*\([^[:space:]]*\).*/\1/p' "$f")
+done < <(find "$PROFILE" -name "*.hook" -print0)
+ok "pacman hooks checked"
+
 # ── 5. Critical packages ──────────────────────────────────────────────────────
 echo "==> Checking package list..."
 required=(
