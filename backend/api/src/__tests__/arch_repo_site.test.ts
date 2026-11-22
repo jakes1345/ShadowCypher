@@ -13,8 +13,9 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
-const read = (path: string) => readFileSync(join(ROOT, path));
-const text = (path: string) => read(path).toString("utf8");
+const text = (path: string) => readFileSync(join(ROOT, path), "utf8");
+/** Byte for byte, as a string: latin1 maps every byte to one character. */
+const bytes = (path: string) => readFileSync(join(ROOT, path), "latin1");
 
 /** Lines of www/_redirects as [from, to, status], without comments. */
 const rules = text("www/_redirects")
@@ -46,6 +47,6 @@ describe("the [shadowos] pacman repository on shadowcypher.site", () => {
   });
 
   it("hands out the key that shadowos-keyring ships", () => {
-    expect(read("www/arch/shadowos.gpg").equals(read("packaging/arch/shadowos-keyring/shadowos.gpg"))).toBe(true);
+    expect(bytes("www/arch/shadowos.gpg") === bytes("packaging/arch/shadowos-keyring/shadowos.gpg")).toBe(true);
   });
 });
