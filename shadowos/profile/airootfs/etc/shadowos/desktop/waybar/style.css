@@ -122,6 +122,16 @@ tooltip label {
   background: rgba(230, 57, 70, 0.14);
   border: 1px solid rgba(230, 57, 70, 0.55);
 }
+#custom-mode.mode-dev {
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.45);
+}
+#custom-mode.mode-gaming {
+  color: #bc8cff;
+  background: rgba(188, 140, 255, 0.12);
+  border: 1px solid rgba(188, 140, 255, 0.45);
+}
 #custom-mode:hover {
   background: rgba(255, 255, 255, 0.08);
 }

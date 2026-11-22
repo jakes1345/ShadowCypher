@@ -87,10 +87,6 @@ apply_mode() {
             sudo -u "$SUDO_USER" \
                 XDG_RUNTIME_DIR="/run/user/$uid" \
                 WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}" \
-                hyprctl hyprpaper preload "$WP_PATH" 2>/dev/null || true
-            sudo -u "$SUDO_USER" \
-                XDG_RUNTIME_DIR="/run/user/$uid" \
-                WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}" \
                 hyprctl hyprpaper wallpaper ",$WP_PATH" 2>/dev/null || true
         fi
     fi

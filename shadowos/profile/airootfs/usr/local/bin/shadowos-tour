@@ -73,15 +73,15 @@ header "Keybinds"
 row "SUPER+D"        "app launcher (wofi)"
 row "SUPER+Return"   "terminal"
 row "SUPER+M"        "mode picker"
-row "SUPER+T"        "toggle Tor"
+row "SUPER+SHIFT+T"  "toggle Tor"
 row "SUPER+B"        "browser (LibreWolf)"
 row "SUPER+E"        "file manager"
-row "SUPER+L"        "lock screen"
+row "SUPER+CTRL+L"   "lock screen"
 row "SUPER+Q"        "close window"
 row "SUPER+F"        "fullscreen"
 row "SUPER+I"        "settings"
 row "SUPER+F1"       "this tour"
-printf "\n  ${S}Edit:${R} ~/.config/hypr/hyprland.conf\n"
+printf "\n  ${S}Your own keys and settings:${R} ~/.config/hypr/user.lua\n"
 pause
 
 # ── 6. guardian ──────────────────────────────────────────────────────────────

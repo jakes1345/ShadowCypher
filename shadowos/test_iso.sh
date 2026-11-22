@@ -33,7 +33,7 @@ required=(
   "$AIRFS/etc/sysctl.d/99-shadowos.conf"
   "$AIRFS/etc/systemd/system/shadowos-firstboot.service"
   "$AIRFS/etc/systemd/system/shadowos-mac-randomize.service"
-  "$AIRFS/etc/skel/.config/hypr/hyprland.conf"
+  "$AIRFS/etc/skel/.config/hypr/hyprland.lua"
   "$AIRFS/etc/skel/.config/hypr/hyprlock.conf"
   "$AIRFS/etc/skel/.config/hypr/hyprpaper.conf"
   "$AIRFS/etc/skel/.config/hypr/hypridle.conf"
@@ -143,30 +143,35 @@ done
 
 # ── 4. Hyprland config sanity ──────────────────────────────────────────────
 section "4. HYPRLAND CONFIG"
-hp="$AIRFS/etc/skel/.config/hypr/hyprland.conf"
+hp="$AIRFS/etc/skel/.config/hypr/hyprland.lua"
 if [[ -f "$hp" ]]; then
-  # Check for matched braces (every { needs a })
-  open=$(grep -c '{' "$hp")
-  close=$(grep -c '}' "$hp")
-  [[ "$open" == "$close" ]] && pass "matched braces ($open/$close)" || fail "unmatched braces: $open open, $close close"
+  # Check for matched braces and parentheses
+  for pair in '{}' '()'; do
+    open=$(tr -cd "${pair:0:1}" < "$hp" | wc -c)
+    close=$(tr -cd "${pair:1:1}" < "$hp" | wc -c)
+    [[ "$open" == "$close" ]] && pass "matched $pair ($open/$close)" || fail "unmatched $pair: $open open, $close close"
+  done
 
   # Check for orphan trailing whitespace / cr
   if grep -q $'\r' "$hp"; then fail "CR characters in $hp"; else pass "no CR"; fi
 
-  # exec-once: every file referenced should exist where possible.
+  # Hyprland reads hyprland.lua only; a hyprland.conf next to it would be dead weight.
+  [[ -e "${hp%.lua}.conf" ]] && fail "stale hyprland.conf next to hyprland.lua" || pass "no stale hyprland.conf"
+
+  # Autostart: every file referenced should exist where possible.
   # /usr/lib/* paths are provided by installed packages, not by airootfs source.
-  for ref in $(grep -oE 'exec-once = [^ ]+' "$hp" | awk '{print $3}' | grep '^/'); do
+  for ref in $(grep -oE 'hl\.exec_cmd\("[^" ]+' "$hp" | sed 's/.*("//' | grep '^/'); do
     if [[ -e "$AIRFS$ref" || -e "$ref" ]]; then
-      pass "exec-once → $ref exists"
+      pass "autostart → $ref exists"
     elif [[ "$ref" =~ ^/usr/(lib|bin|sbin)/ ]]; then
-      pass "exec-once → $ref (provided by installed package)"
+      pass "autostart → $ref (provided by installed package)"
     else
-      warn "exec-once references missing path: $ref"
+      warn "autostart references missing path: $ref"
     fi
   done
 
-  # Check workspace count is sane
-  ws_max=$(grep -oE 'workspace, [0-9]+' "$hp" | awk '{print $2}' | sort -n | tail -1)
+  # Check workspace count is sane (the binds are made in a `for i = 1, N do` loop)
+  ws_max=$(grep -oE 'for i = 1, [0-9]+ do' "$hp" | awk '{print $5}' | sort -n | tail -1)
   [[ -n "$ws_max" && "$ws_max" -ge 5 && "$ws_max" -le 10 ]] && pass "workspace count = $ws_max" || warn "workspace count odd: $ws_max"
 fi
 
@@ -492,7 +497,7 @@ fi
 # ── 23. Hyprland keybind conflicts ────────────────────────────────────────
 section "23. HYPRLAND KEYBIND CONFLICTS"
 if [[ -f "$hp" ]]; then
-  dupes=$(grep -E '^bind = ' "$hp" | awk -F',' '{print $1$2}' | sort | uniq -d)
+  dupes=$(sed -nE 's/^[[:space:]]*(run|hl\.bind)\(([^,]+),.*/\2/p' "$hp" | sed 's/[[:space:]]*$//' | sort | uniq -d)
   if [[ -z "$dupes" ]]; then
     pass "no duplicate keybinds"
   else
@@ -535,8 +540,8 @@ fi
 # ── 25. Hyprland: all bound binaries are realistic ────────────────────────
 section "25. HYPRLAND BIND TARGETS"
 if [[ -f "$hp" ]]; then
-  # Extract `exec, <cmd>` calls
-  for cmd in $(grep -oE 'exec, [^,]+' "$hp" | awk -F', ' '{print $2}' | awk '{print $1}' | sort -u); do
+  # Commands: the second argument of run(...), and the program variables
+  for cmd in $({ sed -nE 's/^run\([^,]+,[[:space:]]*["'"'"']([^ "'"'"']+).*/\1/p' "$hp"; sed -nE 's/^local (terminal|launcher|browser|files)[[:space:]]*=[[:space:]]*"([^ "]+).*/\2/p' "$hp"; } | sort -u); do
     # Skip bash-isms and pipelines
     [[ "$cmd" == "/usr/local/bin/shadow-mode" ]] && continue
     if [[ "$cmd" == /* ]]; then

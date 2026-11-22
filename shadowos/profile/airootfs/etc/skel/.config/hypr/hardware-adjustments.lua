@@ -1,0 +1,3 @@
+-- Replaced by shadowos-session-start at every login with one of
+-- /etc/shadowos/desktop/hardware/{vm,metal}.lua: no effects in a VM, all of
+-- them on real hardware. Changes made here are lost at the next login.

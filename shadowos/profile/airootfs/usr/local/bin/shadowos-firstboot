@@ -10,9 +10,8 @@
 #   4. Install Bibata cursor
 #   5. Install testssl.sh (TLS auditor)
 #   6. Update mirror list with reflector
-#   7. Install ShadowCypher pip deps
-#   8. Kick off AI model download in background
-#   9. Stamp
+#   7. Kick off AI model download in background
+#   8. Stamp
 
 set -u
 
@@ -118,20 +117,11 @@ fi
 echo "[*] Updating pacman mirrors..."
 reflector --latest 20 --sort rate --save /etc/pacman.d/mirrorlist 2>&1 | tail -3 || true
 
-# ── 7. ShadowCypher pip dependencies ────────────────────────────────────────
-echo "[*] Installing ShadowCypher pip dependencies..."
-pip install --break-system-packages --quiet --no-warn-script-location \
-    "litellm>=1.0.0" \
-    "argon2-cffi>=23.0.0" \
-    "paramiko>=3.0.0" \
-    2>&1 | tail -5 || echo "    pip install failed — some ShadowCypher features may be limited"
-echo "    pip deps done"
-
-# ── 8. AI model setup (background) ──────────────────────────────────────────
+# ── 7. AI model setup (background) ──────────────────────────────────────────
 if [[ -x /usr/local/bin/shadowos-ai-setup ]]; then
     /usr/local/bin/shadowos-ai-setup &
 fi
 
-# ── 9. Stamp ─────────────────────────────────────────────────────────────────
+# ── 8. Stamp ─────────────────────────────────────────────────────────────────
 date -Iseconds > "$STAMP"
 echo "[✓] First-boot setup complete."

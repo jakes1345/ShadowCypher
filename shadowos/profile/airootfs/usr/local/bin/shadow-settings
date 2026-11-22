@@ -4,23 +4,28 @@ set -euo pipefail
 
 WOFI_OPTS=(--dmenu --prompt "settings" --width 480 --height 420 --cache-file /dev/null)
 
-pick=$(printf '%s\n' \
-    "Wi-Fi & connections" \
-    "Bluetooth" \
-    "Audio" \
-    "Display & monitors" \
-    "Appearance (GTK theme)" \
-    "Personality mode" \
-    "Firewall (nftables)" \
-    "Privacy leak test" \
-    "Security score" \
-    "Check for updates" \
-    "Install updates" \
-    "Power profile" \
-    "System diagnostics" \
-    "Welcome guide" \
-    "Install ShadowOS to disk" \
-    | wofi "${WOFI_OPTS[@]}")
+entries=(
+    "Wi-Fi & connections"
+    "Bluetooth"
+    "Audio"
+    "Display & monitors"
+    "Appearance (GTK theme)"
+    "Personality mode"
+    "Firewall (nftables)"
+    "Privacy leak test"
+    "Security score"
+    "Check for updates"
+    "Install updates"
+    "Power profile"
+    "System diagnostics"
+    "Welcome guide"
+)
+# The installer is part of the live medium only.
+if command -v shadowos-install >/dev/null && command -v calamares >/dev/null; then
+    entries+=("Install ShadowOS to disk")
+fi
+
+pick=$(printf '%s\n' "${entries[@]}" | wofi "${WOFI_OPTS[@]}")
 
 [[ -n "$pick" ]] || exit 0
 
@@ -42,7 +47,7 @@ case "$pick" in
         exec pavucontrol
         ;;
     "Display & monitors")
-        run_term "display" "hyprctl monitors; echo; echo 'Tip: edit ~/.config/hypr/hyprland.conf for layout; hyprctl reload after changes'"
+        run_term "display" "hyprctl monitors; echo; echo 'Tip: set monitors and layout in ~/.config/hypr/user.lua, then run: hyprctl reload'"
         ;;
     "Appearance (GTK theme)")
         command -v nwg-look >/dev/null && exec nwg-look
