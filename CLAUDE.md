@@ -79,6 +79,7 @@ bash qemu-test.sh
 - **Deploys:**
   - Website: the Cloudflare Pages project `shadowcypher` deploys `www/` automatically from `main`. Don't deploy it by hand.
   - API: `cd backend/api && npm run deploy` ships whatever is in the working tree. Only run it from a clean checkout of `main`, after `npm run typecheck` and `npm test` pass.
+  - Arch repository: `publish-arch.yml` builds the packages in `packaging/arch/` and, on `main`, uploads them signed to the `arch-repo` GitHub release. `shadowcypher.site/arch/shadowos/x86_64/` redirects there (`www/_redirects`). Don't upload to that release by hand. See `packaging/arch/README.md`.
 - **Migrations:** apply a new file in `backend/api/migrations/` to Supabase before deploying code that needs it.
 - **Android:** `android/app/src/main/assets/public` is a frozen copy of the site. Login or protocol changes in `www/` don't reach the Android app until that copy is refreshed.
 
@@ -97,7 +98,7 @@ Required secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_WEBHOOK
 - Planning docs (`PHASE_*.md`, `*_IMPLEMENTATION.md`), which belong in notes, not the repo
 - IDE and tool configs (`.aider*`, `.cursor/`, `.crush/`)
 
-**Product directories on `main`:** `shadowcypher-qt/`, `www/`, `backend/`, `shadowos/`, `android/`, `blog/`. Supporting directories, each with a reason: `agent/` (Guardian agent, still offered), `arch/` (the published ShadowOS package repo), `assets/` and `packaging/` (used by the desktop and ShadowOS builds), `shadowscript/` (missions bundled with the desktop app). Anything else needs a reason.
+**Product directories on `main`:** `shadowcypher-qt/`, `www/`, `backend/`, `shadowos/`, `android/`, `blog/`. Supporting directories, each with a reason: `agent/` (Guardian agent, still offered), `assets/` and `packaging/` (used by the desktop and ShadowOS builds, and the Arch packages), `shadowscript/` (missions bundled with the desktop app). Anything else needs a reason.
 
 **Root-level files allowed:** LICENSE, README.md, CLAUDE.md, CONTRIBUTING.md, SECURITY.md, .gitignore. The website lives in `www/` only; don't put HTML, CSS, icons or other site files at the repo root.
 

@@ -27,8 +27,9 @@ package() {
     install -Dm644 "$SRC/etc/sysctl.d/99-shadowos.conf" \
         "$pkgdir/etc/sysctl.d/99-shadowos.conf"
 
-    # Polkit rules
-    install -Dm644 "$SRC/etc/polkit-1/rules.d/49-shadowos.rules" \
+    # Polkit rules. polkit owns the directory and keeps it at 750.
+    install -dm750 "$pkgdir/etc/polkit-1/rules.d"
+    install -m644 "$SRC/etc/polkit-1/rules.d/49-shadowos.rules" \
         "$pkgdir/etc/polkit-1/rules.d/49-shadowos.rules"
 
     # OS identity

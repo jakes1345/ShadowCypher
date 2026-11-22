@@ -1,2 +1,6 @@
 /agent/:file /agent/:file 200
+# The [shadowos] pacman repository. Its files are the assets of the arch-repo
+# GitHub release (.github/workflows/publish-arch.yml); install.sh and the key
+# are served from www/arch/.
+/arch/shadowos/x86_64/* https://github.com/jakes1345/ShadowCypher/releases/download/arch-repo/:splat 302
 /* /index.html 200
