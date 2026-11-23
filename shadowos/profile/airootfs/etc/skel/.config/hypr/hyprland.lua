@@ -1,6 +1,7 @@
 -- ShadowOS — Hyprland config
--- Canonical copy: /etc/shadowos/desktop/hyprland.lua (re-deployed on every login by
--- shadowos-session-start). Put personal tweaks in ~/.config/hypr/user.lua instead.
+-- On a system installed from the ShadowOS ISO, shadowos-session-start deploys
+-- this file again from /etc/shadowos/desktop at every login. Put personal
+-- tweaks in ~/.config/hypr/user.lua: it is loaded last and never replaced.
 
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
 

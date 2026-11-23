@@ -2,7 +2,8 @@
   // ShadowOS Waybar — single config for all modes.
   // The mode pill (custom/mode) restyles itself per mode via CSS class:
   //   .mode-normal · .mode-privacy · .mode-ghost   (see style.css)
-  // Canonical copy: /etc/shadowos/desktop/waybar/ (re-deployed on every login).
+  // On a system installed from the ShadowOS ISO, re-deployed from
+  // /etc/shadowos/desktop/waybar/ on every login.
   "layer": "top",
   "position": "top",
   "height": 36,

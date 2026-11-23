@@ -1,13 +1,14 @@
 # Maintainer: ShadowCypher <admin@shadowcypher.site>
 pkgname=shadowos-base
-pkgver=1.0
+pkgver=1.1
 pkgrel=${SHADOWOS_PKGREL:-1}   # set by build-repo.sh; see "Versions" in README.md
-pkgdesc="ShadowOS core — sysctl hardening, module blacklist, polkit rules, mode scripts, os-release"
+pkgdesc="ShadowOS core — sysctl hardening, module blacklist, polkit rules, mode scripts, os-release, opt-in login hardening"
 arch=('any')
 url="https://shadowcypher.site"
 license=('MIT')
 depends=(
     'bash' 'polkit' 'systemd'
+    'sudo'          # shadowos-harden asks for root through it
     # What the mode scripts call without checking for it first.
     'nftables' 'iproute2' 'tor' 'macchanger'
     'firejail'      # privacy mode points the browser commands at it
@@ -21,49 +22,64 @@ optdepends=(
     'i2pd: privacy mode starts it if it is installed'
     'gamemode: gaming mode'
     'docker: dev mode'
+    'openssh: shadowos-harden can harden its server'
 )
 backup=(
     'etc/sysctl.d/99-shadowos.conf'
     'etc/modprobe.d/99-shadowos-blacklist.conf'
-    'etc/os-release'
-    'etc/hostname'
 )
+install=shadowos-base.install
 options=('!strip' '!debug')
 
-# The files are the ISO's own, read straight from shadowos/profile/airootfs in
-# this checkout, so the package and the ISO cannot drift apart. A path that
-# moves there fails this build instead of silently dropping out of the package.
+# Read straight from shadowos/profile/airootfs in this checkout; see
+# ../airootfs.sh.
 source=()
 sha256sums=()
 
 package() {
-    local SRC="$startdir/../../../shadowos/profile/airootfs"
+    . "$startdir/../airootfs.sh"
 
     # Sysctl hardening
-    install -Dm644 "$SRC/etc/sysctl.d/99-shadowos.conf" \
+    install -Dm644 "$AIROOTFS/etc/sysctl.d/99-shadowos.conf" \
         "$pkgdir/etc/sysctl.d/99-shadowos.conf"
 
     # Kernel modules that are never loaded on demand: rarely used network
     # protocols and filesystems.
-    install -Dm644 "$SRC/etc/modprobe.d/99-shadowos-blacklist.conf" \
+    install -Dm644 "$AIROOTFS/etc/modprobe.d/99-shadowos-blacklist.conf" \
         "$pkgdir/etc/modprobe.d/99-shadowos-blacklist.conf"
 
     # Polkit rules. polkit owns the directory and keeps it at 750.
     install -dm750 "$pkgdir/etc/polkit-1/rules.d"
-    install -m644 "$SRC/etc/polkit-1/rules.d/49-shadowos.rules" \
+    install -m644 "$AIROOTFS/etc/polkit-1/rules.d/49-shadowos.rules" \
         "$pkgdir/etc/polkit-1/rules.d/49-shadowos.rules"
 
-    # OS identity
-    install -Dm644 "$SRC/etc/os-release" "$pkgdir/etc/os-release"
-    install -Dm644 "$SRC/etc/hostname"   "$pkgdir/etc/hostname"
+    # OS identity. Not at /etc/os-release: a system has its own there already,
+    # which belongs to no package, so pacman would only put this one next to
+    # it as a .pacnew. shadowos-base.install links /etc/os-release to this
+    # copy instead.
+    #
+    # /etc/hostname is not packaged at all. The ISO's names the live system; a
+    # package has no business renaming somebody's machine.
+    install -Dm644 "$AIROOTFS/etc/os-release" "$pkgdir/usr/share/shadowos/os-release"
 
-    # Some of the ISO's hardening is deliberately not packaged. It suits a
-    # machine installed from the ISO and would break one that was not:
-    #  - /etc/security/faillock.conf belongs to pam, and pacman refuses a
+    # Login hardening is opt-in: none of it is active until the admin runs
+    # shadowos-harden, which applies these two profiles.
+    #  - The faillock values are the ISO's. They cannot be installed as
+    #    /etc/security/faillock.conf: that file is pam's, and pacman refuses a
     #    package that brings a file another package owns.
-    #  - /etc/ssh/sshd_config.d/*.conf are written for the live session
-    #    (password logins on, or logins limited to the "shadow" user). On an
-    #    existing system they would override the admin's own sshd_config.
+    #  - The sshd settings are written for an installed system. The ISO's own
+    #    drop-ins are for the live session (password logins on, or logins
+    #    limited to the "shadow" user), and a drop-in overrides the admin's
+    #    sshd_config, so those stay on the ISO.
+    install -Dm755 "$startdir/shadowos-harden" "$pkgdir/usr/bin/shadowos-harden"
+    install -Dm644 "$AIROOTFS/etc/security/faillock.conf" \
+        "$pkgdir/usr/share/shadowos/hardening/faillock.conf"
+    install -Dm644 "$startdir/sshd-hardening.conf" \
+        "$pkgdir/usr/share/shadowos/hardening/sshd.conf"
+
+    # Two more of the ISO's hardening files are deliberately not packaged.
+    # They suit a machine installed from the ISO and would break one that was
+    # not:
     #  - /etc/security/limits.d/99-shadowos.conf caps every user at 1024
     #    processes, which a browser and an IDE together can exceed.
     #  - /etc/modprobe.d/99-shadowos-hardening.conf holds sysctl settings
@@ -72,12 +88,14 @@ package() {
     # Mode scripts. The whole tree: apply.sh sources ../_network_open.sh and
     # shadow-mode runs the previous mode's revert.sh. Executable, as on the ISO.
     install -d "$pkgdir/etc/shadowos"
-    cp -r "$SRC/etc/shadowos/modes" "$pkgdir/etc/shadowos/modes"
+    cp -r "$AIROOTFS/etc/shadowos/modes" "$pkgdir/etc/shadowos/modes"
     find "$pkgdir/etc/shadowos/modes" -type d -exec chmod 755 {} +
     find "$pkgdir/etc/shadowos/modes" -type f -exec chmod 644 {} +
     find "$pkgdir/etc/shadowos/modes" -name '*.sh' -exec chmod 755 {} +
 
     # Install config defaults
-    cp -r "$SRC/etc/shadowos/install" "$pkgdir/etc/shadowos/install"
+    cp -r "$AIROOTFS/etc/shadowos/install" "$pkgdir/etc/shadowos/install"
     chmod -R u=rwX,go=rX "$pkgdir/etc/shadowos/install"
+
+    use_packaged_script_paths
 }

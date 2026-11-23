@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+# shadowos-harden — opt-in login hardening for an installed system.
+#
+# The ShadowOS packages change nothing about how you log in to your own
+# machine. This command does, and only when you run it:
+#
+#   ssh       /etc/ssh/sshd_config.d/50-shadowos.conf, from
+#             /usr/share/shadowos/hardening/sshd.conf
+#   faillock  the settings in /usr/share/shadowos/hardening/faillock.conf,
+#             written into /etc/security/faillock.conf
+#
+#   shadowos-harden                     show what is applied and what would change
+#   shadowos-harden apply [ssh] [faillock] [--yes]
+#   shadowos-harden undo  [ssh] [faillock]
+#
+# It will not lock you out: password logins over SSH are only turned off for an
+# admin who already has an SSH key installed, root logins only when you came in
+# through sudo, and sshd has to accept the result before it is reloaded.
+set -euo pipefail
+
+PROFILES=/usr/share/shadowos/hardening
+STATE=/var/lib/shadowos/harden
+SSHD_DROPIN=/etc/ssh/sshd_config.d/50-shadowos.conf
+FAILLOCK=/etc/security/faillock.conf
+
+usage() { sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; }
+say()   { printf '%s\n' "$*"; }
+note()  { printf '  %s\n' "$*"; }
+
+# ── What to do ──────────────────────────────────────────────────────────────
+action=status parts=() assume_yes=0
+for arg in "$@"; do
+    case $arg in
+        apply|undo|status) action=$arg ;;
+        ssh|faillock)      parts+=("$arg") ;;
+        --yes|-y)          assume_yes=1 ;;
+        -h|--help|help)    usage; exit 0 ;;
+        *)                 usage >&2; exit 2 ;;
+    esac
+done
+(( ${#parts[@]} )) || parts=(ssh faillock)
+
+if [[ $action != status && $EUID -ne 0 ]]; then
+    exec sudo "$0" "$@"
+fi
+
+# The admin whose access has to survive: whoever called sudo, else whoever
+# is running this.
+admin=$(id -un)
+[[ -n ${SUDO_USER:-} && $SUDO_USER != root ]] && admin=$SUDO_USER
+
+# ── ssh ─────────────────────────────────────────────────────────────────────
+have_sshd() { command -v sshd > /dev/null 2>&1 && [[ -f /etc/ssh/sshd_config ]]; }
+
+# What sshd would use: one "key value" per line, keys in lower case. -G only
+# parses the configuration, so unlike -t and -T it also works on a system
+# whose host keys have not been generated yet. It reports the settings outside
+# any Match block.
+effective_sshd_config() {
+    sshd -G 2> /dev/null < /dev/null | awk '{ $1 = tolower($1); print }' || true
+}
+
+# Does $admin have a key sshd would accept a login with?
+admin_has_key() {
+    local home files f
+    home=$(getent passwd "$admin" | cut -d: -f6)
+    [[ -n $home ]] || return 1
+    # What this sshd is configured to read, with %h and %u filled in.
+    files=$(effective_sshd_config | awk '$1 == "authorizedkeysfile" { $1 = ""; print }')
+    [[ -n $files ]] || files=".ssh/authorized_keys"
+    for f in $files; do
+        f=${f//%h/$home}; f=${f//%u/$admin}
+        [[ $f == /* ]] || f=$home/$f
+        if [[ -r $f ]] && grep -qE '^[[:space:]]*[^#[:space:]]' "$f"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# The drop-in for this machine: the profile, minus what would lock $admin out.
+# Prints it on stdout and the reasons for anything left out on fd 3.
+ssh_dropin() {
+    local key value
+    say "# ShadowOS SSH server hardening. Written by shadowos-harden; remove it"
+    say "# with: shadowos-harden undo ssh"
+    while read -r key value; do
+        [[ -n $key && $key != \#* ]] || continue
+        case $key in
+            PasswordAuthentication|KbdInteractiveAuthentication)
+                if ! admin_has_key; then
+                    say "$key stays as it is: $admin has no SSH key installed. Add one (ssh-copy-id) and apply again." >&3
+                    continue
+                fi ;;
+            PermitRootLogin)
+                if [[ $admin == root ]]; then
+                    say "$key stays as it is: you are root, not an admin who came in through sudo." >&3
+                    continue
+                fi ;;
+        esac
+        say "$key $value"
+    done < "$PROFILES/sshd.conf"
+}
+
+# Compare what sshd would really use with what the drop-in asks for. sshd takes
+# the first value it reads, so a file of yours that sorts before ours wins.
+ssh_effective() {
+    local key value now
+    while read -r key value; do
+        [[ -n $key && $key != \#* ]] || continue
+        now=$(effective_sshd_config | awk -v k="${key,,}" '$1 == k { $1 = ""; sub(/^ /, ""); print; exit }')
+        if [[ ${now,,} == "${value,,}" ]]; then
+            note "$key $value"
+        else
+            note "$key $value   (in effect: ${now:-unset}; an earlier file sets it)"
+        fi
+    done < "$1"
+}
+
+ssh_status() {
+    say "ssh:"
+    if ! have_sshd; then
+        note "openssh is not installed; nothing to harden."
+    elif [[ -f $SSHD_DROPIN ]]; then
+        note "applied ($SSHD_DROPIN):"
+        if [[ -r $SSHD_DROPIN ]]; then ssh_effective "$SSHD_DROPIN"; else note "(run as root to read it)"; fi
+    else
+        note "not applied. 'shadowos-harden apply ssh' would write $SSHD_DROPIN:"
+        ssh_dropin 3>&1 | grep -v '^#' | sed 's/^/  /'
+    fi
+}
+
+ssh_apply() {
+    say "ssh:"
+    if ! have_sshd; then
+        note "openssh is not installed; nothing to harden."
+        return 0
+    fi
+    local new old
+    new=$(mktemp) old=""
+    ssh_dropin > "$new" 3> "$new.skipped"
+    sed 's/^/  /' "$new.skipped"
+    if [[ -f $SSHD_DROPIN ]]; then
+        old=$(mktemp)
+        cp -p "$SSHD_DROPIN" "$old"
+    fi
+    install -Dm644 "$new" "$SSHD_DROPIN"
+    # sshd parses the whole configuration here. If it does not accept it, a
+    # reload would leave the machine without an SSH server.
+    if ! sshd -G > /dev/null; then
+        if [[ -n $old ]]; then cp -p "$old" "$SSHD_DROPIN"; else rm -f "$SSHD_DROPIN"; fi
+        rm -f "$new" "$new.skipped" ${old:+"$old"}
+        say "sshd does not accept the hardened configuration (see above); nothing was changed." >&2
+        return 1
+    fi
+    rm -f "$new" "$new.skipped" ${old:+"$old"}
+    note "wrote $SSHD_DROPIN:"
+    ssh_effective "$SSHD_DROPIN"
+    if systemctl is-active --quiet sshd 2> /dev/null; then
+        systemctl reload sshd
+        note "sshd reloaded. Sessions that are open stay open: check that a new one still gets in before you close this one."
+    else
+        note "sshd is not running; this takes effect when it starts."
+    fi
+}
+
+ssh_undo() {
+    say "ssh:"
+    if [[ ! -f $SSHD_DROPIN ]]; then
+        note "not applied."
+        return 0
+    fi
+    rm -f "$SSHD_DROPIN"
+    note "removed $SSHD_DROPIN"
+    if systemctl is-active --quiet sshd 2> /dev/null; then
+        systemctl reload sshd
+        note "sshd reloaded."
+    fi
+}
+
+# ── faillock ────────────────────────────────────────────────────────────────
+# The profile's settings, one per line: "deny = 5", or a bare flag like "audit".
+faillock_settings() { grep -E '^[[:space:]]*[a-z_]+' "$PROFILES/faillock.conf" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//'; }
+
+# Is this exact setting active in the file?
+faillock_has() {   # faillock_has <file> <setting>
+    local key=${2%%[ =]*} want
+    want=$(tr -d '[:space:]' <<< "$2")
+    grep -E "^[[:space:]]*$key([[:space:]]*=.*)?[[:space:]]*$" "$1" 2> /dev/null | tr -d ' \t' | grep -qxF "$want"
+}
+
+faillock_status() {
+    say "faillock:"
+    if [[ ! -f $FAILLOCK ]]; then
+        note "$FAILLOCK is missing (pam is not installed?); nothing to harden."
+        return 0
+    fi
+    local setting pending=0
+    while read -r setting; do
+        if faillock_has "$FAILLOCK" "$setting"; then
+            note "$setting"
+        else
+            note "$setting   (not set)"
+            pending=1
+        fi
+    done < <(faillock_settings)
+    if (( pending )); then
+        note "'shadowos-harden apply faillock' would set these in $FAILLOCK."
+    else
+        note "applied."
+    fi
+}
+
+faillock_apply() {
+    say "faillock:"
+    if [[ ! -f $FAILLOCK ]]; then
+        note "$FAILLOCK is missing (pam is not installed?); nothing to harden."
+        return 0
+    fi
+    # The file as it was, for undo. Kept from the first apply only.
+    install -dm700 "$STATE"
+    [[ -f $STATE/faillock.conf.orig ]] || cp -p "$FAILLOCK" "$STATE/faillock.conf.orig"
+
+    local setting key new
+    new=$(mktemp)
+    cp -p "$FAILLOCK" "$new"
+    while read -r setting; do
+        key=${setting%%[ =]*}
+        if grep -qE "^[[:space:]]*#?[[:space:]]*$key([[:space:]]*=.*)?[[:space:]]*$" "$new"; then
+            # Take over the first line that names the option, commented out or
+            # not, and drop any later ones: pam uses the last value it reads.
+            awk -v key="$key" -v setting="$setting" '
+                $0 ~ "^[[:space:]]*#?[[:space:]]*" key "([[:space:]]*=.*)?[[:space:]]*$" {
+                    if (!done) { print setting; done = 1 }
+                    next
+                }
+                { print }' "$new" > "$new.next"
+            cat "$new.next" > "$new"
+            rm -f "$new.next"
+        else
+            printf '%s\n' "$setting" >> "$new"
+        fi
+    done < <(faillock_settings)
+    cat "$new" > "$FAILLOCK"
+    rm -f "$new"
+    faillock_settings | sed 's/^/  /'
+    note "set in $FAILLOCK. It applies to the next login attempt."
+}
+
+faillock_undo() {
+    say "faillock:"
+    if [[ ! -f $STATE/faillock.conf.orig ]]; then
+        note "not applied by this command."
+        return 0
+    fi
+    cat "$STATE/faillock.conf.orig" > "$FAILLOCK"
+    rm -f "$STATE/faillock.conf.orig"
+    note "$FAILLOCK is back to what it was before 'shadowos-harden apply'."
+}
+
+# ── Run ─────────────────────────────────────────────────────────────────────
+if [[ $action == apply && $assume_yes -eq 0 ]]; then
+    for part in "${parts[@]}"; do "${part}_status"; done
+    read -rp "Apply this to $(uname -n)? [y/N] " answer || answer=""
+    [[ $answer == [yY]* ]] || { say "Nothing was changed."; exit 0; }
+fi
+for part in "${parts[@]}"; do "${part}_${action}"; done

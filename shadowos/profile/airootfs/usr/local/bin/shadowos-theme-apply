@@ -40,7 +40,14 @@ hl.config({
 EOF
 
 if (( reload )); then
-    hyprctl reload >/dev/null 2>&1 || true
+    # hyprctl finds its compositor through HYPRLAND_INSTANCE_SIGNATURE, which
+    # sudo and pkexec drop on the way here from shadow-mode. Without it, ask
+    # for this user's first instance.
+    if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+        hyprctl reload >/dev/null 2>&1 || true
+    else
+        hyprctl -i 0 reload >/dev/null 2>&1 || true
+    fi
     # Refresh the Waybar mode pill immediately (custom/mode uses signal 8)
     pkill -RTMIN+8 waybar 2>/dev/null || true
 fi

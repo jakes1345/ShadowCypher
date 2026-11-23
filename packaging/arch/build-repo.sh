@@ -372,6 +372,38 @@ check_file_conflicts() {
     printf '%d packaged files, none owned by another package without a declared conflict.\n' "${#paths[@]}"
 }
 
+check_script_references() {
+    # The desktop configuration, the units and the scripts name ShadowOS's own
+    # scripts by path. A key binding that names a script no package installs
+    # fails silently, in somebody else's session, so every such path has to be
+    # a file in this repository. And none may still point into /usr/local/bin,
+    # where the ISO keeps them and a package must not install (airootfs.sh).
+    local shipped="$work/logs/shipped.txt" dangling="$work/logs/dangling.txt" pkgfile name ref count=0
+    : > "$dangling"
+    for pkgfile in "$repo"/*.pkg.tar.zst; do
+        bsdtar -tf "$pkgfile" | sed 's|^|/|'
+    done > "$shipped" || return 1
+
+    for pkgfile in "$repo"/*.pkg.tar.zst; do
+        name=$(bsdtar -xOqf "$pkgfile" .PKGINFO | sed -n 's/^pkgname = //p') || return 1
+        while read -r ref; do
+            count=$((count + 1))
+            if [[ $ref == /usr/local/* ]]; then
+                echo "$name refers to $ref: packages install to /usr/bin, see airootfs.sh" >> "$dangling"
+            elif ! grep -qxF "$ref" "$shipped"; then
+                echo "$name refers to $ref, which no package installs" >> "$dangling"
+            fi
+        done < <(bsdtar -xOf "$pkgfile" |
+                 grep -aoE '/usr/(local/)?bin/shadow[a-z0-9-]+' | sort -u)
+    done
+
+    if [[ -s $dangling ]]; then
+        cat "$dangling"
+        return 1
+    fi
+    printf '%d references to ShadowOS scripts, each to a file a package installs.\n' "$count"
+}
+
 check_desktop_config() {
     # Hyprland reads its configuration at login. A file it rejects leaves the
     # user with an error banner in place of the desktop, and a new Hyprland
@@ -394,7 +426,7 @@ check_desktop_config() {
     bsdtar -xf "$repo"/shadowos-hyprland-config-[0-9]*.pkg.tar.zst -C "$root" \
         etc/skel/.config/hypr etc/shadowos/desktop || return 1
     bsdtar -xf "$repo"/shadowos-tools-[0-9]*.pkg.tar.zst -C "$root" \
-        usr/local/bin/shadowos-theme-apply || return 1
+        usr/bin/shadowos-theme-apply || return 1
     mapfile -t modes < <(bsdtar -tf "$repo"/shadowos-base-[0-9]*.pkg.tar.zst |
         sed -n 's|^etc/shadowos/modes/\([^/]*\)/$|\1|p')
     (( ${#modes[@]} )) || { echo "shadowos-base ships no modes in /etc/shadowos/modes"; return 1; }
@@ -405,7 +437,7 @@ check_desktop_config() {
         for mode in "${modes[@]}"; do
             # The two files a login writes next to hyprland.lua.
             cp "$profile" "$hypr/hardware-adjustments.lua" || return 1
-            XDG_CONFIG_HOME="$config" bash "$root/usr/local/bin/shadowos-theme-apply" "$mode" --no-reload || return 1
+            XDG_CONFIG_HOME="$config" bash "$root/usr/bin/shadowos-theme-apply" "$mode" --no-reload || return 1
             output=$(XDG_CONFIG_HOME="$config" XDG_RUNTIME_DIR="$root/runtime" \
                 Hyprland --verify-config -c "$hypr/hyprland.lua" 2>&1) || true
             if [[ $(tail -n 1 <<< "$output") != "config ok" ]]; then
@@ -431,6 +463,7 @@ check "Read the repository with pacman" \
     sync_repositories
 check "Resolve dependencies" "Dependencies do not resolve" check_dependencies
 check "Check for file conflicts" "A package ships a file another package owns" check_file_conflicts
+check "Check references to ShadowOS scripts" "A package refers to a script that is not installed" check_script_references
 check "Check the desktop configuration with Hyprland" "Hyprland rejects the packaged desktop configuration" check_desktop_config
 if [[ -n ${SIGN_KEY:-} ]]; then
     check "Verify package signatures" "pacman rejected a package signature" check_signatures

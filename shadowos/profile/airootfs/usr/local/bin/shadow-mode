@@ -65,10 +65,19 @@ apply_mode() {
 
     echo "$mode" > "$STATE_FILE"
 
+    # Whose desktop this is. sudo names the caller in SUDO_USER; pkexec, which
+    # is how the picker and the key bindings get here, in PKEXEC_UID.
+    local desktop_user="" uid
+    if [[ -n "${SUDO_USER:-}" && "$SUDO_USER" != "root" ]]; then
+        desktop_user="$SUDO_USER"
+    elif [[ -n "${PKEXEC_UID:-}" && "$PKEXEC_UID" != "0" ]]; then
+        desktop_user="$(id -un "$PKEXEC_UID" 2>/dev/null || true)"
+    fi
+
     # Sync Waybar/Hypr theme to mode personality
-    if [[ -n "${SUDO_USER:-}" ]] && [[ "$SUDO_USER" != "root" ]]; then
-        uid=$(id -u "$SUDO_USER")
-        sudo -u "$SUDO_USER" \
+    if [[ -n "$desktop_user" ]]; then
+        uid=$(id -u "$desktop_user")
+        sudo -u "$desktop_user" \
             XDG_RUNTIME_DIR="/run/user/$uid" \
             DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
             /usr/local/bin/shadowos-theme-apply "$mode" 2>/dev/null || true
@@ -84,17 +93,19 @@ apply_mode() {
         WP_FILE="${MODE_WALLPAPER[$mode]:-}"
         WP_PATH="/usr/share/backgrounds/shadowos/${WP_FILE}"
         if [[ -n "$WP_FILE" && -f "$WP_PATH" ]]; then
-            sudo -u "$SUDO_USER" \
+            # -i 0: this user's Hyprland. sudo and pkexec have dropped
+            # HYPRLAND_INSTANCE_SIGNATURE, which hyprctl would otherwise need.
+            sudo -u "$desktop_user" \
                 XDG_RUNTIME_DIR="/run/user/$uid" \
                 WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}" \
-                hyprctl hyprpaper wallpaper ",$WP_PATH" 2>/dev/null || true
+                hyprctl -i 0 hyprpaper wallpaper ",$WP_PATH" 2>/dev/null || true
         fi
     fi
 
     # Notify desktop
-    if command -v notify-send >/dev/null 2>&1; then
-        sudo -u "${SUDO_USER:-shadow}" \
-            DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "${SUDO_USER:-shadow}")/bus" \
+    if [[ -n "$desktop_user" ]] && command -v notify-send >/dev/null 2>&1; then
+        sudo -u "$desktop_user" \
+            DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
             notify-send -i security-high "ShadowOS" "mode → $mode" 2>/dev/null || true
     fi
 
