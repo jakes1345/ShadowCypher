@@ -8,6 +8,9 @@
 #include <QFile>
 #include <QTextStream>
 #include <QDir>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 InstallPage::InstallPage(InstallState* state, QWidget* parent)
     : QWidget(parent), m_state(state), m_proc(nullptr)
@@ -54,6 +57,90 @@ InstallPage::InstallPage(InstallState* state, QWidget* parent)
     lay->addWidget(m_log, 1);
 }
 
+namespace {
+
+// One shell word, whatever the text holds: wrapped in single quotes, with each
+// single quote closed, escaped and reopened.
+QString shq(const QString& v) {
+    QString out = v;
+    out.replace('\'', "'\\''");
+    return '\'' + out + '\'';
+}
+
+QJsonObject btrfsRoot(bool encrypted) {
+    QJsonObject subvols{
+        {"@", "/"}, {"@home", "/home"}, {"@snapshots", "/.snapshots"},
+        {"@log", "/var/log"}, {"@pkg", "/var/cache/pacman/pkg"},
+    };
+    QJsonObject part{
+        {"type", "primary"}, {"start", "513MiB"}, {"size", "100%"},
+        {"fs_type", "btrfs"}, {"mountpoint", "/"},
+        {"btrfs", QJsonObject{{"subvolumes", subvols}}},
+    };
+    if (encrypted) part.insert("encrypt", true);
+    return part;
+}
+
+// Writes [doc] to [path] readable by root only, before any byte of it lands.
+bool writePrivate(const QString& path, const QByteArray& data) {
+    QFile f(path);
+    f.remove();
+    if (!f.open(QIODevice::WriteOnly | QIODevice::NewOnly)) return false;
+    f.setPermissions(QFile::ReadOwner | QFile::WriteOwner);
+    const bool ok = f.write(data) == data.size();
+    f.close();
+    return ok;
+}
+
+} // namespace
+
+// The archinstall configuration, built as JSON so nothing the user typed can
+// change its structure. Secrets are not in it: see credentialsJson().
+QByteArray InstallPage::configJson() const {
+    QJsonArray partitions{
+        QJsonObject{
+            {"type", "primary"}, {"start", "1MiB"}, {"size", "512MiB"},
+            {"fs_type", "fat32"}, {"mount_options", QJsonArray{"umask=0077"}},
+            {"mountpoint", "/boot/efi"}, {"flags", QJsonArray{"boot", "esp"}},
+        },
+        btrfsRoot(m_state->luks),
+    };
+    QJsonObject root{
+        {"disk_config", QJsonObject{
+            {"config_type", "default_layout"},
+            {"device_modifications", QJsonArray{QJsonObject{
+                {"device", m_state->disk}, {"wipe", true}, {"partitions", partitions},
+            }}},
+        }},
+        {"bootloader", "systemd-bootctl"},
+        {"hostname", m_state->hostname},
+        {"locale_config", QJsonObject{{"sys_lang", m_state->locale}, {"sys_enc", "UTF-8"}}},
+        {"timezone", m_state->timezone},
+        {"kernels", QJsonArray{"linux-hardened"}},
+        {"swap", false},
+        {"packages", QJsonArray{"hyprland", "waybar", "kitty", "networkmanager",
+                                "base-devel", "git", "sudo", "pipewire", "wireplumber",
+                                "xdg-portal-hyprland", "polkit-kde-agent",
+                                "noto-fonts", "ttf-jetbrains-mono"}},
+        {"services", QJsonArray{"NetworkManager", "systemd-timesyncd"}},
+    };
+    return QJsonDocument(root).toJson();
+}
+
+// The user's password and the disk passphrase, for archinstall's --creds file.
+QByteArray InstallPage::credentialsJson() const {
+    QJsonObject creds{
+        {"!users", QJsonArray{QJsonObject{
+            {"username", m_state->username},
+            {"!password", m_state->password},
+            {"groups", QJsonArray{"wheel", "video", "audio", "network"}},
+            {"sudo", true},
+        }}},
+    };
+    if (m_state->luks) creds.insert("!encryption-password", m_state->luksPass);
+    return QJsonDocument(creds).toJson();
+}
+
 QString InstallPage::buildScript() {
     QString s;
     QTextStream ts(&s);
@@ -61,114 +148,44 @@ QString InstallPage::buildScript() {
     ts << "#!/bin/bash\n";
     ts << "set -euo pipefail\n\n";
 
-    ts << "DISK=" << m_state->disk << "\n";
-    ts << "USERNAME=" << m_state->username << "\n";
-    ts << "HOSTNAME=" << m_state->hostname << "\n";
-    ts << "PROFILE=" << m_state->profile << "\n";
-    ts << "LOCALE=" << m_state->locale << "\n";
-    ts << "TIMEZONE=" << m_state->timezone << "\n";
-    ts << "LUKS=" << (m_state->luks ? "1" : "0") << "\n\n";
+    // Every value is one quoted word; the script never expands user text.
+    ts << "DISK=" << shq(m_state->disk) << "\n";
+    ts << "USERNAME=" << shq(m_state->username) << "\n";
+    ts << "HOSTNAME=" << shq(m_state->hostname) << "\n";
+    ts << "PROFILE=" << shq(m_state->profile) << "\n";
+    ts << "LOCALE=" << shq(m_state->locale) << "\n";
+    ts << "TIMEZONE=" << shq(m_state->timezone) << "\n";
+    ts << "CONFIG=" << shq(kConfigPath) << "\n";
+    ts << "CREDS=" << shq(kCredsPath) << "\n\n";
 
-    // Write archinstall config JSON
-    ts << "cat > /tmp/shadowos-install.json << 'ARCHINSTALL_EOF'\n";
-    ts << "{\n";
-    ts << "  \"disk_config\": {\n";
-    ts << "    \"config_type\": \"default_layout\",\n";
-    ts << "    \"device_modifications\": [\n";
-    ts << "      {\n";
-    ts << "        \"device\": \"" << m_state->disk << "\",\n";
-    ts << "        \"wipe\": true,\n";
-    ts << "        \"partitions\": [\n";
-    ts << "          { \"type\": \"primary\", \"start\": \"1MiB\", \"size\": \"512MiB\","
-          " \"fs_type\": \"fat32\", \"mount_options\": [\"umask=0077\"],"
-          " \"mountpoint\": \"/boot/efi\", \"flags\": [\"boot\", \"esp\"] },\n";
-    if (m_state->luks) {
-        ts << "          { \"type\": \"primary\", \"start\": \"513MiB\", \"size\": \"100%\","
-              " \"fs_type\": \"btrfs\", \"mountpoint\": \"/\","
-              " \"btrfs\": { \"subvolumes\": {\""
-              "@\": \"/\", \"@home\": \"/home\", \"@snapshots\": \"/.snapshots\","
-              "\"@log\": \"/var/log\", \"@pkg\": \"/var/cache/pacman/pkg\" } },"
-              " \"encrypt\": true }\n";
-    } else {
-        ts << "          { \"type\": \"primary\", \"start\": \"513MiB\", \"size\": \"100%\","
-              " \"fs_type\": \"btrfs\", \"mountpoint\": \"/\","
-              " \"btrfs\": { \"subvolumes\": {\""
-              "@\": \"/\", \"@home\": \"/home\", \"@snapshots\": \"/.snapshots\","
-              "\"@log\": \"/var/log\", \"@pkg\": \"/var/cache/pacman/pkg\" } } }\n";
-    }
-    ts << "        ]\n";
-    ts << "      }\n";
-    ts << "    ]\n";
-    ts << "  },\n";
-    ts << "  \"bootloader\": \"systemd-bootctl\",\n";
-    ts << "  \"hostname\": \"" << m_state->hostname << "\",\n";
-    ts << "  \"locale_config\": { \"sys_lang\": \"" << m_state->locale << "\","
-          " \"sys_enc\": \"UTF-8\" },\n";
-    ts << "  \"timezone\": \"" << m_state->timezone << "\",\n";
-    ts << "  \"kernels\": [\"linux-hardened\"],\n";
-    ts << "  \"swap\": false,\n";
-    ts << "  \"packages\": [\"hyprland\",\"waybar\",\"kitty\",\"networkmanager\","
-          "\"base-devel\",\"git\",\"sudo\",\"pipewire\",\"wireplumber\","
-          "\"xdg-portal-hyprland\",\"polkit-kde-agent\","
-          "\"noto-fonts\",\"ttf-jetbrains-mono\"],\n";
-    ts << "  \"services\": [\"NetworkManager\",\"systemd-timesyncd\"],\n";
-    ts << "  \"user_config\": {\n";
-    ts << "    \"!users\": [\n";
-    ts << "      {\n";
-    ts << "        \"username\": \"" << m_state->username << "\",\n";
-    ts << "        \"!password\": \"" << m_state->password << "\",\n";
-    ts << "        \"groups\": [\"wheel\", \"video\", \"audio\", \"network\"],\n";
-    ts << "        \"sudo\": \"WITH_PASSWORD\"\n";
-    ts << "      }\n";
-    ts << "    ]\n";
-    ts << "  }\n";
-    ts << "}\n";
-    ts << "ARCHINSTALL_EOF\n\n";
-
-    if (m_state->luks) {
-        ts << "echo '" << m_state->luksPass << "' > /tmp/.luks_pass\n";
-        ts << "export LUKS_PASSPHRASE=$(cat /tmp/.luks_pass)\n";
-    }
+    ts << "cleanup() { shred -u \"$CREDS\" 2>/dev/null || rm -f \"$CREDS\"; rm -f \"$CONFIG\"; }\n";
+    ts << "trap cleanup EXIT\n\n";
 
     ts << "echo '>>> Starting archinstall…'\n";
-    ts << "archinstall --config /tmp/shadowos-install.json --silent 2>&1\n\n";
+    ts << "archinstall --config \"$CONFIG\" --creds \"$CREDS\" --silent 2>&1\n\n";
 
-    ts << "echo '>>> Applying ShadowOS profile: $PROFILE'\n";
-    ts << "CHROOT=\"arch-chroot /mnt\"\n\n";
+    ts << "echo \">>> Applying ShadowOS profile: $PROFILE\"\n";
+    ts << "CHROOT=(arch-chroot /mnt)\n\n";
 
-    ts << "# Install profile-specific packages\n";
     ts << "case \"$PROFILE\" in\n";
     ts << "  pentest)\n";
-    ts << "    $CHROOT pacman -Sy --noconfirm nmap metasploit aircrack-ng wireshark-qt \\\n";
+    ts << "    \"${CHROOT[@]}\" pacman -Sy --noconfirm nmap metasploit aircrack-ng wireshark-qt \\\n";
     ts << "      john hashcat sqlmap hydra nikto gobuster 2>&1\n";
     ts << "    ;;\n";
     ts << "  privacy)\n";
-    ts << "    $CHROOT pacman -Sy --noconfirm tor torbrowser-launcher \\\n";
-    ts << "      firejail apparmor 2>&1\n";
-    ts << "    $CHROOT systemctl enable tor apparmor 2>&1\n";
+    ts << "    \"${CHROOT[@]}\" pacman -Sy --noconfirm tor torbrowser-launcher firejail apparmor 2>&1\n";
+    ts << "    \"${CHROOT[@]}\" systemctl enable tor apparmor 2>&1\n";
     ts << "    ;;\n";
     ts << "  gaming)\n";
-    ts << "    $CHROOT pacman -Sy --noconfirm steam gamescope gamemode \\\n";
-    ts << "      mangohud lib32-mesa vulkan-radeon lib32-vulkan-radeon \\\n";
-    ts << "      lib32-vulkan-intel 2>&1\n";
-    ts << "    $CHROOT systemctl enable gamemode 2>&1\n";
+    ts << "    \"${CHROOT[@]}\" pacman -Sy --noconfirm steam gamescope gamemode \\\n";
+    ts << "      mangohud lib32-mesa vulkan-radeon lib32-vulkan-radeon lib32-vulkan-intel 2>&1\n";
+    ts << "    \"${CHROOT[@]}\" systemctl enable gamemode 2>&1\n";
     ts << "    ;;\n";
-    ts << "  *)\n";
-    ts << "    # standard — nothing extra beyond base\n";
-    ts << "    ;;\n";
+    ts << "  *) ;;\n";
     ts << "esac\n\n";
 
-    ts << "# Install ShadowOS base tools\n";
-    ts << "$CHROOT pacman -Sy --noconfirm \\\n";
-    ts << "  ghostty yazi atuin zoxide fzf \\\n";
-    ts << "  anonsurf-parrot \\\n";
-    ts << "  shadowcypher-qt 2>&1 || true\n\n";
-
-    ts << "echo '>>> Cleaning up'\n";
-    ts << "rm -f /tmp/shadowos-install.json /tmp/.luks_pass\n\n";
-
+    ts << "\"${CHROOT[@]}\" pacman -Sy --noconfirm ghostty yazi atuin zoxide fzf anonsurf-parrot shadowcypher-qt 2>&1 || true\n\n";
     ts << "echo '>>> ShadowOS installation complete!'\n";
-
     return s;
 }
 
@@ -176,15 +193,14 @@ void InstallPage::begin() {
     appendLog("Generating installation script…");
 
     const QString scriptPath = "/tmp/shadowos-installer.sh";
-    QFile f(scriptPath);
-    if (!f.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        appendLog("ERROR: Cannot write install script to /tmp", true);
+    if (!writePrivate(kConfigPath, configJson())
+        || !writePrivate(kCredsPath, credentialsJson())
+        || !writePrivate(scriptPath, buildScript().toUtf8())) {
+        QFile::remove(kCredsPath);
+        appendLog("ERROR: Cannot write the installation files to /tmp", true);
         emit finished(false);
         return;
     }
-    f.write(buildScript().toUtf8());
-    f.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
-    f.close();
 
     appendLog("Launching installer…");
     m_status->setText("Installing — this will take 5–20 minutes…");

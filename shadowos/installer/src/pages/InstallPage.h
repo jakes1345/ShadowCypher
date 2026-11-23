@@ -27,5 +27,9 @@ private:
     QProcess*     m_proc;
 
     QString buildScript();
+    QByteArray configJson() const;
+    QByteArray credentialsJson() const;
+    static constexpr const char* kConfigPath = "/tmp/shadowos-install.json";
+    static constexpr const char* kCredsPath  = "/tmp/shadowos-install-creds.json";
     void    appendLog(const QString& line, bool error = false);
 };
