@@ -1,0 +1,48 @@
+## ShadowOS audit rules, loaded by augenrules when auditd starts.
+## Read the trail with: sudo ausearch -k <key> -i   (keys are on the right)
+## Watches cover changes an attacker makes to keep access or hide it.
+
+-D
+-b 8192
+-f 1
+--backlog_wait_time 60000
+
+## Accounts and authentication
+-w /etc/passwd       -p wa -k identity
+-w /etc/shadow       -p wa -k identity
+-w /etc/group        -p wa -k identity
+-w /etc/gshadow      -p wa -k identity
+-w /etc/sudoers      -p wa -k privilege
+-w /etc/sudoers.d/   -p wa -k privilege
+-w /etc/pam.d/       -p wa -k pam
+-w /etc/security/    -p wa -k pam
+
+## Remote access and persistence
+-w /etc/ssh/sshd_config   -p wa -k sshd
+-w /etc/ssh/sshd_config.d -p wa -k sshd
+-w /root/.ssh/            -p wa -k ssh-keys
+-w /etc/systemd/system/   -p wa -k systemd-units
+-w /etc/cron.d/           -p wa -k cron
+-w /var/spool/cron/       -p wa -k cron
+-w /etc/ld.so.preload     -p wa -k preload
+
+## Boot chain and kernel
+-w /boot/                 -p wa -k boot
+-w /etc/mkinitcpio.conf   -p wa -k boot
+-w /etc/default/grub      -p wa -k boot
+-w /var/lib/sbctl/        -p wa -k secureboot
+-a always,exit -F arch=b64 -S init_module,finit_module,delete_module -k kernel-modules
+-a always,exit -F arch=b32 -S init_module,finit_module,delete_module -k kernel-modules
+
+## Clock changes (they make the rest of the log harder to trust)
+-a always,exit -F arch=b64 -S adjtimex,settimeofday,clock_settime -k time-change
+-a always,exit -F arch=b32 -S adjtimex,settimeofday,clock_settime -k time-change
+-w /etc/localtime -p wa -k time-change
+
+## Firewall and network identity
+-w /etc/nftables.conf -p wa -k firewall
+-w /etc/hosts         -p wa -k network
+-w /etc/resolv.conf   -p wa -k network
+
+## The audit system itself
+-w /etc/audit/        -p wa -k audit-config
