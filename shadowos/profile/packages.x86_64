@@ -32,6 +32,8 @@ dnscrypt-proxy
 
 # Security / privacy
 audit
+pacman-contrib
+arch-audit
 tor
 torsocks
 firejail

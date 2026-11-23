@@ -42,7 +42,7 @@ backend/api/src/
   mail.ts               # Shadow Mail (inbound/outbound)
 backend/api/migrations/ # SQL migrations, applied to Supabase in order
 shadowos/               # Arch Linux ISO profile
-android/                # Capacitor app; ships its own copy of the site in app/src/main/assets/public
+android/                # native Kotlin/Compose app; signs in through the browser (device flow) or a pasted API key
 ```
 
 ## Auth model
@@ -50,7 +50,7 @@ android/                # Capacitor app; ships its own copy of the site in app/s
 - Users sign up with a handle; their internal email is `handle@shadowcypher.site`.
 - The web app signs up and signs in directly against Supabase Auth. API calls use an API key (`sc_live_` + 48 hex chars) in `Authorization: Bearer`.
 - The desktop app signs in through the browser: `POST /v1/auth/device`, the user approves at `shadowcypher.site/device`, then the app polls `POST /v1/auth/device/poll`. Pasting an API key also works. There is no `/v1/auth/login` route.
-- **Split password (zero-access encryption):** for accounts whose `GET /v1/auth/kdf` returns `v: 1`, the client stretches the password with Argon2id and sends only the derived login secret to Supabase. The other half unlocks the user's OpenPGP key, which never leaves the device. Accounts on `v: 0` still use the plain password, and existing accounts are not upgraded at sign-in, because the Android app's bundled site still sends the plain password.
+- **Split password (zero-access encryption):** for accounts whose `GET /v1/auth/kdf` returns `v: 1`, the client stretches the password with Argon2id and sends only the derived login secret to Supabase. The other half unlocks the user's OpenPGP key, which never leaves the device. Accounts on `v: 0` sign in with the plain password once; the web app then moves them to `v: 1` (`upgradeToSplitPassword` in `www/app/index.html`) and creates their identity key. The web app is the only client that sends a password.
 - Reading or writing identity keys (`/v1/identity/me`) needs the user's Supabase session in `X-Session-Token` as well as the API key. Writes need a sign-in from the last 15 minutes.
 
 ## Development commands
@@ -81,7 +81,6 @@ bash qemu-test.sh
   - API: `cd backend/api && npm run deploy` ships whatever is in the working tree. Only run it from a clean checkout of `main`, after `npm run typecheck` and `npm test` pass.
   - Arch repository: `publish-arch.yml` builds the packages in `packaging/arch/` and, on `main`, uploads them signed to the `arch-repo` GitHub release. `shadowcypher.site/arch/shadowos/x86_64/` redirects there (`www/_redirects`). Don't upload to that release by hand, and don't edit `pkgrel` in the PKGBUILDs: the build raises a package's release whenever its contents change. See `packaging/arch/README.md`.
 - **Migrations:** apply a new file in `backend/api/migrations/` to Supabase before deploying code that needs it.
-- **Android:** `android/app/src/main/assets/public` is a frozen copy of the site. Login or protocol changes in `www/` don't reach the Android app until that copy is refreshed.
 
 ## Environment / secrets
 

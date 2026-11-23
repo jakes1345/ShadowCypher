@@ -25,7 +25,7 @@ A few things the configs expect aren't in the package list yet:
 
 - LibreWolf is the default browser in the Hyprland config and `mimeapps.list`, but no browser is installed.
 - `shadowos-ai-setup` downloads three models (deepseek-r1:8b, qwen2.5-coder:7b and mistral:7b, about 14 GB), but it needs Ollama, which isn't installed.
-- The Qt6 installer in `installer/` (`shadowos-installer`) drives archinstall, which isn't installed either.
+- The Qt6 installer in `installer/` (`shadowos-installer`) drives archinstall, which isn't installed either, and its archinstall config has not been checked against a current archinstall release.
 
 ## Layout
 
@@ -91,6 +91,17 @@ This boots the newest ISO in `out/` with KVM, 4 GB of RAM, 4 CPUs and UEFI (OVMF
 ```
 
 The script lists removable drives, asks which one to use and refuses non-removable disks. If there's a `.sha256` file next to the ISO it checks it first, and after writing it reads back the first 1 GB to verify.
+
+## Hardening on an installed system
+
+| Command | What it does |
+|---|---|
+| `shadow-update --security` | Lists installed packages with open advisories from the Arch security tracker (through `arch-audit`) and which ones a pending update fixes. A normal `shadow-update` shows the same list before upgrading. |
+| `shadowos-secureboot status` | Secure Boot state and which boot files are signed (`sbctl`). |
+| `sudo shadowos-secureboot enable` | With the firmware in Setup Mode: creates your own keys, enrolls them (with Microsoft's, unless `--no-microsoft`), reinstalls GRUB to run without shim, signs GRUB and the kernels. sbctl's pacman hook re-signs kernels on updates. `--dry-run` prints the steps. |
+| `sudo ausearch -k <key> -i` | Reads the audit trail. `auditd` loads `/etc/audit/rules.d/shadowos.rules`, which watches accounts, sudoers, SSH, systemd units, cron, the boot chain, kernel modules and clock changes. |
+
+Disk encryption: tick "Encrypt system" on the installer's partition page. The installed system gets the `encrypt` initramfs hook when its root is on LUKS.
 
 ## Modes
 

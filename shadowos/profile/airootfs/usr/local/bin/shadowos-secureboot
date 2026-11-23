@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+# shadowos-secureboot — UEFI Secure Boot with your own keys, for an installed ShadowOS.
+#
+# Uses sbctl (https://github.com/Foxboron/sbctl), the Arch tool for owner keys:
+#   status    Secure Boot state, enrolled keys, and which boot files are signed
+#   enable    Create keys, enroll them, reinstall GRUB so it runs without shim,
+#             sign GRUB and every kernel in /boot, then check nothing is unsigned
+#   sign      Sign anything `sbctl verify` reports as unsigned (after a manual
+#             grub-install, for example). Kernel updates are signed by sbctl's
+#             own pacman hook, so this is rarely needed.
+#
+# Options for enable:
+#   --no-microsoft   Enroll only your keys. Firmware drivers on many GPUs and NICs
+#                    are signed by Microsoft; without its keys those cards may not
+#                    initialise before the OS loads, and some boards won't POST.
+#                    Only use this if you know your hardware does not need them.
+#   --dry-run        Print every command instead of running it.
+#
+# Before `enable`: put the firmware in Setup Mode (in its Secure Boot settings,
+# "Clear keys", "Reset to setup mode" or similar). Afterwards: reboot and turn
+# Secure Boot on in the firmware.
+
+set -euo pipefail
+
+RED='\033[1;31m'; GREEN='\033[1;32m'; YELLOW='\033[1;33m'; TEAL='\033[1;36m'; BOLD='\033[1m'; NC='\033[0m'
+log()  { echo -e "${TEAL}[*]${NC} $*"; }
+ok()   { echo -e "${GREEN}[+]${NC} $*"; }
+warn() { echo -e "${YELLOW}[~]${NC} $*"; }
+die()  { echo -e "${RED}[-]${NC} $*" >&2; exit 1; }
+
+ORIG_ARGS=("$@")
+DRY=0
+MICROSOFT=1
+CMD="${1:-status}"
+[[ $# -gt 0 ]] && shift
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run)      DRY=1 ;;
+        --no-microsoft) MICROSOFT=0 ;;
+        *) die "unknown option: $arg" ;;
+    esac
+done
+
+run() {
+    if [[ "$DRY" -eq 1 ]]; then
+        printf '    %q' "$@"; echo
+    else
+        "$@"
+    fi
+}
+
+need_root() {
+    [[ $EUID -eq 0 ]] || exec sudo "$0" "${ORIG_ARGS[@]}"
+}
+
+need_tools() {
+    command -v sbctl >/dev/null || die "sbctl is not installed: sudo pacman -S sbctl"
+    [[ -d /sys/firmware/efi ]] || die "this machine booted in legacy BIOS mode; Secure Boot needs UEFI"
+    [[ -e /etc/shadowos/live-iso ]] && die "run this on the installed system, not the live ISO"
+    return 0
+}
+
+# A sbctl status field as true/false. sbctl --json is stable across 0.x releases.
+sb_field() {
+    sbctl status --json 2>/dev/null | jq -r ".${1} // false"
+}
+
+esp_path() {
+    local p
+    for p in /boot/efi /efi /boot; do
+        if mountpoint -q "$p" && [[ "$(findmnt -no FSTYPE "$p")" == vfat ]]; then
+            echo "$p"; return 0
+        fi
+    done
+    return 1
+}
+
+# The directory under EFI/ that holds GRUB, as Calamares' bootloader module installed it.
+grub_id() {
+    local esp="$1" f
+    for f in "$esp"/EFI/*/grubx64.efi; do
+        [[ -f "$f" ]] || continue
+        local id; id="$(basename "$(dirname "$f")")"
+        [[ "$id" == BOOT ]] && continue
+        echo "$id"; return 0
+    done
+    return 1
+}
+
+cmd_status() {
+    need_tools
+    sbctl status
+    echo
+    log "Signature check of the files sbctl tracks and the ESP:"
+    sbctl verify 2>&1 || true
+}
+
+sign_unsigned() {
+    # sbctl verify prints "✗ <path> is not signed" for each unsigned EFI binary.
+    local f any=0
+    while IFS= read -r f; do
+        [[ -n "$f" ]] || continue
+        any=1
+        log "Signing $f"
+        run sbctl sign -s "$f"
+    done < <(sbctl verify 2>/dev/null | sed -n 's/^✗ \(.*\) is not signed$/\1/p')
+    [[ "$any" -eq 1 ]] || ok "Nothing unsigned."
+}
+
+cmd_sign() {
+    need_root
+    need_tools
+    sign_unsigned
+}
+
+cmd_enable() {
+    need_root
+    need_tools
+    command -v jq >/dev/null || die "jq is not installed: sudo pacman -S jq"
+    command -v grub-install >/dev/null || die "GRUB is not installed; this tool supports the GRUB setup the ShadowOS installer creates"
+
+    local esp id
+    esp="$(esp_path)" || die "no mounted EFI system partition at /boot/efi, /efi or /boot"
+    id="$(grub_id "$esp")" || die "no GRUB found under $esp/EFI/"
+    log "EFI system partition: $esp, GRUB at EFI/$id"
+
+    if [[ "$(sb_field secure_boot)" == true ]]; then
+        warn "Secure Boot is already on."
+    fi
+    if [[ "$(sb_field setup_mode)" != true ]]; then
+        if [[ "$DRY" -eq 1 ]]; then
+            warn "Firmware is not in Setup Mode (continuing because of --dry-run)."
+        else
+            die "the firmware is not in Setup Mode. Open its Secure Boot settings, clear or reset the keys to enter Setup Mode, boot back here and run this again."
+        fi
+    fi
+
+    # 1. Owner keys (kept in /var/lib/sbctl, root only).
+    if [[ "$(sb_field installed)" == true ]]; then
+        ok "sbctl keys already exist."
+    else
+        log "Creating Secure Boot keys (PK, KEK, db)…"
+        run sbctl create-keys
+    fi
+
+    # 2. Enroll.
+    if [[ "$MICROSOFT" -eq 1 ]]; then
+        log "Enrolling your keys together with Microsoft's (keeps GPU/NIC option ROMs working)…"
+        run sbctl enroll-keys --microsoft
+    else
+        warn "Enrolling only your keys (--no-microsoft)."
+        run sbctl enroll-keys --yes-this-might-brick-my-machine
+    fi
+
+    # 3. GRUB without shim: modules it needs are built in, and its shim_lock
+    #    verifier is off, since the firmware itself now checks GRUB's signature.
+    log "Reinstalling GRUB for Secure Boot without shim…"
+    run grub-install --target=x86_64-efi --efi-directory="$esp" --bootloader-id="$id" \
+        --modules="tpm" --disable-shim-lock
+    run grub-mkconfig -o /boot/grub/grub.cfg
+
+    # 4. Sign GRUB, the fallback loader if there is one, and every kernel. -s saves
+    #    each path in sbctl's database, so its pacman hook re-signs them on updates.
+    local f
+    for f in "$esp/EFI/$id/grubx64.efi" "$esp/EFI/BOOT/BOOTX64.EFI" /boot/vmlinuz-*; do
+        [[ -f "$f" ]] || continue
+        log "Signing $f"
+        run sbctl sign -s "$f"
+    done
+
+    # 5. Anything else on the ESP that would fail to load.
+    [[ "$DRY" -eq 1 ]] || sign_unsigned
+
+    echo
+    if [[ "$DRY" -eq 0 ]] && sbctl verify 2>/dev/null | grep -q '^✗'; then
+        sbctl verify || true
+        die "some boot files are still unsigned (above). Don't turn Secure Boot on until they are signed: sudo shadowos-secureboot sign"
+    fi
+    if [[ "$DRY" -eq 1 ]]; then ok "Dry run: nothing was changed."; return 0; fi
+    ok "Keys enrolled and boot files signed."
+    echo -e "    Reboot, open the firmware settings, and turn ${BOLD}Secure Boot${NC} on."
+    echo -e "    Then check with: ${TEAL}shadowos-secureboot status${NC}"
+}
+
+case "$CMD" in
+    status) cmd_status ;;
+    enable) cmd_enable ;;
+    sign)   cmd_sign ;;
+    -h|--help|help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) die "unknown command: $CMD (status, enable, sign)" ;;
+esac

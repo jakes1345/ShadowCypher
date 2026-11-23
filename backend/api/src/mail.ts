@@ -25,6 +25,7 @@ import { dispatchMailPushNotification } from "./notifications";
 import { decodeMimeWords, decodeQuotedPrintable, decodeBase64Body, parseHeaders, parseMimeParts, escapeRegex, extractBodies } from "./mime";
 import type { MimePart } from "./mime";
 import { inboxFor, isBlockedSender } from "./reserved";
+import { bodyColumnsFor, previewFor } from "./mail_crypto";
 
 interface MailRow {
   id: string;
@@ -35,6 +36,7 @@ interface MailRow {
   subject: string;
   body_text: string | null;
   body_html: string | null;
+  body_pgp: string | null;
   direction: "inbound" | "outbound";
   is_read: boolean;
   received_at: string;
@@ -72,6 +74,7 @@ export async function storeInboundMail(
   const { text, html } = extractBodies(rawBody);
 
   const receivedAt = new Date(dateStr).toISOString();
+  const body = await bodyColumnsFor(env, user.id, text, html);
 
   await dbInsert(env, "mail_messages", {
     user_id: user.id,
@@ -79,15 +82,15 @@ export async function storeInboundMail(
     from_addr: message.from,
     to_addr: message.to,
     subject,
-    body_text: text,
-    body_html: html,
+    ...body,
     direction: "inbound",
     is_read: false,
     received_at: receivedAt,
   });
 
-  // Notify any mail.received webhooks (Slack, Teams, Zoom, Discord, custom)
-  const preview = (text ?? "").trim().slice(0, 280).replace(/\s+/g, " ");
+  // Notify any mail.received webhooks (Slack, Teams, Zoom, Discord, custom).
+  // Sealed mail carries no body preview: it would leave the platform in the clear.
+  const preview = previewFor(body, text);
   dispatchMailWebhook(env, {
     from: message.from,
     to: message.to,
@@ -133,20 +136,20 @@ async function deliverInternal(
 
   const messageId = `<${crypto.randomUUID()}@shadowcypher.site>`;
   const receivedAt = new Date().toISOString();
+  const body = await bodyColumnsFor(env, recipient.id, text, html);
   await dbInsert(env, "mail_messages", {
     user_id: recipient.id,
     message_id: messageId,
     from_addr: fromAddr,
     to_addr: toAddr,
     subject,
-    body_text: text,
-    body_html: html,
+    ...body,
     direction: "inbound",
     is_read: false,
     received_at: receivedAt,
   });
 
-  const preview = (text ?? "").trim().slice(0, 280).replace(/\s+/g, " ");
+  const preview = previewFor(body, text);
   dispatchMailWebhook(env, { from: fromAddr, to: toAddr, subject, preview, received_at: receivedAt, user_id: recipient.id }).catch(() => null);
   dispatchMailPushNotification(env, recipient.id, { from: fromAddr, subject, preview }).catch(() => null);
 
@@ -163,14 +166,14 @@ async function storeSentCopy(
   text: string | null,
   html: string | null
 ): Promise<void> {
+  const body = await bodyColumnsFor(env, userId, text, html);
   await dbInsert(env, "mail_messages", {
     user_id: userId,
     message_id: messageId,
     from_addr: fromAddr,
     to_addr: toAddr,
     subject,
-    body_text: text,
-    body_html: html,
+    ...body,
     direction: "outbound",
     is_read: true,
     received_at: new Date().toISOString(),
@@ -396,18 +399,7 @@ export async function replyMail(
   if (!sendResp.ok) return json({ error: "send_failed" }, { status: 502 }, cors);
   const sendData = (await sendResp.json()) as { id?: string };
 
-  await dbInsert(env, "mail_messages", {
-    user_id: user.id,
-    message_id: sendData.id ?? null,
-    from_addr: fromAddr,
-    to_addr: replyTo,
-    subject: replySubject,
-    body_text: replyText,
-    body_html: null,
-    direction: "outbound",
-    is_read: true,
-    received_at: new Date().toISOString(),
-  }).catch(() => null);
+  await storeSentCopy(env, user.id, sendData.id ?? null, fromAddr, replyTo, replySubject, replyText, null);
 
   return json({ ok: true, id: sendData.id }, {}, cors);
 }

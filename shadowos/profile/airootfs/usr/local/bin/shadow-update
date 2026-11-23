@@ -7,6 +7,9 @@
 #   • split output: ShadowOS-only upgrades shown first, then everything else
 #   • post-update tips (mode-aware reminders, kernel-reboot prompt)
 #   • flatpak update tail call (Heroic, Bottles, ProtonUp-Qt get refreshed too)
+#   • security advisories: installed packages with open CVEs, from the Arch
+#     security tracker (security.archlinux.org) through arch-audit, and which of
+#     them this update fixes
 #
 # Flags:
 #   --over-tor      Route pacman traffic through torsocks (privacy/ghost mode)
@@ -14,6 +17,7 @@
 #   --shadow-only   Only update [shadowos] packages
 #   --no-flatpak    Skip flatpak refresh
 #   --quiet         Reduce output
+#   --security      Only list packages with open security advisories, then exit
 
 set -uo pipefail
 
@@ -32,6 +36,7 @@ CHECK_ONLY=0
 SHADOW_ONLY=0
 NO_FLATPAK=0
 QUIET=0
+SECURITY_ONLY=0
 for arg in "$@"; do
     case "$arg" in
         --over-tor)    OVER_TOR=1 ;;
@@ -39,6 +44,7 @@ for arg in "$@"; do
         --shadow-only) SHADOW_ONLY=1 ;;
         --no-flatpak)  NO_FLATPAK=1 ;;
         --quiet|-q)    QUIET=1 ;;
+        --security)    SECURITY_ONLY=1 ;;
         --help|-h)
             grep '^#' "$0" | sed 's/^# *//' | head -20
             exit 0 ;;
@@ -74,11 +80,49 @@ case "$CURRENT_MODE" in
         fi
         log "Routing pacman through Tor (mode: $CURRENT_MODE)"
         PACMAN_CMD="sudo torsocks pacman"
+        AUDIT_CMD="torsocks arch-audit"
         ;;
     *)
         PACMAN_CMD="sudo pacman"
+        AUDIT_CMD="arch-audit"
         ;;
 esac
+
+# ── Security advisories ─────────────────────────────────────────────────────
+# arch-audit matches installed versions against the Arch security tracker.
+# Fixable = a newer version in the repos closes the advisory.
+security_report() {
+    if ! command -v arch-audit >/dev/null; then
+        warn "arch-audit not installed — no security advisory check (sudo pacman -S arch-audit)."
+        return 0
+    fi
+    local all fixable n_all n_fix
+    if ! all=$($AUDIT_CMD --format '%n|%s|%c' 2>/dev/null); then
+        warn "Couldn't reach the Arch security tracker — advisories not checked."
+        return 0
+    fi
+    fixable=$($AUDIT_CMD --upgradable --format '%n|%s|%v' 2>/dev/null || true)
+    n_all=$(grep -c '.' <<<"$all" || true)
+    n_fix=$(grep -c '.' <<<"$fixable" || true)
+    if [[ "$n_all" -eq 0 ]]; then
+        ok "No installed package has an open security advisory."
+        return 0
+    fi
+    echo
+    echo -e "${BOLD}${RED}Security advisories:${NC} $n_all installed package(s) affected, $n_fix fixed by this update"
+    while IFS='|' read -r name sev fixed; do
+        [[ -n "$name" ]] && printf "  ${RED}%-10s${NC} %-28s → %s\n" "$sev" "$name" "$fixed"
+    done <<<"$fixable"
+    if [[ "$n_fix" -lt "$n_all" ]]; then
+        echo -e "  ${DIM}$((n_all - n_fix)) without a fix yet: arch-audit --format '%n %s %c'${NC}"
+    fi
+    echo
+}
+
+if [[ "$SECURITY_ONLY" -eq 1 ]]; then
+    security_report
+    exit 0
+fi
 
 # ── Pre-update snapshot ─────────────────────────────────────────────────────
 log "Refreshing package databases…"
@@ -98,7 +142,7 @@ UPDATE_COUNT=$(echo "$UPDATES_RAW" | grep -c '.' || echo 0)
 
 if [[ "$UPDATE_COUNT" -eq 0 ]]; then
     ok "System is up to date."
-    [[ "$CHECK_ONLY" -eq 1 ]] && exit 0
+    [[ "$CHECK_ONLY" -eq 1 ]] && { security_report; exit 0; }
 else
     # Split: ShadowOS packages first
     SHADOW_PKGS=$(echo "$UPDATES_RAW" | awk '/^(shadowos-|shadowcypher)/ {print $1" "$2" -> "$4}')
@@ -115,6 +159,8 @@ else
     fi
     echo
 fi
+
+security_report
 
 if [[ "$CHECK_ONLY" -eq 1 ]]; then
     log "--check passed; no changes made."

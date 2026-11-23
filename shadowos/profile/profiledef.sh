@@ -41,6 +41,7 @@ file_permissions=(
   ["/usr/local/bin/shadowos-install"]="0:0:0755"
   ["/usr/local/bin/shadowos-welcome"]="0:0:0755"
   ["/usr/local/bin/shadowos-tour"]="0:0:0755"
+  ["/usr/local/bin/shadowos-secureboot"]="0:0:0755"
   ["/usr/local/bin/shadowos-ai-setup"]="0:0:0755"
   ["/usr/local/bin/shadowos-diag"]="0:0:0755"
   ["/usr/local/bin/shadowos-update-gui"]="0:0:0755"

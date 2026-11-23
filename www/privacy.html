@@ -43,9 +43,9 @@
 
     <h3 style="color:#fff;margin-top:26px;font-size:1.05rem;">Mail, chat, files and calendar</h3>
     <ul>
-        <li><strong>Mail.</strong> The messages you send and receive: addresses, subject and body. Mail is stored as received. It is not end-to-end encrypted, so it is readable on the server.</li>
+        <li><strong>Mail.</strong> The messages you send and receive: addresses, subject and body. If your account has an identity key, message bodies are stored encrypted to it and we cannot read them. Mail from outside ShadowCypher reaches our server in the clear over SMTP and is encrypted as it is stored. Subjects and addresses are not encrypted. Accounts without an identity key have their mail stored as received.</li>
         <li><strong>Chat.</strong> Messages, reactions and read markers. While your chat vault is unlocked, messages are encrypted in your browser before they are sent, and the server holds only the encrypted form. A message sent while the vault is locked is stored as plain text.</li>
-        <li><strong>Drive, Docs and Sheets.</strong> The files and documents you save. They are stored as uploaded and are not end-to-end encrypted.</li>
+        <li><strong>Drive, Docs and Sheets.</strong> The files and documents you save. Drive files uploaded from the web app are encrypted to your identity key in your browser before upload, so we hold only ciphertext; file names are not encrypted. Docs and Sheets are stored as saved and are not end-to-end encrypted.</li>
         <li><strong>Calendar.</strong> The events you create.</li>
         <li><strong>Identity keys.</strong> Your OpenPGP public key, and your private key in locked form only. It is unlocked on your device with your password or recovery phrase, which we never receive.</li>
     </ul>
