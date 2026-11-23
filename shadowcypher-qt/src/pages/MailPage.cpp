@@ -544,6 +544,13 @@ void MailPage::onMessageClicked(QListWidgetItem* item)
         if (id != m_openId) return;   // the user opened another message meanwhile
         if (!ok) { showMessage(msg, QString("Couldn't load this message (HTTP %1).").arg(status)); return; }
         const QJsonObject full = doc.object();
+        if (!full.value("body_pgp").toString().isEmpty()) {
+            // Sealed to the account's identity key, which only the web app unlocks.
+            showMessage(msg, QStringLiteral(
+                "This message is end-to-end encrypted to your identity key.\n\n"
+                "Open it at https://shadowcypher.site/app, where your key is unlocked with your password."));
+            return;
+        }
         QString text = full.value("body_text").toString();
         if (text.isEmpty() && !full.value("body_html").toString().isEmpty())
             text = QTextDocumentFragment::fromHtml(full.value("body_html").toString()).toPlainText();

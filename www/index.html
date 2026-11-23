@@ -139,8 +139,8 @@
                     <tr><td>Telemetry</td><td class="yes">None</td><td>The apps send no usage data. Syncing scan results to your account is off until you turn it on.</td></tr>
                     <tr><td>Chat</td><td class="yes">End-to-end</td><td>Messages are encrypted in your browser with AES-GCM while your chat vault is unlocked. The key stays in memory and never reaches the server.</td></tr>
                     <tr><td>Password</td><td class="yes">Split</td><td>New web accounts stretch the password with Argon2id on your device. The server gets a derived login secret; the other half unlocks your OpenPGP key, which only unlocks on your device.</td></tr>
-                    <tr><td>Mail</td><td class="not-yet">Not end-to-end yet</td><td>Stored on the server as received. Mail between ShadowCypher users stays on the platform and never goes through an outside mail provider.</td></tr>
-                    <tr><td>Drive</td><td class="not-yet">Not end-to-end yet</td><td>Files are stored on the server as uploaded.</td></tr>
+                    <tr><td>Mail</td><td class="yes">Zero-access</td><td>Bodies are stored encrypted to your OpenPGP key and opened only in your browser. Mail from outside arrives over SMTP in the clear and is encrypted as it lands; subjects and addresses are not encrypted. Mail between ShadowCypher users never goes through an outside mail provider.</td></tr>
+                    <tr><td>Drive</td><td class="yes">End-to-end</td><td>Files are encrypted to your OpenPGP key in your browser before upload; the server stores only ciphertext. File names are not encrypted.</td></tr>
                     <tr><td>Self-hosting</td><td class="yes">Supported</td><td>Run the API, database and storage yourself. <a href="/self-host.html" class="text-link">Self-hosting guide</a></td></tr>
                 </table>
             </div>

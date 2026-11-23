@@ -4783,6 +4783,25 @@
                 document.getElementById('mail-reader-to').textContent = msg.to_addr || '';
                 document.getElementById('mail-reader-date').textContent = msg.received_at ? new Date(msg.received_at).toLocaleString() : '';
                 const bodyEl = document.getElementById('mail-reader-body');
+                if (msg.body_pgp) {
+                    // Sealed to this account's identity key (mail_crypto.ts); only the unlocked key opens it.
+                    if (!_identityKey) {
+                        bodyEl.style.padding = '24px';
+                        bodyEl.textContent = 'This message is end-to-end encrypted. Sign out and sign in again with your password to unlock your key and read it.';
+                        return;
+                    }
+                    try {
+                        const sealed = await openpgp.readMessage({ armoredMessage: msg.body_pgp });
+                        const { data } = await openpgp.decrypt({ message: sealed, decryptionKeys: _identityKey });
+                        const opened = JSON.parse(data);
+                        msg.body_text = typeof opened.text === 'string' ? opened.text : null;
+                        msg.body_html = typeof opened.html === 'string' ? opened.html : null;
+                    } catch (e) {
+                        bodyEl.style.padding = '24px';
+                        bodyEl.textContent = 'This message is encrypted to a key this session does not hold, so it cannot be opened here.';
+                        return;
+                    }
+                }
                 if (msg.body_html) {
                     const iframe = document.createElement('iframe');
                     iframe.sandbox = '';
@@ -5534,22 +5553,52 @@
         driveRender();
     }
 
+    // Drive files are sealed to this account's identity key before they leave the
+    // browser, so R2 holds only ciphertext (files.ts). Without an unlocked key
+    // (an account that has not set one up) files go up as they are.
+    async function driveUploadOne(file) {
+        const form = new FormData();
+        if (_identityKey) {
+            const plain = new Uint8Array(await file.arrayBuffer());
+            const message = await openpgp.createMessage({ binary: plain });
+            const sealed = await openpgp.encrypt({ message, encryptionKeys: _identityKey.toPublic(), format: 'binary' });
+            form.append('file', new Blob([sealed], { type: 'application/pgp-encrypted' }), file.name);
+            form.append('plain_type', file.type || 'application/octet-stream');
+        } else {
+            form.append('file', file);
+        }
+        const res = await fetch(API_BASE + '/v1/files/upload', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${_sessionApiKey}` },
+            body: form,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+    }
+
+    // The file's bytes as a Blob of its real type, opened here when it is sealed.
+    async function driveFetchPlain(file) {
+        const res = await fetch(`${API_BASE}/v1/files/${encodeURIComponent(file.key)}`, {
+            headers: { Authorization: `Bearer ${_sessionApiKey}` },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        if (!file.sealed) return new Blob([bytes], { type: file.type });
+        if (!_identityKey) throw new Error('This file is end-to-end encrypted. Sign in again with your password to unlock your key.');
+        const message = await openpgp.readMessage({ binaryMessage: bytes });
+        const { data } = await openpgp.decrypt({ message, decryptionKeys: _identityKey, format: 'binary' });
+        return new Blob([data], { type: file.type });
+    }
+
     async function driveUploadFiles(input) {
         const files = [...(input.files || [])];
         if (!files.length) return;
         input.value = '';
         let uploaded = 0;
         for (const file of files) {
-            const form = new FormData();
-            form.append('file', file);
-            try {
-                await fetch(API_BASE + '/v1/files/upload', {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${_sessionApiKey}` },
-                    body: form,
-                });
-                uploaded++;
-            } catch (e) { showToast(`Failed to upload ${file.name}: ${e.message}`, 'error'); }
+            try { await driveUploadOne(file); uploaded++; }
+            catch (e) { showToast(`Failed to upload ${file.name}: ${e.message}`, 'error'); }
         }
         if (uploaded) { showToast(`${uploaded} file(s) uploaded`, 'success'); await driveLoad(); }
     }
@@ -5575,30 +5624,36 @@
             if (!files.length || !_sessionApiKey) return;
             let uploaded = 0;
             for (const file of files) {
-                const form = new FormData();
-                form.append('file', file);
-                try {
-                    await fetch(API_BASE + '/v1/files/upload', {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${_sessionApiKey}` },
-                        body: form,
-                    });
-                    uploaded++;
-                } catch (e) { showToast(`Failed: ${file.name}`, 'error'); }
+                try { await driveUploadOne(file); uploaded++; }
+                catch (e) { showToast(`Failed: ${file.name}: ${e.message}`, 'error'); }
             }
             if (uploaded) { showToast(`${uploaded} file(s) uploaded`, 'success'); await driveLoad(); }
         });
     });
 
-    function driveOpenPreview(file) {
+    let _drivePreviewUrl = null;
+
+    async function driveOpenPreview(file) {
         _drivePreviewFile = file;
-        document.getElementById('drive-preview-name').innerText = file.name;
-        const fileUrl = `${API_BASE}/v1/files/${encodeURIComponent(file.key)}?key=${encodeURIComponent(_sessionApiKey)}`;
+        document.getElementById('drive-preview-name').innerText = file.name + (file.sealed ? '  🔒' : '');
+        const body = document.getElementById('drive-preview-body');
         const dlLink = document.getElementById('drive-preview-download');
+        dlLink.removeAttribute('href');
+        body.innerHTML = '<div style="color:var(--text-secondary);font-size:0.8rem;">Opening…</div>';
+        document.getElementById('drive-preview-modal').style.display = 'flex';
+        let blob;
+        try { blob = await driveFetchPlain(file); }
+        catch (e) {
+            if (_drivePreviewFile !== file) return;
+            body.innerHTML = `<div style="text-align:center;color:#f87171;font-size:0.85rem;">${escapeHtml(e.message)}</div>`;
+            return;
+        }
+        if (_drivePreviewFile !== file) return; // closed or another file opened meanwhile
+        if (_drivePreviewUrl) URL.revokeObjectURL(_drivePreviewUrl);
+        const fileUrl = _drivePreviewUrl = URL.createObjectURL(blob);
         dlLink.href = fileUrl;
         dlLink.download = file.name;
-        const body = document.getElementById('drive-preview-body');
-        if (file.type.startsWith('image/')) {
+        if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
             body.innerHTML = `<img src="${fileUrl}" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:4px;">`;
         } else if (file.type === 'application/pdf') {
             body.innerHTML = `<iframe src="${fileUrl}" style="width:100%;height:60vh;border:none;border-radius:4px;"></iframe>`;
@@ -5607,22 +5662,20 @@
         } else if (file.type.startsWith('video/')) {
             body.innerHTML = `<video controls src="${fileUrl}" style="max-width:100%;max-height:60vh;border-radius:4px;"></video>`;
         } else if (file.type.startsWith('text/')) {
-            body.innerHTML = '<div style="color:var(--text-secondary);font-size:0.8rem;">Loading…</div>';
-            fetch(fileUrl).then(r => r.text()).then(t => {
-                body.innerHTML = `<pre style="color:#e0e0e0;font-size:0.8rem;white-space:pre-wrap;word-break:break-all;text-align:left;max-height:60vh;overflow:auto;padding:16px;background:rgba(0,0,0,0.3);border-radius:4px;width:100%;">${escapeHtml(t.slice(0, 50000))}</pre>`;
-            });
+            const t = await blob.text();
+            body.innerHTML = `<pre style="color:#e0e0e0;font-size:0.8rem;white-space:pre-wrap;word-break:break-all;text-align:left;max-height:60vh;overflow:auto;padding:16px;background:rgba(0,0,0,0.3);border-radius:4px;width:100%;">${escapeHtml(t.slice(0, 50000))}</pre>`;
         } else {
             body.innerHTML = `<div style="text-align:center;color:var(--text-secondary);">
                 <div style="font-size:3rem;margin-bottom:16px;">${driveIcon(file.type)}</div>
                 <div style="font-size:0.9rem;color:#fff;">${escapeHtml(file.name)}</div>
-                <div style="font-size:0.75rem;margin-top:8px;">${driveFmt(file.size)} · ${file.type}</div>
+                <div style="font-size:0.75rem;margin-top:8px;">${driveFmt(file.size)} · ${escapeHtml(file.type)}</div>
             </div>`;
         }
-        document.getElementById('drive-preview-modal').style.display = 'flex';
     }
 
     function driveClosePreview() {
         _drivePreviewFile = null;
+        if (_drivePreviewUrl) { URL.revokeObjectURL(_drivePreviewUrl); _drivePreviewUrl = null; }
         document.getElementById('drive-preview-modal').style.display = 'none';
         document.getElementById('drive-preview-body').innerHTML = '';
     }

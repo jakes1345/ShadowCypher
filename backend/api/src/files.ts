@@ -5,6 +5,12 @@
  *   POST   /v1/files/upload   — multipart or raw body upload (max 10 MB)
  *   GET    /v1/files/:key     — stream file from R2 (owner only; key prefix = user_id/)
  *   DELETE /v1/files/:key     — delete (owner only; key prefix = user_id/)
+ *
+ * Sealed files: the web app encrypts a file to the owner's OpenPGP identity key
+ * before upload and sends it as application/pgp-encrypted, with the file's real
+ * type in the `plain_type` form field. R2 then holds only ciphertext; the list
+ * reports the real type and `sealed: true`, and only the owner's browser can
+ * open the bytes. Files uploaded without a key are stored as before.
  */
 
 import type { Env } from "./index";
@@ -19,6 +25,8 @@ const ALLOWED_TYPES = new Set([
   "audio/mpeg", "audio/ogg", "audio/wav",
   "video/mp4", "video/webm",
 ]);
+
+export const SEALED_TYPE = "application/pgp-encrypted";
 
 function json(body: unknown, init: ResponseInit = {}, cors: HeadersInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -48,7 +56,8 @@ export async function listFiles(
     key: obj.key,
     name: (obj.customMetadata?.original_name ?? obj.key.split("/").pop() ?? obj.key),
     size: obj.size,
-    type: obj.httpMetadata?.contentType ?? "application/octet-stream",
+    type: obj.customMetadata?.plain_type ?? obj.httpMetadata?.contentType ?? "application/octet-stream",
+    sealed: obj.customMetadata?.sealed === "1",
     uploaded_at: obj.customMetadata?.uploaded_at ?? obj.uploaded?.toISOString() ?? null,
   }));
 
@@ -68,6 +77,7 @@ export async function uploadFile(
   let fileData: ArrayBuffer;
   let fileName = "file";
   let mimeType = "application/octet-stream";
+  let plainType: string | null = null;
 
   const ct = req.headers.get("Content-Type") ?? "";
 
@@ -82,6 +92,8 @@ export async function uploadFile(
     fileData = await (file as File).arrayBuffer();
     fileName = (file as File).name || "file";
     mimeType = (file as File).type || "application/octet-stream";
+    const pt = form.get("plain_type");
+    if (typeof pt === "string") plainType = pt.split(";")[0].trim();
   } else {
     fileData = await req.arrayBuffer();
     if (fileData.byteLength > MAX_BYTES)
@@ -90,9 +102,13 @@ export async function uploadFile(
     const nameMatch = cd.match(/filename="?([^";]+)"?/i);
     if (nameMatch) fileName = nameMatch[1];
     mimeType = ct.split(";")[0].trim() || "application/octet-stream";
+    plainType = req.headers.get("X-Plain-Type")?.split(";")[0].trim() ?? null;
   }
 
-  if (!ALLOWED_TYPES.has(mimeType))
+  const sealed = mimeType === SEALED_TYPE;
+  // A sealed upload is checked against the type it will be once opened.
+  const checkedType = sealed ? plainType ?? "" : mimeType;
+  if (!ALLOWED_TYPES.has(checkedType))
     return json({ error: "unsupported_type", allowed: [...ALLOWED_TYPES] }, { status: 415 }, cors);
 
   const ext = fileName.includes(".") ? fileName.split(".").pop()!.slice(0, 10).toLowerCase() : "";
@@ -103,16 +119,18 @@ export async function uploadFile(
   await env.SHADOW_FILES.put(key, fileData, {
     httpMetadata: {
       contentType: mimeType,
-      contentDisposition: `inline; filename="${safeName}"`,
+      // Ciphertext is never rendered by the browser directly; the app opens it first.
+      contentDisposition: `${sealed ? "attachment" : "inline"}; filename="${safeName}${sealed ? ".pgp" : ""}"`,
     },
     customMetadata: {
       user_id: user.id,
       original_name: safeName,
       uploaded_at: new Date().toISOString(),
+      ...(sealed ? { sealed: "1", plain_type: checkedType } : {}),
     },
   });
 
-  return json({ ok: true, key, name: safeName, size: fileData.byteLength, type: mimeType }, {}, cors);
+  return json({ ok: true, key, name: safeName, size: fileData.byteLength, type: checkedType, sealed }, {}, cors);
 }
 
 export async function downloadFile(
