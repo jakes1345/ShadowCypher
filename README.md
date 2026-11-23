@@ -30,7 +30,7 @@ It started as shell scripts I wrote to debug real network problems, because the 
 | Blog | Static HTML posts | [`blog/`](blog/) |
 | API | Cloudflare Worker in TypeScript | [`backend/api/`](backend/api/) |
 | ShadowOS | Arch Linux live ISO | [`shadowos/`](shadowos/) |
-| Android | Capacitor app that ships its own copy of the web app | [`android/`](android/) |
+| Android | Native Kotlin/Compose app (dashboard, devices, incidents, CVEs, AI, missions) | [`android/`](android/) |
 | Guardian agent | Python network agent, the last Python in the project | [`agent/`](agent/) |
 
 ## Desktop app
@@ -82,7 +82,7 @@ The web app and the desktop app use the same API, a Cloudflare Worker backed by:
 
 **Sign-in.** You sign up with a handle, and your address becomes `handle@shadowcypher.site`. The web app signs in against Supabase Auth, and API calls use a personal key (`sc_live_…`) as a bearer token. The desktop app signs in through your browser: it asks the API for a device code, you approve it at shadowcypher.site/device, and the app picks up the key. You can also paste a key.
 
-**Split password.** New accounts created on the web app use a split-password scheme when the browser supports it. Your device stretches the password with Argon2id and sends only a derived login secret to Supabase. The other half unlocks your OpenPGP identity key. The server stores that key only in locked form, and it is only unlocked on your device. Older accounts still use the plain password, and so does the Android app's bundled copy of the site.
+**Split password.** New accounts created on the web app use a split-password scheme when the browser supports it. Your device stretches the password with Argon2id and sends only a derived login secret to Supabase. The other half unlocks your OpenPGP identity key. The server stores that key only in locked form, and it is only unlocked on your device. Older accounts are moved to the split password the next time they sign in on the web app, and get an identity key then. The desktop and Android apps never see your password: they sign in through the browser.
 
 **What is encrypted.** Chat messages are encrypted in the browser with AES-GCM while the chat vault is unlocked. The key is derived from your password at sign-in, or from a passphrase you type into the vault dialog, and it's kept in memory only. Others in a room can read those messages only if they use the same passphrase. For accounts with an identity key, mail bodies are stored encrypted to that key (zero-access): the server encrypts each message as it arrives and keeps only the ciphertext, and your browser opens it with your unlocked key. Mail from outside ShadowCypher still arrives in the clear over SMTP, so the server sees it once on the way in. Subject, sender and recipient are not encrypted. Drive files uploaded from the web app are encrypted to your key in the browser before upload, so the server only ever holds ciphertext. The desktop app can't open encrypted mail or files yet; it points you to the web app.
 

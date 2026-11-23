@@ -2338,10 +2338,33 @@
             return phrase;
         }
 
+        // After a successful sign-in with the plain password (a v0 account): move the
+        // account to the split password, so the server stops holding anything the raw
+        // password can be recovered from, and give it an identity key. Every client
+        // that sends a password is this web app (the desktop and Android apps sign in
+        // through the browser), so nothing is locked out by the change.
+        // Returns {kdf, secrets} on success, or null when the account stays on v0.
+        async function upgradeToSplitPassword(handle, password, user) {
+            const kdf = ScIdentity.newKdfParams();
+            const secrets = await ScIdentity.deriveSecrets(password, kdf);
+            const { error } = await supabaseClient.auth.updateUser({
+                password: secrets.loginSecret,
+                data: { ...(user.user_metadata || {}), kdf },
+            });
+            if (error) throw new Error(`could not upgrade sign-in: ${error.message}`);
+            // The next sign-in reads kdf back from the API; if it didn't stick, the stored
+            // password and the parameters disagree and the account would be locked out.
+            const check = await fetchKdf(handle).catch(() => null);
+            if (!check || check.v !== 1 || check.salt !== kdf.salt) {
+                const rollback = await supabaseClient.auth.updateUser({ password });
+                if (rollback.error) throw new Error(`sign-in upgrade failed half-way (${rollback.error.message}); reset your password from the sign-in page`);
+                return null;
+            }
+            return { kdf, secrets };
+        }
+
         // After a successful sign-in to a split-password account: unlock the identity
         // key or create one. Returns a new recovery phrase, if any.
-        // Legacy accounts are not moved to the split password here: the Android app
-        // still sends the plain password and would be locked out afterwards.
         async function setUpIdentityAfterSignIn(handle, kdf, secrets, user) {
             if (kdf.v !== 1 || !secrets) return '';
             const apiKey = await ensureApiKey(user);
@@ -2386,6 +2409,16 @@
                         setUpIdentityAfterSignIn(handle, kdf, secrets, result.data.user)
                             .then(phrase => { if (phrase) showRecoveryKit([], phrase); })
                             .catch(err => cliPrint(`Encryption key: ${err.message}`, 'var(--warning)'));
+                    } else if (kdf?.v === 0) {
+                        upgradeToSplitPassword(handle, password, result.data.user)
+                            .then(up => up ? setUpIdentityAfterSignIn(handle, up.kdf, up.secrets, result.data.user) : '')
+                            .then(phrase => {
+                                if (phrase) {
+                                    cliPrint('Your account now uses zero-access encryption. Save your recovery phrase.', 'var(--success)');
+                                    showRecoveryKit([], phrase);
+                                }
+                            })
+                            .catch(err => cliPrint(`Encryption upgrade: ${err.message}`, 'var(--warning)'));
                     }
                 } catch (err) {
                     cliPrint(`Sign in failed: ${err.message}`, 'var(--critical)');
