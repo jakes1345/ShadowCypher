@@ -14,7 +14,8 @@ depends=(
     'foot' 'ghostty'
     'wl-clipboard' 'cliphist' 'grim' 'slurp' 'swappy'
     'brightnessctl' 'playerctl' 'wireplumber' 'pavucontrol' 'networkmanager'
-    'ttf-jetbrains-mono-nerd'
+    'ttf-jetbrains-mono-nerd'   # the icons in the bar and the menus
+    'noto-fonts-emoji'          # the bar's security score and its tooltip are emoji
     'yazi' 'neovim' 'btop'
     # .zshrc aliases ls and cat to these, so a shell without them is broken.
     'zsh' 'starship' 'eza' 'bat'
@@ -54,12 +55,12 @@ backup=(
 options=('!strip' '!debug')
 
 # Read straight from shadowos/profile/airootfs in this checkout; see
-# shadowos-base/PKGBUILD.
+# ../airootfs.sh.
 source=()
 sha256sums=()
 
 package() {
-    local SRC="$startdir/../../../shadowos/profile/airootfs"
+    . "$startdir/../airootfs.sh"
     local f
 
     # The desktop configuration and the shell profile, for accounts created
@@ -67,25 +68,36 @@ package() {
     # profile belongs to shadowos-firefox-config (two packages cannot own one
     # file), and .ssh is the live user's.
     install -d "$pkgdir/etc/skel"
-    cp -r "$SRC/etc/skel/.config" "$pkgdir/etc/skel/.config"
-    install -m644 "$SRC/etc/skel/.zshrc" "$pkgdir/etc/skel/.zshrc"
+    cp -r "$AIROOTFS/etc/skel/.config" "$pkgdir/etc/skel/.config"
+    install -m644 "$AIROOTFS/etc/skel/.zshrc" "$pkgdir/etc/skel/.zshrc"
 
-    # The copies shadowos-session-start puts in place at every login. They
-    # must be the files /etc/skel hands to a new account; if the two have
-    # drifted apart in the ISO profile, stop here and say which.
+    # On the ISO, shadowos-session-start puts the copies in
+    # /etc/shadowos/desktop over the user's own at every login. They must be
+    # the files /etc/skel hands to a new account; if the two have drifted
+    # apart in the ISO profile, stop here and say which.
     for f in hypr/hyprland.lua waybar/config.jsonc waybar/style.css; do
-        if ! cmp -s "$SRC/etc/skel/.config/$f" "$SRC/etc/shadowos/desktop/${f#hypr/}"; then
+        if ! cmp -s "$AIROOTFS/etc/skel/.config/$f" "$AIROOTFS/etc/shadowos/desktop/${f#hypr/}"; then
             error "etc/shadowos/desktop/${f#hypr/} and etc/skel/.config/$f differ in the ISO profile"
             return 1
         fi
     done
-    install -d "$pkgdir/etc/shadowos"
-    cp -r "$SRC/etc/shadowos/desktop" "$pkgdir/etc/shadowos/desktop"
+
+    # Those copies are not packaged. Without them the session replaces nothing
+    # in a home directory: on a system that was not installed from the ISO, a
+    # Hyprland config that is already there is its owner's. What the session
+    # does need from /etc/shadowos/desktop is the effects profile for the
+    # hardware, and the bar that hyprland.lua falls back to.
+    install -d "$pkgdir/etc/shadowos/desktop/waybar"
+    cp -r "$AIROOTFS/etc/shadowos/desktop/hardware" "$pkgdir/etc/shadowos/desktop/hardware"
+    install -m644 "$AIROOTFS/etc/shadowos/desktop/waybar/config.fallback.jsonc" \
+        "$pkgdir/etc/shadowos/desktop/waybar/config.fallback.jsonc"
 
     # The "Hyprland (ShadowOS)" entry on the login screen. Its Exec is
     # shadowos-session-start, in shadowos-tools.
-    install -Dm644 "$SRC/usr/share/wayland-sessions/shadowos.desktop" \
+    install -Dm644 "$AIROOTFS/usr/share/wayland-sessions/shadowos.desktop" \
         "$pkgdir/usr/share/wayland-sessions/shadowos.desktop"
 
     chmod -R u=rwX,go=rX "$pkgdir/etc" "$pkgdir/usr"
+
+    use_packaged_script_paths
 }

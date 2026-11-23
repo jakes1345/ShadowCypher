@@ -1,0 +1,76 @@
+# pacman runs these with bash, as root, from /.
+
+# /etc/os-release is what names the running system. It belongs to no package:
+# Arch creates it as a link to /usr/lib/os-release, which is the filesystem
+# package's, and whatever is at /etc/os-release takes precedence (os-release(5)).
+# So the ShadowOS identity is a link to the copy this package ships, and
+# nothing of another package's is modified. A link or a file the admin put
+# there instead is theirs and is left alone.
+_shadowos_identity_on() {
+    if [[ -L /etc/os-release ]]; then
+        case $(readlink /etc/os-release) in
+            ../usr/lib/os-release|/usr/lib/os-release) ;;
+            *) return 0 ;;
+        esac
+    elif [[ -e /etc/os-release ]]; then
+        echo "/etc/os-release is a file of your own and stays as it is."
+        echo "The ShadowOS one is /usr/share/shadowos/os-release."
+        return 0
+    fi
+    ln -sfn ../usr/share/shadowos/os-release /etc/os-release
+}
+
+post_install() {
+    _shadowos_identity_on
+}
+
+# Releases 1.0-* carried /etc/os-release and /etc/hostname as files. On a
+# system that had its own, pacman put the package's next to them as .pacnew,
+# and it still counted the system's own files as this package's. Now that the
+# package no longer has them, pacman moves a file that differs from the
+# packaged one aside as .pacsave and deletes one that does not. Either way the
+# machine would lose its hostname, so keep it across the upgrade.
+pre_upgrade() {
+    if (( $(vercmp "$2" 1.1) < 0 )) && [[ -e /etc/hostname ]]; then
+        cp -a /etc/hostname /etc/hostname.shadowos-upgrade
+    fi
+}
+
+post_upgrade() {
+    (( $(vercmp "$2" 1.1) < 0 )) || return 0
+
+    if [[ -e /etc/hostname.shadowos-upgrade ]]; then
+        if [[ -e /etc/hostname ]]; then
+            rm -f /etc/hostname.shadowos-upgrade
+        else
+            mv /etc/hostname.shadowos-upgrade /etc/hostname
+        fi
+    fi
+    # pacman's .pacsave of it is now a second copy of the same name.
+    if [[ -f /etc/hostname && -f /etc/hostname.pacsave &&
+          $(< /etc/hostname.pacsave) == "$(< /etc/hostname)" ]]; then
+        rm -f /etc/hostname.pacsave
+    fi
+    if [[ ! -e /etc/os-release && ! -L /etc/os-release ]] &&
+       [[ -e /etc/os-release.pacsave || -L /etc/os-release.pacsave ]]; then
+        mv /etc/os-release.pacsave /etc/os-release
+    fi
+
+    # The .pacnew copies those releases left behind.
+    if [[ -f /etc/hostname.pacnew && $(< /etc/hostname.pacnew) == shadowos ]]; then
+        rm -f /etc/hostname.pacnew
+    fi
+    if [[ -f /etc/os-release.pacnew ]] && grep -qx 'ID=shadowos' /etc/os-release.pacnew; then
+        rm -f /etc/os-release.pacnew
+    fi
+
+    # Only here, not on every upgrade: an admin who links /etc/os-release back
+    # to Arch's has said no, and a later upgrade must not undo that.
+    _shadowos_identity_on
+}
+
+pre_remove() {
+    if [[ -L /etc/os-release && $(readlink /etc/os-release) == ../usr/share/shadowos/os-release ]]; then
+        ln -sfn ../usr/lib/os-release /etc/os-release
+    fi
+}
